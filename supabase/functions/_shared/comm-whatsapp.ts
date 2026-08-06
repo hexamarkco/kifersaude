@@ -2663,13 +2663,30 @@ async function fetchWhapiMediaBlob(params: {
     throw new Error('A mensagem nao possui MediaID nem URL valida para transcricao.');
   }
 
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
-    method: 'GET',
-    headers,
-    redirect: 'error',
-  });
+  // Whapi can emit the "new message" webhook slightly before the media
+  // finishes syncing to their storage, so a fetch right after receipt can
+  // 404 with "specified media not found" even though the file shows up
+  // moments later. Retry a few times before giving up on that specific case.
+  const NOT_FOUND_RETRY_DELAYS_MS = [1500, 3000];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
+        method: 'GET',
+        headers,
+        redirect: 'error',
+      });
 
-  return await buildResult(response);
+      return await buildResult(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      const isNotFound = /not found/i.test(message);
+      const delay = NOT_FOUND_RETRY_DELAYS_MS[attempt];
+      if (!isNotFound || delay === undefined) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 }
 
 

@@ -2785,23 +2785,32 @@ function WhatsAppMessageBody({
     </div>
   ) : null;
 
-  if (deletedInfo.deleted) {
-    const deletedByLabel = deletedInfo.deletedBy === 'self'
-      ? 'Você apagou esta mensagem no WhatsApp.'
-      : deletedInfo.deletedBy === 'contact'
-        ? 'O contato apagou esta mensagem no WhatsApp.'
-        : 'Mensagem apagada no WhatsApp.';
+  const hasPreservableDeletedMedia = deletedInfo.deleted
+    && (kind === 'image' || kind === 'sticker' || isVideoLikeMessageType(kind) || kind === 'document' || kind === 'audio' || kind === 'voice')
+    && Boolean(message.media_id || message.media_url);
 
-    return (
-      <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-3 text-[var(--danger-text)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          <span>Mensagem apagada</span>
-        </div>
-        <p className="mt-2 text-xs text-[var(--text-muted)]">{deletedByLabel}</p>
-        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)] line-through opacity-85" text={deletedInfo.preservedText} />
+  const deletedBannerNode = deletedInfo.deleted ? (
+    <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-3 text-[var(--danger-text)]">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>Mensagem apagada</span>
       </div>
-    );
+      <p className="mt-2 text-xs text-[var(--text-muted)]">
+        {deletedInfo.deletedBy === 'self'
+          ? 'Você apagou esta mensagem no WhatsApp.'
+          : deletedInfo.deletedBy === 'contact'
+            ? 'O contato apagou esta mensagem no WhatsApp.'
+            : 'Mensagem apagada no WhatsApp.'}
+        {hasPreservableDeletedMedia ? ' O arquivo continua disponível abaixo.' : ''}
+      </p>
+      {!hasPreservableDeletedMedia ? (
+        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)] line-through opacity-85" text={deletedInfo.preservedText} />
+      ) : null}
+    </div>
+  ) : null;
+
+  if (deletedInfo.deleted && !hasPreservableDeletedMedia) {
+    return deletedBannerNode;
   }
 
   if (kind === 'image' || kind === 'sticker') {
@@ -2813,6 +2822,7 @@ function WhatsAppMessageBody({
 
     return (
       <div className="space-y-3">
+        {deletedBannerNode}
         {quotePreviewNode}
         {mediaUrl ? (
           <button
@@ -2852,6 +2862,7 @@ function WhatsAppMessageBody({
   if (isVideoLikeMessageType(kind)) {
     return (
       <div className="space-y-3">
+        {deletedBannerNode}
         {quotePreviewNode}
         <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
           {mediaUrl ? (
@@ -2879,6 +2890,7 @@ function WhatsAppMessageBody({
 
     return (
       <div className="space-y-3">
+        {deletedBannerNode}
         {quotePreviewNode}
         <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
           <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tracking-[0.08em]">
@@ -2927,6 +2939,7 @@ function WhatsAppMessageBody({
 
     return (
       <div className="space-y-3">
+        {deletedBannerNode}
         {quotePreviewNode}
         <WhatsAppAudioPlayerCard
           kind={kind}

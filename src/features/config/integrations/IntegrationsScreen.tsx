@@ -52,7 +52,8 @@ type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
   | "follow_up_agenda_organization"
-  | "whatsapp_audio_transcription";
+  | "whatsapp_audio_transcription"
+  | "attendance_critique";
 type AiTaskKind = "text" | "transcription";
 type ModelOption = { value: string; label: string };
 
@@ -127,6 +128,12 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind
       label: "Transcrição de áudio do WhatsApp",
       description: "Usado no inbox para transcrever notas de voz e áudios sob demanda.",
       kind: "transcription",
+    },
+    {
+      key: "attendance_critique",
+      label: "Crítica de atendimento (IA)",
+      description: "Usado no inbox para gerar uma análise de qualidade do atendimento, sob demanda.",
+      kind: "text",
     },
   ];
 
@@ -339,6 +346,11 @@ const createDefaultRoutingForm = (): AiRoutingFormState => ({
   whatsapp_audio_transcription: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "whatsapp_audio_transcription"),
+    fallbackToOpenAi: true,
+  },
+  attendance_critique: {
+    provider: "openai",
+    model: getDefaultTaskModel("openai", "attendance_critique"),
     fallbackToOpenAi: true,
   },
 });

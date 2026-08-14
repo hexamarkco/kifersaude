@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
-import { Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, Input } from '../../../../design-system';
+import { Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, Input, Tabs, type TabItem } from '../../../../design-system';
 import DateTimePicker from '../../../../components/ui/DateTimePicker';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
@@ -15,10 +15,19 @@ import type {
   CommWhatsAppLeadSearchResult,
 } from '../../../../lib/commWhatsAppService';
 import type { ConfigOption, Contract, LeadStatusConfig } from '../../../../lib/supabase';
+import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
+
+type LeadDrawerTab = 'crm' | 'critique';
+
+const LEAD_DRAWER_TABS: TabItem<LeadDrawerTab>[] = [
+  { id: 'crm', label: 'CRM' },
+  { id: 'critique', label: 'Análise do atendimento', icon: Sparkles },
+];
 
 type WhatsAppLeadDrawerProps = {
   isOpen: boolean;
   onClose: () => void;
+  chatId: string | null;
   chatDisplayName: string;
   linkedLead: CommWhatsAppLeadPanel | null;
   autoLinked: boolean;
@@ -64,6 +73,7 @@ const getDayKey = (value: string | Date) => {
 export default function WhatsAppLeadDrawer({
   isOpen,
   onClose,
+  chatId,
   chatDisplayName,
   linkedLead,
   autoLinked,
@@ -89,6 +99,12 @@ export default function WhatsAppLeadDrawer({
   canViewAgenda,
   canEditAgenda,
 }: WhatsAppLeadDrawerProps) {
+  const [activeTab, setActiveTab] = useState<LeadDrawerTab>('crm');
+
+  useEffect(() => {
+    setActiveTab('crm');
+  }, [chatId, isOpen]);
+
   const agendaRequestIdRef = useRef(0);
   const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
@@ -404,7 +420,16 @@ export default function WhatsAppLeadDrawer({
           </DialogHeader>
         </DrawerHeader>
         <DrawerBody className="overflow-y-auto">
-          {loading ? (
+          <Tabs
+            items={LEAD_DRAWER_TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+            className="mb-4"
+          />
+
+          {activeTab === 'critique' ? (
+            <WhatsAppAttendanceCritiquePanel chatId={chatId} isActive={activeTab === 'critique'} />
+          ) : loading ? (
             <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Carregando dados do CRM...

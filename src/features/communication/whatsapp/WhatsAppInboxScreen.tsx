@@ -11040,6 +11040,7 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppLeadDrawer
           isOpen={leadDrawerOpen}
           onClose={handleCloseLeadDrawer}
+          chatId={selectedChat?.id ?? null}
           chatDisplayName={selectedChatDisplayName}
           linkedLead={leadPanel}
           autoLinked={selectedChatWasAutoLinked}

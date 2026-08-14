@@ -358,6 +358,23 @@ export type CommWhatsAppReplySuggestion = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppAttendanceCritique = {
+  id: string;
+  chatId: string;
+  generatedBy: string | null;
+  generatedAt: string;
+  provider: string;
+  model: string;
+  sessionStartedAt: string;
+  sessionEndedAt: string;
+  messageCount: number;
+  resumo: string;
+  avaliacaoGeral: 'excelente' | 'boa' | 'regular' | 'precisa_melhorar';
+  pontosFortes: string[];
+  pontosDeAtencao: string[];
+  erros: string[];
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -1611,6 +1628,56 @@ export const commWhatsAppService = {
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
     };
+  },
+
+  async critiqueAttendance(options: { chatId: string }): Promise<CommWhatsAppAttendanceCritique> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-critique-attendance', {
+      body: { chatId: options.chatId },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar a analise do atendimento.'));
+    }
+
+    const payload = (data ?? {}) as { critique?: CommWhatsAppAttendanceCritique };
+    if (!payload.critique) {
+      throw new Error('A IA nao retornou uma analise valida.');
+    }
+
+    return payload.critique;
+  },
+
+  async listAttendanceCritiques(chatId: string, limit = 5): Promise<CommWhatsAppAttendanceCritique[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_attendance_critiques')
+      .select('id, chat_id, generated_by, generated_at, provider, model, session_started_at, session_ended_at, message_count, critique')
+      .eq('chat_id', chatId)
+      .order('generated_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as analises deste atendimento.'));
+    }
+
+    return (data ?? []).map((row: Record<string, unknown>) => {
+      const critique = (row.critique ?? {}) as Record<string, unknown>;
+      return {
+        id: row.id as string,
+        chatId: row.chat_id as string,
+        generatedBy: (row.generated_by as string | null) ?? null,
+        generatedAt: row.generated_at as string,
+        provider: row.provider as string,
+        model: row.model as string,
+        sessionStartedAt: row.session_started_at as string,
+        sessionEndedAt: row.session_ended_at as string,
+        messageCount: Number(row.message_count ?? 0),
+        resumo: (critique.resumo as string) ?? '',
+        avaliacaoGeral: (critique.avaliacao_geral as CommWhatsAppAttendanceCritique['avaliacaoGeral']) ?? 'regular',
+        pontosFortes: Array.isArray(critique.pontos_fortes) ? (critique.pontos_fortes as string[]) : [],
+        pontosDeAtencao: Array.isArray(critique.pontos_de_atencao) ? (critique.pontos_de_atencao as string[]) : [],
+        erros: Array.isArray(critique.erros) ? (critique.erros as string[]) : [],
+      };
+    });
   },
 
   async retryMediaMessage(messageId: string, options: { clientRequestId?: string } = {}): Promise<{ messageId: string | null; status: string }> {

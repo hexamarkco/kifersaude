@@ -1,0 +1,17 @@
+; Copie este arquivo para supabase.local.ini (ele e ignorado pelo Git) e
+; preencha os valores abaixo antes de rodar os scripts de deploy
+; (run-supabase-migrations.sh, deploy-supabase-functions.sh, deploy-functions.bat).
+
+; ID do projeto no Supabase (aparece na URL do dashboard e em
+; supabase/config.toml como project_id). Ja vem preenchido com o valor
+; padrao deste repositorio; so troque se estiver apontando para outro projeto.
+PROJECT_REF=eaxvvhamkmovkoqssahj
+
+; Senha do banco Postgres do projeto (Project Settings > Database no
+; dashboard do Supabase). Necessaria para supabase db push / supabase link.
+DB_PASSWORD=
+
+; Personal access token gerado em
+; https://supabase.com/dashboard/account/tokens
+; Necessario para autenticar o Supabase CLI (supabase link, functions deploy).
+SUPABASE_ACCESS_TOKEN=

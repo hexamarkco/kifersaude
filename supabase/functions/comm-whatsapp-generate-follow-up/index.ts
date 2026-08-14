@@ -7,6 +7,12 @@ import {
   resolveCommWhatsAppCanonicalChatRouteByUuid,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
+import {
+  buildStyleExamples,
+  buildStyleProfile,
+  buildStyleProfileText,
+  STYLE_SAMPLE_LIMIT,
+} from '../_shared/comm-whatsapp-transcript.ts';
 
 declare const Deno: {
   env: {
@@ -198,6 +204,21 @@ const createAdminClient = () => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const sanitizeGeneratedText = (value: string) => {
+  let next = value.trim();
+  if (next.startsWith('```') && next.endsWith('```')) {
+    next = next.replace(/^```[a-zA-Z]*\s*/, '').replace(/```$/, '').trim();
+  }
+  if (
+    (next.startsWith('"') && next.endsWith('"'))
+    || (next.startsWith("'") && next.endsWith("'"))
+    || (next.startsWith('“') && next.endsWith('”'))
+  ) {
+    next = next.slice(1, -1).trim();
+  }
+  return next;
+};
 
 const normalizeSalesTechniques = (value: unknown) => {
   if (!Array.isArray(value)) {
@@ -1036,6 +1057,21 @@ Deno.serve(async (req: Request) => {
       .map((message) => buildTranscriptLine(message, leadContext.nome, systemTimeZone))
       .filter((line): line is string => Boolean(line));
 
+    // ---- Style analysis (aprende o estilo real de escrita a partir do
+    // proprio historico ja carregado, sem round-trip extra ao banco) ----
+
+    const styleMessages = messages
+      .filter((message) => (
+        message.direction === 'outbound'
+        && message.message_type === 'text'
+        && message.delivery_status.trim().toLowerCase() !== 'failed'
+        && Boolean(toTrimmedString(message.text_content))
+      ))
+      .slice(-STYLE_SAMPLE_LIMIT);
+    const styleProfile = buildStyleProfile(styleMessages);
+    const styleProfileText = buildStyleProfileText(styleProfile);
+    const styleExamples = buildStyleExamples(styleMessages);
+
     console.log('[FollowUpAI][edge] loaded context', {
       chat,
       lead,
@@ -1122,7 +1158,12 @@ Deno.serve(async (req: Request) => {
       aiContext ??= {
         situationPresetIds: [],
         tone: requestedTone,
-        salesTechniques: requestedSalesTechniqueIds.length > 0 ? requestedSalesTechniqueIds : ['rapport', 'assumptive-close'],
+        // Sem classificacao automatica bem-sucedida, nao forcamos um par fixo
+        // de tecnicas comerciais (isso fazia toda geracao neutra cair sempre
+        // no mesmo "rapport + assumptive-close", deixando as mensagens
+        // parecidas entre si). Melhor deixar vazio e confiar nas regras
+        // gerais de tom natural do prompt.
+        salesTechniques: requestedSalesTechniqueIds,
         rationale: null,
         nextActionType: null,
         nextActionReason: null,
@@ -1179,11 +1220,19 @@ Deno.serve(async (req: Request) => {
 
     const systemPrompt = [
       configuredPromptBase,
-      'Regras de segurança e contexto do sistema:',
-      'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
-      'Considere as datas e horas do transcript como a referencia temporal principal.',
+      'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
+      '',
+      'REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):',
+      styleProfileText,
+      '',
+      'REGRAS DE CONDUTA:',
+      '- Seja curta e direta, como uma mensagem real de WhatsApp: normalmente 1 a 3 frases curtas. Nao escreva paragrafos longos nem monte um roteiro completo em uma unica mensagem.',
+      '- NUNCA use listas, bullets, numeracao ou markdown na mensagem final.',
+      '- Uma unica pergunta ou proximo passo por vez — nao empilhe varias perguntas.',
+      '- Use o nome do lead se fizer sentido. Nao force.',
+      'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-      'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa. A mensagem final deve ser claramente baseada no conteudo do transcript, nao em templates genericos.',
+      'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa, como se fosse o corretor continuando a conversa real de onde parou. A mensagem final deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
       responseFormatInstruction,
       selectedContextPromptSection,
       `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Aplique este tom com seriedade na mensagem final.`,
@@ -1196,14 +1245,13 @@ Deno.serve(async (req: Request) => {
     const baseUserPrompt = [
       baseContextPrompt,
       '',
-      'Instrucao critica — siga exatamente:',
-      '1. ANTES de escrever, analise o historico e extraia: ultimo topico tratado, produto/plano discutido, objecoes do cliente, prazos acordados, duvidas especificas, valor mencionado, etapa da conversa.',
-      '2. Use esses detalhes CONCRETOS para compor o follow-up. A mensagem deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
-      '3. Retome exatamente de onde parou, como se fosse o corretor continuando a conversa real. Uma pergunta por vez, passo a passo.',
+      styleExamples.length > 0
+        ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n') + '\n'
+        : '',
       shouldGenerateVariations
-        ? `\nGere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
-        : '\nGere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
-    ].join('\n');
+        ? `Gere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
+        : 'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
+    ].filter(Boolean).join('\n');
 
     const userPrompt = refinementMode
       ? [
@@ -1233,7 +1281,7 @@ Deno.serve(async (req: Request) => {
       systemPrompt,
       userPrompt,
       temperature: 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
+      maxTokens: shouldGenerateVariations ? Math.min(760, 190 * variantCount) : 220,
     });
 
     const result = await generateTextWithRouting({
@@ -1242,12 +1290,12 @@ Deno.serve(async (req: Request) => {
       systemPrompt,
       userPrompt,
       temperature: 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
+      maxTokens: shouldGenerateVariations ? Math.min(760, 190 * variantCount) : 220,
     });
 
     const generatedText = result.text.trim();
     const variations = shouldGenerateVariations ? parseFollowUpVariationsResult(generatedText) : [];
-    const responseText = variations[0]?.text ?? generatedText;
+    const responseText = variations[0]?.text ?? sanitizeGeneratedText(generatedText);
     const nextAction = refinementMode ? null : await buildFollowUpNextAction({
       supabaseAdmin,
       messages,

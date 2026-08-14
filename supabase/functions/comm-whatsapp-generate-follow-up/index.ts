@@ -1196,18 +1196,40 @@ Deno.serve(async (req: Request) => {
       customInstructions,
     ].map((instruction) => instruction.trim()).filter(Boolean).join('\n\n');
 
+    const hasCustomInstructions = Boolean(configuredInstructions);
+
+    // Fato tecnico do sistema: sempre precisa ser dito, independente de haver
+    // prompt customizado ou nao, porque e o proprio mecanismo de envio (nao e
+    // uma preferencia de estilo) que reconhece este separador.
+    const multiMessageMechanismNote = 'MECANISMO DO SISTEMA: uma linha contendo APENAS "---" (nada mais nela, nem antes nem depois na mesma linha) e reconhecida como separador entre mensagens distintas do WhatsApp — cada trecho entre separadores vira uma mensagem enviada em sequencia. Isso e diferente dos cabecalhos como "--- CONTEXTO ---" usados neste prompt como organizacao visual: so conta como separador real quando a linha tiver somente os tres tracos, sem texto colado.';
+
     const responseFormatInstruction = shouldGenerateVariations
       ? [
           `Retorne apenas JSON valido, sem markdown, no formato {"variations":[{"label":"...","text":"..."}]}.`,
           `Gere exatamente ${variantCount} variacoes com labels curtos e distintos, como "Direta", "Consultiva" ou "Leve".`,
-          'Cada text deve ser uma mensagem final pronta para envio; nao inclua explicacoes fora do JSON.',
+          'Cada "text" deve ser o follow-up final pronto para envio, usando o separador "---" entre mensagens quando dividido; nao inclua explicacoes fora do JSON.',
         ].join(' ')
-      : 'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.';
+      : 'Retorne apenas o texto final sugerido, sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.';
 
     const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
       'Cada mensagem deve ser contextualizada no historico real do chat: retome o ultimo assunto tratado, use os detalhes especificos da conversa e evite frases que servem para qualquer lead.',
       'A mensagem precisa soar como uma continuacao natural do ultimo contato, nao como um template pre-definido.',
+    ].join('\n');
+
+    // As regras genericas de brevidade/divisao em blocos abaixo so entram
+    // quando NAO ha um prompt customizado configurado (aba Integracoes). Se a
+    // operacao ja definiu sua propria estrutura (ex.: blocos fixos separados
+    // por "---"), duplicar essa orientacao aqui em palavras diferentes so
+    // dilui a instrucao especifica dela em meio a mais texto — melhor deixar
+    // o prompt customizado mandar sozinho nisso.
+    const defaultConductRules = hasCustomInstructions ? '' : [
+      'REGRAS DE CONDUTA:',
+      '- Cada mensagem individual deve ser curta e direta, como uma mensagem real de WhatsApp: normalmente 1 a 2 frases curtas. Nao escreva paragrafos longos.',
+      '- A operacao prefere follow-ups divididos em varias mensagens curtas em sequencia — como uma pessoa real digitando — em vez de um unico bloco longo. Sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer a pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas usando o separador "---". So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta (ex.: uma pergunta objetiva isolada). Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?',
+      '- NUNCA use listas, bullets ou numeracao. Markdown so e permitido na forma do separador "---" descrito acima.',
+      '- Dentro de cada mensagem, uma unica pergunta ou proximo passo por vez — nao empilhe varias perguntas na mesma mensagem.',
+      '- Use o nome do lead se fizer sentido. Nao force.',
     ].join('\n');
 
     const selectedContextPromptSection = buildSelectedContextPromptSection({
@@ -1218,18 +1240,22 @@ Deno.serve(async (req: Request) => {
       manualContext,
     });
 
+    // Quando ha prompt customizado, ele define a voz-alvo (persona, regras
+    // rigidas de pontuacao etc.) de forma explicita. Mensagens reais antigas
+    // podem nao seguir essas regras novas (ex.: ainda usar "pra" ou dois
+    // pontos) — copiar esses exemplos aqui puxaria o modelo de volta ao
+    // habito antigo em vez da voz definida no prompt customizado. Por isso
+    // o perfil/exemplos de estilo real so entram no fallback generico.
+    const styleProfileSection = hasCustomInstructions
+      ? ''
+      : ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):', styleProfileText].join('\n');
+
     const systemPrompt = [
       configuredPromptBase,
       'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
-      '',
-      'REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):',
-      styleProfileText,
-      '',
-      'REGRAS DE CONDUTA:',
-      '- Seja curta e direta, como uma mensagem real de WhatsApp: normalmente 1 a 3 frases curtas. Nao escreva paragrafos longos nem monte um roteiro completo em uma unica mensagem.',
-      '- NUNCA use listas, bullets, numeracao ou markdown na mensagem final.',
-      '- Uma unica pergunta ou proximo passo por vez — nao empilhe varias perguntas.',
-      '- Use o nome do lead se fizer sentido. Nao force.',
+      multiMessageMechanismNote,
+      styleProfileSection,
+      defaultConductRules,
       'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa, como se fosse o corretor continuando a conversa real de onde parou. A mensagem final deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
@@ -1245,12 +1271,12 @@ Deno.serve(async (req: Request) => {
     const baseUserPrompt = [
       baseContextPrompt,
       '',
-      styleExamples.length > 0
+      !hasCustomInstructions && styleExamples.length > 0
         ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n') + '\n'
         : '',
       shouldGenerateVariations
-        ? `Gere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
-        : 'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
+        ? `Gere ${variantCount} variacoes do proximo follow-up mais adequado para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
+        : 'Gere o proximo follow-up mais adequado para enviar agora neste chat. Deve soar humano, comercialmente coerente e pronto para copiar e enviar no WhatsApp.',
     ].filter(Boolean).join('\n');
 
     const userPrompt = refinementMode
@@ -1280,8 +1306,8 @@ Deno.serve(async (req: Request) => {
       aiContext,
       systemPrompt,
       userPrompt,
-      temperature: 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(760, 190 * variantCount) : 220,
+      temperature: hasCustomInstructions ? 0.5 : 0.7,
+      maxTokens: shouldGenerateVariations ? Math.min(820, 220 * variantCount) : 280,
     });
 
     const result = await generateTextWithRouting({
@@ -1289,8 +1315,8 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(760, 190 * variantCount) : 220,
+      temperature: hasCustomInstructions ? 0.5 : 0.7,
+      maxTokens: shouldGenerateVariations ? Math.min(820, 220 * variantCount) : 280,
     });
 
     const generatedText = result.text.trim();

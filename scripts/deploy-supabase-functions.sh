@@ -4,9 +4,37 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$REPO_ROOT/supabase.local.ini"
 FUNCTIONS_DIR="$REPO_ROOT/supabase/functions"
+SUPABASE_TOML="$REPO_ROOT/supabase/config.toml"
 STATE_DIR="$REPO_ROOT/.deploy-cache"
 STATE_FILE="$STATE_DIR/supabase-functions-state.txt"
 DEFAULT_PROJECT_REF="eaxvvhamkmovkoqssahj"
+
+# Le a lista de functions com verify_jwt = false direto de
+# supabase/config.toml, em vez de manter uma lista hardcoded que pode
+# ficar dessincronizada entre este script e o deploy-functions.bat (ou
+# apontar pra functions que ja nao existem mais). config.toml e a fonte
+# unica de verdade tambem lida pelo proprio Supabase CLI.
+load_no_verify_jwt_functions() {
+  local toml_file="$1"
+  local current_fn=""
+  local line
+
+  if [[ ! -f "$toml_file" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    if [[ "$line" =~ ^\[functions\.([A-Za-z0-9_-]+)\]$ ]]; then
+      current_fn="${BASH_REMATCH[1]}"
+    elif [[ -n "$current_fn" && "$line" =~ ^verify_jwt[[:space:]]*=[[:space:]]*false[[:space:]]*$ ]]; then
+      echo "$current_fn"
+      current_fn=""
+    elif [[ "$line" =~ ^\[ ]]; then
+      current_fn=""
+    fi
+  done <"$toml_file"
+}
 
 compute_function_hash() {
   local function_path="$1"
@@ -131,11 +159,18 @@ fi
 deployed_count=0
 skipped_count=0
 failed_count=0
-NO_VERIFY_JWT_FUNCTIONS=(
-  "create-initial-admin"
-  "comm-whatsapp-webhook"
-  "public-lead-submit"
-)
+
+NO_VERIFY_JWT_FUNCTIONS=()
+while IFS= read -r no_verify_name; do
+  [[ -n "$no_verify_name" ]] || continue
+  NO_VERIFY_JWT_FUNCTIONS+=("$no_verify_name")
+done < <(load_no_verify_jwt_functions "$SUPABASE_TOML")
+
+for no_verify_name in "${NO_VERIFY_JWT_FUNCTIONS[@]}"; do
+  if [[ ! -d "$FUNCTIONS_DIR/$no_verify_name" ]]; then
+    echo "[AVISO] supabase/config.toml declara verify_jwt=false para '$no_verify_name', mas essa function nao existe em $FUNCTIONS_DIR. Confira se o nome mudou ou se a entrada esta obsoleta."
+  fi
+done
 
 next_state_file="$(mktemp "$STATE_DIR/supabase-functions-state.XXXXXX")"
 trap 'rm -f "$next_state_file"' EXIT

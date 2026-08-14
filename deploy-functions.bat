@@ -78,6 +78,58 @@ if not defined SUPABASE_BIN if "%SUPABASE_USE_NPX%"=="0" (
 
 echo Usando CLI: %SUPABASE_LABEL%
 
+set "CONFIG_FILE=%~dp0supabase.local.ini"
+if not exist "%CONFIG_FILE%" (
+  echo [ERRO] Arquivo nao encontrado: %CONFIG_FILE%
+  echo Copie o exemplo e preencha os valores:
+  echo copy supabase.local.ini.example supabase.local.ini
+  set "EXIT_CODE=1"
+  goto :end
+)
+
+set "PROJECT_REF="
+set "DB_PASSWORD="
+set "SUPABASE_ACCESS_TOKEN="
+for /f "usebackq eol=; tokens=1,* delims==" %%A in ("%CONFIG_FILE%") do (
+  set "INI_KEY=%%A"
+  set "INI_VALUE=%%B"
+  if "!INI_KEY!"=="PROJECT_REF" set "PROJECT_REF=!INI_VALUE!"
+  if "!INI_KEY!"=="DB_PASSWORD" set "DB_PASSWORD=!INI_VALUE!"
+  if "!INI_KEY!"=="SUPABASE_ACCESS_TOKEN" set "SUPABASE_ACCESS_TOKEN=!INI_VALUE!"
+)
+
+if not defined PROJECT_REF (
+  echo [ERRO] PROJECT_REF nao definido em supabase.local.ini
+  set "EXIT_CODE=1"
+  goto :end
+)
+
+if not defined SUPABASE_ACCESS_TOKEN (
+  echo [ERRO] SUPABASE_ACCESS_TOKEN nao definido em supabase.local.ini
+  set "EXIT_CODE=1"
+  goto :end
+)
+
+echo === Link do projeto: %PROJECT_REF% ===
+if defined DB_PASSWORD (
+  if "!SUPABASE_USE_NPX!"=="1" (
+    call "!NPX_BIN!" --yes supabase link --project-ref "%PROJECT_REF%" --password "%DB_PASSWORD%"
+  ) else (
+    call "!SUPABASE_BIN!" link --project-ref "%PROJECT_REF%" --password "%DB_PASSWORD%"
+  )
+) else (
+  if "!SUPABASE_USE_NPX!"=="1" (
+    call "!NPX_BIN!" --yes supabase link --project-ref "%PROJECT_REF%"
+  ) else (
+    call "!SUPABASE_BIN!" link --project-ref "%PROJECT_REF%"
+  )
+)
+if errorlevel 1 (
+  echo [ERRO] Falha ao linkar o projeto Supabase.
+  set "EXIT_CODE=1"
+  goto :end
+)
+
 if not exist "supabase\functions" (
   echo [ERRO] Pasta supabase\functions nao encontrada.
   set "EXIT_CODE=1"
@@ -97,8 +149,18 @@ set /a SKIPPED=0
 set /a SUCCESS=0
 set /a FAIL=0
 set "EXIT_CODE=0"
-rem Sempre adicione aqui toda Edge Function que precisa de --no-verify-jwt.
-set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook comm-whatsapp-webhook comm-whatsapp-media comm-whatsapp-transcribe create-initial-admin public-lead-submit whatsapp-broadcast"
+rem A lista de functions que dispensam verificacao de JWT da plataforma vem
+rem de supabase\config.toml (blocos [functions.<nome>] com verify_jwt =
+rem false) - a mesma fonte que scripts/deploy-supabase-functions.sh usa.
+rem Nao adicione nomes aqui: edite supabase\config.toml.
+set "NO_VERIFY_JWT_FUNCTIONS="
+if exist "supabase\config.toml" (
+  for /f "usebackq delims=" %%N in (`powershell -NoProfile -Command "$lines = Get-Content -LiteralPath 'supabase\config.toml'; $current = $null; $names = foreach ($line in $lines) { if ($line -match '^\[functions\.(?<name>[^\]]+)\]$') { $current = $Matches['name'] } elseif ($current -and $line -match '^verify_jwt\s*=\s*false\s*$') { $current; $current = $null } elseif ($line -match '^\[') { $current = $null } }; ($names -join ' ')"`) do (
+    set "NO_VERIFY_JWT_FUNCTIONS=%%N"
+  )
+) else (
+  echo [AVISO] supabase\config.toml nao encontrado; nenhuma function sera deployada com --no-verify-jwt.
+)
 
 set "SHARED_HASH="
 if exist "supabase\functions\_shared" (

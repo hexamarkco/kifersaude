@@ -1,7 +1,23 @@
 project_id = "eaxvvhamkmovkoqssahj"
 
+# Functions abaixo fazem sua propria autenticacao internamente
+# (authorizeDashboardUser, token de bootstrap, etc.) e nao devem
+# passar pelo gate de JWT da plataforma. Esta secao e a fonte unica
+# de verdade: os scripts de deploy (deploy-functions.bat e
+# scripts/deploy-supabase-functions.sh) leem esta lista em vez de
+# hardcodar os nomes.
+
 [functions.comm-whatsapp-webhook]
 verify_jwt = false
 
 [functions.public-lead-submit]
+verify_jwt = false
+
+[functions.create-initial-admin]
+verify_jwt = false
+
+[functions.comm-whatsapp-media]
+verify_jwt = false
+
+[functions.comm-whatsapp-transcribe]
 verify_jwt = false

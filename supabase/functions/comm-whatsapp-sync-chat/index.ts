@@ -357,8 +357,15 @@ Deno.serve(async (req: Request) => {
       const summaryText = summarizeWhapiMessage(message);
 
       if (!externalMessageId) {
-        const normalizedSummaryText = normalizeSemanticText(summaryText);
-        const canCheckSemanticDuplicate = Boolean(mediaMeta.mediaId || normalizedSummaryText.length >= 12);
+        // Mensagens sem id externo (resyncs de historico antigo) nao voltam a
+        // ser inseridas quando ja existe conteudo identico (media ou texto) no
+        // mesmo chat/direcao/tipo. Nao depende de message_at exato: re-imports
+        // com timestamp ausente (fallback para agora) recriavam duplicatas.
+        const hasContentSignal = Boolean(mediaMeta.mediaId || normalizeSemanticText(summaryText).length > 0);
+        const canCheckSemanticDuplicate = hasContentSignal && (
+          Boolean(mediaMeta.mediaId)
+          || (toTrimmedString(message.type) || 'text') === 'text'
+        );
 
         if (canCheckSemanticDuplicate) {
           let existingMessageQuery = supabaseAdmin
@@ -366,12 +373,11 @@ Deno.serve(async (req: Request) => {
             .select('id')
             .eq('chat_id', chat.id)
             .eq('direction', direction)
-            .eq('message_type', toTrimmedString(message.type) || 'text')
-            .eq('message_at', messageAt);
+            .eq('message_type', toTrimmedString(message.type) || 'text');
 
           if (mediaMeta.mediaId) {
             existingMessageQuery = existingMessageQuery.eq('media_id', mediaMeta.mediaId);
-          } else {
+          } else if ((normalizeSemanticText(summaryText).length || 0) > 0) {
             existingMessageQuery = existingMessageQuery.eq('text_content', summaryText);
           }
 

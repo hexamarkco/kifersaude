@@ -1201,6 +1201,19 @@ Deno.serve(async (req: Request) => {
     // por isso fica de fora do gate de hasCustomInstructions.
     const messageSplittingInstruction = 'DIVISAO EM MENSAGENS: sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer uma pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas em sequencia usando o separador "---", como uma pessoa real digitando mensagens separadas em vez de um unico bloco longo. So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta. Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?';
 
+    // Instrucao pontual desta geracao especifica (campo "Instrucoes
+    // personalizadas" no modal). Fica logo apos a voz-alvo, em posicao de
+    // alta saliencia — antes ficava por ultimo, depois de tres catalogos
+    // inteiros (cenarios/tons/tecnicas), o que na pratica fazia o modelo
+    // dar menos peso a ela do que o "prioridade alta" prometia.
+    const userCustomInstructionsBlock = customInstructions
+      ? [
+          'INSTRUCAO ESPECIFICA DESTA GERACAO (maxima prioridade, aplique de forma literal):',
+          customInstructions,
+          'Se esta instrucao mencionar uma data, prazo ou fato especifico (ex.: "hoje e dia X"), use exatamente esse dado na mensagem de forma clara e inequivoca — nao troque por uma referencia vaga nem deixe ambiguo se e hoje, uma data futura ou passada.',
+        ].join('\n')
+      : '';
+
     const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
       'Cada mensagem deve ser contextualizada no historico real do chat: retome o ultimo assunto tratado, use os detalhes especificos da conversa e evite frases que servem para qualquer lead.',
@@ -1317,6 +1330,7 @@ Deno.serve(async (req: Request) => {
         ].filter(Boolean).join('\n\n')
       : [
           configuredPromptBase,
+          userCustomInstructionsBlock,
           'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
           multiMessageMechanismNote,
           messageSplittingInstruction,
@@ -1332,7 +1346,6 @@ Deno.serve(async (req: Request) => {
           `Catalogo de tons (use somente os valores exatos):\n${toneCatalog}`,
           `Catalogo de tecnicas comerciais (use somente os ids exatos):\n${salesTechniqueCatalog}`,
           manualSelectionNote ? `Selecoes ja fixadas pelo usuario para esta geracao:\n${manualSelectionNote}` : '',
-          customInstructions ? `Instrucoes extras do usuario para esta geracao (prioridade alta, desde que nao contrariem fatos do historico):\n${customInstructions}` : '',
         ].filter(Boolean).join('\n\n');
 
     const baseUserPrompt = [

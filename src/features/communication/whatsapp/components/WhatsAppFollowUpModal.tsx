@@ -1,15 +1,30 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { CalendarPlus, Check, Clock3, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
+import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
 import { Button, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 import WhatsAppDialog from './WhatsAppDialog';
+import {
+  AiContextPanel,
+  CONTEXT_REFINEMENT_ACTIONS,
+  ChatBubblePreview,
+  FOLLOW_UP_TONE_OPTIONS,
+  NextActionCard,
+  Pill,
+  RefinementChip,
+  SIMPLE_REFINEMENT_ACTIONS,
+  SalesTechniqueSelector,
+  SectionCard,
+  SituationPresetSelector,
+  ToneSelector,
+  VariationCarousel,
+} from './followUpModalUi';
 
 type SpeechRecognitionType = {
   new (): {
@@ -23,39 +38,6 @@ type SpeechRecognitionType = {
     stop: () => void;
   };
 };
-
-
-const followUpToneOptions: Array<{
-  value: CommWhatsAppFollowUpTone;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: 'consultivo',
-    label: 'Consultivo',
-    description: 'Orienta com contexto, escuta ativa e próximo passo claro.',
-  },
-  {
-    value: 'amigavel',
-    label: 'Amigável',
-    description: 'Soa leve, acolhedor e próximo sem perder objetividade.',
-  },
-  {
-    value: 'direto',
-    label: 'Direto',
-    description: 'Vai ao ponto com chamada objetiva e pouco texto.',
-  },
-  {
-    value: 'reativacao',
-    label: 'Reativação',
-    description: 'Retoma contato parado com naturalidade e baixa pressão.',
-  },
-  {
-    value: 'premium',
-    label: 'Premium',
-    description: 'Comunica cuidado, exclusividade e atenção personalizada.',
-  },
-];
 
 declare global {
   interface Window {
@@ -76,6 +58,7 @@ type WhatsAppFollowUpModalProps = {
   selectedSalesTechniques: string[];
   selectedSituationPresetIds: string[];
   aiContextRationale?: string | null;
+  emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
   nextAction?: CommWhatsAppFollowUpNextAction | null;
   schedulingNextAction?: boolean;
   onClose: () => void;
@@ -89,60 +72,6 @@ type WhatsAppFollowUpModalProps = {
   onSend: () => void;
 };
 
-const formatNextActionDate = (value?: string | null) => {
-  if (!value) return 'Sem data sugerida';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Data sugerida inválida';
-  return date.toLocaleString('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-type SimpleRefinementAction = {
-  id: CommWhatsAppRewriteTone;
-  label: string;
-  description: string;
-};
-
-const SIMPLE_REFINEMENT_ACTIONS: SimpleRefinementAction[] = [
-  { id: 'shorter', label: 'Encurtar', description: 'Reescrever a sugestão de forma mais curta e objetiva.' },
-  { id: 'friendly', label: 'Mais amigável', description: 'Deixar a mensagem mais leve, humana e acolhedora.' },
-  { id: 'assertive', label: 'Mais direta', description: 'Tornar o próximo passo mais claro sem soar agressivo.' },
-  { id: 'professional', label: 'Mais profissional', description: 'Ajustar o texto para um tom mais consultivo e profissional.' },
-];
-
-type FollowUpRefinementAction = {
-  id: string;
-  label: string;
-  description: string;
-  instruction: string;
-};
-
-const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: FollowUpRefinementAction[] = [
-  {
-    id: 'add-context',
-    label: 'Usar contexto do chat',
-    description: 'Refinar considerando o histórico e o momento atual da conversa.',
-    instruction: 'Refine a mensagem usando o contexto completo do chat. Preserve apenas fatos confirmados no histórico e deixe o próximo passo mais coerente com a conversa.',
-  },
-  {
-    id: 'reduce-pressure',
-    label: 'Menos pressão',
-    description: 'Diminuir insistência e cobrança no follow-up.',
-    instruction: 'Refine a mensagem para reduzir pressão e cobrança. Mantenha cordialidade, naturalidade e uma pergunta simples para facilitar resposta.',
-  },
-  {
-    id: 'clear-next-step',
-    label: 'Próximo passo claro',
-    description: 'Reforçar uma ação objetiva para avançar a conversa.',
-    instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
-  },
-];
-
 export default function WhatsAppFollowUpModal({
   isOpen,
   generating,
@@ -155,6 +84,7 @@ export default function WhatsAppFollowUpModal({
   selectedSalesTechniques,
   selectedSituationPresetIds,
   aiContextRationale,
+  emotionalContext,
   nextAction,
   schedulingNextAction = false,
   onClose,
@@ -176,7 +106,8 @@ export default function WhatsAppFollowUpModal({
   const wasOpenRef = useRef(false);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
   const hasVariations = variations.length > 0;
-  const selectedToneOption = followUpToneOptions.find((option) => option.value === tone) ?? followUpToneOptions[0];
+  const hasAiInsight = Boolean(aiContextRationale || emotionalContext?.detected);
+  const selectedToneOption = FOLLOW_UP_TONE_OPTIONS.find((option) => option.value === tone) ?? FOLLOW_UP_TONE_OPTIONS[0];
 
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
@@ -244,17 +175,17 @@ export default function WhatsAppFollowUpModal({
     recognitionRef.current = recognitionInstance;
   }, []);
 
-  const handleSimpleRefinement = async (tone: CommWhatsAppRewriteTone) => {
+  const handleSimpleRefinement = async (refinementTone: CommWhatsAppRewriteTone) => {
     const currentMessage = value.trim();
     if (!currentMessage || refiningActionId) {
       return;
     }
 
-    setRefiningActionId(tone);
+    setRefiningActionId(refinementTone);
     try {
       const result = await commWhatsAppService.rewriteMessage({
         message: currentMessage,
-        tone,
+        tone: refinementTone,
       });
       onChangeValue(result.text);
     } catch (error) {
@@ -264,7 +195,7 @@ export default function WhatsAppFollowUpModal({
     }
   };
 
-  const handleContextRefinement = async (action: FollowUpRefinementAction) => {
+  const handleContextRefinement = async (action: (typeof CONTEXT_REFINEMENT_ACTIONS)[number]) => {
     const currentMessage = value.trim();
     if (!currentMessage || refiningActionId) {
       return;
@@ -297,7 +228,7 @@ export default function WhatsAppFollowUpModal({
       const transcript = currentTranscript.trim();
       setCurrentTranscript("");
       setIsRecording(false);
-      
+
       if (transcript) {
         setIsCorrecting(true);
         try {
@@ -329,7 +260,7 @@ export default function WhatsAppFollowUpModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="Gerar follow-up"
-      description="Escolha um cenário, gere uma sugestão e envie. Os ajustes avançados continuam disponíveis quando precisar."
+      description="A IA interpreta a conversa inteira antes de escrever. Ajustes manuais continuam disponíveis quando precisar."
       size="xl"
       panelClassName="max-w-[82rem]"
       footer={(
@@ -358,43 +289,21 @@ export default function WhatsAppFollowUpModal({
     >
       <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.72fr)]">
         <section className="min-w-0 space-y-4">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
+          <SectionCard>
             <div className="flex flex-col gap-4">
-              {(selectedSituationPresetIds.length > 0 || selectedSalesTechniques.length > 0 || aiContextRationale) && (
-                <div className="rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--accent-gold-hover)]">
-                  <div className="flex items-center gap-2 font-semibold">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>IA aplicou o contexto da conversa</span>
-                  </div>
-                  {aiContextRationale ? <p className="mt-1 leading-5 opacity-85">{aiContextRationale}</p> : null}
-                </div>
-              )}
+              {hasAiInsight ? <AiContextPanel rationale={aiContextRationale} emotionalContext={emotionalContext} /> : null}
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Cenário</h3>
                   <span className="text-[11px] font-medium text-[var(--text-muted)]">IA seleciona ao gerar</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {CONVERSATION_SITUATION_PRESETS.map((preset) => {
-                    const active = selectedSituationPresetIds.includes(preset.id);
-
-                    return (
-                      <Button
-                        key={preset.id}
-                        type="button"
-                        variant={active ? 'primary' : 'soft'}
-                        size="sm"
-                        onClick={() => onToggleSituationPreset(preset.id)}
-                        disabled={generating || submitting}
-                        title={active ? `Remover cenário: ${preset.label}` : `Aplicar cenário: ${preset.label}`}
-                      >
-                        {active && <Check className="h-3.5 w-3.5" />}
-                        {preset.label}
-                      </Button>
-                    );
-                  })}
-                </div>
+                <SituationPresetSelector
+                  presets={CONVERSATION_SITUATION_PRESETS}
+                  selectedIds={selectedSituationPresetIds}
+                  onToggle={onToggleSituationPreset}
+                  disabled={generating || submitting}
+                />
               </div>
 
               <div>
@@ -402,28 +311,7 @@ export default function WhatsAppFollowUpModal({
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">Tom</h3>
                   <span className="text-[11px] font-medium text-[var(--accent-gold-hover)]">{selectedToneOption.label}</span>
                 </div>
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Tom do follow-up">
-                  {followUpToneOptions.map((option) => {
-                    const active = tone === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => onChangeTone(option.value)}
-                        disabled={generating || submitting}
-                        title={option.description}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${active
-                          ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]'}`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <ToneSelector value={tone} onChange={onChangeTone} disabled={generating || submitting} />
               </div>
 
               <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3" open={Boolean(localCustomInstructions.trim())}>
@@ -432,9 +320,9 @@ export default function WhatsAppFollowUpModal({
                     <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ajustes extras</h3>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">Instruções, variáveis e áudio ficam aqui.</p>
                   </div>
-                  <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  <Pill tone={localCustomInstructions.trim() ? 'accent' : 'neutral'}>
                     {localCustomInstructions.trim() ? 'Ativo' : 'Abrir'}
-                  </span>
+                  </Pill>
                 </summary>
                 <div className="mt-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -482,71 +370,51 @@ export default function WhatsAppFollowUpModal({
                 </div>
               </details>
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
-            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Mensagem</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Edite o texto final ou refine com um clique.</p>
+          <SectionCard
+            title="Mensagem"
+            description="Edite o texto final ou refine com um clique."
+            action={(
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone="accent">{messageSegments.length || 1} mensagem(ns)</Pill>
+                {value.trim() ? <Pill>{value.trim().length} caracteres</Pill> : null}
               </div>
-              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
-                  {messageSegments.length || 1} mensagem(ns)
-                </div>
-                {value.trim() ? (
-                  <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    {value.trim().length} caracteres
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mb-3 flex flex-wrap gap-2" aria-label="Refinamentos da mensagem sugerida">
+            )}
+          >
+            <div className="mb-3 flex flex-wrap items-center gap-1.5" aria-label="Refinamentos da mensagem sugerida">
               {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
-                <Button
+                <RefinementChip
                   key={action.id}
-                  type="button"
-                  variant="secondary"
-                  size="sm"
+                  icon={action.icon}
+                  label={action.label}
+                  description={action.description}
                   onClick={() => void handleSimpleRefinement(action.id)}
                   loading={refiningActionId === action.id}
                   disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
-                  title={action.description}
-                >
-                  {action.label}
-                </Button>
+                />
               ))}
-              {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
-                <Button
+              <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
+              {CONTEXT_REFINEMENT_ACTIONS.map((action) => (
+                <RefinementChip
                   key={action.id}
-                  type="button"
-                  variant="secondary"
-                  size="sm"
+                  icon={action.icon}
+                  label={action.label}
+                  description={action.description}
                   onClick={() => void handleContextRefinement(action)}
                   loading={refiningActionId === action.id}
                   disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
-                  title={action.description}
-                >
-                  {action.label}
-                </Button>
+                />
               ))}
             </div>
 
             {hasVariations ? (
-              <div className="mb-3 flex gap-2 overflow-x-auto pb-1" aria-label="Variações geradas">
-                {variations.map((variation, index) => (
-                  <button
-                    key={`${variation.label}:${index}`}
-                    type="button"
-                    onClick={() => onChangeValue(variation.text)}
-                    disabled={generating || submitting || Boolean(refiningActionId)}
-                    className="min-w-[12rem] max-w-[16rem] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="block truncate font-semibold text-[var(--text-primary)]">{variation.label}</span>
-                    <span className="mt-1 line-clamp-2 block leading-5 text-[var(--text-muted)]">{variation.text}</span>
-                  </button>
-                ))}
+              <div className="mb-3">
+                <VariationCarousel
+                  variations={variations}
+                  onSelect={onChangeValue}
+                  disabled={generating || submitting || Boolean(refiningActionId)}
+                />
               </div>
             ) : null}
 
@@ -558,122 +426,51 @@ export default function WhatsAppFollowUpModal({
               placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
               disabled={generating || submitting || Boolean(refiningActionId)}
             />
-          </div>
+          </SectionCard>
         </section>
 
         <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                  <MessageSquare className="h-4 w-4" />
-                  Preview
-                </div>
-                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Como será enviado no WhatsApp.</p>
-              </div>
-              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                {messageSegments.length || 1} bloco(s)
+          <SectionCard
+            title={(
+              <span className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Preview
               </span>
-            </div>
-
-            <div className="mt-4 max-h-[430px] space-y-3 overflow-y-auto pr-1">
-              {messageSegments.length > 0 ? (
-                messageSegments.map((segment, index) => (
-                  <div
-                    key={`${index}:${segment}`}
-                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm"
-                  >
-                    <div className="rounded-t-xl border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
-                        Mensagem {index + 1}
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
-                        {segment}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-xl border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-10 text-center">
-                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--text-muted)]" />
-                  <p className="text-sm text-[var(--text-muted)]">Gere ou escreva uma sugestão para visualizar.</p>
-                </div>
-              )}
-            </div>
-          </div>
+            )}
+            description="Como será enviado no WhatsApp."
+            action={<Pill tone="accent">{messageSegments.length || 1} bloco(s)</Pill>}
+            bodyClassName="max-h-[430px] overflow-y-auto pr-1"
+          >
+            <ChatBubblePreview segments={messageSegments} />
+          </SectionCard>
 
           {nextAction ? (
-            <div className="rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--bg-surface)] p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                    <CalendarPlus className="h-4 w-4 text-[var(--brand-primary)]" />
-                    Próxima ação sugerida
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{nextAction.reason}</p>
-                </div>
-                <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
-                  {nextAction.type === 'schedule' ? 'Agendar' : nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
-                </span>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
-                  <div className="font-semibold text-[var(--text-primary)]">{formatNextActionDate(nextAction.suggestedDateTime)}</div>
-                  <div className="mt-0.5 flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Tentativa {nextAction.attemptNumber}/{nextAction.maxAttempts}</div>
-                </div>
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
-                  <div className="font-semibold text-[var(--text-primary)]">Prioridade {nextAction.priority}</div>
-                  <div className="mt-0.5">Dia: {nextAction.dayLoad ?? 0}/{nextAction.dailyCapacity} pendentes</div>
-                </div>
-              </div>
-
-              <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{nextAction.giveUpRecommendation}</p>
-
-              {nextAction.type === 'schedule' && nextAction.suggestedDateTime ? (
-                <Button type="button" variant="primary" size="sm" className="mt-3" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
+            <NextActionCard
+              nextAction={nextAction}
+              action={nextAction.type === 'schedule' && nextAction.suggestedDateTime ? (
+                <Button type="button" variant="primary" size="sm" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
                   <CalendarPlus className="h-4 w-4" />
                   Agendar sugestão
                 </Button>
               ) : null}
-            </div>
+            />
           ) : null}
 
-          <details className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4" open={selectedSalesTechniques.length > 0}>
+          <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4" open={selectedSalesTechniques.length > 0}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">Técnicas avançadas</h3>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">Opcional para a próxima geração.</p>
               </div>
-              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                {selectedSalesTechniques.length || 'Abrir'}
-              </span>
+              <Pill>{selectedSalesTechniques.length || 'Abrir'}</Pill>
             </summary>
-            <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1" role="group" aria-label="Técnicas de venda para o follow-up">
-              {followUpSalesTechniqueOptions.map((technique) => {
-                const selected = selectedSalesTechniques.includes(technique.id);
-
-                return (
-                  <button
-                    key={technique.id}
-                    type="button"
-                    onClick={() => onToggleSalesTechnique(technique.id)}
-                    aria-pressed={selected}
-                    disabled={generating || submitting}
-                    title={technique.description}
-                    className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                      selected
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--accent-gold-hover)]'
-                    }`}
-                  >
-                    {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-subtle)]" />}
-                    <span>{technique.name}</span>
-                  </button>
-                );
-              })}
+            <div className="mt-3 max-h-44 overflow-y-auto pr-1">
+              <SalesTechniqueSelector
+                techniques={followUpSalesTechniqueOptions}
+                selectedIds={selectedSalesTechniques}
+                onToggle={onToggleSalesTechnique}
+                disabled={generating || submitting}
+              />
             </div>
           </details>
         </aside>

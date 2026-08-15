@@ -8,6 +8,8 @@
 
 BEGIN;
 
+DROP FUNCTION IF EXISTS public.comm_whatsapp_get_chat_lead_panel(uuid);
+
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_get_chat_lead_panel(p_chat_id uuid)
 RETURNS TABLE(
   id uuid,

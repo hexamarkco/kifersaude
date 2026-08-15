@@ -307,7 +307,7 @@ GRANT EXECUTE ON FUNCTION public.comm_whatsapp_persist_message_internal(
 DO $$
 DECLARE
   v_protected_ids uuid[] := '{}';
-  v_table_record record;
+  v_table_record text[];
   v_ids uuid[];
   v_tables text[][] := ARRAY[
     ARRAY['public.comm_whatsapp_opt_outs', 'source_message_id'],

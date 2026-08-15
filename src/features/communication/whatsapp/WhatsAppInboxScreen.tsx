@@ -69,6 +69,7 @@ import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDraft';
 import { useVoiceRecording } from './hooks/useVoiceRecording';
 import { useChatSearch } from './hooks/useChatSearch';
+import { useClickOutside } from './hooks/useClickOutside';
 import {
   mergeCommWhatsAppMessage,
   mergeCommWhatsAppMessages,
@@ -3041,6 +3042,7 @@ export default function WhatsAppInboxScreen() {
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
+  const [leadResponsavelFilters, setLeadResponsavelFilters] = useState<string[]>([]);
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [attachmentInputAccept, setAttachmentInputAccept] = useState(DEFAULT_ATTACHMENT_ACCEPT);
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
@@ -3258,6 +3260,7 @@ export default function WhatsAppInboxScreen() {
   } = useChatSearch({
     activityFilter: chatActivityFilter,
     leadStatusFilters,
+    leadResponsavelFilters,
     pendingChatInboxStateRef,
     sortChats: sortChatsByInboxOrder,
   });
@@ -3463,8 +3466,16 @@ export default function WhatsAppInboxScreen() {
       }
     }
 
+    if (leadResponsavelFilters.length > 0) {
+      const chatResponsavelId = String(chat.lead_responsavel_id ?? '').trim();
+      const acceptedResponsavelIds = new Set(leadResponsavelFilters.map((id) => id.trim()).filter(Boolean));
+      if (!chatResponsavelId || !acceptedResponsavelIds.has(chatResponsavelId)) {
+        return false;
+      }
+    }
+
     return true;
-  }, [chatActivityFilter, leadStatusFilters]);
+  }, [chatActivityFilter, leadStatusFilters, leadResponsavelFilters]);
 
   const scopedChats = useMemo(() => {
     const matchesCurrentSection = (chat: CommWhatsAppChat) => (archivedSectionOpen ? chat.is_archived : !chat.is_archived);
@@ -3627,8 +3638,8 @@ export default function WhatsAppInboxScreen() {
     ? 'Nenhuma mensagem rapida cadastrada ainda.'
     : 'Nenhum atalho encontrado para esse termo.';
   const hasActiveChatFilters =
-    chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
-  const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length;
+    chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
+  const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length + leadResponsavelFilters.length;
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
@@ -4905,96 +4916,53 @@ export default function WhatsAppInboxScreen() {
     attachmentPreviewUrlsRef.current.clear();
   }, []);
 
-  useEffect(() => {
-    if (!attachmentMenuOpen) {
-      return;
-    }
+  useClickOutside(
+    attachmentMenuOpen,
+    () => [attachmentMenuRef.current],
+    () => setAttachmentMenuOpen(false),
+  );
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (attachmentMenuRef.current && target && !attachmentMenuRef.current.contains(target)) {
-        setAttachmentMenuOpen(false);
-      }
-    };
+  useClickOutside(
+    composerAiMenuOpen,
+    () => [composerAiMenuRef.current],
+    () => setComposerAiMenuOpen(false),
+  );
 
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [attachmentMenuOpen]);
+  useClickOutside(
+    Boolean(openReactionPickerMessageId),
+    () => [
+      reactionPickerRef.current,
+      openReactionPickerMessageId ? reactionTriggerRefs.current[openReactionPickerMessageId] : null,
+    ],
+    () => setOpenReactionPickerMessageId(null),
+    [openReactionPickerMessageId],
+  );
 
-  useEffect(() => {
-    if (!composerAiMenuOpen) {
-      return;
-    }
+  useClickOutside(
+    Boolean(openMessageActionMenuMessageId),
+    () => [
+      messageActionMenuRef.current,
+      openMessageActionMenuMessageId ? messageActionTriggerRefs.current[openMessageActionMenuMessageId] : null,
+    ],
+    () => {
+      setMessageActionMenuPointerAnchor(null);
+      setOpenMessageActionMenuMessageId(null);
+    },
+    [openMessageActionMenuMessageId],
+  );
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (composerAiMenuRef.current && target && !composerAiMenuRef.current.contains(target)) {
-        setComposerAiMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [composerAiMenuOpen]);
-
-  useEffect(() => {
-    if (!openReactionPickerMessageId) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const clickedInsidePicker = reactionPickerRef.current && target && reactionPickerRef.current.contains(target);
-      const clickedCurrentTrigger = reactionTriggerRefs.current[openReactionPickerMessageId]?.contains(target) ?? false;
-
-      if (!clickedInsidePicker && !clickedCurrentTrigger) {
-        setOpenReactionPickerMessageId(null);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [openReactionPickerMessageId]);
-
-  useEffect(() => {
-    if (!openMessageActionMenuMessageId) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const clickedInsideMenu = messageActionMenuRef.current && target && messageActionMenuRef.current.contains(target);
-      const clickedCurrentTrigger = messageActionTriggerRefs.current[openMessageActionMenuMessageId]?.contains(target) ?? false;
-
-      if (!clickedInsideMenu && !clickedCurrentTrigger) {
-        setMessageActionMenuPointerAnchor(null);
-        setOpenMessageActionMenuMessageId(null);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [openMessageActionMenuMessageId]);
-
-  useEffect(() => {
-    if (!openChatMenuChatId) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const clickedInsideMenu = chatMenuRef.current && target && chatMenuRef.current.contains(target);
-      const clickedCurrentTrigger = chatMenuTriggerRefs.current[openChatMenuChatId]?.contains(target) ?? false;
-
-      if (!clickedInsideMenu && !clickedCurrentTrigger) {
-        setChatMenuPointerAnchor(null);
-        setOpenChatMenuChatId(null);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [openChatMenuChatId]);
+  useClickOutside(
+    Boolean(openChatMenuChatId),
+    () => [
+      chatMenuRef.current,
+      openChatMenuChatId ? chatMenuTriggerRefs.current[openChatMenuChatId] : null,
+    ],
+    () => {
+      setChatMenuPointerAnchor(null);
+      setOpenChatMenuChatId(null);
+    },
+    [openChatMenuChatId],
+  );
 
   useEffect(() => {
     if (openReactionPickerMessageId && !openReactionPickerMessage) {
@@ -5204,24 +5172,11 @@ export default function WhatsAppInboxScreen() {
     };
   }, [chatMenuPointerAnchor, openChatMenuChatId]);
 
-  useEffect(() => {
-    if (!advancedFiltersOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const clickedInsidePopover = advancedFiltersRef.current && target && advancedFiltersRef.current.contains(target);
-      const clickedTrigger = advancedFiltersTriggerRef.current && target && advancedFiltersTriggerRef.current.contains(target);
-
-      if (!clickedInsidePopover && !clickedTrigger) {
-        setAdvancedFiltersOpen(false);
-      }
-    };
-
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [advancedFiltersOpen]);
+  useClickOutside(
+    advancedFiltersOpen,
+    () => [advancedFiltersRef.current, advancedFiltersTriggerRef.current],
+    () => setAdvancedFiltersOpen(false),
+  );
 
   useLayoutEffect(() => {
     if (!advancedFiltersOpen || !advancedFiltersTriggerRef.current || typeof window === 'undefined') {
@@ -5533,6 +5488,7 @@ export default function WhatsAppInboxScreen() {
     const loadKey = JSON.stringify({
       activity: chatActivityFilter,
       statuses: leadStatusFilters.map((status) => status.trim()).filter(Boolean).sort(),
+      responsaveis: leadResponsavelFilters.map((id) => id.trim()).filter(Boolean).sort(),
       sections: [...requestedSections].sort(),
     });
 
@@ -5544,7 +5500,7 @@ export default function WhatsAppInboxScreen() {
     const requestId = ++chatsRequestIdRef.current;
     const loadPromise = (async () => {
       try {
-        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
+        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
         const fetchChatSection = async (archivedFilter: 'active' | 'archived') => {
           const all: CommWhatsAppChat[] = [];
           let offset = 0;
@@ -5558,6 +5514,7 @@ export default function WhatsAppInboxScreen() {
               page = await commWhatsAppService.listChats({
                 activityFilter: chatActivityFilter,
                 leadStatusFilters,
+                leadResponsavelFilters,
                 archivedFilter,
                 limit: CHAT_PAGE_SIZE,
                 offset,
@@ -5733,7 +5690,7 @@ export default function WhatsAppInboxScreen() {
 
     chatsLoadPromiseRef.current = loadPromise;
     return loadPromise;
-  }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
+  }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, leadResponsavelFilters]);
 
   loadChatsRef.current = loadChats;
 
@@ -5760,6 +5717,7 @@ export default function WhatsAppInboxScreen() {
       const page = await commWhatsAppService.listChats({
         activityFilter: chatActivityFilter,
         leadStatusFilters,
+        leadResponsavelFilters,
         archivedFilter: 'archived',
         limit: CHAT_PAGE_SIZE,
         offset: nextPageIndex * CHAT_PAGE_SIZE,
@@ -5804,6 +5762,7 @@ export default function WhatsAppInboxScreen() {
     buildChatsSignature,
     chatActivityFilter,
     leadStatusFilters,
+    leadResponsavelFilters,
     archivedChatsHasMore,
     archivedChatsLoading,
     archivedChatsLoadingMore,
@@ -11348,6 +11307,17 @@ export default function WhatsAppInboxScreen() {
               }))}
             />
 
+            <InboxMultiFilterGroup
+              label="Agente responsável"
+              values={leadResponsavelFilters}
+              onChange={setLeadResponsavelFilters}
+              compact
+              options={responsavelOptions.map((option) => ({
+                value: option.id,
+                label: option.label,
+              }))}
+            />
+
             {hasActiveChatFilters ? (
               <Button
                 type="button"
@@ -11356,6 +11326,7 @@ export default function WhatsAppInboxScreen() {
                 onClick={() => {
                   setChatActivityFilter('all');
                   setLeadStatusFilters([]);
+                  setLeadResponsavelFilters([]);
                   setAdvancedFiltersOpen(false);
                 }}
                 className="h-auto px-0 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--brand-primary)] hover:bg-transparent hover:text-[var(--brand-primary-hover)]"

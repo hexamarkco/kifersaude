@@ -15,6 +15,7 @@ type ChatActivityFilter = 'all' | 'unread';
 type UseChatSearchParams = {
   activityFilter: ChatActivityFilter;
   leadStatusFilters: string[];
+  leadResponsavelFilters: string[];
   pendingChatInboxStateRef: { current: Map<string, PendingChatInboxStatePatch> };
   sortChats: (chats: CommWhatsAppChat[]) => CommWhatsAppChat[];
 };
@@ -22,6 +23,7 @@ type UseChatSearchParams = {
 export const useChatSearch = ({
   activityFilter,
   leadStatusFilters,
+  leadResponsavelFilters,
   pendingChatInboxStateRef,
   sortChats,
 }: UseChatSearchParams) => {
@@ -69,6 +71,7 @@ export const useChatSearch = ({
       search,
       activityFilter,
       leadStatusFilters,
+      leadResponsavelFilters,
       archivedFilter: 'all',
       limit: 500,
     }).then((results) => {
@@ -90,7 +93,7 @@ export const useChatSearch = ({
         setSearchingChats(false);
       }
     });
-  }, [activityFilter, leadStatusFilters, pendingChatInboxStateRef, search, setSearch, sortChats]);
+  }, [activityFilter, leadStatusFilters, leadResponsavelFilters, pendingChatInboxStateRef, search, setSearch, sortChats]);
 
   useEffect(() => {
     if (!search) {

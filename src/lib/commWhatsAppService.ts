@@ -92,6 +92,7 @@ type ListChatsParams = {
   savedFilter?: 'all' | 'saved' | 'unsaved';
   archivedFilter?: 'all' | 'active' | 'archived';
   leadStatusFilters?: string[];
+  leadResponsavelFilters?: string[];
   onlyUnread?: boolean;
   limit?: number;
   offset?: number;
@@ -721,6 +722,7 @@ export const commWhatsAppService = {
     const savedFilter = params.savedFilter ?? 'all';
     const archivedFilter = params.archivedFilter ?? 'all';
     const leadStatusFilters = (params.leadStatusFilters ?? []).map((value) => value.trim()).filter(Boolean);
+    const leadResponsavelFilters = (params.leadResponsavelFilters ?? []).map((value) => value.trim()).filter(Boolean);
 
     const search = sanitizeSearch(params.search ?? '');
 
@@ -731,6 +733,7 @@ export const commWhatsAppService = {
       p_saved_filter: savedFilter,
       p_archived_filter: archivedFilter,
       p_lead_status_filters: leadStatusFilters.length > 0 ? leadStatusFilters : null,
+      p_lead_responsavel_filters: leadResponsavelFilters.length > 0 ? leadResponsavelFilters : null,
       p_limit: limit,
       p_offset: offset,
     });

@@ -554,6 +554,8 @@ export type CommWhatsAppChat = {
   lead_id?: string | null;
   lead_name?: string | null;
   lead_status?: string | null;
+  lead_responsavel_id?: string | null;
+  lead_responsavel?: string | null;
   merged_into_chat_id: string | null;
   lead_link_source: 'legacy' | 'manual' | 'crm_start' | 'auto_phone' | 'repair' | null;
   lead_linked_at: string | null;

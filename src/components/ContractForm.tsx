@@ -40,6 +40,7 @@ import {
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
 import FilterSingleSelect from "./FilterSingleSelect";
+import { LeadFavoriteBadge } from "./LeadFavoriteStar";
 import {
   Alert,
   Badge,
@@ -1191,7 +1192,8 @@ export default function ContractForm({
                 : "Novo Contrato"}
           </DialogTitle>
           {leadToConvert && (
-            <DialogDescription>
+            <DialogDescription className="flex items-center gap-1.5">
+              <LeadFavoriteBadge favorito={leadToConvert.favorito} />
               {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
             </DialogDescription>
           )}

@@ -3,6 +3,7 @@ import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react
 
 import { Button, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
+import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
@@ -51,6 +52,8 @@ type WhatsAppFollowUpModalProps = {
   generating: boolean;
   submitting: boolean;
   chatId?: string | null;
+  leadName?: string | null;
+  leadFavorito?: boolean | null;
   value: string;
   customInstructions: string;
   tone: CommWhatsAppFollowUpTone;
@@ -77,6 +80,8 @@ export default function WhatsAppFollowUpModal({
   generating,
   submitting,
   chatId,
+  leadName,
+  leadFavorito,
   value,
   customInstructions,
   tone,
@@ -287,6 +292,12 @@ export default function WhatsAppFollowUpModal({
         </div>
       )}
     >
+      {leadName ? (
+        <div className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
+          <LeadFavoriteBadge favorito={leadFavorito} />
+          {leadName}
+        </div>
+      ) : null}
       <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.72fr)]">
         <section className="min-w-0 space-y-4">
           <SectionCard>

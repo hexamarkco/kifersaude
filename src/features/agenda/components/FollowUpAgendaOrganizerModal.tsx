@@ -20,6 +20,8 @@ import {
   Surface,
 } from '../../../design-system';
 import { useConfirmationModal } from '../../../hooks/useConfirmationModal';
+import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
+import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { formatDateTimeFullBR } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import {
@@ -66,6 +68,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [applying, setApplying] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const favoritedLeadIds = useFavoritedLeadIds();
 
   const groupedChanges = useMemo(() => preview ? groupChangesByDate(preview.changes) : {}, [preview]);
   const changedItems = useMemo(() => preview?.changes.filter((change) => change.changed) ?? [], [preview]);
@@ -243,7 +246,11 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                           <Surface key={change.reminderId} padding="sm" className="text-sm">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <strong className="text-[var(--text-primary)]">{index + 1}. {change.leadName}</strong>
+                                <strong className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
+                                  {index + 1}.
+                                  <LeadFavoriteBadge favorito={change.leadId ? favoritedLeadIds.has(change.leadId) : false} />
+                                  {change.leadName}
+                                </strong>
                                 <p className="truncate text-[var(--text-muted)]">{change.title}</p>
                               </div>
                               <Badge tone={change.changed ? 'accent' : 'neutral'} className="max-w-full whitespace-normal text-right">

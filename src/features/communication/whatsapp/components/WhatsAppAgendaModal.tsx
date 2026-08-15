@@ -28,6 +28,7 @@ import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import FilterSingleSelect from '../../../../components/FilterSingleSelect';
+import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { Button, Input, Textarea } from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 import {
@@ -1156,6 +1157,7 @@ export default function WhatsAppAgendaModal({
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {leadInfo?.nome_completo ? (
                       <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('neutral')}>
+                        <LeadFavoriteBadge favorito={leadInfo.favorito} />
                         {leadInfo.nome_completo}
                       </span>
                     ) : null}

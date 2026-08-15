@@ -71,6 +71,7 @@ import {
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
+import { LeadFavoriteBadge } from "../../components/LeadFavoriteStar";
 import { toast } from "../../lib/toast";
 import {
   getReminderWhatsappLink,
@@ -1293,6 +1294,7 @@ export default function AgendaScreen() {
             leadId={reminder.lead_id ?? contract?.lead_id}
             contractId={reminder.contract_id}
             leadName={leadInfo?.nome_completo}
+            leadFavorito={leadInfo?.favorito}
             isLoading={loadingLeadId === leadId}
           />
         )
@@ -1882,17 +1884,19 @@ type AgendaReminderContextLinkProps = {
   leadId?: string;
   contractId?: string;
   leadName?: string;
+  leadFavorito?: boolean;
   isLoading?: boolean;
 };
 
 type ContextInfo =
-  | { type: "lead"; label: string }
+  | { type: "lead"; label: string; favorito?: boolean }
   | { type: "contract"; label: string };
 
 function AgendaReminderContextLink({
   leadId,
   contractId,
   leadName,
+  leadFavorito,
   isLoading,
 }: AgendaReminderContextLinkProps) {
   const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
@@ -1904,15 +1908,15 @@ function AgendaReminderContextLink({
       if (leadId) {
         if (leadName) {
           if (active) {
-            setContextInfo({ type: "lead", label: leadName });
+            setContextInfo({ type: "lead", label: leadName, favorito: leadFavorito });
           }
           return;
         }
 
-        const { data } = await supabase.from("leads").select("nome_completo").eq("id", leadId).maybeSingle();
+        const { data } = await supabase.from("leads").select("nome_completo, favorito").eq("id", leadId).maybeSingle();
 
         if (active && data?.nome_completo) {
-          setContextInfo({ type: "lead", label: data.nome_completo });
+          setContextInfo({ type: "lead", label: data.nome_completo, favorito: Boolean(data.favorito) });
         }
         return;
       }
@@ -1940,7 +1944,7 @@ function AgendaReminderContextLink({
     return () => {
       active = false;
     };
-  }, [contractId, leadId, leadName]);
+  }, [contractId, leadId, leadName, leadFavorito]);
 
   if (!contextInfo) {
     return null;
@@ -1949,6 +1953,7 @@ function AgendaReminderContextLink({
   return (
     <Badge tone="neutral" className="gap-1 font-medium">
       {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
+      {contextInfo.type === "lead" ? <LeadFavoriteBadge favorito={contextInfo.favorito} /> : null}
       <span>{contextInfo.label}</span>
     </Badge>
   );

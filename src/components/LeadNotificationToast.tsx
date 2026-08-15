@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import { Lead } from '../lib/supabase';
 import { Toast } from '../design-system';
+import { LeadFavoriteBadge } from './LeadFavoriteStar';
 
 type LeadNotificationToastProps = {
   lead: Lead;
@@ -70,7 +71,10 @@ export default function LeadNotificationToast({
       >
         <div className="mt-3 space-y-3">
           <div>
-            <p className="text-base font-bold text-[var(--text-primary)]">{lead.nome_completo}</p>
+            <p className="flex items-center gap-1.5 text-base font-bold text-[var(--text-primary)]">
+              <LeadFavoriteBadge favorito={lead.favorito} />
+              {lead.nome_completo}
+            </p>
             <p className="text-sm text-[var(--text-secondary)]">
               Status: <span className="font-medium text-[var(--info-text)]">{statusLabel}</span>
             </p>

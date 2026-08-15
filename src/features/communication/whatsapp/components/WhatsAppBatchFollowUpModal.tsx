@@ -3,6 +3,7 @@ import { AlertCircle, CalendarPlus, Check, CheckCircle2, Loader2, MessageSquare,
 
 import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
+import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
@@ -46,6 +47,7 @@ type BatchItemState = {
   chatId: string;
   leadId: string;
   leadName: string | null;
+  leadFavorito: boolean;
   leadPhone: string | null;
   reminderId: string;
   reminderTitle: string;
@@ -161,6 +163,7 @@ export default function WhatsAppBatchFollowUpModal({
           chatId: chat.chat_id,
           leadId: chat.lead_id,
           leadName: chat.lead_name,
+          leadFavorito: Boolean(chat.lead_favorito),
           leadPhone: chat.lead_phone,
           reminderId: chat.reminder_id,
           reminderTitle: chat.reminder_title,
@@ -618,7 +621,10 @@ export default function WhatsAppBatchFollowUpModal({
                 return (
                   <div key={item.reminderId} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs" style={{ background: 'var(--bg-elevated)' }}>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-[var(--text-primary)]">{item.leadName || 'Sem nome'}</p>
+                      <p className="flex items-center gap-1.5 truncate font-semibold text-[var(--text-primary)]">
+                        <LeadFavoriteBadge favorito={item.leadFavorito} />
+                        {item.leadName || 'Sem nome'}
+                      </p>
                       {willReschedule ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
                           <CalendarPlus className="h-3 w-3 shrink-0" />
@@ -839,8 +845,9 @@ export default function WhatsAppBatchFollowUpModal({
                           <span className="block h-2 w-2 rounded-full" style={{ background: dotColor }} />
                         )}
                       </span>
-                      <span className="min-w-0 flex-1 truncate font-medium text-[var(--text-primary)]">
-                        {leadName}
+                      <span className="flex min-w-0 flex-1 items-center gap-1 truncate font-medium text-[var(--text-primary)]">
+                        <LeadFavoriteBadge favorito={item.leadFavorito} />
+                        <span className="min-w-0 truncate">{leadName}</span>
                       </span>
                       {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
                         <span className="shrink-0 text-[10px] font-bold text-[var(--text-muted)]">
@@ -866,7 +873,8 @@ export default function WhatsAppBatchFollowUpModal({
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="truncate text-sm font-bold text-[var(--text-primary)]">
+                          <h3 className="flex items-center gap-1.5 truncate text-sm font-bold text-[var(--text-primary)]">
+                            <LeadFavoriteBadge favorito={activeItem.leadFavorito} />
                             {activeItem.leadName || 'Sem nome'}
                           </h3>
                           {activeItem.status === 'ready' ? (

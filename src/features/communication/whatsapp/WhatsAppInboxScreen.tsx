@@ -8,6 +8,8 @@ import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
 import { Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
+import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
+import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
 import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
@@ -2470,6 +2472,7 @@ function InboxChatListItem({
   selected,
   connectedUserName,
   draftPreview,
+  favorito,
   onSelect,
   menuOpen,
   menuBusy,
@@ -2480,6 +2483,7 @@ function InboxChatListItem({
   chat: CommWhatsAppChat;
   selected: boolean;
   connectedUserName: string | null;
+  favorito?: boolean;
   draftPreview: string;
   onSelect: (chatId: string) => void;
   menuOpen: boolean;
@@ -2509,7 +2513,8 @@ function InboxChatListItem({
         <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <LeadFavoriteBadge favorito={favorito} />
                 <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                   {getSafeChatDisplayName(chat, connectedUserName)}
                 </p>
@@ -2577,11 +2582,13 @@ function InboxMessageSearchListItem({
   result,
   selected,
   connectedUserName,
+  favorito,
   onSelect,
 }: {
   result: CommWhatsAppMessageSearchResult;
   selected: boolean;
   connectedUserName?: string | null;
+  favorito?: boolean;
   onSelect: (chatId: string) => void;
 }) {
   const messagePreviewText = getMessageSearchPreviewText(result.message);
@@ -2597,7 +2604,8 @@ function InboxMessageSearchListItem({
         <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
+              <p className="whatsapp-inbox-heading flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                <LeadFavoriteBadge favorito={favorito} />
                 {getSafeChatDisplayName(result.chat, connectedUserName)}
               </p>
               {messagePreviewText ? (
@@ -3026,6 +3034,7 @@ export default function WhatsAppInboxScreen() {
   const agendaPermission = getRoleModulePermission(role, 'agenda');
   const canViewAgenda = agendaPermission.can_view;
   const canEditAgenda = agendaPermission.can_edit;
+  const favoritedLeadIds = useFavoritedLeadIds();
   const [loading, setLoading] = useState(true);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
@@ -9403,6 +9412,7 @@ export default function WhatsAppInboxScreen() {
                     selected={chat.id === selectedChatId}
                     connectedUserName={channelState?.connected_user_name ?? null}
                     draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
+                    favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false}
                     onSelect={(chatId) => {
                       setChatMenuPointerAnchor(null);
                       setOpenChatMenuChatId(null);
@@ -9439,6 +9449,7 @@ export default function WhatsAppInboxScreen() {
                     result={result}
                     selected={result.chat.id === selectedChatId}
                     connectedUserName={channelState?.connected_user_name ?? null}
+                    favorito={result.chat.lead_id ? favoritedLeadIds.has(result.chat.lead_id) : false}
                     onSelect={() => handleSelectMessageSearchResult(result)}
                   />
                 ))}
@@ -9471,6 +9482,7 @@ export default function WhatsAppInboxScreen() {
                     selected={chat.id === selectedChatId}
                     connectedUserName={channelState?.connected_user_name ?? null}
                     draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
+                    favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false}
                     onSelect={(chatId) => {
                       setChatMenuPointerAnchor(null);
                       setOpenChatMenuChatId(null);
@@ -9521,7 +9533,10 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--text-primary)]">{selectedChatDisplayName}</p>
+                    <p className="whatsapp-inbox-heading flex items-center gap-1.5 text-lg font-semibold text-[var(--text-primary)]">
+                      <LeadFavoriteBadge favorito={leadPanel?.favorito} />
+                      {selectedChatDisplayName}
+                    </p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                       <StatusDropdown
                         currentStatus={leadPanel.status_nome}
@@ -10865,7 +10880,10 @@ export default function WhatsAppInboxScreen() {
                         )}
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
+                          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                            <LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />
+                            {getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}
+                          </p>
                           <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                         </div>
                         {isSelected ? (
@@ -10957,6 +10975,8 @@ export default function WhatsAppInboxScreen() {
           generating={generatingFollowUp}
           submitting={sending}
           chatId={selectedChat?.id ?? null}
+          leadName={selectedChatDisplayName}
+          leadFavorito={leadPanel?.favorito}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
           tone={followUpTone}

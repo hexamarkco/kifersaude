@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
 import { ActionSurface, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
+import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
 import WhatsAppDialog from './WhatsAppDialog';
@@ -169,7 +170,10 @@ export default function WhatsAppStartChatModal({
                       variant="default" padding="sm" className="flex w-full items-center justify-between gap-3 text-left"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{lead.nome_completo || 'Lead sem nome'}</p>
+                        <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                          <LeadFavoriteBadge favorito={lead.favorito} />
+                          {lead.nome_completo || 'Lead sem nome'}
+                        </p>
                         <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
                         <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                           {lead.status_nome || 'Sem status'}

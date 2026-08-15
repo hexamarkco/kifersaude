@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
+import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import { Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, Input, Tabs, type TabItem } from '../../../../design-system';
 import DateTimePicker from '../../../../components/ui/DateTimePicker';
@@ -602,7 +603,8 @@ export default function WhatsAppLeadDrawer({
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
                           Sugestão para esta conversa
                         </p>
-                        <p className="mt-2 truncate text-sm font-semibold text-[var(--text-primary)]">
+                        <p className="mt-2 flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                          <LeadFavoriteBadge favorito={suggestedLead.favorito} />
                           {suggestedLead.nome_completo || 'Lead sem nome'}
                         </p>
                         <p className="truncate text-xs text-[var(--text-muted)]">{suggestedLead.telefone}</p>
@@ -643,7 +645,10 @@ export default function WhatsAppLeadDrawer({
                         className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{lead.nome_completo || 'Lead sem nome'}</p>
+                          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                            <LeadFavoriteBadge favorito={lead.favorito} />
+                            {lead.nome_completo || 'Lead sem nome'}
+                          </p>
                           <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
                           <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                             {lead.status_nome || 'Sem status'}

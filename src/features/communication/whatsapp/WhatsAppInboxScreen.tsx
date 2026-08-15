@@ -10975,6 +10975,8 @@ export default function WhatsAppInboxScreen() {
           generating={generatingFollowUp}
           submitting={sending}
           chatId={selectedChat?.id ?? null}
+          leadName={selectedChatDisplayName}
+          leadFavorito={leadPanel?.favorito}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
           tone={followUpTone}

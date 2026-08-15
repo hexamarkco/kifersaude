@@ -124,6 +124,7 @@ DO $$
 DECLARE
   v_winner public.comm_whatsapp_chats%ROWTYPE;
   v_loser public.comm_whatsapp_chats%ROWTYPE;
+  v_group record;
   v_latest_row record;
   v_preview text;
   v_unread integer;

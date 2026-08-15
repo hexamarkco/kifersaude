@@ -261,7 +261,14 @@ type FollowUpNextAction = {
 
 type FollowUpNextActionType = FollowUpNextAction['type'];
 
+type EmotionalContext = {
+  detected: boolean;
+  guidance: string | null;
+};
+
 type AiContextRecommendation = {
+  situationSummary: string | null;
+  emotionalContext: EmotionalContext | null;
   situationPresetIds: string[];
   tone: FollowUpTone;
   salesTechniques: string[];
@@ -302,47 +309,36 @@ const normalizeSituationPresetIds = (value: unknown) => {
   return selected;
 };
 
-const parseAiContextRecommendation = (value: string): AiContextRecommendation | null => {
-  const candidate = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
-
-  try {
-    const parsed = JSON.parse(candidate) as unknown;
-    if (!isRecord(parsed)) {
-      return null;
-    }
-
-    const toneCandidate = toTrimmedString(parsed.tone);
-    const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
-    const situationPresetIds = normalizeSituationPresetIds(parsed.situationPresetIds);
-    const salesTechniques = normalizeSalesTechniques(parsed.salesTechniques).map((technique) => technique.id);
-    const nextAction = isRecord(parsed.nextAction) ? parsed.nextAction : null;
-
-    return {
-      situationPresetIds,
-      tone,
-      salesTechniques,
-      rationale: toTrimmedString(parsed.rationale) || null,
-      nextActionType: normalizeNextActionType(nextAction?.type),
-      nextActionReason: toTrimmedString(nextAction?.reason) || null,
-      nextActionPriority: normalizeNextActionPriority(nextAction?.priority),
-    };
-  } catch {
+const parseEmotionalContext = (value: unknown): EmotionalContext | null => {
+  if (!isRecord(value)) {
     return null;
   }
+
+  return {
+    detected: value.detected === true,
+    guidance: toTrimmedString(value.guidance) || null,
+  };
 };
 
-const buildSalesTechniquesPromptSection = (salesTechniques: FollowUpSalesTechniqueOption[]) => {
-  if (salesTechniques.length === 0) {
-    return '';
-  }
+const parseAiContextFromRecord = (parsed: Record<string, unknown>): AiContextRecommendation => {
+  const toneCandidate = toTrimmedString(parsed.tone);
+  const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
+  const situationPresetIds = normalizeSituationPresetIds(parsed.situationPresetIds);
+  const salesTechniques = normalizeSalesTechniques(parsed.salesTechniques).map((technique) => technique.id);
+  const nextAction = isRecord(parsed.nextAction) ? parsed.nextAction : null;
 
-  return [
-    'Técnicas comerciais a aplicar:',
-    'Combine as técnicas selecionadas de forma natural, usando apenas o que fizer sentido para o histórico. Não soe robótico, agressivo ou artificial.',
-    ...salesTechniques.map((technique) => `- ${technique.name}: ${technique.description}`),
-  ].join('\n');
+  return {
+    situationSummary: toTrimmedString(parsed.situationSummary) || null,
+    emotionalContext: parseEmotionalContext(parsed.emotionalContext),
+    situationPresetIds,
+    tone,
+    salesTechniques,
+    rationale: toTrimmedString(parsed.rationale) || null,
+    nextActionType: normalizeNextActionType(nextAction?.type),
+    nextActionReason: toTrimmedString(nextAction?.reason) || null,
+    nextActionPriority: normalizeNextActionPriority(nextAction?.priority),
+  };
 };
-
 
 const clampVariantCount = (value: unknown) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -352,36 +348,45 @@ const clampVariantCount = (value: unknown) => {
   return Math.max(1, Math.min(MAX_FOLLOW_UP_VARIANTS, Math.round(value)));
 };
 
-const parseFollowUpVariationsResult = (value: string) => {
+type FollowUpVariation = { label: string; text: string };
+
+type FollowUpGenerationResult = {
+  aiContext: AiContextRecommendation | null;
+  text: string | null;
+  variations: FollowUpVariation[];
+};
+
+// Parser unico: a mesma chamada de IA que interpreta a conversa (resumo,
+// contexto emocional, cenario/tom/tecnica, proxima acao) tambem escreve a
+// mensagem final, entao os dois vem juntos no mesmo JSON.
+const parseFollowUpGenerationResult = (value: string, shouldGenerateVariations: boolean): FollowUpGenerationResult => {
   const candidate = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
 
   try {
     const parsed = JSON.parse(candidate) as unknown;
-    const rawVariations = isRecord(parsed) ? parsed.variations : parsed;
-
-    if (!Array.isArray(rawVariations)) {
-      return [];
+    if (!isRecord(parsed)) {
+      return { aiContext: null, text: null, variations: [] };
     }
 
-    return rawVariations
-      .map((variation, index) => {
-        if (!isRecord(variation)) {
-          return null;
-        }
+    const aiContext = parseAiContextFromRecord(parsed);
 
-        const text = toTrimmedString(variation.text);
-        if (!text) {
-          return null;
-        }
+    if (shouldGenerateVariations) {
+      const rawVariations = Array.isArray(parsed.variations) ? parsed.variations : [];
+      const variations = rawVariations
+        .map((variation, index) => {
+          if (!isRecord(variation)) return null;
+          const text = toTrimmedString(variation.text);
+          if (!text) return null;
+          return { label: toTrimmedString(variation.label) || `Variacao ${index + 1}`, text };
+        })
+        .filter((variation): variation is FollowUpVariation => Boolean(variation));
 
-        return {
-          label: toTrimmedString(variation.label) || `Variacao ${index + 1}`,
-          text,
-        };
-      })
-      .filter((variation): variation is { label: string; text: string } => Boolean(variation));
+      return { aiContext, text: null, variations };
+    }
+
+    return { aiContext, text: toTrimmedString(parsed.text) || null, variations: [] };
   } catch {
-    return [];
+    return { aiContext: null, text: null, variations: [] };
   }
 };
 
@@ -428,36 +433,6 @@ const isManualContextFlagEnabled = (value: unknown, key: string) => {
   }
 
   return value[key] === true;
-};
-
-const buildSelectedContextPromptSection = (params: {
-  situationPresetIds: string[];
-  tone: FollowUpTone;
-  salesTechniques: FollowUpSalesTechniqueOption[];
-  customInstructions: string;
-  manualContext: {
-    tone: boolean;
-    situationPresetIds: boolean;
-    salesTechniques: boolean;
-  };
-}) => {
-  const scenarioLabels = params.situationPresetIds
-    .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.label)
-    .filter((label): label is NonNullable<typeof label> => Boolean(label));
-  const techniqueLabels = params.salesTechniques.map((technique) => technique.name);
-
-  return [
-    'Contexto selecionado para esta geração:',
-    `- Cenário: ${scenarioLabels.length > 0 ? scenarioLabels.join(', ') : 'Nenhum específico'}`,
-    `- Origem do cenário: ${params.manualContext.situationPresetIds ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
-    `- Tom: ${params.tone}`,
-    `- Origem do tom: ${params.manualContext.tone ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
-    `- Técnicas avançadas: ${techniqueLabels.length > 0 ? techniqueLabels.join(', ') : 'Nenhuma específica'}`,
-    `- Origem das técnicas: ${params.manualContext.salesTechniques ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
-    params.customInstructions ? `- Ajustes extras do usuário: ${params.customInstructions}` : '- Ajustes extras do usuário: Nenhum',
-    '',
-    'Use este contexto selecionado com prioridade alta na mensagem final. Se houver conflito entre seleção automática e escolha manual do usuário, obedeça a escolha manual. Se houver ajustes extras do usuário, eles têm prioridade sobre o restante, desde que não contrariem fatos do histórico.',
-  ].join('\n');
 };
 
 const getBusinessDayOffsetForAttempt = (attemptNumber: number) => {
@@ -558,6 +533,97 @@ const countConsecutiveOutboundAttempts = (messages: MessageRow[]) => {
 
   return attempts;
 };
+
+// ---- Temporal facts (calculados em codigo, nao adivinhados pela IA a
+// partir de timestamps brutos do transcript) ----
+
+type PeriodOfDay = 'manha' | 'tarde' | 'noite';
+
+type TemporalFacts = {
+  lastMessageElapsed: string | null;
+  lastInboundElapsed: string | null;
+  lastOutboundElapsed: string | null;
+  contactedToday: boolean;
+  periodOfDay: PeriodOfDay;
+  consecutiveOutboundAttempts: number;
+};
+
+const formatElapsedPortuguese = (rawMs: number): string => {
+  const ms = Math.max(0, rawMs);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (ms < minute) return 'agora mesmo';
+
+  if (ms < hour) {
+    const minutes = Math.round(ms / minute);
+    return `há ${minutes} minuto${minutes === 1 ? '' : 's'}`;
+  }
+
+  if (ms < day) {
+    const hours = Math.round(ms / hour);
+    return `há ${hours} hora${hours === 1 ? '' : 's'}`;
+  }
+
+  const days = Math.round(ms / day);
+  if (days < 30) {
+    return `há ${days} dia${days === 1 ? '' : 's'}`;
+  }
+
+  const months = Math.round(days / 30);
+  return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
+};
+
+const isSameCalendarDay = (a: Date, b: Date, timeZone: string): boolean => {
+  const partsA = getDateTimeParts(a, timeZone);
+  const partsB = getDateTimeParts(b, timeZone);
+  return partsA.year === partsB.year && partsA.month === partsB.month && partsA.day === partsB.day;
+};
+
+const getPeriodOfDay = (date: Date, timeZone: string): PeriodOfDay => {
+  const hour = Number(getDateTimeParts(date, timeZone).hour);
+  if (hour >= 5 && hour < 12) return 'manha';
+  if (hour >= 12 && hour < 18) return 'tarde';
+  return 'noite';
+};
+
+const buildTemporalFacts = (messages: MessageRow[], now: Date, timeZone: string): TemporalFacts => {
+  const contentMessages = messages.filter((message) => Boolean(buildTranscriptContent(message)));
+  const last = contentMessages[contentMessages.length - 1] ?? null;
+  const lastInbound = [...contentMessages].reverse().find((message) => message.direction === 'inbound') ?? null;
+  const lastOutbound = [...contentMessages].reverse().find((message) => message.direction === 'outbound') ?? null;
+
+  const elapsedFrom = (message: MessageRow | null): string | null => {
+    if (!message) return null;
+    const messageAt = Date.parse(message.message_at);
+    if (Number.isNaN(messageAt)) return null;
+    return formatElapsedPortuguese(now.getTime() - messageAt);
+  };
+
+  const lastDate = last ? new Date(Date.parse(last.message_at)) : null;
+  const contactedToday = Boolean(lastDate && !Number.isNaN(lastDate.getTime()) && isSameCalendarDay(lastDate, now, timeZone));
+
+  return {
+    lastMessageElapsed: elapsedFrom(last),
+    lastInboundElapsed: elapsedFrom(lastInbound),
+    lastOutboundElapsed: elapsedFrom(lastOutbound),
+    contactedToday,
+    periodOfDay: getPeriodOfDay(now, timeZone),
+    consecutiveOutboundAttempts: countConsecutiveOutboundAttempts(messages),
+  };
+};
+
+const formatTemporalFactsForPrompt = (facts: TemporalFacts): string => [
+  'FATOS TEMPORAIS (calculados pelo sistema — use exatamente estes fatos, nao tente recalcular tempo decorrido lendo os timestamps do historico):',
+  `- Ultima mensagem nesta conversa, de qualquer lado: ${facts.lastMessageElapsed ?? 'sem historico util'}.`,
+  `- Ultima mensagem do cliente: ${facts.lastInboundElapsed ?? 'o cliente ainda nao respondeu nesta conversa'}.`,
+  `- Sua ultima mensagem: ${facts.lastOutboundElapsed ?? 'voce ainda nao enviou nada nesta conversa'}.`,
+  `- Ja houve contato (de qualquer lado) hoje, antes de agora: ${facts.contactedToday ? 'sim' : 'nao'}.`,
+  `- Periodo do dia agora: ${facts.periodOfDay}.`,
+  `- Tentativas consecutivas de follow-up sem resposta do cliente desde a ultima mensagem dele: ${facts.consecutiveOutboundAttempts}.`,
+  'REGRA DE SAUDACAO: abra a mensagem com saudacao temporal (bom dia/boa tarde/boa noite/oi) SOMENTE se ainda nao houve contato hoje. Se ja houve contato hoje, nao repita saudacao — continue a conversa diretamente, como uma pessoa real continuaria. Nunca trate "ha alguns dias" ou "ha algumas horas" como se fosse "ontem" ou "agora ha pouco" — use a distancia real informada acima.',
+].join('\n');
 
 const buildFollowUpNextAction = async (params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
@@ -1101,6 +1167,9 @@ Deno.serve(async (req: Request) => {
     );
 
     const now = new Date();
+    const temporalFacts = buildTemporalFacts(messages, now, systemTimeZone);
+    const temporalFactsText = formatTemporalFactsForPrompt(temporalFacts);
+
     const baseContextPrompt = [
       'Contexto do chat:',
       `- Nome do contato: ${leadContext.nome}`,
@@ -1111,90 +1180,11 @@ Deno.serve(async (req: Request) => {
       `- Fuso do sistema: ${systemTimeZone}`,
       `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
       '',
+      temporalFactsText,
+      '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),
     ].join('\n');
-
-    let aiContext: AiContextRecommendation | null = null;
-
-    if (autoSelectContext) {
-      try {
-        const recommendationSystemPrompt = [
-          'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
-          'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"...","nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"}}.',
-          `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
-          `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
-          `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
-          'Decida nextAction lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao como varias tentativas de follow-up.',
-          'Use mark_lost_recommended somente quando houver sinais claros de varias tentativas reais em dias/momentos diferentes sem resposta util do cliente. Se a proposta acabou de ser enviada ou ainda e o primeiro retorno apos proposta, use schedule.',
-          'Use wait quando o cliente ja respondeu, existe combinado pendente, ou ainda nao cabe nova cobranca.',
-          'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close e nextAction schedule.',
-        ].join('\n');
-        console.log('[FollowUpAI][edge] auto-context prompt', {
-          systemPrompt: recommendationSystemPrompt,
-          userPrompt: baseContextPrompt,
-          temperature: 0.2,
-          maxTokens: 260,
-          preferDefaultModel: true,
-        });
-        const recommendationResult = await generateTextWithRouting({
-          supabaseAdmin,
-          task: 'follow_up_generation',
-          systemPrompt: recommendationSystemPrompt,
-          userPrompt: baseContextPrompt,
-          temperature: 0.2,
-          maxTokens: 260,
-          preferDefaultModel: true,
-        });
-
-        console.log('[FollowUpAI][edge] auto-context response', recommendationResult);
-
-        aiContext = parseAiContextRecommendation(recommendationResult.text);
-        console.log('[FollowUpAI][edge] parsed auto-context', aiContext);
-      } catch (error) {
-        console.error('[comm-whatsapp-generate-follow-up] erro ao classificar contexto automatico', error);
-      }
-
-      aiContext ??= {
-        situationPresetIds: [],
-        tone: requestedTone,
-        // Sem classificacao automatica bem-sucedida, nao forcamos um par fixo
-        // de tecnicas comerciais (isso fazia toda geracao neutra cair sempre
-        // no mesmo "rapport + assumptive-close", deixando as mensagens
-        // parecidas entre si). Melhor deixar vazio e confiar nas regras
-        // gerais de tom natural do prompt.
-        salesTechniques: requestedSalesTechniqueIds,
-        rationale: null,
-        nextActionType: null,
-        nextActionReason: null,
-        nextActionPriority: null,
-      };
-    }
-
-    const effectiveSituationPresetIds = manualContext.situationPresetIds
-      ? requestedSituationPresetIds
-      : autoSelectContext && aiContext
-        ? aiContext.situationPresetIds
-        : requestedSituationPresetIds;
-    const effectiveTone = manualContext.tone
-      ? requestedTone
-      : autoSelectContext && aiContext
-        ? aiContext.tone
-        : requestedTone;
-    const effectiveSalesTechniqueIds = manualContext.salesTechniques
-      ? requestedSalesTechniqueIds
-      : autoSelectContext && aiContext
-        ? aiContext.salesTechniques
-        : requestedSalesTechniqueIds;
-    const selectedSituationPresetInstructions = effectiveSituationPresetIds
-      .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.instruction)
-      .filter((instruction): instruction is NonNullable<typeof instruction> => Boolean(instruction));
-    const salesTechniques = normalizeSalesTechniques(effectiveSalesTechniqueIds);
-    const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
-    const generationCustomInstructions = [
-      ...selectedSituationPresetInstructions,
-      customInstructions,
-    ].map((instruction) => instruction.trim()).filter(Boolean).join('\n\n');
 
     const hasCustomInstructions = Boolean(configuredInstructions);
 
@@ -1202,14 +1192,6 @@ Deno.serve(async (req: Request) => {
     // prompt customizado ou nao, porque e o proprio mecanismo de envio (nao e
     // uma preferencia de estilo) que reconhece este separador.
     const multiMessageMechanismNote = 'MECANISMO DO SISTEMA: uma linha contendo APENAS "---" (nada mais nela, nem antes nem depois na mesma linha) e reconhecida como separador entre mensagens distintas do WhatsApp — cada trecho entre separadores vira uma mensagem enviada em sequencia. Isso e diferente dos cabecalhos como "--- CONTEXTO ---" usados neste prompt como organizacao visual: so conta como separador real quando a linha tiver somente os tres tracos, sem texto colado.';
-
-    const responseFormatInstruction = shouldGenerateVariations
-      ? [
-          `Retorne apenas JSON valido, sem markdown, no formato {"variations":[{"label":"...","text":"..."}]}.`,
-          `Gere exatamente ${variantCount} variacoes com labels curtos e distintos, como "Direta", "Consultiva" ou "Leve".`,
-          'Cada "text" deve ser o follow-up final pronto para envio, usando o separador "---" entre mensagens quando dividido; nao inclua explicacoes fora do JSON.',
-        ].join(' ')
-      : 'Retorne apenas o texto final sugerido, sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.';
 
     const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
@@ -1232,14 +1214,6 @@ Deno.serve(async (req: Request) => {
       '- Use o nome do lead se fizer sentido. Nao force.',
     ].join('\n');
 
-    const selectedContextPromptSection = buildSelectedContextPromptSection({
-      situationPresetIds: effectiveSituationPresetIds,
-      tone: effectiveTone,
-      salesTechniques,
-      customInstructions,
-      manualContext,
-    });
-
     // Quando ha prompt customizado, ele define a voz-alvo (persona, regras
     // rigidas de pontuacao etc.) de forma explicita. Mensagens reais antigas
     // podem nao seguir essas regras novas (ex.: ainda usar "pra" ou dois
@@ -1250,23 +1224,106 @@ Deno.serve(async (req: Request) => {
       ? ''
       : ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):', styleProfileText].join('\n');
 
-    const systemPrompt = [
-      configuredPromptBase,
-      'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
-      multiMessageMechanismNote,
-      styleProfileSection,
-      defaultConductRules,
-      'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere as datas e horas do transcript como a referencia temporal principal.',
-      'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-      'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa, como se fosse o corretor continuando a conversa real de onde parou. A mensagem final deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
-      responseFormatInstruction,
-      selectedContextPromptSection,
-      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Aplique este tom com seriedade na mensagem final.`,
-      generationCustomInstructions ? `Instrucoes de cenário e ajustes desta geracao:\n${generationCustomInstructions}` : '',
-      salesTechniquesPromptSection,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    // Sempre ativo, independente de prompt customizado: contexto emocional
+    // detectado tem prioridade sobre qualquer tom/cenario/tecnica.
+    const emotionalContextInstruction = [
+      'CONTEXTO HUMANO E EMPATIA (sempre ativo — nao e uma preferencia de estilo, e uma regra de bom senso):',
+      'Antes de decidir a abordagem, procure no historico sinais de que a conversa deixou de ser puramente comercial: doenca, luto, dificuldade pessoal, ansiedade ou frustracao, desabafo, problema profissional, ou qualquer acontecimento pessoal importante que o cliente tenha compartilhado — mesmo que tenha sido ha alguns dias.',
+      'Se detectar algo assim, decida com bom senso qual a melhor resposta: pode ser uma mensagem puramente humana (perguntar como a pessoa esta, sem qualquer viés comercial), pode fazer sentido reconhecer brevemente o que foi dito antes de qualquer coisa comercial (so avance pro comercial se houver abertura natural depois), ou pode ser melhor simplesmente nao pressionar agora. A decisao e sua, nao existe um roteiro fixo pra isso.',
+      'Contexto emocional detectado tem prioridade sobre qualquer tom, cenario ou tecnica comercial — inclusive os selecionados manualmente pelo usuario. Nunca ignore um assunto pessoal sensivel para voltar direto ao comercial como se nada tivesse sido dito.',
+    ].join('\n');
+
+    // Ordem de raciocinio pedida: interpretar a conversa -> entender o
+    // momento -> entender a pessoa -> identificar o objetivo -> so entao
+    // decidir tom/tecnica/mensagem. Cenario/tom/tecnica sao diretrizes que a
+    // IA pode combinar, adaptar ou descartar, nao um roteiro fixo a seguir.
+    const guidelineFramingInstruction = [
+      'COMO DECIDIR (nesta ordem): 1) interprete o que realmente aconteceu na conversa e o histórico completo; 2) entenda o momento (fatos temporais acima); 3) entenda a pessoa (contexto humano/emocional acima); 4) identifique qual e o objetivo certo deste follow-up agora — pode ser comercial, pode ser humano, pode ser so uma pergunta leve, pode ser nao insistir; 5) so entao escolha tom, cenario e tecnica coerentes com essa leitura.',
+      'Cenario, tom e tecnicas comerciais sao DIRETRIZES, nao roteiro fixo: combine, adapte ou descarte o que nao fizer sentido para esta conversa especifica. Nao force uma tecnica comercial so porque ela existe na lista — muitas vezes a melhor mensagem nao usa nenhuma tecnica nomeada.',
+    ].join('\n');
+
+    const situationPresetCatalog = FOLLOW_UP_SITUATION_PRESETS
+      .map((preset) => `- ${preset.id} (${preset.label}): ${preset.instruction}`)
+      .join('\n');
+    const toneCatalog = FOLLOW_UP_TONES
+      .map((tone) => `- ${tone}: ${getFollowUpToneInstruction(tone)}`)
+      .join('\n');
+    const salesTechniqueCatalog = FOLLOW_UP_SALES_TECHNIQUE_OPTIONS
+      .map((technique) => `- ${technique.id} (${technique.name}): ${technique.description}`)
+      .join('\n');
+
+    // Selecoes manuais do usuario (feitas na UI antes de gerar) sempre
+    // vencem no valor final devolvido pro frontend — isso e garantido em
+    // codigo mais abaixo, nao so confiado ao prompt. Aqui so avisamos o
+    // modelo pra nao tentar escolher algo diferente por conta propria.
+    const manualToneFixed = manualContext.tone || !autoSelectContext;
+    const manualSituationFixed = manualContext.situationPresetIds || !autoSelectContext;
+    const manualTechniquesFixed = manualContext.salesTechniques || !autoSelectContext;
+
+    const manualSelectionNote = [
+      manualToneFixed
+        ? `- Tom: ja definido pelo usuario como "${requestedTone}". Use exatamente este valor no campo "tone".`
+        : null,
+      manualSituationFixed
+        ? (requestedSituationPresetIds.length > 0
+            ? `- Cenario: ja definido pelo usuario: ${requestedSituationPresetIds.join(', ')}. Use exatamente estes ids no campo "situationPresetIds".`
+            : '- Cenario: usuario nao selecionou nenhum manualmente; retorne "situationPresetIds" vazio a menos que algo se encaixe claramente.')
+        : null,
+      manualTechniquesFixed
+        ? (requestedSalesTechniqueIds.length > 0
+            ? `- Tecnicas comerciais: ja definidas pelo usuario: ${requestedSalesTechniqueIds.join(', ')}. Use exatamente estes ids no campo "salesTechniques", mas ainda com bom senso — se o contexto emocional pedir uma abordagem mais humana, priorize isso na mensagem mesmo assim.`
+            : '- Tecnicas comerciais: usuario nao selecionou nenhuma manualmente; retorne "salesTechniques" vazio a menos que alguma se encaixe claramente.')
+        : null,
+    ].filter(Boolean).join('\n');
+
+    const jsonShape = shouldGenerateVariations
+      ? '{"situationSummary":"...","emotionalContext":{"detected":true|false,"guidance":"..."|null},"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"},"rationale":"...","variations":[{"label":"...","text":"..."}]}'
+      : '{"situationSummary":"...","emotionalContext":{"detected":true|false,"guidance":"..."|null},"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"},"rationale":"...","text":"..."}';
+
+    const responseFormatInstruction = [
+      `Retorne SOMENTE um JSON valido, sem markdown, no formato exato: ${jsonShape}`,
+      '"situationSummary": 1-2 frases livres sobre o que realmente esta acontecendo nesta conversa agora — sua propria interpretacao, nao uma categoria fixa.',
+      '"emotionalContext": preencha conforme a regra de CONTEXTO HUMANO E EMPATIA acima.',
+      '"situationPresetIds": 0 a 2 ids do catalogo de cenarios abaixo, so quando fizer sentido claro no historico — nao force.',
+      '"tone": um dos valores do catalogo de tons abaixo.',
+      '"salesTechniques": 0 a 3 ids do catalogo de tecnicas abaixo — pode ficar vazio, nao force.',
+      '"nextAction": decida lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao varias tentativas. Use "mark_lost_recommended" so com sinais claros de varias tentativas reais em dias diferentes sem resposta util. Use "wait" quando o cliente ja respondeu, existe combinado pendente, o contexto emocional pede pausa, ou ainda nao cabe nova cobranca.',
+      '"rationale": resumo curto e legivel (1-3 frases) do seu raciocinio — inclua o que motivou tom/cenario/tecnica e qualquer contexto temporal ou emocional relevante. Isso e mostrado para quem esta usando o sistema.',
+      shouldGenerateVariations
+        ? `"variations": gere exatamente ${variantCount} variacoes com labels curtos e distintos (ex.: "Direta", "Consultiva", "Leve"); cada "text" segue a regra de divisao em multiplas mensagens.`
+        : '"text": o follow-up final pronto para envio, seguindo a regra de divisao em multiplas mensagens.',
+    ].join('\n');
+
+    const systemPrompt = refinementMode
+      ? [
+          configuredPromptBase,
+          'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
+          multiMessageMechanismNote,
+          styleProfileSection,
+          defaultConductRules,
+          emotionalContextInstruction,
+          'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
+          'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
+          'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
+        ].filter(Boolean).join('\n\n')
+      : [
+          configuredPromptBase,
+          'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
+          multiMessageMechanismNote,
+          styleProfileSection,
+          defaultConductRules,
+          emotionalContextInstruction,
+          guidelineFramingInstruction,
+          'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
+          'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
+          'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa, como se fosse o corretor continuando a conversa real de onde parou. A mensagem final deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
+          responseFormatInstruction,
+          `Catalogo de cenarios (use somente os ids exatos):\n${situationPresetCatalog}`,
+          `Catalogo de tons (use somente os valores exatos):\n${toneCatalog}`,
+          `Catalogo de tecnicas comerciais (use somente os ids exatos):\n${salesTechniqueCatalog}`,
+          manualSelectionNote ? `Selecoes ja fixadas pelo usuario para esta geracao:\n${manualSelectionNote}` : '',
+          customInstructions ? `Instrucoes extras do usuario para esta geracao (prioridade alta, desde que nao contrariem fatos do historico):\n${customInstructions}` : '',
+        ].filter(Boolean).join('\n\n');
 
     const baseUserPrompt = [
       baseContextPrompt,
@@ -1275,8 +1332,8 @@ Deno.serve(async (req: Request) => {
         ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n') + '\n'
         : '',
       shouldGenerateVariations
-        ? `Gere ${variantCount} variacoes do proximo follow-up mais adequado para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
-        : 'Gere o proximo follow-up mais adequado para enviar agora neste chat. Deve soar humano, comercialmente coerente e pronto para copiar e enviar no WhatsApp.',
+        ? `Interprete a conversa acima e gere ${variantCount} variacoes do proximo follow-up mais adequado para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
+        : 'Interprete a conversa acima e gere o proximo follow-up mais adequado para enviar agora neste chat. Deve soar humano, comercialmente coerente e pronto para copiar e enviar no WhatsApp.',
     ].filter(Boolean).join('\n');
 
     const userPrompt = refinementMode
@@ -1290,24 +1347,25 @@ Deno.serve(async (req: Request) => {
           adjustmentInstruction,
           '',
           'Tarefa:',
-          'Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat. Retorne somente a mensagem final, sem explicações.',
+          'Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat (incluindo os fatos temporais e o contexto humano acima). Retorne somente a mensagem final em texto puro, sem JSON, sem explicações.',
         ].join('\n')
       : baseUserPrompt;
 
+    const temperature = hasCustomInstructions ? 0.5 : 0.7;
+    const maxTokens = refinementMode
+      ? 320
+      : shouldGenerateVariations
+        ? Math.min(1400, 340 * variantCount)
+        : 520;
+
     console.log('[FollowUpAI][edge] final generation prompt', {
       configuredPromptBase,
-      configuredInstructions,
-      selectedContextPromptSection,
-      generationCustomInstructions,
-      salesTechniques,
-      effectiveSituationPresetIds,
-      effectiveTone,
-      effectiveSalesTechniqueIds,
-      aiContext,
+      temporalFacts,
+      manualSelectionNote,
       systemPrompt,
       userPrompt,
-      temperature: hasCustomInstructions ? 0.5 : 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(820, 220 * variantCount) : 280,
+      temperature,
+      maxTokens,
     });
 
     const result = await generateTextWithRouting({
@@ -1315,13 +1373,48 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: hasCustomInstructions ? 0.5 : 0.7,
-      maxTokens: shouldGenerateVariations ? Math.min(820, 220 * variantCount) : 280,
+      temperature,
+      maxTokens,
     });
 
-    const generatedText = result.text.trim();
-    const variations = shouldGenerateVariations ? parseFollowUpVariationsResult(generatedText) : [];
-    const responseText = variations[0]?.text ?? sanitizeGeneratedText(generatedText);
+    let aiContext: AiContextRecommendation | null = null;
+    let variations: FollowUpVariation[] = [];
+    let responseText: string;
+
+    if (refinementMode) {
+      responseText = sanitizeGeneratedText(result.text.trim());
+    } else {
+      const parsed = parseFollowUpGenerationResult(result.text, shouldGenerateVariations);
+      aiContext = parsed.aiContext;
+
+      if (shouldGenerateVariations) {
+        variations = parsed.variations;
+        responseText = variations[0]?.text ? sanitizeGeneratedText(variations[0].text) : '';
+      } else {
+        responseText = parsed.text ? sanitizeGeneratedText(parsed.text) : '';
+      }
+
+      // Se o modelo nao seguiu o formato JSON pedido (raro, mas providers
+      // podem falhar nisso), cai pro texto bruto em vez de retornar vazio.
+      if (!responseText) {
+        responseText = sanitizeGeneratedText(result.text.trim());
+      }
+    }
+
+    if (!responseText) {
+      throw new Error('A IA nao retornou um follow-up valido.');
+    }
+
+    const effectiveSituationPresetIds = manualSituationFixed
+      ? requestedSituationPresetIds
+      : (aiContext?.situationPresetIds ?? requestedSituationPresetIds);
+    const effectiveTone = manualToneFixed
+      ? requestedTone
+      : (aiContext?.tone ?? requestedTone);
+    const effectiveSalesTechniqueIds = manualTechniquesFixed
+      ? requestedSalesTechniqueIds
+      : (aiContext?.salesTechniques ?? requestedSalesTechniqueIds);
+
     const nextAction = refinementMode ? null : await buildFollowUpNextAction({
       supabaseAdmin,
       messages,
@@ -1334,7 +1427,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('[FollowUpAI][edge] final generation response', {
       result,
-      generatedText,
+      aiContext,
       variations,
       responseText,
       nextAction,

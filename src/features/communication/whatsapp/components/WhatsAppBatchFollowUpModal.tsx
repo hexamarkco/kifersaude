@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
-import { Avatar, Button, Progress, Stepper, Textarea } from '../../../../design-system';
+import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { supabase } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
@@ -18,6 +19,7 @@ import {
   Pill,
   RefinementChip,
   SIMPLE_REFINEMENT_ACTIONS,
+  formatNextActionDate,
   SalesTechniqueSelector,
   SituationPresetSelector,
   ToneSelector,
@@ -123,6 +125,8 @@ export default function WhatsAppBatchFollowUpModal({
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [sentSummary, setSentSummary] = useState<SentSummary | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
+  const [markingLostReminderIds, setMarkingLostReminderIds] = useState<Set<string>>(new Set());
+  const [markedLostReminderIds, setMarkedLostReminderIds] = useState<Set<string>>(new Set());
   const cancelRequestedRef = useRef(false);
 
   const currentStep = phase === 'loading' ? 0 : phase === 'generating' ? 1 : phase === 'sending' ? 3 : phase === 'sent' ? 4 : items.some((i) => i.status === 'pending') ? 1 : 2;
@@ -524,6 +528,29 @@ export default function WhatsAppBatchFollowUpModal({
     setPhase('sent');
   };
 
+  // ---- Mark as lost (from the final summary, when the AI recommends giving up on a lead) ----
+
+  const handleMarkLeadAsLost = async (item: BatchItemState) => {
+    if (markingLostReminderIds.has(item.reminderId) || markedLostReminderIds.has(item.reminderId)) return;
+
+    setMarkingLostReminderIds((prev) => new Set(prev).add(item.reminderId));
+    try {
+      const { error } = await supabase.from('leads').update({ status: 'Perdido' }).eq('id', item.leadId);
+      if (error) throw error;
+
+      setMarkedLostReminderIds((prev) => new Set(prev).add(item.reminderId));
+      toast.success(`${item.leadName || 'Lead'} marcado como perdido.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível marcar o lead como perdido.');
+    } finally {
+      setMarkingLostReminderIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.reminderId);
+        return next;
+      });
+    }
+  };
+
   // ---- Close / cancel ----
 
   const handleClose = () => {
@@ -576,6 +603,62 @@ export default function WhatsAppBatchFollowUpModal({
           {sentSummary.errorMessage ? (
             <p className="max-w-md text-center text-sm text-[var(--danger-text)]">{sentSummary.errorMessage}</p>
           ) : null}
+
+          {/* Detalhe por lead: quem foi enviado, quem foi reagendado e para quando, quem falhou */}
+          <div className="w-full max-w-xl">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              Detalhamento por lead
+            </p>
+            <div className="max-h-[320px] space-y-1.5 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
+              {items.filter((item) => item.selected && item.sendStatus !== 'idle').map((item) => {
+                const willReschedule = item.sendStatus === 'sent' && item.nextAction?.type === 'schedule' && item.nextAction.suggestedDateTime;
+                const recommendsLost = item.sendStatus === 'sent' && item.nextAction?.type === 'mark_lost_recommended';
+                const isMarkingLost = markingLostReminderIds.has(item.reminderId);
+                const isMarkedLost = markedLostReminderIds.has(item.reminderId);
+                return (
+                  <div key={item.reminderId} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs" style={{ background: 'var(--bg-elevated)' }}>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-[var(--text-primary)]">{item.leadName || 'Sem nome'}</p>
+                      {willReschedule ? (
+                        <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
+                          <CalendarPlus className="h-3 w-3 shrink-0" />
+                          Reagendado para {formatNextActionDate(item.nextAction!.suggestedDateTime)}
+                        </p>
+                      ) : recommendsLost ? (
+                        <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {isMarkedLost ? 'Marcado como perdido' : 'IA recomenda marcar como perdido'}
+                        </p>
+                      ) : item.sendStatus === 'sent' ? (
+                        <p className="mt-0.5 text-[var(--text-muted)]">Sem novo reagendamento</p>
+                      ) : item.sendStatus === 'failed' ? (
+                        <p className="mt-0.5 text-[var(--danger-text)]">{item.sendError || 'Falha ao enviar'}</p>
+                      ) : null}
+                    </div>
+                    {recommendsLost ? (
+                      isMarkedLost ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="warning"
+                          size="xs"
+                          onClick={() => void handleMarkLeadAsLost(item)}
+                          loading={isMarkingLost}
+                        >
+                          Marcar como perdido
+                        </Button>
+                      )
+                    ) : item.sendStatus === 'sent' ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
+                    ) : item.sendStatus === 'failed' ? (
+                      <AlertCircle className="h-4 w-4 shrink-0 text-[var(--danger)]" />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </WhatsAppDialog>
     );
@@ -749,16 +832,12 @@ export default function WhatsAppBatchFollowUpModal({
                         isActive ? 'border border-[var(--brand-primary-border)] bg-[var(--bg-elevated)] shadow-sm' : 'border border-transparent hover:bg-[var(--bg-elevated)]'
                       }`}
                     >
-                      <span className="relative shrink-0">
-                        <Avatar name={leadName} size="xs" />
-                        <span
-                          className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 border-[var(--bg-surface)]"
-                          style={{ background: dotColor }}
-                        >
-                          {statusDot === 'generating' || statusDot === 'sending' ? (
-                            <Loader2 className="h-2 w-2 animate-spin text-[var(--bg-surface)]" />
-                          ) : null}
-                        </span>
+                      <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+                        {statusDot === 'generating' || statusDot === 'sending' ? (
+                          <Loader2 className="h-3 w-3 animate-spin" style={{ color: dotColor }} />
+                        ) : (
+                          <span className="block h-2 w-2 rounded-full" style={{ background: dotColor }} />
+                        )}
                       </span>
                       <span className="min-w-0 flex-1 truncate font-medium text-[var(--text-primary)]">
                         {leadName}
@@ -785,7 +864,6 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* Header */}
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <Avatar name={activeItem.leadName || 'Sem nome'} size="sm" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="truncate text-sm font-bold text-[var(--text-primary)]">

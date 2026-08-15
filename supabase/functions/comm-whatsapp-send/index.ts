@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
+import { isPlausibleMediaSignature } from '../_shared/file-signature.ts';
 import {
   archiveCommWhatsAppMedia,
   COMM_WHATSAPP_MODULE,
@@ -62,6 +64,12 @@ type SendRequestRow = {
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+const SEND_RATE_LIMIT_SCOPE = 'comm-whatsapp-send';
+const SEND_RATE_LIMIT_MAX_REQUESTS = 60;
+const SEND_RATE_LIMIT_WINDOW_SECONDS = 60;
+// Mesmo teto já usado para download de mídia inbound (MAX_WHAPI_MEDIA_RESPONSE_BYTES).
+const MAX_OUTBOUND_MEDIA_UPLOAD_BYTES = 32 * 1024 * 1024;
+const MEDIA_SIGNATURE_SAMPLE_BYTES = 16;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -526,6 +534,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const withinRateLimit = await checkCommWhatsAppActionRateLimit(
+      supabaseAdmin,
+      authResult.user.userId,
+      SEND_RATE_LIMIT_SCOPE,
+      SEND_RATE_LIMIT_MAX_REQUESTS,
+      SEND_RATE_LIMIT_WINDOW_SECONDS,
+    );
+    if (!withinRateLimit) {
+      return new Response(JSON.stringify(RATE_LIMIT_RESPONSE_BODY), {
+        status: 429,
+        headers: jsonHeaders,
+      });
+    }
+
     const contentType = req.headers.get('content-type') || '';
     let chatId = '';
     let text = '';
@@ -580,6 +602,25 @@ Deno.serve(async (req: Request) => {
           fileName: toTrimmedString(body.fileName) || undefined,
         });
         mediaKind = normalizeMediaKind(toTrimmedString(body.type), mediaFile.type);
+      }
+    }
+
+    if (mediaFile) {
+      if (mediaFile.size > MAX_OUTBOUND_MEDIA_UPLOAD_BYTES) {
+        return new Response(
+          JSON.stringify({ error: `Arquivo excede o limite de ${Math.floor(MAX_OUTBOUND_MEDIA_UPLOAD_BYTES / (1024 * 1024))}MB.` }),
+          { status: 400, headers: jsonHeaders },
+        );
+      }
+
+      if (mediaKind) {
+        const headerBytes = new Uint8Array(await mediaFile.slice(0, MEDIA_SIGNATURE_SAMPLE_BYTES).arrayBuffer());
+        if (!isPlausibleMediaSignature(mediaKind, headerBytes)) {
+          return new Response(JSON.stringify({ error: 'O conteudo do arquivo nao corresponde ao tipo declarado.' }), {
+            status: 400,
+            headers: jsonHeaders,
+          });
+        }
       }
     }
 

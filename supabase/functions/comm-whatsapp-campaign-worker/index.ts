@@ -22,6 +22,7 @@ import {
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
+import { mapWithConcurrency } from '../_shared/concurrency.ts';
 
 declare const Deno: {
   env: {
@@ -136,6 +137,17 @@ const OPT_OUT_LOOKUP_CHUNK_SIZE = 500;
 const MAX_SEND_ATTEMPTS = 3;
 const RETRY_BACKOFF_MINUTES = [5, 30, 120];
 const DEFAULT_CAMPAIGN_TIME_ZONE = 'America/Sao_Paulo';
+// Quantos alvos reivindicados são enviados em paralelo por invocação. Não muda
+// quantos alvos são processados por minuto (isso continua sendo o teto de
+// pacing_per_minute/maxLimit já aplicado no claim) — só reduz o tempo de
+// parede gasto para processar o mesmo lote, que antes era pago inteiramente
+// de forma sequencial (uma chamada HTTP à Whapi de cada vez).
+const DEFAULT_CAMPAIGN_SEND_CONCURRENCY = 5;
+
+const getCampaignSendConcurrency = (): number => {
+  const raw = Number(Deno.env.get('COMM_WHATSAPP_CAMPAIGN_SEND_CONCURRENCY'));
+  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : DEFAULT_CAMPAIGN_SEND_CONCURRENCY;
+};
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -1684,16 +1696,16 @@ async function processCampaigns(
     if (campaignLimit <= 0) break;
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
-    for (const target of targets) {
+
+    const processTarget = async (target: TargetRow): Promise<{ status?: string; skipped?: boolean }> => {
       const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
       if (currentCampaign.status === 'paused' || currentCampaign.status === 'cancelled') {
         await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
-        continue;
+        return { skipped: true };
       }
 
-      let result: { status?: string };
       try {
-        result = await sendTarget({
+        return await sendTarget({
           supabaseAdmin,
           campaign,
           target,
@@ -1704,26 +1716,38 @@ async function processCampaigns(
         });
       } catch (error) {
         if (error instanceof CampaignTargetLeaseLostError) {
-          result = { status: 'lease_lost' };
           await insertEvent(supabaseAdmin, {
             campaignId: campaign.id,
             targetId: target.id,
             eventType: 'target_lease_lost',
             payload: { error: error.message },
           });
-        } else if (error instanceof CampaignProviderAcceptedError) {
-          result = { status: 'provider_accepted_unreconciled' };
+          return { status: 'lease_lost' };
+        }
+
+        if (error instanceof CampaignProviderAcceptedError) {
           console.error('[comm-whatsapp-campaign-worker] mensagem aceita pela Whapi sem checkpoint completo', {
             campaignId: campaign.id,
             targetId: target.id,
             error: error.message,
           });
-        } else {
-          const message = error instanceof Error ? error.message : 'Erro inesperado ao enviar mensagem.';
-          result = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage: message, retryable: true });
-          await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: result.status === 'retry_scheduled' ? 'target_retry_scheduled' : 'target_failed', payload: { error: message } });
+          return { status: 'provider_accepted_unreconciled' };
         }
+
+        const message = error instanceof Error ? error.message : 'Erro inesperado ao enviar mensagem.';
+        const result = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage: message, retryable: true });
+        await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: result.status === 'retry_scheduled' ? 'target_retry_scheduled' : 'target_failed', payload: { error: message } });
+        return result;
       }
+    };
+
+    // Processa o lote reivindicado em paralelo (pool limitado) em vez de um por
+    // vez: reduz o tempo de parede do lote sem mudar quantos alvos são
+    // reivindicados por invocação (esse teto continua vindo de campaignLimit).
+    const targetResults = await mapWithConcurrency(targets, getCampaignSendConcurrency(), processTarget);
+
+    for (const result of targetResults) {
+      if (result.skipped) continue;
       processed += 1;
       if (result.status === 'sent' || result.status === 'scheduled') sent += 1;
       if (result.status === 'failed' || result.status === 'invalid') failed += 1;

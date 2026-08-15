@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import {
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
@@ -61,6 +62,10 @@ const jsonHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
   'Content-Type': 'application/json',
 };
+
+const RETRY_RATE_LIMIT_SCOPE = 'comm-whatsapp-retry-message';
+const RETRY_RATE_LIMIT_MAX_REQUESTS = 20;
+const RETRY_RATE_LIMIT_WINDOW_SECONDS = 60;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -239,6 +244,20 @@ Deno.serve(async (req: Request) => {
     if (!authResult.authorized) {
       return new Response(JSON.stringify(authResult.body), {
         status: authResult.status,
+        headers: jsonHeaders,
+      });
+    }
+
+    const withinRateLimit = await checkCommWhatsAppActionRateLimit(
+      supabaseAdmin,
+      authResult.user.userId,
+      RETRY_RATE_LIMIT_SCOPE,
+      RETRY_RATE_LIMIT_MAX_REQUESTS,
+      RETRY_RATE_LIMIT_WINDOW_SECONDS,
+    );
+    if (!withinRateLimit) {
+      return new Response(JSON.stringify(RATE_LIMIT_RESPONSE_BODY), {
+        status: 429,
         headers: jsonHeaders,
       });
     }

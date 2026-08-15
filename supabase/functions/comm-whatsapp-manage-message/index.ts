@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import {
   applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_MODULE,
@@ -42,6 +43,9 @@ type ManageMessageBody = {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const EDITABLE_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
 const MEDIA_EDIT_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short', 'document']);
+const MANAGE_MESSAGE_RATE_LIMIT_SCOPE = 'comm-whatsapp-manage-message';
+const MANAGE_MESSAGE_RATE_LIMIT_MAX_REQUESTS = 40;
+const MANAGE_MESSAGE_RATE_LIMIT_WINDOW_SECONDS = 60;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -83,6 +87,20 @@ Deno.serve(async (req: Request) => {
     if (!authResult.authorized) {
       return new Response(JSON.stringify(authResult.body), {
         status: authResult.status,
+        headers: jsonHeaders,
+      });
+    }
+
+    const withinRateLimit = await checkCommWhatsAppActionRateLimit(
+      supabaseAdmin,
+      authResult.user.userId,
+      MANAGE_MESSAGE_RATE_LIMIT_SCOPE,
+      MANAGE_MESSAGE_RATE_LIMIT_MAX_REQUESTS,
+      MANAGE_MESSAGE_RATE_LIMIT_WINDOW_SECONDS,
+    );
+    if (!withinRateLimit) {
+      return new Response(JSON.stringify(RATE_LIMIT_RESPONSE_BODY), {
+        status: 429,
         headers: jsonHeaders,
       });
     }

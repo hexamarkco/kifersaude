@@ -3,6 +3,7 @@ import { Calendar, Mail, Phone, Users } from "lucide-react";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
+import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
 import { Button, EmptyState, Input, OperationalMetricChip, OperationalStatusDot, Surface } from "../../../design-system";
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
 import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
@@ -389,7 +390,13 @@ export default function LeadKanbanBoard({
                             aria-label={`Abrir detalhes de ${lead.nome_completo}`}
                             className="kds-kanban-card kds-action-surface cursor-move transition-colors"
                           >
-                            <div className="mb-3">
+                            <div className="mb-3 flex items-center gap-1.5">
+                              <LeadFavoriteToggle
+                                leadId={lead.id}
+                                favorito={Boolean(lead.favorito)}
+                                size="sm"
+                                onToggled={(next) => setLocalLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
+                              />
                               <h5
                                 className="kds-op-lead-title truncate"
                               >

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
+import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
   Badge,
   Button,
@@ -39,6 +40,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
+  const [favorito, setFavorito] = useState(Boolean(lead.favorito));
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [statusHistory, setStatusHistory] = useState<LeadStatusHistory[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -99,6 +101,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   useEffect(() => {
     loadLeadTimeline();
   }, [lead.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setFavorito(Boolean(lead.favorito));
+  }, [lead.id, lead.favorito]);
 
   const loadLeadTimeline = async () => {
     setLoading(true);
@@ -169,7 +175,17 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
       <DialogHeader onClose={onClose}>
         <div>
-          <DialogTitle>{lead.nome_completo}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <LeadFavoriteToggle
+              leadId={lead.id}
+              favorito={favorito}
+              onToggled={(next) => {
+                setFavorito(next);
+                onUpdate();
+              }}
+            />
+            {lead.nome_completo}
+          </DialogTitle>
           <DialogDescription>Historico de interacoes, status e lembretes.</DialogDescription>
         </div>
       </DialogHeader>

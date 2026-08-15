@@ -210,6 +210,7 @@ export type CommWhatsAppLeadPanel = {
   status_value?: string | null;
   responsavel_label?: string | null;
   responsavel_value?: string | null;
+  favorito?: boolean | null;
 };
 
 export type CommWhatsAppLeadContractSummary = Pick<

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
+import { LeadFavoriteToggle } from "../../components/LeadFavoriteStar";
 import StatusDropdown from "../../components/StatusDropdown";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import Pagination from "../../components/Pagination";
@@ -1889,14 +1890,23 @@ export default function LeadsManager({
                           </TableCell>
                         )}
                         <TableCell>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLead(lead)}
-                            className="block max-w-72 text-left transition-colors hover:text-[var(--brand-primary)]"
-                          >
-                            <span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span>
-                            <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span>
-                          </button>
+                          <div className="flex items-start gap-1.5">
+                            <LeadFavoriteToggle
+                              leadId={lead.id}
+                              favorito={Boolean(lead.favorito)}
+                              size="sm"
+                              className="mt-0.5"
+                              onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLead(lead)}
+                              className="block max-w-72 text-left transition-colors hover:text-[var(--brand-primary)]"
+                            >
+                              <span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span>
+                              <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span>
+                            </button>
+                          </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
                         </TableCell>
                         <TableCell>
@@ -1952,6 +1962,12 @@ export default function LeadsManager({
                                 aria-label={`Selecionar lead ${lead.nome_completo}`}
                               />
                             )}
+                            <LeadFavoriteToggle
+                              leadId={lead.id}
+                              favorito={Boolean(lead.favorito)}
+                              size="sm"
+                              onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
+                            />
                             <h3 className="kds-op-lead-title">
                               {lead.nome_completo}
                             </h3>

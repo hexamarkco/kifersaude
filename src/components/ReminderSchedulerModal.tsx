@@ -4,6 +4,7 @@ import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
+import { LeadFavoriteBadge } from './LeadFavoriteStar';
 import {
   Alert,
   Button,
@@ -24,7 +25,7 @@ const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
 const PRIORITY_OPTIONS = ['alta', 'normal', 'baixa'] as const;
 
 type ReminderSchedulerModalProps = {
-  lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
+  lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel' | 'favorito'>;
   onClose: () => void;
   onScheduled?: (details: {
     reminderDate: string;
@@ -167,7 +168,7 @@ export default function ReminderSchedulerModal({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()} size="md" className="max-w-lg">
       <DialogHeader onClose={onClose}>
-        <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription>{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
+        <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription className="flex items-center gap-1.5"><LeadFavoriteBadge favorito={lead.favorito} />{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
       </DialogHeader>
       <DialogBody className="space-y-5">
       <div className="space-y-6">

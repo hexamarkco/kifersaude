@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Contract,
   ConfigOption,
@@ -7,6 +7,7 @@ import {
 } from '../lib/supabase';
 import StatusDropdown from './StatusDropdown';
 import FilterSingleSelect from './FilterSingleSelect';
+import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
   AlertCircle,
   ClipboardList,
@@ -18,7 +19,7 @@ import {
   UserCircle,
 } from 'lucide-react';
 
-type LeadSummary = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'observacoes'> & {
+type LeadSummary = Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'observacoes' | 'favorito'> & {
   status_nome?: string | null;
   status_value?: string | null;
   responsavel_label?: string | null;
@@ -73,6 +74,11 @@ export default function LeadDetailsPanel({
   disabled = false,
 }: LeadDetailsPanelProps) {
   const [isUpdatingResponsavel, setIsUpdatingResponsavel] = useState(false);
+  const [favorito, setFavorito] = useState(Boolean(lead?.favorito));
+
+  useEffect(() => {
+    setFavorito(Boolean(lead?.favorito));
+  }, [lead?.id, lead?.favorito]);
 
   const rootClassName = useMemo(() => {
     const base = 'border border-[var(--border-default)] bg-[var(--bg-surface)] rounded-xl flex flex-col';
@@ -200,7 +206,8 @@ export default function LeadDetailsPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Lead selecionado
           </p>
-          <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">
+          <h3 className="mt-1 flex items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
+            <LeadFavoriteToggle leadId={lead.id} favorito={favorito} size="sm" onToggled={setFavorito} />
             {lead.nome_completo || 'Lead sem nome'}
           </h3>
           {lead.telefone && (

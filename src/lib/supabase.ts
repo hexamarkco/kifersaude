@@ -248,6 +248,7 @@ export type Lead = {
   daily_send_limit?: number | null;
   skip_automation?: boolean | null;
   arquivado: boolean;
+  favorito?: boolean;
   created_at: string;
   updated_at: string;
 };

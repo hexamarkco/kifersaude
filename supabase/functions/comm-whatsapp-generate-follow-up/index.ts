@@ -622,7 +622,7 @@ const formatTemporalFactsForPrompt = (facts: TemporalFacts): string => [
   `- Ja houve contato (de qualquer lado) hoje, antes de agora: ${facts.contactedToday ? 'sim' : 'nao'}.`,
   `- Periodo do dia agora: ${facts.periodOfDay}.`,
   `- Tentativas consecutivas de follow-up sem resposta do cliente desde a ultima mensagem dele: ${facts.consecutiveOutboundAttempts}.`,
-  'REGRA DE SAUDACAO: abra a mensagem com saudacao temporal (bom dia/boa tarde/boa noite/oi) SOMENTE se ainda nao houve contato hoje. Se ja houve contato hoje, nao repita saudacao — continue a conversa diretamente, como uma pessoa real continuaria. Nunca trate "ha alguns dias" ou "ha algumas horas" como se fosse "ontem" ou "agora ha pouco" — use a distancia real informada acima.',
+  'REGRA DE SAUDACAO: se ja houve contato hoje, NUNCA repita saudacao — continue a conversa diretamente, como uma pessoa real continuaria. Se ainda NAO houve contato hoje, uma saudacao (bom dia/boa tarde/boa noite/oi) normalmente cabe e e o mais natural, principalmente quando a ultima mensagem de qualquer lado foi ha dias — retomar contato depois de um tempo sem nenhuma saudacao soa abrupto e frio, como se a conversa nunca tivesse parado; use bom senso apenas se o contexto humano/emocional pedir uma abertura diferente. Nunca trate "ha alguns dias" ou "ha algumas horas" como se fosse "ontem" ou "agora ha pouco" — use a distancia real informada acima.',
 ].join('\n');
 
 const buildFollowUpNextAction = async (params: {
@@ -1193,22 +1193,30 @@ Deno.serve(async (req: Request) => {
     // uma preferencia de estilo) que reconhece este separador.
     const multiMessageMechanismNote = 'MECANISMO DO SISTEMA: uma linha contendo APENAS "---" (nada mais nela, nem antes nem depois na mesma linha) e reconhecida como separador entre mensagens distintas do WhatsApp — cada trecho entre separadores vira uma mensagem enviada em sequencia. Isso e diferente dos cabecalhos como "--- CONTEXTO ---" usados neste prompt como organizacao visual: so conta como separador real quando a linha tiver somente os tres tracos, sem texto colado.';
 
+    // Tambem sempre ativo, independente de prompt customizado: SABER O
+    // MECANISMO (acima) nao e o mesmo que saber QUANDO usa-lo. Sem isto, um
+    // prompt customizado que nao mencione explicitamente "---" faz o modelo
+    // nunca dividir a mensagem, mesmo tendo mais de uma ideia. Isto e
+    // comportamento de segmentacao de envio, nao preferencia de estilo/voz —
+    // por isso fica de fora do gate de hasCustomInstructions.
+    const messageSplittingInstruction = 'DIVISAO EM MENSAGENS: sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer uma pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas em sequencia usando o separador "---", como uma pessoa real digitando mensagens separadas em vez de um unico bloco longo. So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta. Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?';
+
     const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
       'Cada mensagem deve ser contextualizada no historico real do chat: retome o ultimo assunto tratado, use os detalhes especificos da conversa e evite frases que servem para qualquer lead.',
       'A mensagem precisa soar como uma continuacao natural do ultimo contato, nao como um template pre-definido.',
     ].join('\n');
 
-    // As regras genericas de brevidade/divisao em blocos abaixo so entram
-    // quando NAO ha um prompt customizado configurado (aba Integracoes). Se a
-    // operacao ja definiu sua propria estrutura (ex.: blocos fixos separados
-    // por "---"), duplicar essa orientacao aqui em palavras diferentes so
-    // dilui a instrucao especifica dela em meio a mais texto — melhor deixar
-    // o prompt customizado mandar sozinho nisso.
+    // As regras genericas de brevidade/tom abaixo so entram quando NAO ha um
+    // prompt customizado configurado (aba Integracoes). Se a operacao ja
+    // definiu sua propria estrutura, duplicar essa orientacao aqui em
+    // palavras diferentes so dilui a instrucao especifica dela em meio a
+    // mais texto — melhor deixar o prompt customizado mandar sozinho nisso.
+    // A divisao em "---" NAO entra aqui: e mecanismo de envio, nao estilo,
+    // e fica sempre ativa via messageSplittingInstruction acima.
     const defaultConductRules = hasCustomInstructions ? '' : [
       'REGRAS DE CONDUTA:',
       '- Cada mensagem individual deve ser curta e direta, como uma mensagem real de WhatsApp: normalmente 1 a 2 frases curtas. Nao escreva paragrafos longos.',
-      '- A operacao prefere follow-ups divididos em varias mensagens curtas em sequencia — como uma pessoa real digitando — em vez de um unico bloco longo. Sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer a pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas usando o separador "---". So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta (ex.: uma pergunta objetiva isolada). Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?',
       '- NUNCA use listas, bullets ou numeracao. Markdown so e permitido na forma do separador "---" descrito acima.',
       '- Dentro de cada mensagem, uma unica pergunta ou proximo passo por vez — nao empilhe varias perguntas na mesma mensagem.',
       '- Use o nome do lead se fizer sentido. Nao force.',
@@ -1299,6 +1307,7 @@ Deno.serve(async (req: Request) => {
           configuredPromptBase,
           'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
           multiMessageMechanismNote,
+          messageSplittingInstruction,
           styleProfileSection,
           defaultConductRules,
           emotionalContextInstruction,
@@ -1310,6 +1319,7 @@ Deno.serve(async (req: Request) => {
           configuredPromptBase,
           'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
           multiMessageMechanismNote,
+          messageSplittingInstruction,
           styleProfileSection,
           defaultConductRules,
           emotionalContextInstruction,

@@ -36,6 +36,7 @@ type ProviderCallParams = {
   userPrompt: string;
   temperature: number;
   maxTokens: number;
+  task: AiTask;
 };
 
 type OpenAiMessage = {
@@ -348,8 +349,17 @@ const getPreferredOpenAiTokenParameter = (model: string): OpenAiTokenParameter =
 const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTokenParameter =>
   value === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
 
-const getPreferredOpenAiReasoningEffort = (model: string): OpenAiReasoningEffort | undefined => {
+// Tarefas que precisam interpretar o contexto em varias etapas antes de
+// escrever (ler a conversa, entender o momento, a pessoa, so entao decidir
+// tom/abordagem) sofrem muito com reasoning_effort "none": o modelo pula
+// direto para uma resposta plausivel na superficie sem executar o raciocinio
+// que o prompt pede. Tarefas mais mecanicas (reescrever um texto dado,
+// organizar agenda) continuam com esforco minimo por velocidade/custo.
+const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'attendance_critique']);
+
+const getPreferredOpenAiReasoningEffort = (model: string, task: AiTask): OpenAiReasoningEffort | undefined => {
   const normalized = model.trim().toLowerCase();
+  const needsDeepReasoning = DEEP_REASONING_TASKS.has(task);
 
   if (
     normalized.startsWith('gpt-5.5') ||
@@ -357,7 +367,7 @@ const getPreferredOpenAiReasoningEffort = (model: string): OpenAiReasoningEffort
     normalized.startsWith('gpt-5.2') ||
     normalized.startsWith('gpt-5.1')
   ) {
-    return 'none';
+    return needsDeepReasoning ? 'minimal' : 'none';
   }
 
   if (
@@ -460,7 +470,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
 
   let tokenParameter = getPreferredOpenAiTokenParameter(params.model);
   let includeTemperature = true;
-  let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model);
+  let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model, params.task);
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const response = await fetch(endpoint, {
@@ -776,6 +786,7 @@ export const generateTextWithRouting = async (
         userPrompt: options.userPrompt,
         temperature: options.temperature ?? 0.4,
         maxTokens: options.maxTokens ?? 900,
+        task: options.task,
       });
 
       return {

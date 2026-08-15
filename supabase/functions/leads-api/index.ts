@@ -18,6 +18,7 @@ import {
   sanitizeWhapiToken,
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
+import { isDuplicateLead } from '../_shared/leads.ts';
 const DEFAULT_GREETING_TIMEZONE = 'America/Sao_Paulo';
 
 const buildHourFormatter = (timeZone: string) =>
@@ -1147,27 +1148,6 @@ function mapLeadRelationsForResponse(lead: any, lookups: LeadLookupMaps) {
 
 function getDuplicateStatusId(lookups: LeadLookupMaps) {
   return lookups.statusByName.get(normalizeText('Duplicado')) ?? null;
-}
-
-async function isDuplicateLead(
-  supabase: ReturnType<typeof createClient>,
-  telefone: string,
-  email?: string | null,
-): Promise<boolean> {
-  const filters = [telefone ? `telefone.eq.${telefone}` : null, email ? `email.ilike.${email.toLowerCase()}` : null].filter(
-    Boolean,
-  );
-
-  if (filters.length === 0) return false;
-
-  const { data, error } = await supabase.from('leads').select('id').or(filters.join(',')).limit(1);
-
-  if (error) {
-    console.error('Erro ao verificar duplicidade de lead', error);
-    return false;
-  }
-
-  return (data?.length ?? 0) > 0;
 }
 
 function normalizeTelefone(telefone: string): string {

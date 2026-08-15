@@ -21,6 +21,7 @@ import {
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
+import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
 
 declare const Deno: {
   env: {
@@ -228,50 +229,10 @@ const chunkArray = <T,>(items: T[], size: number): T[][] => {
   return chunks;
 };
 
-const createLockToken = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return `campaign-lock-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-};
-
-class CampaignTargetLeaseLostError extends Error {
-  constructor() {
-    super('A reserva do alvo da campanha expirou ou foi assumida por outro worker.');
-    this.name = 'CampaignTargetLeaseLostError';
-  }
-}
-
 class CampaignProviderAcceptedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'CampaignProviderAcceptedError';
-  }
-}
-
-async function updateClaimedTarget(
-  supabaseAdmin: ReturnType<typeof createAdminClient>,
-  target: TargetRow,
-  update: Record<string, unknown>,
-) {
-  const lockToken = toTrimmedString(target.lock_token);
-  if (!lockToken) {
-    throw new CampaignTargetLeaseLostError();
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .update(update)
-    .eq('id', target.id)
-    .eq('status', 'sending')
-    .eq('lock_token', lockToken)
-    .select('id')
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao atualizar alvo reservado da campanha: ${error.message}`);
-  }
-
-  if (!data) {
-    throw new CampaignTargetLeaseLostError();
   }
 }
 

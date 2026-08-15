@@ -19,6 +19,7 @@ import {
   getDirectChatDisplayNameCandidate,
   getHealthStatusText,
   getNowIso,
+  isCommWhatsAppWebhookSecretValid,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isRecord,
@@ -38,6 +39,10 @@ import {
   hasWhapiPatchTextChange,
   type WhapiWebhookMessagePatch,
 } from '../_shared/whapi-webhook-parser.ts';
+import {
+  hasCommWhatsAppEventReceipt as hasEventReceipt,
+  recordCommWhatsAppEventReceipt as recordEventReceipt,
+} from '../_shared/webhook-event-receipts.ts';
 
 type ChannelRow = {
   id: string;
@@ -122,54 +127,6 @@ async function archiveRawPayload(
     console.error(`[${correlationId}] erro ao arquivar payload bruto: ${e instanceof Error ? e.message : 'desconhecido'}`);
     return null;
   }
-}
-
-async function recordEventReceipt(
-  supabaseAdmin: SupabaseClient,
-  channelId: string,
-  eventKey: string,
-  eventType: string,
-  resourceId: string | null,
-  summary: Record<string, unknown>,
-  payloadArchivePath?: string | null,
-) {
-  const { error } = await supabaseAdmin
-    .from('comm_whatsapp_event_receipts')
-    .insert({
-      channel_id: channelId,
-      event_key: eventKey,
-      event_type: eventType,
-      resource_id: resourceId,
-      summary,
-      payload_archive_path: payloadArchivePath || null,
-    });
-
-  if (error) {
-    if (error.code === '23505') {
-      return false;
-    }
-
-    throw new Error(`Erro ao registrar dedupe do webhook: ${error.message}`);
-  }
-
-  return true;
-}
-
-async function hasEventReceipt(
-  supabaseAdmin: SupabaseClient,
-  eventKey: string,
-) {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_event_receipts')
-    .select('id')
-    .eq('event_key', eventKey)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao verificar dedupe do webhook: ${error.message}`);
-  }
-
-  return Boolean(data);
 }
 
 const resolveMessageChatId = (message: Record<string, unknown>): string => {
@@ -537,8 +494,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const providedSecret = req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER)?.trim() || '';
-    if (!providedSecret || providedSecret !== webhookSecret) {
+    const providedSecret = req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER);
+    if (!isCommWhatsAppWebhookSecretValid(providedSecret, webhookSecret)) {
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,
         headers: jsonHeaders,

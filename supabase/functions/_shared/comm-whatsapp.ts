@@ -418,6 +418,19 @@ export const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAP
 export const getCommWhatsAppWebhookSecret = (): string =>
   toTrimmedString(Deno.env.get(COMM_WHATSAPP_WEBHOOK_SECRET_ENV));
 
+/**
+ * Valida o header de autenticidade do webhook (`X-Kifer-Webhook-Secret`) contra o
+ * segredo configurado via Edge Secret. Extraída como função pura para poder ser
+ * coberta por teste de regressão sem precisar subir a Edge Function inteira.
+ */
+export const isCommWhatsAppWebhookSecretValid = (
+  providedHeaderValue: string | null | undefined,
+  expectedSecret: string,
+): boolean => {
+  const provided = toTrimmedString(providedHeaderValue);
+  return Boolean(provided) && Boolean(expectedSecret) && provided === expectedSecret;
+};
+
 export async function fetchWhapiWithTimeout(
   url: string,
   init: RequestInit,

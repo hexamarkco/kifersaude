@@ -1034,22 +1034,22 @@ Deno.serve(async (req: Request) => {
       salesTechniques: isManualContextFlagEnabled(body.manualContext, 'salesTechniques'),
     };
 
-    console.log('[FollowUpAI][edge] request body', {
-      body,
-      parsed: {
-        chatId,
-        customInstructions,
-        requestedTone,
-        refinementMode,
-        currentMessage,
-        adjustmentInstruction,
-        variantCount,
-        shouldGenerateVariations,
-        requestedSalesTechniqueIds,
-        requestedSituationPresetIds,
-        autoSelectContext,
-        manualContext,
-      },
+    // Não logar `body`, `customInstructions`, `currentMessage` nem `adjustmentInstruction`:
+    // contêm o texto real da conversa com o lead/paciente (dado sensível), que não deve
+    // ir para logs de produção da Edge Function.
+    console.log('[FollowUpAI][edge] request received', {
+      chatId,
+      requestedTone,
+      refinementMode,
+      hasCustomInstructions: Boolean(customInstructions),
+      hasCurrentMessage: Boolean(currentMessage),
+      hasAdjustmentInstruction: Boolean(adjustmentInstruction),
+      variantCount,
+      shouldGenerateVariations,
+      requestedSalesTechniqueIds,
+      requestedSituationPresetIds,
+      autoSelectContext,
+      manualContext,
     });
 
     if (!chatId) {

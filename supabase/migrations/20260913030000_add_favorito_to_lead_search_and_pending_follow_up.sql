@@ -9,6 +9,8 @@
 
 BEGIN;
 
+DROP FUNCTION IF EXISTS public.comm_whatsapp_search_crm_leads(text, text[], integer);
+
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_search_crm_leads(
   p_query text DEFAULT NULL,
   p_phone_numbers text[] DEFAULT NULL,
@@ -107,6 +109,8 @@ $$;
 
 REVOKE ALL ON FUNCTION public.comm_whatsapp_search_crm_leads(text, text[], integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_search_crm_leads(text, text[], integer) TO authenticated;
+
+DROP FUNCTION IF EXISTS public.comm_whatsapp_pending_follow_up_chats();
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_pending_follow_up_chats()
 RETURNS TABLE(

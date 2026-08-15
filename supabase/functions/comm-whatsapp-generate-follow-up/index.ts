@@ -1439,6 +1439,8 @@ Deno.serve(async (req: Request) => {
         text: responseText,
         variations: variations.length > 0 ? variations : undefined,
         aiContext: {
+          situationSummary: aiContext?.situationSummary ?? null,
+          emotionalContext: aiContext?.emotionalContext ?? null,
           situationPresetIds: effectiveSituationPresetIds,
           tone: effectiveTone,
           salesTechniques: effectiveSalesTechniqueIds,

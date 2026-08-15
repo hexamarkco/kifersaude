@@ -1,81 +1,41 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CalendarPlus, Check, CheckCircle2, Clock3, Loader2, MessageSquare, RotateCcw, Send, Settings, Sparkles, X } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, CheckCircle2, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
-import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
+import { Avatar, Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 import WhatsAppDialog from './WhatsAppDialog';
+import {
+  AiContextPanel,
+  CONTEXT_REFINEMENT_ACTIONS,
+  ChatBubblePreview,
+  NextActionCard,
+  Pill,
+  RefinementChip,
+  SIMPLE_REFINEMENT_ACTIONS,
+  SalesTechniqueSelector,
+  SituationPresetSelector,
+  ToneSelector,
+  VariationCarousel,
+} from './followUpModalUi';
 
 // ---- Constants ----
 
 const CONCURRENCY = 3;
 
-const followUpToneOptions: Array<{
-  value: CommWhatsAppFollowUpTone;
-  label: string;
-  description: string;
-}> = [
-  { value: 'consultivo', label: 'Consultivo', description: 'Orienta com contexto, escuta ativa e próximo passo claro.' },
-  { value: 'amigavel', label: 'Amigável', description: 'Soa leve, acolhedor e próximo sem perder objetividade.' },
-  { value: 'direto', label: 'Direto', description: 'Vai ao ponto com chamada objetiva e pouco texto.' },
-  { value: 'reativacao', label: 'Reativação', description: 'Retoma contato parado com naturalidade e baixa pressão.' },
-  { value: 'premium', label: 'Premium', description: 'Comunica cuidado, exclusividade e atenção personalizada.' },
-];
-
-const SIMPLE_REFINEMENT_ACTIONS: Array<{
-  id: CommWhatsAppRewriteTone;
-  label: string;
-  description: string;
-  icon: typeof Sparkles;
-}> = [
-  { id: 'shorter', label: 'Encurtar', description: 'Reescrever de forma mais curta e objetiva.', icon: X },
-  { id: 'friendly', label: 'Suavizar', description: 'Deixar mais leve, humana e acolhedora.', icon: Sparkles },
-  { id: 'assertive', label: 'Objetivar', description: 'Tornar o próximo passo mais claro.', icon: Check },
-  { id: 'professional', label: 'Profissionalizar', description: 'Ajustar para tom consultivo e profissional.', icon: Settings },
-];
-
-const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: Array<{
-  id: string;
-  label: string;
-  description: string;
-  instruction: string;
-}> = [
-  {
-    id: 'add-context',
-    label: 'Usar contexto',
-    description: 'Refinar considerando o histórico da conversa.',
-    instruction: 'Refine a mensagem usando o contexto completo do chat. Preserve apenas fatos confirmados no histórico e deixe o próximo passo mais coerente com a conversa.',
-  },
-  {
-    id: 'reduce-pressure',
-    label: 'Menos pressão',
-    description: 'Diminuir insistência e cobrança.',
-    instruction: 'Refine a mensagem para reduzir pressão e cobrança. Mantenha cordialidade, naturalidade e uma pergunta simples para facilitar resposta.',
-  },
-  {
-    id: 'clear-next-step',
-    label: 'Próximo passo',
-    description: 'Reforçar ação objetiva.',
-    instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
-  },
-];
-
-const formatNextActionDate = (value?: string | null) => {
-  if (!value) return 'Sem data sugerida';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Data sugerida inválida';
-  return date.toLocaleString('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const STATUS_DOT_COLOR: Record<string, string> = {
+  pending: 'var(--text-muted)',
+  generating: 'var(--brand-primary)',
+  ready: 'var(--success)',
+  failed: 'var(--danger)',
+  sending: 'var(--brand-primary)',
+  sent: 'var(--success)',
+  error: 'var(--danger)',
 };
 
 // ---- Types ----
@@ -99,6 +59,7 @@ type BatchItemState = {
   generatedText: string;
   variations: CommWhatsAppFollowUpVariation[];
   aiContextRationale: string | null;
+  emotionalContext: CommWhatsAppFollowUpEmotionalContext | null;
   nextAction: CommWhatsAppFollowUpNextAction | null;
   error: string | null;
   selected: boolean;
@@ -209,6 +170,7 @@ export default function WhatsAppBatchFollowUpModal({
           generatedText: '',
           variations: [],
           aiContextRationale: null,
+          emotionalContext: null,
           nextAction: null,
           error: null,
           selected: true,
@@ -275,6 +237,7 @@ export default function WhatsAppBatchFollowUpModal({
           generatedText: result.text.trim(),
           variations: result.variations ?? [],
           aiContextRationale: result.aiContext?.rationale ?? null,
+          emotionalContext: result.aiContext?.emotionalContext ?? null,
           nextAction: result.nextAction ?? null,
           tone: (result.aiContext?.tone as CommWhatsAppFollowUpTone) ?? item.tone,
           selectedSituationPresetIds: result.aiContext?.situationPresetIds ?? item.selectedSituationPresetIds,
@@ -328,7 +291,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Context refinement ----
 
-  const handleContextRefinement = async (action: typeof FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS[number]) => {
+  const handleContextRefinement = async (action: typeof CONTEXT_REFINEMENT_ACTIONS[number]) => {
     const idx = activeItemIndex;
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
     setRefiningActionId(action.id);
@@ -392,7 +355,7 @@ export default function WhatsAppBatchFollowUpModal({
       tone,
       manualContext: { ...it.manualContext, tone: true },
     })));
-    toast.success(`Tom "${followUpToneOptions.find((o) => o.value === tone)?.label}" aplicado a todos.`);
+    toast.success('Tom aplicado a todos os leads.');
   };
 
   const handleBatchApplySituationPreset = (presetId: string) => {
@@ -459,6 +422,7 @@ export default function WhatsAppBatchFollowUpModal({
             generatedText: result.value.text.trim(),
             variations: result.value.variations ?? [],
             aiContextRationale: result.value.aiContext?.rationale ?? null,
+            emotionalContext: result.value.aiContext?.emotionalContext ?? null,
             nextAction: result.value.nextAction ?? null,
           };
         } else {
@@ -575,42 +539,42 @@ export default function WhatsAppBatchFollowUpModal({
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
-          <div className="rounded-full border-4 p-4" style={{ borderColor: 'var(--success)', background: 'var(--success-soft)' }}>
-            <CheckCircle2 className="h-10 w-10" style={{ color: 'var(--success-text)' }} />
+          <div className="rounded-full border-4 border-[var(--success)] bg-[var(--success-soft)] p-4">
+            <CheckCircle2 className="h-10 w-10 text-[var(--success-text)]" />
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Follow-ups enviados</p>
-            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>Resumo do disparo em lote</p>
+            <p className="text-xl font-bold text-[var(--text-primary)]">Follow-ups enviados</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Resumo do disparo em lote</p>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
-            <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--success-border)', background: 'var(--success-soft)' }}>
-              <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--success-text)' }} />
+            <div className="flex items-center gap-2.5 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] px-5 py-3 shadow-sm">
+              <CheckCircle2 className="h-5 w-5 text-[var(--success-text)]" />
               <div>
-                <p className="text-lg font-bold" style={{ color: 'var(--success-text)' }}>{sentSummary.sentCount}</p>
-                <p className="text-xs font-medium" style={{ color: 'var(--success-text)' }}>enviado(s)</p>
+                <p className="text-lg font-bold text-[var(--success-text)]">{sentSummary.sentCount}</p>
+                <p className="text-xs font-medium text-[var(--success-text)]">enviado(s)</p>
               </div>
             </div>
             {sentSummary.scheduledCount > 0 ? (
-              <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--info-border)', background: 'var(--info-soft)' }}>
-                <CalendarPlus className="h-5 w-5" style={{ color: 'var(--info-text)' }} />
+              <div className="flex items-center gap-2.5 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-5 py-3 shadow-sm">
+                <CalendarPlus className="h-5 w-5 text-[var(--info-text)]" />
                 <div>
-                  <p className="text-lg font-bold" style={{ color: 'var(--info-text)' }}>{sentSummary.scheduledCount}</p>
-                  <p className="text-xs font-medium" style={{ color: 'var(--info-text)' }}>agendado(s)</p>
+                  <p className="text-lg font-bold text-[var(--info-text)]">{sentSummary.scheduledCount}</p>
+                  <p className="text-xs font-medium text-[var(--info-text)]">agendado(s)</p>
                 </div>
               </div>
             ) : null}
             {sentSummary.failedCount > 0 ? (
-              <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--danger-border)', background: 'var(--danger-soft)' }}>
-                <AlertCircle className="h-5 w-5" style={{ color: 'var(--danger-text)' }} />
+              <div className="flex items-center gap-2.5 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-5 py-3 shadow-sm">
+                <AlertCircle className="h-5 w-5 text-[var(--danger-text)]" />
                 <div>
-                  <p className="text-lg font-bold" style={{ color: 'var(--danger-text)' }}>{sentSummary.failedCount}</p>
-                  <p className="text-xs font-medium" style={{ color: 'var(--danger-text)' }}>falha(s)</p>
+                  <p className="text-lg font-bold text-[var(--danger-text)]">{sentSummary.failedCount}</p>
+                  <p className="text-xs font-medium text-[var(--danger-text)]">falha(s)</p>
                 </div>
               </div>
             ) : null}
           </div>
           {sentSummary.errorMessage ? (
-            <p className="max-w-md text-center text-sm" style={{ color: 'var(--danger-text)' }}>{sentSummary.errorMessage}</p>
+            <p className="max-w-md text-center text-sm text-[var(--danger-text)]">{sentSummary.errorMessage}</p>
           ) : null}
         </div>
       </WhatsAppDialog>
@@ -623,10 +587,10 @@ export default function WhatsAppBatchFollowUpModal({
     return (
       <WhatsAppDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
           <div className="text-center">
-            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Buscando follow-ups pendentes...</p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Aguarde enquanto carregamos os leads com follow-up atrasado.</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Buscando follow-ups pendentes...</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</p>
           </div>
         </div>
       </WhatsAppDialog>
@@ -640,7 +604,7 @@ export default function WhatsAppBatchFollowUpModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
-      description={phase === 'sending' ? '' : 'Selecione, gere e envie follow-ups para vários leads de uma vez.'}
+      description={phase === 'sending' ? '' : 'Cada lead é interpretado individualmente pela IA — selecione, gere e envie de uma vez.'}
       size="xl"
       panelClassName="max-w-[90rem]"
       footer={
@@ -648,12 +612,12 @@ export default function WhatsAppBatchFollowUpModal({
           {/* Left footer: contextual actions */}
           <div className="flex items-center gap-2">
             {phase === 'generating' ? (
-              <Button variant="secondary" size="sm" className="rounded-xl" onClick={() => { cancelRequestedRef.current = true; }}>
+              <Button variant="secondary" size="sm" onClick={() => { cancelRequestedRef.current = true; }}>
                 Cancelar geração
               </Button>
             ) : phase === 'sending' ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span>Enviando {sendingFinished} de {sendingTotal}</span>
                 </div>
@@ -664,21 +628,19 @@ export default function WhatsAppBatchFollowUpModal({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="rounded-xl"
                   onClick={() => void handleGenerateAll()}
                   disabled={pendingCount === 0}
                 >
-                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  <Sparkles className="h-4 w-4" />
                   Gerar {pendingCount} pendente(s)
                 </Button>
                 {readyCount > 0 ? (
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="rounded-xl"
                     onClick={() => setConfigOpen((v) => !v)}
                   >
-                    <Settings className="mr-1.5 h-4 w-4" />
+                    <Settings className="h-4 w-4" />
                     Configurar IA
                   </Button>
                 ) : null}
@@ -688,17 +650,16 @@ export default function WhatsAppBatchFollowUpModal({
 
           {/* Right footer: close + send */}
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleClose} disabled={phase === 'sending'}>
+            <Button variant="secondary" size="sm" onClick={handleClose} disabled={phase === 'sending'}>
               Fechar
             </Button>
             <Button
               variant="primary"
               size="sm"
-              className="rounded-xl"
               onClick={() => void handleSendSelected()}
               disabled={readyCount === 0 || phase === 'sending'}
             >
-              {phase === 'sending' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
+              {phase === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar ${readyCount} selecionado(s)`}
             </Button>
           </div>
@@ -713,40 +674,22 @@ export default function WhatsAppBatchFollowUpModal({
 
         {/* Stats bar */}
         <div className="flex items-center justify-between gap-4 px-1">
-          <div className="flex items-center gap-3">
-            <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-secondary)',
-            }}>
-              {selectedCount}/{totalCount} selecionados
-            </span>
-            {pendingCount > 0 ? (
-              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
-                background: 'var(--warning-soft)',
-                color: 'var(--warning-text)',
-              }}>
-                {pendingCount} pendente(s)
-              </span>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill>{selectedCount}/{totalCount} selecionados</Pill>
+            {pendingCount > 0 ? <Pill tone="accent">{pendingCount} pendente(s)</Pill> : null}
             {readyCount > 0 ? (
-              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
-                background: 'var(--success-soft)',
-                color: 'var(--success-text)',
-              }}>
+              <span className="rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--success-text)]">
                 {readyCount} pronto(s)
               </span>
             ) : null}
             {failedGenCount > 0 ? (
-              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
-                background: 'var(--danger-soft)',
-                color: 'var(--danger-text)',
-              }}>
+              <span className="rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--danger-text)]">
                 {failedGenCount} falha(s)
               </span>
             ) : null}
           </div>
           {phase === 'sending' ? (
-            <span className="text-xs font-semibold" style={{ color: currentSendingItem ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
+            <span className={`text-xs font-semibold ${currentSendingItem ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)]'}`}>
               {currentSendingItem ? `Enviando: ${currentSendingItem.leadName || 'Sem nome'}` : 'Finalizando...'}
             </span>
           ) : null}
@@ -755,16 +698,15 @@ export default function WhatsAppBatchFollowUpModal({
         {/* Main content */}
         <div className="flex min-h-0 flex-1 gap-5 overflow-hidden">
           {/* Sidebar */}
-          <aside className="flex w-[248px] shrink-0 flex-col gap-2">
+          <aside className="flex w-[260px] shrink-0 flex-col gap-2">
             <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                 Leads
               </span>
               <button
                 type="button"
                 onClick={handleToggleSelectAll}
-                className="text-[11px] font-semibold transition hover:opacity-70"
-                style={{ color: 'var(--brand-primary)' }}
+                className="text-[11px] font-semibold text-[var(--brand-primary)] transition hover:opacity-70"
                 disabled={phase === 'sending'}
               >
                 {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
@@ -785,17 +727,8 @@ export default function WhatsAppBatchFollowUpModal({
                   statusDot = item.status === 'generating' ? 'generating' : item.status === 'ready' ? 'ready' : item.status === 'failed' ? 'failed' : 'pending';
                 }
 
-                const statusColors: Record<string, { dot: string; bg: string }> = {
-                  pending: { dot: 'var(--text-muted)', bg: 'transparent' },
-                  generating: { dot: 'var(--brand-primary)', bg: 'var(--brand-primary-soft)' },
-                  ready: { dot: 'var(--success)', bg: 'var(--success-soft)' },
-                  failed: { dot: 'var(--danger)', bg: 'var(--danger-soft)' },
-                  sending: { dot: 'var(--brand-primary)', bg: 'var(--brand-primary-soft)' },
-                  sent: { dot: 'var(--success)', bg: 'var(--success-soft)' },
-                  error: { dot: 'var(--danger)', bg: 'var(--danger-soft)' },
-                };
-
-                const colors = statusColors[statusDot];
+                const dotColor = STATUS_DOT_COLOR[statusDot];
+                const leadName = item.leadName || 'Sem nome';
 
                 return (
                   <div key={item.reminderId} className="flex items-center gap-1.5">
@@ -807,33 +740,31 @@ export default function WhatsAppBatchFollowUpModal({
                       }}
                       onClick={() => { if (phase !== 'sending') handleToggleSelect(item.chatId); }}
                     >
-                      {item.selected && <Check className="h-3 w-3" style={{ color: 'var(--text-on-brand)' }} />}
+                      {item.selected && <Check className="h-3 w-3 text-[var(--text-on-brand)]" />}
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveItemIndex(index)}
-                      className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-xs transition ${
-                        isActive
-                          ? 'shadow-sm'
-                          : 'hover:bg-[var(--bg-elevated)]'
+                      className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs transition ${
+                        isActive ? 'border border-[var(--brand-primary-border)] bg-[var(--bg-elevated)] shadow-sm' : 'border border-transparent hover:bg-[var(--bg-elevated)]'
                       }`}
-                      style={{
-                        background: isActive ? colors.bg || 'var(--bg-elevated)' : 'transparent',
-                        border: isActive ? `1px solid ${colors.dot || 'transparent'}` : '1px solid transparent',
-                      }}
                     >
-                      <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                        {statusDot === 'generating' || statusDot === 'sending' ? (
-                          <Loader2 className="h-3 w-3 animate-spin" style={{ color: colors.dot }} />
-                        ) : (
-                          <span className="block h-2 w-2 rounded-full" style={{ background: colors.dot }} />
-                        )}
+                      <span className="relative shrink-0">
+                        <Avatar name={leadName} size="xs" />
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 border-[var(--bg-surface)]"
+                          style={{ background: dotColor }}
+                        >
+                          {statusDot === 'generating' || statusDot === 'sending' ? (
+                            <Loader2 className="h-2 w-2 animate-spin text-[var(--bg-surface)]" />
+                          ) : null}
+                        </span>
                       </span>
-                      <span className="min-w-0 flex-1 truncate font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {item.leadName || 'Sem nome'}
+                      <span className="min-w-0 flex-1 truncate font-medium text-[var(--text-primary)]">
+                        {leadName}
                       </span>
                       {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
-                        <span className="shrink-0 text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                        <span className="shrink-0 text-[10px] font-bold text-[var(--text-muted)]">
                           {item.sendSegmentsSent}/{item.sendSegmentsTotal}
                         </span>
                       ) : null}
@@ -850,116 +781,81 @@ export default function WhatsAppBatchFollowUpModal({
               {/* Main editor */}
               <section className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
                 {/* Message editor card */}
-                <div className="rounded-2xl border p-4 shadow-sm" style={{
-                  borderColor: 'var(--border-subtle)',
-                  background: 'var(--bg-surface)',
-                }}>
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
                   {/* Header */}
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                          {activeItem.leadName || 'Sem nome'}
-                        </h3>
-                        {activeItem.status === 'ready' ? (
-                          <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: 'var(--success)' }} />
-                        ) : activeItem.status === 'failed' ? (
-                          <AlertCircle className="h-4 w-4 shrink-0" style={{ color: 'var(--danger)' }} />
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Avatar name={activeItem.leadName || 'Sem nome'} size="sm" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="truncate text-sm font-bold text-[var(--text-primary)]">
+                            {activeItem.leadName || 'Sem nome'}
+                          </h3>
+                          {activeItem.status === 'ready' ? (
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
+                          ) : activeItem.status === 'failed' ? (
+                            <AlertCircle className="h-4 w-4 shrink-0 text-[var(--danger)]" />
+                          ) : null}
+                        </div>
+                        {activeItem.leadPhone ? (
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{activeItem.leadPhone}</p>
                         ) : null}
                       </div>
-                      {activeItem.leadPhone ? (
-                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>{activeItem.leadPhone}</p>
-                      ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Button
-                        variant="secondary" size="sm" className="rounded-xl"
+                        variant="secondary" size="sm"
                         loading={activeItem.status === 'generating'}
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!)}
                       >
-                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                        <Sparkles className="h-3.5 w-3.5" />
                         {activeItem.generatedText.trim() ? 'Regenerar' : 'Gerar'}
                       </Button>
                       <Button
-                        variant="soft" size="sm" className="rounded-xl"
+                        variant="soft" size="sm"
                         loading={activeItem.status === 'generating'}
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!, { variantCount: 3 })}
                       >
-                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                        <Sparkles className="h-3.5 w-3.5" />
                         3 opções
                       </Button>
                     </div>
                   </div>
 
-                  {/* AI Context Rationale */}
-                  {activeItem.aiContextRationale ? (
-                    <div className="mb-4 rounded-xl border px-3 py-2.5 text-xs leading-5" style={{
-                      borderColor: 'var(--brand-primary-border)',
-                      background: 'var(--brand-primary-soft)',
-                      color: 'var(--accent-gold-hover)',
-                    }}>
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                        <span>Contexto aplicado pela IA</span>
-                      </div>
-                      <p className="mt-1 opacity-85">{activeItem.aiContextRationale}</p>
-                    </div>
+                  {/* AI Context Panel */}
+                  {activeItem.aiContextRationale || activeItem.emotionalContext?.detected ? (
+                    <AiContextPanel
+                      className="mb-4"
+                      rationale={activeItem.aiContextRationale}
+                      emotionalContext={activeItem.emotionalContext}
+                    />
                   ) : null}
 
                   {/* Variations carousel */}
                   {activeItem.variations.length > 0 ? (
                     <div className="mb-4">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                         Variações disponíveis
                       </p>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {activeItem.variations.map((variation, index) => (
-                          <button
-                            key={`${variation.label}:${index}`}
-                            type="button"
-                            onClick={() => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: variation.text }))}
-                            disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                            className="min-w-[14rem] max-w-[18rem] rounded-xl border px-3 py-2.5 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60"
-                            style={{
-                              borderColor: 'var(--border-subtle)',
-                              background: 'var(--bg-elevated)',
-                            }}
-                          >
-                            <span className="block truncate font-bold" style={{ color: 'var(--text-primary)' }}>
-                              {variation.label}
-                            </span>
-                            <span className="mt-1.5 line-clamp-2 block leading-5" style={{ color: 'var(--text-muted)' }}>
-                              {variation.text}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                      <VariationCarousel
+                        variations={activeItem.variations}
+                        onSelect={(text) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: text }))}
+                        disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                      />
                     </div>
                   ) : null}
 
                   {/* Textarea with word count */}
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <label className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                       Mensagem
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                        color: 'var(--accent-gold-hover)',
-                      }}>
-                        {activeMessageSegments.length || 1} blocos
-                      </span>
+                      <Pill tone="accent">{activeMessageSegments.length || 1} blocos</Pill>
                       {activeItem.generatedText.trim() ? (
-                        <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" style={{
-                          borderColor: 'var(--border-subtle)',
-                          background: 'var(--bg-elevated)',
-                          color: 'var(--text-muted)',
-                        }}>
-                          {activeItem.generatedText.trim().length} caracteres
-                        </span>
+                        <Pill>{activeItem.generatedText.trim().length} caracteres</Pill>
                       ) : null}
                     </div>
                   </div>
@@ -975,66 +871,38 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* Refinement toolbar */}
                   {activeItem.generatedText.trim() ? (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <span className="mr-1 text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Refinar:</span>
-                      {SIMPLE_REFINEMENT_ACTIONS.map((action) => {
-                        const Icon = action.icon;
-                        return (
-                          <button
-                            key={action.id}
-                            type="button"
-                            onClick={() => void handleSimpleRefinement(action.id)}
-                            disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                            title={action.description}
-                            className="flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-50"
-                            style={{
-                              borderColor: 'var(--border-subtle)',
-                              background: 'var(--bg-elevated)',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {refiningActionId === action.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Icon className="h-3 w-3" />
-                            )}
-                            {action.label}
-                          </button>
-                        );
-                      })}
-                      <span className="mx-1 h-4 w-px" style={{ background: 'var(--border-subtle)' }} />
-                      {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
-                        <button
+                      <span className="mr-1 text-[11px] font-semibold text-[var(--text-muted)]">Refinar:</span>
+                      {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
+                        <RefinementChip
                           key={action.id}
-                          type="button"
-                          onClick={() => void handleContextRefinement(action)}
+                          icon={action.icon}
+                          label={action.label}
+                          description={action.description}
+                          onClick={() => void handleSimpleRefinement(action.id)}
+                          loading={refiningActionId === action.id}
                           disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                          title={action.description}
-                          className="flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-50"
-                          style={{
-                            borderColor: 'var(--border-subtle)',
-                            background: 'var(--bg-elevated)',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {refiningActionId === action.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <RotateCcw className="h-3 w-3" />
-                          )}
-                          {action.label}
-                        </button>
+                        />
+                      ))}
+                      <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
+                      {CONTEXT_REFINEMENT_ACTIONS.map((action) => (
+                        <RefinementChip
+                          key={action.id}
+                          icon={action.icon}
+                          label={action.label}
+                          description={action.description}
+                          onClick={() => void handleContextRefinement(action)}
+                          loading={refiningActionId === action.id}
+                          disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                        />
                       ))}
                     </div>
                   ) : null}
 
                   {/* Error state */}
                   {activeItem.status === 'failed' && activeItem.error ? (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border px-3 py-2" style={{
-                      borderColor: 'var(--danger-border)',
-                      background: 'var(--danger-soft)',
-                    }}>
-                      <AlertCircle className="h-4 w-4 shrink-0" style={{ color: 'var(--danger-text)' }} />
-                      <span className="text-xs" style={{ color: 'var(--danger-text)' }}>{activeItem.error}</span>
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-[var(--danger-text)]" />
+                      <span className="text-xs text-[var(--danger-text)]">{activeItem.error}</span>
                     </div>
                   ) : null}
                 </div>
@@ -1043,180 +911,63 @@ export default function WhatsAppBatchFollowUpModal({
               {/* Right panel: Preview + Config */}
               <aside className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto">
                 {/* WhatsApp Preview */}
-                <div className="rounded-2xl border p-4 shadow-sm" style={{
-                  borderColor: 'var(--border-subtle)',
-                  background: 'var(--bg-elevated)',
-                }}>
-                  <div className="mb-3 flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
                     <MessageSquare className="h-4 w-4" />
                     Preview WhatsApp
                   </div>
-                  <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                    {activeMessageSegments.length > 0 ? (
-                      activeMessageSegments.map((segment, index) => (
-                        <div key={`${index}:${segment}`} className="flex flex-col items-start">
-                          <div className="max-w-[90%] rounded-2xl rounded-bl-sm border px-4 py-3 shadow-sm" style={{
-                            borderColor: 'var(--border-subtle)',
-                            background: 'var(--bg-surface)',
-                          }}>
-                            <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--text-primary)' }}>
-                              {segment}
-                            </p>
-                          </div>
-                          <div className="mt-1 flex items-center gap-2 pl-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent-gold-hover)' }}>
-                              Bloco {index + 1}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border-2 border-dashed px-4 py-10 text-center" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-surface)',
-                      }}>
-                        <MessageSquare className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--text-muted)' }} />
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          Gere ou escreva uma sugestão para visualizar.
-                        </p>
-                      </div>
-                    )}
+                  <div className="max-h-[320px] overflow-y-auto pr-1">
+                    <ChatBubblePreview segments={activeMessageSegments} />
                   </div>
                 </div>
 
                 {/* Next action */}
                 {activeItem.nextAction ? (
-                  <div className="rounded-2xl border p-4 shadow-sm" style={{
-                    borderColor: 'var(--brand-primary-border)',
-                    background: 'var(--bg-surface)',
-                  }}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                          <CalendarPlus className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-                          Próxima ação
-                        </div>
-                        <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                          {activeItem.nextAction.reason}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                        color: 'var(--accent-gold-hover)',
-                      }}>
-                        {activeItem.nextAction.type === 'schedule' ? 'Agendar' : activeItem.nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
-                      </span>
-                    </div>
-                    <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2" style={{ color: 'var(--text-secondary)' }}>
-                      <div className="rounded-xl border px-3 py-2" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                      }}>
-                        <div className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                          {formatNextActionDate(activeItem.nextAction.suggestedDateTime)}
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          Tentativa {activeItem.nextAction.attemptNumber}/{activeItem.nextAction.maxAttempts}
-                        </div>
-                      </div>
-                      <div className="rounded-xl border px-3 py-2" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                      }}>
-                        <div className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                          Prioridade {activeItem.nextAction.priority}
-                        </div>
-                        <div className="mt-0.5">
-                          Dia: {activeItem.nextAction.dayLoad ?? 0}/{activeItem.nextAction.dailyCapacity} pendentes
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                      {activeItem.nextAction.giveUpRecommendation}
-                    </p>
-                  </div>
+                  <NextActionCard nextAction={activeItem.nextAction} title="Próxima ação" />
                 ) : null}
 
                 {/* Configuração da IA accordion */}
                 <details
-                  className="rounded-2xl border shadow-sm"
-                  style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-surface)',
-                  }}
+                  className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm"
                   open={configOpen || activeItem.customInstructions.trim().length > 0 || activeItem.selectedSalesTechniques.length > 0}
                   onToggle={(e) => setConfigOpen(e.currentTarget.open)}
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
                     <div className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                      <Settings className="h-4 w-4 text-[var(--text-secondary)]" />
                       <div>
-                        <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Configurar IA</h3>
-                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <h3 className="text-sm font-bold text-[var(--text-primary)]">Configurar IA</h3>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                           Tom, cenário, técnicas e instruções
                         </p>
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--text-muted)',
-                    }}>
-                      {configOpen ? 'Recolher' : 'Abrir'}
-                    </span>
+                    <Pill>{configOpen ? 'Recolher' : 'Abrir'}</Pill>
                   </summary>
-                  <div className="space-y-4 border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="space-y-4 border-t border-[var(--border-subtle)] px-4 pb-4 pt-3">
                     {/* Tone */}
                     <div>
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Tom</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Tom</h4>
                         <button
                           type="button"
-                          className="text-[10px] font-semibold underline transition hover:opacity-70"
-                          style={{ color: 'var(--brand-primary)' }}
+                          className="text-[10px] font-semibold text-[var(--brand-primary)] underline transition hover:opacity-70"
                           onClick={() => handleBatchApplyTone(activeItem.tone)}
                           disabled={phase !== 'ready'}
                         >
                           Aplicar a todos
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {followUpToneOptions.map((option) => {
-                          const activeOption = activeItem.tone === option.value;
-                          return (
-                            <button
-                              key={option.value} type="button"
-                              onClick={() => handleChangeTone(option.value)}
-                              disabled={phase !== 'ready'}
-                              title={option.description}
-                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                                activeOption
-                                  ? 'shadow-sm'
-                                  : 'hover:border-[var(--brand-primary-border)]'
-                              }`}
-                              style={{
-                                borderColor: activeOption ? 'var(--brand-primary)' : 'var(--border-subtle)',
-                                background: activeOption ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
-                                color: activeOption ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
-                              }}
-                            >
-                              {option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <ToneSelector value={activeItem.tone} onChange={handleChangeTone} disabled={phase !== 'ready'} />
                     </div>
 
                     {/* Situation presets */}
                     <div>
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Cenário</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Cenário</h4>
                         <button
                           type="button"
-                          className="text-[10px] font-semibold underline transition hover:opacity-70"
-                          style={{ color: 'var(--brand-primary)' }}
+                          className="text-[10px] font-semibold text-[var(--brand-primary)] underline transition hover:opacity-70"
                           onClick={() => {
                             const activePresets = activeItem.selectedSituationPresetIds;
                             if (activePresets.length > 0) {
@@ -1230,69 +981,32 @@ export default function WhatsAppBatchFollowUpModal({
                           Aplicar a todos
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {CONVERSATION_SITUATION_PRESETS.map((preset) => {
-                          const activeOption = activeItem.selectedSituationPresetIds.includes(preset.id);
-                          return (
-                            <button
-                              key={preset.id} type="button"
-                              onClick={() => handleToggleSituationPreset(preset.id)}
-                              disabled={phase !== 'ready'}
-                              title={activeOption ? `Remover: ${preset.label}` : `Aplicar: ${preset.label}`}
-                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                                activeOption ? 'shadow-sm' : 'hover:border-[var(--brand-primary-border)]'
-                              }`}
-                              style={{
-                                borderColor: activeOption ? 'var(--brand-primary)' : 'var(--border-subtle)',
-                                background: activeOption ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
-                                color: activeOption ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
-                              }}
-                            >
-                              {activeOption && <Check className="mr-1 inline h-3 w-3" />}
-                              {preset.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <SituationPresetSelector
+                        presets={CONVERSATION_SITUATION_PRESETS}
+                        selectedIds={activeItem.selectedSituationPresetIds}
+                        onToggle={handleToggleSituationPreset}
+                        disabled={phase !== 'ready'}
+                      />
                     </div>
 
                     {/* Sales techniques */}
                     <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                         Técnicas avançadas
                       </h4>
-                      <div className="max-h-32 space-y-1 overflow-y-auto pr-1" role="group" aria-label="Técnicas de venda">
-                        {followUpSalesTechniqueOptions.map((technique) => {
-                          const selected = activeItem.selectedSalesTechniques.includes(technique.id);
-                          return (
-                            <button
-                              key={technique.id} type="button"
-                              onClick={() => handleToggleSalesTechnique(technique.id)}
-                              aria-pressed={selected}
-                              disabled={phase !== 'ready'}
-                              title={technique.description}
-                              className={`flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                                selected
-                                  ? 'shadow-sm'
-                                  : 'hover:border-[var(--brand-primary)]'
-                              }`}
-                              style={{
-                                borderColor: selected ? 'var(--brand-primary)' : 'var(--border-subtle)',
-                                background: selected ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
-                                color: selected ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
-                              }}
-                            >
-                              {selected ? <Check className="h-3 w-3 shrink-0" /> : <span className="h-3 w-3 shrink-0 rounded-full border" style={{ borderColor: 'var(--border-subtle)' }} />}
-                              <span>{technique.name}</span>
-                            </button>
-                          );
-                        })}
+                      <div className="max-h-32 overflow-y-auto pr-1">
+                        <SalesTechniqueSelector
+                          techniques={followUpSalesTechniqueOptions}
+                          selectedIds={activeItem.selectedSalesTechniques}
+                          onToggle={handleToggleSalesTechnique}
+                          disabled={phase !== 'ready'}
+                        />
                       </div>
                     </div>
 
                     {/* Custom instructions */}
                     <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                         Instruções extras
                       </h4>
                       <VariableAutocompleteTextarea
@@ -1312,11 +1026,11 @@ export default function WhatsAppBatchFollowUpModal({
           ) : (
             <div className="flex min-w-0 flex-1 items-center justify-center">
               <div className="text-center">
-                <MessageSquare className="mx-auto mb-3 h-10 w-10" style={{ color: 'var(--text-muted)' }} />
-                <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                <MessageSquare className="mx-auto mb-3 h-10 w-10 text-[var(--text-muted)]" />
+                <p className="font-semibold text-[var(--text-secondary)]">
                   Nenhum lead carregado
                 </p>
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
                   Selecione um lead na lista ao lado para começar.
                 </p>
               </div>
@@ -1327,3 +1041,4 @@ export default function WhatsAppBatchFollowUpModal({
     </WhatsAppDialog>
   );
 }
+

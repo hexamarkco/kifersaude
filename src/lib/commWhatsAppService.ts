@@ -253,7 +253,14 @@ export type CommWhatsAppFollowUpVariation = {
   text: string;
 };
 
+export type CommWhatsAppFollowUpEmotionalContext = {
+  detected: boolean;
+  guidance: string | null;
+};
+
 export type CommWhatsAppFollowUpAiContext = {
+  situationSummary?: string | null;
+  emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
   situationPresetIds: string[];
   tone: CommWhatsAppFollowUpTone;
   salesTechniques: string[];

@@ -26,6 +26,7 @@ import {
   type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
+  type CommWhatsAppFollowUpEmotionalContext,
   type CommWhatsAppFollowUpNextAction,
   type CommWhatsAppFollowUpTone,
   type CommWhatsAppFollowUpVariation,
@@ -3074,6 +3075,7 @@ export default function WhatsAppInboxScreen() {
     salesTechniques: false,
   });
   const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
+  const [followUpEmotionalContext, setFollowUpEmotionalContext] = useState<CommWhatsAppFollowUpEmotionalContext | null>(null);
   const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
   const [schedulingFollowUpNextAction, setSchedulingFollowUpNextAction] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
@@ -5345,6 +5347,7 @@ export default function WhatsAppInboxScreen() {
     setFollowUpSelectedSituationPresetIds([]);
     setFollowUpManualContext({ tone: false, situationPresetIds: false, salesTechniques: false });
     setFollowUpAiContextRationale(null);
+    setFollowUpEmotionalContext(null);
     setFollowUpNextAction(null);
   }, []);
 
@@ -8477,6 +8480,7 @@ export default function WhatsAppInboxScreen() {
       setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
       setFollowUpManualContext(activeManualContext);
       setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
+      setFollowUpEmotionalContext(result.aiContext?.emotionalContext ?? null);
       setFollowUpNextAction(result.nextAction ?? null);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
@@ -10960,6 +10964,7 @@ export default function WhatsAppInboxScreen() {
           selectedSalesTechniques={followUpSelectedSalesTechniques}
           selectedSituationPresetIds={followUpSelectedSituationPresetIds}
           aiContextRationale={followUpAiContextRationale}
+          emotionalContext={followUpEmotionalContext}
           nextAction={followUpNextAction}
           schedulingNextAction={schedulingFollowUpNextAction}
           onClose={handleCloseFollowUpModal}

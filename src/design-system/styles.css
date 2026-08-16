@@ -655,19 +655,21 @@
 }
 
 .kds-button-primary {
-  border-color: var(--button-primary-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 88%, var(--accent-copper)) 0%, color-mix(in srgb, var(--brand-primary-active) 82%, black) 100%);
-  color: var(--text-on-brand);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 14px 28px -20px color-mix(in srgb, var(--brand-primary) 84%, transparent);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  box-shadow: none;
 }
 
 .kds-button-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 96%, white) 0%, var(--brand-primary) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 18px 34px -20px color-mix(in srgb, var(--brand-primary) 90%, transparent), var(--glow-terracotta);
+  background: var(--text-primary);
+  opacity: 0.9;
+  box-shadow: none;
 }
 
 .kds-button-primary:active:not(:disabled) {
-  background: linear-gradient(180deg, var(--brand-primary-active) 0%, color-mix(in srgb, var(--brand-primary-active) 72%, black) 100%);
+  background: var(--text-primary);
+  opacity: 0.82;
 }
 
 .kds-button-secondary {
@@ -985,8 +987,8 @@
 }
 
 .kds-checkbox:checked {
-  border-color: var(--brand-primary-hover);
-  background-color: var(--brand-primary);
+  border-color: var(--text-primary);
+  background-color: var(--text-primary);
 }
 
 .kds-tabs-list {
@@ -1020,10 +1022,10 @@
 }
 
 .kds-tab-active {
-  color: var(--text-on-brand);
-  border-color: var(--button-primary-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 88%, var(--accent-copper)) 0%, color-mix(in srgb, var(--brand-primary-active) 82%, black) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 28px -22px color-mix(in srgb, var(--brand-primary) 90%, transparent);
+  color: var(--text-inverse);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  box-shadow: none;
 }
 
 .kds-tab-underline {
@@ -1075,9 +1077,9 @@
 }
 
 .kds-tabs-list-pill .kds-tab-active {
-  border-color: var(--button-primary-border);
-  background: var(--brand-primary-gradient);
-  color: var(--text-on-brand);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
 }
 
 .kds-tabs-badge {
@@ -2086,11 +2088,11 @@
 .kds-switch-lg .kds-switch-thumb { width: 1.375rem; height: 1.375rem; margin-left: 0.125rem; }
 
 .kds-switch-input:checked + .kds-switch-track {
-  background: var(--brand-primary);
-  border-color: var(--brand-primary);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
 }
 .kds-switch-input:checked + .kds-switch-track .kds-switch-thumb {
-  background: var(--text-on-brand);
+  background: var(--text-inverse);
 }
 .kds-switch-sm .kds-switch-input:checked + .kds-switch-track .kds-switch-thumb { transform: translateX(0.875rem); }
 .kds-switch-md .kds-switch-input:checked + .kds-switch-track .kds-switch-thumb { transform: translateX(1.125rem); }
@@ -2178,10 +2180,10 @@
 }
 
 .kds-radio-checked .kds-radio-indicator {
-  border-color: var(--brand-primary);
+  border-color: var(--text-primary);
 }
 .kds-radio-checked .kds-radio-indicator::after {
-  background: var(--brand-primary);
+  background: var(--text-primary);
 }
 
 .kds-radio-input:focus-visible + .kds-radio-indicator {
@@ -3187,19 +3189,21 @@
 }
 
 .kds-button-primary {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
-  color: var(--text-on-brand);
-  box-shadow: var(--shadow-button);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  box-shadow: none;
 }
 
 .kds-button-primary:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-  box-shadow: var(--shadow-button);
+  background: var(--text-primary);
+  opacity: 0.9;
+  box-shadow: none;
 }
 
 .kds-button-primary:active:not(:disabled) {
-  background: var(--brand-primary-active);
+  background: var(--text-primary);
+  opacity: 0.82;
 }
 
 .kds-button-secondary {
@@ -3349,8 +3353,8 @@
 }
 
 .kds-checkbox:checked {
-  border-color: var(--brand-primary);
-  background-color: var(--brand-primary);
+  border-color: var(--text-primary);
+  background-color: var(--text-primary);
 }
 
 .kds-tabs-list-underline {
@@ -3495,9 +3499,9 @@
 
 .kds-pagination-page-active,
 .kds-pagination-page-active:hover {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
-  color: var(--text-on-brand);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
   box-shadow: none;
 }
 
@@ -3514,9 +3518,9 @@
 }
 
 .kds-stepper-step-active .kds-stepper-circle {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
-  color: var(--text-on-brand);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
   box-shadow: var(--shadow-focus);
 }
 
@@ -3540,8 +3544,8 @@
 }
 
 .kds-switch-input:checked + .kds-switch-track {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
 }
 
 .kds-radio-indicator {
@@ -3551,8 +3555,8 @@
 
 .kds-radio-checked .kds-radio-indicator,
 .kds-radio-checked .kds-radio-indicator::after {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
 }
 
 .kds-avatar {
@@ -3641,8 +3645,8 @@
 
 .kds-op-page-button:hover:not(:disabled),
 .kds-op-page-button.is-active {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
 }
 
 .kds-kanban-board,
@@ -3668,8 +3672,9 @@
 
 .kds-calendar-day-selected,
 .calendar-day-selected {
-  border-color: var(--brand-primary) !important;
-  background: var(--brand-primary) !important;
+  border-color: var(--text-primary) !important;
+  background: var(--text-primary) !important;
+  color: var(--text-inverse) !important;
 }
 
 .kds-section-eyebrow {

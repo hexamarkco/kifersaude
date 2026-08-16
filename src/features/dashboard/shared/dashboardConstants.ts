@@ -20,12 +20,13 @@ export const DASHBOARD_CHART_RANGE_OPTIONS = [
 
 export const DASHBOARD_CHART_PALETTE = [
   'var(--brand-primary)',
-  'var(--accent-gold)',
-  'var(--purple-text)',
-  'var(--success-text)',
-  'var(--accent-copper)',
-  'var(--danger-text)',
-  'var(--text-muted)',
+  '#d97b3f',
+  '#c68a4e',
+  '#b3985e',
+  '#9ca36d',
+  '#8a9e6f',
+  '#5f8f5c',
+  '#4a7a52',
 ] as const;
 
 export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {

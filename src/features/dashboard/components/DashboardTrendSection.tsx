@@ -2,7 +2,7 @@ import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react'
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import { Card, SectionHeader, Surface, Tabs } from '../../../design-system';
+import { SectionHeader, Surface } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
   DASHBOARD_METRIC_COLORS,
@@ -104,13 +104,22 @@ export function DashboardTrendSection({
               />
             </div>
 
-            <Tabs
-              items={DASHBOARD_METRIC_TABS}
-              value={selectedMetric}
-              onChange={onSelectedMetricChange}
-              variant="pill"
-              listClassName="w-full xl:w-auto"
-            />
+            <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
+              {DASHBOARD_METRIC_TABS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectedMetricChange(item.id)}
+                  className={
+                    item.id === selectedMetric
+                      ? 'flex-1 rounded-full bg-[var(--text-primary)] px-4 py-2 text-xs font-medium text-[var(--text-inverse)] transition xl:flex-none'
+                      : 'flex-1 rounded-full px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition xl:flex-none'
+                  }
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
             <div className="min-w-0 xl:w-48">
               <FilterSingleSelect
@@ -135,21 +144,16 @@ export function DashboardTrendSection({
             const Icon = card.icon;
 
             return (
-              <Card key={card.label} variant="muted" kind="summary" padding="sm" className="space-y-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+              <div key={card.label} className="rounded-2xl bg-[var(--bg-hover)] p-4">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-surface)]">
                     <Icon className="h-4 w-4" strokeWidth={1.75} style={{ color: card.iconColor }} aria-hidden="true" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">{card.label}</p>
-                    <p className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">{card.meta}</p>
-                  </div>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">{card.label}</span>
                 </div>
-                <p className="font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
-                  {card.value}
-                </p>
-                <p className={`text-xs font-semibold leading-snug ${card.captionClassName}`}>{card.caption}</p>
-              </Card>
+                <p className="mt-3 text-xl font-semibold text-[var(--text-primary)]">{card.value}</p>
+                <p className={`mt-1 text-xs font-medium ${card.captionClassName}`}>{card.caption}</p>
+              </div>
             );
           })}
         </div>
@@ -161,7 +165,7 @@ export function DashboardTrendSection({
           }))}
           color={DASHBOARD_METRIC_COLORS[selectedMetric]}
           formatValue={formatSelectedMetricValue}
-          height={300}
+          height={280}
         />
       </div>
     </Surface>

@@ -81,11 +81,10 @@ export default function MonthlyTrendChart({
   if (!chart) {
     return (
       <div
-        className="flex items-center justify-center rounded-[var(--radius-2xl)] border border-dashed text-sm"
+        className="flex items-center justify-center rounded-2xl text-sm"
         style={{
           height,
-          borderColor: 'var(--border-subtle)',
-          background: 'var(--bg-inset)',
+          background: 'var(--bg-hover)',
           color: 'var(--text-muted)',
         }}
       >
@@ -94,35 +93,24 @@ export default function MonthlyTrendChart({
     );
   }
 
-  const recentPoints = data.slice(-3);
-  const latestPoint = chart.points[chart.points.length - 1];
-
   return (
-    <div className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 sm:p-5">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: `radial-gradient(circle at 82% 0%, color-mix(in srgb, ${color} 18%, transparent) 0%, transparent 38%), radial-gradient(circle at 10% 100%, color-mix(in srgb, var(--accent-gold) 8%, transparent) 0%, transparent 34%)`,
-        }}
-      />
-
-      <div className="relative rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
-              Série temporal
-            </p>
-            <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">
-              Tendência suavizada do indicador selecionado
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-            Série atual
-          </div>
+    <div className="h-full rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
+            Série temporal
+          </p>
+          <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">
+            Tendência suavizada do indicador selecionado
+          </p>
         </div>
+        <div className="inline-flex items-center gap-2 rounded-full bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+          Série atual
+        </div>
+      </div>
 
-        <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
+      <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
           <defs>
             <linearGradient id="monthlyTrendAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor={color} stopOpacity="0.2" />
@@ -235,33 +223,6 @@ export default function MonthlyTrendChart({
             strokeWidth="1.2"
           />
         </svg>
-      </div>
-
-      <div className="relative mt-4 grid gap-3 md:grid-cols-3">
-        {recentPoints.map((point) => {
-          const isLatest = point.label === latestPoint.label;
-
-          return (
-            <div
-              key={point.label}
-              className="rounded-[var(--radius-xl)] border px-4 py-3"
-              style={{
-                borderColor: isLatest ? `color-mix(in srgb, ${color} 56%, var(--border-subtle))` : 'var(--border-subtle)',
-                background: isLatest
-                  ? `linear-gradient(180deg, color-mix(in srgb, ${color} 16%, var(--bg-surface)) 0%, var(--bg-surface) 100%)`
-                  : 'var(--bg-inset)',
-              }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
-                {point.label}
-              </p>
-              <p className="mt-2 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                {formatValue(point.value)}
-              </p>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

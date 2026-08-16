@@ -29,20 +29,22 @@ export function DashboardSummaryCards({
     <div data-panel-animate className={gridClassName}>
       <KpiCard
         padding="sm"
+        icon={<Users className="h-4 w-4" aria-hidden="true" />}
         title="Leads em negociação"
         subtitle="Base de leads"
         value={<span className="tabular-nums">{leadsAtivos} / {totalLeads}</span>}
-        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" aria-hidden="true" />Pipeline ativo</span>}
+        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Pipeline ativo</span>}
         className="h-full space-y-3"
       />
 
       {!isObserver && (
         <KpiCard
           padding="sm"
+          icon={<FileText className="h-4 w-4" aria-hidden="true" />}
           title="Contratos ativos"
           subtitle="Vigentes"
           value={<span className="tabular-nums">{contratosAtivosCount.toLocaleString('pt-BR')}</span>}
-          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><FileText className="h-3.5 w-3.5 text-[var(--accent-copper)]" aria-hidden="true" />Carteira atual</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Carteira atual</span>}
           className="h-full space-y-3"
         />
       )}
@@ -50,30 +52,33 @@ export function DashboardSummaryCards({
       {!isObserver && (
         <KpiCard
           padding="sm"
+          icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
           title="Comissão"
           subtitle="Mensal"
           value={<span className="tabular-nums">R$ {comissaoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
-          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" aria-hidden="true" />Previsão de receita</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Previsão de receita</span>}
           className="h-full space-y-3"
         />
       )}
 
       <KpiCard
         padding="sm"
+        icon={<Target className="h-4 w-4" aria-hidden="true" />}
         title="Taxa de eficiência"
         subtitle="Leads convertidos"
         value={<span className="tabular-nums">{conversionRate.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
-        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Target className="h-3.5 w-3.5 text-[var(--accent-copper)]" aria-hidden="true" />Conversão atual</span>}
+        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Conversão atual</span>}
         className="h-full space-y-3"
       />
 
       {!isObserver && (
         <KpiCard
           padding="sm"
+          icon={<Activity className="h-4 w-4" aria-hidden="true" />}
           title="Ticket médio"
           subtitle="Por contrato"
           value={<span className="tabular-nums">R$ {ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
-          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Activity className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" aria-hidden="true" />Valor da carteira</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Valor da carteira</span>}
           className="h-full space-y-3"
         />
       )}

@@ -2303,7 +2303,7 @@ export default function DashboardScreen({
               />
 
               <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
-                <Surface variant="muted" padding="sm" className="sm:p-4">
+                <div className="rounded-2xl bg-[var(--bg-hover)] p-3 sm:p-4">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <Button
                       type="button"
@@ -2324,7 +2324,7 @@ export default function DashboardScreen({
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <div className="text-center">
-                      <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)]">
+                      <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--brand-primary)]">
                         <CalendarDays className="h-5 w-5" strokeWidth={1.75} />
                       </div>
                       <h4 className="text-base font-semibold capitalize leading-tight text-[var(--text-primary)]">
@@ -2350,16 +2350,12 @@ export default function DashboardScreen({
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div
-                    className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-xs text-[var(--text-muted)]"
-                  >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--bg-surface)] p-3 text-xs text-[var(--text-muted)]">
                     <span>
                       Navegue os meses para consultar reajustes e aniversários.
                     </span>
-                    <div
-                      className="inline-flex items-center gap-1 rounded-[var(--kds-radius-sm)] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
-                    >
-                      <Button
+                    <div className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
+                      <button
                         type="button"
                         onClick={() => {
                           const today = new Date();
@@ -2370,14 +2366,15 @@ export default function DashboardScreen({
                           );
                           setSelectedCalendarDate(today);
                         }}
-                        variant={
-                          calendarView === "day" ? "primary" : "secondary"
+                        className={
+                          calendarView === "day"
+                            ? "rounded-full bg-[var(--text-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-inverse)] transition"
+                            : "rounded-full px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition"
                         }
-                        size="sm"
                       >
                         Hoje
-                      </Button>
-                      <Button
+                      </button>
+                      <button
                         type="button"
                         onClick={() => {
                           if (!selectedCalendarDate) {
@@ -2387,26 +2384,28 @@ export default function DashboardScreen({
                           }
                           setCalendarView("week");
                         }}
-                        variant={
-                          calendarView === "week" ? "primary" : "secondary"
+                        className={
+                          calendarView === "week"
+                            ? "rounded-full bg-[var(--text-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-inverse)] transition"
+                            : "rounded-full px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition"
                         }
-                        size="sm"
                       >
                         Semana
-                      </Button>
-                      <Button
+                      </button>
+                      <button
                         type="button"
                         onClick={() => setCalendarView("month")}
-                        variant={
-                          calendarView === "month" ? "primary" : "secondary"
+                        className={
+                          calendarView === "month"
+                            ? "rounded-full bg-[var(--text-primary)] px-3 py-1.5 text-xs font-medium text-[var(--text-inverse)] transition"
+                            : "rounded-full px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition"
                         }
-                        size="sm"
                       >
                         Mês
-                      </Button>
+                      </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 gap-1.5 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="grid grid-cols-7 gap-1.5 rounded-2xl bg-[var(--bg-surface)] p-3">
                     {calendarDays.weekDays.map((day) => (
                       <div
                         key={day}
@@ -2417,12 +2416,12 @@ export default function DashboardScreen({
                     ))}
                     {calendarDays.cells}
                   </div>
-                </Surface>
+                </div>
 
-                <Surface variant="muted" padding="sm" className="flex flex-col sm:p-4">
-                  <div className="mb-4 flex items-start justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                <div className="flex flex-col rounded-2xl bg-[var(--bg-hover)] p-3 sm:p-4">
+                  <div className="mb-4 flex items-start justify-between gap-4 rounded-2xl bg-[var(--bg-surface)] p-3">
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--accent-copper)]">
                         <Sparkles className="h-5 w-5" strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0">
@@ -2436,7 +2435,7 @@ export default function DashboardScreen({
                       </h4>
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    <span className="shrink-0 rounded-full bg-[var(--bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                       {calendarViewEvents.length} evento
                       {calendarViewEvents.length === 1 ? "" : "s"}
                     </span>
@@ -2483,15 +2482,13 @@ export default function DashboardScreen({
                               ? `${band.min}+`
                               : `${band.min}-${band.max}`;
                           return (
-                            <Surface
+                            <div
                               key={event.id}
-                              padding="sm"
-                              variant="muted"
-                              className="overflow-hidden border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)]"
+                              className="overflow-hidden rounded-2xl bg-[var(--brand-primary-muted)] p-4"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex min-w-0 gap-3">
-                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--brand-primary)]">
                                     <Sparkles className="h-5 w-5" strokeWidth={1.75} />
                                   </span>
                                   <div className="min-w-0 space-y-1">
@@ -2599,22 +2596,20 @@ export default function DashboardScreen({
                                   Criar lembrete
                                 </Button>
                               </div>
-                            </Surface>
+                            </div>
                           );
                         }
 
                         const birthday = event.birthday;
 
                         return (
-                          <Surface
+                          <div
                             key={event.id}
-                            padding="sm"
-                            variant="muted"
-                            className="overflow-hidden border-[var(--border-subtle)]"
+                            className="overflow-hidden rounded-2xl bg-[var(--bg-surface)] p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 gap-3">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--accent-copper)]">
                                   <Cake className="h-5 w-5" strokeWidth={1.75} />
                                 </span>
                                 <div className="min-w-0">
@@ -2716,12 +2711,12 @@ export default function DashboardScreen({
                                 Criar lembrete
                               </Button>
                             </div>
-                          </Surface>
+                          </div>
                         );
                       })}
                     </div>
                   )}
-                </Surface>
+                </div>
               </div>
             </Surface>
           </>

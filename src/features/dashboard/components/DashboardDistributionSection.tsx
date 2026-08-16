@@ -1,5 +1,5 @@
 import DonutChart from '../../../components/charts/DonutChart';
-import { ActionSurface, Badge, SectionHeader, Surface } from '../../../design-system';
+import { Badge, SectionHeader, Surface } from '../../../design-system';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
 type DashboardDistributionSectionProps = {
@@ -36,81 +36,47 @@ export function DashboardDistributionSection({
     const leader = sortedData[0];
 
     return (
-      <Surface padding="sm" className="flex min-h-[27rem] flex-col">
-        <div className="flex h-full flex-col">
-          <SectionHeader title={title} description={description} as="h3" />
+      <Surface padding="sm" className="flex min-h-[24rem] flex-col">
+        <SectionHeader title={title} description={description} as="h3" />
 
-          {data.length > 0 ? (
-            <div className="mt-5 grid flex-1 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-center">
-              <Surface variant="muted" padding="sm" className="flex flex-col">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Rosca</p>
-                  <Badge tone="neutral">Total {total.toLocaleString('pt-BR')}</Badge>
-                </div>
-                <DonutChart data={data} size={210} strokeWidth={30} onSegmentClick={onSegmentClick} compact />
-              </Surface>
+        {data.length > 0 ? (
+          <div className="mt-5 flex flex-1 flex-col items-center gap-5">
+            <div className="shrink-0">
+              <DonutChart data={data} size={168} strokeWidth={22} onSegmentClick={onSegmentClick} compact />
+            </div>
 
-              <div className="min-w-0 space-y-3">
-                <Surface variant="muted" padding="sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Maior concentração</p>
-                  <p className="mt-2 truncate text-lg font-semibold leading-tight text-[var(--text-primary)]">
-                    {leader?.label}
-                  </p>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
-                      {leader?.value.toLocaleString('pt-BR')}
-                    </span>
-                    <span className="pb-0.5 text-sm font-semibold text-[var(--text-muted)]">
-                      de {total.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </Surface>
-
-                <div className="space-y-3">
-                  {sortedData.slice(0, 5).map((item) => {
-                    const percentage = total > 0 ? (item.value / total) * 100 : 0;
-
-                    return (
-                      <ActionSurface
-                        key={item.label}
-                        onClick={() => onSegmentClick(item.label)}
-                        variant="muted"
-                        padding="sm"
-                        className="group"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <span
-                              className="h-3 w-3 shrink-0 rounded-full"
-                              style={{ background: item.color }}
-                            />
-                            <span className="truncate text-sm font-semibold text-[var(--text-primary)]">{item.label}</span>
-                          </div>
-                          <span className="text-sm font-semibold tabular-nums text-[var(--text-secondary)]">
-                            {percentage.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${percentage}%`,
-                              background: item.color,
-                            }}
-                          />
-                        </div>
-                      </ActionSurface>
-                    );
-                  })}
-                </div>
+            <div className="w-full min-w-0 space-y-2">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium text-[var(--text-muted)]">
+                  Maior concentração: <span className="font-semibold text-[var(--text-primary)]">{leader?.label}</span>
+                </span>
+                <Badge tone="neutral">{total.toLocaleString('pt-BR')} total</Badge>
               </div>
+              {sortedData.slice(0, 6).map((item) => {
+                const percentage = total > 0 ? (item.value / total) * 100 : 0;
+
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onSegmentClick(item.label)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-[var(--bg-hover)]"
+                  >
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: item.color }} />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-secondary)]">{item.label}</span>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--text-muted)]">
+                      {percentage.toFixed(0)}%
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <div className="mt-5 flex min-h-72 flex-1 items-center justify-center rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] text-sm text-[var(--text-muted)]">
-              {emptyLabel}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-5 flex min-h-72 flex-1 items-center justify-center rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] text-sm text-[var(--text-muted)]">
+            {emptyLabel}
+          </div>
+        )}
       </Surface>
     );
   };

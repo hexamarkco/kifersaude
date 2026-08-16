@@ -108,10 +108,10 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Shared by light and dark themes: rounded pill controls keep the new Kifer visual language aligned. */
+  /* Shared by light and dark themes: contained radii for panels/containers; --radius-full is used explicitly by pill controls (buttons, inputs, badges). */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
-  --radius-lg: 9999px;
+  --radius-lg: 1.25rem;
   --radius-xl: 1.25rem;
   --radius-2xl: 1.75rem;
   --radius-full: 9999px;
@@ -625,7 +625,7 @@
 }
 
 .kds-button {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   font: var(--type-button);
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -763,7 +763,7 @@
   display: inline-flex;
   overflow: hidden;
   border: 1px solid var(--brand-primary-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--bg-inset);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -788,7 +788,7 @@
 .kds-textarea {
   width: 100%;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--control-bg);
   color: var(--text-primary);
   font: 500 0.875rem / 1.4 var(--font-sans);
@@ -917,7 +917,7 @@
   height: 100%;
   align-items: center;
   border-color: var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--control-addon-bg);
   color: var(--text-secondary);
   font: 600 0.8125rem / 1.4 var(--font-sans);
@@ -2814,43 +2814,43 @@
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'Inter', sans-serif;
 
-  --bg-canvas: #faf6f0;
-  --bg-canvas-subtle: #fdf9f5;
+  --bg-canvas: #f4f0e7;
+  --bg-canvas-subtle: #f8f5ee;
   --bg-surface: #ffffff;
-  --bg-surface-muted: #fdf9f5;
+  --bg-surface-muted: #f4f0e7;
   --bg-elevated: #ffffff;
-  --bg-inset: #f5e9dc;
-  --bg-hover: #f9eee5;
-  --bg-active: #f4ded1;
-  --bg-disabled: #f1e9e2;
+  --bg-inset: #f4f0e7;
+  --bg-hover: #ece3d3;
+  --bg-active: #e2d9c6;
+  --bg-disabled: #ece5d6;
 
-  --border-subtle: #f0e7df;
-  --border-default: #e9ddd3;
-  --border-strong: #d9c5b7;
-  --border-accent: #e5b2a2;
+  --border-subtle: #f0ebe0;
+  --border-default: #ece5d6;
+  --border-strong: #d8cfbc;
+  --border-accent: #efb692;
   --border-gold: #e6d18c;
 
-  --text-primary: #4b2e20;
-  --text-secondary: #74635a;
-  --text-muted: #a69890;
-  --text-subtle: #c0b4ad;
+  --text-primary: #18140f;
+  --text-secondary: #6b6255;
+  --text-muted: #8a8172;
+  --text-subtle: #b3a88f;
   --text-inverse: #ffffff;
-  --text-disabled: #b7aaa2;
+  --text-disabled: #b3a88f;
   --text-on-brand: #ffffff;
 
-  --brand-primary: #cb5a3a;
-  --brand-primary-hover: #b84d31;
-  --brand-primary-active: #9c3f2b;
-  --brand-primary-soft: #fbe8e1;
-  --brand-primary-muted: #fdf1ec;
-  --brand-primary-border: #e5b2a2;
+  --brand-primary: #e2672e;
+  --brand-primary-hover: #ef7c46;
+  --brand-primary-active: #c5501f;
+  --brand-primary-soft: #fbe3d3;
+  --brand-primary-muted: #f5e2d3;
+  --brand-primary-border: #efb692;
   --brand-primary-gradient: var(--brand-primary);
   --brand-primary-gradient-hover: var(--brand-primary-hover);
   --brand-primary-gradient-active: var(--brand-primary-active);
 
-  --accent-copper: #b86a48;
-  --accent-copper-hover: #995035;
-  --accent-copper-active: #7c3f2b;
+  --accent-copper: #c07a45;
+  --accent-copper-hover: #d98d52;
+  --accent-copper-active: #9c5f30;
   --accent-gold: #d4af37;
   --accent-gold-hover: #9a6d08;
   --accent-gold-active: #b8860b;
@@ -2861,30 +2861,30 @@
   --accent-gold-gradient-hover: var(--accent-gold-hover);
   --accent-gold-gradient-active: var(--accent-gold-active);
 
-  --success: #2e7d4f;
-  --success-hover: #21683e;
-  --success-active: #195033;
-  --success-soft: #eaf5ed;
-  --success-border: #b8d9c1;
-  --success-text: #286b43;
-  --warning: #b7791f;
-  --warning-hover: #956117;
-  --warning-active: #754b11;
-  --warning-soft: #fcf3e3;
-  --warning-border: #ead09b;
-  --warning-text: #805616;
-  --danger: #c43d32;
-  --danger-hover: #a93128;
-  --danger-active: #87261f;
-  --danger-soft: #fcebe8;
-  --danger-border: #edb9b2;
-  --danger-text: #a5342b;
-  --info: #3a6ea5;
-  --info-hover: #2e5988;
-  --info-active: #23466c;
-  --info-soft: #eaf2fa;
-  --info-border: #bdd1e7;
-  --info-text: #315f91;
+  --success: #22c55e;
+  --success-hover: #16a34a;
+  --success-active: #15803d;
+  --success-soft: #e3f1e7;
+  --success-border: #b8dfbd;
+  --success-text: #256a3f;
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-active: #b45309;
+  --warning-soft: #fbeedb;
+  --warning-border: #f3c27a;
+  --warning-text: #9c6b12;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-active: #b91c1c;
+  --danger-soft: #fbe1de;
+  --danger-border: #f4aaa3;
+  --danger-text: #b23327;
+  --info: #3b82f6;
+  --info-hover: #2563eb;
+  --info-active: #1d4ed8;
+  --info-soft: #e4eef7;
+  --info-border: #b7cff5;
+  --info-text: #2c5c86;
   --purple: #7d5a9b;
   --purple-soft: #f3edf7;
   --purple-border: #d7c7e2;
@@ -2894,18 +2894,18 @@
   --cyan-border: #b9dcda;
   --cyan-text: #216d6e;
 
-  --focus-ring: rgba(203, 90, 58, 0.25);
-  --focus-ring-strong: rgba(203, 90, 58, 0.58);
+  --focus-ring: rgba(226, 103, 46, 0.25);
+  --focus-ring-strong: rgba(226, 103, 46, 0.58);
   --disabled-bg: var(--bg-disabled);
   --disabled-border: var(--border-default);
   --disabled-text: var(--text-disabled);
-  --overlay: rgba(75, 46, 32, 0.42);
+  --overlay: rgba(24, 20, 15, 0.4);
 
-  --shadow-card: 0 1px 2px rgba(75, 46, 32, 0.04), 0 8px 24px -18px rgba(75, 46, 32, 0.18);
-  --shadow-card-hover: 0 8px 24px -16px rgba(75, 46, 32, 0.2), 0 0 0 1px rgba(203, 90, 58, 0.12);
-  --shadow-popover: 0 14px 32px -18px rgba(75, 46, 32, 0.24), 0 0 0 1px rgba(75, 46, 32, 0.04);
-  --shadow-modal: 0 24px 56px -24px rgba(75, 46, 32, 0.3), 0 0 0 1px rgba(75, 46, 32, 0.05);
-  --shadow-button: 0 6px 12px -9px rgba(156, 63, 43, 0.42);
+  --shadow-card: 0 1px 2px rgba(24, 20, 15, 0.04), 0 8px 24px -18px rgba(24, 20, 15, 0.14);
+  --shadow-card-hover: 0 8px 24px -16px rgba(24, 20, 15, 0.16), 0 0 0 1px rgba(226, 103, 46, 0.12);
+  --shadow-popover: 0 14px 32px -18px rgba(24, 20, 15, 0.18), 0 0 0 1px rgba(24, 20, 15, 0.04);
+  --shadow-modal: 0 24px 56px -24px rgba(24, 20, 15, 0.24), 0 0 0 1px rgba(24, 20, 15, 0.05);
+  --shadow-button: 0 6px 12px -9px rgba(226, 103, 46, 0.5);
   --shadow-button-gold: 0 6px 12px -9px rgba(184, 134, 11, 0.32);
   --shadow-focus: 0 0 0 3px var(--focus-ring);
   --glow-terracotta: none;
@@ -3042,33 +3042,33 @@
 .modal-theme-host.painel-theme.kifer-ds.theme-dark {
   color-scheme: dark;
 
-  --bg-canvas: #171210;
-  --bg-canvas-subtle: #1d1613;
-  --bg-surface: #241b17;
-  --bg-surface-muted: #1d1613;
-  --bg-elevated: #2c211c;
-  --bg-inset: #130f0d;
-  --bg-hover: #33251f;
-  --bg-active: #412b22;
-  --bg-disabled: #2a211d;
-  --border-subtle: #382b25;
-  --border-default: #49382f;
-  --border-strong: #684d3f;
-  --border-accent: #98533f;
+  --bg-canvas: #16110c;
+  --bg-canvas-subtle: #1a140e;
+  --bg-surface: #1f1811;
+  --bg-surface-muted: #241c14;
+  --bg-elevated: #2a2016;
+  --bg-inset: #16110c;
+  --bg-hover: #2e2318;
+  --bg-active: #382b1c;
+  --bg-disabled: #2b2117;
+  --border-subtle: #2e2419;
+  --border-default: #2e2419;
+  --border-strong: #4a3d2c;
+  --border-accent: #a85b34;
   --border-gold: #8e7334;
-  --text-primary: #fff8f2;
-  --text-secondary: #d3c3b8;
-  --text-muted: #a99386;
-  --text-subtle: #79675c;
-  --text-inverse: #251711;
-  --text-disabled: #76665d;
-  --text-on-brand: #fffaf6;
-  --brand-primary: #d76a4b;
-  --brand-primary-hover: #e98260;
-  --brand-primary-active: #b84b35;
-  --brand-primary-soft: #3e241d;
-  --brand-primary-muted: #2d1c17;
-  --brand-primary-border: #874937;
+  --text-primary: #f5f0e6;
+  --text-secondary: #d8cbb4;
+  --text-muted: #a99d89;
+  --text-subtle: #74695a;
+  --text-inverse: #1b140d;
+  --text-disabled: #665a51;
+  --text-on-brand: #fff7ef;
+  --brand-primary: #f0793f;
+  --brand-primary-hover: #ff9159;
+  --brand-primary-active: #cf5f28;
+  --brand-primary-soft: #3a2415;
+  --brand-primary-muted: #2e2015;
+  --brand-primary-border: #7a4326;
   --brand-primary-gradient: var(--brand-primary);
   --brand-primary-gradient-hover: var(--brand-primary-hover);
   --brand-primary-gradient-active: var(--brand-primary-active);
@@ -3081,8 +3081,8 @@
   --accent-gold-gradient: var(--accent-gold);
   --accent-gold-gradient-hover: var(--accent-gold-hover);
   --accent-gold-gradient-active: var(--accent-gold-active);
-  --focus-ring: rgba(215, 106, 75, 0.3);
-  --focus-ring-strong: rgba(215, 106, 75, 0.62);
+  --focus-ring: rgba(240, 121, 63, 0.3);
+  --focus-ring-strong: rgba(240, 121, 63, 0.62);
   --overlay: rgba(9, 6, 5, 0.7);
   --surface-bg: var(--bg-surface);
   --surface-muted-bg: var(--bg-surface-muted);
@@ -3103,7 +3103,7 @@
   --panel-glass-border: var(--border-default);
   --panel-glass-highlight: transparent;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 12px 28px -20px rgba(0, 0, 0, 0.6);
-  --shadow-card-hover: 0 14px 32px -20px rgba(0, 0, 0, 0.68), 0 0 0 1px rgba(215, 106, 75, 0.2);
+  --shadow-card-hover: 0 14px 32px -20px rgba(0, 0, 0, 0.68), 0 0 0 1px rgba(240, 121, 63, 0.2);
   --shadow-popover: 0 20px 42px -20px rgba(0, 0, 0, 0.7);
   --shadow-modal: 0 30px 72px -26px rgba(0, 0, 0, 0.76);
   --shadow-button: 0 6px 14px -9px rgba(0, 0, 0, 0.58);
@@ -3172,7 +3172,7 @@
 }
 
 .kds-button {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   letter-spacing: 0;
 }
@@ -3285,7 +3285,7 @@
 
 .kds-button-group {
   border-color: var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--bg-surface-muted);
   box-shadow: none;
 }
@@ -3294,7 +3294,7 @@
 .kds-select,
 .kds-textarea {
   border-color: var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--bg-surface);
   color: var(--text-primary);
   box-shadow: none;
@@ -3363,10 +3363,10 @@
 }
 
 .kds-badge {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: var(--badge-bg, var(--bg-surface));
   box-shadow: none;
-  letter-spacing: 0.02em;
+  letter-spacing: normal;
 }
 
 .kds-alert {

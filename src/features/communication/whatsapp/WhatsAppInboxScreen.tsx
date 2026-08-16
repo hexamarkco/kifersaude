@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
+import { Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
@@ -87,11 +87,18 @@ import {
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
+import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
+// Quando o Realtime de mensagens confirma SUBSCRIBED, o polling vira só rede
+// de segurança e pode rodar bem mais espaçado.
+const MESSAGE_POLL_SAFETY_NET_INTERVAL_MS = 20000;
 const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
+// Quando o canal do WhatsApp não está conectado, poll mais rápido para
+// detectar a reconexão sem esperar o intervalo espaçado padrão.
+const OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS = 10000;
 const MESSAGE_PAGE_SIZE = 50;
 const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
@@ -3068,6 +3075,8 @@ export default function WhatsAppInboxScreen() {
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
+  const [chatPendingDeletion, setChatPendingDeletion] = useState<CommWhatsAppChat | null>(null);
+  const [messagePendingDeletion, setMessagePendingDeletion] = useState<CommWhatsAppMessage | null>(null);
   const [saveContactDialogOpen, setSaveContactDialogOpen] = useState(false);
   const [saveContactName, setSaveContactName] = useState('');
   const [savingContact, setSavingContact] = useState(false);
@@ -4302,7 +4311,20 @@ export default function WhatsAppInboxScreen() {
     }
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
 
-  useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
+  const { isRealtimeHealthy: isMessageRealtimeHealthy } = useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
+
+  // Lidos via ref (não via dependência de efeito) para que os loops de
+  // polling abaixo recalculem o intervalo a cada agendamento sem reiniciar o
+  // timer inteiro a cada flutuação de conexão/realtime.
+  const isChannelConnectedRef = useRef(isChannelConnected);
+  useEffect(() => {
+    isChannelConnectedRef.current = isChannelConnected;
+  }, [isChannelConnected]);
+
+  const isMessageRealtimeHealthyRef = useRef(isMessageRealtimeHealthy);
+  useEffect(() => {
+    isMessageRealtimeHealthyRef.current = isMessageRealtimeHealthy;
+  }, [isMessageRealtimeHealthy]);
 
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => {
@@ -6285,27 +6307,52 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void loadOperationalState();
-    }, OPERATIONAL_STATE_POLL_INTERVAL_MS);
+    let timeoutId: number;
 
-    return () => window.clearInterval(intervalId);
+    const scheduleNext = () => {
+      const delay = computeOperationalStatePollIntervalMs(
+        isChannelConnectedRef.current,
+        OPERATIONAL_STATE_POLL_INTERVAL_MS,
+        OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS,
+      );
+
+      timeoutId = window.setTimeout(() => {
+        void loadOperationalState();
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadOperationalState, pollingEnabled]);
 
   useEffect(() => {
     if (!pollingEnabled || !selectedChat) return;
 
+    let timeoutId: number;
+
     // BUG FIX (BUG #16): nao pausamos mais o polling de mensagens enquanto
     // o "Carregar mais antigas" esta em andamento. O proprio loadMessages
     // ja respeita pollingMessagesChatIdRef para evitar requests concorrentes.
-    const intervalId = window.setInterval(() => {
-      if (loadingOlderMessages) {
-        return;
-      }
-      void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
-    }, MESSAGE_POLL_INTERVAL_MS);
+    const scheduleNext = () => {
+      const delay = computeMessagePollIntervalMs(
+        isMessageRealtimeHealthyRef.current,
+        MESSAGE_POLL_INTERVAL_MS,
+        MESSAGE_POLL_SAFETY_NET_INTERVAL_MS,
+      );
 
-    return () => window.clearInterval(intervalId);
+      timeoutId = window.setTimeout(() => {
+        if (!loadingOlderMessages) {
+          void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
+        }
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => window.clearTimeout(timeoutId);
   }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChat]);
 
   useEffect(() => {
@@ -7530,13 +7577,6 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const confirmed = window.confirm('Apagar esta mensagem no WhatsApp para todos?');
-    if (!confirmed) {
-      return;
-    }
-
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
     setDeletingMessageId(message.id);
 
     try {
@@ -8667,11 +8707,6 @@ export default function WhatsAppInboxScreen() {
 
   const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
     if (deletingChatId) {
-      return;
-    }
-
-    const confirmed = window.confirm('Excluir esta conversa da Inbox? Novas mensagens recebidas do contato podem reabrir a conversa.');
-    if (!confirmed) {
       return;
     }
 
@@ -10980,6 +11015,40 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
+        <ConfirmDialog
+          open={Boolean(chatPendingDeletion)}
+          onOpenChange={(open) => {
+            if (!open) setChatPendingDeletion(null);
+          }}
+          onConfirm={async () => {
+            if (!chatPendingDeletion) return;
+            await handleDeleteChat(chatPendingDeletion);
+            setChatPendingDeletion(null);
+          }}
+          title="Excluir conversa"
+          description="Excluir esta conversa da Inbox? Novas mensagens recebidas do contato podem reabrir a conversa."
+          confirmLabel="Excluir"
+          destructive
+          loading={Boolean(chatPendingDeletion && deletingChatId === chatPendingDeletion.id)}
+        />
+
+        <ConfirmDialog
+          open={Boolean(messagePendingDeletion)}
+          onOpenChange={(open) => {
+            if (!open) setMessagePendingDeletion(null);
+          }}
+          onConfirm={async () => {
+            if (!messagePendingDeletion) return;
+            await handleDeleteMessage(messagePendingDeletion);
+            setMessagePendingDeletion(null);
+          }}
+          title="Apagar mensagem"
+          description="Apagar esta mensagem no WhatsApp para todos?"
+          confirmLabel="Apagar"
+          destructive
+          loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)}
+        />
+
         <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">
           <DialogHeader onClose={() => setSaveContactDialogOpen(false)} showCloseButton>
             <DialogTitle>{selectedChat?.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}</DialogTitle>
@@ -10987,8 +11056,8 @@ export default function WhatsAppInboxScreen() {
           <DialogBody className="space-y-4">
             <DialogDescription>
               {selectedChat?.saved_contact_name
-                ? 'Atualize o nome salvo na sua agenda do WhatsApp.'
-                : 'Este contato ainda n&atilde;o est&aacute; salvo na sua agenda. Escolha um nome para salva-lo.'}
+                ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'
+                : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}
             </DialogDescription>
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">
@@ -11181,7 +11250,11 @@ export default function WhatsAppInboxScreen() {
               {canDeleteOutboundMessage(openMessageActionMenuMessage) ? (
                 <button
                   type="button"
-                  onClick={() => void handleDeleteMessage(openMessageActionMenuMessage)}
+                  onClick={() => {
+                    setMessageActionMenuPointerAnchor(null);
+                    setOpenMessageActionMenuMessageId(null);
+                    setMessagePendingDeletion(openMessageActionMenuMessage);
+                  }}
                   disabled={deletingMessageId === openMessageActionMenuMessage.id}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
                 >
@@ -11264,7 +11337,7 @@ export default function WhatsAppInboxScreen() {
                 onClick={() => {
                   setChatMenuPointerAnchor(null);
                   setOpenChatMenuChatId(null);
-                  void handleDeleteChat(openChatMenuChat);
+                  setChatPendingDeletion(openChatMenuChat);
                 }}
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"

@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { isCommWhatsAppWebhookSecretValid } from '../comm-whatsapp';
+import { corsHeaders, isCommWhatsAppWebhookSecretValid } from '../comm-whatsapp';
+
+test('CORS não usa mais wildcard — Access-Control-Allow-Origin aponta para uma origem específica', () => {
+  assert.notEqual(corsHeaders['Access-Control-Allow-Origin'], '*');
+  assert.ok(corsHeaders['Access-Control-Allow-Origin'].startsWith('https://'));
+  assert.equal(corsHeaders.Vary, 'Origin');
+});
 
 test('aceita quando o header bate exatamente com o segredo configurado', () => {
   assert.equal(isCommWhatsAppWebhookSecretValid('meu-segredo-123', 'meu-segredo-123'), true);

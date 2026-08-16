@@ -3,24 +3,34 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 import { supabase, type CommWhatsAppMessage } from '../../../../lib/supabase';
 
+export type CommWhatsAppMessageRealtimeState = {
+  readyChatId: string | null;
+  /** true somente quando o canal confirmou SUBSCRIBED — falso no fallback de 900ms e em erro/timeout. */
+  isRealtimeHealthy: boolean;
+};
+
 export const useCommWhatsAppMessageRealtime = (
   selectedChatId: string | null,
   onMessageChange: (payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => void,
-) => {
+): CommWhatsAppMessageRealtimeState => {
   const [readyChatId, setReadyChatId] = useState<string | null>(null);
+  const [isRealtimeHealthy, setIsRealtimeHealthy] = useState(false);
 
   useEffect(() => {
     if (!selectedChatId) {
       setReadyChatId(null);
+      setIsRealtimeHealthy(false);
       return;
     }
 
     let active = true;
     setReadyChatId(null);
+    setIsRealtimeHealthy(false);
 
     const readyFallbackTimeoutId = window.setTimeout(() => {
       if (active) {
         setReadyChatId(selectedChatId);
+        setIsRealtimeHealthy(false);
       }
     }, 900);
 
@@ -44,11 +54,13 @@ export const useCommWhatsAppMessageRealtime = (
         if (status === 'SUBSCRIBED') {
           window.clearTimeout(readyFallbackTimeoutId);
           setReadyChatId(selectedChatId);
+          setIsRealtimeHealthy(true);
         }
 
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn('[WhatsAppInbox] realtime de mensagens indisponivel; polling permanece ativo.');
           setReadyChatId(selectedChatId);
+          setIsRealtimeHealthy(false);
         }
       });
 
@@ -59,5 +71,5 @@ export const useCommWhatsAppMessageRealtime = (
     };
   }, [onMessageChange, selectedChatId]);
 
-  return readyChatId;
+  return { readyChatId, isRealtimeHealthy };
 };

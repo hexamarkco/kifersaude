@@ -1,9 +1,23 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
+// Antes '*': qualquer origem podia ler a resposta dessas Edge Functions no
+// navegador. Restrito à origem conhecida do CRM (configurável via env para
+// permitir staging/local sem precisar editar código).
+//
+// Acesso a `Deno` feito via globalThis (não `Deno.env.get` direto) para este
+// módulo continuar importável sob Node/vitest — vários testes de regressão
+// importam funções puras deste arquivo sem precisar de um runtime Deno real.
+const DEFAULT_COMM_WHATSAPP_ALLOWED_ORIGIN = 'https://www.kifersaude.com.br';
+const getCommWhatsAppAllowedOrigin = (): string => {
+  const denoGlobal = (globalThis as { Deno?: { env: { get: (key: string) => string | undefined } } }).Deno;
+  return denoGlobal?.env.get('COMM_WHATSAPP_ALLOWED_ORIGIN')?.trim() || DEFAULT_COMM_WHATSAPP_ALLOWED_ORIGIN;
+};
+
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': getCommWhatsAppAllowedOrigin(),
   'Access-Control-Allow-Methods': 'POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-Supabase-Api-Version, X-Region, Accept, X-Kifer-Webhook-Secret',
+  Vary: 'Origin',
 };
 
 export const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
@@ -419,6 +433,29 @@ export const getCommWhatsAppWebhookSecret = (): string =>
   toTrimmedString(Deno.env.get(COMM_WHATSAPP_WEBHOOK_SECRET_ENV));
 
 /**
+ * Compara duas strings em tempo constante (não retorna assim que acha a
+ * primeira diferença), para não vazar por timing quantos caracteres iniciais
+ * do segredo o chamador acertou. Tamanhos diferentes já revelam que não bate
+ * — isso é inevitável e de baixo valor para um atacante (só diz "não é do
+ * mesmo tamanho", não qual byte diverge).
+ */
+const timingSafeStringEqual = (a: string, b: string): boolean => {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  const bytesA = new TextEncoder().encode(a);
+  const bytesB = new TextEncoder().encode(b);
+
+  let diff = 0;
+  for (let i = 0; i < bytesA.length; i += 1) {
+    diff |= bytesA[i] ^ bytesB[i];
+  }
+
+  return diff === 0;
+};
+
+/**
  * Valida o header de autenticidade do webhook (`X-Kifer-Webhook-Secret`) contra o
  * segredo configurado via Edge Secret. Extraída como função pura para poder ser
  * coberta por teste de regressão sem precisar subir a Edge Function inteira.
@@ -428,7 +465,7 @@ export const isCommWhatsAppWebhookSecretValid = (
   expectedSecret: string,
 ): boolean => {
   const provided = toTrimmedString(providedHeaderValue);
-  return Boolean(provided) && Boolean(expectedSecret) && provided === expectedSecret;
+  return Boolean(provided) && Boolean(expectedSecret) && timingSafeStringEqual(provided, expectedSecret);
 };
 
 export async function fetchWhapiWithTimeout(

@@ -81,10 +81,11 @@ AS $$
       l.nome_completo AS resolved_lead_name,
       COALESCE(lsc.nome, l.status) AS resolved_lead_status,
       l.responsavel_id AS resolved_lead_responsavel_id,
-      l.responsavel AS resolved_lead_responsavel
+      lr.label AS resolved_lead_responsavel
     FROM public.comm_whatsapp_chats c
     LEFT JOIN public.leads l ON l.id = c.lead_id
     LEFT JOIN public.lead_status_config lsc ON lsc.id = l.status_id
+    LEFT JOIN public.lead_responsaveis lr ON lr.id = l.responsavel_id
     CROSS JOIN input
     WHERE public.current_user_can_view_comm_whatsapp()
       AND c.deleted_at IS NULL

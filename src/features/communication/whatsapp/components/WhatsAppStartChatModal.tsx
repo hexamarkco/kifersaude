@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
-import { ActionSurface, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
+import { ActionSurface, Button, Input, Surface, type TabItem } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
@@ -82,14 +82,25 @@ export default function WhatsAppStartChatModal({
       bodyClassName="flex min-h-0 flex-col"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-5">
-        <Tabs
-          items={SOURCE_TABS}
-          value={source}
-          onChange={setSource}
-          variant="pill"
-          listClassName="w-full sm:w-auto"
-          triggerClassName="flex-1 sm:flex-initial"
-        />
+        <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1 sm:w-auto sm:inline-flex">
+          {SOURCE_TABS.map((tab) => {
+            const isActive = tab.id === source;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSource(tab.id)}
+                className={`flex-1 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors sm:flex-initial ${
+                  isActive
+                    ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
         {source === 'manual' ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4">

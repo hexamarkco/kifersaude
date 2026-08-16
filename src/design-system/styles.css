@@ -497,8 +497,8 @@
 
 .kds-surface-muted,
 .kds-card-muted {
-  border-color: var(--border-subtle);
-  background: var(--surface-muted-bg);
+  border-color: transparent;
+  background: var(--bg-hover);
 }
 
 .kds-surface-strong,
@@ -3124,8 +3124,8 @@
 
 .kds-surface-muted,
 .kds-card-muted {
-  border-color: var(--border-subtle);
-  background: var(--bg-surface-muted);
+  border-color: transparent;
+  background: var(--bg-hover);
 }
 
 .kds-surface-strong,
@@ -3615,12 +3615,17 @@
   box-shadow: none;
 }
 
-.kds-op-chip,
+.kds-op-chip {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
 .kds-op-toolbar,
 .kds-op-bulk-bar,
 .kds-op-pagination {
-  border-color: var(--border-default);
-  background: var(--bg-surface);
+  border-color: transparent;
+  background: var(--bg-hover);
   box-shadow: none;
 }
 

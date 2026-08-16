@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
@@ -2703,8 +2703,8 @@ function WhatsAppMessageBody({
   const linkPreviewContent = linkPreview ? (
     <>
       {linkPreview.previewImage ? (
-        <div className="overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-inset)]">
-          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="max-h-[220px] w-full object-cover" loading="lazy" />
+        <div className="h-40 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-inset)]">
+          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="h-full w-full object-cover" loading="lazy" />
         </div>
       ) : null}
       <div className="space-y-1.5 px-3 py-3">
@@ -2721,13 +2721,13 @@ function WhatsAppMessageBody({
           href={linkPreview.url}
           target="_blank"
           rel="noreferrer"
-          className="block overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] transition hover:border-[var(--border-strong)]"
+          className="block w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] transition hover:border-[var(--border-strong)]"
         >
           {linkPreviewContent}
         </a>
       )
       : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
+        <div className="w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
           {linkPreviewContent}
         </div>
       )
@@ -3139,6 +3139,10 @@ export default function WhatsAppInboxScreen() {
   const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [removedAttachmentForUndo, setRemovedAttachmentForUndo] = useState<PendingAttachment | null>(null);
+  const removedAttachmentUndoTimeoutRef = useRef<number | null>(null);
+  const [isDraggingFilesOverThread, setIsDraggingFilesOverThread] = useState(false);
+  const threadDragCounterRef = useRef(0);
   const [selectedMediaComposerAttachmentId, setSelectedMediaComposerAttachmentId] = useState<string | null>(null);
   const [selectedDocumentComposerAttachmentId, setSelectedDocumentComposerAttachmentId] = useState<string | null>(null);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<MediaUploadProgress | null>(null);
@@ -4938,6 +4942,12 @@ export default function WhatsAppInboxScreen() {
     attachmentPreviewUrlsRef.current.clear();
   }, []);
 
+  useEffect(() => () => {
+    if (removedAttachmentUndoTimeoutRef.current) {
+      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
+    }
+  }, []);
+
   useClickOutside(
     attachmentMenuOpen,
     () => [attachmentMenuRef.current],
@@ -6241,6 +6251,11 @@ export default function WhatsAppInboxScreen() {
       cancelVoiceRecordingRef.current();
       messagesSignatureRef.current = '';
       pendingMessageSearchChatIdRef.current = null;
+      if (removedAttachmentUndoTimeoutRef.current) {
+        window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
+        removedAttachmentUndoTimeoutRef.current = null;
+      }
+      setRemovedAttachmentForUndo(null);
       return;
     }
 
@@ -6251,6 +6266,11 @@ export default function WhatsAppInboxScreen() {
     isNearBottomRef.current = true;
     setPendingAttachments([]);
     setReplyTargetMessage(null);
+    if (removedAttachmentUndoTimeoutRef.current) {
+      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
+      removedAttachmentUndoTimeoutRef.current = null;
+    }
+    setRemovedAttachmentForUndo(null);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
@@ -6863,7 +6883,9 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleClearAttachment = (attachmentId?: string) => {
-    if (!attachmentId || pendingAttachments.find((a) => a.id === attachmentId)?.kind === 'voice') {
+    const removedAttachment = attachmentId ? pendingAttachments.find((a) => a.id === attachmentId) ?? null : null;
+
+    if (!attachmentId || removedAttachment?.kind === 'voice') {
       handleClearVoiceAttachmentFromHook();
     }
     setPendingAttachments((current) => {
@@ -6873,6 +6895,83 @@ export default function WhatsAppInboxScreen() {
       return current.filter((attachment) => attachment.id !== attachmentId);
     });
     setMediaUploadProgress(null);
+
+    if (removedAttachment && removedAttachment.kind !== 'voice') {
+      if (removedAttachmentUndoTimeoutRef.current) {
+        window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
+      }
+      setRemovedAttachmentForUndo(removedAttachment);
+      removedAttachmentUndoTimeoutRef.current = window.setTimeout(() => {
+        setRemovedAttachmentForUndo(null);
+        removedAttachmentUndoTimeoutRef.current = null;
+      }, 6000);
+    }
+  };
+
+  const handleUndoRemoveAttachment = () => {
+    if (!removedAttachmentForUndo) {
+      return;
+    }
+
+    if (removedAttachmentUndoTimeoutRef.current) {
+      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
+      removedAttachmentUndoTimeoutRef.current = null;
+    }
+
+    const restoredAttachment = createPendingAttachmentFromFile(removedAttachmentForUndo.file);
+    setPendingAttachments((current) => [...current, restoredAttachment]);
+    setRemovedAttachmentForUndo(null);
+  };
+
+  const handleThreadDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!selectedChat || voiceRecordingState !== 'idle' || !Array.from(event.dataTransfer.types).includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    threadDragCounterRef.current += 1;
+    setIsDraggingFilesOverThread(true);
+  };
+
+  const handleThreadDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!selectedChat || voiceRecordingState !== 'idle' || !Array.from(event.dataTransfer.types).includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+  };
+
+  const handleThreadDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.types).includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    threadDragCounterRef.current = Math.max(0, threadDragCounterRef.current - 1);
+    if (threadDragCounterRef.current === 0) {
+      setIsDraggingFilesOverThread(false);
+    }
+  };
+
+  const handleThreadDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.types).includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    threadDragCounterRef.current = 0;
+    setIsDraggingFilesOverThread(false);
+
+    if (!selectedChat || voiceRecordingState !== 'idle') {
+      return;
+    }
+
+    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+    if (droppedFiles.length === 0) {
+      return;
+    }
+
+    const nextAttachments = droppedFiles.map(createPendingAttachmentFromFile);
+    setPendingAttachments((current) => {
+      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
+      return [...preserved, ...nextAttachments];
+    });
   };
 
   const handleSendCurrentVoiceRecording = () => {
@@ -9261,7 +9360,7 @@ export default function WhatsAppInboxScreen() {
         )}
 
         <section className="grid h-full min-h-0 flex-1 gap-0 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="whatsapp-inbox-panel whatsapp-inbox-sidebar flex h-full min-h-0 flex-col border shadow-sm xl:rounded-r-none xl:border-r">
+        <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar h-full min-h-0 flex-col border shadow-sm xl:flex xl:rounded-r-none xl:border-r ${selectedChat ? 'hidden' : 'flex'}`}>
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
@@ -9513,7 +9612,18 @@ export default function WhatsAppInboxScreen() {
           </div>
         </div>
 
-        <div className="whatsapp-inbox-panel whatsapp-inbox-thread flex h-full min-h-0 flex-col border shadow-sm xl:rounded-l-none xl:border-l-0">
+        <div
+          className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm xl:flex xl:rounded-l-none xl:border-l-0 ${selectedChat ? 'flex' : 'hidden xl:flex'}`}
+          onDragEnter={handleThreadDragEnter}
+          onDragOver={handleThreadDragOver}
+          onDragLeave={handleThreadDragLeave}
+          onDrop={handleThreadDrop}
+        >
+          {isDraggingFilesOverThread ? (
+            <div className="pointer-events-none absolute inset-2 z-[3] flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]/90">
+              <p className="whatsapp-inbox-heading text-sm font-semibold text-[var(--brand-primary)]">Solte para anexar à conversa</p>
+            </div>
+          ) : null}
           {!selectedChat ? (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
                 <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
@@ -9525,7 +9635,16 @@ export default function WhatsAppInboxScreen() {
           ) : (
             <>
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
-                <div>
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChatId(null)}
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] xl:hidden"
+                    aria-label="Voltar para a lista de conversas"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="whatsapp-inbox-heading flex items-center gap-1.5 text-lg font-semibold text-[var(--text-primary)]">
                       <LeadFavoriteBadge favorito={leadPanel?.favorito} />
@@ -9591,6 +9710,7 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     </div>
                   ) : null}
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-start gap-3">
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
@@ -10030,6 +10150,19 @@ export default function WhatsAppInboxScreen() {
                   })
                 )}
               </div>
+
+              {removedAttachmentForUndo ? (
+                <div className="mx-2.5 mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] sm:mx-3">
+                  <span className="truncate">Anexo removido: {removedAttachmentForUndo.file.name}</span>
+                  <button
+                    type="button"
+                    onClick={handleUndoRemoveAttachment}
+                    className="shrink-0 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                  >
+                    Desfazer
+                  </button>
+                </div>
+              ) : null}
 
               <div className="whatsapp-inbox-composer-area border-t p-2.5 sm:p-3">
                 <div className={`whatsapp-inbox-composer rounded-xl border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>

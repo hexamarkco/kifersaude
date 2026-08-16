@@ -9,6 +9,7 @@ import {
   ConfigPage,
   ContractsManagerWrapper,
   DashboardWrapper,
+  DesignSystemShowcase,
   FinanceiroAgendaTab,
   FinanceiroComissoesTab,
   HomePage,
@@ -48,6 +49,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/faq" element={<Navigate to="/" replace />} />
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/design-system" element={<DesignSystemShowcase />} />
             <Route
               path="/painel"
               element={

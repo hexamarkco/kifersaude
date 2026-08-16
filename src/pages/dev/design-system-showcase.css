@@ -1,0 +1,55 @@
+.ds-accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.ds-accordion-panel.is-open {
+  grid-template-rows: 1fr;
+}
+
+.ds-accordion-panel > div {
+  overflow: hidden;
+}
+
+.ds-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #18140f var(--ds-slider-fill, 50%),
+    #e7dfcf var(--ds-slider-fill, 50%)
+  );
+  cursor: pointer;
+}
+
+.ds-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #18140f;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(24, 20, 15, 0.35);
+  cursor: pointer;
+}
+
+.ds-slider::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: #18140f;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(24, 20, 15, 0.35);
+  cursor: pointer;
+}
+
+.ds-slider::-moz-range-track {
+  height: 2px;
+  border-radius: 9999px;
+  background: transparent;
+}

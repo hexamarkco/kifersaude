@@ -4534,7 +4534,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
     } finally {
-      if (shouldShowLoading && requestId === chatAgendaSummaryRequestIdRef.current && chatAgendaSummaryLeadIdRef.current === leadId) {
+      if (requestId === chatAgendaSummaryRequestIdRef.current && chatAgendaSummaryLeadIdRef.current === leadId) {
         setChatAgendaSummaryLoading(false);
       }
     }

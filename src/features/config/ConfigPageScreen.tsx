@@ -51,7 +51,7 @@ export default function ConfigPageScreen() {
           items={allowedTabs}
           value={activeAllowedTab}
           onChange={setActiveTab}
-          variant="underline"
+          variant="rail"
           listClassName="flex-nowrap overflow-x-auto"
         />
       </PageHeader>

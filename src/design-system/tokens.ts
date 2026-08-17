@@ -153,7 +153,7 @@ export const panelCheckboxSizeClasses: Record<PanelCheckboxSize, string> = {
   md: 'h-5 w-5',
 };
 
-export type PanelTabsVariant = 'underline' | 'pill';
+export type PanelTabsVariant = 'underline' | 'pill' | 'rail';
 export type PanelTabsSize = 'sm' | 'md' | 'lg';
 
 const tabsListBaseClass = 'kds-tabs-list';
@@ -161,6 +161,7 @@ const tabsListBaseClass = 'kds-tabs-list';
 const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
   underline: 'kds-tabs-list-underline',
   pill: 'kds-tabs-list-pill',
+  rail: 'kds-tabs-list-rail',
 };
 
 const tabsTriggerBaseClass =
@@ -180,6 +181,10 @@ const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle
   pill: {
     active: 'kds-tab-active',
     idle: '',
+  },
+  rail: {
+    active: 'kds-tab-rail kds-tab-active px-5',
+    idle: 'kds-tab-rail px-5',
   },
 };
 

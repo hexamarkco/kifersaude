@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   Bell,
@@ -29,14 +29,10 @@ import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpM
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import FilterSingleSelect from '../../../../components/FilterSingleSelect';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
-import { Button, Input, Textarea } from '../../../../design-system';
+import { Badge, Button, EmptyState, Input, Surface, Textarea } from '../../../../design-system';
+import DateTimePicker from '../../../../components/ui/DateTimePicker';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
-import {
-  PANEL_EMPTY_STATE_STYLE,
-  PANEL_INSET_STYLE,
-  PANEL_MUTED_INSET_STYLE,
-  getPanelToneStyle,
-} from '../../../../components/ui/panelStyles';
+import type { PanelTone } from '../../../../design-system';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../../../../lib/commWhatsAppService';
@@ -1021,8 +1017,8 @@ export default function WhatsAppAgendaModal({
     });
   };
 
-  const handleSelectedDateChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const parsedDate = parseDateInputValue(event.target.value);
+  const handleSelectedDateChange = (nextValue: string) => {
+    const parsedDate = parseDateInputValue(nextValue);
     if (!parsedDate) {
       return;
     }
@@ -1042,17 +1038,17 @@ export default function WhatsAppAgendaModal({
     void loadReminders();
   }, [loadReminders]);
 
-  const getReminderPriorityStyle = (priority: string) => {
+  const getReminderPriorityTone = (priority: string): PanelTone => {
     const tones = {
       baixa: 'info',
       normal: 'neutral',
       alta: 'danger',
     } as const;
 
-    return getPanelToneStyle(tones[priority as keyof typeof tones] ?? 'neutral');
+    return tones[priority as keyof typeof tones] ?? 'neutral';
   };
 
-  const getReminderTypeStyle = (type: string) => {
+  const getReminderTypeTone = (type: string): PanelTone => {
     const tones = {
       'Documentos pendentes': 'warning',
       Assinatura: 'accent',
@@ -1067,7 +1063,7 @@ export default function WhatsAppAgendaModal({
       Reajuste: 'info',
     } as const;
 
-    return getPanelToneStyle(tones[type as keyof typeof tones] ?? 'neutral');
+    return tones[type as keyof typeof tones] ?? 'neutral';
   };
 
   const getReminderIcon = (type: string) => {
@@ -1089,23 +1085,16 @@ export default function WhatsAppAgendaModal({
     return <Icon className="h-5 w-5" />;
   };
 
-  const getReminderCardStyle = (reminder: Reminder) => {
+  const getReminderCardVariant = (reminder: Reminder): 'success' | 'danger' | 'default' => {
     if (reminder.lido) {
-      return {
-        ...PANEL_INSET_STYLE,
-        ...getPanelToneStyle('success'),
-      };
+      return 'success';
     }
 
     if (isOverdue(reminder.data_lembrete)) {
-      return {
-        ...PANEL_INSET_STYLE,
-        borderColor: 'var(--danger-border)',
-        boxShadow: '0 0 0 1px var(--danger-border), var(--shadow-card)',
-      };
+      return 'danger';
     }
 
-    return PANEL_INSET_STYLE;
+    return 'default';
   };
 
   const renderReminderCard = (reminder: Reminder) => {
@@ -1119,75 +1108,62 @@ export default function WhatsAppAgendaModal({
     const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
 
     return (
-      <article
+      <Surface
         key={reminder.id}
-        className="panel-glass-lite rounded-[var(--kds-radius-lg)] border p-4 shadow-sm transition-all"
-        style={getReminderCardStyle(reminder)}
+        variant={getReminderCardVariant(reminder)}
+        padding="sm"
+        className="transition-all"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-3">
-              <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle('success') : getReminderTypeStyle(reminder.tipo)}>
+              <div className={`rounded-[1rem] border p-3 kds-surface-${reminder.lido ? 'success' : getReminderTypeTone(reminder.tipo)}`}>
                 {getReminderIcon(reminder.tipo)}
               </div>
 
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">
                       {reminder.titulo}
                     </h3>
                     {overdue ? (
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('danger')}>
-                        Atrasado
-                      </span>
+                      <Badge tone="danger">Atrasado</Badge>
                     ) : null}
                     {matchesCurrentLead ? (
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('accent')}>
-                        Chat atual
-                      </span>
+                      <Badge tone="accent">Chat atual</Badge>
                     ) : null}
                     {reminder.lido ? (
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('success')}>
-                        Concluido
-                      </span>
+                      <Badge tone="success">Concluido</Badge>
                     ) : null}
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {leadInfo?.nome_completo ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('neutral')}>
-                        <LeadFavoriteBadge favorito={leadInfo.favorito} />
+                      <Badge tone="neutral" icon={<LeadFavoriteBadge favorito={leadInfo.favorito} />}>
                         {leadInfo.nome_completo}
-                      </span>
+                      </Badge>
                     ) : null}
                     {contract?.codigo_contrato ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('info')}>
-                        Contrato {contract.codigo_contrato}
-                      </span>
+                      <Badge tone="info">Contrato {contract.codigo_contrato}</Badge>
                     ) : null}
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderTypeStyle(reminder.tipo)}>
-                      {reminder.tipo}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderPriorityStyle(reminder.prioridade)}>
-                      {reminder.prioridade}
-                    </span>
+                    <Badge tone={getReminderTypeTone(reminder.tipo)}>{reminder.tipo}</Badge>
+                    <Badge tone={getReminderPriorityTone(reminder.prioridade)}>{reminder.prioridade}</Badge>
                     {reminder.tempo_estimado_minutos ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('info')}>
-                        <Timer className="h-3 w-3" />
-                        <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
-                      </span>
+                      <Badge tone="info" icon={Timer}>
+                        {formatEstimatedTime(reminder.tempo_estimado_minutos)}
+                      </Badge>
                     ) : null}
                   </div>
 
                   {reminder.descricao ? (
-                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                       {reminder.descricao}
                     </p>
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--text-muted)]">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
@@ -1377,7 +1353,7 @@ export default function WhatsAppAgendaModal({
             ) : null}
           </div>
         </div>
-      </article>
+      </Surface>
     );
   };
 
@@ -1401,35 +1377,32 @@ export default function WhatsAppAgendaModal({
         }
       >
         {loading ? (
-          <div className="flex min-h-[520px] items-center justify-center rounded-[var(--kds-radius-lg)] border" style={PANEL_MUTED_INSET_STYLE}>
-            <div className="panel-glass-strong flex items-center gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3 shadow-lg" style={PANEL_INSET_STYLE}>
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <Surface variant="muted" padding="none" className="flex min-h-[520px] items-center justify-center">
+            <Surface variant="strong" padding="sm" className="flex items-center gap-3 shadow-lg">
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" />
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
                 Carregando agenda...
               </span>
-            </div>
-          </div>
+            </Surface>
+          </Surface>
         ) : (
           <div className="space-y-5">
-            <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+            <Surface padding="sm" className="sm:p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                     Dia em foco
                   </p>
-                  <h3 className="mt-2 text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
                     {selectedDateLabel}
                   </h3>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
                     {visiblePendingReminders.length > 0
                       ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
                       : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold" style={getPanelToneStyle('neutral')}>
-                      <Clock3 className="h-3.5 w-3.5" />
-                      <span>{lastUpdatedLabel}</span>
-                    </span>
+                    <Badge tone="neutral" icon={Clock3}>{lastUpdatedLabel}</Badge>
                   </div>
                 </div>
 
@@ -1453,7 +1426,7 @@ export default function WhatsAppAgendaModal({
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <div className="w-[176px]">
-                    <Input type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
+                    <DateTimePicker type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
                   </div>
                   <Button onClick={goToNextDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Próximo dia">
                     <ChevronRight className="h-5 w-5" />
@@ -1467,9 +1440,9 @@ export default function WhatsAppAgendaModal({
                   </Button>
                 </div>
               </div>
-            </section>
+            </Surface>
 
-            <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+            <Surface padding="sm" className="sm:p-5">
               <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto_auto]">
                 <div className="relative">
                   <Input
@@ -1514,90 +1487,74 @@ export default function WhatsAppAgendaModal({
                   </Button>
                 ) : null}
               </div>
-            </section>
+            </Surface>
 
             {error ? (
-              <div className="flex items-center gap-2 rounded-[var(--kds-radius-md)] border p-3 text-sm" style={getPanelToneStyle('danger')}>
+              <Surface variant="danger" padding="sm" className="flex items-center gap-2 py-3 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
-              </div>
+              </Surface>
             ) : null}
 
             {filteredReminders.length === 0 ? (
-              <div className="rounded-[var(--kds-radius-lg)] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
-                <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-                  Nenhum item encontrado
-                </h3>
-                <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  {emptyStateMessage}
-                </p>
-              </div>
+              <EmptyState
+                icon={<Bell className="h-14 w-14" />}
+                title="Nenhum item encontrado"
+                description={emptyStateMessage}
+              />
             ) : (
               <div className="space-y-4">
                 {overdueReminders.length > 0 ? (
-                  <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                  <Surface padding="sm" className="sm:p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--danger-text)' }}>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--danger-text)]">
                           Atrasados
                         </p>
-                        <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                           Pendencias de dias anteriores
                         </h4>
                       </div>
-                      <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('danger')}>
-                        {overdueReminders.length}
-                      </span>
+                      <Badge tone="danger">{overdueReminders.length}</Badge>
                     </div>
                     <div className="space-y-3">{overdueReminders.map(renderReminderCard)}</div>
-                  </section>
+                  </Surface>
                 ) : null}
 
-                <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <Surface padding="sm" className="sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
                         Rotina do dia
                       </p>
-                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                         {selectedDateLabel}
                       </h4>
                     </div>
-                    <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('accent')}>
-                      {pendingSelectedReminders.length} pendente(s)
-                    </span>
+                    <Badge tone="accent">{pendingSelectedReminders.length} pendente(s)</Badge>
                   </div>
 
                   {pendingSelectedReminders.length > 0 ? (
                     <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
                   ) : (
-                    <div
-                      className="rounded-[var(--kds-radius-md)] border py-8 text-center text-sm"
-                      style={{
-                        ...PANEL_MUTED_INSET_STYLE,
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
+                    <Surface variant="muted" padding="sm" className="py-8 text-center text-sm text-[var(--text-secondary)]">
                       Nenhum item pendente neste dia.
-                    </div>
+                    </Surface>
                   )}
-                </section>
+                </Surface>
 
-                <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <Surface padding="sm" className="sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
                         Concluidos no dia
                       </p>
-                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                         {completedSelectedReminders.length > 0 ? 'Historico do dia em foco' : 'Nada concluido ainda'}
                       </h4>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('success')}>
-                        {completedSelectedReminders.length}
-                      </span>
+                      <Badge tone="success">{completedSelectedReminders.length}</Badge>
                       <Button onClick={() => setShowCompleted((current) => !current)} variant="ghost" size="sm">
                         {showCompleted ? 'Ocultar' : 'Mostrar'}
                       </Button>
@@ -1608,28 +1565,16 @@ export default function WhatsAppAgendaModal({
                     completedSelectedReminders.length > 0 ? (
                       <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
                     ) : (
-                      <div
-                        className="rounded-[var(--kds-radius-md)] border py-8 text-center text-sm"
-                        style={{
-                          ...PANEL_MUTED_INSET_STYLE,
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
+                      <Surface variant="muted" padding="sm" className="py-8 text-center text-sm text-[var(--text-secondary)]">
                         Nenhum item concluido neste dia.
-                      </div>
+                      </Surface>
                     )
                   ) : (
-                    <div
-                      className="rounded-[var(--kds-radius-md)] border py-5 text-center text-sm"
-                      style={{
-                        ...PANEL_MUTED_INSET_STYLE,
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
+                    <Surface variant="muted" padding="sm" className="py-5 text-center text-sm text-[var(--text-secondary)]">
                       Expanda quando quiser revisar o que ja foi concluido neste dia.
-                    </div>
+                    </Surface>
                   )}
-                </section>
+                </Surface>
               </div>
             )}
           </div>
@@ -1647,7 +1592,7 @@ export default function WhatsAppAgendaModal({
         >
           <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <label htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium text-[var(--text-secondary)]">
                 Tarefa
               </label>
               <Input
@@ -1662,7 +1607,7 @@ export default function WhatsAppAgendaModal({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium text-[var(--text-secondary)]">
                 Descricao (opcional)
               </label>
               <Textarea

@@ -868,9 +868,10 @@ html,
 
 .painel-theme .whatsapp-inbox-composer {
   border-color: var(--app-border-soft);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   background: var(--app-surface-glass-strong);
   box-shadow: var(--shadow-card);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .painel-theme .whatsapp-inbox-composer.is-voice-mode {
@@ -880,7 +881,7 @@ html,
 
 .painel-theme .whatsapp-inbox-composer.is-focused {
   border-color: var(--brand-primary-border);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-card-hover);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu {
@@ -930,17 +931,22 @@ html,
 
 .painel-theme .whatsapp-inbox-composer-icon,
 .painel-theme .whatsapp-inbox-composer-action {
-  border: 1px solid var(--app-border-soft);
-  background: var(--app-surface-glass);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-muted);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
 .painel-theme :is(.whatsapp-inbox-composer-icon, .whatsapp-inbox-composer-action):hover:not(:disabled),
 .painel-theme .whatsapp-inbox-composer-icon.is-open {
-  border-color: var(--brand-primary-border);
+  border-color: transparent;
   background: var(--brand-primary-soft);
   color: var(--brand-primary-hover);
+}
+
+.painel-theme :is(.whatsapp-inbox-composer-icon, .whatsapp-inbox-composer-action):active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .painel-theme .whatsapp-inbox-composer-input {
@@ -966,27 +972,29 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active {
-  border-color: var(--text-primary);
-  background: var(--text-primary);
-  color: var(--text-inverse);
+  border-color: transparent;
+  background: var(--brand-primary-gradient);
+  color: var(--text-on-brand);
   box-shadow: var(--shadow-button);
 }
 
-.painel-theme .whatsapp-inbox-composer-action.is-active:hover {
-  background: var(--text-primary);
-  opacity: 0.9;
-}
-
-.painel-theme .whatsapp-inbox-voice-composer {
-  min-height: 3rem;
-  border: 0;
-  border-radius: var(--kds-radius-sm);
-  background: var(--app-contrast-surface);
+.painel-theme .whatsapp-inbox-composer-action.is-active:hover:not(:disabled) {
+  background: var(--brand-primary-gradient-hover);
   color: var(--text-on-brand);
 }
 
+.painel-theme .whatsapp-inbox-voice-composer {
+  min-height: 3.25rem;
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 14%, transparent);
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(135deg, var(--app-contrast-surface) 0%, color-mix(in srgb, var(--brand-primary) 34%, var(--app-contrast-surface)) 100%);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-card-hover);
+}
+
 .painel-theme .whatsapp-inbox-voice-composer.is-recording {
-  background: color-mix(in srgb, var(--danger) 28%, var(--app-contrast-surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+  background: linear-gradient(135deg, var(--app-contrast-surface) 0%, color-mix(in srgb, var(--danger) 34%, var(--app-contrast-surface)) 100%);
 }
 
 .painel-theme :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play) {
@@ -1017,13 +1025,14 @@ html,
   height: 2.5rem;
   width: 2.5rem;
   border-radius: var(--radius-full);
-  background: var(--text-on-brand);
-  color: var(--text-inverse);
-  box-shadow: var(--shadow-card);
+  background: var(--brand-primary-gradient);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
 }
 
 .painel-theme .whatsapp-inbox-voice-send:hover:not(:disabled) {
-  background: var(--bg-elevated);
+  background: var(--brand-primary-gradient-hover);
+  color: var(--text-on-brand);
 }
 
 .painel-theme :is(.whatsapp-inbox-voice-send, .whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play):disabled {

@@ -1013,7 +1013,10 @@
 }
 
 .kds-tabs-list-pill {
-  gap: var(--space-1);
+  gap: 0.25rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  padding: 0.25rem;
 }
 
 .kds-tab {
@@ -1049,7 +1052,7 @@
 
 .kds-tab-underline:hover:not(:disabled) {
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: var(--brand-primary-muted);
   color: var(--brand-primary-hover);
 }
@@ -1074,20 +1077,27 @@
 }
 
 .kds-tabs-list-pill .kds-tab {
-  border-color: var(--border-strong);
+  flex: 1 1 0%;
+  border-color: transparent;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-secondary);
 }
 
 .kds-tabs-list-pill .kds-tab:hover:not(:disabled) {
-  border-color: var(--brand-primary-border);
-  background: var(--brand-primary-muted);
-  color: var(--brand-primary-hover);
+  border-color: transparent;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .kds-tabs-list-pill .kds-tab-active {
-  border-color: var(--text-primary);
+  border-color: transparent;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-card);
+}
+
+.kds-tabs-list-pill .kds-tab-active:hover:not(:disabled) {
   background: var(--text-primary);
   color: var(--text-inverse);
 }

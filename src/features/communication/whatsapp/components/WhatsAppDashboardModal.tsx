@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, SendHorizontal, WifiOff } from 'lucide-react';
 
-import { Button, Surface } from '../../../../design-system';
+import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem } from '../../../../design-system';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -16,13 +16,13 @@ type WhatsAppDashboardModalProps = {
   onClose: () => void;
 };
 
+type DashboardTone = 'danger' | 'warning' | 'neutral' | 'success';
+
 type PriorityItem = {
   tone: DashboardTone;
   title: string;
   description: string;
 };
-
-type DashboardTone = 'danger' | 'warning' | 'neutral' | 'success';
 
 type ChannelStatusInfo = {
   tone: DashboardTone;
@@ -30,6 +30,13 @@ type ChannelStatusInfo = {
   description: string;
   connected: boolean;
 };
+
+type DashboardView = 'priorities' | 'recent';
+
+const DASHBOARD_VIEW_TABS: TabItem<DashboardView>[] = [
+  { id: 'priorities', label: 'Prioridades' },
+  { id: 'recent', label: 'Conversas recentes' },
+];
 
 const numberFormatter = new Intl.NumberFormat('pt-BR');
 
@@ -221,18 +228,11 @@ const buildPriorityItems = (metrics: CommWhatsAppDashboardMetrics): PriorityItem
   return items.slice(0, 5);
 };
 
-const toneClasses: Record<DashboardTone, string> = {
-  danger: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  neutral: 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]',
-  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)]',
-};
-
-const toneIconClasses: Record<DashboardTone, string> = {
-  danger: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  warning: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  neutral: 'bg-[var(--bg-surface)] text-[var(--text-secondary)]',
-  success: 'bg-[var(--success-soft)] text-[var(--success-text)]',
+const priorityIcon: Record<DashboardTone, typeof AlertTriangle> = {
+  danger: AlertTriangle,
+  warning: AlertTriangle,
+  neutral: Activity,
+  success: CheckCircle2,
 };
 
 const getChatPreview = (chat: CommWhatsAppDashboardRecentChat) => {
@@ -249,6 +249,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [error, setError] = useState<string | null>(null);
   const [exportingInbox, setExportingInbox] = useState(false);
   const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const [view, setView] = useState<DashboardView>('priorities');
 
   const loadMetrics = useCallback(async () => {
     setLoading(true);
@@ -271,6 +272,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   }, [isOpen, loadMetrics]);
 
   const channelHealth = getChannelHealth(metrics);
+  const ChannelHealthIcon = channelHealth.connected ? CheckCircle2 : WifiOff;
   const priorities = metrics ? buildPriorityItems(metrics) : [];
 
   const handleExportInboxJson = useCallback(async () => {
@@ -321,6 +323,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       title="Painel WhatsApp"
       description="Dashboard operacional para decidir onde olhar agora no inbox."
       size="xl"
+      panelClassName="max-w-6xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[var(--text-muted)]">
@@ -346,135 +349,112 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           Carregando métricas do WhatsApp...
         </div>
       ) : error ? (
-        <div className={`rounded-[var(--kds-radius-lg)] border p-5 ${toneClasses.danger}`}>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>
-              <p className="font-semibold">Não foi possível carregar o dashboard</p>
-              <p className="mt-1 text-sm leading-6">{error}</p>
-            </div>
-          </div>
-        </div>
+        <EmptyState
+          icon={<AlertTriangle className="h-7 w-7" />}
+          title="Não foi possível carregar o dashboard"
+          description={error}
+          action={<Button variant="secondary" size="sm" onClick={() => void loadMetrics()}>Tentar novamente</Button>}
+        />
       ) : metrics ? (
-        <div className="space-y-5">
-          <section className={`rounded-[var(--kds-radius-lg)] border p-4 ${toneClasses[channelHealth.tone]}`}>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneIconClasses[channelHealth.tone]}`}>
-                  {channelHealth.tone === 'danger' ? <WifiOff className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</p>
-                  <h3 className="mt-1 text-base font-semibold">{channelHealth.title}</h3>
-                  <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
-                </div>
+        <div className="flex min-h-[560px] flex-col gap-5 lg:flex-row lg:items-start">
+          {/* Left rail: channel health + at-a-glance metrics */}
+          <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-0 lg:w-[280px]">
+            <Surface
+              variant={channelHealth.tone === 'success' ? 'success' : channelHealth.tone === 'danger' ? 'danger' : channelHealth.tone === 'warning' ? 'warning' : 'default'}
+              padding="sm"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-surface)]">
+                <ChannelHealthIcon className="h-6 w-6" />
               </div>
-              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-right text-xs font-medium">
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</p>
+              <h3 className="mt-1 text-base font-semibold">{channelHealth.title}</h3>
+              <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
+              <div className="mt-3 border-t border-[color:var(--border-subtle)] pt-3 text-xs font-medium">
                 <p>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</p>
-                <p className="mt-1 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>
+                <p className="mt-0.5 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>
               </div>
-            </div>
-          </section>
+            </Surface>
 
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={Inbox} label="Fila ativa" value={metrics.chatMetrics.activeChats} hint={`${formatNumber(metrics.chatMetrics.archivedChats)} arquivadas`} />
-            <MetricCard icon={MessageCircle} label="Não lidas" value={metrics.chatMetrics.unreadChats} hint={`${formatNumber(metrics.chatMetrics.unreadMessages)} mensagens`} />
-            <MetricCard icon={BarChart3} label="Volume 24h" value={metrics.messageMetrics.messages24h} hint={`${formatNumber(metrics.messageMetrics.inbound24h)} recebidas · ${formatNumber(metrics.messageMetrics.outbound24h)} enviadas`} />
-            <MetricCard icon={Clock3} label="Agenda" value={metrics.reminderMetrics.upcomingReminders24h} hint={`${formatNumber(metrics.reminderMetrics.overdueReminders)} vencidas`} />
-          </section>
-
-          <section className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Onde olhar agora</p>
-                  <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Prioridades operacionais</h3>
-                </div>
-                <Activity className="h-5 w-5 text-[var(--brand-primary)]" />
-              </div>
-
-              <div className="space-y-2">
-                {priorities.map((item) => (
-                  <div key={`${item.title}:${item.description}`} className={`rounded-2xl border px-3 py-3 ${toneClasses[item.tone]}`}>
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <p className="mt-1 text-sm leading-6 opacity-90">{item.description}</p>
-                  </div>
-                ))}
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Atividade</p>
+              <div className="flex flex-wrap gap-2">
+                <OperationalMetricChip icon={<Inbox className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.activeChats)} label="Fila ativa" />
+                <OperationalMetricChip icon={<MessageCircle className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.unreadChats)} label="Não lidas" tone={metrics.chatMetrics.unreadChats > 0 ? 'warning' : 'neutral'} />
+                <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={formatNumber(metrics.messageMetrics.messages24h)} label="Volume 24h" />
+                <OperationalMetricChip icon={<Clock3 className="h-3.5 w-3.5" />} value={formatNumber(metrics.reminderMetrics.upcomingReminders24h)} label="Agenda 24h" />
               </div>
             </div>
 
-            <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Conversas recentes</p>
-                  <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Últimos pontos de atenção</h3>
-                </div>
-                <MessageCircle className="h-5 w-5 text-[var(--brand-primary)]" />
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Saúde operacional</p>
+              <div className="flex flex-wrap gap-2">
+                <OperationalMetricChip icon={<Link2 className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.linkedLeadChats)} label="Com lead" />
+                <OperationalMetricChip icon={<Archive className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.archivedChats)} label="Arquivadas" />
+                <OperationalMetricChip icon={<AlertTriangle className="h-3.5 w-3.5" />} value={formatNumber(metrics.messageMetrics.failedOutbound24h)} label="Falhas 24h" tone={metrics.messageMetrics.failedOutbound24h > 0 ? 'danger' : 'neutral'} />
               </div>
+            </div>
+          </aside>
 
-              <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
-                {metrics.recentChats.length > 0 ? metrics.recentChats.map((chat) => (
-                  <div key={chat.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
-                    <div className="flex items-start justify-between gap-3">
+          {/* Right: tabbed priorities / recent chats */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <Tabs items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} variant="pill" />
+
+            {view === 'priorities' ? (
+              <div className="space-y-2.5">
+                {priorities.map((item) => {
+                  const Icon = priorityIcon[item.tone];
+                  return (
+                    <Surface
+                      key={`${item.title}:${item.description}`}
+                      variant={item.tone === 'neutral' ? 'muted' : item.tone}
+                      padding="sm"
+                      className="flex items-start gap-3"
+                    >
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
-                        <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatCommWhatsAppPhoneLabel(chat.phoneNumber)} · {formatDateTime(chat.lastMessageAt)}</p>
+                        <p className="text-sm font-semibold">{item.title}</p>
+                        <p className="mt-1 text-sm leading-6 opacity-90">{item.description}</p>
+                      </div>
+                    </Surface>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {metrics.recentChats.length > 0 ? metrics.recentChats.map((chat) => (
+                  <Surface key={chat.id} variant="muted" padding="sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-sm font-semibold text-[var(--brand-primary)]">
+                          {(chat.displayName || chat.phoneNumber || '?').trim().charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
+                          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatCommWhatsAppPhoneLabel(chat.phoneNumber)} · {formatDateTime(chat.lastMessageAt)}</p>
+                        </div>
                       </div>
                       {chat.unreadCount > 0 || chat.manualUnread ? (
-                        <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-on-brand)]">
+                        <Badge tone="accent" size="xs" className="shrink-0">
                           {chat.unreadCount > 99 ? '99+' : Math.max(chat.unreadCount, 1)}
-                        </span>
+                        </Badge>
                       ) : null}
                     </div>
                     <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[var(--text-muted)]">
-                      {chat.leadId ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5"><Link2 className="mr-1 inline h-3 w-3" />Lead vinculado</span> : <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Sem lead</span>}
-                      {chat.isPinned ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Fixado</span> : null}
-                      {chat.isMuted ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Silenciado</span> : null}
-                      {chat.lastMessageStatus ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5"><SendHorizontal className="mr-1 inline h-3 w-3" />{normalizeStatusLabel(chat.lastMessageStatus)}</span> : null}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {chat.leadId ? <Badge tone="info" size="xs" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="xs">Sem lead</Badge>}
+                      {chat.isPinned ? <Badge tone="neutral" size="xs">Fixado</Badge> : null}
+                      {chat.isMuted ? <Badge tone="neutral" size="xs">Silenciado</Badge> : null}
+                      {chat.lastMessageStatus ? <Badge tone="neutral" size="xs" icon={SendHorizontal}>{normalizeStatusLabel(chat.lastMessageStatus)}</Badge> : null}
                     </div>
-                  </div>
+                  </Surface>
                 )) : (
-                  <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-muted)]">
-                    Nenhuma conversa recente encontrada.
-                  </div>
+                  <EmptyState title="Nenhuma conversa recente" description="Ainda não há pontos de atenção recentes para mostrar aqui." />
                 )}
               </div>
-            </div>
-          </section>
-
-          <section className="grid gap-3 sm:grid-cols-3">
-            <MetricCard icon={Link2} label="Chats com lead" value={metrics.chatMetrics.linkedLeadChats} hint={`${formatNumber(metrics.chatMetrics.activeUnlinkedChats)} ativos sem lead`} compact />
-            <MetricCard icon={Archive} label="Arquivadas" value={metrics.chatMetrics.archivedChats} hint={`${formatNumber(metrics.chatMetrics.mutedChats)} silenciadas`} compact />
-            <MetricCard icon={AlertTriangle} label="Falhas 24h" value={metrics.messageMetrics.failedOutbound24h} hint={`${formatNumber(metrics.messageMetrics.pendingOutbound)} pendentes`} compact />
-          </section>
+            )}
+          </div>
         </div>
       ) : null}
     </WhatsAppDialog>
-  );
-}
-
-type MetricCardProps = {
-  icon: typeof Inbox;
-  label: string;
-  value: number;
-  hint: string;
-  compact?: boolean;
-};
-
-function MetricCard({ icon: Icon, label, value, hint, compact = false }: MetricCardProps) {
-  return (
-      <Surface padding="sm" className="rounded-[var(--kds-radius-lg)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
-          <p className={`${compact ? 'mt-2 text-2xl' : 'mt-3 text-3xl'} font-semibold tabular-nums text-[var(--text-primary)]`}>{formatNumber(value)}</p>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">{hint}</p>
-        </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)]">
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </Surface>
   );
 }

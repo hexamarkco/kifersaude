@@ -642,7 +642,7 @@
 
 .kds-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 1px var(--control-focus-color), 0 0 0 4px var(--focus-ring), 0 0 24px color-mix(in srgb, var(--control-focus-color) 42%, transparent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .kds-button:disabled {
@@ -3367,7 +3367,7 @@
 }
 
 .kds-button:focus-visible {
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .kds-button-primary {
@@ -3684,7 +3684,7 @@
 .kds-pagination-button,
 .kds-pagination-page {
   border-color: var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: var(--bg-surface);
   color: var(--text-secondary);
 }
@@ -3830,11 +3830,9 @@
   box-shadow: none;
 }
 
-/* Pills are reserved for counters and circular indicators. Operational controls
-   share the same contained geometry as inputs and buttons. */
 .kds-op-chip {
   min-height: 2.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   padding: 0.5rem 0.75rem;
 }
 

@@ -3,7 +3,7 @@ import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCirc
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, PageHeader, Select, Surface, Textarea } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Surface, Textarea } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -531,7 +531,12 @@ export default function WhatsAppCampaignsScreen() {
         title="Disparos WhatsApp"
         description="Crie campanhas conversacionais para leads do CRM ou contatos importados por CSV, com base preparada para opt-out sinalizado por IA."
         actions={(
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <OperationalMetricChip icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
+            <OperationalMetricChip icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
+            <OperationalMetricChip icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
+            <OperationalMetricChip icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
+            <OperationalMetricChip icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
             <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
               <Plus className="h-4 w-4" />
               Novo disparo
@@ -543,14 +548,6 @@ export default function WhatsAppCampaignsScreen() {
           </div>
         )}
       />
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard icon={Send} label="Campanhas" value={stats.total} />
-        <MetricCard icon={PauseCircle} label="Rascunhos" value={stats.drafts} />
-        <MetricCard icon={CalendarClock} label="Agendadas" value={stats.scheduled} />
-        <MetricCard icon={PlayCircle} label="Ativas" value={stats.active} />
-        <MetricCard icon={Bot} label="Sugestoes IA" value={stats.aiSuggestionsPending} />
-      </div>
 
       <Card className="comm-campaign-toolbar space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1001,20 +998,6 @@ export default function WhatsAppCampaignsScreen() {
           )}
       </Card>
     </div>
-  );
-}
-
-function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
-  return (
-    <Card padding="sm" className="comm-campaign-metric flex items-center gap-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-strong)]">
-        <Icon className="h-5 w-5" />
-      </span>
-      <span>
-        <span className="block text-lg font-semibold text-[color:var(--panel-text)]">{value}</span>
-        <span className="block text-xs text-[color:var(--panel-text-muted)]">{label}</span>
-      </span>
-    </Card>
   );
 }
 

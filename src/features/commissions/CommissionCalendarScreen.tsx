@@ -12,6 +12,7 @@ import {
   Button,
   OperationalMetricChip,
   PageHeader,
+  SectionHeader,
   Surface,
 } from "../../design-system";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
@@ -19,7 +20,6 @@ import { CommissionCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { type Contract, supabase } from "../../lib/supabase";
 import CommissionMonthGrid from "./components/CommissionMonthGrid";
-import CommissionMonthHighlights from "./components/CommissionMonthHighlights";
 import CommissionSelectedDatePanel from "./components/CommissionSelectedDatePanel";
 import {
   buildCommissionEvents,
@@ -155,74 +155,100 @@ export default function CommissionCalendarScreen() {
         overlayLabel="Atualizando agenda de comissoes..."
         stageClassName="min-h-[560px]"
       >
-        <Surface className="space-y-6">
-          <Surface variant="muted" padding="none" className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-3">
+        {error && (
+          <Alert tone="danger" className="mb-4">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              {error}
+            </span>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
+          <Surface padding="md" className="space-y-4 2xl:sticky 2xl:top-4 2xl:self-start">
+            <div className="flex items-center justify-between gap-2">
               <Button
                 onClick={goToPreviousMonth}
                 variant="icon"
                 size="icon"
-                className="h-9 w-9"
                 aria-label="Mes anterior"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
 
-              <h3 className="font-[var(--font-display)] text-lg font-semibold capitalize text-[var(--text-primary)]">
-                {monthLabel}
-              </h3>
+              <div className="text-center">
+                <h3 className="font-[var(--font-display)] text-lg font-semibold capitalize text-[var(--text-primary)]">
+                  {monthLabel}
+                </h3>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {monthEvents.length} evento(s) no mes
+                </p>
+              </div>
 
               <Button
                 onClick={goToNextMonth}
                 variant="icon"
                 size="icon"
-                className="h-9 w-9"
                 aria-label="Proximo mes"
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
 
-            <div className="p-4">
-              <div className="overflow-x-auto pb-2">
-                <div className="min-w-[640px]">
-                  <CommissionMonthGrid
-                    currentMonth={currentMonth}
-                    eventsByDay={eventsByDay}
-                    onSelectDate={setSelectedDate}
-                    selectedDate={selectedDate}
-                  />
-                  {monthEvents.length === 0 && (
-                    <div className="py-10 text-center text-sm text-[var(--text-muted)]">
-                      Nenhuma previsao cadastrada para este mes.
-                    </div>
-                  )}
-                </div>
-              </div>
+            <CommissionMonthGrid
+              currentMonth={currentMonth}
+              eventsByDay={eventsByDay}
+              onSelectDate={setSelectedDate}
+              selectedDate={selectedDate}
+            />
+
+            <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" /> Comissao
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Gift className="h-3.5 w-3.5 text-[var(--brand-primary)]" /> Bonificacao
+              </span>
             </div>
           </Surface>
 
-          {error && (
-            <Alert tone="danger" className="mt-4">
-              <span className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                {error}
-              </span>
-            </Alert>
-          )}
+          <Surface padding="none" className="overflow-hidden">
+            <div className="space-y-3 border-b border-[var(--border-subtle)] p-4">
+              <SectionHeader
+                as="h3"
+                title={selectedDateLabel ? `Eventos de ${selectedDateLabel}` : "Selecione um dia"}
+                description={
+                  selectedDate
+                    ? `${selectedDateEvents.length} lancamento(s) previsto(s) para esta data.`
+                    : "Escolha um dia no calendario para ver os detalhes."
+                }
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <OperationalMetricChip
+                  tone="gold"
+                  icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+                  label="comissao no mes"
+                  value={formatCommissionCurrency(totals.commission)}
+                  className="justify-center"
+                />
+                <OperationalMetricChip
+                  tone="accent"
+                  icon={<Gift className="h-4 w-4" aria-hidden="true" />}
+                  label="bonificacao no mes"
+                  value={formatCommissionCurrency(totals.bonus)}
+                  className="justify-center"
+                />
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <CommissionMonthHighlights
-              bonusTotal={totals.bonus}
-              commissionTotal={totals.commission}
-            />
-            <CommissionSelectedDatePanel
-              selectedDate={selectedDate}
-              selectedDateEvents={selectedDateEvents}
-              selectedDateLabel={selectedDateLabel}
-            />
-          </div>
-        </Surface>
+            <div className="max-h-[calc(100vh-22rem)] min-h-96 overflow-y-auto p-4">
+              <CommissionSelectedDatePanel
+                selectedDate={selectedDate}
+                selectedDateEvents={selectedDateEvents}
+              />
+            </div>
+          </Surface>
+        </div>
       </PanelAdaptiveLoadingFrame>
     </div>
   );

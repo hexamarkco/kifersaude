@@ -10705,9 +10705,7 @@ export default function WhatsAppInboxScreen() {
                       >
                         <Smile className="h-5 w-5" />
                       </button>
-                    </div>
 
-                    <div className={`relative flex shrink-0 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       <Popover open={composerAiMenuOpen} onOpenChange={setComposerAiMenuOpen}>
                         <PopoverTrigger
                           onClick={() => {

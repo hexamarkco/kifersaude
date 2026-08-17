@@ -458,7 +458,7 @@ export default function WhatsAppFollowUpModal({
           {nextAction ? (
             <NextActionCard
               nextAction={nextAction}
-              action={nextAction.type === 'schedule' && nextAction.suggestedDateTime ? (
+              action={nextAction.type !== 'mark_lost_recommended' && nextAction.suggestedDateTime ? (
                 <Button type="button" variant="primary" size="sm" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
                   <CalendarPlus className="h-4 w-4" />
                   Agendar sugestão

@@ -115,6 +115,7 @@ const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const MAX_FOLLOW_UP_VARIANTS = 5;
 const DAILY_FOLLOW_UP_CAPACITY = 15;
+const WAIT_COOLDOWN_BUSINESS_DAYS = 7;
 const FOLLOW_UP_SCHEDULE_HOURS = [10, 11, 14, 15, 16] as const;
 const OUTBOUND_ATTEMPT_GROUP_GAP_MS = 2 * 60 * 60 * 1000;
 const FOLLOW_UP_SITUATION_PRESETS = [
@@ -625,6 +626,24 @@ const formatTemporalFactsForPrompt = (facts: TemporalFacts): string => [
   'REGRA DE SAUDACAO: se ja houve contato hoje, NUNCA repita saudacao — continue a conversa diretamente, como uma pessoa real continuaria. Se ainda NAO houve contato hoje, uma saudacao (bom dia/boa tarde/boa noite/oi) normalmente cabe e e o mais natural, principalmente quando a ultima mensagem de qualquer lado foi ha dias — retomar contato depois de um tempo sem nenhuma saudacao soa abrupto e frio, como se a conversa nunca tivesse parado; use bom senso apenas se o contexto humano/emocional pedir uma abertura diferente. Nunca trate "ha alguns dias" ou "ha algumas horas" como se fosse "ontem" ou "agora ha pouco" — use a distancia real informada acima.',
 ].join('\n');
 
+const computeAvailableFollowUpDate = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  now: Date,
+  businessDays: number,
+) => {
+  let candidateDay = addBusinessDays(now, businessDays);
+  let dayLoad: number | null = null;
+
+  for (let attempts = 0; attempts < 10; attempts += 1) {
+    dayLoad = await countPendingRemindersForDay(supabaseAdmin, candidateDay);
+    if (dayLoad === null || dayLoad < DAILY_FOLLOW_UP_CAPACITY) break;
+    candidateDay = addBusinessDays(candidateDay, 1);
+  }
+
+  const hour = FOLLOW_UP_SCHEDULE_HOURS[Math.max(0, Math.min(FOLLOW_UP_SCHEDULE_HOURS.length - 1, dayLoad ?? 0)) % FOLLOW_UP_SCHEDULE_HOURS.length];
+  return { suggestedDate: buildSaoPauloDateTimeUtc(candidateDay, hour), dayLoad };
+};
+
 const buildFollowUpNextAction = async (params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   messages: MessageRow[];
@@ -658,15 +677,21 @@ const buildFollowUpNextAction = async (params: {
   }
 
   if (aiNextActionType === 'wait') {
+    const { suggestedDate: waitDate, dayLoad: waitDayLoad } = await computeAvailableFollowUpDate(
+      params.supabaseAdmin,
+      params.now,
+      WAIT_COOLDOWN_BUSINESS_DAYS,
+    );
+
     return {
       type: 'wait',
-      suggestedDateTime: null,
+      suggestedDateTime: waitDate.toISOString(),
       priority: aiNextActionPriority ?? 'baixa',
-      title: `Aguardar: ${params.leadContext.nome}`,
-      reason: aiNextActionReason || 'O contexto da conversa indica que ainda não é o momento de agendar novo follow-up.',
+      title: `Retomar contato: ${params.leadContext.nome}`,
+      reason: aiNextActionReason || 'O contexto da conversa indica que ainda não é o momento de uma nova cobrança; agendamos um retorno mais distante para reavaliar.',
       attemptNumber,
       maxAttempts,
-      dayLoad: null,
+      dayLoad: waitDayLoad,
       dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
       giveUpRecommendation: 'Acompanhe o contexto antes de criar uma nova cobrança ou marcar o lead como perdido.',
     };
@@ -688,17 +713,7 @@ const buildFollowUpNextAction = async (params: {
   }
 
   const businessDays = getBusinessDayOffsetForAttempt(attemptNumber);
-  let candidateDay = addBusinessDays(params.now, businessDays);
-  let dayLoad: number | null = null;
-
-  for (let attempts = 0; attempts < 10; attempts += 1) {
-    dayLoad = await countPendingRemindersForDay(params.supabaseAdmin, candidateDay);
-    if (dayLoad === null || dayLoad < DAILY_FOLLOW_UP_CAPACITY) break;
-    candidateDay = addBusinessDays(candidateDay, 1);
-  }
-
-  const hour = FOLLOW_UP_SCHEDULE_HOURS[Math.max(0, Math.min(FOLLOW_UP_SCHEDULE_HOURS.length - 1, dayLoad ?? 0)) % FOLLOW_UP_SCHEDULE_HOURS.length];
-  const suggestedDate = buildSaoPauloDateTimeUtc(candidateDay, hour);
+  const { suggestedDate, dayLoad } = await computeAvailableFollowUpDate(params.supabaseAdmin, params.now, businessDays);
   const isLastAttempt = attemptNumber >= maxAttempts;
   const hasDocumentScenario = params.effectiveSituationPresetIds.includes('aguardando_documentos');
 

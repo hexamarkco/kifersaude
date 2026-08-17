@@ -614,7 +614,8 @@ export default function WhatsAppBatchFollowUpModal({
             </p>
             <div className="max-h-[320px] space-y-1.5 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
               {items.filter((item) => item.selected && item.sendStatus !== 'idle').map((item) => {
-                const willReschedule = item.sendStatus === 'sent' && item.nextAction?.type === 'schedule' && item.nextAction.suggestedDateTime;
+                const willReschedule = item.sendStatus === 'sent' && item.nextAction?.type !== 'mark_lost_recommended' && Boolean(item.nextAction?.suggestedDateTime);
+                const isWaitReschedule = item.nextAction?.type === 'wait';
                 const recommendsLost = item.sendStatus === 'sent' && item.nextAction?.type === 'mark_lost_recommended';
                 const isMarkingLost = markingLostReminderIds.has(item.reminderId);
                 const isMarkedLost = markedLostReminderIds.has(item.reminderId);
@@ -628,7 +629,7 @@ export default function WhatsAppBatchFollowUpModal({
                       {willReschedule ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
                           <CalendarPlus className="h-3 w-3 shrink-0" />
-                          Reagendado para {formatNextActionDate(item.nextAction!.suggestedDateTime)}
+                          {isWaitReschedule ? 'Retorno agendado' : 'Reagendado'} para {formatNextActionDate(item.nextAction!.suggestedDateTime)}
                         </p>
                       ) : recommendsLost ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">

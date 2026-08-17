@@ -3,7 +3,7 @@ import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCirc
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, PageHeader, Select, Surface, Textarea } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, PageHeader, Select, Surface, Textarea } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -556,7 +556,7 @@ export default function WhatsAppCampaignsScreen() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Activity className="h-5 w-5 text-[color:var(--panel-accent)]" />
+              <Activity className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Saude do worker</h2>
               <Badge tone={getWorkerRunTone(workerHealth.latestRun)}>
                 {workerHealth.latestRun ? workerHealth.latestRun.status : 'sem execucao'}
@@ -617,7 +617,7 @@ export default function WhatsAppCampaignsScreen() {
                 </div>
                 <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</p>
                 {suggestion.evidence && (
-                  <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
+                  <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
                     {suggestion.evidence}
                   </blockquote>
                 )}
@@ -690,7 +690,7 @@ export default function WhatsAppCampaignsScreen() {
                   <p className="text-sm font-semibold text-[color:var(--panel-text)]">CSV com nome e telefone</p>
                   <p className="text-xs text-[color:var(--panel-text-muted)]">Aceita cabecalhos como nome, telefone, phone, celular ou whatsapp.</p>
                 </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 py-2 text-sm font-medium text-[color:var(--panel-text)] transition hover:border-[color:var(--panel-accent)]">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 py-2 text-sm font-medium text-[color:var(--panel-text)] transition hover:border-[color:var(--panel-accent-strong)]">
                   <FileSpreadsheet className="h-4 w-4" />
                   Escolher arquivo
                   <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => void handleCsvFile(event)} />
@@ -729,7 +729,7 @@ export default function WhatsAppCampaignsScreen() {
                 <div key={index} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent)]">{index + 1}</span>
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{index + 1}</span>
                       <div>
                         <p className="text-sm font-semibold text-[color:var(--panel-text)]">{index === 0 ? 'Mensagem inicial' : 'Follow-up'}</p>
                         <p className="text-xs text-[color:var(--panel-text-muted)]">{index === 0 ? 'Enviada ao ativar ou no horario agendado.' : 'Enviado depois do intervalo abaixo, se nao houver resposta.'}</p>
@@ -814,7 +814,7 @@ export default function WhatsAppCampaignsScreen() {
 
           <div className="grid gap-4 md:grid-cols-4">
             <Field label="Agendar para">
-              <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+              <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
             <Field label="Ritmo por minuto">
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
@@ -823,17 +823,17 @@ export default function WhatsAppCampaignsScreen() {
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
             <Field label="Janela inicio">
-              <Input type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
+              <DateTimePicker type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
             </Field>
             <Field label="Janela fim">
-              <Input type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
+              <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
           </div>
             </DialogBody>
 
           <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent)]" />
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
               Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
             </div>
             <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
@@ -885,7 +885,7 @@ export default function WhatsAppCampaignsScreen() {
                     <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variavel foi usada nas mensagens.</p>
                   )}
                   {activationPreview.unknownVariables.length > 0 && (
-                    <p className="text-xs text-[color:var(--panel-danger)]">Ha variaveis nao reconhecidas. Elas podem ser enviadas vazias ou sem substituicao.</p>
+                    <p className="text-xs text-[color:var(--danger-text)]">Ha variaveis nao reconhecidas. Elas podem ser enviadas vazias ou sem substituicao.</p>
                   )}
                 </Card>
               </div>
@@ -942,7 +942,7 @@ export default function WhatsAppCampaignsScreen() {
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</h2>
               <p className="text-sm text-[color:var(--panel-text-soft)]">Base criada para ativacao por worker.</p>
             </div>
-            <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent)]" />
+            <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
           </div>
 
           {loading ? (
@@ -1031,7 +1031,6 @@ function AudienceButton({ active, icon: Icon, label, onClick }: { active: boolea
   return (
     <ActionSurface
       padding="sm"
-      variant={active ? 'warning' : 'default'}
       selected={active}
       onClick={onClick}
       className="inline-flex items-center gap-2 text-sm font-medium"

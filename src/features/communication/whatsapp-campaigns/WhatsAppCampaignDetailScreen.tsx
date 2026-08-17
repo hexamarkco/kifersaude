@@ -213,7 +213,7 @@ export default function WhatsAppCampaignDetailScreen() {
                 <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</h2>
                 <p className="text-sm text-[color:var(--panel-text-soft)]">Mostrando ate 500 contatos por enquanto.</p>
               </div>
-              <Users className="h-5 w-5 text-[color:var(--panel-accent)]" />
+              <Users className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
             <Table size="sm">
                 <TableHeader>

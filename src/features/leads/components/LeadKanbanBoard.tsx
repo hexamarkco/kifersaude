@@ -4,7 +4,7 @@ import { Calendar, Mail, Phone, Users } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
 import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
-import { Button, EmptyState, Input, OperationalMetricChip, OperationalStatusDot, Surface } from "../../../design-system";
+import { ActionSurface, Button, EmptyState, Input, LoadingState, OperationalMetricChip, OperationalStatusDot, Surface } from "../../../design-system";
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
 import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
@@ -257,11 +257,7 @@ export default function LeadKanbanBoard({
   if (loading) {
     return (
       <Surface className="py-12">
-        <div className="kds-loading flex items-center justify-center">
-          <div className="kds-loading-card">
-            <div className="kds-loading-spinner" />
-          </div>
-        </div>
+        <LoadingState label="Carregando kanban" />
       </Surface>
     );
   }
@@ -301,7 +297,7 @@ export default function LeadKanbanBoard({
         </div>
       </div>
 
-      <Surface variant="muted" padding="none" className="p-3 sm:p-4">
+      <div className="rounded-2xl bg-[var(--bg-hover)] p-3 sm:p-4">
         <div className="kds-kanban-scroll overflow-x-auto pb-4 snap-x snap-mandatory">
           <div className="flex min-w-max gap-4">
             {statusColumns.map((column) => {
@@ -311,11 +307,13 @@ export default function LeadKanbanBoard({
               const isOverLimit = wipLimit > 0 && columnLeads.length > wipLimit;
 
               return (
-                <Surface
+                <div
                   key={column.id}
-                  variant={isOverLimit ? "danger" : "muted"}
-                  padding="sm"
-                  className="kds-kanban-column w-80 flex-shrink-0 snap-start border p-3"
+                  className={`kds-kanban-column w-80 flex-shrink-0 snap-start rounded-2xl p-3 ${
+                    isOverLimit
+                      ? "border border-[var(--danger-border)] bg-[var(--danger-soft)]"
+                      : "bg-[var(--bg-surface)]"
+                  }`}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => void handleDrop(column.id)}
                 >
@@ -339,7 +337,7 @@ export default function LeadKanbanBoard({
                     <OperationalMetricChip value={columnLeads.length} active={isOverLimit} tone={isOverLimit ? "danger" : "neutral"} />
                   </div>
 
-                  <Surface padding="none" className="mb-4">
+                  <div className="mb-4 rounded-xl bg-[var(--bg-hover)]">
                     <label className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
                       <span className="kds-op-lead-muted">
                         Limite WIP
@@ -357,38 +355,27 @@ export default function LeadKanbanBoard({
                         />
                       </div>
                     </label>
-                  </Surface>
+                  </div>
 
                   <div className="kds-kanban-column-body space-y-3 overflow-y-auto pr-1">
                     {columnLeads.length === 0 ? (
-                      <Surface
-                        variant="muted"
-                        className="border-dashed px-4 py-8 text-center"
-                      >
+                      <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] px-4 py-8 text-center">
                         <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
                         <p className="text-sm font-medium">Nenhum lead</p>
-                      </Surface>
+                      </div>
                     ) : (
                       columnLeads.map((lead) => {
                         const responsavelLabel = getResponsavelLabel(lead);
 
                         return (
-                          <Surface
+                          <ActionSurface
                             key={lead.id}
                             padding="sm"
                             draggable
                             onDragStart={() => setDraggedLead(lead)}
                             onClick={() => onLeadClick?.(lead)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                onLeadClick?.(lead);
-                              }
-                            }}
-                            role="button"
-                            tabIndex={0}
                             aria-label={`Abrir detalhes de ${lead.nome_completo}`}
-                            className="kds-kanban-card kds-action-surface cursor-move transition-colors"
+                            className="kds-kanban-card cursor-move transition-colors"
                           >
                             <div className="mb-3 flex items-center gap-1.5">
                               <LeadFavoriteToggle
@@ -461,17 +448,17 @@ export default function LeadKanbanBoard({
                                 Converter em contrato
                               </Button>
                             )}
-                          </Surface>
+                          </ActionSurface>
                         );
                       })
                     )}
                   </div>
-                </Surface>
+                </div>
               );
             })}
           </div>
         </div>
-      </Surface>
+      </div>
     </Surface>
   );
 }

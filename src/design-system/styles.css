@@ -2472,19 +2472,19 @@
 .kds-kanban-scroll { scrollbar-color: var(--brand-primary) transparent; }
 
 .kds-kanban-column {
-  border-color: color-mix(in srgb, var(--accent-gold-border) 35%, var(--border-default));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 78%, transparent), color-mix(in srgb, var(--bg-canvas) 92%, transparent));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 48px -38px rgba(0,0,0,0.9);
+  border-color: transparent;
+  background: var(--bg-surface);
+  box-shadow: none;
 }
 
 .kds-kanban-card {
-  border-color: var(--border-default);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 90%, transparent), color-mix(in srgb, var(--bg-inset) 94%, transparent));
+  border-color: transparent;
+  background: var(--bg-hover);
 }
 
 .kds-kanban-card:hover {
   border-color: var(--brand-primary-border);
-  box-shadow: 0 20px 38px -30px rgba(0,0,0,0.9), 0 0 26px -20px var(--brand-primary);
+  box-shadow: none;
 }
 
 .kds-kanban-column-body {
@@ -3860,19 +3860,19 @@
 }
 
 .kds-kanban-column {
-  border-color: var(--border-default);
-  background: var(--bg-surface-muted);
-  box-shadow: var(--shadow-card);
+  border-color: transparent;
+  background: var(--bg-surface);
+  box-shadow: none;
 }
 
 .kds-kanban-card {
-  border-color: var(--border-default);
-  background: var(--bg-surface);
+  border-color: transparent;
+  background: var(--bg-hover);
 }
 
 .kds-kanban-card:hover {
   border-color: var(--brand-primary-border);
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: none;
 }
 
 .kds-calendar-day-selected,

@@ -12,6 +12,7 @@ import {
   Button,
   EmptyState,
   Field,
+  LoadingState,
   SectionHeader,
   Surface,
   Textarea,
@@ -259,9 +260,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
             action={<History className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />}
           />
           {loading ? (
-            <div className="flex items-center justify-center py-8" role="status" aria-label="Carregando linha do tempo">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-primary)]" />
-            </div>
+            <LoadingState compact label="Carregando linha do tempo" className="py-8" />
           ) : timelineEvents.length === 0 ? (
             <EmptyState
               icon={<History className="h-8 w-8" />}
@@ -273,11 +272,11 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               {timelineEvents.map((event) => (
                 <Surface key={event.id} variant="muted" padding="sm">
                   <div className="flex items-start gap-3">
-                    <Surface padding="none" className="mt-1 flex h-8 w-8 items-center justify-center text-[var(--text-muted)]">
+                    <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--text-muted)]">
                       {event.type === 'interaction' && <MessageCircle className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'reminder' && <Bell className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'status' && <Clock className="h-4 w-4" aria-hidden="true" />}
-                    </Surface>
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>
@@ -381,9 +380,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-12" role="status" aria-label="Carregando interações">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border-strong)] border-t-[var(--brand-primary)]" />
-          </div>
+          <LoadingState compact label="Carregando interações" className="py-12" />
         ) : interactions.length === 0 ? (
           <EmptyState
             icon={<MessageCircle className="h-10 w-10" />}

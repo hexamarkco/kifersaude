@@ -17,7 +17,7 @@ export default function CommissionSelectedDatePanel({
   selectedDateLabel,
 }: CommissionSelectedDatePanelProps) {
   return (
-    <Surface padding="sm">
+    <Surface variant="muted" padding="sm">
       <h3 className="mb-3 font-[var(--font-display)] text-base font-semibold text-[var(--text-primary)]">
         {selectedDateLabel
           ? `Eventos de ${selectedDateLabel}`
@@ -33,7 +33,6 @@ export default function CommissionSelectedDatePanel({
               return (
                 <Surface
                   key={event.id}
-                  variant={isCommission ? "muted" : "default"}
                   padding="sm"
                   className="p-3"
                 >
@@ -81,7 +80,7 @@ export default function CommissionSelectedDatePanel({
           </div>
         )
       ) : (
-        <Surface variant="muted" className="py-10 text-center text-sm text-[var(--text-muted)]">
+        <Surface className="py-10 text-center text-sm text-[var(--text-muted)]">
           Escolha um dia para visualizar os detalhes.
         </Surface>
       )}

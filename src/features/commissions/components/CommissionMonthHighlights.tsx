@@ -13,13 +13,13 @@ export default function CommissionMonthHighlights({
   commissionTotal,
 }: CommissionMonthHighlightsProps) {
   return (
-    <Surface padding="sm">
+    <Surface variant="muted" padding="sm">
       <h3 className="mb-3 font-[var(--font-display)] text-base font-semibold text-[var(--text-primary)]">
         Destaques do mes
       </h3>
 
       <div className="space-y-3">
-        <Surface variant="muted" padding="sm" className="flex items-center justify-between p-3">
+        <Surface padding="sm" className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-[var(--accent-gold-hover)]" />
             <span className="text-sm text-[var(--text-secondary)]">
@@ -31,7 +31,7 @@ export default function CommissionMonthHighlights({
           </span>
         </Surface>
 
-        <Surface variant="muted" padding="sm" className="flex items-center justify-between p-3">
+        <Surface padding="sm" className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
             <Gift className="h-4 w-4 text-[var(--brand-primary)]" />
             <span className="text-sm text-[var(--text-secondary)]">

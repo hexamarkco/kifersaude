@@ -1181,6 +1181,17 @@ export default function AgendaScreen() {
     return tone;
   };
 
+  const reminderIconChipClasses: Record<SurfaceVariant, string> = {
+    default: "bg-[var(--bg-hover)] text-[var(--text-secondary)]",
+    muted: "bg-[var(--bg-hover)] text-[var(--text-secondary)]",
+    strong: "bg-[var(--surface-strong-bg)] text-[var(--text-secondary)]",
+    hero: "bg-[var(--surface-hero-bg)] text-[var(--text-secondary)]",
+    danger: "bg-[var(--danger-soft)] text-[var(--danger-text)]",
+    warning: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
+    success: "bg-[var(--success-soft)] text-[var(--success-text)]",
+    info: "bg-[var(--info-soft)] text-[var(--info-text)]",
+  };
+
   const getReminderIcon = (type: string) => {
     const icons = {
       "Documentos pendentes": AlertCircle,
@@ -1336,13 +1347,11 @@ export default function AgendaScreen() {
         aria-label={canOpenLead ? `Abrir edicao do lead ${leadInfo?.nome_completo ?? ""}`.trim() : undefined}
       >
         <div className="grid min-w-0 gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start">
-          <Surface
-            variant={reminder.lido ? "success" : getReminderTypeSurface(reminder.tipo)}
-            padding="none"
-            className="flex h-10 w-10 items-center justify-center"
+          <span
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${reminderIconChipClasses[reminder.lido ? "success" : getReminderTypeSurface(reminder.tipo)]}`}
           >
             {getReminderIcon(reminder.tipo)}
-          </Surface>
+          </span>
 
           <div className="min-w-0 flex-1">
             <div className="space-y-2">

@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  DateTimePicker,
   Dialog,
   DialogBody,
   DialogDescription,
@@ -164,7 +165,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                 />
               </Field>
               <Field label="Horario unico da fila" htmlFor="agenda-organizer-time">
-                <Input
+                <DateTimePicker
                   id="agenda-organizer-time"
                   type="time"
                   value={options.queueTime}
@@ -172,7 +173,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                 />
               </Field>
               <Field label="Data inicial" htmlFor="agenda-organizer-date">
-                <Input
+                <DateTimePicker
                   id="agenda-organizer-date"
                   type="date"
                   value={options.startDate}

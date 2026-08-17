@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Badge, Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
+import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
@@ -2349,12 +2349,14 @@ function InboxMultiFilterGroup({
   options,
   onChange,
   compact = false,
+  variant = 'chips',
 }: {
   label: string;
   values: string[];
   options: Array<{ value: string; label: string }>;
   onChange: (value: string[]) => void;
   compact?: boolean;
+  variant?: 'chips' | 'list';
 }) {
   const normalizedValues = values.map((value) => value.toLowerCase());
 
@@ -2365,6 +2367,40 @@ function InboxMultiFilterGroup({
       : [...values, value];
     onChange(next);
   };
+
+  if (variant === 'list') {
+    return (
+      <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+          {values.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary)] transition hover:text-[var(--brand-primary-hover)]"
+            >
+              Limpar
+            </button>
+          ) : null}
+        </div>
+        <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
+          {options.map((option) => {
+            const selected = normalizedValues.includes(option.value.toLowerCase());
+            return (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)]"
+              >
+                <Checkbox checked={selected} onChange={() => toggleValue(option.value)} />
+                <span className="truncate">{option.label}</span>
+              </label>
+            );
+          })}
+          {options.length === 0 ? <p className="px-2 py-3 text-xs text-[var(--text-muted)]">Nenhuma opção disponível</p> : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
@@ -11468,7 +11504,7 @@ export default function WhatsAppInboxScreen() {
           position={advancedFiltersPosition}
           onClose={() => setAdvancedFiltersOpen(false)}
           ariaLabel="Filtros avançados do inbox"
-          className="w-[272px] border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2.5 shadow-2xl"
+          className="w-[292px] border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2.5 shadow-2xl"
         >
           <div className="space-y-2.5">
             <InboxFilterGroup
@@ -11487,6 +11523,7 @@ export default function WhatsAppInboxScreen() {
               values={leadStatusFilters}
               onChange={setLeadStatusFilters}
               compact
+              variant="list"
               options={leadStatuses.map((status) => ({
                 value: status.nome,
                 label: status.nome,

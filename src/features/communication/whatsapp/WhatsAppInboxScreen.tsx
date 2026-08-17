@@ -10165,11 +10165,8 @@ export default function WhatsAppInboxScreen() {
                           </button>
 
                         <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="h-3 w-3 shrink-0 rounded-full bg-[var(--success)] shadow-[0_0_0_4px_var(--success-soft)]" />
-                          <div className="min-w-0 flex-1">
-                            <WaveformBars bars={voiceAttachment.waveform} active={voicePreviewPlaying} />
-                          </div>
-                          <span className="whatsapp-inbox-voice-time shrink-0 text-sm font-semibold tabular-nums">
+                          <span className="whatsapp-inbox-voice-time-pill inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums">
+                            <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
                             {formatDurationLabel(
                               Math.max(
                                 0,
@@ -10177,6 +10174,9 @@ export default function WhatsAppInboxScreen() {
                               ),
                             )}
                           </span>
+                          <div className="min-w-0 flex-1">
+                            <WaveformBars bars={voiceAttachment.waveform} active={voicePreviewPlaying} />
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
@@ -10213,12 +10213,10 @@ export default function WhatsAppInboxScreen() {
                       </button>
 
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex shrink-0 items-center gap-2 text-[var(--danger-text)]">
-                          <span className="h-3 w-3 rounded-full bg-current shadow-[0_0_0_4px_var(--danger-soft)]" />
-                          <span className="whatsapp-inbox-voice-time text-sm font-semibold tabular-nums text-[var(--text-primary)]">
-                            {formatDurationLabel(voiceRecordingSeconds)}
-                          </span>
-                        </div>
+                        <span className="whatsapp-inbox-voice-time-pill inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--danger)]" />
+                          {formatDurationLabel(voiceRecordingSeconds)}
+                        </span>
 
                         <div className="min-w-0 flex-1">
                           <WaveformBars bars={voiceRecordingWaveform} active />

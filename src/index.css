@@ -990,8 +990,8 @@ html,
 }
 
 .painel-theme :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play) {
-  height: 2.25rem;
-  width: 2.25rem;
+  height: 2.5rem;
+  width: 2.5rem;
   color: var(--text-on-brand);
 }
 
@@ -1008,7 +1008,8 @@ html,
   border-radius: var(--radius-full);
 }
 
-.painel-theme .whatsapp-inbox-voice-time {
+.painel-theme .whatsapp-inbox-voice-time-pill {
+  background: color-mix(in srgb, var(--text-on-brand) 16%, transparent);
   color: var(--text-on-brand);
 }
 

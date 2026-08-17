@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
-import { ActionSurface, Button, Input, Surface, type TabItem } from '../../../../design-system';
+import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
@@ -35,6 +35,20 @@ type WhatsAppStartChatModalProps = {
   onStartFromManual: () => void;
   startingKey: string | null;
 };
+
+const getInitial = (value: string) => value.trim().charAt(0).toUpperCase() || '#';
+
+function ContactAvatar({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'gold' }) {
+  return (
+    <div
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+        tone === 'gold' ? 'bg-[var(--accent-gold-soft)] text-[var(--accent-gold-hover)]' : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+      }`}
+    >
+      {getInitial(label)}
+    </div>
+  );
+}
 
 export default function WhatsAppStartChatModal({
   isOpen,
@@ -82,35 +96,20 @@ export default function WhatsAppStartChatModal({
       bodyClassName="flex min-h-0 flex-col"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-5">
-        <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1 sm:w-auto sm:inline-flex">
-          {SOURCE_TABS.map((tab) => {
-            const isActive = tab.id === source;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setSource(tab.id)}
-                className={`flex-1 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors sm:flex-initial ${
-                  isActive
-                    ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs items={SOURCE_TABS} value={source} onChange={setSource} variant="pill" />
 
         {source === 'manual' ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 overflow-y-auto">
-              <div className="flex min-h-[320px] flex-col justify-center">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
+            <Surface variant="muted" padding="lg" className="min-h-0 flex-1 overflow-y-auto">
+              <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                  <Phone className="h-6 w-6" />
                 </div>
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <p className="mt-4 text-base font-semibold text-[var(--text-primary)]">Iniciar por número</p>
+                <p className="mt-1 max-w-xs text-sm leading-6 text-[var(--text-muted)]">
+                  Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.
+                </p>
+                <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
                   <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
                     {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
@@ -125,8 +124,9 @@ export default function WhatsAppStartChatModal({
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
             <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
               {source === 'saved' && (
-                <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  {contactsTotal} contatos salvos
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Contatos salvos</span>
+                  <Badge tone="neutral" size="xs">{contactsTotal}</Badge>
                 </div>
               )}
               {(source === 'saved' ? contactsLoading : crmLoading) ? (
@@ -147,13 +147,14 @@ export default function WhatsAppStartChatModal({
                         type="button"
                         onClick={() => onStartFromSavedContact(contact)}
                         disabled={starting}
-                        variant="default" padding="sm" className="flex w-full items-center justify-between gap-3 text-left"
+                        variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
                       >
-                        <div className="min-w-0">
+                        <ContactAvatar label={contact.display_name || contact.phone_number} />
+                        <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name}</p>
                           <p className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</p>
                         </div>
-                        {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4 text-[var(--brand-primary)]" />}
+                        {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
                       </ActionSurface>
                     ))}
 
@@ -178,20 +179,21 @@ export default function WhatsAppStartChatModal({
                       type="button"
                       onClick={() => onStartFromLead(lead)}
                       disabled={starting}
-                      variant="default" padding="sm" className="flex w-full items-center justify-between gap-3 text-left"
+                      variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
                     >
-                      <div className="min-w-0">
+                      <ContactAvatar label={lead.nome_completo || lead.telefone || '?'} tone="gold" />
+                      <div className="min-w-0 flex-1">
                         <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                           <LeadFavoriteBadge favorito={lead.favorito} />
                           {lead.nome_completo || 'Lead sem nome'}
                         </p>
                         <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
-                        <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
-                          {lead.status_nome || 'Sem status'}
-                          {lead.responsavel_label ? ` • ${lead.responsavel_label}` : ''}
-                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <Badge tone="neutral" size="xs">{lead.status_nome || 'Sem status'}</Badge>
+                          {lead.responsavel_label ? <Badge tone="neutral" size="xs">{lead.responsavel_label}</Badge> : null}
+                        </div>
                       </div>
-                      {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCircle2 className="h-4 w-4 text-[var(--brand-primary)]" />}
+                      {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
                     </ActionSurface>
                   ))}
                 </div>

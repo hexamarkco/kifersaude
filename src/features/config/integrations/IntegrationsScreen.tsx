@@ -1011,7 +1011,7 @@ export default function IntegrationsScreen() {
                       />
                   </div>
 
-                  <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2">
+                  <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-2">
                     <p className="text-sm font-medium text-[var(--text-primary)]">
                       Credencial protegida por Edge Secret
                     </p>

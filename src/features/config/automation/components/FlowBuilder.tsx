@@ -148,7 +148,13 @@ const toGraphNode = (
   data: node.data,
 });
 
-const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
+const TriggerNode = ({
+  data,
+  selected,
+}: {
+  data: AutoContactFlowGraphNodeData;
+  selected?: boolean;
+}) => {
   const getTriggerDescription = () => {
     switch (data.triggerType) {
       case "status_changed":
@@ -169,7 +175,17 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
   };
 
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
+    <div
+      className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
+      style={
+        selected
+          ? {
+              borderColor: "var(--accent-gold-border)",
+              background: "var(--surface-selected-bg)",
+            }
+          : undefined
+      }
+    >
       <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
         Gatilho
       </div>
@@ -190,8 +206,24 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
 
 const BOOLEAN_FIELDS = ["whatsapp_valid", "event", "lead_created"];
 
-const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-[var(--radius-xl)] border border-[var(--border-strong)] bg-[var(--bg-surface-muted)] px-4 py-3 shadow-sm">
+const ConditionNode = ({
+  data,
+  selected,
+}: {
+  data: AutoContactFlowGraphNodeData;
+  selected?: boolean;
+}) => (
+  <div
+    className="rounded-[var(--radius-xl)] border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
+    style={
+      selected
+        ? {
+            borderColor: "var(--accent-gold-border)",
+            background: "var(--surface-selected-bg)",
+          }
+        : undefined
+    }
+  >
     <div className="text-xs font-semibold uppercase text-[var(--brand-primary)]">
       Condição
     </div>
@@ -204,10 +236,10 @@ const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
         : "Sem condições"}
     </div>
     <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5">
+      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-2 py-0.5">
         Sim
       </span>
-      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5">
+      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-2 py-0.5">
         Não
       </span>
     </div>
@@ -233,8 +265,24 @@ const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
   </div>
 );
 
-const ActionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
+const ActionNode = ({
+  data,
+  selected,
+}: {
+  data: AutoContactFlowGraphNodeData;
+  selected?: boolean;
+}) => (
+  <div
+    className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
+    style={
+      selected
+        ? {
+            borderColor: "var(--accent-gold-border)",
+            background: "var(--surface-selected-bg)",
+          }
+        : undefined
+    }
+  >
     <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">Ação</div>
     <div className="text-sm font-semibold text-[var(--text-primary)]">
       {data.label || "Ação"}
@@ -1027,7 +1075,7 @@ export default function FlowBuilder({
           </div>
         </div>
         {totalIssueCount > 0 && (
-          <div className="border-b border-[var(--border-strong)] bg-[var(--bg-surface-muted)] px-4 py-2 text-xs text-[var(--text-secondary)]">
+          <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]">
             Existem {totalIssueCount} alerta(s) de conexao no fluxo.
           </div>
         )}
@@ -1071,14 +1119,14 @@ export default function FlowBuilder({
         </div>
         {contextMenu && (
           <div
-            className="fixed z-50 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-sm shadow-lg"
+            className="fixed z-50 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-elevated)] text-sm shadow-[var(--shadow-popover)]"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <Button
               variant="danger"
               size="sm"
               fullWidth
-              className="h-auto justify-start rounded-lg border-0 bg-transparent px-3 py-2 text-left shadow-none"
+              className="h-auto justify-start rounded-[var(--radius-lg)] border-0 bg-transparent px-3 py-2 text-left shadow-none"
               onClick={() => handleDeleteNode(contextMenu.nodeId)}
             >
               Excluir bloco
@@ -1103,7 +1151,7 @@ export default function FlowBuilder({
             </div>
 
             {selectedNodeIssues.length > 0 && (
-              <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-2 text-xs text-[var(--warning-text)]">
                 {selectedNodeIssues.join(" • ")}
               </div>
             )}

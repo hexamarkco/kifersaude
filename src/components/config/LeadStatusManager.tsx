@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
@@ -317,51 +318,58 @@ export default function LeadStatusManager() {
           <DialogDescription>Crie uma nova etapa para o funil de leads.</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="space-y-4">
+          <form
+            id="lead-status-create-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate();
+            }}
+            className="space-y-4"
+          >
             <Field label="Nome do status">
-            <Input
-              type="text"
-              value={newStatus.nome}
-              onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
-              placeholder="Ex: Em negociação"
-            />
-            </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Cor">
               <Input
-                type="color"
-                value={newStatus.cor}
-                onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
+                type="text"
+                value={newStatus.nome}
+                onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
+                placeholder="Ex: Em negociação"
               />
             </Field>
 
-            <Field label="Ordem">
-              <Input
-                type="number"
-                value={newStatus.ordem}
-                onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
-              />
-            </Field>
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Cor">
+                <Input
+                  type="color"
+                  value={newStatus.cor}
+                  onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
+                />
+              </Field>
 
-          <div className="flex items-center gap-3">
-            <Button onClick={() => void handleCreate()} disabled={saving}>
-              <Plus className="h-4 w-4" />
-              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-          </div>
+              <Field label="Ordem">
+                <Input
+                  type="number"
+                  value={newStatus.ordem}
+                  onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
+                />
+              </Field>
+            </div>
+          </form>
         </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setIsCreateModalOpen(false);
+              setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="lead-status-create-form" disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
+        </DialogFooter>
       </Dialog>
       {ConfirmationDialog}
     </Card>

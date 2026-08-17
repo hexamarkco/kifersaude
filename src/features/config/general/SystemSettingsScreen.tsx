@@ -421,7 +421,7 @@ export default function SystemSettingsScreen() {
                         {settings.notification_sound_enabled ? (
                           <Volume2 className="h-5 w-5 text-[color:var(--brand-primary)]" />
                         ) : (
-                          <VolumeX className="h-5 w-5 text-[color:var(--text-tertiary)]" />
+                          <VolumeX className="h-5 w-5 text-[color:var(--text-muted)]" />
                         )}
                         <span className="text-sm font-medium text-[color:var(--text-primary)]">
                           Ativar sons de notificação
@@ -475,7 +475,7 @@ export default function SystemSettingsScreen() {
                         })
                       }
                     />
-                    <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
+                    <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                       Recomendado: 30 segundos.
                     </p>
                   </div>

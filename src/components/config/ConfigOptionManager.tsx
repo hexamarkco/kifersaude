@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
@@ -282,33 +283,39 @@ export default function ConfigOptionManager({
           <DialogDescription>Adicione um novo item a esta lista.</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="space-y-4">
+          <form
+            id="config-option-create-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate();
+            }}
+          >
             <Field label="Nome da opção">
-            <Input
-              type="text"
-              value={newLabel}
-              onChange={(event) => setNewLabel(event.target.value)}
-              placeholder={placeholder || 'Nova opção'}
-            />
+              <Input
+                type="text"
+                value={newLabel}
+                onChange={(event) => setNewLabel(event.target.value)}
+                placeholder={placeholder || 'Nova opção'}
+              />
             </Field>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={() => void handleCreate()} disabled={saving}>
-              <Plus className="h-4 w-4" />
-              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setNewLabel('');
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-          </div>
+          </form>
         </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setIsCreateModalOpen(false);
+              setNewLabel('');
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="config-option-create-form" disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
+        </DialogFooter>
       </Dialog>
       {ConfirmationDialog}
     </Card>

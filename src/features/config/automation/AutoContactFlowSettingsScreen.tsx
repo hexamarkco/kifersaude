@@ -73,7 +73,18 @@ import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocom
 import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
-import { ActionSurface, Alert, Button, Card, Checkbox, Input, OperationalMetricChip, Surface, Switch, Tabs } from "../../../design-system";
+import {
+  ActionSurface,
+  Alert,
+  Button,
+  Card,
+  DateTimePicker as DesignSystemDateTimePicker,
+  Input,
+  OperationalMetricChip,
+  Surface,
+  Switch,
+  Tabs,
+} from "../../../design-system";
 
 type MessageState = {
   type: "success" | "error" | "warning";
@@ -1741,14 +1752,12 @@ export default function AutoContactFlowSettingsScreen() {
                         Controla o envio automático dos fluxos configurados.
                       </p>
                     </div>
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                      <Checkbox
-                        checked={autoSendEnabled}
-                        onChange={(event) =>
-                          setAutoSendEnabled(event.target.checked)
-                        }
-                      />
-                    </label>
+                    <Switch
+                      checked={autoSendEnabled}
+                      onChange={(event) =>
+                        setAutoSendEnabled(event.target.checked)
+                      }
+                    />
                   </div>
                 </Card>
                 <Card variant="muted" padding="sm" className="space-y-4">
@@ -1782,18 +1791,16 @@ export default function AutoContactFlowSettingsScreen() {
                     definidos em cada fluxo.
                   </p>
                   <div className="space-y-1">
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                      <Checkbox
-                        checked={schedulingDraft.skipHolidays}
-                        onChange={(event) =>
-                          setSchedulingDraft((previous) => ({
-                            ...previous,
-                            skipHolidays: event.target.checked,
-                          }))
-                        }
-                      />
-                      Pausar envios em feriados nacionais e estaduais
-                    </label>
+                    <Switch
+                      checked={schedulingDraft.skipHolidays}
+                      onChange={(event) =>
+                        setSchedulingDraft((previous) => ({
+                          ...previous,
+                          skipHolidays: event.target.checked,
+                        }))
+                      }
+                      label="Pausar envios em feriados nacionais e estaduais"
+                    />
                     <p className="text-[11px] text-[var(--text-subtle)]">
                       O sistema considera automaticamente os feriados oficiais e
                       respeita datas extras configuradas manualmente.
@@ -1817,7 +1824,7 @@ export default function AutoContactFlowSettingsScreen() {
                           execuções.
                         </p>
                       </div>
-                      <Checkbox
+                      <Switch
                         checked={monitoringDraft.realtimeEnabled}
                         onChange={(event) =>
                           setMonitoringDraft((previous) => ({
@@ -1869,7 +1876,7 @@ export default function AutoContactFlowSettingsScreen() {
                           Registre eventos, payloads e ações por usuário.
                         </p>
                       </div>
-                      <Checkbox
+                      <Switch
                         checked={loggingDraft.enabled}
                         onChange={(event) =>
                           setLoggingDraft((previous) => ({
@@ -1898,8 +1905,8 @@ export default function AutoContactFlowSettingsScreen() {
                           size="large"
                         />
                       </div>
-                      <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] mt-6">
-                        <Checkbox
+                      <div className="mt-6">
+                        <Switch
                           checked={loggingDraft.includePayloads}
                           onChange={(event) =>
                             setLoggingDraft((previous) => ({
@@ -1907,9 +1914,9 @@ export default function AutoContactFlowSettingsScreen() {
                               includePayloads: event.target.checked,
                             }))
                           }
+                          label="Salvar payloads completos"
                         />
-                        Salvar payloads completos
-                      </label>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -1977,7 +1984,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
 
               {flowDrafts.length === 0 ? (
-                <Surface variant="muted" padding="sm" className="text-sm">
+                <Surface variant="default" padding="sm" className="text-sm">
                   Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
                 </Surface>
               ) : (
@@ -2097,7 +2104,7 @@ export default function AutoContactFlowSettingsScreen() {
                         {activeFlow.name || "Novo fluxo"}
                       </h4>
                       {activeFlow.ativo === false && (
-                        <span className="mt-1 inline-flex items-center rounded-full border border-[var(--danger-border)] bg-[var(--danger-surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--danger-text)]">
+                        <span className="mt-1 inline-flex items-center rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--danger-text)]">
                           Desativado
                         </span>
                       )}
@@ -2249,7 +2256,7 @@ export default function AutoContactFlowSettingsScreen() {
                             Janela diária
                           </label>
                           <div className="flex items-center gap-2">
-                            <Input
+                            <DesignSystemDateTimePicker
                               type="time"
                               value={activeFlowScheduling.startHour}
                               onChange={(event) =>
@@ -2262,7 +2269,7 @@ export default function AutoContactFlowSettingsScreen() {
                             <span className="text-xs text-[var(--text-subtle)]">
                               até
                             </span>
-                            <Input
+                            <DesignSystemDateTimePicker
                               type="time"
                               value={activeFlowScheduling.endHour}
                               onChange={(event) =>
@@ -2299,7 +2306,7 @@ export default function AutoContactFlowSettingsScreen() {
                                           ].sort((a, b) => a - b),
                                     })
                                   }
-                                  variant={isActive ? "warning" : "secondary"}
+                                  variant={isActive ? "primary" : "secondary"}
                                   size="sm"
                                   className="h-auto px-3 py-1 text-xs"
                                 >
@@ -3665,6 +3672,25 @@ export default function AutoContactFlowSettingsScreen() {
               }
               size="lg"
               panelClassName="max-w-3xl"
+              footer={
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    onClick={handleCloseTemplateModal}
+                    variant="secondary"
+                    className="w-full sm:w-auto"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveTemplateDraft}
+                    loading={savingTemplate}
+                    className="w-full sm:w-auto"
+                  >
+                    {!savingTemplate && "Salvar template"}
+                    {savingTemplate && "Salvando..."}
+                  </Button>
+                </div>
+              }
             >
               <div className="space-y-6">
                 <div>
@@ -3849,27 +3875,10 @@ export default function AutoContactFlowSettingsScreen() {
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-[var(--text-muted)]">
+              <div className="mt-6 text-xs text-[var(--text-muted)]">
                 Este botão salva o template na biblioteca e no banco de dados.
                 Para aplicar mudanças nos fluxos, finalize com "Salvar
                 automação".
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button
-                  onClick={handleCloseTemplateModal}
-                  variant="secondary"
-                  className="w-full sm:w-auto"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSaveTemplateDraft}
-                  loading={savingTemplate}
-                  className="w-full sm:w-auto"
-                >
-                  {!savingTemplate && "Salvar template"}
-                  {savingTemplate && "Salvando..."}
-                </Button>
               </div>
             </ModalShell>
           )}

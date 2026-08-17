@@ -298,9 +298,6 @@ export default function AccessControlManagerScreen() {
 
         {(creatingProfile || editingProfileId) && (
           <Card
-            onSubmit={
-              editingProfileId ? handleUpdateProfile : handleCreateProfile
-            }
             className="mb-6"
             variant="muted"
             padding="md"
@@ -386,7 +383,7 @@ export default function AccessControlManagerScreen() {
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
                     {profile.slug}
                   </p>
                   <p className="mt-2 text-sm text-[color:var(--text-secondary)]">

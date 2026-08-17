@@ -76,7 +76,7 @@ export function MessageListEditor({
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
-                  className="rounded p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
                   onClick={() => moveItem(index, -1)}
                   disabled={index === 0}
                   aria-label="Mover para cima"
@@ -85,7 +85,7 @@ export function MessageListEditor({
                 </button>
                 <button
                   type="button"
-                  className="rounded p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
                   onClick={() => moveItem(index, 1)}
                   disabled={index === currentMessages.length - 1}
                   aria-label="Mover para baixo"
@@ -94,7 +94,7 @@ export function MessageListEditor({
                 </button>
                 <button
                   type="button"
-                  className="rounded p-1 text-[var(--danger-text)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  className="rounded-full p-1 text-[var(--danger-text)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
                   onClick={() => removeItem(index)}
                   disabled={currentMessages.length === 1}
                   aria-label="Remover mensagem"

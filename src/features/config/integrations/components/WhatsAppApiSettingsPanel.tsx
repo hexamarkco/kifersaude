@@ -338,7 +338,7 @@ export default function WhatsAppApiSettingsPanel() {
                     O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
                   </p>
                 ) : (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="mt-2 text-xs text-[var(--warning-text)]">
                     Migre para `COMM_WHATSAPP_WEBHOOK_SECRET` e um header customizado da Whapi para remover o segredo da URL.
                   </p>
                 )}

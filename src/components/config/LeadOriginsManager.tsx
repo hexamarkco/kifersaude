@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
@@ -260,33 +261,39 @@ export default function LeadOriginsManager() {
           <DialogDescription>Cadastre um novo canal de entrada de leads.</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="space-y-4">
+          <form
+            id="lead-origin-create-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreate();
+            }}
+          >
             <Field label="Nome da origem">
-            <Input
-              type="text"
-              value={newOrigin}
-              onChange={(event) => setNewOrigin(event.target.value)}
-              placeholder="Ex: Indicação"
-            />
+              <Input
+                type="text"
+                value={newOrigin}
+                onChange={(event) => setNewOrigin(event.target.value)}
+                placeholder="Ex: Indicação"
+              />
             </Field>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={() => void handleCreate()} disabled={saving}>
-              <Plus className="h-4 w-4" />
-              <span>{saving ? 'Salvando' : 'Adicionar'}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsCreateModalOpen(false);
-                setNewOrigin('');
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-          </div>
+          </form>
         </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setIsCreateModalOpen(false);
+              setNewOrigin('');
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="lead-origin-create-form" disabled={saving}>
+            <Plus className="h-4 w-4" />
+            <span>{saving ? 'Salvando' : 'Adicionar'}</span>
+          </Button>
+        </DialogFooter>
       </Dialog>
       {ConfirmationDialog}
     </Card>

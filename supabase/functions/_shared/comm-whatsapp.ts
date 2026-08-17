@@ -2158,7 +2158,10 @@ export const normalizeWhapiMediaFileName = (value: unknown): string => {
 
 export const extractWhapiContactSaved = (payload: unknown): boolean => {
   if (!isRecord(payload)) return false;
-  return payload.phonebook === true || payload.saved === true;
+  // Whapi marks every contact the account has ever chatted with as `saved: true`,
+  // regardless of whether it's actually in the phone's address book. Only
+  // `phonebook: true` reflects a real, user-saved contact.
+  return payload.phonebook === true;
 };
 
 export const extractWhapiSavedContactName = (payload: unknown): string => {

@@ -2468,11 +2468,11 @@ export default function DashboardScreen({
                           return (
                             <div
                               key={event.id}
-                              className="overflow-hidden rounded-2xl bg-[var(--brand-primary-muted)] p-2.5"
+                              className="overflow-hidden rounded-2xl bg-[var(--bg-surface)] p-2.5"
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex min-w-0 gap-2.5">
-                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--brand-primary)]">
+                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--brand-primary)]">
                                     <Sparkles className="h-4 w-4" strokeWidth={1.75} />
                                   </span>
                                   <div className="min-w-0 space-y-0.5">

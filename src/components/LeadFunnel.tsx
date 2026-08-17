@@ -74,6 +74,23 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
     );
   }
 
+  const bandHeight = 30;
+  const chartHeight = stageSummaries.length * bandHeight;
+  const bands = stageSummaries.map((summary, index) => {
+    const topWidth = summary.funnelWidth;
+    const bottomWidth = index < stageSummaries.length - 1 ? stageSummaries[index + 1].funnelWidth : summary.funnelWidth * 0.92;
+    const yTop = index * bandHeight;
+    const yBottom = yTop + bandHeight;
+    const topLeft = 100 - topWidth;
+    const topRight = 100 + topWidth;
+    const bottomLeft = 100 - bottomWidth;
+    const bottomRight = 100 + bottomWidth;
+    const curve = bandHeight * 0.65;
+    const d = `M ${topLeft} ${yTop} L ${topRight} ${yTop} C ${topRight} ${yTop + curve}, ${bottomRight} ${yBottom - curve}, ${bottomRight} ${yBottom} L ${bottomLeft} ${yBottom} C ${bottomLeft} ${yBottom - curve}, ${topLeft} ${yTop + curve}, ${topLeft} ${yTop} Z`;
+
+    return { id: summary.stage.id, d, color: summary.color, title: `${summary.stage.nome}: ${summary.count.toLocaleString('pt-BR')}` };
+  });
+
   return (
     <Surface padding="sm" className="flex h-full flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -91,22 +108,27 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
         </div>
       </div>
 
-      <div className="mx-auto mt-4 flex w-full max-w-md flex-col items-center gap-1">
-        {stageSummaries.map((summary) => (
-          <div
-            key={summary.stage.id}
-            className="h-6 transition-[width] duration-500"
-            style={{
-              width: `${summary.funnelWidth}%`,
-              clipPath: 'polygon(4% 0%, 96% 0%, 88% 100%, 12% 100%)',
-              background: summary.color,
-            }}
-            title={`${summary.stage.nome}: ${summary.count.toLocaleString('pt-BR')}`}
-          />
+      <svg
+        viewBox={`0 0 200 ${chartHeight}`}
+        preserveAspectRatio="none"
+        className="mx-auto mt-4 h-48 w-full max-w-md"
+        aria-hidden="true"
+      >
+        {bands.map((band) => (
+          <path
+            key={band.id}
+            d={band.d}
+            fill={band.color}
+            stroke="var(--bg-surface)"
+            strokeWidth={1.5}
+            strokeLinejoin="round"
+          >
+            <title>{band.title}</title>
+          </path>
         ))}
-      </div>
+      </svg>
 
-      <div className="mt-4 flex-1 space-y-2">
+      <div className="mt-4 grid flex-1 grid-cols-1 gap-2 content-start sm:grid-cols-2">
         {stageSummaries.map((summary, index) => (
           <div key={summary.stage.id} className="rounded-2xl bg-[var(--bg-hover)] px-3.5 py-2.5">
             <div className="flex items-center justify-between gap-3">

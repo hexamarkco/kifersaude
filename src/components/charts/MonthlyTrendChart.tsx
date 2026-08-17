@@ -52,9 +52,16 @@ export default function MonthlyTrendChart({
       };
     });
 
-    const linePath = points
-      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
-      .join(' ');
+    const linePath = points.reduce((path, point, index) => {
+      if (index === 0) {
+        return `M ${point.x} ${point.y}`;
+      }
+
+      const previous = points[index - 1];
+      const midX = (previous.x + point.x) / 2;
+
+      return `${path} C ${midX} ${previous.y}, ${midX} ${point.y}, ${point.x} ${point.y}`;
+    }, '');
 
     const areaPath = `${linePath} L ${points[points.length - 1].x} ${VIEWBOX_HEIGHT - PADDING.bottom} L ${points[0].x} ${VIEWBOX_HEIGHT - PADDING.bottom} Z`;
 

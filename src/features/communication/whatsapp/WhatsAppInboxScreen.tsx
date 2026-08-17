@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Badge, Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
+import { Badge, Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
@@ -3185,11 +3185,9 @@ export default function WhatsAppInboxScreen() {
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const chatMessageSearchInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const composerAiMenuRef = useRef<HTMLDivElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
   const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
   const chatMenuRef = useRef<HTMLDivElement | null>(null);
@@ -4947,18 +4945,6 @@ export default function WhatsAppInboxScreen() {
       window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
     }
   }, []);
-
-  useClickOutside(
-    attachmentMenuOpen,
-    () => [attachmentMenuRef.current],
-    () => setAttachmentMenuOpen(false),
-  );
-
-  useClickOutside(
-    composerAiMenuOpen,
-    () => [composerAiMenuRef.current],
-    () => setComposerAiMenuOpen(false),
-  );
 
   useClickOutside(
     Boolean(openReactionPickerMessageId),
@@ -10617,9 +10603,30 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   ) : null}
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                    <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                      {attachmentMenuOpen && (
-                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-2 min-w-[208px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl" role="dialog" aria-label="Anexar arquivo">
+                    <div className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                      <Popover open={attachmentMenuOpen} onOpenChange={setAttachmentMenuOpen}>
+                        <PopoverTrigger
+                          onClick={() => {
+                            setComposerAiMenuOpen(false);
+                            setMediaDrawerOpen(false);
+                          }}
+                        >
+                          <button
+                            type="button"
+                            disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
+                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
+                            aria-label="Anexar"
+                            aria-expanded={attachmentMenuOpen}
+                          >
+                            <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          side="top"
+                          align="start"
+                          className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl"
+                          aria-label="Anexar arquivo"
+                        >
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
@@ -10650,23 +10657,8 @@ export default function WhatsAppInboxScreen() {
                             </span>
                             <span>Áudio</span>
                           </button>
-                        </div>
-                      )}
-
-                      <button
-                          type="button"
-                          onClick={() => {
-                            setComposerAiMenuOpen(false);
-                            setMediaDrawerOpen(false);
-                            setAttachmentMenuOpen((current) => !current);
-                          }}
-                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
-                          aria-label="Anexar"
-                          aria-expanded={attachmentMenuOpen}
-                      >
-                        <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
-                      </button>
+                        </PopoverContent>
+                      </Popover>
                         <button
                           type="button"
                           ref={mediaDrawerTriggerRef}
@@ -10681,9 +10673,31 @@ export default function WhatsAppInboxScreen() {
                       </button>
                     </div>
 
-                    <div ref={composerAiMenuRef} className={`relative flex shrink-0 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                      {composerAiMenuOpen ? (
-                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-2 min-w-[216px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl" role="dialog" aria-label="Ações de inteligência artificial">
+                    <div className={`relative flex shrink-0 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                      <Popover open={composerAiMenuOpen} onOpenChange={setComposerAiMenuOpen}>
+                        <PopoverTrigger
+                          onClick={() => {
+                            setAttachmentMenuOpen(false);
+                            setMediaDrawerOpen(false);
+                          }}
+                        >
+                          <button
+                            type="button"
+                            disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
+                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
+                            aria-label="Ações com IA"
+                            aria-expanded={composerAiMenuOpen}
+                            title="Ações com IA"
+                          >
+                            {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          side="top"
+                          align="start"
+                          className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl"
+                          aria-label="Ações de inteligência artificial"
+                        >
                           <button
                             type="button"
                             onClick={() => {
@@ -10789,23 +10803,8 @@ export default function WhatsAppInboxScreen() {
                               S
                             </button>
                           </div>
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAttachmentMenuOpen(false);
-                          setMediaDrawerOpen(false);
-                          setComposerAiMenuOpen((current) => !current);
-                        }}
-                        disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
-                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
-                        aria-label="Ações com IA"
-                        aria-expanded={composerAiMenuOpen}
-                        title="Ações com IA"
-                      >
-                        {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
-                      </button>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>

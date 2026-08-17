@@ -1595,9 +1595,9 @@ export default function LeadsManager({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <details className="group flex-1 basis-full sm:basis-0">
+              <details className="group w-full sm:w-auto">
                 <summary className="cursor-pointer list-none">
-                  <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between px-3 py-2 transition-colors">
+                  <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between gap-3 px-4 py-2 transition-colors sm:inline-flex sm:justify-start">
                     <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                       <Filter className="w-4 h-4" />
                       Filtros avançados
@@ -1815,9 +1815,9 @@ export default function LeadsManager({
                       disabled={isBulkUpdating}
                       placeholder="Próximo retorno"
                     />
+                  </div>
 
-                    <span className="hidden h-6 w-px shrink-0 bg-[var(--border-subtle)] sm:block" aria-hidden="true" />
-
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       onClick={handleBulkStatusApply}

@@ -71,54 +71,44 @@ export default function FilterDateRange({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger className="block">
         <button
-        type="button"
-        className="kds-select panel-ui-input relative h-auto w-full py-2.5 pl-10 pr-9 text-left"
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-      >
-        <Icon
-          className={cx(
-            'absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2',
-            'text-[var(--text-muted)]',
-          )}
-        />
-        <div className="flex flex-col gap-0.5">
-          <span
+          type="button"
+          className="kds-select panel-ui-input relative h-10 w-full px-9 text-left text-sm"
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+        >
+          <Icon
             className={cx(
-              'text-xs font-semibold uppercase tracking-wide',
+              'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2',
               'text-[var(--text-muted)]',
             )}
-          >
-            {label}
-          </span>
+          />
           <span
             className={cx(
-              'text-sm',
+              'block truncate',
               hasActiveFilter
                 ? 'text-[var(--text-primary)]'
                 : 'text-[var(--text-secondary)]',
             )}
           >
-            {displayValue}
+            {label}: {displayValue}
           </span>
-        </div>
-        <ChevronDown
-          className={cx(
-            'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
-            'text-[var(--text-muted)]',
-            isOpen && 'rotate-180',
-          )}
-        />
+          <ChevronDown
+            className={cx(
+              'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
+              'text-[var(--text-muted)]',
+              isOpen && 'rotate-180',
+            )}
+          />
         </button>
       </PopoverTrigger>
 
       <PopoverContent
         side="bottom"
         align="start"
-        className="w-[min(26.25rem,calc(100vw-1rem))] space-y-3 p-4"
+        className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-4"
         aria-label={`Selecionar intervalo de ${label}`}
       >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3">
             <Field label="De" htmlFor={`${label}-from`}>
               <DateTimePicker
                 id={`${label}-from`}

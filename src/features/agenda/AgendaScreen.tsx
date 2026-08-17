@@ -1252,7 +1252,7 @@ export default function AgendaScreen() {
           onClick={() => {
             void handleDayClick(cellDate);
           }}
-          className={`kds-action-surface flex min-h-16 flex-col justify-between border p-1.5 text-left transition-colors sm:min-h-20 sm:p-2 ${stateClass}`}
+          className={`kds-action-surface flex aspect-square flex-col justify-between border p-1.5 text-left transition-colors sm:p-2 ${stateClass}`}
           aria-pressed={isSelected}
           aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${totalCount} item(ns)`}
         >
@@ -1607,7 +1607,7 @@ export default function AgendaScreen() {
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
-              variant="underline"
+              variant="pill"
               listClassName="flex-nowrap overflow-x-auto"
             />
             <div className="flex flex-wrap items-center gap-2">

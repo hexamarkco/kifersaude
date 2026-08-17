@@ -949,7 +949,7 @@ export default function IntegrationsScreen() {
           ]}
           value={activeSection}
           onChange={setActiveSection}
-          variant="underline"
+          variant="pill"
           listClassName="flex-nowrap overflow-x-auto"
         />
 

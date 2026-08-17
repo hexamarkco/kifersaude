@@ -320,7 +320,7 @@ export default function SystemSettingsScreen() {
               }))}
               value={activeVisibleSection ?? "general"}
               onChange={setActiveSection}
-              variant="underline"
+              variant="pill"
               className="mt-5"
               listClassName="flex-nowrap overflow-x-auto"
             />
@@ -549,7 +549,7 @@ export default function SystemSettingsScreen() {
                           items={leadConfigurationTabs}
                           value={activeLeadConfigurationId}
                           onChange={setActiveLeadConfiguration}
-                          variant="underline"
+                          variant="pill"
                           listClassName="flex-nowrap overflow-x-auto"
                         />
                         {activeLeadConfigurationId === "status" && <LeadStatusManager />}
@@ -605,7 +605,7 @@ export default function SystemSettingsScreen() {
                         items={contractConfigurationTabs}
                         value={activeContractConfigurationId}
                         onChange={setActiveContractConfiguration}
-                        variant="underline"
+                        variant="pill"
                         listClassName="flex-nowrap overflow-x-auto"
                       />
                       {(() => {

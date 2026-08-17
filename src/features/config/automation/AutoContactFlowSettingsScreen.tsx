@@ -1676,7 +1676,7 @@ export default function AutoContactFlowSettingsScreen() {
               ]}
               value={activeWorkspace}
               onChange={setActiveWorkspace}
-              variant="underline"
+              variant="pill"
               listClassName="flex-nowrap overflow-x-auto"
             />
           </div>
@@ -2155,7 +2155,7 @@ export default function AutoContactFlowSettingsScreen() {
 
                     <Tabs
                       className="mt-5"
-                      variant="underline"
+                      variant="pill"
                       value={flowDetailTab}
                       onChange={(next) => {
                         setFlowDetailTab(next);

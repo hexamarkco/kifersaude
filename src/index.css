@@ -1173,7 +1173,7 @@ html,
   }
 }
 
-/* Terracota CRM shell: solid workspace surfaces driven by DS tokens. */
+/* Terracota CRM shell: flat workspace surfaces driven by DS tokens. */
 .terracota-shell,
 .terracota-main,
 .terracota-content-shell {
@@ -1181,46 +1181,7 @@ html,
 }
 
 .terracota-sidebar {
-  border-color: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
-  background: linear-gradient(180deg, var(--brand-primary-active) 0%, color-mix(in srgb, var(--brand-primary-active) 72%, var(--bg-inset)) 48%, var(--bg-inset) 100%);
-  box-shadow: var(--shadow-popover);
-  color: var(--text-on-brand);
-}
-
-.terracota-sidebar .kds-sidebar-divider {
-  border-color: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
-}
-
-.terracota-sidebar .kds-sidebar-item {
-  color: color-mix(in srgb, var(--text-on-brand) 76%, transparent);
-}
-
-.terracota-sidebar .kds-sidebar-item:hover {
-  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
-  color: var(--text-on-brand);
-}
-
-.terracota-sidebar .kds-sidebar-item.is-active {
-  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
-  background: var(--brand-primary-gradient-hover);
-  color: var(--text-on-brand);
-  box-shadow: var(--shadow-button);
-}
-
-.terracota-sidebar .kds-sidebar-item-danger:hover {
-  background: var(--danger-soft);
-  color: var(--danger-text);
-}
-
-.terracota-sidebar .kds-brand-mark {
-  background: var(--brand-primary-gradient);
-  box-shadow: var(--shadow-button);
-}
-
-.terracota-sidebar .kds-sidebar-badge {
-  background: var(--text-on-brand);
-  color: var(--brand-primary-active);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
 }
 
 .terracota-sidebar-popover {
@@ -1241,8 +1202,8 @@ html,
 
 .terracota-sidebar .kds-sidebar-item:focus-visible,
 .terracota-mobile-menu-trigger:focus-visible {
-  outline: 2px solid var(--text-on-brand);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 @media (max-width: 767px) {

@@ -808,7 +808,7 @@ export default function Layout({
             onClick={(event) => handleTabClick(tab, event.currentTarget)}
             data-sidebar-item
             className={cx(
-              'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200',
+              'kds-sidebar-item relative flex w-full items-center py-2.5 text-left text-sm font-medium transition-all duration-200',
               isActive && 'is-active',
               isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
             )}
@@ -855,7 +855,7 @@ export default function Layout({
                       setIsMobileMenuOpen(false);
                     }}
                     className={cx(
-                      'kds-sidebar-item flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
+                      'kds-sidebar-item flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium transition-colors',
                       isChildActive && 'is-active',
                     )}
                   >
@@ -885,7 +885,7 @@ export default function Layout({
         onClick={() => handleTabClick(tab)}
         data-sidebar-item
         className={cx(
-          'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors',
+          'kds-sidebar-item relative flex w-full items-center py-2.5 text-left text-sm font-medium transition-colors',
           isActive && 'is-active',
           isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
         )}
@@ -1007,7 +1007,7 @@ export default function Layout({
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
               data-sidebar-item
-              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
+              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
                 isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isSidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
@@ -1020,7 +1020,7 @@ export default function Layout({
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
-                className={`kds-sidebar-item flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
+                className={`kds-sidebar-item flex items-center py-2.5 text-sm font-medium transition-all duration-200 ${
                   isSidebarCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
                 }`}
                 title="Notificações"
@@ -1141,7 +1141,7 @@ export default function Layout({
               type="button"
               onClick={toggleThemeMode}
               data-sidebar-item
-              className={`kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
+              className={`kds-sidebar-item flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
                 isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -1153,7 +1153,7 @@ export default function Layout({
             <button
               onClick={handleLogout}
               data-sidebar-item
-              className={`kds-sidebar-item kds-sidebar-item-danger flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
+              className={`kds-sidebar-item kds-sidebar-item-danger flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
                 isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isSidebarCollapsed ? 'Sair' : undefined}
@@ -1199,7 +1199,7 @@ export default function Layout({
                     setIsMobileMenuOpen(false);
                   }}
                   className={cx(
-                    'kds-sidebar-item flex min-w-[156px] items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                    'kds-sidebar-item flex min-w-[156px] items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
                     isChildActive && 'is-active',
                   )}
                 >

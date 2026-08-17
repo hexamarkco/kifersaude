@@ -1950,7 +1950,7 @@ export default function DashboardScreen({
     const cells: JSX.Element[] = [];
 
     for (let i = 0; i < firstDay; i += 1) {
-      cells.push(<div key={`empty-${i}`} className="h-9" />);
+      cells.push(<div key={`empty-${i}`} className="aspect-square" />);
     }
 
     for (let day = 1; day <= daysInMonth; day += 1) {
@@ -1968,7 +1968,7 @@ export default function DashboardScreen({
           onClick={() => setSelectedCalendarDate(date)}
           padding="none"
           selected={isSelected}
-          className="group relative h-9 rounded-[var(--kds-radius-md)] p-1.5 text-left transition-all duration-200 hover:-translate-y-px"
+          className="group relative aspect-square rounded-[var(--kds-radius-md)] p-1.5 text-left transition-all duration-200 hover:-translate-y-px"
           style={
             isSelected
               ? undefined

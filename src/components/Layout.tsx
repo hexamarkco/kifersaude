@@ -808,9 +808,9 @@ export default function Layout({
             onClick={(event) => handleTabClick(tab, event.currentTarget)}
             data-sidebar-item
             className={cx(
-              'kds-sidebar-item relative flex w-full items-center py-2.5 text-left text-sm font-medium transition-all duration-200',
+              'kds-sidebar-item relative flex items-center text-left text-sm font-medium transition-all duration-200',
               isActive && 'is-active',
-              isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+              isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center' : 'w-full justify-between px-3 py-2.5',
             )}
             title={isSidebarCollapsed ? tab.label : undefined}
           >
@@ -885,9 +885,9 @@ export default function Layout({
         onClick={() => handleTabClick(tab)}
         data-sidebar-item
         className={cx(
-          'kds-sidebar-item relative flex w-full items-center py-2.5 text-left text-sm font-medium transition-colors',
+          'kds-sidebar-item relative flex items-center text-left text-sm font-medium transition-colors',
           isActive && 'is-active',
-          isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+          isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center' : 'w-full justify-between px-3 py-2.5',
         )}
         title={isSidebarCollapsed ? tab.label : undefined}
       >
@@ -1007,8 +1007,8 @@ export default function Layout({
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
               data-sidebar-item
-              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
+                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
               }`}
               title={isSidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
             >
@@ -1020,8 +1020,8 @@ export default function Layout({
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
-                className={`kds-sidebar-item flex items-center py-2.5 text-sm font-medium transition-all duration-200 ${
-                  isSidebarCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
+                className={`kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
+                  isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
                 }`}
                 title="Notificações"
                 aria-expanded={showNotificationsDropdown}
@@ -1141,8 +1141,8 @@ export default function Layout({
               type="button"
               onClick={toggleThemeMode}
               data-sidebar-item
-              className={`kds-sidebar-item flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+              className={`kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
+                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -1153,8 +1153,8 @@ export default function Layout({
             <button
               onClick={handleLogout}
               data-sidebar-item
-              className={`kds-sidebar-item kds-sidebar-item-danger flex w-full items-center py-2.5 text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+              className={`kds-sidebar-item kds-sidebar-item-danger flex items-center text-sm font-medium transition-all duration-200 ${
+                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
               }`}
               title={isSidebarCollapsed ? 'Sair' : undefined}
             >

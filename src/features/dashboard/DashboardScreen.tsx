@@ -1962,59 +1962,37 @@ export default function DashboardScreen({
       const isSelected = selectedCalendarKey === dateKey;
       const kinds = Array.from(new Set(dayEvents.map((event) => event.kind)));
 
+      const stateClass = isSelected
+        ? "border-transparent bg-[var(--text-primary)] text-[var(--text-inverse)]"
+        : isToday
+          ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--text-primary)]"
+          : dayEvents.length > 0
+            ? "border-transparent bg-[var(--bg-hover)] text-[var(--text-primary)]"
+            : "border-transparent text-[var(--text-secondary)]";
+      const badgeClass = isSelected
+        ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
+        : kinds.includes("adjustment")
+          ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
+          : "bg-[var(--border-strong)] text-[var(--text-inverse)]";
+
       cells.push(
-        <ActionSurface
+        <button
           key={day}
+          type="button"
           onClick={() => setSelectedCalendarDate(date)}
-          padding="none"
-          selected={isSelected}
-          className="group relative aspect-square rounded-[var(--kds-radius-md)] p-1.5 text-left transition-all duration-200 hover:-translate-y-px"
-          style={
-            isSelected
-              ? undefined
-              : isToday
-                ? {
-                    borderColor: "var(--brand-primary-border)",
-                    background: "var(--brand-primary-muted)",
-                    color: "var(--text-primary)",
-                  }
-                : dayEvents.length > 0
-                  ? {
-                      borderColor: "var(--border-subtle)",
-                    background: "var(--accent-gold-muted)",
-                      color: "var(--text-secondary)",
-                    }
-                  : {
-                      borderColor: "var(--border-subtle)",
-                    background: "var(--bg-surface)",
-                      color: "var(--text-secondary)",
-                    }
-          }
+          aria-pressed={isSelected}
+          className={`kds-action-surface relative flex aspect-square items-center justify-center rounded-full border transition-colors ${stateClass}`}
         >
-          <div className="font-[var(--font-sans)] text-xs font-semibold tabular-nums">{day}</div>
+          <span className="font-[var(--font-sans)] text-xs font-bold tabular-nums sm:text-sm">{day}</span>
           {dayEvents.length > 0 && (
-            <div className="absolute right-1 top-1 rounded-full bg-[var(--bg-hover)] px-1 text-[9px] font-semibold leading-[1.1rem] text-[var(--text-secondary)]">
+            <span
+              className={`absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none sm:h-5 sm:min-w-5 sm:text-[10px] ${badgeClass}`}
+              title={`${dayEvents.length} evento(s)`}
+            >
               {dayEvents.length}
-            </div>
+            </span>
           )}
-          {kinds.length > 0 && (
-            <div className="absolute bottom-1 left-1.5 flex gap-0.5">
-              {kinds.map((kind) => (
-                <span
-                  key={kind}
-                  className="h-1 w-1 rounded-full"
-                  style={{
-                    backgroundColor: isSelected
-                      ? "var(--text-on-brand)"
-                      : kind === "adjustment"
-                        ? "var(--brand-primary)"
-                        : "var(--border-strong)",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </ActionSurface>,
+        </button>,
       );
     }
 

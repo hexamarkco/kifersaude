@@ -1,6 +1,3 @@
-import { DollarSign, Gift } from "lucide-react";
-
-import { ActionSurface, Badge } from "../../../design-system";
 import { cx } from "../../../lib/cx";
 import { COMMISSION_WEEK_DAYS } from "../shared/commissionCalendarConstants";
 import {
@@ -48,48 +45,47 @@ export default function CommissionMonthGrid({
     const dateKey = getCommissionDateKey(cellDate);
     const dayEvents = eventsByDay.get(dateKey) || [];
     const hasCommission = dayEvents.some((event) => event.type === "comissao");
-    const hasBonus = dayEvents.some((event) => event.type === "bonificacao");
     const isToday = isCommissionSameDay(cellDate, today);
     const isSelected = selectedDate
       ? isCommissionSameDay(cellDate, selectedDate)
       : false;
 
+    const stateClass = isSelected
+      ? "border-transparent bg-[var(--text-primary)] text-[var(--text-inverse)]"
+      : isToday
+        ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+        : dayEvents.length > 0
+          ? "border-transparent bg-[var(--bg-hover)] text-[var(--text-primary)]"
+          : "border-transparent text-[var(--text-secondary)]";
+
     days.push(
-      <ActionSurface
+      <button
         key={day}
+        type="button"
         aria-pressed={isSelected}
         onClick={() => onSelectDate(cellDate)}
-        variant={dayEvents.length > 0 || isToday ? "muted" : "default"}
-        padding="none"
-        selected={isSelected}
         className={cx(
-          "aspect-square p-2",
-          "flex flex-col items-start justify-between",
-          isToday && !isSelected && "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]",
+          "kds-action-surface relative flex aspect-square items-center justify-center rounded-full border transition-colors",
+          stateClass,
         )}
       >
-        <span className="text-sm font-semibold">{day}</span>
-        <div className="mt-auto flex flex-wrap gap-1">
-          {hasCommission && (
-            <Badge tone="accent" size="sm" className="px-2 py-0.5 text-[10px]">
-              <DollarSign className="mr-1 h-3 w-3" />
-              {dayEvents
-                .filter((event) => event.type === "comissao")
-                .reduce((sum, event) => sum + event.value, 0)
-                .toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-            </Badge>
-          )}
-          {hasBonus && (
-            <Badge tone="neutral" size="sm" className="px-2 py-0.5 text-[10px]">
-              <Gift className="mr-1 h-3 w-3" />
-              {dayEvents
-                .filter((event) => event.type === "bonificacao")
-                .reduce((sum, event) => sum + event.value, 0)
-                .toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-            </Badge>
-          )}
-        </div>
-      </ActionSurface>,
+        <span className="text-sm font-bold sm:text-base">{day}</span>
+        {dayEvents.length > 0 && (
+          <span
+            className={cx(
+              "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none sm:h-5 sm:min-w-5 sm:text-[10px]",
+              isSelected
+                ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                : hasCommission
+                  ? "bg-[var(--accent-gold-hover)] text-[var(--text-on-brand)]"
+                  : "bg-[var(--brand-primary)] text-[var(--text-on-brand)]",
+            )}
+            title={`${dayEvents.length} evento(s)`}
+          >
+            {dayEvents.length}
+          </span>
+        )}
+      </button>,
     );
   }
 

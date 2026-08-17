@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { Tabs, type TabItem } from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 
 type DrawerMode = 'emoji' | 'gif' | 'sticker';
@@ -217,6 +218,12 @@ const MEDIA_SHORTCUTS: Record<'gif' | 'sticker', MediaShortcut[]> = {
     { id: 'mundo', label: 'Meme global', term: 'meme', icon: Globe },
   ],
 };
+
+const DRAWER_MODE_TABS: TabItem<DrawerMode>[] = [
+  { id: 'emoji', label: 'Emoji', icon: Smile },
+  { id: 'gif', label: 'GIF' },
+  { id: 'sticker', label: 'Figurinha', icon: Sticker },
+];
 
 const readStoredRecents = () => {
   if (typeof window === 'undefined') {
@@ -663,29 +670,20 @@ export default function WhatsAppMediaDrawer({
         )}
       </div>
 
-      <div className="comm-media-picker-modebar">
-        {[
-          { id: 'emoji', label: <Smile className="h-4 w-4" /> },
-          { id: 'gif', label: <span>GIF</span> },
-          { id: 'sticker', label: <Sticker className="h-4 w-4" /> },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`comm-media-picker-modebutton ${mode === item.id ? 'is-active' : ''}`}
-            onClick={() => {
-              setMode(item.id as DrawerMode);
-              setSearchQuery('');
-              if (item.id !== 'emoji') {
-                setActiveShortcutId(MEDIA_SHORTCUTS[item.id as 'gif' | 'sticker'][0].id);
-              }
-            }}
-            title={item.id === 'emoji' ? 'Emoji' : item.id === 'gif' ? 'GIF' : 'Figurinha'}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        items={DRAWER_MODE_TABS}
+        value={mode}
+        onChange={(nextMode) => {
+          setMode(nextMode);
+          setSearchQuery('');
+          if (nextMode !== 'emoji') {
+            setActiveShortcutId(MEDIA_SHORTCUTS[nextMode][0].id);
+          }
+        }}
+        variant="pill"
+        size="sm"
+        className="mx-3 mb-3 mt-1"
+      />
 
       {!canSendMedia && mode !== 'emoji' ? (
         <div className="border-t border-[var(--border-subtle)] px-4 pb-4 text-center text-[11px] font-medium text-[var(--text-muted)]">

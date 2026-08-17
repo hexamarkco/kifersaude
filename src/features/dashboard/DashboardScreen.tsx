@@ -2302,7 +2302,7 @@ export default function DashboardScreen({
                 as="h3"
               />
 
-              <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+              <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
                 <div className="rounded-2xl bg-[var(--bg-hover)] p-3">
                   <div className="mb-2.5 flex items-center justify-between gap-2">
                     <Button
@@ -2406,7 +2406,7 @@ export default function DashboardScreen({
                   </div>
                 </div>
 
-                <div className="flex flex-col rounded-2xl bg-[var(--bg-hover)] p-3">
+                <div className="flex h-full flex-col rounded-2xl bg-[var(--bg-hover)] p-3">
                   <div className="mb-2.5 flex items-center justify-between gap-2 rounded-full bg-[var(--bg-surface)] py-1.5 pl-3 pr-1.5">
                     <span className="min-w-0 truncate text-xs font-semibold text-[var(--text-primary)]">
                       {calendarViewLabel}
@@ -2423,7 +2423,7 @@ export default function DashboardScreen({
                       className="flex-1"
                     />
                   ) : (
-                    <div className="max-h-80 flex-1 space-y-2 overflow-y-auto pr-1">
+                    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                       {calendarViewEvents.map((event) => {
                         if (event.kind === "adjustment") {
                           const adjustment = event.adjustment;

@@ -31,6 +31,7 @@ import {
   Dialog,
   DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
@@ -437,8 +438,8 @@ export default function UsersScreen() {
           <div className="space-y-3 lg:hidden">
             {filteredUsers.length === 0 ? (
               <Card variant="muted" padding="md" className="py-12 text-center">
-                <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-tertiary)] opacity-40" />
-                <p className="text-[color:var(--text-tertiary)]">
+                <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-muted)] opacity-40" />
+                <p className="text-[color:var(--text-muted)]">
                   Nenhum usuário cadastrado
                 </p>
               </Card>
@@ -449,6 +450,7 @@ export default function UsersScreen() {
                   userProfile.role,
                   profile?.name,
                 );
+                const isCurrentUser = userProfile.id === currentUserManagementId;
                 return (
                   <Card
                     key={userProfile.id}
@@ -464,18 +466,13 @@ export default function UsersScreen() {
                         <p className="font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
                         </p>
-                        <p className="text-sm text-[color:var(--text-tertiary)]">
+                        <p className="text-sm text-[color:var(--text-muted)]">
                           {userProfile.email}
                         </p>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <Shield
-                            className="h-4 w-4 text-[color:var(--brand-primary)]"
-                          />
-                          <span
-                            className="text-sm text-[color:var(--brand-primary)]"
-                          >
+                        <div className="mt-1">
+                          <Badge tone={isCurrentUser ? "gold" : "neutral"}>
                             {profileLabel || userProfile.role}
-                          </span>
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -492,18 +489,18 @@ export default function UsersScreen() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      {userProfile.id !== currentUserManagementId ? (
+                      {!isCurrentUser ? (
                         <Button
                           onClick={() => void handleDeleteUser(userProfile.id)}
                           disabled={actionLoading}
-                          variant="icon"
+                          variant="danger"
                           size="icon"
                           title="Excluir usuário"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <span className="text-sm italic text-[color:var(--text-tertiary)]">
+                        <span className="text-sm italic text-[color:var(--text-muted)]">
                           Você
                         </span>
                       )}
@@ -520,130 +517,124 @@ export default function UsersScreen() {
             <DialogTitle>Novo Usuário</DialogTitle>
             <DialogDescription>Crie um novo usuário e associe a um perfil dinâmico de acesso.</DialogDescription>
           </DialogHeader>
-          <DialogBody>
-          <form onSubmit={handleCreateUser} className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Usuário">
-                <Input
-                  type="text"
-                  value={newUserUsername}
-                  onChange={(e) => setNewUserUsername(e.target.value)}
-                  required
-                  placeholder="nome.usuario"
-                />
-              </Field>
+          <form onSubmit={handleCreateUser} className="flex min-h-0 flex-1 flex-col">
+            <DialogBody>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="Usuário">
+                  <Input
+                    type="text"
+                    value={newUserUsername}
+                    onChange={(e) => setNewUserUsername(e.target.value)}
+                    required
+                    placeholder="nome.usuario"
+                  />
+                </Field>
 
-              <Field label="Email">
-                <Input
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  required
-                  placeholder="usuario@email.com"
-                />
-              </Field>
+                <Field label="Email">
+                  <Input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    placeholder="usuario@email.com"
+                  />
+                </Field>
 
-              <Field label="Senha">
-                <Input
-                  type="password"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="Digite uma senha temporária"
-                />
-              </Field>
+                <Field label="Senha">
+                  <Input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="Digite uma senha temporária"
+                  />
+                </Field>
 
-              <Field label="Perfil">
-                <FilterSingleSelect
-                  icon={Shield}
-                  value={newUserRole}
-                  onChange={setNewUserRole}
-                  placeholder="Selecione um perfil"
-                  includePlaceholderOption={false}
-                  options={profileOptions}
-                />
-              </Field>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button type="submit" disabled={actionLoading}>
-                  {actionLoading ? "Criando..." : "Criar Usuário"}
-              </Button>
-              <Button
-                type="button"
-                onClick={resetCreateForm}
-                variant="secondary"
-              >
+                <Field label="Perfil">
+                  <FilterSingleSelect
+                    icon={Shield}
+                    value={newUserRole}
+                    onChange={setNewUserRole}
+                    placeholder="Selecione um perfil"
+                    includePlaceholderOption={false}
+                    options={profileOptions}
+                  />
+                </Field>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" onClick={resetCreateForm} variant="secondary">
                 Cancelar
               </Button>
-            </div>
+              <Button type="submit" disabled={actionLoading} loading={actionLoading}>
+                {actionLoading ? "Criando..." : "Criar Usuário"}
+              </Button>
+            </DialogFooter>
           </form>
-          </DialogBody>
         </Dialog>
         <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && resetEditForm()} size="lg">
           <DialogHeader onClose={resetEditForm}>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>Atualize os dados e o perfil de acesso do usuário.</DialogDescription>
           </DialogHeader>
-          <DialogBody>
-          <form onSubmit={handleUpdateUser} className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Usuário">
-                <Input
-                  type="text"
-                  value={editUserUsername}
-                  onChange={(e) => setEditUserUsername(e.target.value)}
-                  required
-                  placeholder="nome.usuario"
-                />
-              </Field>
+          <form onSubmit={handleUpdateUser} className="flex min-h-0 flex-1 flex-col">
+            <DialogBody>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="Usuário">
+                  <Input
+                    type="text"
+                    value={editUserUsername}
+                    onChange={(e) => setEditUserUsername(e.target.value)}
+                    required
+                    placeholder="nome.usuario"
+                  />
+                </Field>
 
-              <Field label="Email">
-                <Input
-                  type="email"
-                  value={editUserEmail}
-                  onChange={(e) => setEditUserEmail(e.target.value)}
-                  required
-                  placeholder="usuario@email.com"
-                />
-              </Field>
+                <Field label="Email">
+                  <Input
+                    type="email"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                    required
+                    placeholder="usuario@email.com"
+                  />
+                </Field>
 
-              <Field
-                label="Nova senha"
-                description="Deixe em branco para manter a senha atual."
-              >
-                <Input
-                  type="password"
-                  value={editUserPassword}
-                  onChange={(e) => setEditUserPassword(e.target.value)}
-                  minLength={6}
-                  placeholder="Deixe em branco para manter"
-                />
-              </Field>
+                <Field
+                  label="Nova senha"
+                  description="Deixe em branco para manter a senha atual."
+                >
+                  <Input
+                    type="password"
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    minLength={6}
+                    placeholder="Deixe em branco para manter"
+                  />
+                </Field>
 
-              <Field label="Perfil">
-                <FilterSingleSelect
-                  icon={Shield}
-                  value={editUserRole}
-                  onChange={setEditUserRole}
-                  placeholder="Selecione um perfil"
-                  includePlaceholderOption={false}
-                  options={profileOptions}
-                />
-              </Field>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button type="submit" disabled={actionLoading} variant="warning">
-                  {actionLoading ? "Salvando..." : "Salvar Alterações"}
-              </Button>
+                <Field label="Perfil">
+                  <FilterSingleSelect
+                    icon={Shield}
+                    value={editUserRole}
+                    onChange={setEditUserRole}
+                    placeholder="Selecione um perfil"
+                    includePlaceholderOption={false}
+                    options={profileOptions}
+                  />
+                </Field>
+              </div>
+            </DialogBody>
+            <DialogFooter>
               <Button type="button" onClick={resetEditForm} variant="secondary">
                 Cancelar
               </Button>
-            </div>
+              <Button type="submit" disabled={actionLoading} variant="warning" loading={actionLoading}>
+                {actionLoading ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
           </form>
-          </DialogBody>
         </Dialog>
         {ConfirmationDialog}
       </div>

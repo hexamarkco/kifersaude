@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -573,10 +573,28 @@ export default function WhatsAppCampaignsScreen() {
               Ultima execucao {formatRelativeRunTime(workerHealth.latestRun?.finished_at ?? workerHealth.latestRun?.started_at)}.
             </p>
           </div>
-          <div className="grid gap-2 text-sm sm:grid-cols-3 lg:min-w-[420px]">
-            <WorkerHealthStat label="Processados" value={workerHealth.latestRun?.processed ?? 0} />
-            <WorkerHealthStat label="Enviados" value={workerHealth.latestRun?.sent ?? 0} />
-            <WorkerHealthStat label="Falhas" value={workerHealth.latestRun?.failed ?? 0} />
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+            <OperationalMetricChip
+              icon={<Activity className="h-3.5 w-3.5" aria-hidden="true" />}
+              label="processados"
+              value={workerHealth.latestRun?.processed ?? 0}
+              className="justify-center"
+            />
+            <OperationalMetricChip
+              icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />}
+              label="enviados"
+              value={workerHealth.latestRun?.sent ?? 0}
+              tone="success"
+              className="justify-center"
+            />
+            <OperationalMetricChip
+              icon={<AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+              label="falhas"
+              value={workerHealth.latestRun?.failed ?? 0}
+              tone="danger"
+              active={(workerHealth.latestRun?.failed ?? 0) > 0}
+              className="justify-center"
+            />
           </div>
         </div>
         {workerHealth.latestFailure && (
@@ -1012,15 +1030,6 @@ export default function WhatsAppCampaignsScreen() {
             </div>
           )}
       </Card>
-    </div>
-  );
-}
-
-function WorkerHealthStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-surface-soft)] px-3 py-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text)]">{value}</p>
     </div>
   );
 }

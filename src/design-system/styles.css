@@ -2740,7 +2740,7 @@
 .kds-calendar-day,
 .calendar-day {
   border-color: var(--border-default) !important;
-  border-radius: var(--radius-lg) !important;
+  border-radius: var(--radius-full) !important;
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
 }
 

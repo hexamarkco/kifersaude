@@ -1252,26 +1252,23 @@ export default function AgendaScreen() {
           onClick={() => {
             void handleDayClick(cellDate);
           }}
-          className={`kds-action-surface flex aspect-square flex-col justify-between border p-1.5 text-left transition-colors sm:p-2 ${stateClass}`}
+          className={`kds-action-surface relative flex aspect-square items-center justify-center border transition-colors ${stateClass}`}
           aria-pressed={isSelected}
           aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${totalCount} item(ns)`}
         >
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-xs font-bold sm:text-sm">{day}</span>
-            {totalCount > 0 && (
-              <Badge
-                size="sm"
-                className="px-1.5 py-0.5 text-[10px] leading-none sm:px-2"
-                tone={isSelected ? "neutral" : "accent"}
-              >
-                {totalCount}
-              </Badge>
-            )}
-          </div>
-          <div className="mt-auto flex flex-wrap items-center gap-1 text-[10px] font-semibold">
-            {pendingCount > 0 && <span className="h-1.5 min-w-3 rounded-full bg-[var(--brand-primary)] sm:min-w-5" title={`${pendingCount} pendente(s)`} />}
-            {doneCount > 0 && <span className="h-1.5 min-w-3 rounded-full bg-[var(--success)] sm:min-w-5" title={`${doneCount} concluido(s)`} />}
-          </div>
+          <span className="text-sm font-bold sm:text-base">{day}</span>
+          {totalCount > 0 && (
+            <span
+              className={`absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none sm:h-5 sm:min-w-5 sm:text-[10px] ${
+                isSelected
+                  ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                  : "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
+              }`}
+              title={`${pendingCount} pendente(s), ${doneCount} concluido(s)`}
+            >
+              {totalCount}
+            </span>
+          )}
         </button>,
       );
     }
@@ -1538,11 +1535,11 @@ export default function AgendaScreen() {
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
-              <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="sm">
+              <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="md">
                 <Sparkles className="h-4 w-4" />
                 Organizar
               </Button>
-              <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="sm">
+              <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
                 <Plus className="h-4 w-4" />
                 Nova tarefa
               </Button>
@@ -1611,9 +1608,9 @@ export default function AgendaScreen() {
               listClassName="flex-nowrap overflow-x-auto"
             />
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={goToToday} variant="secondary" size="sm">Hoje</Button>
+              <Button onClick={goToToday} variant="secondary" size="md">Hoje</Button>
               {filteredReminders.some((item) => !item.lido) && (
-                <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="sm">
+                <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="md">
                   Marcar como lidos
                 </Button>
               )}
@@ -1627,7 +1624,7 @@ export default function AgendaScreen() {
                     setStatusFilter("todos");
                   }}
                   variant="ghost"
-                  size="sm"
+                  size="md"
                 >
                   Limpar filtros ({hasActiveFilters})
                 </Button>

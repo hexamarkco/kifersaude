@@ -2342,6 +2342,10 @@
   width: min(28rem, calc(100vw - 1rem));
   max-width: 28rem;
 }
+
+.kds-toast-container.painel-theme.kifer-ds {
+  background: transparent;
+}
 .kds-toast-top-right { top: 0; right: 0; }
 .kds-toast-top-left { top: 0; left: 0; }
 .kds-toast-bottom-right { bottom: 0; right: 0; }
@@ -2744,10 +2748,17 @@
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
 }
 
-.kds-calendar-day:hover,
-.calendar-day:hover {
+.kds-calendar-day:hover:not(.kds-calendar-day-selected):not(.kds-calendar-day-today),
+.calendar-day:hover:not(.calendar-day-selected):not(.calendar-day-today) {
   border-color: var(--brand-primary-border) !important;
   background: var(--brand-primary-muted) !important;
+}
+
+.kds-calendar-day-selected:hover,
+.calendar-day-selected:hover,
+.kds-calendar-day-today:hover,
+.calendar-day-today:hover {
+  filter: brightness(1.1);
 }
 
 .kds-calendar-day-selected,

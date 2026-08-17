@@ -632,11 +632,22 @@ export default function WhatsAppCampaignsScreen() {
             {aiSuggestions.map((suggestion) => (
               <Surface key={suggestion.id} variant="muted" padding="sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
-                    <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number'
+                          ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]'
+                          : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'
+                      }`}
+                    >
+                      <Bot className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
+                      <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+                    </div>
                   </div>
-                  <Badge tone={suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number' ? 'danger' : 'warning'} size="sm">
+                  <Badge tone={suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number' ? 'danger' : 'warning'} size="sm" className="shrink-0">
                     {formatIntentLabel(suggestion.intent)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
                   </Badge>
                 </div>

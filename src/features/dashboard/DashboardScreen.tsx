@@ -1963,11 +1963,11 @@ export default function DashboardScreen({
       const kinds = Array.from(new Set(dayEvents.map((event) => event.kind)));
 
       const stateClass = isSelected
-        ? "border-transparent bg-[var(--text-primary)] text-[var(--text-inverse)]"
+        ? "border-transparent !bg-[var(--text-primary)] text-[var(--text-inverse)]"
         : isToday
-          ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--text-primary)]"
+          ? "border-[var(--brand-primary-border)] !bg-[var(--brand-primary-muted)] text-[var(--text-primary)]"
           : dayEvents.length > 0
-            ? "border-transparent bg-[var(--bg-hover)] text-[var(--text-primary)]"
+            ? "border-transparent !bg-[var(--bg-hover)] text-[var(--text-primary)]"
             : "border-transparent text-[var(--text-secondary)]";
       const badgeClass = isSelected
         ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"

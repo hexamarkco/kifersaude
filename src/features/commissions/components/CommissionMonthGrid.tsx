@@ -51,11 +51,11 @@ export default function CommissionMonthGrid({
       : false;
 
     const stateClass = isSelected
-      ? "border-transparent bg-[var(--text-primary)] text-[var(--text-inverse)]"
+      ? "border-transparent !bg-[var(--text-primary)] text-[var(--text-inverse)]"
       : isToday
-        ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+        ? "border-[var(--brand-primary-border)] !bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
         : dayEvents.length > 0
-          ? "border-transparent bg-[var(--bg-hover)] text-[var(--text-primary)]"
+          ? "border-transparent !bg-[var(--bg-hover)] text-[var(--text-primary)]"
           : "border-transparent text-[var(--text-secondary)]";
 
     days.push(

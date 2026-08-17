@@ -20,7 +20,7 @@ import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type HolderFormProps = {
   contractId: string;
@@ -484,7 +484,7 @@ export default function HolderForm({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="p-0">
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+        <form id="holder-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
               <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informacoes Pessoais</h4>
@@ -792,16 +792,16 @@ export default function HolderForm({
             )}
           </div>
 
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={saving}>
-              {saving ? 'Salvando...' : 'Salvar Titular'}
-            </Button>
-          </div>
         </form>
         </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="holder-form" loading={saving}>
+            {saving ? 'Salvando...' : 'Salvar Titular'}
+          </Button>
+        </DialogFooter>
       </Dialog>
 
       {showDependentForm && (

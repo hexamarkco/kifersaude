@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { supabase, ContractValueAdjustment } from '../lib/supabase';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
-import { DollarSign } from 'lucide-react';
-import { ActionSurface, Alert, Button, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Textarea } from '../design-system';
+import { ActionSurface, Alert, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Field, Input, Textarea } from '../design-system';
 
 type ValueAdjustmentFormProps = {
   contractId: string;
@@ -82,11 +81,7 @@ export default function ValueAdjustmentForm({
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>
       <DialogBody className="p-0">
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
-          <h3 className="mb-4 flex items-center text-lg font-bold text-[var(--text-primary)]">
-            <DollarSign className="mr-2 h-5 w-5" />
-            {adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}
-          </h3>
+        <form id="value-adjustment-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
           {error && (
             <Alert tone="danger" className="mb-4" role="alert">
               {error}
@@ -147,23 +142,24 @@ export default function ValueAdjustmentForm({
             </Field>
           </div>
 
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
-            <Button
-              type="button"
-              onClick={onClose}
-              variant="ghost"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              loading={saving}
-            >
-              {saving ? 'Salvando...' : adjustment ? 'Atualizar' : 'Adicionar'}
-            </Button>
-          </div>
         </form>
       </DialogBody>
+      <DialogFooter>
+        <Button
+          type="button"
+          onClick={onClose}
+          variant="ghost"
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          form="value-adjustment-form"
+          loading={saving}
+        >
+          {saving ? 'Salvando...' : adjustment ? 'Atualizar' : 'Adicionar'}
+        </Button>
+      </DialogFooter>
     </Dialog>
   );
 }

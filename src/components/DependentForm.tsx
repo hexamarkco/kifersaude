@@ -6,7 +6,7 @@ import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inp
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type DependentFormProps = {
   contractId: string;
@@ -242,7 +242,7 @@ export default function DependentForm({
         <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
       </DialogHeader>
       <DialogBody className="p-0">
-      <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+      <form id="dependent-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
             <FilterSingleSelect
@@ -365,16 +365,16 @@ export default function DependentForm({
           </Field>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            {saving ? 'Salvando...' : 'Salvar Dependente'}
-          </Button>
-        </div>
       </form>
       </DialogBody>
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button type="submit" form="dependent-form" loading={saving}>
+          {saving ? 'Salvando...' : 'Salvar Dependente'}
+        </Button>
+      </DialogFooter>
     </Dialog>
   );
 }

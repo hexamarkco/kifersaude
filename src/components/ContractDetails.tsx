@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  LoadingState,
   Surface,
   Textarea,
   type PanelTone,
@@ -780,11 +781,7 @@ export default function ContractDetails({
           <DialogDescription>Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
         </DialogHeader>
         <DialogBody className="flex min-h-[260px] items-center justify-center">
-          <div
-            className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent"
-            role="status"
-            aria-label="Carregando dados do contrato"
-          />
+          <LoadingState label="Carregando dados do contrato" />
         </DialogBody>
       </Dialog>
     );

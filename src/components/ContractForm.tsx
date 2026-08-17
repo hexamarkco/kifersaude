@@ -50,6 +50,7 @@ import {
   Dialog,
   DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
@@ -1205,6 +1206,7 @@ export default function ContractForm({
         </DialogHeader>
         <DialogBody className="p-0">
         <form
+          id="contract-form"
           onSubmit={handleSubmit}
           className="max-h-[70vh] overflow-y-auto p-4 sm:p-5"
         >
@@ -2226,21 +2228,20 @@ export default function ContractForm({
               </Field>
             </div>
           </Surface>
-
-          <div className="flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={saving}>
-              {saving
-                ? "Salvando..."
-                : contract
-                  ? "Salvar"
-                  : "Continuar para Titular"}
-            </Button>
-          </div>
         </form>
         </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="contract-form" loading={saving}>
+            {saving
+              ? "Salvando..."
+              : contract
+                ? "Salvar"
+                : "Continuar para Titular"}
+          </Button>
+        </DialogFooter>
       </Dialog>
 
       {showAdjustmentForm && contract?.id && (

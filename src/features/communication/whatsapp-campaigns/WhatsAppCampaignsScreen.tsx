@@ -105,6 +105,16 @@ const statusTones: Record<CommWhatsAppCampaign['status'], 'neutral' | 'accent' |
   cancelled: 'danger',
 };
 
+const statusIconClasses: Record<CommWhatsAppCampaign['status'], string> = {
+  draft: 'bg-[var(--bg-hover)] text-[var(--text-muted)]',
+  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
+  queued: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
+  running: 'bg-[var(--success-soft)] text-[var(--success-text)]',
+  paused: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
+  completed: 'bg-[var(--success-soft)] text-[var(--success-text)]',
+  cancelled: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
+};
+
 const splitCsvLine = (line: string) => {
   const delimiter = line.includes(';') ? ';' : ',';
   return line.split(delimiter).map((value) => value.trim().replace(/^"|"$/g, ''));
@@ -952,15 +962,20 @@ export default function WhatsAppCampaignsScreen() {
               <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar publico e mensagem.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {campaigns.map((campaign) => (
                 <article key={campaign.id} className="comm-campaign-list-item rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</h3>
-                      <p className="mt-1 line-clamp-2 text-xs text-[color:var(--panel-text-soft)]">{campaign.message_text || 'Sem mensagem definida.'}</p>
+                    <div className="flex min-w-0 gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${statusIconClasses[campaign.status]}`}>
+                        <Send className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</h3>
+                        <p className="mt-1 line-clamp-2 text-xs text-[color:var(--panel-text-soft)]">{campaign.message_text || 'Sem mensagem definida.'}</p>
+                      </div>
                     </div>
-                    <Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge>
+                    <Badge tone={statusTones[campaign.status]} size="sm" className="shrink-0">{statusLabels[campaign.status]}</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                     <MiniStat label="Alvos" value={campaign.total_targets} />

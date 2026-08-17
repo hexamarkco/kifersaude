@@ -981,12 +981,62 @@ export default function AgendaScreen() {
     ];
   }, [reminders]);
 
-  const filteredReminders = useMemo(() => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23, 59, 59, 999);
+  const matchesNonStatusFilters = useCallback(
+    (reminder: Reminder) => {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
 
+      if (typeFilter !== "all" && reminder.tipo !== typeFilter) {
+        return false;
+      }
+
+      if (priorityFilter !== "all" && reminder.prioridade !== priorityFilter) {
+        return false;
+      }
+
+      if (timeFilter !== "todos") {
+        const reminderDate = new Date(reminder.data_lembrete);
+        if (timeFilter === "atrasados") {
+          if (!reminder.lido && reminderDate < now) return true;
+          return false;
+        }
+        if (timeFilter === "dia") {
+          if (reminderDate >= now && reminderDate <= todayEnd) return true;
+          return false;
+        }
+        if (timeFilter === "futuros") {
+          if (reminderDate > todayEnd) return true;
+          return false;
+        }
+      }
+
+      if (!searchQuery.trim()) {
+        return true;
+      }
+
+      const leadName = (() => {
+        const leadId = getLeadIdForReminder(reminder);
+        return leadId ? leadsMap.get(leadId)?.nome_completo ?? "" : "";
+      })();
+
+      const normalizedQuery = searchQuery.trim().toLowerCase();
+      return [reminder.titulo, reminder.descricao, reminder.tipo, leadName]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(normalizedQuery));
+    },
+    [getLeadIdForReminder, leadsMap, priorityFilter, searchQuery, timeFilter, typeFilter],
+  );
+
+  // Ignora o statusFilter de proposito: usado para contar pendentes/concluidos/atrasados
+  // nas abas e no cabecalho independente de qual aba esta ativa no momento.
+  const statusAgnosticFilteredReminders = useMemo(
+    () => reminders.filter(matchesNonStatusFilters),
+    [matchesNonStatusFilters, reminders],
+  );
+
+  const filteredReminders = useMemo(() => {
     return reminders
       .filter((reminder) => {
         if (statusFilter === "nao-lidos" && reminder.lido) {
@@ -997,56 +1047,10 @@ export default function AgendaScreen() {
           return false;
         }
 
-        if (typeFilter !== "all" && reminder.tipo !== typeFilter) {
-          return false;
-        }
-
-        if (priorityFilter !== "all" && reminder.prioridade !== priorityFilter) {
-          return false;
-        }
-
-        if (timeFilter !== "todos") {
-          const reminderDate = new Date(reminder.data_lembrete);
-          if (timeFilter === "atrasados") {
-            if (!reminder.lido && reminderDate < now) return true;
-            return false;
-          }
-          if (timeFilter === "dia") {
-            if (reminderDate >= now && reminderDate <= todayEnd) return true;
-            return false;
-          }
-          if (timeFilter === "futuros") {
-            if (reminderDate > todayEnd) return true;
-            return false;
-          }
-        }
-
-        if (!searchQuery.trim()) {
-          return true;
-        }
-
-        const leadName = (() => {
-          const leadId = getLeadIdForReminder(reminder);
-          return leadId ? leadsMap.get(leadId)?.nome_completo ?? "" : "";
-        })();
-
-        const normalizedQuery = searchQuery.trim().toLowerCase();
-        return [reminder.titulo, reminder.descricao, reminder.tipo, leadName]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(normalizedQuery));
+        return matchesNonStatusFilters(reminder);
       })
       .sort(compareRemindersByDueAtThenAlphabetical);
-  }, [
-    compareRemindersByDueAtThenAlphabetical,
-    getLeadIdForReminder,
-    leadsMap,
-    priorityFilter,
-    reminders,
-    searchQuery,
-    statusFilter,
-    timeFilter,
-    typeFilter,
-  ]);
+  }, [compareRemindersByDueAtThenAlphabetical, matchesNonStatusFilters, reminders, statusFilter]);
 
   const filteredMonthReminders = useMemo(() => {
     const currentMonthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth()}`;
@@ -1105,9 +1109,9 @@ export default function AgendaScreen() {
   ].filter((section) => section.items.length > 0);
   const selectedDateDensity = selectedDateReminders.length >= 18 ? "compact" : selectedDateReminders.length >= 8 ? "comfortable" : "spacious";
 
-  const pendingFilteredCount = filteredReminders.filter((item) => !item.lido).length;
-  const completedFilteredCount = filteredReminders.filter((item) => item.lido).length;
-  const overdueFilteredCount = filteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
+  const pendingFilteredCount = statusAgnosticFilteredReminders.filter((item) => !item.lido).length;
+  const completedFilteredCount = statusAgnosticFilteredReminders.filter((item) => item.lido).length;
+  const overdueFilteredCount = statusAgnosticFilteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
   const lastUpdatedLabel = lastUpdated
     ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} as ${lastUpdated.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
@@ -1414,7 +1418,7 @@ export default function AgendaScreen() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 sm:max-w-36 sm:justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
                 <Button
                   onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}
@@ -1660,7 +1664,7 @@ export default function AgendaScreen() {
           </Surface>
 
           <Surface padding="none" className="overflow-hidden">
-            <div className="sticky top-0 z-10 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-5">
+            <div className="sticky top-0 isolate z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-5">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <SectionHeader
                     eyebrow="Dia selecionado"
@@ -1713,7 +1717,7 @@ export default function AgendaScreen() {
                 {selectedDateSections.length > 0 ? (
                   selectedDateSections.map((section) => (
                     <section key={section.id} className="space-y-2">
-                      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] py-2">
+                      <div className="sticky top-0 isolate z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] py-2">
                         <SectionHeader
                           as="h3"
                           title={section.title}

@@ -3,6 +3,7 @@ import { afterEach, test } from 'vitest';
 
 import {
   extractWhapiContactPhone,
+  extractWhapiContactSaved,
   extractWhapiSavedContactName,
   isValidCommWhatsAppDisplayName,
   resolveVerifiedWhapiDirectIdentity,
@@ -30,6 +31,12 @@ test('does not treat a LID as a phone number', () => {
 test('keeps saved names separate from push names', () => {
   assert.equal(extractWhapiSavedContactName({ name: 'Contato salvo', phonebook: true }), 'Contato salvo');
   assert.equal(extractWhapiSavedContactName({ name: 'Push indevido', pushname: 'Push indevido', saved: false }), '');
+});
+
+test('ignores Whapi "saved" flag, since it is true for every chat partner, not just phonebook contacts', () => {
+  assert.equal(extractWhapiContactSaved({ phonebook: true }), true);
+  assert.equal(extractWhapiContactSaved({ saved: true }), false);
+  assert.equal(extractWhapiContactSaved({ saved: true, phonebook: false }), false);
 });
 
 test('rejects provider identifiers as display names', () => {

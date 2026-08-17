@@ -25,7 +25,8 @@ import {
   Share2,
   Trash2,
   Download,
-  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
@@ -767,6 +768,26 @@ export default function LeadsManager({
     filterResponsavel,
     filterOrigem,
     filterTipoContratacao,
+    filterTags,
+    filterCanais,
+    filterCreatedFrom,
+    filterCreatedTo,
+    filterUltimoContatoFrom,
+    filterUltimoContatoTo,
+    filterProximoRetornoFrom,
+    filterProximoRetornoTo,
+  ]);
+  const advancedFilterCount = useMemo(() => {
+    let count = 0;
+
+    if (filterTags.length > 0) count += 1;
+    if (filterCanais.length > 0) count += 1;
+    if (filterCreatedFrom || filterCreatedTo) count += 1;
+    if (filterUltimoContatoFrom || filterUltimoContatoTo) count += 1;
+    if (filterProximoRetornoFrom || filterProximoRetornoTo) count += 1;
+
+    return count;
+  }, [
     filterTags,
     filterCanais,
     filterCreatedFrom,
@@ -1533,144 +1554,124 @@ export default function LeadsManager({
           </Surface>
 
           <div className="space-y-4">
-            <div>
-              <h4 className="kds-op-section-label mb-3">
-                Filtros Principais
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                {[
-                  {
-                    id: "status",
-                    icon: Filter,
-                    options: statusFilterOptions,
-                    placeholder: "Todos os status",
-                    values: filterStatus,
-                    onChange: setFilterStatus,
-                  },
-                  {
-                    id: "responsavel",
-                    icon: UserCircle,
-                    options: responsavelFilterOptions,
-                    placeholder: "Todos os responsáveis",
-                    values: filterResponsavel,
-                    onChange: setFilterResponsavel,
-                  },
-                  {
-                    id: "origem",
-                    icon: MapPin,
-                    options: origemFilterOptions,
-                    placeholder: "Todas as origens",
-                    values: filterOrigem,
-                    onChange: setFilterOrigem,
-                  },
-                  {
-                    id: "tipo-contratacao",
-                    icon: Layers,
-                    options: tipoContratacaoFilterOptions,
-                    placeholder: "Todos os tipos",
-                    values: filterTipoContratacao,
-                    onChange: setFilterTipoContratacao,
-                  },
-                ].map((filter) => {
-                  const { id, ...props } = filter;
-                  return <FilterMultiSelect key={id} {...props} />;
-                })}
-              </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  id: "status",
+                  icon: Filter,
+                  options: statusFilterOptions,
+                  placeholder: "Todos os status",
+                  values: filterStatus,
+                  onChange: setFilterStatus,
+                },
+                {
+                  id: "responsavel",
+                  icon: UserCircle,
+                  options: responsavelFilterOptions,
+                  placeholder: "Todos os responsáveis",
+                  values: filterResponsavel,
+                  onChange: setFilterResponsavel,
+                },
+                {
+                  id: "origem",
+                  icon: MapPin,
+                  options: origemFilterOptions,
+                  placeholder: "Todas as origens",
+                  values: filterOrigem,
+                  onChange: setFilterOrigem,
+                },
+                {
+                  id: "tipo-contratacao",
+                  icon: Layers,
+                  options: tipoContratacaoFilterOptions,
+                  placeholder: "Todos os tipos",
+                  values: filterTipoContratacao,
+                  onChange: setFilterTipoContratacao,
+                },
+              ].map((filter) => {
+                const { id, ...props } = filter;
+                return <FilterMultiSelect key={id} {...props} />;
+              })}
             </div>
 
-            <details className="group">
-              <summary className="cursor-pointer list-none">
-                <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between px-3 py-2 transition-colors">
-                  <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                    <Filter className="w-4 h-4" />
-                    Filtros Avançados
-                  </h4>
-                  <span className="text-xs transition-transform group-open:rotate-180">
-                    ▼
-                  </span>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <details className="group flex-1 basis-full sm:basis-0">
+                <summary className="cursor-pointer list-none">
+                  <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between px-3 py-2 transition-colors">
+                    <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                      <Filter className="w-4 h-4" />
+                      Filtros avançados
+                      {advancedFilterCount > 0 && (
+                        <Badge tone="accent" size="xs">{advancedFilterCount}</Badge>
+                      )}
+                    </h4>
+                    <span className="text-xs transition-transform group-open:rotate-180">
+                      ▼
+                    </span>
+                  </Surface>
+                </summary>
+                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    {
+                      id: "tags",
+                      icon: Tag,
+                      options: tagFilterOptions,
+                      placeholder: "Todas as tags",
+                      values: filterTags,
+                      onChange: setFilterTags,
+                    },
+                    {
+                      id: "canais",
+                      icon: Share2,
+                      options: canalFilterOptions,
+                      placeholder: "Todos os canais",
+                      values: filterCanais,
+                      onChange: setFilterCanais,
+                    },
+                  ].map((filter) => {
+                    const { id, ...props } = filter;
+                    return <FilterMultiSelect key={id} {...props} />;
+                  })}
+                  {[
+                    {
+                      id: "criacao",
+                      icon: Calendar,
+                      label: "Criação",
+                      fromValue: filterCreatedFrom,
+                      toValue: filterCreatedTo,
+                      onFromChange: setFilterCreatedFrom,
+                      onToChange: setFilterCreatedTo,
+                      type: "date" as const,
+                    },
+                    {
+                      id: "ultimo-contato",
+                      icon: MessageCircle,
+                      label: "Último contato",
+                      fromValue: filterUltimoContatoFrom,
+                      toValue: filterUltimoContatoTo,
+                      onFromChange: setFilterUltimoContatoFrom,
+                      onToChange: setFilterUltimoContatoTo,
+                      type: "datetime-local" as const,
+                    },
+                    {
+                      id: "proximo-retorno",
+                      icon: Bell,
+                      label: "Próximo retorno",
+                      fromValue: filterProximoRetornoFrom,
+                      toValue: filterProximoRetornoTo,
+                      onFromChange: setFilterProximoRetornoFrom,
+                      onToChange: setFilterProximoRetornoTo,
+                      type: "datetime-local" as const,
+                    },
+                  ].map((dateFilter) => {
+                    const { id, ...props } = dateFilter;
+                    return <FilterDateRange key={id} {...props} />;
+                  })}
                 </Surface>
-              </summary>
-                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 space-y-4 p-4">
-                <div>
-                  <h5 className="kds-op-section-label mb-2">
-                    Tags e Canais
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      {
-                        id: "tags",
-                        icon: Tag,
-                        options: tagFilterOptions,
-                        placeholder: "Todas as tags",
-                        values: filterTags,
-                        onChange: setFilterTags,
-                      },
-                      {
-                        id: "canais",
-                        icon: Share2,
-                        options: canalFilterOptions,
-                        placeholder: "Todos os canais",
-                        values: filterCanais,
-                        onChange: setFilterCanais,
-                      },
-                    ].map((filter) => {
-                      const { id, ...props } = filter;
-                      return <FilterMultiSelect key={id} {...props} />;
-                    })}
-                  </div>
-                </div>
+              </details>
 
-                <div>
-                  <h5 className="kds-op-section-label mb-2">
-                    Filtros de Data
-                  </h5>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                    {[
-                      {
-                        id: "criacao",
-                        icon: Calendar,
-                        label: "Criação",
-                        fromValue: filterCreatedFrom,
-                        toValue: filterCreatedTo,
-                        onFromChange: setFilterCreatedFrom,
-                        onToChange: setFilterCreatedTo,
-                        type: "date" as const,
-                      },
-                      {
-                        id: "ultimo-contato",
-                        icon: MessageCircle,
-                        label: "Último contato",
-                        fromValue: filterUltimoContatoFrom,
-                        toValue: filterUltimoContatoTo,
-                        onFromChange: setFilterUltimoContatoFrom,
-                        onToChange: setFilterUltimoContatoTo,
-                        type: "datetime-local" as const,
-                      },
-                      {
-                        id: "proximo-retorno",
-                        icon: Bell,
-                        label: "Próximo retorno",
-                        fromValue: filterProximoRetornoFrom,
-                        toValue: filterProximoRetornoTo,
-                        onFromChange: setFilterProximoRetornoFrom,
-                        onToChange: setFilterProximoRetornoTo,
-                        type: "datetime-local" as const,
-                      },
-                    ].map((dateFilter) => {
-                      const { id, ...props } = dateFilter;
-                      return <FilterDateRange key={id} {...props} />;
-                    })}
-                  </div>
-                </div>
-              </Surface>
-            </details>
-
-            <div>
-              <h4 className="kds-op-section-label mb-3">
-                Ordenação
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Ordenar por">
+              <Field label="Ordenar por" className="w-full sm:w-auto sm:min-w-[14rem]">
+                <div className="flex items-center gap-2">
                   <FilterSingleSelect
                     icon={Filter}
                     value={sortField}
@@ -1682,23 +1683,25 @@ export default function LeadsManager({
                       label: option.label,
                     }))}
                   />
-                </Field>
-                <Field label="Direção">
-                  <FilterSingleSelect
-                    icon={ArrowUpDown}
-                    value={sortDirection}
-                    onChange={(value) =>
-                      setSortDirection(value as typeof sortDirection)
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    onClick={() =>
+                      setSortDirection((current) => (current === "asc" ? "desc" : "asc"))
                     }
-                    placeholder="Decrescente"
-                    includePlaceholderOption={false}
-                    options={[
-                      { value: "asc", label: "Crescente" },
-                      { value: "desc", label: "Decrescente" },
-                    ]}
-                  />
-                </Field>
-              </div>
+                    title={sortDirection === "asc" ? "Ordem crescente" : "Ordem decrescente"}
+                    aria-label={sortDirection === "asc" ? "Ordem crescente" : "Ordem decrescente"}
+                    className="shrink-0"
+                  >
+                    {sortDirection === "asc" ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </Field>
             </div>
           </div>
         </Surface>
@@ -1751,22 +1754,33 @@ export default function LeadsManager({
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <Surface variant="muted" padding="none" className="kds-op-bulk-bar">
-                  <span className="kds-op-bulk-title">
-                    {selectedLeadIds.length} lead(s) selecionado(s)
-                  </span>
-                  <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
-                    <div className="w-full xl:w-48">
+                <Surface variant="muted" padding="sm" className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="kds-op-bulk-title">
+                      {selectedLeadIds.length} lead(s) selecionado(s)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      disabled={isBulkUpdating}
+                      className="text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Limpar seleção
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="w-full sm:w-44">
                       <FilterSingleSelect
                         icon={Tag}
                         value={bulkStatus}
                         onChange={(value) => setBulkStatus(value)}
-                        placeholder="Selecionar novo status"
+                        placeholder="Novo status"
                         includePlaceholderOption={false}
                         size="compact"
                         disabled={isBulkUpdating}
                         options={[
-                          { value: "", label: "Selecionar novo status" },
+                          { value: "", label: "Novo status" },
                           ...activeLeadStatuses.map((status) => ({
                             value: status.nome,
                             label: status.nome,
@@ -1774,17 +1788,17 @@ export default function LeadsManager({
                         ]}
                       />
                     </div>
-                    <div className="w-full xl:w-48">
+                    <div className="w-full sm:w-44">
                       <FilterSingleSelect
                         icon={UserCircle}
                         value={bulkResponsavel}
                         onChange={(value) => setBulkResponsavel(value)}
-                        placeholder="Selecionar responsável"
+                        placeholder="Responsável"
                         includePlaceholderOption={false}
                         size="compact"
                         disabled={isBulkUpdating}
                         options={[
-                          { value: "", label: "Selecionar responsável" },
+                          { value: "", label: "Responsável" },
                           ...responsavelOptions.map((option) => ({
                             value: option.value,
                             label: option.label,
@@ -1795,53 +1809,46 @@ export default function LeadsManager({
                     <DateTimePicker
                       type="datetime-local"
                       value={bulkProximoRetorno}
-                       onChange={(event) => setBulkProximoRetorno(event.target.value)}
-                      className="w-full xl:w-56"
+                      onChange={(event) => setBulkProximoRetorno(event.target.value)}
+                      size="compact"
+                      className="w-full sm:w-52"
                       disabled={isBulkUpdating}
-                      placeholder="Proximo retorno"
+                      placeholder="Próximo retorno"
                     />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        onClick={handleBulkStatusApply}
-                        disabled={!bulkStatus || isBulkUpdating}
-                        variant="primary"
-                        size="sm"
-                      >
-                        {isBulkUpdating ? "Atualizando..." : "Aplicar Status"}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleBulkDetailsApply}
-                        disabled={
-                          isBulkUpdating ||
-                          (!bulkResponsavel && !bulkProximoRetorno)
-                        }
-                        variant="soft"
-                        size="sm"
-                      >
-                        {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleExportSelectedLeads}
-                        disabled={isBulkUpdating}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>Exportar XLSX</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={clearSelection}
-                        disabled={isBulkUpdating}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Limpar
-                      </Button>
-                    </div>
+
+                    <span className="hidden h-6 w-px shrink-0 bg-[var(--border-subtle)] sm:block" aria-hidden="true" />
+
+                    <Button
+                      type="button"
+                      onClick={handleBulkStatusApply}
+                      disabled={!bulkStatus || isBulkUpdating}
+                      variant="primary"
+                      size="sm"
+                    >
+                      {isBulkUpdating ? "Atualizando..." : "Aplicar status"}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleBulkDetailsApply}
+                      disabled={
+                        isBulkUpdating ||
+                        (!bulkResponsavel && !bulkProximoRetorno)
+                      }
+                      variant="soft"
+                      size="sm"
+                    >
+                      {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleExportSelectedLeads}
+                      disabled={isBulkUpdating}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Exportar XLSX</span>
+                    </Button>
                   </div>
                 </Surface>
             )}

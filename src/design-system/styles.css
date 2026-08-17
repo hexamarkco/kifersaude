@@ -798,6 +798,10 @@
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease;
 }
 
+.kds-textarea {
+  border-radius: var(--radius-xl);
+}
+
 .kds-input::placeholder,
 .kds-textarea::placeholder {
   color: var(--text-muted);
@@ -3485,6 +3489,10 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   box-shadow: none;
+}
+
+.kds-textarea {
+  border-radius: var(--radius-xl);
 }
 
 .kds-input:hover:not(:disabled):not([readonly]),

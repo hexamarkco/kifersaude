@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
+import { Badge, Button, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
@@ -1291,7 +1291,7 @@ const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0
 const inboxInlineActionClassName = getPanelButtonClass({
   variant: 'soft',
   size: 'sm',
-  className: 'h-8 rounded-xl px-3 text-[11px] font-semibold',
+  className: 'h-8 px-3 text-[11px] font-semibold',
 });
 
 const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
@@ -2285,7 +2285,7 @@ function RetryMediaButton({
       disabled={loading}
       variant="soft"
       size="xs"
-      className="whatsapp-inbox-retry-button rounded-xl px-3 text-[11px]"
+      className="whatsapp-inbox-retry-button px-3 text-[11px]"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
       Reenviar
@@ -2311,7 +2311,7 @@ function InboxFilterChip({
       aria-pressed={active}
       variant={active ? 'soft' : 'secondary'}
       size="sm"
-      className={compact ? 'h-8 rounded-xl px-3 text-[11px]' : 'h-9 rounded-xl px-3.5 text-xs'}
+      className={compact ? 'h-8 px-3 text-[11px]' : 'h-9 px-3.5 text-xs'}
     >
       {label}
     </Button>
@@ -2678,7 +2678,7 @@ function WhatsAppMessageBody({
             variant="ghost"
             size="sm"
             onClick={() => setShowOriginalText((current) => !current)}
-            className="h-7 rounded-xl px-2.5 text-[11px] normal-case tracking-normal"
+            className="h-7 px-2.5 text-[11px] normal-case tracking-normal"
           >
             {showOriginalText ? 'Ocultar alteracoes' : 'Ver antes e depois'}
           </Button>
@@ -2996,7 +2996,7 @@ function WhatsAppMessageBody({
                 variant="soft"
                 size="xs"
                 onClick={() => onTranscribe(message)}
-                className="rounded-xl px-3 text-[11px]"
+                className="px-3 text-[11px]"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -9372,7 +9372,6 @@ export default function WhatsAppInboxScreen() {
                     size="icon"
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
                     onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
-                    className="rounded-xl"
                     aria-label="Chats arquivados"
                     title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
                   >
@@ -9393,7 +9392,6 @@ export default function WhatsAppInboxScreen() {
                     size="icon"
                     variant="secondary"
                     onClick={() => setWhatsAppAgendaOpen(true)}
-                    className="rounded-xl"
                     aria-label="Agenda do WhatsApp"
                     title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissao para acessar a agenda'}
                     disabled={!canViewAgenda}
@@ -9404,7 +9402,6 @@ export default function WhatsAppInboxScreen() {
                     size="icon"
                     variant="secondary"
                     onClick={() => setWhatsAppDashboardOpen(true)}
-                    className="rounded-xl"
                     aria-label="Painel WhatsApp"
                     title="Painel WhatsApp"
                   >
@@ -9413,7 +9410,6 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     onClick={() => setStartChatModalOpen(true)}
-                    className="rounded-xl"
                     aria-label="Novo chat"
                     title="Novo chat"
                   >
@@ -9448,7 +9444,7 @@ export default function WhatsAppInboxScreen() {
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
                     variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
                     size="sm"
-                    className="h-9 rounded-xl px-3.5 text-xs"
+                    className="h-9 px-3.5 text-xs"
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
@@ -9659,9 +9655,9 @@ export default function WhatsAppInboxScreen() {
                       />
                     ) : null}
                     {selectedChatWasAutoLinked ? (
-                      <span className="inline-flex items-center rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">
+                      <Badge tone="primary" size="xs" className="uppercase tracking-[0.12em]">
                         Auto
-                      </span>
+                      </Badge>
                     ) : null}
                   </div>
                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
@@ -9693,21 +9689,13 @@ export default function WhatsAppInboxScreen() {
                     {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1" style={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete)
-                        ? {
-                            borderColor: 'var(--danger-border)',
-                            background: 'var(--danger-soft)',
-                            color: 'var(--danger-text)',
-                          }
-                        : {
-                            borderColor: 'var(--border-strong)',
-                            background: 'var(--bg-elevated)',
-                            color: 'var(--text-muted)',
-                          }}>
-                        <CalendarDays className="h-3.5 w-3.5" />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge
+                        tone={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete) ? 'danger' : 'neutral'}
+                        icon={CalendarDays}
+                      >
                         <span className="max-w-[34rem] truncate">{nextChatReminderSummary}</span>
-                      </span>
+                      </Badge>
                     </div>
                   ) : null}
                   </div>
@@ -9730,7 +9718,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => setChatFilesOpen(true)}
                       variant={chatFilesOpen ? 'secondary' : 'soft'}
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Ver arquivos desta conversa"
                       title="Arquivos da conversa"
                     >
@@ -9741,7 +9728,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={handleToggleChatMessageSearch}
                       variant={chatMessageSearchOpen ? 'secondary' : 'soft'}
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Pesquisar mensagens neste chat"
                       title="Pesquisar neste chat"
                     >
@@ -9752,7 +9738,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => void handleCopyChatTranscript()}
                       variant="soft"
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Copiar conversa formatada"
                       title="Copiar conversa formatada"
                       disabled={copyingTranscript}
@@ -9764,7 +9749,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => void handleRecoverChatHistory()}
                       variant="soft"
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Recuperar mensagens antigas do chat"
                       title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
                       disabled={Boolean(historyRecoveryDisabledReason)}
@@ -9776,7 +9760,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={handleOpenFollowUpModal}
                       variant="soft"
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Gerar follow-up com IA"
                       title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
                       disabled={Boolean(followUpGenerationDisabledReason)}
@@ -9788,7 +9771,6 @@ export default function WhatsAppInboxScreen() {
                       onClick={handleOpenLeadDrawer}
                       variant="soft"
                       size="icon"
-                      className="rounded-xl"
                       aria-label="Abrir informações do lead"
                       title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
                     >
@@ -9836,7 +9818,6 @@ export default function WhatsAppInboxScreen() {
                         }}
                         variant="ghost"
                         size="icon"
-                        className="rounded-xl"
                         aria-label="Fechar busca no chat"
                         title="Fechar busca"
                       >
@@ -9914,7 +9895,7 @@ export default function WhatsAppInboxScreen() {
                       disabled={loadingOlderMessages}
                       variant="secondary"
                       size="xs"
-                      className="whatsapp-inbox-load-older rounded-xl px-3.5 text-[11px]"
+                      className="whatsapp-inbox-load-older px-3.5 text-[11px]"
                     >
                       {loadingOlderMessages ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -10357,7 +10338,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={handleToggleMediaDrawer}
                             disabled={!selectedChat}
-                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
+                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
                             aria-label="Emoji, GIF e figurinha"
                             aria-expanded={mediaDrawerOpen}
                             title="Emoji, GIF e figurinha"
@@ -10491,7 +10472,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
                           aria-label="Emoji, GIF e figurinha"
                           aria-expanded={mediaDrawerOpen}
                           title="Emoji, GIF e figurinha"
@@ -10606,7 +10587,7 @@ export default function WhatsAppInboxScreen() {
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
-                              <Button type="button" size="xs" className="rounded-xl px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
+                              <Button type="button" size="xs" className="px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
                                 Aplicar
                               </Button>
                             ) : null}
@@ -10614,7 +10595,7 @@ export default function WhatsAppInboxScreen() {
                               type="button"
                               variant="secondary"
                               size="xs"
-                              className="rounded-xl px-3 text-[11px]"
+                              className="px-3 text-[11px]"
                               onClick={() => void handleGenerateReplySuggestion(true)}
                               disabled={replySuggestionLoading}
                             >
@@ -10624,7 +10605,7 @@ export default function WhatsAppInboxScreen() {
                               type="button"
                               variant="ghost"
                               size="xs"
-                              className="rounded-xl px-3 text-[11px]"
+                              className="px-3 text-[11px]"
                               onClick={handleDismissReplySuggestion}
                               disabled={replySuggestionLoading && !replySuggestionText}
                             >
@@ -10680,7 +10661,7 @@ export default function WhatsAppInboxScreen() {
                             setAttachmentMenuOpen((current) => !current);
                           }}
                           disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${attachmentMenuOpen ? 'is-open' : ''}`}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                           aria-label="Anexar"
                           aria-expanded={attachmentMenuOpen}
                       >
@@ -10691,7 +10672,7 @@ export default function WhatsAppInboxScreen() {
                           ref={mediaDrawerTriggerRef}
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
                         aria-label="Emoji, GIF e figurinha"
                           aria-expanded={mediaDrawerOpen}
                           title="Emoji, GIF e figurinha"
@@ -10818,7 +10799,7 @@ export default function WhatsAppInboxScreen() {
                           setComposerAiMenuOpen((current) => !current);
                         }}
                         disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
-                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
+                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
                         aria-label="Ações com IA"
                         aria-expanded={composerAiMenuOpen}
                         title="Ações com IA"
@@ -10838,7 +10819,7 @@ export default function WhatsAppInboxScreen() {
                               type="button"
                               variant="secondary"
                               size="xs"
-                              className="rounded-xl px-3 text-[11px]"
+                              className="px-3 text-[11px]"
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();
@@ -11014,9 +10995,11 @@ export default function WhatsAppInboxScreen() {
                           <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                         </div>
                         {isSelected ? (
-                          <Check className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]">
+                            <Check className="h-3 w-3" />
+                          </span>
                         ) : (
-                          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
+                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
                         )}
                       </button>
                     );
@@ -11196,12 +11179,11 @@ export default function WhatsAppInboxScreen() {
               <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">
                 Nome do contato
               </label>
-              <input
+              <Input
                 id="save-contact-name"
                 type="text"
                 value={saveContactName}
                 onChange={(e) => setSaveContactName(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--brand-primary)] focus:ring-2"
                 placeholder="Nome do contato"
                 autoFocus
                 disabled={savingContact}

@@ -2406,7 +2406,7 @@ export default function DashboardScreen({
                   </div>
                 </div>
 
-                <div className="flex h-full flex-col rounded-2xl bg-[var(--bg-hover)] p-3">
+                <div className="flex h-full min-h-0 flex-col rounded-2xl bg-[var(--bg-hover)] p-3">
                   <div className="mb-2.5 flex items-center justify-between gap-2 rounded-full bg-[var(--bg-surface)] py-1.5 pl-3 pr-1.5">
                     <span className="min-w-0 truncate text-xs font-semibold text-[var(--text-primary)]">
                       {calendarViewLabel}

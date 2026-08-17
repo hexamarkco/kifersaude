@@ -100,7 +100,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
           description="Leitura do pipeline ativo e da conversao entre etapas."
         />
 
-        <div className="flex shrink-0 items-center gap-2 rounded-2xl bg-[var(--bg-hover)] px-3.5 py-2 text-xs font-semibold text-[var(--text-secondary)]">
+        <div className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--bg-hover)] px-3.5 py-2 text-xs font-semibold text-[var(--text-secondary)]">
           <Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
           {totalLeads.toLocaleString('pt-BR')} no pipeline
           <span className="text-[var(--text-subtle)]">·</span>

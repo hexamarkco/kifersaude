@@ -49,7 +49,7 @@ export function DashboardDistributionSection({
           key={item.label}
           type="button"
           onClick={() => onSegmentClick(item.label)}
-          className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-[var(--bg-hover)]"
+          className="flex w-full items-center gap-2.5 rounded-full px-2 py-1.5 text-left transition hover:bg-[var(--bg-hover)]"
         >
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: item.color }} />
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-secondary)]">{item.label}</span>
@@ -82,7 +82,7 @@ export function DashboardDistributionSection({
               {hiddenData.length > 0 && (
                 <Popover>
                   <PopoverTrigger className="block w-full">
-                    <span className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm font-semibold text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">
+                    <span className="flex w-full items-center gap-2.5 rounded-full px-2 py-1.5 text-left text-sm font-semibold text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]">
                       <ChevronDown className="h-3.5 w-3.5 shrink-0" />
                       <span className="flex-1">Ver mais ({hiddenData.length})</span>
                     </span>

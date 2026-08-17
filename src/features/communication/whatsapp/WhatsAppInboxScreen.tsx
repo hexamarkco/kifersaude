@@ -2608,7 +2608,7 @@ function InboxChatListItem({
           onToggleMenu(chat.id);
         }}
         className={cx(
-          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
+          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
           menuOpen ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
           selected ? 'opacity-100' : '',
         )}
@@ -3022,7 +3022,7 @@ function WhatsAppMessageBody({
 
           <div className="flex flex-wrap items-center gap-2">
             {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Transcrevendo...
               </span>
@@ -10078,7 +10078,7 @@ export default function WhatsAppInboxScreen() {
                                   type="button"
                                   onClick={() => handleToggleMessageActionMenu(message.id)}
                                   className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                                    'inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
                                     openMessageActionMenuMessageId === message.id
                                       ? 'bg-[var(--bg-hover)] opacity-100'
                                       : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -10095,7 +10095,7 @@ export default function WhatsAppInboxScreen() {
                                   type="button"
                                   onClick={() => void handleToggleStarMessage(message)}
                                   className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-md transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                                    'inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
                                     isMessageStarred(message)
                                       ? 'text-[var(--accent-gold)]'
                                       : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -10119,7 +10119,7 @@ export default function WhatsAppInboxScreen() {
                                   <button
                                     type="button"
                                     onClick={handleCancelMediaUpload}
-                                    className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
+                                    className="whatsapp-inbox-retry-button h-8 rounded-full px-3 text-[11px]"
                                   >
                                     Cancelar
                                   </button>
@@ -10409,7 +10409,7 @@ export default function WhatsAppInboxScreen() {
                                     className="flex min-w-0 flex-1 items-center gap-2 text-left"
                                     aria-label="Selecionar documento"
                                   >
-                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-lg border px-1 text-[10px] font-bold tracking-[0.08em]">
+                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-full border px-1 text-[10px] font-bold tracking-[0.08em]">
                                       {extension.slice(0, 4)}
                                     </span>
                                     <span className="min-w-0">
@@ -10432,7 +10432,7 @@ export default function WhatsAppInboxScreen() {
                               type="button"
                               onClick={() => handleAttachmentMenuAction('document')}
                               disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
-                              className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Adicionar documento"
                               title="Adicionar documento"
                             >
@@ -10570,7 +10570,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={() => handleAttachmentMenuAction('media')}
                             disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
-                            className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-50"
+                            className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label="Adicionar mídia"
                             title="Adicionar foto ou vídeo"
                           >
@@ -10802,7 +10802,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('bold');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Negrito"
                               title="Negrito"
                             >
@@ -10816,7 +10816,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('italic');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs italic transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs italic transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Italico"
                               title="Italico"
                             >
@@ -10830,7 +10830,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('strike');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs line-through transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs line-through transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Riscado"
                               title="Riscado"
                             >
@@ -11359,7 +11359,7 @@ export default function WhatsAppInboxScreen() {
                   <button
                     type="button"
                     onClick={() => handleReplyToMessage(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                   >
                     <Reply className="h-4 w-4 shrink-0" />
                     <span>Responder mensagem</span>
@@ -11367,7 +11367,7 @@ export default function WhatsAppInboxScreen() {
                   <button
                     type="button"
                     onClick={() => handleOpenForwardMessageModal(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                   >
                     <Forward className="h-4 w-4 shrink-0" />
                     <span>Encaminhar mensagem</span>
@@ -11379,7 +11379,7 @@ export default function WhatsAppInboxScreen() {
                       setOpenMessageActionMenuMessageId(null);
                       setMessageActionMenuPointerAnchor(null);
                     }}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                   >
                     <Star className={cx('h-4 w-4 shrink-0', isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : '')} />
                     <span>{isMessageStarred(openMessageActionMenuMessage) ? 'Remover estrela' : 'Estrelar mensagem'}</span>
@@ -11390,7 +11390,7 @@ export default function WhatsAppInboxScreen() {
                 <button
                   type="button"
                   onClick={() => handleOpenEditMessageModal(openMessageActionMenuMessage)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                 >
                   <Pencil className="h-4 w-4 shrink-0" />
                   <span>{openMessageActionMenuMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda'}</span>
@@ -11405,7 +11405,7 @@ export default function WhatsAppInboxScreen() {
                     setMessagePendingDeletion(openMessageActionMenuMessage);
                   }}
                   disabled={deletingMessageId === openMessageActionMenuMessage.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
+                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
                 >
                   {deletingMessageId === openMessageActionMenuMessage.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
                   <span>Apagar mensagem</span>
@@ -11437,7 +11437,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_archived ? <ArchiveRestore className="h-4 w-4 shrink-0" /> : <Archive className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_archived ? 'Remover dos arquivados' : 'Arquivar conversa'}</span>
@@ -11450,7 +11450,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_muted ? <Bell className="h-4 w-4 shrink-0" /> : <BellOff className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_muted ? 'Ativar notificacoes' : 'Silenciar notificacoes'}</span>
@@ -11463,7 +11463,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 <Pin className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.is_pinned ? 'Desafixar conversa' : 'Fixar conversa'}</span>
@@ -11476,7 +11476,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openChatMenuChat.unread_count <= 0 });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como nao lida'}</span>
@@ -11489,7 +11489,7 @@ export default function WhatsAppInboxScreen() {
                   setChatPendingDeletion(openChatMenuChat);
                 }}
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
               >
                 {deletingChatId === openChatMenuChat.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
                 <span>Excluir conversa</span>

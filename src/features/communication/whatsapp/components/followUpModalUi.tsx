@@ -418,7 +418,7 @@ export function RefinementChip({
       onClick={onClick}
       disabled={disabled}
       title={description}
-      className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-[var(--brand-primary-border)] hover:text-[var(--accent-gold-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-[var(--brand-primary-border)] hover:text-[var(--accent-gold-hover)] disabled:cursor-not-allowed disabled:opacity-50"
     >
       {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
       {label}

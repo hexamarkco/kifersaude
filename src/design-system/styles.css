@@ -982,7 +982,7 @@
   appearance: none;
   -webkit-appearance: none;
   border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: var(--bg-inset);
   color: var(--brand-primary-hover);
   cursor: pointer;
@@ -1030,7 +1030,7 @@
   font: var(--type-button);
   min-height: 0;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   letter-spacing: 0.01em;
 }
 
@@ -1514,7 +1514,7 @@
 }
 
 .kds-config-token {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
 }
 
 .kds-table-sticky .kds-table-header {
@@ -1817,7 +1817,7 @@
   justify-content: center;
   height: 2.35rem;
   width: 2.35rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   border: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
@@ -1847,7 +1847,7 @@
   min-width: 2.35rem;
   height: 2.35rem;
   padding: 0 0.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   border: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
@@ -2423,7 +2423,7 @@
   height: 1.75rem;
   padding: 0;
   color: var(--text-muted);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   transition: color 150ms;
 }
 .kds-toast-close:hover { color: var(--text-primary); }
@@ -3003,7 +3003,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--bg-inset) 82%, transparent);
   color: var(--text-secondary);
   font: 700 0.75rem / 1 var(--font-sans);
@@ -3592,7 +3592,7 @@
   appearance: none;
   -webkit-appearance: none;
   border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: var(--bg-surface);
   color: var(--brand-primary);
   cursor: pointer;

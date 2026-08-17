@@ -152,7 +152,7 @@ export default function VariableAutocompleteTextarea({
                     <div className="text-sm font-medium">{suggestion.label}</div>
                     <div className="text-xs text-[var(--text-muted)]">{suggestion.description}</div>
                   </div>
-                  <code className="rounded border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 text-[11px] text-[var(--brand-primary)]">
+                  <code className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 text-[11px] text-[var(--brand-primary)]">
                     {`{{${suggestion.key}}}`}
                   </code>
                 </button>

@@ -728,15 +728,15 @@ function ShowcaseContent() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-1.5">
-                <button className="kds-dropdown-option flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm">
+                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                   <Pencil className="h-3.5 w-3.5" />
                   Editar
                 </button>
-                <button className="kds-dropdown-option flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm">
+                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                   <Share2 className="h-3.5 w-3.5" />
                   Compartilhar
                 </button>
-                <button className="kds-dropdown-option flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger-text)]">
+                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--danger-text)]">
                   <Trash2 className="h-3.5 w-3.5" />
                   Excluir
                 </button>
@@ -747,11 +747,11 @@ function ShowcaseContent() {
           <Item title="Context Menu">
             <div className="relative rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5">
               <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lead: Ana Paula</p>
-              <button className="kds-dropdown-option flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm">
+              <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                 <Copy className="h-3.5 w-3.5" />
                 Copiar telefone
               </button>
-              <button className="kds-dropdown-option is-selected flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm">
+              <button className="kds-dropdown-option is-selected flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                 <MessageCircle className="h-3.5 w-3.5" />
                 Abrir WhatsApp
               </button>
@@ -765,11 +765,11 @@ function ShowcaseContent() {
                 <span className="text-sm text-[var(--text-muted)]">Buscar leads, contratos, ações...</span>
               </div>
               <div className="mt-1.5 space-y-0.5">
-                <div className="kds-dropdown-option is-selected flex items-center justify-between rounded-xl px-3 py-2 text-sm">
+                <div className="kds-dropdown-option is-selected flex items-center justify-between px-3 py-2 text-sm">
                   <span>Ir para Leads</span>
                   <span className="text-xs text-[var(--text-muted)]">G L</span>
                 </div>
-                <div className="kds-dropdown-option flex items-center justify-between rounded-xl px-3 py-2 text-sm">
+                <div className="kds-dropdown-option flex items-center justify-between px-3 py-2 text-sm">
                   <span>Criar novo contrato</span>
                   <span className="text-xs text-[var(--text-muted)]">⌘ N</span>
                 </div>
@@ -926,7 +926,7 @@ function ShowcaseContent() {
                       setStatusDropdownValue(option.nome);
                       setStatusDropdownOpen(false);
                     }}
-                    className="kds-dropdown-option flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm"
+                    className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
                   >
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: option.cor }} />
                     {option.nome}

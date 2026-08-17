@@ -423,7 +423,7 @@ html,
   width: var(--comm-emoji-size);
   align-items: center;
   justify-content: center;
-  border-radius: var(--kds-radius-sm);
+  border-radius: var(--radius-full);
   transition: background-color 160ms ease, transform 160ms ease;
 }
 
@@ -457,7 +457,7 @@ html,
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   padding: 0 var(--space-2);
   color: var(--text-secondary);
   font-size: 0.72rem;
@@ -544,7 +544,7 @@ html,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: var(--space-1) auto var(--space-3);
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
 }
 
 .comm-media-picker-modebutton {
@@ -892,7 +892,7 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item {
-  border-radius: var(--kds-radius-sm);
+  border-radius: var(--radius-full);
   color: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -918,7 +918,7 @@ html,
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
@@ -1238,7 +1238,7 @@ html,
     align-items: center;
     justify-content: center;
     border: 1px solid var(--brand-primary-border);
-    border-radius: var(--kds-radius-sm);
+    border-radius: var(--radius-full);
     background: var(--brand-primary-active);
     color: var(--text-on-brand);
     box-shadow: var(--shadow-button);

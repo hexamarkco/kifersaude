@@ -1256,7 +1256,7 @@ export default function WhatsAppAgendaModal({
                               void handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
                             }}
                             disabled={isQuickSchedulingCurrentReminder}
-                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
                           >
                             <CalendarPlus className="h-4 w-4" />
                             <span>+{days} dia{days > 1 ? 's' : ''}</span>

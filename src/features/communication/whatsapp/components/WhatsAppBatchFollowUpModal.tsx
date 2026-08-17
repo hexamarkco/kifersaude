@@ -823,7 +823,7 @@ export default function WhatsAppBatchFollowUpModal({
                 return (
                   <div key={item.reminderId} className="flex items-center gap-1.5">
                     <div
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${phase === 'sending' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${phase === 'sending' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                       style={{
                         borderColor: item.selected ? 'var(--brand-primary)' : 'var(--border-default)',
                         background: item.selected ? 'var(--brand-primary)' : 'transparent',

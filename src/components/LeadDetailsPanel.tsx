@@ -138,7 +138,7 @@ export default function LeadDetailsPanel({
                 <button
                   type="button"
                   onClick={onRefreshContracts}
-                  className="inline-flex items-center gap-2 rounded-md border border-[var(--warning-border)] px-3 py-1 text-xs font-semibold text-[var(--warning-text)] transition-colors hover:bg-[var(--warning-soft)]"
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--warning-border)] px-3 py-1 text-xs font-semibold text-[var(--warning-text)] transition-colors hover:bg-[var(--warning-soft)]"
                 >
                   Tentar novamente
                 </button>
@@ -219,7 +219,7 @@ export default function LeadDetailsPanel({
             <button
               type="button"
               onClick={onViewLead}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]"
             >
               <ExternalLink className="h-4 w-4" />
               Ver completo
@@ -229,7 +229,7 @@ export default function LeadDetailsPanel({
             <button
               type="button"
               onClick={onEditLead}
-              className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--brand-primary-hover)]"
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--brand-primary-hover)]"
             >
               <Edit3 className="h-4 w-4" />
               Editar

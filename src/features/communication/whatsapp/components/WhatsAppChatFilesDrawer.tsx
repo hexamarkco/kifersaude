@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, FileAudio, FileText, Image, Loader2, Pause, Play, Video } from 'lucide-react';
 
-import { Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Tabs } from '../../../../design-system';
+import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs } from '../../../../design-system';
 import { commWhatsAppService, type CommWhatsAppMediaType } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppMessage } from '../../../../lib/supabase';
 
@@ -101,7 +101,7 @@ function AudioFileRow({ message }: { message: CommWhatsAppMessage }) {
     else { audio.pause(); setPlaying(false); }
   };
 
-  return <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-3">
+  return <Surface variant="muted" padding="sm">
     <audio ref={audioRef} src={url ?? undefined} preload="metadata" onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || 0)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime || 0)} onEnded={() => { setPlaying(false); setCurrentTime(0); }} />
     <div className="flex items-center gap-3">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--bg-surface)] text-[var(--brand-primary)]"><FileAudio className="h-4 w-4" /></span>
@@ -117,7 +117,7 @@ function AudioFileRow({ message }: { message: CommWhatsAppMessage }) {
       <div className="flex items-center gap-1" aria-label="Velocidade de reprodução">{[1, 1.5, 2].map((value) => <Button key={value} size="xs" variant={speed === value ? 'soft' : 'ghost'} onClick={() => setSpeed(value)} aria-pressed={speed === value}>{String(value).replace('.', ',')}x</Button>)}</div>
       {url && <a href={url} download={message.media_file_name || `audio-${message.id}`} className="text-xs font-semibold text-[var(--brand-primary)]">Baixar</a>}
     </div>
-  </div>;
+  </Surface>;
 }
 
 export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpen, onClose, onOpenMedia }: ChatFilesDrawerProps) {
@@ -167,14 +167,39 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
         </DialogHeader>
       </DrawerHeader>
       <DrawerBody className="space-y-4 overflow-y-auto">
-        <Tabs items={mediaTabs} value={mediaType} onChange={setMediaType} variant="underline" listClassName="flex-nowrap overflow-x-auto" />
+        <Tabs items={mediaTabs} value={mediaType} onChange={setMediaType} variant="pill" listClassName="flex-nowrap overflow-x-auto" />
         {loading ? <div className="flex min-h-40 items-center justify-center text-sm text-[var(--text-muted)]"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando arquivos...</div> : error ? <EmptyState title="Arquivos indisponíveis" description={error} action={<Button variant="secondary" size="sm" onClick={() => void load(false)}>Tentar novamente</Button>} /> : messages.length === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title="Nenhum arquivo encontrado" description="Esta conversa ainda não possui arquivos neste filtro." /> : <>
-          {visuals.length > 0 && <div className="grid grid-cols-3 gap-2">{visuals.map((message) => <FileThumbnail key={message.id} message={message} onOpen={() => onOpenMedia(message)} />)}</div>}
-          {files.length > 0 && <div className="space-y-2">{files.map((message) => {
-            if (message.message_type === 'audio' || message.message_type === 'voice') return <AudioFileRow key={message.id} message={message} />;
-            const Icon = message.message_type === 'audio' || message.message_type === 'voice' ? FileAudio : FileText;
-            return <div key={message.id} className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-3"><span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--bg-surface)] text-[var(--brand-primary)]"><Icon className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[var(--text-primary)]">{message.media_file_name || (message.message_type === 'voice' ? 'Mensagem de voz' : 'Arquivo sem nome')}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{new Date(message.message_at).toLocaleDateString('pt-BR')} {formatSize(message.media_size_bytes) ? `· ${formatSize(message.media_size_bytes)}` : ''}</p></div><Button size="icon" variant="secondary" title="Abrir ou baixar" aria-label="Abrir ou baixar arquivo" onClick={() => onOpenMedia(message)}><Download className="h-4 w-4" /></Button></div>;
-          })}</div>}
+          {visuals.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Fotos e vídeos</span>
+                <Badge tone="neutral" size="xs">{visuals.length}</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">{visuals.map((message) => <FileThumbnail key={message.id} message={message} onOpen={() => onOpenMedia(message)} />)}</div>
+            </div>
+          )}
+          {files.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Documentos e áudios</span>
+                <Badge tone="neutral" size="xs">{files.length}</Badge>
+              </div>
+              <div className="space-y-2">{files.map((message) => {
+                if (message.message_type === 'audio' || message.message_type === 'voice') return <AudioFileRow key={message.id} message={message} />;
+                const Icon = message.message_type === 'audio' || message.message_type === 'voice' ? FileAudio : FileText;
+                return (
+                  <Surface key={message.id} variant="muted" padding="sm" className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--bg-surface)] text-[var(--brand-primary)]"><Icon className="h-4 w-4" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{message.media_file_name || (message.message_type === 'voice' ? 'Mensagem de voz' : 'Arquivo sem nome')}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{new Date(message.message_at).toLocaleDateString('pt-BR')} {formatSize(message.media_size_bytes) ? `· ${formatSize(message.media_size_bytes)}` : ''}</p>
+                    </div>
+                    <Button size="icon" variant="secondary" title="Abrir ou baixar" aria-label="Abrir ou baixar arquivo" onClick={() => onOpenMedia(message)}><Download className="h-4 w-4" /></Button>
+                  </Surface>
+                );
+              })}</div>
+            </div>
+          )}
           {hasMore && <Button variant="secondary" size="sm" fullWidth loading={loadingMore} onClick={() => void load(true)}>{!loadingMore && 'Carregar mais'}</Button>}
         </>}
       </DrawerBody>

@@ -10146,7 +10146,7 @@ export default function WhatsAppInboxScreen() {
               ) : null}
 
               <div className="whatsapp-inbox-composer-area border-t p-2.5 sm:p-3">
-                <div className={`whatsapp-inbox-composer rounded-xl border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
+                <div className={`whatsapp-inbox-composer rounded-xl border transition-shadow ${composerFocused ? 'is-focused' : ''} ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -10368,7 +10368,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={handleComposerSubmit}
                             disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                            className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                            className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60"
                             aria-label="Enviar documento"
                             title={sendDisabledReason ?? undefined}
                           >
@@ -10502,7 +10502,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleComposerSubmit}
                           disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                          className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                          className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60"
                           aria-label="Enviar mídia"
                           title={sendDisabledReason ?? undefined}
                         >
@@ -10895,7 +10895,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        className={`whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >

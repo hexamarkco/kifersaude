@@ -878,6 +878,11 @@ html,
   padding: 0;
 }
 
+.painel-theme .whatsapp-inbox-composer.is-focused {
+  border-color: var(--brand-primary-border);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
 .painel-theme .whatsapp-inbox-attach-menu {
   border-color: var(--app-border-soft);
   background: var(--surface-strong-bg);
@@ -961,14 +966,15 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active {
-  border-color: var(--brand-primary-border);
-  background: var(--brand-primary-gradient);
-  color: var(--text-on-brand);
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--text-inverse);
   box-shadow: var(--shadow-button);
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active:hover {
-  background: var(--brand-primary-gradient-hover);
+  background: var(--text-primary);
+  opacity: 0.9;
 }
 
 .painel-theme .whatsapp-inbox-voice-composer {

@@ -6,7 +6,30 @@ import { test } from 'vitest';
 import DateTimePicker from '../DateTimePicker';
 import { normalizeYearInput, parseCommittedYearInput } from '../dateTimePickerUtils';
 
-const renderControlledPicker = (initialValue: string, type: 'date' | 'month' | 'datetime-local' = 'date') => {
+const click = (element: Element | null) => {
+  assert.ok(element instanceof HTMLElement, 'element to click must exist');
+  act(() => {
+    (element as HTMLElement).click();
+  });
+};
+
+const findByText = (root: ParentNode, text: string): HTMLElement | null => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode() as HTMLElement | null;
+  while (current) {
+    if (current.children.length === 0 && (current.textContent ?? '').trim() === text) {
+      return current;
+    }
+    current = walker.nextNode() as HTMLElement | null;
+  }
+  return null;
+};
+
+const renderControlledPicker = (
+  initialValue: string,
+  type: 'date' | 'datetime-local' | 'time' = 'date',
+  extraProps: Record<string, unknown> = {},
+) => {
   const state = { current: initialValue };
 
   function ControlledPicker() {
@@ -22,6 +45,7 @@ const renderControlledPicker = (initialValue: string, type: 'date' | 'month' | '
           setValue(nextValue);
         }}
         type={type}
+        {...extraProps}
       />
     );
   }
@@ -32,15 +56,6 @@ const renderControlledPicker = (initialValue: string, type: 'date' | 'month' | '
   };
 };
 
-const setInputValue = (element: HTMLInputElement, value: string) => {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
-  descriptor?.set?.call(element, value);
-
-  act(() => {
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-};
-
 test('normalizes year input and only commits complete years', () => {
   assert.equal(normalizeYearInput('20a1b0'), '2010');
   assert.equal(parseCommittedYearInput('20'), null);
@@ -48,71 +63,57 @@ test('normalizes year input and only commits complete years', () => {
   assert.equal(parseCommittedYearInput('2200'), 2100);
 });
 
-test('renders a native date input and keeps controlled value updates', () => {
+test('renders a trigger showing the formatted date and commits a new value on day click', () => {
   const { container, getValue, unmount } = renderControlledPicker('2026-03-12', 'date');
 
-  const input = container.querySelector('input[type="date"]');
-  assert.ok(input instanceof HTMLInputElement);
-  assert.equal(input.value, '2026-03-12');
+  const trigger = container.querySelector('.kds-dp-trigger');
+  assert.ok(trigger instanceof HTMLButtonElement);
+  assert.equal(trigger.textContent, '12/03/2026');
 
-  setInputValue(input, '2026-04-18');
-  assert.equal(getValue(), '2026-04-18');
+  click(trigger);
 
-  unmount();
-});
+  const dayEighteen = findByText(document.body, '18');
+  click(dayEighteen);
 
-test('renders a native month input', () => {
-  const { container, unmount } = renderControlledPicker('2026-03', 'month');
-
-  const input = container.querySelector('input[type="month"]');
-  assert.ok(input instanceof HTMLInputElement);
-  assert.equal(input.value, '2026-03');
+  assert.equal(getValue(), '2026-03-18');
 
   unmount();
 });
 
-test('opens the native picker from the action button when showPicker is available', () => {
-  const { container, unmount } = render(<DateTimePicker value="2026-03-12" onChange={() => {}} type="date" />);
+test('clearing the value resets the trigger to the placeholder', () => {
+  const { container, getValue, unmount } = renderControlledPicker('2026-03-12', 'date');
 
-  const input = container.querySelector('input[type="date"]');
-  const button = container.querySelector('button[type="button"]');
-  assert.ok(input instanceof HTMLInputElement);
-  assert.ok(button instanceof HTMLButtonElement);
+  click(container.querySelector('.kds-dp-trigger'));
 
-  let opened = false;
-  Object.defineProperty(input, 'showPicker', {
-    value: () => {
-      opened = true;
-    },
-    configurable: true,
+  const clearButton = findByText(document.body, 'Limpar');
+  click(clearButton);
+
+  assert.equal(getValue(), '');
+
+  unmount();
+});
+
+test('forwards min/max constraints by disabling out-of-range days', () => {
+  const { container, unmount } = renderControlledPicker('2026-03-12T10:00', 'datetime-local', {
+    min: '2026-03-15T00:00',
+    max: '2026-03-20T00:00',
   });
 
-  act(() => {
-    button.click();
-  });
+  click(container.querySelector('.kds-dp-trigger'));
 
-  assert.equal(opened, true);
-
-  unmount();
-});
-
-test('forwards native constraints like min and max', () => {
-  const { container, unmount } = render(
-    <DateTimePicker
-      value="2026-03-12T10:00"
-      onChange={() => {}}
-      type="datetime-local"
-      min="2026-03-01T08:00"
-      max="2026-03-31T18:00"
-      required
-    />,
+  const inMonthDays = Array.from(
+    document.body.querySelectorAll<HTMLButtonElement>('.kds-dp-days button:not(.kds-dp-day-outside)'),
   );
+  const dayFive = inMonthDays.find((el) => el.textContent === '5');
+  const dayTwentyFive = inMonthDays.find((el) => el.textContent === '25');
+  const dayEighteen = inMonthDays.find((el) => el.textContent === '18');
 
-  const input = container.querySelector('input[type="datetime-local"]');
-  assert.ok(input instanceof HTMLInputElement);
-  assert.equal(input.min, '2026-03-01T08:00');
-  assert.equal(input.max, '2026-03-31T18:00');
-  assert.equal(input.required, true);
+  assert.ok(dayFive instanceof HTMLButtonElement);
+  assert.ok(dayTwentyFive instanceof HTMLButtonElement);
+  assert.ok(dayEighteen instanceof HTMLButtonElement);
+  assert.equal(dayFive.disabled, true, 'day before min should be disabled');
+  assert.equal(dayTwentyFive.disabled, true, 'day after max should be disabled');
+  assert.equal(dayEighteen.disabled, false, 'day within range should stay enabled');
 
   unmount();
 });

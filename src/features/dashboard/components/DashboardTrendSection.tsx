@@ -83,81 +83,57 @@ export function DashboardTrendSection({
   ];
 
   return (
-    <Surface padding="sm" data-panel-animate>
+    <Surface padding="sm" className="flex h-full flex-col">
       <SectionHeader
         eyebrow="Analytics"
         title="Evolucao mensal"
         description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
-        action={(
-          <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:items-center">
-            <div className="min-w-0 xl:w-40">
-              <FilterSingleSelect
-                icon={Filter}
-                value={periodFilter}
-                onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-                placeholder="Mes atual"
-                includePlaceholderOption={false}
-                options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-              />
-            </div>
-
-            <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
-              {DASHBOARD_METRIC_TABS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => onSelectedMetricChange(item.id)}
-                  className={
-                    item.id === selectedMetric
-                      ? 'flex-1 rounded-full bg-[var(--text-primary)] px-4 py-2 text-xs font-medium text-[var(--text-inverse)] transition xl:flex-none'
-                      : 'flex-1 rounded-full px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition xl:flex-none'
-                  }
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="min-w-0 xl:w-48">
-              <FilterSingleSelect
-                icon={Clock}
-                value={String(chartRangeInMonths)}
-                onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}
-                placeholder="Ultimos 6 meses"
-                includePlaceholderOption={false}
-                options={DASHBOARD_CHART_RANGE_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-              />
-            </div>
-          </div>
-        )}
       />
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-[0.82fr_1.6fr] xl:items-stretch">
-        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-          {insightCards.map((card) => {
-            const Icon = card.icon;
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <FilterSingleSelect
+          icon={Filter}
+          value={periodFilter}
+          onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
+          placeholder="Mes atual"
+          includePlaceholderOption={false}
+          options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+        />
 
-            return (
-              <div key={card.label} className="rounded-2xl bg-[var(--bg-hover)] p-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-surface)]">
-                    <Icon className="h-4 w-4" strokeWidth={1.75} style={{ color: card.iconColor }} aria-hidden="true" />
-                  </span>
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">{card.label}</span>
-                </div>
-                <p className="mt-3 text-xl font-semibold text-[var(--text-primary)]">{card.value}</p>
-                <p className={`mt-1 text-xs font-medium ${card.captionClassName}`}>{card.caption}</p>
-              </div>
-            );
-          })}
-        </div>
+        <FilterSingleSelect
+          icon={Clock}
+          value={String(chartRangeInMonths)}
+          onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}
+          placeholder="Ultimos 6 meses"
+          includePlaceholderOption={false}
+          options={DASHBOARD_CHART_RANGE_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+        />
+      </div>
 
+      <div className="mt-2 flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
+        {DASHBOARD_METRIC_TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelectedMetricChange(item.id)}
+            className={
+              item.id === selectedMetric
+                ? 'flex-1 whitespace-nowrap rounded-full bg-[var(--text-primary)] px-3.5 py-2 text-xs font-medium text-[var(--text-inverse)] transition'
+                : 'flex-1 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] transition'
+            }
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4">
         <MonthlyTrendChart
           data={displayedMonthlySeries.map((point) => ({
             label: point.label,
@@ -165,8 +141,27 @@ export function DashboardTrendSection({
           }))}
           color={DASHBOARD_METRIC_COLORS[selectedMetric]}
           formatValue={formatSelectedMetricValue}
-          height={280}
+          height={220}
         />
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2.5">
+        {insightCards.map((card) => {
+          const Icon = card.icon;
+
+          return (
+            <div key={card.label} className="min-w-0 rounded-2xl bg-[var(--bg-hover)] p-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)]">
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} style={{ color: card.iconColor }} aria-hidden="true" />
+              </span>
+              <p className="mt-2 truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {card.label}
+              </p>
+              <p className="mt-1 truncate text-base font-semibold text-[var(--text-primary)]">{card.value}</p>
+              <p className={`mt-0.5 truncate text-[0.6875rem] font-medium ${card.captionClassName}`}>{card.caption}</p>
+            </div>
+          );
+        })}
       </div>
     </Surface>
   );

@@ -2246,21 +2246,21 @@ export default function DashboardScreen({
           conversionRate={conversionRate}
           ticketMedio={ticketMedio}
         />
-        <DashboardTrendSection
-          periodFilter={periodFilter}
-          selectedMetric={selectedMetric}
-          chartRangeInMonths={chartRangeInMonths}
-          displayedMonthlySeries={displayedMonthlySeries}
-          latestMonthlyPoint={latestMonthlyPoint}
-          previousMonthlyPoint={previousMonthlyPoint}
-          highestMonthlyPoint={highestMonthlyPoint}
-          averageMonthlyValue={averageMonthlyValue}
-          onPeriodFilterChange={handleDashboardPeriodFilterChange}
-          onSelectedMetricChange={setSelectedMetric}
-          onChartRangeChange={setChartRangeInMonths}
-        />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
+          <DashboardTrendSection
+            periodFilter={periodFilter}
+            selectedMetric={selectedMetric}
+            chartRangeInMonths={chartRangeInMonths}
+            displayedMonthlySeries={displayedMonthlySeries}
+            latestMonthlyPoint={latestMonthlyPoint}
+            previousMonthlyPoint={previousMonthlyPoint}
+            highestMonthlyPoint={highestMonthlyPoint}
+            averageMonthlyValue={averageMonthlyValue}
+            onPeriodFilterChange={handleDashboardPeriodFilterChange}
+            onSelectedMetricChange={setSelectedMetric}
+            onChartRangeChange={setChartRangeInMonths}
+          />
 
-        <div data-panel-animate>
           <LeadFunnel leads={activeLeads} />
         </div>
         <DashboardDistributionSection
@@ -2547,7 +2547,7 @@ export default function DashboardScreen({
                                   <p>{adjustment.contract?.operadora}</p>
                                 </div>
                               </div>
-                              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
+                              <div className="mt-3 flex flex-wrap items-center gap-1.5">
                                 <Button
                                   type="button"
                                   onClick={() =>
@@ -2556,8 +2556,7 @@ export default function DashboardScreen({
                                     )
                                   }
                                   variant="secondary"
-                                  size="sm"
-                                  
+                                  size="xs"
                                 >
                                   Ver contrato
                                 </Button>
@@ -2570,8 +2569,7 @@ export default function DashboardScreen({
                                       )
                                     }
                                     variant="secondary"
-                                    size="sm"
-                                    
+                                    size="xs"
                                   >
                                     Abrir lead
                                   </Button>
@@ -2590,8 +2588,7 @@ export default function DashboardScreen({
                                     })
                                   }
                                   variant="soft"
-                                  size="sm"
-                                  
+                                  size="xs"
                                 >
                                   Criar lembrete
                                 </Button>
@@ -2664,7 +2661,7 @@ export default function DashboardScreen({
                               </div>
                             )}
                             <div
-                              className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3"
+                              className="mt-3 flex flex-wrap items-center gap-1.5"
                             >
                               {birthday.contract && (
                                 <Button
@@ -2673,8 +2670,7 @@ export default function DashboardScreen({
                                     handleNavigateToContract(birthday.contract)
                                   }
                                   variant="secondary"
-                                  size="sm"
-                                  
+                                  size="xs"
                                 >
                                   Ver contrato
                                 </Button>
@@ -2688,8 +2684,7 @@ export default function DashboardScreen({
                                     )
                                   }
                                   variant="secondary"
-                                  size="sm"
-                                  
+                                  size="xs"
                                 >
                                   Abrir lead
                                 </Button>
@@ -2704,9 +2699,8 @@ export default function DashboardScreen({
                                     description: `Data: ${birthday.nextBirthday.toLocaleDateString("pt-BR")}`,
                                   })
                                 }
-                                variant="warning"
-                                size="sm"
-                                
+                                variant="soft"
+                                size="xs"
                               >
                                 Criar lembrete
                               </Button>

@@ -159,7 +159,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const files = messages.filter((message) => message.message_type !== 'image' && message.message_type !== 'video');
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" className="w-full max-w-[440px]">
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" className="w-full max-w-[380px]">
       <DrawerHeader>
         <DialogHeader onClose={onClose}>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Arquivos da conversa</p>

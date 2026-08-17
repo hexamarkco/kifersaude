@@ -8,6 +8,7 @@ import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHea
 import DateTimePicker from '../../../../components/ui/DateTimePicker';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
+import { getBadgeStyle } from '../../../../lib/colorUtils';
 import { supabase, fetchAllPages, type Reminder } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import type {
@@ -115,6 +116,14 @@ export default function WhatsAppLeadDrawer({
   useEffect(() => {
     setActiveTab('crm');
   }, [chatId, isOpen]);
+
+  const getStatusColor = useCallback(
+    (statusName: string | null | undefined) => {
+      if (!statusName) return null;
+      return statusOptions.find((option) => option.nome === statusName)?.cor ?? null;
+    },
+    [statusOptions],
+  );
 
   const agendaRequestIdRef = useRef(0);
   const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
@@ -418,7 +427,7 @@ export default function WhatsAppLeadDrawer({
         open={isOpen}
         onOpenChange={(open) => !open && onClose()}
         side="right"
-        className="comm-whatsapp-lead-drawer w-full max-w-[440px]"
+        className="comm-whatsapp-lead-drawer w-full max-w-[400px]"
       >
         <DrawerHeader>
           <DialogHeader onClose={onClose}>
@@ -609,7 +618,13 @@ export default function WhatsAppLeadDrawer({
                         </p>
                         <p className="truncate text-xs text-[var(--text-muted)]">{suggestedLead.telefone}</p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          <Badge tone="neutral" size="xs">{suggestedLead.status_nome || 'Sem status'}</Badge>
+                          <Badge
+                            tone="neutral"
+                            size="xs"
+                            style={getStatusColor(suggestedLead.status_nome) ? getBadgeStyle(getStatusColor(suggestedLead.status_nome)!) : undefined}
+                          >
+                            {suggestedLead.status_nome || 'Sem status'}
+                          </Badge>
                           {suggestedLead.responsavel_label ? <Badge tone="neutral" size="xs">{suggestedLead.responsavel_label}</Badge> : null}
                         </div>
                       </div>
@@ -647,7 +662,13 @@ export default function WhatsAppLeadDrawer({
                           </p>
                           <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            <Badge tone="neutral" size="xs">{lead.status_nome || 'Sem status'}</Badge>
+                            <Badge
+                              tone="neutral"
+                              size="xs"
+                              style={getStatusColor(lead.status_nome) ? getBadgeStyle(getStatusColor(lead.status_nome)!) : undefined}
+                            >
+                              {lead.status_nome || 'Sem status'}
+                            </Badge>
                             {lead.responsavel_label ? <Badge tone="neutral" size="xs">{lead.responsavel_label}</Badge> : null}
                           </div>
                         </div>

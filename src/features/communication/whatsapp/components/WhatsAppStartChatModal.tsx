@@ -3,8 +3,9 @@ import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } fro
 
 import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
+import { getBadgeStyle } from '../../../../lib/colorUtils';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
-import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
+import type { CommWhatsAppPhoneContact, LeadStatusConfig } from '../../../../lib/supabase';
 import WhatsAppDialog from './WhatsAppDialog';
 
 type StartChatSource = 'saved' | 'crm' | 'manual';
@@ -28,6 +29,7 @@ type WhatsAppStartChatModalProps = {
   onLoadMoreContacts: () => void;
   crmLeads: CommWhatsAppLeadSearchResult[];
   crmLoading: boolean;
+  statusOptions: LeadStatusConfig[];
   onStartFromSavedContact: (contact: CommWhatsAppPhoneContact) => void;
   onStartFromLead: (lead: CommWhatsAppLeadSearchResult) => void;
   manualPhone: string;
@@ -63,6 +65,7 @@ export default function WhatsAppStartChatModal({
   onLoadMoreContacts,
   crmLeads,
   crmLoading,
+  statusOptions,
   onStartFromSavedContact,
   onStartFromLead,
   manualPhone,
@@ -72,6 +75,11 @@ export default function WhatsAppStartChatModal({
 }: WhatsAppStartChatModalProps) {
   const [source, setSource] = useState<StartChatSource>('saved');
   const starting = Boolean(startingKey);
+
+  const getStatusColor = (statusName: string | null | undefined) => {
+    if (!statusName) return null;
+    return statusOptions.find((option) => option.nome === statusName)?.cor ?? null;
+  };
 
   const sourceTitle = useMemo(() => {
     switch (source) {
@@ -111,7 +119,7 @@ export default function WhatsAppStartChatModal({
                 </p>
                 <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
-                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
+                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="shrink-0 whitespace-nowrap">
                     {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
                     Iniciar chat
                   </Button>
@@ -122,13 +130,13 @@ export default function WhatsAppStartChatModal({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
+            {source === 'saved' && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Contatos salvos</span>
+                <Badge tone="neutral" size="xs">{contactsTotal}</Badge>
+              </div>
+            )}
             <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
-              {source === 'saved' && (
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Contatos salvos</span>
-                  <Badge tone="neutral" size="xs">{contactsTotal}</Badge>
-                </div>
-              )}
               {(source === 'saved' ? contactsLoading : crmLoading) ? (
                 <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -189,7 +197,13 @@ export default function WhatsAppStartChatModal({
                         </p>
                         <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          <Badge tone="neutral" size="xs">{lead.status_nome || 'Sem status'}</Badge>
+                          <Badge
+                            tone="neutral"
+                            size="xs"
+                            style={getStatusColor(lead.status_nome) ? getBadgeStyle(getStatusColor(lead.status_nome)!) : undefined}
+                          >
+                            {lead.status_nome || 'Sem status'}
+                          </Badge>
                           {lead.responsavel_label ? <Badge tone="neutral" size="xs">{lead.responsavel_label}</Badge> : null}
                         </div>
                       </div>

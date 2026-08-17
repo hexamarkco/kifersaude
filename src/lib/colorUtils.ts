@@ -22,7 +22,7 @@ export const hexToRgba = (hexColor: string, alpha = 1): string => {
   return `color-mix(in srgb, ${getColor(hexColor)} ${opacity}%, transparent)`;
 };
 
-export const getContrastTextColor = (hexColor: string): string => {
+export const getContrastTextColor = (hexColor: string, alpha = 1): string => {
   const normalized = normalizeHex(hexColor);
   if (!normalized) return 'var(--text-on-brand)';
 
@@ -30,13 +30,18 @@ export const getContrastTextColor = (hexColor: string): string => {
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? 'var(--text-primary)' : 'var(--text-on-brand)';
+  const colorLuminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  // Badges render the color at low alpha over a light surface, so the pill
+  // reads much lighter than the raw hue — blend against that surface before
+  // picking dark/light text, otherwise a dark source color at low alpha
+  // ends up with near-invisible light text on an almost-white background.
+  const effectiveLuminance = colorLuminance * alpha + 1 * (1 - alpha);
+  return effectiveLuminance > 0.6 ? 'var(--text-primary)' : 'var(--text-on-brand)';
 };
 
 export const getBadgeStyle = (hexColor: string, alpha = 0.15) => {
   const backgroundColor = hexToRgba(hexColor, alpha);
-  const textColor = getContrastTextColor(hexColor);
+  const textColor = getContrastTextColor(hexColor, alpha);
   return {
     backgroundColor,
     color: textColor,

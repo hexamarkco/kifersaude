@@ -10687,7 +10687,7 @@ export default function WhatsAppInboxScreen() {
                             aria-expanded={composerAiMenuOpen}
                             title="Ações com IA"
                           >
-                            {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
+                            {replySuggestionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                           </button>
                         </PopoverTrigger>
                         <PopoverContent
@@ -11254,6 +11254,7 @@ export default function WhatsAppInboxScreen() {
           onLoadMoreContacts={handleLoadMoreSavedContacts}
           crmLeads={crmStartResults}
           crmLoading={crmStartLoading}
+          statusOptions={leadStatuses}
           onStartFromSavedContact={(contact) => void handleStartChatFromSavedContact(contact)}
           onStartFromLead={(lead) => void handleStartChatFromLead(lead)}
           manualPhone={manualStartPhone}

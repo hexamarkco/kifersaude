@@ -1593,7 +1593,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   padding: 0.5rem;
   color: var(--text-muted);
   transition: background 150ms, color 150ms, border-color 150ms, box-shadow 150ms;
@@ -3722,7 +3722,7 @@
 
 .kds-dialog-close {
   border-color: var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
 }
 
 .kds-dialog-close:hover {

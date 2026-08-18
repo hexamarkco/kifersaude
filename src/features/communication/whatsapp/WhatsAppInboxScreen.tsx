@@ -100,6 +100,9 @@ const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 // detectar a reconexão sem esperar o intervalo espaçado padrão.
 const OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS = 10000;
 const MESSAGE_PAGE_SIZE = 50;
+// Quantidade de conversas cujo último resultado de mensagens fica em cache em memória,
+// permitindo reabrir uma conversa recém-vista sem exibir o spinner de carregamento.
+const MESSAGES_CACHE_MAX_CHATS = 20;
 const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
@@ -3267,6 +3270,7 @@ export default function WhatsAppInboxScreen() {
   const lastSavedContactForceSyncAtRef = useRef(0);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
+  const messagesCacheByChatIdRef = useRef<Map<string, { messages: CommWhatsAppMessage[]; signature: string; hasOlderMessages: boolean }>>(new Map());
   const pendingScrollModeRef = useRef<ScrollMode>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const pendingScrollHeightRef = useRef<number | null>(null);
@@ -5991,6 +5995,16 @@ export default function WhatsAppInboxScreen() {
       }
 
       setMessages(nextMessages);
+
+      const cache = messagesCacheByChatIdRef.current;
+      cache.delete(targetChatId);
+      cache.set(targetChatId, { messages: nextMessages, signature: nextSignature, hasOlderMessages: hasMore });
+      if (cache.size > MESSAGES_CACHE_MAX_CHATS) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey !== undefined) {
+          cache.delete(oldestKey);
+        }
+      }
     } catch (error) {
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -6281,7 +6295,6 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    messagesSignatureRef.current = '';
     pendingScrollModeRef.current = 'bottom';
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
@@ -6295,10 +6308,22 @@ export default function WhatsAppInboxScreen() {
     setRemovedAttachmentForUndo(null);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
-    setHasOlderMessages(false);
     setThreadReconcileChatId(null);
     lastSelectedChatPreviewRefreshKeyRef.current = '';
-    setMessages([]);
+
+    // Se já temos o último resultado desta conversa em cache, exibimos na hora
+    // (sem o spinner de "carregando mensagens") enquanto a atualização roda em segundo
+    // plano — evita o efeito de "sempre demora" ao reabrir uma conversa recém-vista.
+    const cached = messagesCacheByChatIdRef.current.get(selectedChatId);
+    if (cached) {
+      messagesSignatureRef.current = cached.signature;
+      setHasOlderMessages(cached.hasOlderMessages);
+      setMessages(cached.messages);
+    } else {
+      messagesSignatureRef.current = '';
+      setHasOlderMessages(false);
+      setMessages([]);
+    }
 
     if (pendingMessageSearchChatIdRef.current === selectedChatId) {
       return;

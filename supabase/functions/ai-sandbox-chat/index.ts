@@ -18,7 +18,6 @@ declare const Deno: {
 
 type RequestBody = {
   conversationId?: string;
-  message?: string;
 };
 
 type SandboxMessageRow = {
@@ -37,20 +36,15 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
-const buildTitleFromFirstMessage = (message: string): string => {
-  const clean = message.trim().replace(/\s+/g, ' ');
-  if (!clean) return 'Nova simulação';
-  return clean.length > 60 ? `${clean.slice(0, 57)}...` : clean;
-};
-
 const SYSTEM_PLAYBOOK = [
   'Voce e a assistente de atendimento da Kifer Saude no WhatsApp, atuando no lugar da corretora especialista em planos de saude.',
   'Esta e uma SIMULACAO interna: a pessoa do outro lado e um funcionario da propria operacao testando como voce se comportaria com um lead real. Trate a conversa exatamente como trataria um lead de verdade — nao quebre o personagem, nao mencione que e uma simulacao.',
+  'Cada turno do LEAD que voce ve ja pode ser o resultado de varias mensagens picotadas que a pessoa mandou seguidas — trate tudo isso como uma unica fala antes de responder.',
   '',
   'ROTEIRO DE QUALIFICACAO (siga a ordem, mas adapte-se ao que o lead ja disse):',
   '1. Se for o primeiro contato do lead, cumprimente, se apresente rapidamente e pergunte se o plano e so para a pessoa ou para mais gente da familia.',
   '2. Se for familia: peça a idade de cada pessoa (incluindo quem esta falando).',
-  '3. Pergunte bairro e cidade.',
+  '3. Pergunte a cidade onde mora. So pergunte o BAIRRO tambem se a cidade for Rio de Janeiro (capital) — a rede credenciada varia muito dentro do Rio, entao o bairro importa. Para qualquer outra cidade, o bairro e irrelevante para a cotacao: nao pergunte.',
   '4. Pergunte se ja tem plano de saude hoje (para avaliar aproveitamento de carencia) ou seria a primeira contratacao.',
   '5. Pergunte se tem CNPJ ou MEI (planos empresariais costumam sair mais em conta).',
   '6. So depois de ter idade(s), localizacao e a resposta sobre CNPJ/MEI voce esta pronta para montar a cotacao.',
@@ -85,41 +79,21 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = (await req.json().catch(() => ({}))) as RequestBody;
-    const message = toTrimmedString(body.message).slice(0, 2000);
-    let conversationId = toTrimmedString(body.conversationId);
+    const conversationId = toTrimmedString(body.conversationId);
 
-    if (!message) {
-      return new Response(JSON.stringify({ error: 'Mensagem obrigatoria.' }), { status: 400, headers: jsonHeaders });
+    if (!conversationId) {
+      return new Response(JSON.stringify({ error: 'Conversa obrigatoria.' }), { status: 400, headers: jsonHeaders });
     }
 
-    // ---- Resolve or create conversation ----
-
-    if (conversationId) {
-      const { data: existing, error: existingError } = await supabaseAdmin
-        .from('ai_sandbox_conversations')
-        .select('id')
-        .eq('id', conversationId)
-        .maybeSingle();
-      if (existingError) throw new Error(`Erro ao carregar conversa: ${existingError.message}`);
-      if (!existing) {
-        return new Response(JSON.stringify({ error: 'Conversa nao encontrada.' }), { status: 404, headers: jsonHeaders });
-      }
-    } else {
-      const { data: created, error: createError } = await supabaseAdmin
-        .from('ai_sandbox_conversations')
-        .insert({ title: buildTitleFromFirstMessage(message), created_by: authResult.user.profileId })
-        .select('id')
-        .single();
-      if (createError) throw new Error(`Erro ao criar conversa: ${createError.message}`);
-      conversationId = created.id as string;
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from('ai_sandbox_conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .maybeSingle();
+    if (existingError) throw new Error(`Erro ao carregar conversa: ${existingError.message}`);
+    if (!existing) {
+      return new Response(JSON.stringify({ error: 'Conversa nao encontrada.' }), { status: 404, headers: jsonHeaders });
     }
-
-    // ---- Persist lead message ----
-
-    const { error: insertLeadError } = await supabaseAdmin
-      .from('ai_sandbox_messages')
-      .insert({ conversation_id: conversationId, role: 'lead', content: message });
-    if (insertLeadError) throw new Error(`Erro ao salvar mensagem: ${insertLeadError.message}`);
 
     // ---- Load full sandbox history + real style examples in parallel ----
 
@@ -144,6 +118,10 @@ Deno.serve(async (req: Request) => {
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
     const history = (historyResult.data ?? []) as SandboxMessageRow[];
+    if (history.length === 0 || history[history.length - 1].role !== 'lead') {
+      return new Response(JSON.stringify({ error: 'Nao ha mensagem do lead pendente de resposta.' }), { status: 400, headers: jsonHeaders });
+    }
+
     const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'LEAD' : 'VOCE'}: ${row.content}`);
 
     const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
@@ -169,7 +147,7 @@ Deno.serve(async (req: Request) => {
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
-      task: 'follow_up_generation',
+      task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
       temperature: 0.6,

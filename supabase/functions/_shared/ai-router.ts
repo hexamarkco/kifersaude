@@ -7,7 +7,7 @@ declare const Deno: {
   };
 };
 
-export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique';
+export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique' | 'autonomous_attendance';
 
 type ProviderSettings = {
   enabled: boolean;
@@ -106,7 +106,7 @@ const GEMINI_DEFAULT_TRANSCRIPTION_MODEL = GEMINI_DEFAULT_TEXT_MODEL;
 const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
 const CLAUDE_DEFAULT_TRANSCRIPTION_MODEL = CLAUDE_DEFAULT_TEXT_MODEL;
 
-const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique'];
+const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -304,6 +304,12 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
       providers,
       fallbackEnabled,
     ),
+    autonomous_attendance: normalizeTaskRouting(
+      'autonomous_attendance',
+      rawTasks.autonomous_attendance,
+      providers,
+      fallbackEnabled,
+    ),
   };
 
   return {
@@ -355,7 +361,7 @@ const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTo
 // direto para uma resposta plausivel na superficie sem executar o raciocinio
 // que o prompt pede. Tarefas mais mecanicas (reescrever um texto dado,
 // organizar agenda) continuam com esforco minimo por velocidade/custo.
-const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'attendance_critique']);
+const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'attendance_critique', 'autonomous_attendance']);
 
 const getPreferredOpenAiReasoningEffort = (model: string, task: AiTask): OpenAiReasoningEffort | undefined => {
   const normalized = model.trim().toLowerCase();

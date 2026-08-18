@@ -19,12 +19,17 @@ export type AiSandboxMessage = {
   created_at: string;
 };
 
-type SendMessageResult = {
-  conversationId: string;
+type GenerateReplyResult = {
   reply: string;
   handoffReason: string | null;
   provider: string | null;
   model: string | null;
+};
+
+const buildTitleFromMessage = (message: string): string => {
+  const clean = message.trim().replace(/\s+/g, ' ');
+  if (!clean) return 'Nova simulação';
+  return clean.length > 60 ? `${clean.slice(0, 57)}...` : clean;
 };
 
 export const aiSandboxChatService = {
@@ -67,12 +72,31 @@ export const aiSandboxChatService = {
     if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel apagar a simulacao.'));
   },
 
-  async sendMessage(options: { conversationId: string | null; message: string }): Promise<SendMessageResult> {
+  async createConversation(firstMessage: string, createdBy: string): Promise<AiSandboxConversation> {
+    const { data, error } = await supabase
+      .from('ai_sandbox_conversations')
+      .insert({ title: buildTitleFromMessage(firstMessage), created_by: createdBy })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel criar a simulacao.'));
+    return data as AiSandboxConversation;
+  },
+
+  async appendLeadMessage(conversationId: string, content: string): Promise<AiSandboxMessage> {
+    const { data, error } = await supabase
+      .from('ai_sandbox_messages')
+      .insert({ conversation_id: conversationId, role: 'lead', content })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem.'));
+    return data as AiSandboxMessage;
+  },
+
+  async generateReply(conversationId: string): Promise<GenerateReplyResult> {
     const { data, error } = await supabase.functions.invoke('ai-sandbox-chat', {
-      body: {
-        conversationId: options.conversationId ?? undefined,
-        message: options.message,
-      },
+      body: { conversationId },
     });
 
     if (error) {
@@ -80,7 +104,6 @@ export const aiSandboxChatService = {
     }
 
     const payload = (data ?? {}) as {
-      conversationId?: string;
       reply?: string;
       handoffReason?: string | null;
       provider?: string | null;
@@ -92,12 +115,11 @@ export const aiSandboxChatService = {
       throw new Error(payload.error);
     }
 
-    if (!payload.conversationId || !payload.reply) {
+    if (!payload.reply) {
       throw new Error('A IA nao retornou uma resposta valida.');
     }
 
     return {
-      conversationId: payload.conversationId,
       reply: payload.reply,
       handoffReason: payload.handoffReason ?? null,
       provider: payload.provider ?? null,

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, MessageCirclePlus, Send, Sparkles, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2 } from 'lucide-react';
 import { Badge, Button, EmptyState, LoadingState } from '../../design-system';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -8,22 +8,42 @@ import {
   type AiSandboxMessage,
 } from '../../lib/aiSandboxChatService';
 
+const REPLY_DEBOUNCE_SECONDS = 60;
+
 export default function AiSandboxChatScreen() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [conversations, setConversations] = useState<AiSandboxConversation[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiSandboxMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
+  const [sendingDraft, setSendingDraft] = useState(false);
+  const [secondsUntilReply, setSecondsUntilReply] = useState<number | null>(null);
+  const [generatingReply, setGeneratingReply] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const activeConversationIdRef = useRef<string | null>(null);
+  const pendingTimerRef = useRef<{ intervalId: number; conversationId: string } | null>(null);
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
+
+  const clearPendingTimer = useCallback(() => {
+    if (pendingTimerRef.current) {
+      window.clearInterval(pendingTimerRef.current.intervalId);
+      pendingTimerRef.current = null;
+    }
+    setSecondsUntilReply(null);
+  }, []);
+
+  useEffect(() => () => clearPendingTimer(), [clearPendingTimer]);
 
   const loadConversations = async () => {
     setConversationsLoading(true);
@@ -66,13 +86,20 @@ export default function AiSandboxChatScreen() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, secondsUntilReply, generatingReply]);
 
   const handleNewConversation = () => {
+    clearPendingTimer();
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
     setError(null);
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    if (conversationId === activeConversationId) return;
+    clearPendingTimer();
+    setActiveConversationId(conversationId);
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -87,44 +114,16 @@ export default function AiSandboxChatScreen() {
     }
   };
 
-  const handleSend = async () => {
-    const text = draft.trim();
-    if (!text || sending) return;
-
-    setError(null);
-    setSending(true);
-    setDraft('');
-
-    const optimisticLeadMessage: AiSandboxMessage = {
-      id: `optimistic-${Date.now()}`,
-      conversation_id: activeConversationId ?? 'pending',
-      role: 'lead',
-      content: text,
-      handoff_reason: null,
-      provider: null,
-      model: null,
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimisticLeadMessage]);
-
+  const triggerGenerateReply = useCallback(async (conversationId: string) => {
+    setGeneratingReply(true);
     try {
-      const result = await aiSandboxChatService.sendMessage({
-        conversationId: activeConversationId,
-        message: text,
-      });
+      const result = await aiSandboxChatService.generateReply(conversationId);
 
-      if (!activeConversationId) {
-        setActiveConversationId(result.conversationId);
-        await loadConversations();
-      } else {
-        setConversations((prev) =>
-          prev.map((c) => (c.id === result.conversationId ? { ...c, updated_at: new Date().toISOString() } : c)),
-        );
-      }
+      if (activeConversationIdRef.current !== conversationId) return;
 
       const aiMessage: AiSandboxMessage = {
         id: `ai-${Date.now()}`,
-        conversation_id: result.conversationId,
+        conversation_id: conversationId,
         role: 'ai',
         content: result.reply,
         handoff_reason: result.handoffReason,
@@ -133,12 +132,77 @@ export default function AiSandboxChatScreen() {
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, updated_at: new Date().toISOString() } : c)),
+      );
+    } catch (err) {
+      if (activeConversationIdRef.current === conversationId) {
+        setError(err instanceof Error ? err.message : 'Erro ao gerar resposta da IA.');
+      }
+    } finally {
+      if (activeConversationIdRef.current === conversationId) {
+        setGeneratingReply(false);
+      }
+    }
+  }, []);
+
+  const startReplyCountdown = useCallback(
+    (conversationId: string) => {
+      clearPendingTimer();
+      let secondsLeft = REPLY_DEBOUNCE_SECONDS;
+      setSecondsUntilReply(secondsLeft);
+      const intervalId = window.setInterval(() => {
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+          window.clearInterval(intervalId);
+          pendingTimerRef.current = null;
+          setSecondsUntilReply(null);
+          triggerGenerateReply(conversationId);
+        } else {
+          setSecondsUntilReply(secondsLeft);
+        }
+      }, 1000);
+      pendingTimerRef.current = { intervalId, conversationId };
+    },
+    [clearPendingTimer, triggerGenerateReply],
+  );
+
+  const handleReplyNow = () => {
+    const pending = pendingTimerRef.current;
+    if (!pending) return;
+    clearPendingTimer();
+    triggerGenerateReply(pending.conversationId);
+  };
+
+  const handleSend = async () => {
+    const text = draft.trim();
+    if (!text || sendingDraft || !user) return;
+
+    setError(null);
+    setSendingDraft(true);
+    setDraft('');
+
+    try {
+      let conversationId = activeConversationId;
+
+      if (!conversationId) {
+        const conversation = await aiSandboxChatService.createConversation(text, user.id);
+        conversationId = conversation.id;
+        setConversations((prev) => [conversation, ...prev]);
+        setActiveConversationId(conversation.id);
+      }
+
+      const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
+      setMessages((prev) => [...prev, leadMessage]);
+
+      // Reinicia a contagem a cada mensagem nova do lead — dá tempo de quem está
+      // testando mandar mensagens picotadas antes da IA responder de uma vez.
+      startReplyCountdown(conversationId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao enviar mensagem.');
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticLeadMessage.id));
       setDraft(text);
     } finally {
-      setSending(false);
+      setSendingDraft(false);
     }
   };
 
@@ -189,7 +253,7 @@ export default function AiSandboxChatScreen() {
                   >
                     <button
                       type="button"
-                      onClick={() => setActiveConversationId(conversation.id)}
+                      onClick={() => handleSelectConversation(conversation.id)}
                       className="min-w-0 flex-1 truncate text-left"
                       title={conversation.title}
                     >
@@ -260,6 +324,26 @@ export default function AiSandboxChatScreen() {
                   </div>
                 ))
               )}
+
+              {secondsUntilReply !== null && (
+                <div className="flex items-center justify-start gap-2">
+                  <div className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>IA responde em {secondsUntilReply}s (aguardando novas mensagens)</span>
+                  </div>
+                  <Button variant="text" size="xs" onClick={handleReplyNow}>
+                    Responder agora
+                  </Button>
+                </div>
+              )}
+
+              {generatingReply && (
+                <div className="flex justify-start">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2.5 text-sm text-[var(--text-secondary)]">
+                    IA está digitando...
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -278,10 +362,10 @@ export default function AiSandboxChatScreen() {
               onKeyDown={handleKeyDown}
               placeholder="Digite como se fosse o lead..."
               rows={1}
-              disabled={sending}
+              disabled={sendingDraft}
               className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
             />
-            <Button variant="primary" size="md" loading={sending} onClick={handleSend} disabled={!draft.trim()}>
+            <Button variant="primary" size="md" loading={sendingDraft} onClick={handleSend} disabled={!draft.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </div>

@@ -702,7 +702,7 @@ export default function HomePage() {
         >
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <a href="#topo" className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
                 <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
               </div>
               <span className="text-2xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</span>
@@ -729,7 +729,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setShowQuoteModal(true)}
-              className="rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] sm:px-6"
+              className="rounded-full [background:var(--brand-primary-gradient)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] sm:px-6"
             >
               Cotação grátis
             </button>
@@ -786,7 +786,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setShowQuoteModal(true)}
-                    className="whitespace-nowrap rounded-[var(--kds-radius-md)] [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] md:text-lg"
+                    className="whitespace-nowrap rounded-full [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] md:text-lg"
                   >
                     Quero minha cotação gratuita
                   </button>
@@ -794,7 +794,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => openWhatsApp()}
-                    className="whitespace-nowrap rounded-[var(--kds-radius-md)] border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--success-hover)] md:text-lg"
+                    className="whitespace-nowrap rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--success-hover)] md:text-lg"
                   >
                     <MessageCircle className="mr-2 inline-block h-5 w-5" />
                     Falar no WhatsApp
@@ -813,12 +813,12 @@ export default function HomePage() {
 
               <div className="order-1 flex justify-center lg:order-2">
                 <div className="relative pb-8 pt-20">
-                  <div className="absolute -left-2 top-20 z-10 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
+                  <div className="absolute -left-2 top-20 z-10 rounded-full bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
                     <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">500+</div>
                     <div className="text-xs font-medium text-[color:var(--text-secondary)]">Clientes</div>
                   </div>
 
-                  <div className="absolute -right-2 bottom-32 z-10 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
+                  <div className="absolute -right-2 bottom-32 z-10 rounded-full bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
                     <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">4.9★</div>
                     <div className="text-xs font-medium text-[color:var(--text-secondary)]">Avaliação</div>
                   </div>
@@ -837,7 +837,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-8 py-4 text-center shadow-[var(--shadow-card)]">
+                  <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-full bg-[var(--bg-elevated)] px-8 py-4 text-center shadow-[var(--shadow-card)]">
                     <h3 className="mb-1 text-xl font-bold text-[color:var(--text-primary)]">Luiza Kifer</h3>
                     <p className="font-semibold whitespace-nowrap text-[color:var(--brand-primary)]">Sua especialista em saúde</p>
                   </div>
@@ -924,7 +924,7 @@ export default function HomePage() {
                         <p className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">{card.eyebrow}</p>
                         <h3 className="mt-4 font-[var(--font-display)] text-3xl font-bold leading-tight text-[color:var(--text-primary)]">{card.title}</h3>
                       </div>
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--kds-radius-md)] bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                         <card.icon className="h-7 w-7" />
                       </span>
                     </div>
@@ -935,7 +935,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-auto inline-flex items-center rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
+                    className="mt-auto inline-flex items-center rounded-full [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
                   >
                     {card.ctaLabel}
                     <ChevronRight className="ml-2 h-4 w-4" />
@@ -979,7 +979,7 @@ export default function HomePage() {
                     {item.step}
                   </div>
                   <div className="ml-6">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
                       <item.icon className="h-8 w-8" />
                     </div>
                     <h3 className="mt-6 font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">{item.title}</h3>
@@ -1099,7 +1099,7 @@ export default function HomePage() {
 
             <div className="mt-12 space-y-4">
               {faqItems.map((faq, index) => (
-                <div key={faq.question} className="overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+                <div key={faq.question} className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
@@ -1151,7 +1151,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
                 <ChevronRight className="ml-2 inline-block h-5 w-5" />
@@ -1178,7 +1178,7 @@ export default function HomePage() {
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-[var(--kds-radius-md)] border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  className="inline-flex items-center justify-center rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Quero falar agora no WhatsApp
@@ -1186,7 +1186,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex items-center justify-center rounded-[var(--kds-radius-md)] border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
+                  className="inline-flex items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
                 >
                   Prefiro preencher a cotação
                 </button>
@@ -1200,7 +1200,7 @@ export default function HomePage() {
             <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-[var(--kds-radius-md)] [background:var(--brand-primary-gradient)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full [background:var(--brand-primary-gradient)]">
                     <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
                   </div>
                   <span className="text-2xl font-bold">Kifer Saúde</span>
@@ -1276,7 +1276,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? 'Enviando cotação...' : 'Enviar cotação via WhatsApp'}
                 <MessageCircle className="ml-2 inline-block h-5 w-5" />

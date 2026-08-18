@@ -1756,12 +1756,17 @@ const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, message
 
   switch (status) {
     case 'pending':
+    case 'queued':
+    case 'sending':
       return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
     case 'sent':
+    case 'received':
       return { icon: Check, label: 'Enviado', tone: 'sent' as const };
     case 'delivered':
       return { icon: CheckCheck, label: 'Entregue', tone: 'delivered' as const };
     case 'read':
+    case 'seen':
+    case 'viewed':
       return { icon: CheckCheck, label: 'Vista', tone: 'read' as const };
     case 'played':
       return {
@@ -1770,11 +1775,15 @@ const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, message
         tone: 'played' as const,
       };
     case 'failed':
+    case 'error':
       return { icon: AlertCircle, label: 'Falhou', tone: 'failed' as const };
     case 'deleted':
       return { icon: AlertTriangle, label: 'Apagada', tone: 'deleted' as const };
     default:
-      return { icon: Clock3, label: status || 'Pendente', tone: 'pending' as const };
+      // Nunca mostra o valor cru (ex.: um status novo que o WHAPI passe a
+      // enviar e que ainda não mapeamos aqui) — isso é o tipo de coisa que
+      // faz o status parecer quebrado/não confiável para quem está usando.
+      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
   }
 };
 
@@ -6176,19 +6185,47 @@ export default function WhatsAppInboxScreen() {
     chat: CommWhatsAppChat;
     externalMessageIds: string[];
   }) => {
-    const externalMessageIds = Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20);
-    if (externalMessageIds.length === 0) {
+    // O realtime (webhook -> comm_whatsapp_messages -> canal do chat, ver
+    // applyRealtimeMessageChange) já é o caminho principal para saber quando
+    // uma mensagem foi entregue/lida — normalmente resolve em 1-2s. Este poll
+    // ao provedor existe só como rede de segurança para quando o webhook
+    // atrasa ou falha, então cada tick primeiro confere se o status já chegou
+    // por outro caminho antes de fazer a chamada ao WHAPI, e para de agendar
+    // chamadas assim que não sobrar nenhuma mensagem pendente — em vez de
+    // sempre repetir as 8 chamadas ao vivo até 5 minutos depois do envio.
+    const remainingIds = new Set(
+      Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20),
+    );
+    if (remainingIds.size === 0) {
       return;
     }
+
+    const dropAlreadyResolvedIds = () => {
+      for (const externalMessageId of remainingIds) {
+        const known = latestMessagesRef.current.find(
+          (message) => String(message.external_message_id ?? '').trim() === externalMessageId,
+        );
+        if (known && !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(known.delivery_status))) {
+          remainingIds.delete(externalMessageId);
+        }
+      }
+    };
 
     for (const delayMs of MESSAGE_STATUS_REFRESH_DELAYS_MS) {
       const timeoutId = window.setTimeout(() => {
         statusRefreshTimeoutsRef.current = statusRefreshTimeoutsRef.current.filter((id) => id !== timeoutId);
 
+        dropAlreadyResolvedIds();
+        if (remainingIds.size === 0) {
+          return;
+        }
+
+        const idsToCheck = Array.from(remainingIds);
+
         void commWhatsAppService.refreshMessageStatuses({
           chatId: params.chat.external_chat_id,
-          externalMessageIds,
-          limit: externalMessageIds.length,
+          externalMessageIds: idsToCheck,
+          limit: idsToCheck.length,
         }).then((result) => {
           if (result.refreshed.length === 0) {
             return;
@@ -6213,6 +6250,12 @@ export default function WhatsAppInboxScreen() {
               status_updated_at: new Date().toISOString(),
             };
           }));
+
+          for (const item of result.refreshed) {
+            if (!REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status))) {
+              remainingIds.delete(item.external_message_id);
+            }
+          }
 
           if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status)))) {
             void Promise.all([loadMessages(params.chat, 'send'), loadChats()]).catch((error) => {

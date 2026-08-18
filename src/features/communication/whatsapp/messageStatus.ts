@@ -1,19 +1,27 @@
 import type { CommWhatsAppMessage } from '../../../lib/supabase';
 
+// Mesma ordem de public.comm_whatsapp_status_rank (ver migration
+// 20260911385000_fix_comm_whatsapp_status_preview_unread_consistency.sql).
+// As duas precisam concordar: o servidor usa esse rank para decidir se um
+// status recebido por webhook pode substituir o atual (guarda monotonica em
+// comm_whatsapp_should_apply_status); o cliente usa a mesma logica para
+// mesclar o estado otimista com o que chega do servidor. Se divergirem, um
+// status mais antigo pode "voltar no tempo" na tela mesmo que o banco já
+// tenha rejeitado essa mesma regressão.
 const STATUS_RANKS: Record<string, number> = {
-  failed: -1,
-  error: -1,
   pending: 0,
   queued: 0,
   sending: 0,
   sent: 1,
   received: 1,
-  delivered: 2,
-  read: 3,
-  seen: 3,
-  viewed: 3,
-  played: 4,
-  deleted: 5,
+  failed: 2,
+  error: 2,
+  delivered: 3,
+  read: 4,
+  seen: 4,
+  viewed: 4,
+  played: 5,
+  deleted: 6,
 };
 
 const NON_TERMINAL_STATUSES = new Set(['', 'pending', 'queued', 'sending']);

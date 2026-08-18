@@ -694,7 +694,7 @@ export default function HomePage() {
         }
       `}</style>
 
-      <div className="painel-theme kifer-ds kifer-marketing theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
+      <div className="painel-theme kifer-ds theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
         <nav
           className={`fixed top-0 z-40 w-full transition-all duration-300 ${
             isScrolled ? 'bg-[var(--panel-glass-bg-lite)] shadow-[var(--shadow-card)] backdrop-blur-sm' : 'bg-transparent'
@@ -757,9 +757,7 @@ export default function HomePage() {
 
                 <h1 className="mb-6 font-[var(--font-display)] text-4xl font-extrabold leading-tight text-[color:var(--text-primary)] md:text-5xl lg:text-6xl">
                   O plano ideal começa com{' '}
-                  <span className="[background-image:var(--brand-primary-gradient)] bg-clip-text [-webkit-text-fill-color:transparent] [color:transparent]">
-                    gente de verdade.
-                  </span>
+                  <span className="text-[color:var(--brand-primary)]">gente de verdade.</span>
                 </h1>
 
                 <p className="mb-5 text-lg font-light leading-relaxed text-[color:var(--text-secondary)] md:text-xl">

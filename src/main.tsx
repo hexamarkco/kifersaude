@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
 import ToastViewport from './components/ui/ToastViewport';
 import {
+  AiSandboxChatWrapper,
   BlogTab,
   ConfigPage,
   ContractsManagerWrapper,
@@ -50,6 +51,14 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/design-system" element={<DesignSystemShowcase />} />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <AiSandboxChatWrapper />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/painel"
               element={

@@ -8,7 +8,7 @@ import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
 import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
-import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
+import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
@@ -9665,7 +9665,13 @@ export default function WhatsAppInboxScreen() {
                   <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="whatsapp-inbox-heading flex items-center gap-1.5 text-lg font-semibold text-[var(--text-primary)]">
-                      <LeadFavoriteBadge favorito={leadPanel?.favorito} />
+                      {leadPanel?.id ? (
+                        <LeadFavoriteToggle
+                          leadId={leadPanel.id}
+                          favorito={favoritedLeadIds.has(leadPanel.id)}
+                          size="sm"
+                        />
+                      ) : null}
                       {selectedChatDisplayName}
                     </p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (

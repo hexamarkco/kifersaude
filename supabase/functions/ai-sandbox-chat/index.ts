@@ -169,7 +169,7 @@ Deno.serve(async (req: Request) => {
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
-      task: 'follow_up_generation',
+      task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
       temperature: 0.6,

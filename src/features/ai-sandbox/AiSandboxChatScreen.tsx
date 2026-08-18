@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, MessageCirclePlus, Send, Trash2 } from 'lucide-react';
-import { Button, EmptyState, LoadingState } from '../../design-system';
+import { AlertTriangle, MessageCirclePlus, Send, Sparkles, Trash2 } from 'lucide-react';
+import { Badge, Button, EmptyState, LoadingState } from '../../design-system';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   aiSandboxChatService,
@@ -150,20 +150,16 @@ export default function AiSandboxChatScreen() {
   };
 
   return (
-    <div className="kifer-ds flex h-screen w-full bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div className="painel-theme kifer-ds flex h-screen w-full bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       <aside className="flex w-72 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface)]">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4">
           <div>
             <p className="text-sm font-semibold">Chat de testes — IA</p>
             <p className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</p>
           </div>
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="text-xs text-[var(--text-secondary)] underline-offset-2 hover:underline"
-          >
+          <Button variant="text" size="xs" onClick={() => signOut()}>
             Sair
-          </button>
+          </Button>
         </div>
 
         <div className="px-3 pt-3">
@@ -185,10 +181,10 @@ export default function AiSandboxChatScreen() {
               {conversations.map((conversation) => (
                 <li key={conversation.id}>
                   <div
-                    className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm ${
+                    className={`group flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-2 text-sm transition-colors ${
                       conversation.id === activeConversationId
-                        ? 'bg-[var(--bg-selected,rgba(59,130,246,0.12))] font-medium'
-                        : 'hover:bg-[var(--bg-hover,rgba(0,0,0,0.04))]'
+                        ? 'bg-[var(--app-surface-selected)] font-medium text-[var(--text-primary)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                     }`}
                   >
                     <button
@@ -202,7 +198,7 @@ export default function AiSandboxChatScreen() {
                     <button
                       type="button"
                       onClick={() => handleDeleteConversation(conversation.id)}
-                      className="shrink-0 text-[var(--text-secondary)] opacity-0 hover:text-red-500 group-hover:opacity-100"
+                      className="shrink-0 text-[var(--text-muted)] opacity-0 transition-colors hover:text-[var(--danger)] group-hover:opacity-100"
                       title="Apagar simulação"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -224,6 +220,7 @@ export default function AiSandboxChatScreen() {
         {!activeConversationId && messages.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
             <EmptyState
+              icon={<Sparkles className="h-6 w-6" />}
               title="Simule um atendimento"
               description="Digite como se você fosse um lead chegando no WhatsApp. A IA responde seguindo o playbook e o estilo real da operação."
             />
@@ -240,10 +237,10 @@ export default function AiSandboxChatScreen() {
                       className={`flex ${message.role === 'lead' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
+                        className={`max-w-[75%] whitespace-pre-wrap rounded-[var(--radius-lg)] px-4 py-2.5 text-sm shadow-[var(--shadow-card)] ${
                           message.role === 'lead'
-                            ? 'bg-[var(--brand-primary,#2563eb)] text-white'
-                            : 'bg-[var(--bg-surface-elevated,#f1f5f9)] text-[var(--text-primary)]'
+                            ? 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]'
+                            : 'border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
                         }`}
                       >
                         {message.content}
@@ -251,9 +248,12 @@ export default function AiSandboxChatScreen() {
                     </div>
                     {message.handoff_reason && (
                       <div className="flex justify-start">
-                        <div className="flex max-w-[75%] items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+                        <div className="flex max-w-[75%] items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-1.5 text-xs text-[var(--warning-text)]">
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                          <span>Handoff sugerido: {message.handoff_reason}</span>
+                          <span>
+                            <Badge tone="warning" size="sm" className="mr-1.5 align-middle">Handoff</Badge>
+                            {message.handoff_reason}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -265,7 +265,7 @@ export default function AiSandboxChatScreen() {
         )}
 
         {error && (
-          <div className="mx-6 mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)]">
             {error}
           </div>
         )}
@@ -279,7 +279,7 @@ export default function AiSandboxChatScreen() {
               placeholder="Digite como se fosse o lead..."
               rows={1}
               disabled={sending}
-              className="min-h-[42px] flex-1 resize-none rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm outline-none focus:border-[var(--brand-primary,#2563eb)]"
+              className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
             />
             <Button variant="primary" size="md" loading={sending} onClick={handleSend} disabled={!draft.trim()}>
               <Send className="h-4 w-4" />

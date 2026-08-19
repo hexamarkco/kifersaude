@@ -1595,7 +1595,7 @@ export default function LeadsManager({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <details className="group w-full sm:w-auto">
+              <details className="group relative w-full sm:w-auto">
                 <summary className="cursor-pointer list-none">
                   <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between gap-3 px-4 py-2 transition-colors sm:inline-flex sm:justify-start">
                     <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
@@ -1610,7 +1610,7 @@ export default function LeadsManager({
                     </span>
                   </Surface>
                 </summary>
-                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid grid-cols-1 gap-3 p-4 sm:absolute sm:left-0 sm:top-full sm:z-20 sm:mt-2 sm:w-[38rem] sm:grid-cols-2 sm:shadow-lg lg:grid-cols-3">
                   {[
                     {
                       id: "tags",

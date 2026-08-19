@@ -1350,11 +1350,11 @@ export default function HomePage() {
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex w-full items-center justify-between gap-3 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-6 pr-2 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  className="group inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    Quero falar agora no WhatsApp
+                    <MessageCircle className="h-5 w-5 shrink-0" />
+                    Falar no WhatsApp
                   </span>
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
                     <ArrowUpRight className="h-5 w-5" />
@@ -1363,7 +1363,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--text-inverse)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--text-inverse)_8%,transparent)] px-8 py-4 text-sm font-bold text-[color:var(--text-inverse)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]"
                 >
                   Prefiro preencher a cotação
                 </button>

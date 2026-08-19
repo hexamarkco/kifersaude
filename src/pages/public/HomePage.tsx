@@ -1,5 +1,6 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
 import {
+  ArrowUpRight,
   Briefcase,
   Building2,
   CheckCircle,
@@ -16,6 +17,8 @@ import {
   Sparkles,
   Star,
   ThumbsUp,
+  TrendingUp,
+  Users,
   UserRound,
   X,
 } from 'lucide-react';
@@ -130,6 +133,7 @@ const heroRibbonItems = [
 
 const loopedHeroRibbonItems = [...heroRibbonItems, ...heroRibbonItems];
 const loopedPartnerLogos = [...partnerLogos, ...partnerLogos];
+const metricIcons = [Users, Building2, TrendingUp];
 
 const testimonials: Testimonial[] = [
   {
@@ -993,7 +997,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <div className="hero-ribbon-marquee relative z-20 -mt-8 mb-2">
+        <div className="hero-ribbon-marquee relative z-20 -mt-8">
           <div className="hero-ribbon-track items-center gap-5 px-4 py-3 sm:gap-6 sm:px-6">
             {loopedHeroRibbonItems.map((item, index) => (
               <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-5 sm:gap-6" aria-hidden={index >= heroRibbonItems.length}>
@@ -1015,13 +1019,24 @@ export default function HomePage() {
             </div>
 
             <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {publicMetrics.map((metric) => (
-                <article key={metric.label} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]">
-                  <p className="text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">{metric.value}</p>
-                  <p className="mt-3 text-lg font-semibold text-[color:var(--brand-primary)]">{metric.label}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{metric.detail}</p>
-                </article>
-              ))}
+              {publicMetrics.map((metric, index) => {
+                const MetricIcon = metricIcons[index] ?? Sparkles;
+
+                return (
+                  <article
+                    key={metric.label}
+                    className="relative overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]"
+                  >
+                    <MetricIcon className="absolute -right-4 -top-4 h-24 w-24 text-[color:var(--brand-primary)] opacity-[0.08]" />
+                    <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
+                      <MetricIcon className="h-6 w-6" />
+                    </span>
+                    <p className="relative mt-6 text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">{metric.value}</p>
+                    <p className="relative mt-3 text-lg font-semibold text-[color:var(--brand-primary)]">{metric.label}</p>
+                    <p className="relative mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{metric.detail}</p>
+                  </article>
+                );
+              })}
             </div>
 
             <div className="mt-12 rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] px-6 py-8 shadow-[var(--shadow-card)]">
@@ -1335,10 +1350,15 @@ export default function HomePage() {
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  className="group inline-flex w-full items-center justify-between gap-3 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-6 pr-2 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Quero falar agora no WhatsApp
+                  <span className="inline-flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    Quero falar agora no WhatsApp
+                  </span>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </span>
                 </a>
                 <button
                   type="button"

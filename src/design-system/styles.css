@@ -2951,7 +2951,7 @@
   border: 1px solid color-mix(in srgb, var(--op-status-color) 42%, transparent);
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--op-status-color) 16%, var(--bg-inset));
-  color: color-mix(in srgb, var(--op-status-color) 72%, white);
+  color: color-mix(in srgb, var(--op-status-color) 72%, var(--text-primary));
   padding: 0.25rem 0.65rem;
   font: 700 0.6875rem / 1 var(--font-sans);
   white-space: nowrap;

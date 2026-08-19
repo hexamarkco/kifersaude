@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Briefcase,
@@ -291,6 +291,99 @@ function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, c
   );
 }
 
+type ParsedMetricValue = {
+  sign: string;
+  suffix: string;
+  targetValue: number;
+  decimalPlaces: number;
+};
+
+const parseMetricValue = (raw: string): ParsedMetricValue | null => {
+  const trimmed = raw.trim();
+  const sign = trimmed.startsWith('+') || trimmed.startsWith('-') ? trimmed[0] : '';
+  const rest = sign ? trimmed.slice(1) : trimmed;
+
+  const numericMatch = rest.match(/^[\d.]+/);
+  if (!numericMatch) {
+    return null;
+  }
+
+  const numericPart = numericMatch[0];
+  const suffix = rest.slice(numericPart.length);
+  const segments = numericPart.split('.').filter(Boolean);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const lastSegment = segments[segments.length - 1];
+  const isDecimal = segments.length > 1 && lastSegment.length < 3;
+  const decimalPlaces = isDecimal ? lastSegment.length : 0;
+  const integerSegments = isDecimal ? segments.slice(0, -1) : segments;
+  const wholeDigits = integerSegments.join('');
+  const targetValue = isDecimal ? Number(`${wholeDigits}.${lastSegment}`) : Number(segments.join(''));
+
+  if (!Number.isFinite(targetValue)) {
+    return null;
+  }
+
+  return { sign, suffix, targetValue, decimalPlaces };
+};
+
+const formatMetricValue = (value: number, parsed: ParsedMetricValue) => {
+  const formattedNumber =
+    parsed.decimalPlaces > 0 ? value.toFixed(parsed.decimalPlaces) : Math.round(value).toLocaleString('pt-BR');
+
+  return `${parsed.sign}${formattedNumber}${parsed.suffix}`;
+};
+
+type AnimatedMetricValueProps = {
+  value: string;
+  play: boolean;
+};
+
+function AnimatedMetricValue({ value, play }: AnimatedMetricValueProps) {
+  const parsed = useMemo(() => parseMetricValue(value), [value]);
+  const [display, setDisplay] = useState(() => (parsed ? formatMetricValue(0, parsed) : value));
+
+  useEffect(() => {
+    if (!parsed) {
+      setDisplay(value);
+      return;
+    }
+
+    if (!play) {
+      setDisplay(formatMetricValue(0, parsed));
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setDisplay(formatMetricValue(parsed.targetValue, parsed));
+      return;
+    }
+
+    let frameId: number;
+    const duration = 1400;
+    const startTime = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplay(formatMetricValue(parsed.targetValue * eased, parsed));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [parsed, play, value]);
+
+  return <>{display}</>;
+}
+
 type CityAutocompleteFieldProps = {
   id: string;
   value: string;
@@ -422,6 +515,8 @@ export default function HomePage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [metricsInView, setMetricsInView] = useState(false);
+  const metricsGridRef = useRef<HTMLDivElement | null>(null);
 
   const totalLives = Number.parseInt(formData.numeroVidas, 10) || 0;
   const filledAgeRanges = Object.entries(ageRangeCounts)
@@ -439,6 +534,29 @@ export default function HomePage() {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const node = metricsGridRef.current;
+    if (!node) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMetricsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
     };
   }, []);
 
@@ -1018,7 +1136,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mt-12 grid gap-5 md:grid-cols-3">
+            <div ref={metricsGridRef} className="mt-12 grid gap-5 md:grid-cols-3">
               {publicMetrics.map((metric, index) => {
                 const MetricIcon = metricIcons[index] ?? Sparkles;
 
@@ -1031,7 +1149,9 @@ export default function HomePage() {
                     <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
                       <MetricIcon className="h-6 w-6" />
                     </span>
-                    <p className="relative mt-6 text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">{metric.value}</p>
+                    <p className="relative mt-6 text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">
+                      <AnimatedMetricValue value={metric.value} play={metricsInView} />
+                    </p>
                     <p className="relative mt-3 text-lg font-semibold text-[color:var(--brand-primary)]">{metric.label}</p>
                     <p className="relative mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{metric.detail}</p>
                   </article>

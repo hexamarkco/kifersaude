@@ -8,7 +8,7 @@ import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
 import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
-import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
+import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
@@ -100,6 +100,9 @@ const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 // detectar a reconexão sem esperar o intervalo espaçado padrão.
 const OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS = 10000;
 const MESSAGE_PAGE_SIZE = 50;
+// Quantidade de conversas cujo último resultado de mensagens fica em cache em memória,
+// permitindo reabrir uma conversa recém-vista sem exibir o spinner de carregamento.
+const MESSAGES_CACHE_MAX_CHATS = 20;
 const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
@@ -1753,12 +1756,17 @@ const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, message
 
   switch (status) {
     case 'pending':
+    case 'queued':
+    case 'sending':
       return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
     case 'sent':
+    case 'received':
       return { icon: Check, label: 'Enviado', tone: 'sent' as const };
     case 'delivered':
       return { icon: CheckCheck, label: 'Entregue', tone: 'delivered' as const };
     case 'read':
+    case 'seen':
+    case 'viewed':
       return { icon: CheckCheck, label: 'Vista', tone: 'read' as const };
     case 'played':
       return {
@@ -1767,11 +1775,15 @@ const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, message
         tone: 'played' as const,
       };
     case 'failed':
+    case 'error':
       return { icon: AlertCircle, label: 'Falhou', tone: 'failed' as const };
     case 'deleted':
       return { icon: AlertTriangle, label: 'Apagada', tone: 'deleted' as const };
     default:
-      return { icon: Clock3, label: status || 'Pendente', tone: 'pending' as const };
+      // Nunca mostra o valor cru (ex.: um status novo que o WHAPI passe a
+      // enviar e que ainda não mapeamos aqui) — isso é o tipo de coisa que
+      // faz o status parecer quebrado/não confiável para quem está usando.
+      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
   }
 };
 
@@ -3267,6 +3279,7 @@ export default function WhatsAppInboxScreen() {
   const lastSavedContactForceSyncAtRef = useRef(0);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
+  const messagesCacheByChatIdRef = useRef<Map<string, { messages: CommWhatsAppMessage[]; signature: string; hasOlderMessages: boolean }>>(new Map());
   const pendingScrollModeRef = useRef<ScrollMode>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const pendingScrollHeightRef = useRef<number | null>(null);
@@ -5991,6 +6004,16 @@ export default function WhatsAppInboxScreen() {
       }
 
       setMessages(nextMessages);
+
+      const cache = messagesCacheByChatIdRef.current;
+      cache.delete(targetChatId);
+      cache.set(targetChatId, { messages: nextMessages, signature: nextSignature, hasOlderMessages: hasMore });
+      if (cache.size > MESSAGES_CACHE_MAX_CHATS) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey !== undefined) {
+          cache.delete(oldestKey);
+        }
+      }
     } catch (error) {
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -6162,19 +6185,47 @@ export default function WhatsAppInboxScreen() {
     chat: CommWhatsAppChat;
     externalMessageIds: string[];
   }) => {
-    const externalMessageIds = Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20);
-    if (externalMessageIds.length === 0) {
+    // O realtime (webhook -> comm_whatsapp_messages -> canal do chat, ver
+    // applyRealtimeMessageChange) já é o caminho principal para saber quando
+    // uma mensagem foi entregue/lida — normalmente resolve em 1-2s. Este poll
+    // ao provedor existe só como rede de segurança para quando o webhook
+    // atrasa ou falha, então cada tick primeiro confere se o status já chegou
+    // por outro caminho antes de fazer a chamada ao WHAPI, e para de agendar
+    // chamadas assim que não sobrar nenhuma mensagem pendente — em vez de
+    // sempre repetir as 8 chamadas ao vivo até 5 minutos depois do envio.
+    const remainingIds = new Set(
+      Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20),
+    );
+    if (remainingIds.size === 0) {
       return;
     }
+
+    const dropAlreadyResolvedIds = () => {
+      for (const externalMessageId of remainingIds) {
+        const known = latestMessagesRef.current.find(
+          (message) => String(message.external_message_id ?? '').trim() === externalMessageId,
+        );
+        if (known && !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(known.delivery_status))) {
+          remainingIds.delete(externalMessageId);
+        }
+      }
+    };
 
     for (const delayMs of MESSAGE_STATUS_REFRESH_DELAYS_MS) {
       const timeoutId = window.setTimeout(() => {
         statusRefreshTimeoutsRef.current = statusRefreshTimeoutsRef.current.filter((id) => id !== timeoutId);
 
+        dropAlreadyResolvedIds();
+        if (remainingIds.size === 0) {
+          return;
+        }
+
+        const idsToCheck = Array.from(remainingIds);
+
         void commWhatsAppService.refreshMessageStatuses({
           chatId: params.chat.external_chat_id,
-          externalMessageIds,
-          limit: externalMessageIds.length,
+          externalMessageIds: idsToCheck,
+          limit: idsToCheck.length,
         }).then((result) => {
           if (result.refreshed.length === 0) {
             return;
@@ -6199,6 +6250,12 @@ export default function WhatsAppInboxScreen() {
               status_updated_at: new Date().toISOString(),
             };
           }));
+
+          for (const item of result.refreshed) {
+            if (!REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status))) {
+              remainingIds.delete(item.external_message_id);
+            }
+          }
 
           if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status)))) {
             void Promise.all([loadMessages(params.chat, 'send'), loadChats()]).catch((error) => {
@@ -6281,7 +6338,6 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    messagesSignatureRef.current = '';
     pendingScrollModeRef.current = 'bottom';
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
@@ -6295,10 +6351,22 @@ export default function WhatsAppInboxScreen() {
     setRemovedAttachmentForUndo(null);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
-    setHasOlderMessages(false);
     setThreadReconcileChatId(null);
     lastSelectedChatPreviewRefreshKeyRef.current = '';
-    setMessages([]);
+
+    // Se já temos o último resultado desta conversa em cache, exibimos na hora
+    // (sem o spinner de "carregando mensagens") enquanto a atualização roda em segundo
+    // plano — evita o efeito de "sempre demora" ao reabrir uma conversa recém-vista.
+    const cached = messagesCacheByChatIdRef.current.get(selectedChatId);
+    if (cached) {
+      messagesSignatureRef.current = cached.signature;
+      setHasOlderMessages(cached.hasOlderMessages);
+      setMessages(cached.messages);
+    } else {
+      messagesSignatureRef.current = '';
+      setHasOlderMessages(false);
+      setMessages([]);
+    }
 
     if (pendingMessageSearchChatIdRef.current === selectedChatId) {
       return;
@@ -9665,7 +9733,13 @@ export default function WhatsAppInboxScreen() {
                   <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="whatsapp-inbox-heading flex items-center gap-1.5 text-lg font-semibold text-[var(--text-primary)]">
-                      <LeadFavoriteBadge favorito={leadPanel?.favorito} />
+                      {leadPanel?.id ? (
+                        <LeadFavoriteToggle
+                          leadId={leadPanel.id}
+                          favorito={favoritedLeadIds.has(leadPanel.id)}
+                          size="sm"
+                        />
+                      ) : null}
                       {selectedChatDisplayName}
                     </p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (

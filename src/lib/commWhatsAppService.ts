@@ -539,7 +539,20 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
   return normalized || 'Contato privado';
 };
 
+// Resolver o id canonico de um chat (apos fusoes de variantes de telefone) exige um
+// RPC dedicado antes de qualquer outra chamada. Como fusoes sao raras, cacheamos o
+// resultado por um curto periodo para evitar essa ida-e-volta extra a cada abertura
+// de conversa ja vista nesta sessao, sem manter a resposta indefinidamente caso o
+// chat venha a ser fundido em outro logo em seguida.
+const CANONICAL_CHAT_UUID_CACHE_TTL_MS = 3 * 60 * 1000;
+const canonicalChatUuidCache = new Map<string, { resolvedChatId: string; expiresAt: number }>();
+
 const resolveCanonicalCommWhatsAppChatUuid = async (chatId: string): Promise<string> => {
+  const cached = canonicalChatUuidCache.get(chatId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.resolvedChatId;
+  }
+
   const { data, error } = await supabase.rpc('comm_whatsapp_resolve_chat_uuid' as never, {
     p_chat_id: chatId,
   } as never);
@@ -551,6 +564,8 @@ const resolveCanonicalCommWhatsAppChatUuid = async (chatId: string): Promise<str
   if (!resolvedChatId) {
     throw new Error('Conversa do WhatsApp nao encontrada.');
   }
+
+  canonicalChatUuidCache.set(chatId, { resolvedChatId, expiresAt: Date.now() + CANONICAL_CHAT_UUID_CACHE_TTL_MS });
 
   return resolvedChatId;
 };

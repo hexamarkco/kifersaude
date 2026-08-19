@@ -53,7 +53,8 @@ type AiTaskKey =
   | "follow_up_generation"
   | "follow_up_agenda_organization"
   | "whatsapp_audio_transcription"
-  | "attendance_critique";
+  | "attendance_critique"
+  | "autonomous_attendance";
 type AiTaskKind = "text" | "transcription";
 type ModelOption = { value: string; label: string };
 
@@ -133,6 +134,12 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind
       key: "attendance_critique",
       label: "Crítica de atendimento (IA)",
       description: "Usado no inbox para gerar uma análise de qualidade do atendimento, sob demanda.",
+      kind: "text",
+    },
+    {
+      key: "autonomous_attendance",
+      label: "Atendimento autônomo",
+      description: "Usado no chat de testes (/chat) para simular o atendimento autônomo antes de ligar a automação no inbox real.",
       kind: "text",
     },
   ];
@@ -351,6 +358,11 @@ const createDefaultRoutingForm = (): AiRoutingFormState => ({
   attendance_critique: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "attendance_critique"),
+    fallbackToOpenAi: true,
+  },
+  autonomous_attendance: {
+    provider: "openai",
+    model: getDefaultTaskModel("openai", "autonomous_attendance"),
     fallbackToOpenAi: true,
   },
 });

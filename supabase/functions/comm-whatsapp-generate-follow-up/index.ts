@@ -1269,6 +1269,18 @@ Deno.serve(async (req: Request) => {
       'Contexto emocional detectado tem prioridade sobre qualquer tom, cenario ou tecnica comercial — inclusive os selecionados manualmente pelo usuario. Nunca ignore um assunto pessoal sensivel para voltar direto ao comercial como se nada tivesse sido dito.',
     ].join('\n');
 
+    // Sempre ativo: sem isto, quando o cliente ainda nao respondeu apos a
+    // ultima mensagem enviada ("Eu"), o modelo tende a reformular essa mesma
+    // mensagem como se fosse um follow-up novo (ex.: repetir um prazo ou
+    // pedido ja feito, mesmo que o prazo citado ja tenha passado segundo os
+    // FATOS TEMPORAIS acima). Isso da a impressao de que a IA nao leu as
+    // proprias mensagens ("Eu") no historico.
+    const ownLastMessageAwarenessInstruction = [
+      'ATENCAO A SUA PROPRIA ULTIMA MENSAGEM (sempre ativo): releia com atencao a(s) sua(s) ultima(s) mensagem(ns) marcadas como "Eu" no historico, principalmente se o cliente ainda nao respondeu depois delas.',
+      'NUNCA reformule ou repita, como se fosse novidade, algo que voce mesmo ja disse na ultima mensagem (a mesma sugestao, o mesmo pedido, o mesmo prazo ou referencia de dia). Se voce ja pediu para o cliente ver algo ate um dia especifico (ex.: "ve isso no fim de semana") e esse dia ja passou segundo os FATOS TEMPORAIS, NAO repita essa instrucao como se ainda fosse futura — em vez disso, pergunte se ele conseguiu ver, sem soar repetitivo.',
+      'O follow-up precisa ser uma CONTINUACAO real da conversa, acrescentando algo novo (uma checagem, uma pergunta de acompanhamento, uma informacao adicional) — nunca apenas parafrasear o que voce mesmo ja escreveu.',
+    ].join('\n');
+
     // Ordem de raciocinio pedida: interpretar a conversa -> entender o
     // momento -> entender a pessoa -> identificar o objetivo -> so entao
     // decidir tom/tecnica/mensagem. Cenario/tom/tecnica sao diretrizes que a
@@ -1339,6 +1351,7 @@ Deno.serve(async (req: Request) => {
           styleProfileSection,
           defaultConductRules,
           emotionalContextInstruction,
+          ownLastMessageAwarenessInstruction,
           'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
           'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
           'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
@@ -1352,6 +1365,7 @@ Deno.serve(async (req: Request) => {
           styleProfileSection,
           defaultConductRules,
           emotionalContextInstruction,
+          ownLastMessageAwarenessInstruction,
           guidelineFramingInstruction,
           'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
           'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',

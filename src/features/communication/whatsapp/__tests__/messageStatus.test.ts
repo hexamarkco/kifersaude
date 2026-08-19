@@ -58,6 +58,16 @@ test('only applies failed to non-terminal sends', () => {
   assert.equal(resolveDeliveryStatus('delivered', 'failed'), 'delivered');
 });
 
+test('does not let a stale non-failed status override a failed message', () => {
+  // Espelha public.comm_whatsapp_should_apply_status: uma vez 'failed', só um
+  // status igual ou mais avançado (delivered/read/...) pode substituir — um
+  // 'sent' atrasado (webhook fora de ordem, retry do cliente) não deve
+  // "reviver" a mensagem como enviada.
+  assert.equal(resolveDeliveryStatus('failed', 'sent'), 'failed');
+  assert.equal(resolveDeliveryStatus('failed', 'pending'), 'failed');
+  assert.equal(resolveDeliveryStatus('failed', 'delivered'), 'delivered');
+});
+
 test('merges local and server messages by client request id', () => {
   const local = baseMessage({
     id: 'local-1',

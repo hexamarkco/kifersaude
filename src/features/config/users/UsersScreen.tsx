@@ -338,7 +338,6 @@ export default function UsersScreen() {
       phase={loadingUi.phase}
       hasContent={hasUsersSnapshot}
       skeleton={<UsersSkeleton />}
-      stageLabel="Carregando usuários..."
       overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >

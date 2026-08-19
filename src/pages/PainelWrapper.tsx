@@ -11,7 +11,7 @@ import { notificationService, type InboxMessageNotification } from '../lib/notif
 import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
-import { LoadingState } from '../design-system';
+import { AppLoadingScreen } from '../design-system';
 import type { TabNavigationOptions } from '../types/navigation';
 
 const ROUTE_TAB_MAP: Record<string, string> = {
@@ -238,11 +238,7 @@ export default function PainelWrapper() {
   }, []);
 
   if (configLoading) {
-    return (
-      <div className="kifer-ds flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4">
-        <LoadingState label="Preparando o painel" compact />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

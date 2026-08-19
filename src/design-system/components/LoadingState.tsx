@@ -47,3 +47,26 @@ export function LoadingState({
     </div>
   );
 }
+
+export type AppLoadingScreenProps = {
+  className?: string;
+};
+
+/**
+ * The single loading screen used everywhere the app has nothing to show yet:
+ * route chunk loading, auth check, panel config, and every tab's data fetch.
+ * Reusing one component keeps all of these visually identical instead of
+ * flashing between differently styled/labelled spinners.
+ */
+export function AppLoadingScreen({ className }: AppLoadingScreenProps) {
+  return (
+    <div
+      className={cx(
+        'painel-theme kifer-ds flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4',
+        className,
+      )}
+    >
+      <LoadingState compact />
+    </div>
+  );
+}

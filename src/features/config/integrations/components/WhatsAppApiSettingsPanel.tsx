@@ -246,7 +246,6 @@ export default function WhatsAppApiSettingsPanel() {
       phase={loadingUi.phase}
       hasContent={autoContactIntegration !== null}
       skeleton={<WhatsAppApiSkeleton />}
-      stageLabel="Carregando configurações da API WhatsApp..."
       overlayLabel="Atualizando configurações da API WhatsApp..."
       stageClassName="min-h-[340px]"
     >

@@ -563,7 +563,6 @@ export default function ContractsManager({
       phase={loadingUi.phase}
       hasContent={hasContractsSnapshot}
       skeleton={<ContractsPageSkeleton />}
-      stageLabel="Carregando contratos..."
       overlayLabel="Atualizando contratos..."
       stageClassName="panel-dashboard-immersive"
     >

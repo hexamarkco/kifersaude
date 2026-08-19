@@ -2181,7 +2181,6 @@ export default function DashboardScreen({
       phase={loadingUi.phase}
       hasContent={hasDashboardSnapshot}
       skeleton={<DashboardPageSkeleton />}
-      stageLabel="Carregando dashboard..."
       overlayLabel="Atualizando dashboard..."
       stageClassName="panel-dashboard-immersive"
     >

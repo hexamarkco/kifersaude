@@ -1487,7 +1487,6 @@ export default function LeadsManager({
       phase={loadingUi.phase}
       hasContent={hasLeadsSnapshot}
       skeleton={<LeadsPageSkeleton />}
-      stageLabel="Carregando leads..."
       overlayLabel="Atualizando leads..."
       stageClassName="panel-dashboard-immersive"
     >

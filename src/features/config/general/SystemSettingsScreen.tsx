@@ -253,7 +253,6 @@ export default function SystemSettingsScreen() {
         phase={loadingUi.phase}
         hasContent={false}
         skeleton={<SystemSettingsSkeleton />}
-        stageLabel="Carregando configurações do sistema..."
         stageClassName="min-h-[440px]"
       >
         <div />
@@ -278,7 +277,6 @@ export default function SystemSettingsScreen() {
       phase={loadingUi.phase}
       hasContent
       skeleton={<SystemSettingsSkeleton />}
-      stageLabel="Carregando configurações do sistema..."
       overlayLabel="Atualizando configurações do sistema..."
       stageClassName="min-h-[440px]"
     >

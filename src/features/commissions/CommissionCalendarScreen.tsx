@@ -151,7 +151,6 @@ export default function CommissionCalendarScreen() {
         phase={loadingUi.phase}
         hasContent={hasContractsSnapshot}
         skeleton={<CommissionCalendarSkeleton />}
-        stageLabel="Carregando agenda de comissoes..."
         overlayLabel="Atualizando agenda de comissoes..."
         stageClassName="min-h-[560px]"
       >

@@ -27,15 +27,14 @@ type PanelAdaptiveLoadingFrameProps = {
   phase: AdaptiveLoadingPhase;
   hasContent: boolean;
   skeleton: ReactNode;
-  stageLabel: string;
   overlayLabel?: string;
   stageClassName?: string;
   children: ReactNode;
 };
 
-function Spinner({ label, className }: { label?: string; className?: string }) {
+function Spinner({ className }: { className?: string }) {
   return (
-    <LoadingState label={label} className={cx('min-h-[48vh] px-4', className)} />
+    <LoadingState className={cx('min-h-[48vh] px-4', className)} />
   );
 }
 
@@ -55,22 +54,21 @@ export function PanelSoftRefreshOverlay({ active }: PanelSoftRefreshOverlayProps
   return null;
 }
 
-export function PanelLoadingStage({ phase, label, className }: PanelLoadingStageProps) {
+export function PanelLoadingStage({ phase, className }: PanelLoadingStageProps) {
   if (phase === 'hidden') {
     return <div className={cx('min-h-[48vh]', className)} />;
   }
 
-  return <Spinner label={label} className={className} />;
+  return <Spinner className={className} />;
 }
 
 export function PanelAdaptiveLoadingFrame({
   loading,
-  stageLabel,
   stageClassName,
   children,
 }: PanelAdaptiveLoadingFrameProps) {
   if (loading) {
-    return <Spinner label={stageLabel} className={stageClassName} />;
+    return <Spinner className={stageClassName} />;
   }
 
   return <>{children}</>;

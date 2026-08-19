@@ -1,14 +1,16 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
 import {
   Briefcase,
+  Building2,
   CheckCircle,
-  ChevronDown,
   ChevronRight,
   Heart,
   Instagram,
   MapPin,
   MessageCircle,
+  Minus,
   Phone,
+  Plus,
   Search,
   Shield,
   Sparkles,
@@ -21,6 +23,7 @@ import {
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import { Input, Select } from '../../design-system';
+import { fetchCitiesByState } from '../../lib/brasilLocations';
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
@@ -52,6 +55,7 @@ type AudienceCard = {
   title: string;
   description: string;
   eyebrow: string;
+  bullets: string[];
   ctaLabel: string;
   contractKind: ContractKind;
   icon: typeof Briefcase;
@@ -150,20 +154,52 @@ const testimonials: Testimonial[] = [
 
 const audienceCards: AudienceCard[] = [
   {
-    eyebrow: 'MEI / Empresa pequena',
-    title: 'Plano empresarial com melhor custo-benefício para quem tem CNPJ.',
-    description: 'Sabia que como MEI você pode acessar plano empresarial com melhor custo-benefício? A Kifer compara opções e explica a elegibilidade certa para o seu caso.',
-    ctaLabel: 'Quero cotar para empresa',
+    eyebrow: 'Pessoa física',
+    title: 'Comparação direta pra quem quer parar de pagar caro.',
+    description: 'A gente compara operadora, rede, carência e coparticipação para mostrar o que realmente compensa na sua rotina.',
+    bullets: ['Comparação sem letra miúda', 'Rede pensada pro seu bairro', 'Zero compromisso para pedir'],
+    ctaLabel: 'Quero cotar pessoa física',
+    contractKind: 'PF',
+    icon: UserRound,
+  },
+  {
+    eyebrow: 'MEI',
+    title: 'Plano empresarial custa menos do que parece com CNPJ ativo.',
+    description: 'Como MEI, você pode acessar plano empresarial com condição melhor que muito plano individual. A gente confere a elegibilidade certa pro seu caso.',
+    bullets: ['Elegibilidade explicada sem enrolação', 'Costuma sair mais barato que o individual', 'Ativação rápida com seu CNPJ'],
+    ctaLabel: 'Quero cotar como MEI',
     contractKind: 'MEI',
     icon: Briefcase,
   },
   {
-    eyebrow: 'Pessoa Física',
-    title: 'Comparativo para quem quer sair do caro pelo mais coerente.',
-    description: 'Está pagando caro no seu plano atual? A gente compara operadoras, rede, carência e custo real para mostrar o que faz sentido para a sua rotina.',
-    ctaLabel: 'Quero cotar para pessoa física',
-    contractKind: 'PF',
-    icon: UserRound,
+    eyebrow: 'Empresa',
+    title: 'Plano coletivo pra empresa com o time crescendo.',
+    description: 'Comparamos operadoras e desenho de plano para fechar uma proposta empresarial que faça sentido pro seu time e pro seu orçamento.',
+    bullets: ['Proposta sob medida pro seu quadro', 'Comparação entre operadoras parceiras', 'Suporte na documentação e ativação'],
+    ctaLabel: 'Quero cotar para empresa',
+    contractKind: 'CNPJ',
+    icon: Building2,
+  },
+];
+
+const howItWorksSteps = [
+  {
+    step: '1',
+    title: 'Você me conta o que precisa',
+    text: 'Cidade, idade, rede desejada e perfil de contratação entram primeiro para a análise nascer certa.',
+    icon: MessageCircle,
+  },
+  {
+    step: '2',
+    title: 'Eu comparo as melhores opções',
+    text: 'A comparação considera operadora, custo, carência, coparticipação e rede funcional para sua rotina.',
+    icon: Search,
+  },
+  {
+    step: '3',
+    title: 'Você escolhe e eu cuido do resto',
+    text: 'A Kifer acompanha a contratação até a ativação para você não ficar sozinho no meio do processo.',
+    icon: CheckCircle,
   },
 ];
 
@@ -247,6 +283,122 @@ function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, c
         </div>
         <div className="modal-panel-content overflow-y-auto p-8">{children}</div>
       </div>
+    </div>
+  );
+}
+
+type CityAutocompleteFieldProps = {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function CityAutocompleteField({ id, value, onChange }: CityAutocompleteFieldProps) {
+  const [cities, setCities] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchCitiesByState('RJ')
+      .then((list) => {
+        if (active) {
+          setCities(list);
+        }
+      })
+      .catch(() => {
+        // Sem lista carregada, o campo continua funcionando como texto livre.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const query = value.trim().toLowerCase();
+  const suggestions = query.length >= 2 ? cities.filter((city) => city.toLowerCase().includes(query)).slice(0, 6) : [];
+  const showSuggestions = isOpen && suggestions.length > 0;
+
+  const selectCity = (city: string) => {
+    onChange(city);
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedIndex((current) => (current + 1) % suggestions.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedIndex((current) => (current - 1 + suggestions.length) % suggestions.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      selectCity(suggestions[highlightedIndex]);
+    } else if (event.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type="text"
+        required
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={showSuggestions}
+        aria-autocomplete="list"
+        leftIcon={MapPin}
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setIsOpen(true);
+          setHighlightedIndex(0);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+        onKeyDown={handleKeyDown}
+        size="large"
+        placeholder="Sua cidade no RJ"
+      />
+      {showSuggestions ? (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-56 overflow-y-auto rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]"
+        >
+          {suggestions.map((city, index) => {
+            const matchIndex = city.toLowerCase().indexOf(query);
+            const before = matchIndex >= 0 ? city.slice(0, matchIndex) : city;
+            const match = matchIndex >= 0 ? city.slice(matchIndex, matchIndex + query.length) : '';
+            const after = matchIndex >= 0 ? city.slice(matchIndex + query.length) : '';
+
+            return (
+              <button
+                key={city}
+                type="button"
+                role="option"
+                aria-selected={index === highlightedIndex}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectCity(city)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                className={`block w-full rounded-xl px-3 py-2 text-left text-sm text-[color:var(--text-secondary)] ${
+                  index === highlightedIndex ? 'bg-[var(--bg-hover)]' : ''
+                }`}
+              >
+                {before}
+                <strong className="text-[color:var(--text-primary)]">{match}</strong>
+                {after}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -507,14 +659,10 @@ export default function HomePage() {
         <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-city">
           Cidade *
         </label>
-        <Input
+        <CityAutocompleteField
           id="quote-city"
-          type="text"
-          required
           value={formData.cidade}
-          onChange={(event) => setFormData((current) => ({ ...current, cidade: event.target.value }))}
-          size="large"
-          placeholder="Sua cidade"
+          onChange={(city) => setFormData((current) => ({ ...current, cidade: city }))}
         />
       </div>
 
@@ -909,31 +1057,34 @@ export default function HomePage() {
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                Se você quer cotar como pessoa física ou entender se existe uma via mais inteligente via CNPJ, a Kifer orienta o caminho sem enrolação.
+                Cada perfil pede uma leitura diferente de rede, custo e carência. Escolha o seu abaixo e a Kifer cuida dos detalhes.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-2">
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
               {audienceCards.map((card) => (
-                <article key={card.eyebrow} className="flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
-                  <div className="flex flex-1 flex-col">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">{card.eyebrow}</p>
-                        <h3 className="mt-4 font-[var(--font-display)] text-3xl font-bold leading-tight text-[color:var(--text-primary)]">{card.title}</h3>
-                      </div>
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
-                        <card.icon className="h-7 w-7" />
-                      </span>
-                    </div>
+                <article key={card.eyebrow} className="flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)]">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                    <card.icon className="h-7 w-7" />
+                  </span>
 
-                    <p className="mt-5 flex-1 text-base leading-relaxed text-[color:var(--text-secondary)]">{card.description}</p>
-                  </div>
+                  <p className="mt-5 text-sm font-black uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">{card.eyebrow}</p>
+                  <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold leading-tight text-[color:var(--text-primary)]">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-[color:var(--text-secondary)]">{card.description}</p>
+
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {card.bullets.map((bullet) => (
+                      <li key={bullet} className="flex items-start gap-2.5 text-sm text-[color:var(--text-secondary)]">
+                        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-primary)]" />
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
 
                   <button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-auto inline-flex items-center rounded-full [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
+                    className="mt-6 inline-flex items-center justify-center rounded-full [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
                   >
                     {card.ctaLabel}
                     <ChevronRight className="ml-2 h-4 w-4" />
@@ -949,42 +1100,38 @@ export default function HomePage() {
             <div className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">como funciona</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+                Do primeiro contato até a ativação, você sabe exatamente em que etapa está.
+              </p>
             </div>
 
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {[
-                {
-                  step: '1',
-                  title: 'Você me conta o que precisa',
-                  text: 'Cidade, idade, rede desejada e perfil de contratação entram primeiro para a análise nascer certa.',
-                  icon: MessageCircle,
-                },
-                {
-                  step: '2',
-                  title: 'Eu comparo as melhores opções',
-                  text: 'A comparação considera operadora, custo, carência, coparticipação e rede funcional para sua rotina.',
-                  icon: Search,
-                },
-                {
-                  step: '3',
-                  title: 'Você escolhe e eu cuido do resto',
-                  text: 'A Kifer acompanha a contratação até a ativação para você não ficar sozinho no meio do processo.',
-                  icon: CheckCircle,
-                },
-              ].map((item) => (
-                <article key={item.step} className="relative rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-8 shadow-[var(--shadow-card)]">
-                  <div className="absolute -left-3 top-8 flex h-12 w-12 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-xl font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
-                    {item.step}
+            <div className="relative mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
+              <div className="pointer-events-none absolute left-[16.6%] right-[16.6%] top-8 hidden h-px bg-[color:var(--border-strong)] md:block" />
+
+              {howItWorksSteps.map((item) => (
+                <div key={item.step} className="relative flex flex-col items-center text-center">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)] ring-8 ring-[var(--bg-surface)]">
+                    <item.icon className="h-7 w-7" />
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-xs font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
+                      {item.step}
+                    </span>
                   </div>
-                  <div className="ml-6">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
-                      <item.icon className="h-8 w-8" />
-                    </div>
-                    <h3 className="mt-6 font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">{item.title}</h3>
-                    <p className="mt-4 text-base leading-relaxed text-[color:var(--text-secondary)]">{item.text}</p>
-                  </div>
-                </article>
+                  <h3 className="mt-6 font-[var(--font-display)] text-xl font-bold text-[color:var(--text-primary)]">{item.title}</h3>
+                  <p className="mt-3 max-w-xs text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.text}</p>
+                </div>
               ))}
+            </div>
+
+            <div className="mt-14 flex flex-col items-center gap-4 text-center">
+              <p className="text-base font-semibold text-[color:var(--text-primary)]">Pronto para começar a sua comparação?</p>
+              <button
+                type="button"
+                onClick={() => scrollToForm()}
+                className="inline-flex items-center justify-center rounded-full [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
+              >
+                Quero minha cotação gratuita
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </button>
             </div>
           </div>
         </section>
@@ -1095,22 +1242,24 @@ export default function HomePage() {
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Perguntas frequentes antes de contratar.</h2>
             </div>
 
-            <div className="mt-12 space-y-4">
+            <div className="mt-12 space-y-3">
               {faqItems.map((faq, index) => (
-                <div key={faq.question} className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+                <div key={faq.question} className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
-                    className="flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors hover:bg-[var(--bg-hover)] sm:px-8 sm:py-6"
+                    className="flex w-full items-center justify-between gap-5 text-left"
                     aria-expanded={openFaqIndex === index}
                   >
-                    <span className="text-lg font-semibold leading-relaxed text-[color:var(--text-primary)]">{faq.question}</span>
-                    <ChevronDown
-                      className={`h-6 w-6 shrink-0 text-[color:var(--brand-primary)] transition-transform ${openFaqIndex === index ? 'rotate-180' : ''}`}
-                    />
+                    <span className="text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
+                    {openFaqIndex === index ? (
+                      <Minus className="h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                    ) : (
+                      <Plus className="h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                    )}
                   </button>
                   {openFaqIndex === index ? (
-                    <div className="px-6 pb-6 sm:px-8">
+                    <div className="pt-3">
                       <p className="leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
                     </div>
                   ) : null}
@@ -1160,10 +1309,20 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-[var(--text-primary)] px-4 py-16 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] p-8 shadow-[var(--shadow-modal)] md:p-12">
-            <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-16 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] shadow-[var(--shadow-modal)]">
+            <div className="grid gap-8 p-8 md:p-12 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-10">
+              <div className="hidden shrink-0 lg:block">
+                <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
+                  <img src="/image.png" alt="Luiza Kifer" className="h-full w-full object-cover object-[center_20%]" />
+                </div>
+              </div>
+
               <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[color:color-mix(in_srgb,var(--success)_18%,transparent)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[color:var(--success)]">
+                  <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
+                  Online agora
+                </div>
                 <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
                 <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
                 <p className="mt-4 max-w-2xl text-lg leading-relaxed opacity-75">
@@ -1171,12 +1330,12 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 lg:items-end">
+              <div className="flex flex-col gap-3 lg:w-72">
                 <a
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Quero falar agora no WhatsApp
@@ -1184,7 +1343,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
                 >
                   Prefiro preencher a cotação
                 </button>

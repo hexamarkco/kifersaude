@@ -840,7 +840,7 @@
 
 .kds-dropdown-menu {
   border-color: color-mix(in srgb, var(--brand-primary-border) 58%, var(--border-strong));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   background:
     radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent), transparent 40%),
     linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 96%, transparent) 0%, color-mix(in srgb, var(--bg-canvas) 96%, transparent) 100%);
@@ -850,7 +850,7 @@
 
 .kds-dropdown-option {
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -1681,7 +1681,7 @@
   min-width: 12rem;
   max-width: min(calc(100vw - 1rem), 24rem);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   background: var(--bg-elevated);
   color: var(--text-primary);
   box-shadow: var(--shadow-popover);
@@ -3570,7 +3570,7 @@
 .kds-dropdown-menu,
 .kds-popover {
   border-color: var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   background: var(--bg-surface);
   box-shadow: var(--shadow-popover);
 }

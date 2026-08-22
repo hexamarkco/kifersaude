@@ -10732,7 +10732,7 @@ export default function WhatsAppInboxScreen() {
                         <PopoverContent
                           side="top"
                           align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl"
+                          className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
                           aria-label="Anexar arquivo"
                         >
                           <button
@@ -10801,7 +10801,7 @@ export default function WhatsAppInboxScreen() {
                         <PopoverContent
                           side="top"
                           align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl"
+                          className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
                           aria-label="Ações de inteligência artificial"
                         >
                           <button

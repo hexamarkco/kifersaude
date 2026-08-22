@@ -30,7 +30,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="painel-theme kifer-ds theme-light flex min-h-dvh w-full items-center justify-center overflow-hidden [background:var(--surface-hero-bg)] px-4 py-6 sm:py-12">
+    <div className="painel-theme kifer-ds theme-dark flex min-h-dvh w-full items-center justify-center overflow-hidden [background:var(--surface-hero-bg)] px-4 py-6 sm:py-12">
       <div className="w-full max-w-sm sm:max-w-md">
         <Surface variant="strong" padding="lg" className="backdrop-blur-sm">
           <div className="mb-8 text-center">

@@ -60,7 +60,7 @@ const PANEL_THEME_STORAGE_KEY = 'painel.theme.v2';
 
 const getInitialThemeMode = (): ThemeMode => {
   if (typeof window === 'undefined') {
-    return 'light';
+    return 'dark';
   }
 
   const storedTheme = window.localStorage.getItem(PANEL_THEME_STORAGE_KEY);
@@ -68,7 +68,7 @@ const getInitialThemeMode = (): ThemeMode => {
     return storedTheme;
   }
 
-  return 'light';
+  return 'dark';
 };
 
 export default function Layout({

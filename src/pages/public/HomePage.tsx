@@ -350,6 +350,7 @@ type AnimatedMetricValueProps = {
 function AnimatedMetricValue({ value, play }: AnimatedMetricValueProps) {
   const parsed = useMemo(() => parseMetricValue(value), [value]);
   const [display, setDisplay] = useState(() => (parsed ? formatMetricValue(0, parsed) : value));
+  const hasPlayedRef = useRef(false);
 
   useEffect(() => {
     if (!parsed) {
@@ -358,9 +359,21 @@ function AnimatedMetricValue({ value, play }: AnimatedMetricValueProps) {
     }
 
     if (!play) {
-      setDisplay(formatMetricValue(0, parsed));
+      if (!hasPlayedRef.current) {
+        setDisplay(formatMetricValue(0, parsed));
+      }
       return;
     }
+
+    // Only ever animate the count-up once. If the metric value changes afterwards
+    // (e.g. live data replacing the fallback), just snap to it instead of resetting
+    // to 0 and counting up again, which reads as the number flickering/blinking.
+    if (hasPlayedRef.current) {
+      setDisplay(formatMetricValue(parsed.targetValue, parsed));
+      return;
+    }
+
+    hasPlayedRef.current = true;
 
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
@@ -1028,16 +1041,9 @@ export default function HomePage() {
           animation: modal-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes reveal-up {
-          from {
-            opacity: 0;
-            transform: translateY(24px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .reveal-hidden,
+        .reveal-visible {
+          transition: opacity 600ms ease-out, transform 600ms ease-out;
         }
 
         .reveal-hidden {
@@ -1046,7 +1052,8 @@ export default function HomePage() {
         }
 
         .reveal-visible {
-          animation: reveal-up 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          opacity: 1;
+          transform: translateY(0);
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1056,12 +1063,13 @@ export default function HomePage() {
           }
 
           .modal-backdrop-animated,
-          .modal-panel-animated,
-          .reveal-visible {
+          .modal-panel-animated {
             animation: none;
           }
 
-          .reveal-hidden {
+          .reveal-hidden,
+          .reveal-visible {
+            transition: none;
             opacity: 1;
             transform: none;
           }

@@ -966,7 +966,7 @@ export default function HomePage() {
         }
       `}</style>
 
-      <div className="painel-theme kifer-ds theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
+      <div className="painel-theme kifer-ds theme-dark min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
         <nav
           className={`fixed top-0 z-40 w-full transition-all duration-300 ${
             isScrolled ? 'bg-[var(--panel-glass-bg-lite)] shadow-[var(--shadow-card)] backdrop-blur-sm' : 'bg-transparent'

@@ -943,7 +943,6 @@ export default function IntegrationsScreen() {
       phase={loadingUi.phase}
       hasContent={hasIntegrationSnapshot}
       skeleton={<IntegrationsSkeleton />}
-      stageLabel="Carregando integrações..."
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >

@@ -1650,7 +1650,6 @@ export default function AutoContactFlowSettingsScreen() {
       phase={loadingUi.phase}
       hasContent={hasFlowSnapshot}
       skeleton={<AutomationFlowsSkeleton />}
-      stageLabel="Carregando fluxos de automação..."
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >

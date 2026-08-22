@@ -69,7 +69,6 @@ export default function BlogPostsList({
           phase={loadingPhase}
           hasContent={hasPostsSnapshot}
           skeleton={<BlogTabSkeletonList />}
-          stageLabel="Carregando posts do blog..."
           overlayLabel="Atualizando posts..."
           stageClassName="min-h-[360px]"
         >

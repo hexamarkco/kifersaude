@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 
-import { LoadingState } from '../design-system';
+import { AppLoadingScreen } from '../design-system';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
 export const AiSandboxChatWrapper = lazy(() => import('../pages/routes/AiSandboxChatWrapper'));
@@ -20,9 +20,5 @@ export const FinanceiroComissoesTab = lazy(() => import('../features/commissions
 export const FinanceiroAgendaTab = lazy(() => import('../components/finance/FinanceiroAgendaTab'));
 
 export function RouteLoading() {
-  return (
-    <div className="kifer-ds flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4">
-      <LoadingState label="Carregando painel" compact />
-    </div>
-  );
+  return <AppLoadingScreen />;
 }

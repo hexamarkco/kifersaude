@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type FormEvent, type KeyboardEvent, type MouseEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Briefcase,
@@ -268,9 +268,12 @@ const normalizePublicMetric = (value: unknown): PublicMetric | null => {
 
 function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, children }: OverlayModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--overlay)] p-4 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="modal-backdrop-animated fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--overlay)] p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
-        className={`modal-panel flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[var(--shadow-modal)]`}
+        className={`modal-panel modal-panel-animated flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[var(--shadow-modal)]`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sticky top-0 flex items-start justify-between gap-4 [background:var(--brand-primary-gradient)] p-6 text-[color:var(--text-on-brand)]">
@@ -384,6 +387,54 @@ function AnimatedMetricValue({ value, play }: AnimatedMetricValueProps) {
   }, [parsed, play, value]);
 
   return <>{display}</>;
+}
+
+type RevealProps = {
+  children: ReactNode;
+  className?: string;
+  delayMs?: number;
+  onReveal?: () => void;
+};
+
+function Reveal({ children, className, delayMs = 0, onReveal }: RevealProps) {
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = nodeRef.current;
+    if (!node) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          onReveal?.();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+    // Runs once on mount; onReveal only needs to fire the first time this enters view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      ref={nodeRef}
+      className={`${isVisible ? 'reveal-visible' : 'reveal-hidden'}${className ? ` ${className}` : ''}`}
+      style={delayMs ? { animationDelay: `${delayMs}ms` } : undefined}
+    >
+      {children}
+    </div>
+  );
 }
 
 type CityAutocompleteFieldProps = {
@@ -518,7 +569,6 @@ export default function HomePage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [metricsInView, setMetricsInView] = useState(false);
-  const metricsGridRef = useRef<HTMLDivElement | null>(null);
 
   const totalLives = Number.parseInt(formData.numeroVidas, 10) || 0;
   const filledAgeRanges = Object.entries(ageRangeCounts)
@@ -536,29 +586,6 @@ export default function HomePage() {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  useEffect(() => {
-    const node = metricsGridRef.current;
-    if (!node) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setMetricsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
     };
   }, []);
 
@@ -609,6 +636,21 @@ export default function HomePage() {
     window.open(buildWhatsAppUrl(message), '_blank', 'noopener,noreferrer');
   };
 
+  const scrollToSection = (id: string) => {
+    const node = document.getElementById(id);
+    if (!node) {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    node.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+  };
+
+  const handleNavLinkClick = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
+    event.preventDefault();
+    scrollToSection(id);
+  };
+
   const scrollToForm = (contractKind?: ContractKind) => {
     if (contractKind) {
       setFormData((current) => ({
@@ -617,9 +659,7 @@ export default function HomePage() {
       }));
     }
 
-    window.requestAnimationFrame(() => {
-      document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    window.requestAnimationFrame(() => scrollToSection('cotacao'));
   };
 
   const resetForm = () => {
@@ -958,10 +998,72 @@ export default function HomePage() {
           }
         }
 
+        @keyframes modal-backdrop-in {
+          from {
+            opacity: 0;
+          }
+
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes modal-panel-in {
+          from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .modal-backdrop-animated {
+          animation: modal-backdrop-in 200ms ease-out;
+        }
+
+        .modal-panel-animated {
+          animation: modal-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes reveal-up {
+          from {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .reveal-hidden {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+
+        .reveal-visible {
+          animation: reveal-up 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .hero-ribbon-track,
           .partner-logos-track {
             animation: none;
+          }
+
+          .modal-backdrop-animated,
+          .modal-panel-animated,
+          .reveal-visible {
+            animation: none;
+          }
+
+          .reveal-hidden {
+            opacity: 1;
+            transform: none;
           }
         }
       `}</style>
@@ -973,7 +1075,7 @@ export default function HomePage() {
           }`}
         >
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <a href="#topo" className="flex items-center space-x-3">
+            <a href="#topo" onClick={(event) => handleNavLinkClick(event, 'topo')} className="flex items-center space-x-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
                 <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
               </div>
@@ -981,19 +1083,39 @@ export default function HomePage() {
             </a>
 
             <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
-              <a href="#prova-social" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
+              <a
+                href="#prova-social"
+                onClick={(event) => handleNavLinkClick(event, 'prova-social')}
+                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+              >
                 Operadoras
               </a>
-              <a href="#para-quem" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
+              <a
+                href="#para-quem"
+                onClick={(event) => handleNavLinkClick(event, 'para-quem')}
+                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+              >
                 Para quem é
               </a>
-              <a href="#como-funciona" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
+              <a
+                href="#como-funciona"
+                onClick={(event) => handleNavLinkClick(event, 'como-funciona')}
+                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+              >
                 Como funciona
               </a>
-              <a href="#depoimentos" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
+              <a
+                href="#depoimentos"
+                onClick={(event) => handleNavLinkClick(event, 'depoimentos')}
+                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+              >
                 Depoimentos
               </a>
-              <a href="#faq" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
+              <a
+                href="#faq"
+                onClick={(event) => handleNavLinkClick(event, 'faq')}
+                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+              >
                 FAQ
               </a>
             </div>
@@ -1130,15 +1252,15 @@ export default function HomePage() {
 
         <section id="prova-social" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-3xl text-center">
+            <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">confiança em números</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Confiança construída no atendimento real.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 A Kifer compara operadoras, custos e rede de atendimento com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir.
               </p>
-            </div>
+            </Reveal>
 
-            <div ref={metricsGridRef} className="mt-12 grid gap-5 md:grid-cols-3">
+            <Reveal className="mt-12 grid gap-5 md:grid-cols-3" delayMs={100} onReveal={() => setMetricsInView(true)}>
               {publicMetrics.map((metric, index) => {
                 const MetricIcon = metricIcons[index] ?? Sparkles;
 
@@ -1159,7 +1281,7 @@ export default function HomePage() {
                   </article>
                 );
               })}
-            </div>
+            </Reveal>
 
             <div className="mt-12 rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] px-6 py-8 shadow-[var(--shadow-card)]">
               <div className="mb-6 flex flex-col gap-2 text-center">
@@ -1190,15 +1312,15 @@ export default function HomePage() {
 
         <section id="para-quem" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-3xl text-center">
+            <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 Cada perfil pede uma leitura diferente de rede, custo e carência. Escolha o seu abaixo e a Kifer cuida dos detalhes.
               </p>
-            </div>
+            </Reveal>
 
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {audienceCards.map((card) => (
                 <article key={card.eyebrow} className="flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)]">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
@@ -1228,21 +1350,21 @@ export default function HomePage() {
                   </button>
                 </article>
               ))}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         <section id="como-funciona" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-3xl text-center">
+            <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">como funciona</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 Do primeiro contato até a ativação, você sabe exatamente em que etapa está.
               </p>
-            </div>
+            </Reveal>
 
-            <div className="relative mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
+            <Reveal className="relative mt-16 grid gap-10 md:grid-cols-3 md:gap-8" delayMs={100}>
               <div className="pointer-events-none absolute left-[16.6%] right-[16.6%] top-8 hidden h-px bg-[color:var(--border-strong)] md:block" />
 
               {howItWorksSteps.map((item) => (
@@ -1257,9 +1379,9 @@ export default function HomePage() {
                   <p className="mt-3 max-w-xs text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.text}</p>
                 </div>
               ))}
-            </div>
+            </Reveal>
 
-            <div className="mt-14 flex flex-col items-center gap-4 text-center">
+            <Reveal className="mt-14 flex flex-col items-center gap-4 text-center" delayMs={150}>
               <p className="text-base font-semibold text-[color:var(--text-primary)]">Pronto para começar a sua comparação?</p>
               <button
                 type="button"
@@ -1269,18 +1391,18 @@ export default function HomePage() {
                 Quero minha cotação gratuita
                 <ChevronRight className="ml-2 h-5 w-5" />
               </button>
-            </div>
+            </Reveal>
           </div>
         </section>
 
         <section id="depoimentos" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-3xl text-center">
+            <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">depoimentos</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Clientes que saíram da cotação com mais segurança.</h2>
-            </div>
+            </Reveal>
 
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {testimonials.map((testimonial) => (
                 <article key={testimonial.name} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
                   <div className="mb-5 flex items-center gap-1 text-[color:var(--accent-gold)]">
@@ -1300,7 +1422,7 @@ export default function HomePage() {
                   </div>
                 </article>
               ))}
-            </div>
+            </Reveal>
 
             <div className="mt-10 text-center">
               <a
@@ -1318,7 +1440,7 @@ export default function HomePage() {
 
         <section id="quem-somos" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="relative overflow-hidden rounded-[var(--kds-radius-xl)] [background:var(--surface-hero-bg)] p-4 shadow-[var(--shadow-card)]">
+            <Reveal className="relative overflow-hidden rounded-[var(--kds-radius-xl)] [background:var(--surface-hero-bg)] p-4 shadow-[var(--shadow-card)]">
               <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)]">
                 <img
                   src="/image.png"
@@ -1326,9 +1448,9 @@ export default function HomePage() {
                   className="h-full min-h-[420px] w-full object-cover object-[center_28%]"
                 />
               </div>
-            </div>
+            </Reveal>
 
-            <div>
+            <Reveal delayMs={120}>
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luiza</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Uma pessoa real te acompanha do início até a ativação.</h2>
               <p className="mt-6 text-lg leading-relaxed text-[color:var(--text-secondary)]">
@@ -1368,18 +1490,18 @@ export default function HomePage() {
                   </article>
                 ))}
               </div>
-            </div>
+            </Reveal>
           </div>
         </section>
 
         <section id="faq" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
-            <div className="text-center">
+            <Reveal className="text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">faq rápido</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Perguntas frequentes antes de contratar.</h2>
-            </div>
+            </Reveal>
 
-            <div className="mt-12 space-y-3">
+            <Reveal className="mt-12 space-y-3" delayMs={100}>
               {faqItems.map((faq, index) => (
                 <div key={faq.question} className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
                   <button
@@ -1395,20 +1517,23 @@ export default function HomePage() {
                       <Plus className="h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
                     )}
                   </button>
-                  {openFaqIndex === index ? (
-                    <div className="pt-3">
-                      <p className="leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
+                  <div
+                    className="grid transition-[grid-template-rows] duration-300 ease-out"
+                    style={{ gridTemplateRows: openFaqIndex === index ? '1fr' : '0fr' }}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="pt-3 leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
                     </div>
-                  ) : null}
+                  </div>
                 </div>
               ))}
-            </div>
+            </Reveal>
           </div>
         </section>
 
         <section id="cotacao" className="scroll-mt-32 [background:var(--brand-primary-gradient)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div className="text-[color:var(--text-on-brand)]">
+            <Reveal className="text-[color:var(--text-on-brand)]">
               <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80">cotação gratuita</p>
               <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba um comparativo coerente com o seu perfil.</h2>
               <p className="mt-5 text-lg leading-relaxed opacity-90">
@@ -1427,27 +1552,29 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Reveal>
 
-            <form onSubmit={handleSubmit} className="rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] p-8 text-[color:var(--text-primary)] shadow-[var(--shadow-modal)] md:p-10">
-              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
+            <Reveal delayMs={120}>
+              <form onSubmit={handleSubmit} className="rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] p-8 text-[color:var(--text-primary)] shadow-[var(--shadow-modal)] md:p-10">
+                <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
-                <ChevronRight className="ml-2 inline-block h-5 w-5" />
-              </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
+                  <ChevronRight className="ml-2 inline-block h-5 w-5" />
+                </button>
 
-              <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
-            </form>
+                <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
+              </form>
+            </Reveal>
           </div>
         </section>
 
         <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-20 sm:px-6 lg:px-8">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] text-[color:var(--text-inverse)] shadow-[var(--shadow-modal)]">
+          <Reveal className="relative mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] text-[color:var(--text-inverse)] shadow-[var(--shadow-modal)]">
             <div className="pointer-events-none absolute inset-0 opacity-20">
               <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-[var(--brand-primary)] blur-3xl" />
               <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[var(--accent-gold)] blur-3xl" />
@@ -1507,32 +1634,23 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="mt-5 flex flex-col gap-3">
-                  <a
-                    href={WHATSAPP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5 shrink-0" />
-                      Falar no WhatsApp
-                    </span>
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
-                      <ArrowUpRight className="h-5 w-5" />
-                    </span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuoteModal(true)}
-                    className="inline-flex w-full items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--text-inverse)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--text-inverse)_8%,transparent)] px-8 py-4 text-sm font-bold text-[color:var(--text-inverse)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]"
-                  >
-                    Prefiro preencher a cotação
-                  </button>
-                </div>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-5 inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 shrink-0" />
+                    Falar no WhatsApp
+                  </span>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </span>
+                </a>
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
 
         <footer className="bg-[var(--text-primary)] px-4 py-14 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
@@ -1553,16 +1671,32 @@ export default function HomePage() {
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</h3>
                 <div className="mt-5 space-y-3 text-sm opacity-70">
-                  <a href="#para-quem" className="block transition-colors hover:text-[color:var(--text-inverse)]">
+                  <a
+                    href="#para-quem"
+                    onClick={(event) => handleNavLinkClick(event, 'para-quem')}
+                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
+                  >
                     Para quem é
                   </a>
-                  <a href="#como-funciona" className="block transition-colors hover:text-[color:var(--text-inverse)]">
+                  <a
+                    href="#como-funciona"
+                    onClick={(event) => handleNavLinkClick(event, 'como-funciona')}
+                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
+                  >
                     Como funciona
                   </a>
-                  <a href="#faq" className="block transition-colors hover:text-[color:var(--text-inverse)]">
+                  <a
+                    href="#faq"
+                    onClick={(event) => handleNavLinkClick(event, 'faq')}
+                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
+                  >
                     FAQ
                   </a>
-                  <a href="#cotacao" className="block transition-colors hover:text-[color:var(--text-inverse)]">
+                  <a
+                    href="#cotacao"
+                    onClick={(event) => handleNavLinkClick(event, 'cotacao')}
+                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
+                  >
                     Cotação gratuita
                   </a>
                 </div>
@@ -1596,17 +1730,6 @@ export default function HomePage() {
             </div>
           </div>
         </footer>
-
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-4 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-transform hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
-          aria-label="Abrir conversa no WhatsApp"
-        >
-          <MessageCircle className="h-5 w-5" />
-          <span className="hidden sm:inline">WhatsApp</span>
-        </a>
 
         {showQuoteModal ? (
           <OverlayModal title="Faça sua cotação" subtitle="Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>

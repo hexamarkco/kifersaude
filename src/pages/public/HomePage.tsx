@@ -4,7 +4,9 @@ import {
   Briefcase,
   Building2,
   CheckCircle,
+  CheckCheck,
   ChevronRight,
+  Clock,
   Heart,
   Instagram,
   MapPin,
@@ -1444,49 +1446,90 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-16 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] shadow-[var(--shadow-modal)]">
-            <div className="grid gap-8 p-8 md:p-12 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-10">
-              <div className="hidden shrink-0 lg:block">
-                <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
-                  <img src="/image.png" alt="Luiza Kifer" className="h-full w-full object-cover object-[center_20%]" />
+        <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-20 sm:px-6 lg:px-8">
+          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] text-[color:var(--text-inverse)] shadow-[var(--shadow-modal)]">
+            <div className="pointer-events-none absolute inset-0 opacity-20">
+              <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-[var(--brand-primary)] blur-3xl" />
+              <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[var(--accent-gold)] blur-3xl" />
+            </div>
+
+            <div className="relative grid gap-12 p-8 md:p-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+              <div>
+                <div className="mb-6 flex items-center gap-4">
+                  <div className="relative h-20 w-20 shrink-0">
+                    <div className="h-full w-full overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
+                      <img src="/image.png" alt="Luiza Kifer" className="h-full w-full object-cover object-[center_20%]" />
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[color:var(--text-primary)] bg-[var(--success)]">
+                      <span className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
+                    </span>
+                  </div>
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[color:color-mix(in_srgb,var(--success)_18%,transparent)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[color:var(--success)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+                      Online agora
+                    </div>
+                    <p className="mt-1.5 text-sm font-semibold opacity-80">Luiza Kifer · Kifer Saúde</p>
+                  </div>
+                </div>
+
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
+                <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
+                <p className="mt-4 max-w-xl text-lg leading-relaxed opacity-75">
+                  Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.
+                </p>
+
+                <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold opacity-70">
+                  <Clock className="h-4 w-4 text-[color:var(--accent-gold)]" />
+                  Responde em poucos minutos, sem robô.
                 </div>
               </div>
 
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[color:color-mix(in_srgb,var(--success)_18%,transparent)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[color:var(--success)]">
-                  <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
-                  Online agora
-                </div>
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
-                <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
-                <p className="mt-4 max-w-2xl text-lg leading-relaxed opacity-75">
-                  Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.
-                </p>
-              </div>
+                <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-modal)]">
+                  <div className="flex items-center gap-3 border-b border-[color:var(--border-subtle)] pb-3">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full">
+                      <img src="/image.png" alt="" className="h-full w-full object-cover object-[center_20%]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[color:var(--text-primary)]">Luiza Kifer</p>
+                      <p className="text-xs font-semibold text-[color:var(--success-text)]">online</p>
+                    </div>
+                    <MessageCircle className="ml-auto h-5 w-5 text-[color:var(--success)]" />
+                  </div>
 
-              <div className="flex flex-col gap-3 lg:w-72">
-                <a
-                  href={WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5 shrink-0" />
-                    Falar no WhatsApp
-                  </span>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
-                    <ArrowUpRight className="h-5 w-5" />
-                  </span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--text-inverse)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--text-inverse)_8%,transparent)] px-8 py-4 text-sm font-bold text-[color:var(--text-inverse)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]"
-                >
-                  Prefiro preencher a cotação
-                </button>
+                  <div className="mt-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--brand-primary-border)] [background:linear-gradient(135deg,var(--brand-primary-soft)_0%,var(--accent-gold-soft)_100%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--text-primary)]">
+                    Oi! 👋 Me conta sua cidade e o tipo de plano que você procura que eu já trago as opções comparadas.
+                    <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-[color:var(--text-muted)]">
+                      agora
+                      <CheckCheck className="h-3.5 w-3.5 text-[color:var(--info)]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3">
+                  <a
+                    href={WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 shrink-0" />
+                      Falar no WhatsApp
+                    </span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
+                      <ArrowUpRight className="h-5 w-5" />
+                    </span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuoteModal(true)}
+                    className="inline-flex w-full items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--text-inverse)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--text-inverse)_8%,transparent)] px-8 py-4 text-sm font-bold text-[color:var(--text-inverse)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]"
+                  >
+                    Prefiro preencher a cotação
+                  </button>
+                </div>
               </div>
             </div>
           </div>

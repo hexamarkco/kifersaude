@@ -850,7 +850,7 @@
 
 .kds-dropdown-option {
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-weight: 500;
 }

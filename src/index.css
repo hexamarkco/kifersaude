@@ -892,7 +892,7 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item {
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   color: inherit;
   font-size: 0.8125rem;
   font-weight: 600;

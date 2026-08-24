@@ -10,11 +10,23 @@ import type { PublicLinkItem, PublicLinkPageSettings } from '../../lib/supabase'
 
 const LINK_REVEAL_BASE_DELAY_MS = 200;
 const LINK_REVEAL_STEP_MS = 70;
+const DARK_CANVAS_COLOR = '#16110c';
+const DEFAULT_THEME_COLOR = '#f4f0e7';
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<PublicLinkPageSettings | null>(null);
   const [items, setItems] = useState<PublicLinkItem[]>([]);
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const previousColor = meta?.getAttribute('content') ?? DEFAULT_THEME_COLOR;
+    meta?.setAttribute('content', DARK_CANVAS_COLOR);
+
+    return () => {
+      meta?.setAttribute('content', previousColor);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;

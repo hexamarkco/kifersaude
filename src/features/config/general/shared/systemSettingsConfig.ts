@@ -9,7 +9,6 @@ import {
 import type { ConfigCategory } from "../../../../lib/configService";
 import type { SystemSettings } from "../../../../lib/supabase";
 
-export type SettingsMessage = { type: "success" | "error"; text: string };
 export type SectionId =
   | "general"
   | "access"

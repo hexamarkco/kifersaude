@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  CheckCircle,
   Clock,
   RotateCcw,
   Save,
@@ -14,6 +13,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { configService } from "../../../lib/configService";
 import { type SystemSettings } from "../../../lib/supabase";
+import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "../../../components/config/ConfigOptionManager";
 import LeadOriginsManager from "../../../components/config/LeadOriginsManager";
 import LeadStatusManager from "../../../components/config/LeadStatusManager";
@@ -31,7 +31,6 @@ import {
   normalizeConfigSearchText,
   SECTION_OVERVIEW,
   type SectionId,
-  type SettingsMessage,
 } from "./shared/systemSettingsConfig";
 
 export default function SystemSettingsScreen() {
@@ -42,7 +41,6 @@ export default function SystemSettingsScreen() {
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<SettingsMessage | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeSection, setActiveSection] = useState<SectionId>("general");
   const [activeLeadConfiguration, setActiveLeadConfiguration] = useState("status");
@@ -64,20 +62,6 @@ export default function SystemSettingsScreen() {
     void loadSettings();
   }, []);
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setMessage(null);
-    }, 5000);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [message]);
-
   const loadSettings = async () => {
     setLoading(true);
     const data = await configService.getSystemSettings();
@@ -86,8 +70,12 @@ export default function SystemSettingsScreen() {
     setLoading(false);
   };
 
-  const showMessage = (type: SettingsMessage["type"], text: string) => {
-    setMessage({ type, text });
+  const showMessage = (type: "success" | "error", text: string) => {
+    if (type === "success") {
+      toast.success(text);
+    } else {
+      toast.error(text);
+    }
   };
 
   const handleSave = async () => {
@@ -281,17 +269,6 @@ export default function SystemSettingsScreen() {
       stageClassName="min-h-[440px]"
     >
       <div className="panel-page-shell space-y-6">
-        {message && (
-          <Alert tone={message.type === "success" ? "success" : "danger"} className="flex items-center space-x-3">
-            {message.type === "success" ? (
-              <CheckCircle className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            )}
-            <p>{message.text}</p>
-          </Alert>
-        )}
-
         <Surface padding="md">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <SectionHeader

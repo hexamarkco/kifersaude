@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle, PaintBucket, Plus, Star, Trash2 } from 'lucide-react';
+import { PaintBucket, Plus, Star, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { toast } from '../../lib/toast';
 import {
-  Alert,
   Badge,
   Button,
   Card,
@@ -20,7 +20,6 @@ import {
   Input,
 } from '../../design-system';
 
-type Message = { type: 'success' | 'error'; text: string };
 type StatusDraft = { nome: string; ordem: string };
 
 const getDefaultStatusColor = () => {
@@ -39,7 +38,6 @@ export default function LeadStatusManager() {
   const [saving, setSaving] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, StatusDraft>>({});
-  const [message, setMessage] = useState<Message | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -51,16 +49,13 @@ export default function LeadStatusManager() {
     setDrafts(nextDrafts);
   }, [leadStatuses]);
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    if (type === 'success') {
+      toast.success(text);
+    } else {
+      toast.error(text);
     }
-
-    const timeout = window.setTimeout(() => setMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [message]);
-
-  const showMessage = (type: Message['type'], text: string) => setMessage({ type, text });
+  };
 
   const updateDraft = (id: string, updates: Partial<StatusDraft>) => {
     setDrafts((current) => ({
@@ -227,13 +222,6 @@ export default function LeadStatusManager() {
           <span>Novo status</span>
         </Button>
       </div>
-
-      {message && (
-        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
-          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          <span>{message.text}</span>
-        </Alert>
-      )}
 
       <div className="space-y-3">
         {leadStatuses.map((status) => {

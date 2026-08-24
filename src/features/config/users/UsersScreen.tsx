@@ -11,13 +11,13 @@ import {
   Trash2,
   Plus,
   AlertCircle,
-  CheckCircle,
   User as UserIcon,
   Pencil,
   Search,
 } from "lucide-react";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
+import { toast } from "../../../lib/toast";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import { UsersSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
@@ -63,10 +63,6 @@ export default function UsersScreen() {
   const [editUserPassword, setEditUserPassword] = useState("");
   const [editUserRole, setEditUserRole] = useState("observer");
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const loadingUi = useAdaptiveLoading(loading);
@@ -127,8 +123,11 @@ export default function UsersScreen() {
   };
 
   const showMessage = (type: "success" | "error", text: string) => {
-    setMessage({ type, text });
-    window.setTimeout(() => setMessage(null), 5000);
+    if (type === "success") {
+      toast.success(text);
+    } else {
+      toast.error(text);
+    }
   };
 
   const resetCreateForm = () => {
@@ -367,18 +366,6 @@ export default function UsersScreen() {
           <OperationalMetricChip value={filteredUsers.length} label={filteredUsers.length === 1 ? "usuário" : "usuários"} />
         </div>
 
-        {message && (
-          <Alert tone={message.type === "success" ? "success" : "danger"}>
-            <div className="flex items-center space-x-3">
-              {message.type === "success" ? (
-                <CheckCircle className="h-5 w-5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              )}
-              <p>{message.text}</p>
-            </div>
-          </Alert>
-        )}
 
         <div className="space-y-3">
 

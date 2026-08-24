@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import {
-  AlertCircle,
   Check,
-  CheckCircle,
   ChevronDown,
   ChevronUp,
   Copy,
   ExternalLink,
+  ImageIcon,
   Loader,
   Plus,
   Save,
@@ -20,8 +19,8 @@ import { uploadLinkPageImage } from "../../../lib/imageUploadService";
 import { getLinkIcon, LINK_ICON_OPTIONS } from "../../../lib/linkIcons";
 import { linksService } from "../../../lib/linksService";
 import type { PublicLinkItem, PublicLinkPageSettings } from "../../../lib/supabase";
+import { toast } from "../../../lib/toast";
 import {
-  Alert,
   Button,
   Card,
   Dialog,
@@ -34,12 +33,9 @@ import {
   LoadingState,
   SectionHeader,
   Select,
-  Surface,
   Switch,
   Textarea,
 } from "../../../design-system";
-
-type Message = { type: "success" | "error"; text: string } | null;
 
 type LinkFormState = {
   title: string;
@@ -63,11 +59,9 @@ export default function LinksScreen() {
     is_published: true,
   });
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileMessage, setProfileMessage] = useState<Message>(null);
   const [copyLabel, setCopyLabel] = useState("Copiar link");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  const [linksMessage, setLinksMessage] = useState<Message>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
@@ -101,18 +95,6 @@ export default function LinksScreen() {
     void loadData();
   }, [loadData]);
 
-  useEffect(() => {
-    if (!profileMessage) return undefined;
-    const timeout = window.setTimeout(() => setProfileMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [profileMessage]);
-
-  useEffect(() => {
-    if (!linksMessage) return undefined;
-    const timeout = window.setTimeout(() => setLinksMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [linksMessage]);
-
   const handleCopyPublicUrl = async () => {
     try {
       await navigator.clipboard.writeText(publicUrl);
@@ -133,7 +115,7 @@ export default function LinksScreen() {
     const result = await uploadLinkPageImage(file);
 
     if (!result.success || !result.url) {
-      setProfileMessage({ type: "error", text: result.error ?? "Erro ao fazer upload da imagem." });
+      toast.error(result.error ?? "Erro ao fazer upload da imagem.");
     } else {
       setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
     }
@@ -142,7 +124,7 @@ export default function LinksScreen() {
 
   const handleSaveProfile = async () => {
     if (!profileForm.title.trim()) {
-      setProfileMessage({ type: "error", text: "Informe um título para a página." });
+      toast.error("Informe um título para a página.");
       return;
     }
 
@@ -158,17 +140,17 @@ export default function LinksScreen() {
     );
 
     if (error) {
-      setProfileMessage({ type: "error", text: "Erro ao salvar as configurações da página." });
+      toast.error("Erro ao salvar as configurações da página.");
     } else {
       setPageSettings(data ?? pageSettings);
-      setProfileMessage({ type: "success", text: "Página de links atualizada com sucesso." });
+      toast.success("Página de links atualizada com sucesso.");
     }
     setSavingProfile(false);
   };
 
   const handleCreateLink = async () => {
     if (!createForm.title.trim() || !createForm.url.trim()) {
-      setLinksMessage({ type: "error", text: "Informe o título e a URL do link." });
+      toast.error("Informe o título e a URL do link.");
       return;
     }
 
@@ -182,12 +164,12 @@ export default function LinksScreen() {
     });
 
     if (error) {
-      setLinksMessage({ type: "error", text: "Erro ao adicionar o link." });
+      toast.error("Erro ao adicionar o link.");
     } else {
       setIsCreateModalOpen(false);
       setCreateForm(EMPTY_LINK_FORM);
       await loadData();
-      setLinksMessage({ type: "success", text: "Link adicionado com sucesso." });
+      toast.success("Link adicionado com sucesso.");
     }
     setCreating(false);
   };
@@ -206,7 +188,7 @@ export default function LinksScreen() {
     if (!editingId) return;
 
     if (!editingForm.title.trim() || !editingForm.url.trim()) {
-      setLinksMessage({ type: "error", text: "Informe o título e a URL do link." });
+      toast.error("Informe o título e a URL do link.");
       return;
     }
 
@@ -218,11 +200,11 @@ export default function LinksScreen() {
     });
 
     if (error) {
-      setLinksMessage({ type: "error", text: "Erro ao atualizar o link." });
+      toast.error("Erro ao atualizar o link.");
     } else {
       await loadData();
       cancelEditing();
-      setLinksMessage({ type: "success", text: "Link atualizado com sucesso." });
+      toast.success("Link atualizado com sucesso.");
     }
     setBusyId(null);
   };
@@ -231,7 +213,7 @@ export default function LinksScreen() {
     setBusyId(link.id);
     const { error } = await linksService.updateLinkItem(link.id, { is_active: !link.is_active });
     if (error) {
-      setLinksMessage({ type: "error", text: "Erro ao atualizar o link." });
+      toast.error("Erro ao atualizar o link.");
     } else {
       await loadData();
     }
@@ -251,10 +233,10 @@ export default function LinksScreen() {
     setBusyId(link.id);
     const { error } = await linksService.deleteLinkItem(link.id);
     if (error) {
-      setLinksMessage({ type: "error", text: "Erro ao remover o link." });
+      toast.error("Erro ao remover o link.");
     } else {
       await loadData();
-      setLinksMessage({ type: "success", text: "Link removido com sucesso." });
+      toast.success("Link removido com sucesso.");
     }
     setBusyId(null);
   };
@@ -271,7 +253,7 @@ export default function LinksScreen() {
     setBusyId(moved.id);
     const { error } = await linksService.reorderLinkItems(reordered.map((item) => item.id));
     if (error) {
-      setLinksMessage({ type: "error", text: "Erro ao reordenar os links." });
+      toast.error("Erro ao reordenar os links.");
       await loadData();
     }
     setBusyId(null);
@@ -311,18 +293,50 @@ export default function LinksScreen() {
           </div>
         </div>
 
-        {profileMessage && (
-          <Alert tone={profileMessage.type === "success" ? "success" : "danger"} className="mb-4">
-            {profileMessage.type === "success" ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <span>{profileMessage.text}</span>
-          </Alert>
-        )}
+        <div className="space-y-5">
+          <Field label="Foto">
+            <div className="flex items-center gap-4">
+              <div className="relative h-20 w-20 shrink-0">
+                {profileForm.avatar_url ? (
+                  <img
+                    src={profileForm.avatar_url}
+                    alt="Preview da foto"
+                    className="h-20 w-20 rounded-full border border-[var(--border-subtle)] object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--text-muted)]">
+                    <ImageIcon className="h-6 w-6" />
+                  </div>
+                )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+                <label className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm transition-colors hover:bg-[var(--bg-hover)]">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    onChange={(event) => void handleAvatarUpload(event)}
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                  />
+                  {uploadingAvatar ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </label>
+              </div>
+
+              <div className="flex-1 space-y-1.5">
+                <Input
+                  value={profileForm.avatar_url}
+                  onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
+                  placeholder="Cole a URL de uma imagem ou envie um arquivo"
+                  size="compact"
+                />
+                <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</p>
+              </div>
+            </div>
+          </Field>
+
           <Field label="Título da página">
             <Input
               value={profileForm.title}
@@ -338,48 +352,6 @@ export default function LinksScreen() {
               onChange={(event) => setProfileForm((prev) => ({ ...prev, bio: event.target.value }))}
               placeholder="Um resumo curto sobre você ou a Kifer Saúde."
             />
-          </Field>
-
-          <Field label="Foto" className="md:col-span-2">
-            <div className="space-y-3">
-              <Input
-                value={profileForm.avatar_url}
-                onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
-                placeholder="https://... ou faça upload abaixo"
-              />
-
-              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center gap-2 border-dashed px-4 py-3 text-[var(--warning-text)] transition-colors">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                  onChange={(event) => void handleAvatarUpload(event)}
-                  className="hidden"
-                  disabled={uploadingAvatar}
-                />
-                {uploadingAvatar ? (
-                  <>
-                    <Loader className="h-4 w-4 animate-spin" />
-                    <span className="text-sm font-semibold">Fazendo upload...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    <span className="text-sm font-semibold">Fazer upload da foto</span>
-                    <span className="text-xs">(JPG, PNG, WEBP, GIF — máx 5MB)</span>
-                  </>
-                )}
-              </label>
-
-              {profileForm.avatar_url && (
-                <Surface padding="none" className="w-24 overflow-hidden rounded-full">
-                  <img
-                    src={profileForm.avatar_url}
-                    alt="Preview da foto"
-                    className="h-24 w-24 object-cover"
-                  />
-                </Surface>
-              )}
-            </div>
           </Field>
         </div>
 
@@ -414,17 +386,6 @@ export default function LinksScreen() {
             <span>Novo link</span>
           </Button>
         </div>
-
-        {linksMessage && (
-          <Alert tone={linksMessage.type === "success" ? "success" : "danger"} className="mb-4">
-            {linksMessage.type === "success" ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <span>{linksMessage.text}</span>
-          </Alert>
-        )}
 
         {links.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">

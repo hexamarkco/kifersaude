@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  AlertCircle,
-  CheckCircle,
   Pencil,
   Plus,
   ShieldCheck,
@@ -16,10 +14,9 @@ import {
   formatProfileLabel,
 } from "../../../lib/accessControl";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { Alert, Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
+import { toast } from "../../../lib/toast";
+import { Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
-
-type FeedbackMessage = { type: "success" | "error"; text: string };
 
 export default function AccessControlManagerScreen() {
   const {
@@ -28,7 +25,6 @@ export default function AccessControlManagerScreen() {
     refreshAccessProfiles,
     refreshProfilePermissions,
   } = useConfig();
-  const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
@@ -42,17 +38,12 @@ export default function AccessControlManagerScreen() {
     [accessProfiles],
   );
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
+  const showMessage = (type: "success" | "error", text: string) => {
+    if (type === "success") {
+      toast.success(text);
+    } else {
+      toast.error(text);
     }
-
-    const timeout = window.setTimeout(() => setMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [message]);
-
-  const showMessage = (type: FeedbackMessage["type"], text: string) => {
-    setMessage({ type, text });
   };
 
   const resetProfileForm = () => {
@@ -262,17 +253,6 @@ export default function AccessControlManagerScreen() {
             </p>
           </div>
         </div>
-
-        {message && (
-          <Alert tone={message.type === "success" ? "success" : "danger"} className="mb-4 flex items-center gap-2">
-            {message.type === "success" ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <span>{message.text}</span>
-          </Alert>
-        )}
 
         <div className="mb-6 flex flex-wrap gap-3">
           <Button

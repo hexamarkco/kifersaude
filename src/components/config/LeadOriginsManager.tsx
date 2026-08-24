@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { AlertCircle, Check, CheckCircle, Plus, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Plus, Trash2, X } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { toast } from '../../lib/toast';
 import {
-  Alert,
   Button,
   Card,
   Checkbox,
@@ -18,8 +18,6 @@ import {
   Input,
 } from '../../design-system';
 
-type Message = { type: 'success' | 'error'; text: string };
-
 export default function LeadOriginsManager() {
   const { leadOrigins, refreshLeadOrigins } = useConfig();
   const [newOrigin, setNewOrigin] = useState('');
@@ -27,21 +25,15 @@ export default function LeadOriginsManager() {
   const [editingName, setEditingName] = useState('');
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [message, setMessage] = useState<Message | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    if (type === 'success') {
+      toast.success(text);
+    } else {
+      toast.error(text);
     }
-
-    const timeout = window.setTimeout(() => setMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [message]);
-
-  const showMessage = (type: Message['type'], text: string) => {
-    setMessage({ type, text });
   };
 
   const handleCreate = async () => {
@@ -159,13 +151,6 @@ export default function LeadOriginsManager() {
           <span>Nova origem</span>
         </Button>
       </div>
-
-      {message && (
-        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
-          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          <span>{message.text}</span>
-        </Alert>
-      )}
 
       <div className="space-y-3">
         {leadOrigins.map((origin) => {

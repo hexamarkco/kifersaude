@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Info,
   Plug,
   Save,
-  ShieldCheck,
   Facebook,
   MessageCircle,
   Sparkles,
@@ -12,6 +10,7 @@ import {
 
 import { configService } from "../../../lib/configService";
 import { supabase, type IntegrationSetting } from "../../../lib/supabase";
+import { toast } from "../../../lib/toast";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
 import { IntegrationsSkeleton } from "../../../components/ui/panelSkeletons";
@@ -455,20 +454,35 @@ export default function IntegrationsScreen() {
     useState<IntegrationSetting | null>(null);
   const [aiReplySuggestionInstructions, setAiReplySuggestionInstructions] = useState("");
   const [savingAiReplySuggestion, setSavingAiReplySuggestion] = useState(false);
-  const [aiMessage, setAiMessage] = useState<MessageState>(null);
   const [metaPixelIntegration, setMetaPixelIntegration] =
     useState<IntegrationSetting | null>(null);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [loadingMetaPixel, setLoadingMetaPixel] = useState(true);
   const [savingMetaPixel, setSavingMetaPixel] = useState(false);
-  const [metaPixelMessage, setMetaPixelMessage] = useState<MessageState>(null);
 
   const [gtmIntegration, setGtmIntegration] =
     useState<IntegrationSetting | null>(null);
   const [gtmId, setGtmId] = useState("");
   const [loadingGtm, setLoadingGtm] = useState(true);
   const [savingGtm, setSavingGtm] = useState(false);
-  const [gtmMessage, setGtmMessage] = useState<MessageState>(null);
+
+  const setAiMessage = (message: MessageState) => {
+    if (!message) return;
+    if (message.type === "success") toast.success(message.text);
+    else toast.error(message.text);
+  };
+
+  const setMetaPixelMessage = (message: MessageState) => {
+    if (!message) return;
+    if (message.type === "success") toast.success(message.text);
+    else toast.error(message.text);
+  };
+
+  const setGtmMessage = (message: MessageState) => {
+    if (!message) return;
+    if (message.type === "success") toast.success(message.text);
+    else toast.error(message.text);
+  };
 
   const loadingUi = useAdaptiveLoading(loadingAi);
 
@@ -967,18 +981,6 @@ export default function IntegrationsScreen() {
         {activeSection === "ai" && <section className="space-y-4">
           <SectionHeader title="Integrações de IA" description="Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo cada funcionalidade deve usar." />
 
-          {aiMessage && (
-            <Alert tone={aiMessage.type === "success" ? "success" : "danger"} className="mb-4">
-              <div className="flex items-center gap-3">
-              {aiMessage.type === "success" ? (
-                <ShieldCheck className="w-5 h-5" />
-              ) : (
-                <Info className="w-5 h-5" />
-              )}
-              <p>{aiMessage.text}</p>
-              </div>
-            </Alert>
-          )}
 
           <div className="grid gap-4 xl:grid-cols-3">
             {AI_PROVIDER_ORDER.map((provider) => {
@@ -1386,11 +1388,6 @@ export default function IntegrationsScreen() {
                 </div>
               </div>
 
-              {metaPixelMessage && (
-                <Alert tone={metaPixelMessage.type === "success" ? "success" : "danger"} className="mb-4">
-                  <p className="text-sm">{metaPixelMessage.text}</p>
-                </Alert>
-              )}
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
@@ -1434,12 +1431,6 @@ export default function IntegrationsScreen() {
                   </p>
                 </div>
               </div>
-
-              {gtmMessage && (
-                <Alert tone={gtmMessage.type === "success" ? "success" : "danger"} className="mb-4">
-                  <p className="text-sm">{gtmMessage.text}</p>
-                </Alert>
-              )}
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService, type ConfigCategory } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { toast } from '../../lib/toast';
 import {
-  Alert,
   Button,
   Card,
   Checkbox,
@@ -25,7 +25,6 @@ type ConfigOptionManagerProps = {
   placeholder?: string;
 };
 
-type Message = { type: 'success' | 'error'; text: string };
 type OptionDraft = { label: string; ordem: string };
 
 export default function ConfigOptionManager({
@@ -39,7 +38,6 @@ export default function ConfigOptionManager({
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OptionDraft>>({});
-  const [message, setMessage] = useState<Message | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -56,17 +54,12 @@ export default function ConfigOptionManager({
     setDrafts(nextDrafts);
   }, [items]);
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    if (type === 'success') {
+      toast.success(text);
+    } else {
+      toast.error(text);
     }
-
-    const timeout = window.setTimeout(() => setMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [message]);
-
-  const showMessage = (type: Message['type'], text: string) => {
-    setMessage({ type, text });
   };
 
   const updateDraft = (id: string, updates: Partial<OptionDraft>) => {
@@ -195,13 +188,6 @@ export default function ConfigOptionManager({
           <span>Nova opção</span>
         </Button>
       </div>
-
-      {message && (
-        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
-          {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          <span>{message.text}</span>
-        </Alert>
-      )}
 
       <div className="space-y-3">
         {items.map((item) => {

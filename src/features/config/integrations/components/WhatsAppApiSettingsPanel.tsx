@@ -4,7 +4,6 @@ import {
   Info,
   RefreshCcw,
   Save,
-  ShieldCheck,
 } from "lucide-react";
 
 import { configService } from "../../../../lib/configService";
@@ -50,8 +49,13 @@ export default function WhatsAppApiSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshingHealth, setRefreshingHealth] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<MessageState>(null);
   const loadingUi = useAdaptiveLoading(loading);
+
+  const setStatusMessage = (message: MessageState) => {
+    if (!message) return;
+    if (message.type === "success") toast.success(message.text);
+    else toast.error(message.text);
+  };
 
   const [enabled, setEnabled] = useState(false);
   const [tokenConfigured, setTokenConfigured] = useState(false);
@@ -250,19 +254,6 @@ export default function WhatsAppApiSettingsPanel() {
       stageClassName="min-h-[340px]"
     >
       <div className="space-y-6">
-        {statusMessage && (
-          <Alert tone={statusMessage.type === "success" ? "success" : "danger"}>
-            <div className="flex items-center gap-3">
-            {statusMessage.type === "success" ? (
-              <ShieldCheck className="w-5 h-5" />
-            ) : (
-              <Info className="w-5 h-5" />
-            )}
-            <p>{statusMessage.text}</p>
-            </div>
-          </Alert>
-        )}
-
         <details className="group">
           <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">
             Como conectar um canal na Whapi Cloud

@@ -9,8 +9,8 @@ export const supabaseFunctionsUrl =
 const SUPABASE_NETWORK_HELP =
   'Falha de rede ao conectar com o Supabase. Se o navegador mostrar erros de CORS ao mesmo tempo em auth, rest e rpc, o problema tende a ser bloqueio local de navegador/extensao/proxy ou indisponibilidade temporaria da rede, nao ausencia de CORS no codigo do app.';
 
-const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 15000;
-const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 30000;
+const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 8000;
+const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 10000;
 const DEFAULT_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 60000;
 const LONG_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 180000;
 const LONG_RUNNING_FUNCTION_PATHS = new Set([

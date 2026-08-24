@@ -54,8 +54,10 @@ export default function LinksScreen() {
 
   const [profileForm, setProfileForm] = useState({
     title: "",
+    subtitle: "",
     bio: "",
     avatar_url: "",
+    is_verified: false,
     is_published: true,
   });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -83,8 +85,10 @@ export default function LinksScreen() {
     setPageSettings(settings);
     setProfileForm({
       title: settings?.title ?? "Kifer Saúde",
+      subtitle: settings?.subtitle ?? "",
       bio: settings?.bio ?? "",
       avatar_url: settings?.avatar_url ?? "",
+      is_verified: settings?.is_verified ?? false,
       is_published: settings?.is_published ?? true,
     });
     setLinks(items);
@@ -132,8 +136,10 @@ export default function LinksScreen() {
     const { data, error } = await linksService.saveLinkPageSettings(
       {
         title: profileForm.title.trim(),
+        subtitle: profileForm.subtitle.trim() || null,
         bio: profileForm.bio.trim() || null,
         avatar_url: profileForm.avatar_url.trim() || null,
+        is_verified: profileForm.is_verified,
         is_published: profileForm.is_published,
       },
       pageSettings?.id,
@@ -345,6 +351,14 @@ export default function LinksScreen() {
             />
           </Field>
 
+          <Field label="Subtítulo">
+            <Input
+              value={profileForm.subtitle}
+              onChange={(event) => setProfileForm((prev) => ({ ...prev, subtitle: event.target.value }))}
+              placeholder="Ex: Planos de saúde no RJ"
+            />
+          </Field>
+
           <Field label="Biografia">
             <Textarea
               rows={3}
@@ -355,12 +369,19 @@ export default function LinksScreen() {
           </Field>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-[var(--border-subtle)] pt-4">
-          <Switch
-            checked={profileForm.is_published}
-            onChange={(event) => setProfileForm((prev) => ({ ...prev, is_published: event.target.checked }))}
-            label={profileForm.is_published ? "Página publicada" : "Página despublicada"}
-          />
+        <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <Switch
+              checked={profileForm.is_published}
+              onChange={(event) => setProfileForm((prev) => ({ ...prev, is_published: event.target.checked }))}
+              label={profileForm.is_published ? "Página publicada" : "Página despublicada"}
+            />
+            <Switch
+              checked={profileForm.is_verified}
+              onChange={(event) => setProfileForm((prev) => ({ ...prev, is_verified: event.target.checked }))}
+              label="Selo de verificado na foto"
+            />
+          </div>
           <Button onClick={() => void handleSaveProfile()} loading={savingProfile}>
             {!savingProfile && <Save className="h-4 w-4" />}
             <span>{savingProfile ? "Salvando..." : "Salvar perfil"}</span>
@@ -405,7 +426,7 @@ export default function LinksScreen() {
                   padding="sm"
                   className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
                 >
-                  <div className="flex flex-1 items-start gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="flex flex-col items-center gap-0.5 pt-0.5">
                       <button
                         type="button"
@@ -463,7 +484,9 @@ export default function LinksScreen() {
                       ) : (
                         <>
                           <p className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</p>
-                          <p className="truncate text-xs text-[var(--text-secondary)]">{link.url}</p>
+                          <p className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>
+                            {link.url}
+                          </p>
                           <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                             {link.is_active ? "Ativo" : "Inativo"} · {link.click_count} clique
                             {link.click_count === 1 ? "" : "s"}

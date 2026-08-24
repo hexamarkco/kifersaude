@@ -456,8 +456,10 @@ export type IntegrationSetting = {
 export type PublicLinkPageSettings = {
   id: string;
   title: string;
+  subtitle: string | null;
   bio: string | null;
   avatar_url: string | null;
+  is_verified: boolean;
   is_published: boolean;
   created_at: string;
   updated_at: string;

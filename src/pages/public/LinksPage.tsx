@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
@@ -7,6 +7,9 @@ import { getPanelButtonClass, LoadingState } from '../../design-system';
 import { getLinkIcon } from '../../lib/linkIcons';
 import { linksService } from '../../lib/linksService';
 import type { PublicLinkItem, PublicLinkPageSettings } from '../../lib/supabase';
+
+const LINK_REVEAL_BASE_DELAY_MS = 200;
+const LINK_REVEAL_STEP_MS = 70;
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);
@@ -56,22 +59,38 @@ export default function LinksPage() {
           </div>
         ) : (
           <>
-            <div className="mb-8 flex flex-col items-center gap-3 text-center">
-              {settings.avatar_url ? (
-                <img
-                  src={settings.avatar_url}
-                  alt={pageTitle}
-                  className="h-20 w-20 rounded-full border border-[color:var(--border-default)] object-cover shadow-[var(--shadow-button)]"
-                />
-              ) : (
-                <div className="inline-flex h-20 w-20 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
-                  <PublicBrandMark className="h-9 w-auto text-[color:var(--text-on-brand)]" />
-                </div>
-              )}
+            <div className="links-reveal mb-8 flex flex-col items-center gap-3 text-center">
+              <div className="relative">
+                {settings.avatar_url ? (
+                  <img
+                    src={settings.avatar_url}
+                    alt={pageTitle}
+                    className="h-20 w-20 rounded-full border border-[color:var(--border-default)] object-cover shadow-[var(--shadow-button)]"
+                  />
+                ) : (
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+                    <PublicBrandMark className="h-9 w-auto text-[color:var(--text-on-brand)]" />
+                  </div>
+                )}
 
-              <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">
-                {pageTitle}
-              </h1>
+                {settings.is_verified && (
+                  <span
+                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] ring-2 ring-[color:var(--bg-canvas)]"
+                    title="Perfil verificado"
+                  >
+                    <BadgeCheck className="h-4 w-4" />
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">
+                  {pageTitle}
+                </h1>
+                {settings.subtitle && (
+                  <p className="mt-0.5 text-sm font-medium text-[color:var(--brand-primary)]">{settings.subtitle}</p>
+                )}
+              </div>
 
               {settings.bio && (
                 <p className="max-w-sm text-sm text-[color:var(--text-secondary)]">{settings.bio}</p>
@@ -84,7 +103,7 @@ export default function LinksPage() {
                   Nenhum link disponível no momento.
                 </p>
               ) : (
-                items.map((link) => {
+                items.map((link, index) => {
                   const Icon = getLinkIcon(link.icon);
                   return (
                     <a
@@ -93,11 +112,12 @@ export default function LinksPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => handleLinkClick(link)}
+                      style={{ animationDelay: `${LINK_REVEAL_BASE_DELAY_MS + index * LINK_REVEAL_STEP_MS}ms` }}
                       className={getPanelButtonClass({
                         variant: 'secondary',
                         size: 'lg',
                         fullWidth: true,
-                        className: 'justify-between',
+                        className: 'links-reveal justify-between',
                       })}
                     >
                       <span className="flex items-center gap-3">
@@ -113,7 +133,8 @@ export default function LinksPage() {
 
             <a
               href="/"
-              className="mt-8 flex items-center justify-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
+              style={{ animationDelay: `${LINK_REVEAL_BASE_DELAY_MS + items.length * LINK_REVEAL_STEP_MS}ms` }}
+              className="links-reveal mt-8 flex items-center justify-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
             >
               <PublicBrandMark className="h-4 w-auto" />
               Kifer Saúde
@@ -121,6 +142,29 @@ export default function LinksPage() {
           </>
         )}
       </div>
+
+      <style>{`
+        @keyframes links-fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .links-reveal {
+          animation: links-fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .links-reveal {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }

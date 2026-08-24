@@ -33,7 +33,10 @@ export const linksService = {
   },
 
   async saveLinkPageSettings(
-    payload: Pick<PublicLinkPageSettings, 'title' | 'bio' | 'avatar_url' | 'is_published'>,
+    payload: Pick<
+      PublicLinkPageSettings,
+      'title' | 'subtitle' | 'bio' | 'avatar_url' | 'is_verified' | 'is_published'
+    >,
     existingId?: string | null,
   ): Promise<{ data: PublicLinkPageSettings | null; error: PostgrestError | null }> {
     try {

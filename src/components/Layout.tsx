@@ -1169,7 +1169,7 @@ export default function Layout({
         <div
           id="collapsed-menu-dropdown"
           ref={collapsedDropdownRef}
-          className="terracota-sidebar-popover fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border p-1.5 shadow-2xl"
+          className="terracota-sidebar-popover fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-[var(--radius-2xl)] border p-1.5 shadow-2xl"
           style={{
             left: collapsedDropdownPosition.left,
             top: collapsedDropdownPosition.top,

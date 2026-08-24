@@ -7,6 +7,7 @@ import { Alert, Badge, PageHeader, Tabs, type TabItem } from "../../design-syste
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
 import IntegrationsScreen from "./integrations/IntegrationsScreen";
+import LinksScreen from "./links/LinksScreen";
 import { getAllowedConfigTabs, type ConfigTabType } from "./shared/configTabs";
 import UsersScreen from "./users/UsersScreen";
 
@@ -61,6 +62,7 @@ export default function ConfigPageScreen() {
           {activeAllowedTab === "users" && <UsersScreen />}
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
+          {activeAllowedTab === "links" && <LinksScreen />}
       </main>
     </div>
   );

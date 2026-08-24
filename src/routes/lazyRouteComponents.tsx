@@ -3,6 +3,7 @@ import { lazy } from 'react';
 import { AppLoadingScreen } from '../design-system';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
+export const LinksPage = lazy(() => import('../pages/public/LinksPage'));
 export const AiSandboxChatWrapper = lazy(() => import('../pages/routes/AiSandboxChatWrapper'));
 export const DesignSystemShowcase = lazy(() => import('../pages/dev/DesignSystemShowcase'));
 export const PainelWrapper = lazy(() => import('../pages/PainelWrapper'));

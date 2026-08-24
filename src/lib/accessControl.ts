@@ -20,6 +20,7 @@ export const ACCESS_MODULES: AccessModuleDefinition[] = [
   { id: 'config-users', label: 'Configurações - Usuários', description: 'Criação, edição e exclusão de usuários do sistema.', group: 'config' },
   { id: 'config-automation', label: 'Configurações - Automações', description: 'Gestão dos fluxos de automação do sistema.', group: 'config' },
   { id: 'config-integrations', label: 'Configurações - Integrações', description: 'Parâmetros e credenciais de integrações.', group: 'config' },
+  { id: 'config-links', label: 'Configurações - Links', description: 'Gestão da página pública de links (/links).', group: 'config' },
 ];
 
 export const CONFIG_MODULE_IDS = ACCESS_MODULES.filter((module) => module.group === 'config').map((module) => module.id);
@@ -32,6 +33,7 @@ const MODULE_ALIASES: Record<string, string[]> = {
   'config-users': ['config'],
   'config-automation': ['config'],
   'config-integrations': ['config'],
+  'config-links': ['config'],
 };
 
 export const getModuleLookupOrder = (moduleId: string): string[] => {

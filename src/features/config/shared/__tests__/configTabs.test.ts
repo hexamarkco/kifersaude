@@ -10,6 +10,6 @@ test("getAllowedConfigTabs returns only modules with view permission", () => {
 
   assert.deepEqual(
     tabs.map((tab) => tab.id),
-    ["system", "users", "integrations"],
+    ["system", "users", "integrations", "links"],
   );
 });

@@ -1,12 +1,13 @@
 import {
   GitBranch,
+  Link2,
   Plug,
   Settings,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
-export type ConfigTabType = "system" | "users" | "integrations" | "automation";
+export type ConfigTabType = "system" | "users" | "integrations" | "automation" | "links";
 
 type ConfigTabDefinition = {
   id: ConfigTabType;
@@ -29,6 +30,12 @@ export const CONFIG_TAB_DEFINITIONS: ConfigTabDefinition[] = [
     label: "Integrações",
     icon: Plug,
     moduleId: "config-integrations",
+  },
+  {
+    id: "links",
+    label: "Links",
+    icon: Link2,
+    moduleId: "config-links",
   },
 ];
 

@@ -227,6 +227,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  let retryDispatched = false;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -383,6 +385,7 @@ Deno.serve(async (req: Request) => {
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
     const whapi = createWhapiClient(token);
+    retryDispatched = true;
     const response = await whapi.post(
       `${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`,
       JSON.stringify({
@@ -399,7 +402,10 @@ Deno.serve(async (req: Request) => {
     if (!response.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
       await failRetryRequest(supabaseAdmin, retryRequest.row?.id, errorMessage || 'Nao foi possivel reenviar a midia.');
-      return new Response(JSON.stringify({ error: errorMessage || 'Nao foi possivel reenviar a midia.' }), {
+      // Erro 5xx nao garante que a Whapi nao processou o envio (pode ser so a
+      // resposta que falhou). Sinalizamos como ambiguo para o cliente nao
+      // oferecer reenvio imediato do mesmo conteudo.
+      return new Response(JSON.stringify({ error: errorMessage || 'Nao foi possivel reenviar a midia.', ambiguous: response.status >= 500 }), {
         status: response.status,
         headers: jsonHeaders,
       });
@@ -460,8 +466,13 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('[comm-whatsapp-retry-message] erro inesperado', error);
+    // Se ja tinhamos chamado a Whapi quando a excecao ocorreu, nao ha garantia
+    // de que o reenvio nao chegou ao destinatario - sinalizamos como ambiguo.
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao reenviar midia.' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Erro interno ao reenviar midia.',
+        ambiguous: retryDispatched,
+      }),
       { status: 500, headers: jsonHeaders },
     );
   }

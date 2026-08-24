@@ -19,6 +19,7 @@ import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
 import { cx } from '../../../lib/cx';
 import {
+  CommWhatsAppAmbiguousSendError,
   CommWhatsAppMediaSendTimeoutError,
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -7138,12 +7139,16 @@ export default function WhatsAppInboxScreen() {
           localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+          // Erro ambíguo: não há confirmação de que a mensagem anterior não foi
+          // entregue, então mantemos como "sending" para não oferecer reenvio
+          // imediato do mesmo texto e arriscar duplicar para o contato.
+          const status = error instanceof CommWhatsAppAmbiguousSendError ? 'sending' : 'failed';
           patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-            delivery_status: 'failed',
+            delivery_status: status,
             status_updated_at: new Date().toISOString(),
             error_message: message,
           });
-          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, 'failed');
+          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, status);
         }
       }
 
@@ -7302,7 +7307,7 @@ export default function WhatsAppInboxScreen() {
               } catch (error) {
                 const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
                 firstErrorMessage = firstErrorMessage || message;
-                if (error instanceof CommWhatsAppMediaSendTimeoutError) {
+                if (error instanceof CommWhatsAppMediaSendTimeoutError || error instanceof CommWhatsAppAmbiguousSendError) {
                   hadAmbiguousSend = true;
                   patchLocalOutgoingMessage(queued.optimisticMessage.id, {
                     delivery_status: 'sending',
@@ -7493,7 +7498,7 @@ export default function WhatsAppInboxScreen() {
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao reenviar mensagem', error);
       const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
-      if (error instanceof CommWhatsAppMediaSendTimeoutError) {
+      if (error instanceof CommWhatsAppMediaSendTimeoutError || error instanceof CommWhatsAppAmbiguousSendError) {
         patchLocalOutgoingMessage(message.id, {
           delivery_status: 'sending',
           status_updated_at: new Date().toISOString(),
@@ -10200,8 +10205,14 @@ export default function WhatsAppInboxScreen() {
                                   </button>
                                 </>
                               ) : null}
-                              {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                                <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => setRetryPendingMessage(message)} />
+                              {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
+                                <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
+                              ) : null}
+                              {message.direction === 'outbound' && retryingMessageId === message.id ? (
+                                <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <span>Reenviando</span>
+                                </span>
                               ) : null}
                             </div>
                           </div>

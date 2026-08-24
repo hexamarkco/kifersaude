@@ -340,7 +340,9 @@ const failMissingWhapiMessageId = async (
   const errorMessage = 'A Whapi confirmou a requisicao, mas nao retornou o ID da mensagem.';
   await failSendRequest(supabaseAdmin, requestId, errorMessage);
 
-  return new Response(JSON.stringify({ error: errorMessage }), {
+  // A Whapi confirmou a requisicao (HTTP ok) - a mensagem pode ja ter sido
+  // entregue mesmo sem o ID no payload de resposta.
+  return new Response(JSON.stringify({ error: errorMessage, ambiguous: true }), {
     status: 502,
     headers: jsonHeaders,
   });
@@ -897,7 +899,11 @@ Deno.serve(async (req: Request) => {
         : `Whapi retornou erro HTTP ${whapiResponse.status}.`;
       await failSendRequest(supabaseAdmin, sendRequest.row?.id, detailedErrorMessage);
 
-      return new Response(JSON.stringify({ error: detailedErrorMessage }), {
+      // Erro 5xx nao garante que a Whapi nao processou o envio (pode ser so a
+      // resposta que falhou). Sinalizamos como ambiguo para o cliente nao
+      // oferecer reenvio imediato do mesmo conteudo.
+      const ambiguous = whapiResponse.status >= 500;
+      return new Response(JSON.stringify({ error: detailedErrorMessage, ambiguous }), {
         status: whapiResponse.status,
         headers: jsonHeaders,
       });
@@ -1024,8 +1030,14 @@ Deno.serve(async (req: Request) => {
         console.error('[comm-whatsapp-send] erro ao encerrar tentativa falha', cleanupError);
       }
     }
+    // O request ja tinha sido reservado (chegamos a chamar ou estavamos prestes a
+    // chamar a Whapi) quando a excecao ocorreu - nao ha garantia de que a mensagem
+    // nao chegou ao destinatario, entao sinalizamos como ambiguo.
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.',
+        ambiguous: Boolean(sendRequestId),
+      }),
       {
         status: 500,
         headers: jsonHeaders,

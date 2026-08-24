@@ -140,6 +140,17 @@ export class CommWhatsAppMediaSendTimeoutError extends Error {
   }
 }
 
+// Lançado quando não há confirmação de que a mensagem NÃO foi entregue (ex.: erro
+// 5xx da Whapi, ou a conexão caiu antes da resposta chegar). Nesses casos o envio
+// pode ter sido concluído do outro lado, então a UI não deve oferecer reenvio
+// imediato do mesmo conteúdo — isso arriscaria duplicar a mensagem para o contato.
+export class CommWhatsAppAmbiguousSendError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CommWhatsAppAmbiguousSendError';
+  }
+}
+
 export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
@@ -416,6 +427,38 @@ const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: st
   }
 
   return getSupabaseErrorMessage(error, fallbackMessage);
+};
+
+// Igual a getFunctionInvokeErrorMessage, mas também repassa a flag `ambiguous` que
+// as functions de envio/reenvio retornam quando não dá para confirmar se a
+// mensagem anterior realmente não foi entregue.
+const getSendInvokeErrorDetails = async (
+  error: unknown,
+  fallbackMessage: string,
+): Promise<{ message: string; ambiguous: boolean }> => {
+  const context = error && typeof error === 'object' && 'context' in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (context instanceof Response) {
+    const payload = await context.clone().json().catch(() => null) as { error?: unknown; message?: unknown; ambiguous?: unknown } | null;
+    const message = typeof payload?.error === 'string' && payload.error.trim()
+      ? payload.error.trim()
+      : typeof payload?.message === 'string' && payload.message.trim()
+        ? payload.message.trim()
+        : '';
+
+    if (message) {
+      return { message, ambiguous: payload?.ambiguous === true };
+    }
+  }
+
+  return { message: await getFunctionInvokeErrorMessage(error, fallbackMessage), ambiguous: false };
+};
+
+const throwSendInvokeError = async (error: unknown, fallbackMessage: string): Promise<never> => {
+  const { message, ambiguous } = await getSendInvokeErrorDetails(error, fallbackMessage);
+  throw ambiguous ? new CommWhatsAppAmbiguousSendError(message) : new Error(message);
 };
 
 const parseSendResponse = (data: unknown, fallbackStatus = 'pending'): CommWhatsAppSendResult => {
@@ -1458,7 +1501,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel enviar a mensagem no WhatsApp.'));
+      await throwSendInvokeError(error, 'Nao foi possivel enviar a mensagem no WhatsApp.');
     }
 
     return parseSendResponse(data);
@@ -1714,7 +1757,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel reenviar a midia no WhatsApp.'));
+      await throwSendInvokeError(error, 'Nao foi possivel reenviar a midia no WhatsApp.');
     }
 
     const payload = (data ?? {}) as { messageId?: string | null; status?: string };
@@ -1825,7 +1868,9 @@ export const commWhatsAppService = {
             typeof payload.error === 'string' && payload.error.trim()
               ? payload.error.trim()
               : 'Nao foi possivel enviar a midia no WhatsApp.';
-          finalize(() => reject(new Error(message)));
+          finalize(() => reject(payload.ambiguous === true
+            ? new CommWhatsAppAmbiguousSendError(message)
+            : new Error(message)));
           return;
         }
 
@@ -1838,7 +1883,9 @@ export const commWhatsAppService = {
       };
 
       xhr.onerror = () => {
-        finalize(() => reject(new Error('Falha de rede ao enviar a midia no WhatsApp.')));
+        // A conexão pode ter caído depois que o servidor já processou o envio -
+        // não dá para confirmar que a mídia não chegou ao WhatsApp.
+        finalize(() => reject(new CommWhatsAppAmbiguousSendError('Falha de rede ao enviar a midia no WhatsApp. Confirmando envio...')));
       };
 
       xhr.ontimeout = () => {
@@ -1883,7 +1930,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a midia remota no WhatsApp.'));
+      await throwSendInvokeError(error, 'Nao foi possivel enviar a midia remota no WhatsApp.');
     }
 
     return parseSendResponse(data);

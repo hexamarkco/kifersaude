@@ -13,6 +13,7 @@ import {
   DesignSystemShowcase,
   FinanceiroAgendaTab,
   FinanceiroComissoesTab,
+  FormPage,
   HomePage,
   LeadsManagerWrapper,
   LinksPage,
@@ -52,6 +53,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/links" element={<LinksPage />} />
+            <Route path="/forms/:slug" element={<FormPage />} />
             <Route path="/design-system" element={<DesignSystemShowcase />} />
             <Route
               path="/chat"

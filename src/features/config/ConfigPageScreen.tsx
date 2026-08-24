@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
 import { Alert, Badge, PageHeader, Tabs, type TabItem } from "../../design-system";
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
+import FormsScreen from "./forms/FormsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
 import IntegrationsScreen from "./integrations/IntegrationsScreen";
 import LinksScreen from "./links/LinksScreen";
@@ -63,6 +64,7 @@ export default function ConfigPageScreen() {
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
           {activeAllowedTab === "links" && <LinksScreen />}
+          {activeAllowedTab === "forms" && <FormsScreen />}
       </main>
     </div>
   );

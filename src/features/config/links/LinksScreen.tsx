@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import {
   AlertCircle,
   Check,
@@ -7,13 +7,16 @@ import {
   ChevronUp,
   Copy,
   ExternalLink,
+  Loader,
   Plus,
   Save,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
+import { uploadLinkPageImage } from "../../../lib/imageUploadService";
 import { getLinkIcon, LINK_ICON_OPTIONS } from "../../../lib/linkIcons";
 import { linksService } from "../../../lib/linksService";
 import type { PublicLinkItem, PublicLinkPageSettings } from "../../../lib/supabase";
@@ -31,6 +34,7 @@ import {
   LoadingState,
   SectionHeader,
   Select,
+  Surface,
   Switch,
   Textarea,
 } from "../../../design-system";
@@ -61,6 +65,7 @@ export default function LinksScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<Message>(null);
   const [copyLabel, setCopyLabel] = useState("Copiar link");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [linksMessage, setLinksMessage] = useState<Message>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -117,6 +122,22 @@ export default function LinksScreen() {
       setCopyLabel("Não foi possível copiar");
       window.setTimeout(() => setCopyLabel("Copiar link"), 2000);
     }
+  };
+
+  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    const result = await uploadLinkPageImage(file);
+
+    if (!result.success || !result.url) {
+      setProfileMessage({ type: "error", text: result.error ?? "Erro ao fazer upload da imagem." });
+    } else {
+      setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
+    }
+    setUploadingAvatar(false);
   };
 
   const handleSaveProfile = async () => {
@@ -310,21 +331,55 @@ export default function LinksScreen() {
             />
           </Field>
 
-          <Field label="Foto (URL da imagem)">
-            <Input
-              value={profileForm.avatar_url}
-              onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
-              placeholder="https://..."
-            />
-          </Field>
-
-          <Field label="Biografia" className="md:col-span-2">
+          <Field label="Biografia">
             <Textarea
               rows={3}
               value={profileForm.bio}
               onChange={(event) => setProfileForm((prev) => ({ ...prev, bio: event.target.value }))}
               placeholder="Um resumo curto sobre você ou a Kifer Saúde."
             />
+          </Field>
+
+          <Field label="Foto" className="md:col-span-2">
+            <div className="space-y-3">
+              <Input
+                value={profileForm.avatar_url}
+                onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
+                placeholder="https://... ou faça upload abaixo"
+              />
+
+              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center gap-2 border-dashed px-4 py-3 text-[var(--warning-text)] transition-colors">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={(event) => void handleAvatarUpload(event)}
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                />
+                {uploadingAvatar ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="text-sm font-semibold">Fazendo upload...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    <span className="text-sm font-semibold">Fazer upload da foto</span>
+                    <span className="text-xs">(JPG, PNG, WEBP, GIF — máx 5MB)</span>
+                  </>
+                )}
+              </label>
+
+              {profileForm.avatar_url && (
+                <Surface padding="none" className="w-24 overflow-hidden rounded-full">
+                  <img
+                    src={profileForm.avatar_url}
+                    alt="Preview da foto"
+                    className="h-24 w-24 object-cover"
+                  />
+                </Surface>
+              )}
+            </div>
           </Field>
         </div>
 

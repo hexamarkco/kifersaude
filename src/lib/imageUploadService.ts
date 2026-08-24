@@ -65,6 +65,59 @@ export async function uploadBlogImage(file: File): Promise<UploadResult> {
   }
 }
 
+export async function uploadLinkPageImage(file: File): Promise<UploadResult> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return {
+      success: false,
+      error: 'Formato de arquivo não suportado. Use JPG, PNG, WEBP ou GIF.'
+    };
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      success: false,
+      error: 'Arquivo muito grande. Tamanho máximo: 5MB.'
+    };
+  }
+
+  const fileExt = file.name.split('.').pop();
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(2, 8);
+  const fileName = `${timestamp}-${randomString}.${fileExt}`;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from('link-page-images')
+      .upload(fileName, file, {
+        cacheControl: '31536000',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Upload error:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao fazer upload da imagem.'
+      };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('link-page-images')
+      .getPublicUrl(data.path);
+
+    return {
+      success: true,
+      url: publicUrl
+    };
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return {
+      success: false,
+      error: 'Erro inesperado ao fazer upload da imagem.'
+    };
+  }
+}
+
 export async function deleteBlogImage(url: string): Promise<boolean> {
   try {
     const path = url.split('/blog-images/').pop();

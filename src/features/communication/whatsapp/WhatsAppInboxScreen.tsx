@@ -3167,6 +3167,7 @@ export default function WhatsAppInboxScreen() {
   const [sending, setSending] = useState(false);
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
+  const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
@@ -10200,7 +10201,7 @@ export default function WhatsAppInboxScreen() {
                                 </>
                               ) : null}
                               {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                                <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
+                                <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => setRetryPendingMessage(message)} />
                               ) : null}
                             </div>
                           </div>
@@ -11268,6 +11269,22 @@ export default function WhatsAppInboxScreen() {
           confirmLabel="Apagar"
           destructive
           loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)}
+        />
+
+        <ConfirmDialog
+          open={Boolean(retryPendingMessage)}
+          onOpenChange={(open) => {
+            if (!open) setRetryPendingMessage(null);
+          }}
+          onConfirm={async () => {
+            if (!retryPendingMessage) return;
+            await handleRetryMediaMessage(retryPendingMessage);
+            setRetryPendingMessage(null);
+          }}
+          title="Reenviar mensagem"
+          description="Confirme que a mensagem anterior realmente não chegou no WhatsApp antes de reenviar. Reenviar uma mensagem que já foi entregue cria uma duplicata para o contato."
+          confirmLabel="Reenviar mesmo assim"
+          loading={Boolean(retryPendingMessage && retryingMessageId === retryPendingMessage.id)}
         />
 
         <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">

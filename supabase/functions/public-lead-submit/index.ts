@@ -36,6 +36,12 @@ type ContractTypeRow = {
   value: string;
 };
 
+type ResponsibleRow = {
+  id: string;
+  label: string;
+  value: string;
+};
+
 const normalizeText = (value: string) =>
   value
     .normalize('NFD')
@@ -96,18 +102,26 @@ const hashIp = async (ip: string, serviceRoleKey: string): Promise<string> => {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const findOriginId = (origins: OriginRow[]): string | null => {
+// `leads.origem`/`tipo_contratacao`/`responsavel` are legacy NOT NULL text
+// columns (FK'd to these config tables by name/value) that predate the
+// `*_id` columns and are never auto-synced by a trigger — unlike `status`,
+// which is. So every insert must resolve and set the text value directly,
+// not just the `*_id` column, or it can violate the NOT NULL/FK constraint.
+const resolveOrigin = (origins: OriginRow[]): OriginRow | null => {
   const priorities = ['site', 'home', 'inicio', 'organico', 'organico site', 'landing'];
   const match = origins.find((origin) => priorities.some((term) => normalizeText(origin.nome).includes(term)));
-  return match?.id ?? origins[0]?.id ?? null;
+  return match ?? origins[0] ?? null;
 };
 
-const findStatusId = (statuses: StatusRow[]): string | null => {
+const resolveStatus = (statuses: StatusRow[]): StatusRow | null => {
   const match = statuses.find((status) => normalizeText(status.nome).includes('novo'));
-  return match?.id ?? statuses[0]?.id ?? null;
+  return match ?? statuses[0] ?? null;
 };
 
-const findContractTypeId = (types: ContractTypeRow[], contractType: ValidatedPublicLeadPayload['contractType']): string | null => {
+const resolveContractType = (
+  types: ContractTypeRow[],
+  contractType: ValidatedPublicLeadPayload['contractType'],
+): ContractTypeRow | null => {
   const aliases: Record<ValidatedPublicLeadPayload['contractType'], string[]> = {
     PF: ['pf', 'pessoa fisica', 'pessoa fisica individual', 'individual', 'familiar'],
     MEI: ['mei', 'pme', 'empresa', 'empresarial', 'cnpj', 'pj'],
@@ -118,8 +132,10 @@ const findContractTypeId = (types: ContractTypeRow[], contractType: ValidatedPub
     return aliases[contractType].some((alias) => candidate.includes(alias));
   });
 
-  return match?.id ?? null;
+  return match ?? types[0] ?? null;
 };
+
+const resolveResponsible = (responsibles: ResponsibleRow[]): ResponsibleRow | null => responsibles[0] ?? null;
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -190,23 +206,33 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(origin, GENERIC_ERROR_BODY, 429);
     }
 
-    const [originsResult, statusesResult, contractTypesResult] = await Promise.all([
+    const [originsResult, statusesResult, contractTypesResult, responsiblesResult] = await Promise.all([
       supabaseAdmin.from('lead_origens').select('id, nome').eq('ativo', true),
       supabaseAdmin.from('lead_status_config').select('id, nome').eq('ativo', true).order('ordem', { ascending: true }),
       supabaseAdmin.from('lead_tipos_contratacao').select('id, label, value').eq('ativo', true).order('ordem', { ascending: true }),
+      supabaseAdmin.from('lead_responsaveis').select('id, label, value').eq('ativo', true).order('ordem', { ascending: true }),
     ]);
-    if (originsResult.error || statusesResult.error || contractTypesResult.error) {
+    if (originsResult.error || statusesResult.error || contractTypesResult.error || responsiblesResult.error) {
       throw new Error('Unable to resolve lead defaults.');
     }
+
+    const originRow = resolveOrigin((originsResult.data ?? []) as OriginRow[]);
+    const status = resolveStatus((statusesResult.data ?? []) as StatusRow[]);
+    const contractTypeRow = resolveContractType((contractTypesResult.data ?? []) as ContractTypeRow[], payload.contractType);
+    const responsible = resolveResponsible((responsiblesResult.data ?? []) as ResponsibleRow[]);
 
     const now = new Date().toISOString();
     const { error: insertError } = await supabaseAdmin.from('leads').insert({
       nome_completo: payload.name,
       telefone: payload.phone,
       cidade: payload.city,
-      origem_id: findOriginId((originsResult.data ?? []) as OriginRow[]),
-      status_id: findStatusId((statusesResult.data ?? []) as StatusRow[]),
-      tipo_contratacao_id: findContractTypeId((contractTypesResult.data ?? []) as ContractTypeRow[], payload.contractType),
+      origem: originRow?.nome ?? undefined,
+      origem_id: originRow?.id ?? null,
+      status: status?.nome ?? undefined,
+      status_id: status?.id ?? null,
+      tipo_contratacao: contractTypeRow?.value ?? undefined,
+      tipo_contratacao_id: contractTypeRow?.id ?? null,
+      responsavel: responsible?.value ?? undefined,
       observacoes: `Lead site | Tipo: ${payload.contractType} | Cidade: ${payload.city} | Beneficiarios: ${formatPublicLeadAgeSummary(payload.ageSummary)}`,
       data_criacao: now,
       ultimo_contato: now,

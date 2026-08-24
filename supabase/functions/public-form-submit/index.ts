@@ -25,6 +25,7 @@ const MAX_BODY_BYTES = 8192;
 type OriginRow = { id: string; nome: string };
 type StatusRow = { id: string; nome: string };
 type ContractTypeRow = { id: string; label: string; value: string };
+type ResponsibleRow = { id: string; label: string; value: string };
 type FormRow = { id: string; title: string; slug: string };
 type StepOption = { id: string; label: string; value?: string };
 type StepRow = {
@@ -96,15 +97,20 @@ const hashIp = async (ip: string, serviceRoleKey: string): Promise<string> => {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const findOriginId = (origins: OriginRow[]): string | null => {
+// `leads.origem`/`tipo_contratacao`/`responsavel` are legacy NOT NULL text
+// columns (FK'd to these config tables by name/value) that predate the
+// `*_id` columns and are never auto-synced by a trigger — unlike `status`,
+// which is. So every insert must resolve and set the text value directly,
+// not just the `*_id` column, or it can violate the NOT NULL/FK constraint.
+const resolveOrigin = (origins: OriginRow[]): OriginRow | null => {
   const priorities = ['formulario', 'form', 'site', 'landing', 'organico'];
   const match = origins.find((origin) => priorities.some((term) => normalizeText(origin.nome).includes(term)));
-  return match?.id ?? origins[0]?.id ?? null;
+  return match ?? origins[0] ?? null;
 };
 
-const findStatusId = (statuses: StatusRow[]): string | null => {
+const resolveStatus = (statuses: StatusRow[]): StatusRow | null => {
   const match = statuses.find((status) => normalizeText(status.nome).includes('novo'));
-  return match?.id ?? statuses[0]?.id ?? null;
+  return match ?? statuses[0] ?? null;
 };
 
 const CONTRACT_TYPE_ALIASES: Record<'PF' | 'MEI' | 'CNPJ', string[]> = {
@@ -113,14 +119,22 @@ const CONTRACT_TYPE_ALIASES: Record<'PF' | 'MEI' | 'CNPJ', string[]> = {
   CNPJ: ['cnpj', 'pme', 'empresa', 'empresarial', 'pj', 'coletivo empresarial'],
 };
 
-const findContractTypeId = (types: ContractTypeRow[], contractType: 'PF' | 'MEI' | 'CNPJ'): string | null => {
-  const aliases = CONTRACT_TYPE_ALIASES[contractType];
-  const match = types.find((type) => {
-    const candidate = normalizeText(`${type.label} ${type.value}`);
-    return aliases.some((alias) => candidate.includes(alias));
-  });
-  return match?.id ?? null;
+const resolveContractType = (
+  types: ContractTypeRow[],
+  contractType: 'PF' | 'MEI' | 'CNPJ' | null,
+): ContractTypeRow | null => {
+  if (contractType) {
+    const aliases = CONTRACT_TYPE_ALIASES[contractType];
+    const match = types.find((type) => {
+      const candidate = normalizeText(`${type.label} ${type.value}`);
+      return aliases.some((alias) => candidate.includes(alias));
+    });
+    if (match) return match;
+  }
+  return types[0] ?? null;
 };
+
+const resolveResponsible = (responsibles: ResponsibleRow[]): ResponsibleRow | null => responsibles[0] ?? null;
 
 const buildFieldMappings = (
   steps: StepRow[],
@@ -278,17 +292,23 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(origin, GENERIC_ERROR_BODY, 429);
     }
 
-    const [originsResult, statusesResult, contractTypesResult] = await Promise.all([
+    const [originsResult, statusesResult, contractTypesResult, responsiblesResult] = await Promise.all([
       supabaseAdmin.from('lead_origens').select('id, nome').eq('ativo', true),
       supabaseAdmin.from('lead_status_config').select('id, nome').eq('ativo', true).order('ordem', { ascending: true }),
       supabaseAdmin.from('lead_tipos_contratacao').select('id, label, value').eq('ativo', true).order('ordem', { ascending: true }),
+      supabaseAdmin.from('lead_responsaveis').select('id, label, value').eq('ativo', true).order('ordem', { ascending: true }),
     ]);
-    if (originsResult.error || statusesResult.error || contractTypesResult.error) {
+    if (originsResult.error || statusesResult.error || contractTypesResult.error || responsiblesResult.error) {
       throw new Error('Unable to resolve lead defaults.');
     }
 
     const { cidade, contractType } = buildFieldMappings(answerableSteps, payload.answers);
     const answersSummary = buildAnswersSummary(answerableSteps, payload.answers);
+
+    const originRow = resolveOrigin((originsResult.data ?? []) as OriginRow[]);
+    const status = resolveStatus((statusesResult.data ?? []) as StatusRow[]);
+    const contractTypeRow = resolveContractType((contractTypesResult.data ?? []) as ContractTypeRow[], contractType);
+    const responsible = resolveResponsible((responsiblesResult.data ?? []) as ResponsibleRow[]);
 
     const geoSummary =
       payload.geo.permission === 'granted' && payload.geo.latitude !== null && payload.geo.longitude !== null
@@ -311,11 +331,13 @@ Deno.serve(async (req: Request) => {
         telefone: payload.contact.phone,
         email: payload.contact.email ?? undefined,
         cidade: cidade ?? undefined,
-        origem_id: findOriginId((originsResult.data ?? []) as OriginRow[]),
-        status_id: findStatusId((statusesResult.data ?? []) as StatusRow[]),
-        tipo_contratacao_id: contractType
-          ? findContractTypeId((contractTypesResult.data ?? []) as ContractTypeRow[], contractType)
-          : null,
+        origem: originRow?.nome ?? undefined,
+        origem_id: originRow?.id ?? null,
+        status: status?.nome ?? undefined,
+        status_id: status?.id ?? null,
+        tipo_contratacao: contractTypeRow?.value ?? undefined,
+        tipo_contratacao_id: contractTypeRow?.id ?? null,
+        responsavel: responsible?.value ?? undefined,
         observacoes: observacoesParts.join(' | '),
         data_criacao: now,
         ultimo_contato: now,

@@ -1230,7 +1230,7 @@ export default function HomePage() {
                     </div>
                     <div className="absolute inset-0 overflow-hidden rounded-[var(--kds-radius-md)] border-4 border-[color:var(--text-on-brand)] [background:var(--surface-hero-bg)] shadow-[var(--shadow-modal)]">
                       <img
-                        src="/image.png"
+                        src="/luiza-kifer-hero.png"
                         alt="Luiza Kifer - especialista em planos de saúde"
                         className="h-full w-full object-cover object-[center_35%] scale-105"
                       />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2 } from 'lucide-react';
-import { Badge, Button, EmptyState, LoadingState } from '../../design-system';
+import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
+import { Badge, Button, EmptyState, Input, LoadingState } from '../../design-system';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   aiSandboxChatService,
@@ -21,6 +21,8 @@ export default function AiSandboxChatScreen() {
   const [sendingDraft, setSendingDraft] = useState(false);
   const [secondsUntilReply, setSecondsUntilReply] = useState<number | null>(null);
   const [generatingReply, setGeneratingReply] = useState(false);
+  const [leadNameForApproach, setLeadNameForApproach] = useState('');
+  const [startingApproach, setStartingApproach] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
@@ -93,6 +95,7 @@ export default function AiSandboxChatScreen() {
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
+    setLeadNameForApproach('');
     setError(null);
   };
 
@@ -206,6 +209,43 @@ export default function AiSandboxChatScreen() {
     }
   };
 
+  const handleStartWithApproach = async () => {
+    if (!user || startingApproach) return;
+
+    setError(null);
+    setStartingApproach(true);
+    const name = leadNameForApproach.trim();
+
+    try {
+      const conversation = await aiSandboxChatService.createConversation(name || 'Abordagem', user.id);
+      setConversations((prev) => [conversation, ...prev]);
+      setActiveConversationId(conversation.id);
+      setLeadNameForApproach('');
+
+      setGeneratingReply(true);
+      const result = await aiSandboxChatService.generateOpening(conversation.id, name || undefined);
+      if (activeConversationIdRef.current !== conversation.id) return;
+
+      const now = Date.now();
+      const openingMessages: AiSandboxMessage[] = result.messages.map((content, index) => ({
+        id: `ai-opening-${now}-${index}`,
+        conversation_id: conversation.id,
+        role: 'ai',
+        content,
+        handoff_reason: index === result.messages.length - 1 ? result.handoffReason : null,
+        provider: result.provider,
+        model: result.model,
+        created_at: new Date().toISOString(),
+      }));
+      setMessages(openingMessages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
+    } finally {
+      setStartingApproach(false);
+      setGeneratingReply(false);
+    }
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -282,12 +322,33 @@ export default function AiSandboxChatScreen() {
           </div>
         )}
         {!activeConversationId && messages.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center">
-            <EmptyState
-              icon={<Sparkles className="h-6 w-6" />}
-              title="Simule um atendimento"
-              description="Digite como se você fosse um lead chegando no WhatsApp. A IA responde seguindo o playbook e o estilo real da operação."
-            />
+          <div className="flex flex-1 items-center justify-center px-6">
+            <div className="w-full max-w-sm">
+              <EmptyState
+                icon={<Sparkles className="h-6 w-6" />}
+                title="Simule um atendimento"
+                description="Na maioria dos casos é você quem aborda o lead primeiro — a IA pode puxar o mesmo fluxo de abordagem. Se for um lead que te procurou por indicação, é só mandar a primeira mensagem no campo abaixo."
+              />
+              <div className="mt-4 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
+                <p className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</p>
+                <Input
+                  value={leadNameForApproach}
+                  onChange={(event) => setLeadNameForApproach(event.target.value)}
+                  placeholder="Nome do lead (opcional)"
+                  size="compact"
+                  disabled={startingApproach}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={startingApproach}
+                  onClick={handleStartWithApproach}
+                >
+                  <UserRoundPlus className="mr-1.5 h-4 w-4" />
+                  Iniciar abordagem
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">

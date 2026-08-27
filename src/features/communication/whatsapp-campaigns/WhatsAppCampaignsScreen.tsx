@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, Bot, BookmarkPlus, CalendarClock, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -14,11 +14,27 @@ import {
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
   type CommWhatsAppCampaignActivationPreview,
+  type CommWhatsAppCampaignMediaType,
+  type CommWhatsAppCampaignRecurrenceRule,
   type CommWhatsAppCampaignStepDraft,
+  type CommWhatsAppCampaignTemplate,
   type CommWhatsAppCampaignWorkerHealth,
   type CommWhatsAppCampaignWorkerRun,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
+
+const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
+  none: 'Nao repetir',
+  daily: 'Repetir diariamente',
+  weekly: 'Repetir semanalmente',
+  monthly: 'Repetir mensalmente',
+};
+
+const mediaTypeLabels: Record<CommWhatsAppCampaignMediaType, string> = {
+  image: 'Imagem',
+  document: 'Documento',
+  video: 'Video',
+};
 
 type AudienceMode = 'crm' | 'csv';
 
@@ -211,6 +227,16 @@ export default function WhatsAppCampaignsScreen() {
   const [recentCampaignDays, setRecentCampaignDays] = useState(30);
   const [variableAutocomplete, setVariableAutocomplete] = useState<VariableAutocompleteState | null>(null);
   const stepTextareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [abSplitPercent, setAbSplitPercent] = useState(50);
+  const [recurrenceRule, setRecurrenceRule] = useState<CommWhatsAppCampaignRecurrenceRule>('none');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceEndAt, setRecurrenceEndAt] = useState('');
+  const [uploadingStepIndex, setUploadingStepIndex] = useState<number | null>(null);
+  const [templates, setTemplates] = useState<CommWhatsAppCampaignTemplate[]>([]);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
+  const mediaFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -237,16 +263,18 @@ export default function WhatsAppCampaignsScreen() {
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth] = await Promise.all([
+      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth, nextTemplates] = await Promise.all([
         commWhatsAppCampaignService.listCampaigns(),
         commWhatsAppCampaignService.getStats(),
         commWhatsAppCampaignService.listPendingAiSuggestions(),
         commWhatsAppCampaignService.getWorkerHealth(),
+        commWhatsAppCampaignService.listTemplates(),
       ]);
       setCampaigns(nextCampaigns);
       setStats(nextStats);
       setAiSuggestions(nextSuggestions);
       setWorkerHealth(nextWorkerHealth);
+      setTemplates(nextTemplates);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os disparos.');
     } finally {
@@ -285,6 +313,12 @@ export default function WhatsAppCampaignsScreen() {
     setInactiveDays(90);
     setRecentCampaignDays(30);
     setVariableAutocomplete(null);
+    setAbTestEnabled(false);
+    setAbSplitPercent(50);
+    setRecurrenceRule('none');
+    setRecurrenceInterval(1);
+    setRecurrenceEndAt('');
+    setTestPhoneNumber('');
   };
 
   const openNewCampaignModal = () => {
@@ -309,13 +343,31 @@ export default function WhatsAppCampaignsScreen() {
       setName(campaign.name);
       setObjective(campaign.objective ?? '');
       setMessageText(campaign.message_text ?? '');
-      setSteps(campaignSteps.length > 0
-        ? campaignSteps.map((step) => ({
-            messageText: step.message_text,
-            delayAmount: step.delay_amount,
-            delayUnit: step.delay_unit,
-          }))
-        : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
+      const stepsByIndex = new Map<number, typeof campaignSteps>();
+      for (const step of campaignSteps) {
+        stepsByIndex.set(step.step_index, [...(stepsByIndex.get(step.step_index) ?? []), step]);
+      }
+      const mergedSteps: CommWhatsAppCampaignStepDraft[] = Array.from(stepsByIndex.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, group]) => {
+          const primary = group.find((item) => item.variant_label !== 'B') ?? group[0];
+          const variantB = group.find((item) => item.variant_label === 'B');
+          return {
+            messageText: primary.message_text,
+            delayAmount: primary.delay_amount,
+            delayUnit: primary.delay_unit,
+            mediaUrl: primary.media_url,
+            mediaType: primary.media_type,
+            mediaFilename: primary.media_filename,
+            variantBMessageText: variantB?.message_text,
+          };
+        });
+      setSteps(mergedSteps.length > 0 ? mergedSteps : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
+      setAbTestEnabled(campaign.ab_test_enabled);
+      setAbSplitPercent(campaign.ab_split_percent || 50);
+      setRecurrenceRule(campaign.recurrence_rule || 'none');
+      setRecurrenceInterval(campaign.recurrence_interval || 1);
+      setRecurrenceEndAt(campaign.recurrence_end_at ? campaign.recurrence_end_at.slice(0, 16) : '');
       setLeadStatusFilters(readStringArrayFilter(filters, 'statuses', 'status'));
       setLeadOwnerFilters(readStringArrayFilter(filters, 'responsaveis', 'responsavel'));
       setCsvText('');
@@ -347,8 +399,8 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
-    if (!firstMessageText) {
-      toast.warning('Escreva pelo menos uma mensagem do disparo.');
+    if (!firstMessageText && !steps.some((step) => step.mediaUrl)) {
+      toast.warning('Escreva pelo menos uma mensagem ou anexe uma midia no disparo.');
       return;
     }
 
@@ -386,8 +438,12 @@ export default function WhatsAppCampaignsScreen() {
           messageText: step.messageText.trim(),
           delayAmount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
           delayUnit: step.delayUnit,
+          mediaUrl: step.mediaUrl || null,
+          mediaType: step.mediaUrl ? step.mediaType : null,
+          mediaFilename: step.mediaUrl ? step.mediaFilename : null,
+          variantBMessageText: index === 0 ? step.variantBMessageText?.trim() : undefined,
         }))
-        .filter((step) => step.messageText.length > 0);
+        .filter((step) => step.messageText.length > 0 || step.mediaUrl);
 
       const payload = {
         name,
@@ -404,6 +460,11 @@ export default function WhatsAppCampaignsScreen() {
         createLeadsFromCsv,
         steps: normalizedSteps,
         csvTargets: !editingCampaign && audienceMode === 'csv' ? csvValidTargets : [],
+        abTestEnabled: abTestEnabled && Boolean(normalizedSteps[0]?.variantBMessageText),
+        abSplitPercent,
+        recurrenceRule: audienceMode === 'crm' ? recurrenceRule : 'none' as CommWhatsAppCampaignRecurrenceRule,
+        recurrenceInterval,
+        recurrenceEndAt: recurrenceEndAt ? new Date(recurrenceEndAt).toISOString() : null,
       };
 
       if (editingCampaign) {
@@ -460,6 +521,77 @@ export default function WhatsAppCampaignsScreen() {
 
   const removeStep = (index: number) => {
     setSteps((current) => current.length <= 1 ? current : current.filter((_, stepIndex) => stepIndex !== index));
+  };
+
+  const handleStepMediaUpload = async (index: number, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setUploadingStepIndex(index);
+    try {
+      const uploaded = await commWhatsAppCampaignService.uploadCampaignMedia(file);
+      updateStep(index, { mediaUrl: uploaded.url, mediaType: uploaded.type, mediaFilename: uploaded.filename });
+      toast.success('Midia anexada.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a midia.');
+    } finally {
+      setUploadingStepIndex(null);
+    }
+  };
+
+  const handleRemoveStepMedia = (index: number) => {
+    updateStep(index, { mediaUrl: null, mediaType: null, mediaFilename: null });
+  };
+
+  const handleSaveTemplate = async () => {
+    const templateName = window.prompt('Nome do modelo:', name || 'Modelo de disparo');
+    if (!templateName || !templateName.trim()) return;
+
+    try {
+      const saved = await commWhatsAppCampaignService.saveTemplate(templateName, steps);
+      setTemplates((current) => [saved, ...current]);
+      toast.success('Modelo salvo.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o modelo.');
+    }
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    if (!templateId) return;
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) return;
+    setSteps(template.steps.length > 0 ? template.steps : [{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
+    setMessageText(template.steps[0]?.messageText ?? '');
+    toast.success(`Modelo "${template.name}" carregado.`);
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      await commWhatsAppCampaignService.deleteTemplate(templateId);
+      setTemplates((current) => current.filter((item) => item.id !== templateId));
+      toast.success('Modelo removido.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel remover o modelo.');
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!editingCampaign) return;
+    if (!testPhoneNumber.trim()) {
+      toast.warning('Informe um telefone para o envio de teste.');
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      await commWhatsAppCampaignService.sendTestMessage(editingCampaign.id, testPhoneNumber, 0, 'A');
+      toast.success('Mensagem de teste enviada.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem de teste.');
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   const openActivationPreview = async (campaign: CommWhatsAppCampaign) => {
@@ -755,11 +887,68 @@ export default function WhatsAppCampaignsScreen() {
                   {steps.length > 1 && <Badge tone="neutral">{steps.length - 1} follow-up(s)</Badge>}
                 </div>
               </div>
-              <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
-                <Plus className="h-3.5 w-3.5" />
-                Adicionar
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {templates.length > 0 && (
+                  <Select value="" onChange={(event) => handleLoadTemplate(event.target.value)}>
+                    <option value="">Carregar modelo...</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </Select>
+                )}
+                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={() => void handleSaveTemplate()}>
+                  <BookmarkPlus className="h-3.5 w-3.5" />
+                  Salvar modelo
+                </Button>
+                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
+
+            {templates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {templates.map((template) => (
+                  <span key={template.id} className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-surface-soft)] py-1 pl-3 pr-1 text-xs text-[color:var(--panel-text-muted)]">
+                    <FolderOpen className="h-3 w-3" />
+                    {template.name}
+                    <button
+                      type="button"
+                      className="ml-1 rounded-full p-1 hover:bg-[color:var(--panel-surface-soft)]"
+                      onClick={() => void handleDeleteTemplate(template.id)}
+                      title="Remover modelo"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+              <Checkbox checked={abTestEnabled} onChange={(event) => setAbTestEnabled(event.target.checked)} />
+              <span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-[color:var(--panel-text)]">
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Teste A/B na mensagem inicial
+                </span>
+                <br />
+                Sorteia entre duas versoes da primeira mensagem e permite comparar a taxa de resposta de cada uma.
+              </span>
+            </label>
+            {abTestEnabled && (
+              <Field label={`Percentual para a variante B (${abSplitPercent}%)`}>
+                <Input
+                  type="range"
+                  min={1}
+                  max={99}
+                  value={abSplitPercent}
+                  onChange={(event) => setAbSplitPercent(Number(event.target.value) || 50)}
+                />
+              </Field>
+            )}
+
             <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
               {steps.map((step, index) => (
                 <div key={index} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
@@ -819,6 +1008,50 @@ export default function WhatsAppCampaignsScreen() {
                           </div>
                         </div>
                       )}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <input
+                          ref={(element) => { mediaFileInputRefs.current[index] = element; }}
+                          type="file"
+                          accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                          className="sr-only"
+                          onChange={(event) => void handleStepMediaUpload(index, event)}
+                        />
+                        {step.mediaUrl ? (
+                          <>
+                            <Badge tone="accent" size="sm" icon={ImageIcon}>
+                              {mediaTypeLabels[step.mediaType || 'document']}: {step.mediaFilename || 'arquivo anexado'}
+                            </Badge>
+                            <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(index)}>
+                              <X className="h-3.5 w-3.5" />
+                              Remover midia
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={uploadingStepIndex === index}
+                            onClick={() => mediaFileInputRefs.current[index]?.click()}
+                          >
+                            <Upload className="h-3.5 w-3.5" />
+                            Anexar midia
+                          </Button>
+                        )}
+                      </div>
+
+                      {index === 0 && abTestEnabled && (
+                        <div className="mt-3">
+                          <Field label="Variante B (texto alternativo)">
+                            <Textarea
+                              size="compact"
+                              value={step.variantBMessageText ?? ''}
+                              onChange={(event) => updateStep(0, { variantBMessageText: event.target.value })}
+                              placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotacao em aberto - posso te ajudar?"
+                            />
+                          </Field>
+                        </div>
+                      )}
                     </div>
                     <Surface variant="muted" padding="sm" className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-1 ${index === 0 ? 'items-center' : ''}`}>
                       {index === 0 ? (
@@ -847,6 +1080,58 @@ export default function WhatsAppCampaignsScreen() {
               ))}
             </div>
           </Surface>
+
+          {audienceMode === 'crm' && (
+            <Surface variant="muted" padding="sm" className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Repeat2 className="h-4 w-4 text-[color:var(--panel-accent-strong)]" />
+                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Recorrencia</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Repetir">
+                  <Select value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as CommWhatsAppCampaignRecurrenceRule)}>
+                    {(Object.keys(recurrenceRuleLabels) as CommWhatsAppCampaignRecurrenceRule[]).map((rule) => (
+                      <option key={rule} value={rule}>{recurrenceRuleLabels[rule]}</option>
+                    ))}
+                  </Select>
+                </Field>
+                {recurrenceRule !== 'none' && (
+                  <>
+                    <Field label="A cada">
+                      <Input type="number" min={1} max={90} value={recurrenceInterval} onChange={(event) => setRecurrenceInterval(Math.max(1, Number(event.target.value) || 1))} />
+                    </Field>
+                    <Field label="Repetir ate (opcional)">
+                      <DateTimePicker type="datetime-local" value={recurrenceEndAt} onChange={(event) => setRecurrenceEndAt(event.target.value)} />
+                    </Field>
+                  </>
+                )}
+              </div>
+              {recurrenceRule !== 'none' && (
+                <p className="text-xs text-[color:var(--panel-text-muted)]">
+                  Quando esta campanha for concluida, o worker rematerializa o mesmo publico de CRM (respeitando opt-outs e o modo de reativacao segura) e ativa uma nova rodada automaticamente.
+                </p>
+              )}
+            </Surface>
+          )}
+
+          {editingCampaign && (
+            <Surface variant="muted" padding="sm" className="space-y-3">
+              <div className="flex items-center gap-2">
+                <TestTube2 className="h-4 w-4 text-[color:var(--panel-accent-strong)]" />
+                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Enviar teste</span>
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Telefone (com DDD)" className="min-w-[12rem] flex-1">
+                  <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
+                </Field>
+                <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
+                  <Send className="h-3.5 w-3.5" />
+                  Enviar mensagem inicial de teste
+                </Button>
+              </div>
+              <p className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variaveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</p>
+            </Surface>
+          )}
 
           <div className="grid gap-4 md:grid-cols-4">
             <Field label="Agendar para">
@@ -942,7 +1227,7 @@ export default function WhatsAppCampaignsScreen() {
               </Card>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico (com a mensagem ja resolvida por lead)</h3>
                 {activationPreview.sample.length > 0 ? (
                   <div className="grid gap-2 md:grid-cols-2">
                     {activationPreview.sample.map((sample, index) => (
@@ -950,6 +1235,9 @@ export default function WhatsAppCampaignsScreen() {
                         <p className="text-sm font-medium text-[color:var(--panel-text)]">{sample.name}</p>
                         <p className="text-xs text-[color:var(--panel-text-muted)]">{sample.phone}</p>
                         {(sample.status || sample.responsavel) && <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">{[sample.status, sample.responsavel].filter(Boolean).join(' · ')}</p>}
+                        {sample.resolvedMessage && (
+                          <p className="mt-2 whitespace-pre-wrap rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-xs text-[color:var(--panel-text-soft)]">{sample.resolvedMessage}</p>
+                        )}
                       </div>
                     ))}
                   </div>

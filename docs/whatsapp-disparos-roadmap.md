@@ -29,13 +29,20 @@
 - Ao aceitar, criar/atualizar `comm_whatsapp_opt_outs` e excluir o telefone de campanhas futuras.
 - Automatizar bloqueio apenas depois de validar precisão operacional.
 
-## Evolucao de produto
+## Evolucao de produto entregue
 
-- Preview real do publico CRM antes de ativar.
+- Preview real do publico CRM antes de ativar, com a mensagem ja resolvida por lead de amostra.
+- Templates salvos (nome + pacote de mensagens) reutilizaveis entre campanhas.
+- Midias em campanha: imagem, documento e video anexados por etapa (audio ainda nao suportado).
+- Sequencias multi-etapas com delays.
+- Teste para numero interno antes de ativar, direto do formulario da campanha.
+- Relatorio de respostas, taxa de falha e principais motivos de erro no detalhe da campanha.
+- Regras de recorrencia (diaria/semanal/mensal) que rematerializam o publico de CRM automaticamente.
+- Teste A/B na mensagem inicial com percentual configuravel e comparativo de taxa de resposta por variante.
+
+## Evolucao de produto ainda pendente
+
 - Mapeamento visual de colunas do CSV.
-- Templates salvos e preview por lead.
-- Midias em campanha: imagem, documento, audio e video.
-- Sequencias multi-etapas com delays e regras condicionais.
-- Teste para numero interno antes de ativar.
-- Relatorio de respostas, conversoes e falhas por campanha.
-- Regras de recorrencia e A/B test de mensagem.
+- Suporte a audio nas midias de campanha.
+- Preview por lead individual fora da amostra (hoje limitado a 5 contatos de exemplo).
+- Sequencias com regras condicionais (hoje o fluxo e sempre linear).

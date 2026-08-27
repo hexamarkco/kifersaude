@@ -20,6 +20,7 @@ import {
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
+  WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
@@ -31,13 +32,16 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-type WorkerAction = 'activate' | 'process';
+type WorkerAction = 'activate' | 'process' | 'test_send';
 
 type WorkerRequestBody = {
   action?: WorkerAction;
   campaignId?: string;
   limit?: number;
   source?: 'cron' | 'manual' | 'dashboard' | 'api';
+  phoneNumber?: string;
+  stepIndex?: number;
+  variant?: 'A' | 'B';
 };
 
 type CampaignRow = {
@@ -54,6 +58,13 @@ type CampaignRow = {
   send_window_end: string | null;
   stop_on_reply: boolean;
   created_by: string | null;
+  ab_test_enabled: boolean;
+  ab_split_percent: number;
+  recurrence_rule: 'none' | 'daily' | 'weekly' | 'monthly';
+  recurrence_interval: number;
+  recurrence_end_at: string | null;
+  recurrence_next_run_at: string | null;
+  recurrence_runs_completed: number;
 };
 
 type TargetRow = {
@@ -72,6 +83,7 @@ type TargetRow = {
   locked_at: string | null;
   lock_token: string | null;
   sent_at: string | null;
+  ab_variant: 'A' | 'B' | null;
 };
 
 type CampaignStepRow = {
@@ -81,6 +93,10 @@ type CampaignStepRow = {
   message_text: string;
   delay_amount: number;
   delay_unit: 'seconds' | 'minutes' | 'hours' | 'days';
+  media_url: string | null;
+  media_type: 'image' | 'document' | 'video' | null;
+  media_filename: string | null;
+  variant_label: 'ANY' | 'A' | 'B';
 };
 
 type LeadRow = {
@@ -275,6 +291,16 @@ const isWithinSendWindow = (campaign: CampaignRow, now = new Date()) => {
   const current = currentHour * 60 + currentMinute;
   if (start < end) return current >= start && current < end;
   return current >= start || current < end;
+};
+
+const computeNextRecurrenceRun = (rule: CampaignRow['recurrence_rule'], interval: number, from: Date): string | null => {
+  const step = Math.max(Math.floor(interval) || 1, 1);
+  const next = new Date(from.getTime());
+  if (rule === 'daily') next.setUTCDate(next.getUTCDate() + step);
+  else if (rule === 'weekly') next.setUTCDate(next.getUTCDate() + step * 7);
+  else if (rule === 'monthly') next.setUTCMonth(next.getUTCMonth() + step);
+  else return null;
+  return next.toISOString();
 };
 
 const getNextRetryAt = (attempts: number) => {
@@ -476,7 +502,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -765,7 +791,10 @@ async function activateCampaign(
   profileId: string | null,
 ) {
   const campaign = await getCampaign(supabaseAdmin, campaignId);
-  if (!['draft', 'scheduled', 'paused'].includes(campaign.status)) {
+  // 'completed' so entra aqui via reativacao automatica de recorrencia
+  // (reactivateRecurringCampaigns) - o botao "Ativar" da UI nunca oferece
+  // essa transicao para uma campanha ja concluida.
+  if (!['draft', 'scheduled', 'paused', 'completed'].includes(campaign.status)) {
     throw new Error('Somente campanhas em rascunho, agendadas ou pausadas podem ser ativadas.');
   }
 
@@ -800,6 +829,73 @@ async function activateCampaign(
   });
 
   return { campaignId: campaign.id, status: nextStatus, materialized, counters };
+}
+
+async function sendCampaignTestMessage(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { campaignId: string; phoneNumber: string; stepIndex: number; variant: 'A' | 'B'; profileId: string | null },
+) {
+  const phoneDigits = normalizeCommWhatsAppPhone(params.phoneNumber);
+  const chatId = phoneDigits ? buildWhapiDirectChatId(phoneDigits) : null;
+  if (!phoneDigits || !chatId) {
+    throw new Error('Informe um telefone valido para o envio de teste.');
+  }
+
+  const campaign = await getCampaign(supabaseAdmin, params.campaignId);
+  const steps = await getCampaignSteps(supabaseAdmin, campaign, params.variant);
+  const step = steps.find((item) => item.step_index === params.stepIndex) ?? steps[0];
+  if (!step) {
+    throw new Error('Esta campanha ainda nao tem nenhuma mensagem configurada.');
+  }
+
+  const sampleLead: LeadRow = {
+    id: 'test-send',
+    nome_completo: 'Nome de teste',
+    telefone: phoneDigits,
+    status: 'Em teste',
+    responsavel: 'Voce',
+    responsavel_id: null,
+    arquivado: false,
+    ultimo_contato: null,
+  };
+  const text = resolveMessageText(step.message_text, { lead: sampleLead, target: null }).trim();
+  if (!text && !step.media_url) {
+    throw new Error('Esta mensagem esta vazia.');
+  }
+
+  const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
+  const channel = await ensurePrimaryChannel(supabaseAdmin);
+  const token = sanitizeWhapiToken(settings.token);
+  if (!settings.enabled) throw new Error('Integracao WhatsApp desabilitada.');
+  if (!token) throw new Error('Token da Whapi nao configurado.');
+
+  const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+    channelId: channel.id,
+    externalChatId: chatId,
+  });
+  if (chatRoute.identityConflict) {
+    throw new Error('Identidade WhatsApp exige revisao manual antes do envio de teste.');
+  }
+
+  const dispatchChatId = chatRoute?.externalChatId || chatId;
+  const whapi = createWhapiClient(token);
+  const response = step.media_url
+    ? await sendCampaignMedia(token, dispatchChatId, step, text)
+    : await whapi.sendText(dispatchChatId, text);
+  const payload = await readResponsePayload(response);
+
+  if (!response.ok || (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload as Record<string, unknown>).sent === false)) {
+    throw new Error(parseWhapiError(payload) || 'A Whapi nao confirmou o envio da mensagem de teste.');
+  }
+
+  await insertEvent(supabaseAdmin, {
+    campaignId: campaign.id,
+    eventType: 'test_message_sent',
+    payload: { phoneDigits, stepIndex: step.step_index, variant: params.variant },
+    createdBy: params.profileId,
+  });
+
+  return { phoneDigits, stepIndex: step.step_index, messageText: text };
 }
 
 async function findInboundCampaignChat(
@@ -1161,10 +1257,11 @@ async function getLeadById(supabaseAdmin: ReturnType<typeof createAdminClient>, 
 async function getCampaignSteps(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaign: CampaignRow,
+  variant: 'A' | 'B' | null = null,
 ): Promise<CampaignStepRow[]> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_steps')
-    .select('id,campaign_id,step_index,message_text,delay_amount,delay_unit')
+    .select('id,campaign_id,step_index,message_text,delay_amount,delay_unit,media_url,media_type,media_filename,variant_label')
     .eq('campaign_id', campaign.id)
     .order('step_index', { ascending: true });
 
@@ -1172,17 +1269,40 @@ async function getCampaignSteps(
     throw new Error(`Erro ao carregar etapas da campanha: ${error.message}`);
   }
 
-  const steps = (data ?? []) as CampaignStepRow[];
-  if (steps.length > 0) return steps;
+  const rows = (data ?? []) as CampaignStepRow[];
+  if (rows.length === 0) {
+    return [{
+      id: 'fallback-message',
+      campaign_id: campaign.id,
+      step_index: 0,
+      message_text: campaign.message_text,
+      delay_amount: 0,
+      delay_unit: 'minutes',
+      media_url: null,
+      media_type: null,
+      media_filename: null,
+      variant_label: 'ANY',
+    }];
+  }
 
-  return [{
-    id: 'fallback-message',
-    campaign_id: campaign.id,
-    step_index: 0,
-    message_text: campaign.message_text,
-    delay_amount: 0,
-    delay_unit: 'minutes',
-  }];
+  // Uma etapa marcada com a variante especifica (A ou B) sobrepoe a versao
+  // compartilhada ('ANY') no mesmo indice, permitindo A/B so na mensagem
+  // inicial enquanto os follow-ups continuam unicos para as duas variantes.
+  const byIndex = new Map<number, CampaignStepRow>();
+  for (const step of rows) {
+    if (step.variant_label === 'ANY') {
+      if (!byIndex.has(step.step_index)) byIndex.set(step.step_index, step);
+      continue;
+    }
+    if (variant && step.variant_label === variant) {
+      byIndex.set(step.step_index, step);
+    } else if (!byIndex.has(step.step_index)) {
+      // Sem variante resolvida ainda: usa a variante A como base neutra.
+      if (step.variant_label === 'A') byIndex.set(step.step_index, step);
+    }
+  }
+
+  return Array.from(byIndex.values()).sort((a, b) => a.step_index - b.step_index);
 }
 
 async function releaseTargetAfterFailure(
@@ -1225,6 +1345,45 @@ async function releaseClaimedTarget(
   status: 'scheduled' | 'cancelled',
 ) {
   await updateClaimedTarget(supabaseAdmin, target, { status, locked_at: null, lock_token: null });
+}
+
+async function sendCampaignMedia(
+  token: string,
+  chatId: string,
+  step: Pick<CampaignStepRow, 'media_url' | 'media_type' | 'media_filename'>,
+  caption: string,
+): Promise<Response> {
+  if (!step.media_url || !step.media_type) {
+    throw new Error('Etapa sem midia valida configurada.');
+  }
+
+  const mediaResponse = await fetch(step.media_url, { method: 'GET', headers: { Accept: '*/*' } });
+  if (!mediaResponse.ok) {
+    throw new Error('Nao foi possivel baixar a midia da campanha para envio.');
+  }
+
+  const contentType = mediaResponse.headers.get('content-type') || 'application/octet-stream';
+  const bytes = await mediaResponse.arrayBuffer();
+  const fileName = step.media_filename || `campanha-midia.${contentType.split('/')[1] || 'bin'}`;
+  const file = new File([bytes], fileName, { type: contentType });
+
+  // FormData multipart: sem definir Content-Type manualmente para que o
+  // fetch calcule o boundary corretamente (igual ao padrao de envio de
+  // documento usado no comm-whatsapp-send).
+  const form = new FormData();
+  form.append('to', chatId);
+  form.append('media', file, fileName);
+  if (step.media_type === 'document') form.append('filename', fileName);
+  if (caption) form.append('caption', caption);
+
+  return fetch(`${WHAPI_BASE_URL}/messages/${step.media_type}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${sanitizeWhapiToken(token)}`,
+    },
+    body: form,
+  });
 }
 
 async function sendTarget(params: {
@@ -1313,13 +1472,23 @@ async function sendTarget(params: {
   }
 
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
-  const steps = await getCampaignSteps(supabaseAdmin, campaign);
+
+  // Sorteia a variante A/B na primeira tentativa de envio do alvo e persiste,
+  // para que os follow-ups do mesmo contato continuem na variante sorteada.
+  let abVariant = target.ab_variant;
+  if (campaign.ab_test_enabled && !abVariant) {
+    abVariant = Math.random() * 100 < campaign.ab_split_percent ? 'B' : 'A';
+    await updateClaimedTarget(supabaseAdmin, target, { ab_variant: abVariant });
+    target.ab_variant = abVariant;
+  }
+
+  const steps = await getCampaignSteps(supabaseAdmin, campaign, abVariant);
   const currentStepIndex = Math.max(Number(target.current_step_index) || 0, 0);
   const step = steps.find((item) => item.step_index === currentStepIndex) ?? steps[currentStepIndex] ?? steps[0];
   const stepPosition = Math.max(steps.findIndex((item) => item.step_index === step.step_index), 0);
   const nextStep = steps[stepPosition + 1] ?? null;
   const text = resolveMessageText(step.message_text, { lead, target }).trim();
-  if (!text) {
+  if (!text && !step.media_url) {
     await updateClaimedTarget(supabaseAdmin, target, {
       status: 'failed',
       error_message: 'Mensagem vazia apos aplicar variaveis.',
@@ -1338,6 +1507,7 @@ async function sendTarget(params: {
     externalChatId: chatId,
     messageText: text,
     stepIndex: step.step_index,
+    mediaUrl: step.media_url,
   };
   const dispatchReservation = await reserveCampaignDispatch(supabaseAdmin, {
     campaignId: campaign.id,
@@ -1398,7 +1568,9 @@ async function sendTarget(params: {
   let payload: unknown;
   try {
     const whapi = createWhapiClient(params.token);
-    response = await whapi.sendText(chatId, text);
+    response = step.media_url
+      ? await sendCampaignMedia(params.token, chatId, step, text)
+      : await whapi.sendText(chatId, text);
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
@@ -1659,10 +1831,11 @@ async function processCampaigns(
     senderName: channel.connected_user_name,
   });
   await reconcileResponses(supabaseAdmin, params.campaignId);
+  await reactivateRecurringCampaigns(supabaseAdmin);
 
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -1756,12 +1929,85 @@ async function processCampaigns(
 
     const counters = await recomputeCampaignCounters(supabaseAdmin, campaign.id);
     if (counters.pending === 0 && counters.total > 0) {
-      await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'completed', completed_at: getNowIso() }).eq('id', campaign.id);
+      const completedAt = getNowIso();
+      // Agenda a proxima rodada automatica na primeira vez que a campanha
+      // termina, se ela tiver recorrencia configurada e ainda nao tiver uma
+      // proxima execucao marcada.
+      const recurrenceNextRunAt = campaign.recurrence_rule !== 'none' && !campaign.recurrence_next_run_at
+        ? computeNextRecurrenceRun(campaign.recurrence_rule, campaign.recurrence_interval, new Date(completedAt))
+        : campaign.recurrence_next_run_at;
+      await supabaseAdmin
+        .from('comm_whatsapp_campaigns')
+        .update({
+          status: 'completed',
+          completed_at: completedAt,
+          ...(recurrenceNextRunAt !== campaign.recurrence_next_run_at ? { recurrence_next_run_at: recurrenceNextRunAt } : {}),
+        })
+        .eq('id', campaign.id);
       await insertEvent(supabaseAdmin, { campaignId: campaign.id, eventType: 'campaign_completed', payload: counters });
     }
   }
 
   return { processed, sent, failed, stopped };
+}
+
+async function reactivateRecurringCampaigns(supabaseAdmin: ReturnType<typeof createAdminClient>) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaigns')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
+    .eq('status', 'completed')
+    .neq('recurrence_rule', 'none')
+    .not('recurrence_next_run_at', 'is', null)
+    .lte('recurrence_next_run_at', getNowIso())
+    .in('audience_source', ['crm', 'mixed'])
+    .limit(10);
+
+  if (error) {
+    throw new Error(`Erro ao buscar campanhas recorrentes: ${error.message}`);
+  }
+
+  for (const campaign of (data ?? []) as CampaignRow[]) {
+    if (campaign.recurrence_end_at && Date.parse(campaign.recurrence_next_run_at!) > Date.parse(campaign.recurrence_end_at)) {
+      // Passou da data limite de recorrencia: encerra sem reativar de novo.
+      await supabaseAdmin
+        .from('comm_whatsapp_campaigns')
+        .update({ recurrence_rule: 'none', recurrence_next_run_at: null })
+        .eq('id', campaign.id);
+      continue;
+    }
+
+    // Remove os alvos da rodada anterior para poder rematerializar o publico
+    // de CRM sem colidir com a chave unica (campaign_id, phone_digits).
+    const { error: deleteError } = await supabaseAdmin
+      .from('comm_whatsapp_campaign_targets')
+      .delete()
+      .eq('campaign_id', campaign.id);
+    if (deleteError) {
+      console.error('[comm-whatsapp-campaign-worker] erro ao limpar alvos para nova rodada recorrente', deleteError);
+      continue;
+    }
+
+    try {
+      const activation = await activateCampaign(supabaseAdmin, campaign.id, null);
+      const nextRunAt = computeNextRecurrenceRun(campaign.recurrence_rule, campaign.recurrence_interval, new Date(campaign.recurrence_next_run_at!));
+      await supabaseAdmin
+        .from('comm_whatsapp_campaigns')
+        .update({
+          recurrence_next_run_at: nextRunAt,
+          recurrence_runs_completed: (campaign.recurrence_runs_completed || 0) + 1,
+        })
+        .eq('id', campaign.id);
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        eventType: 'campaign_recurrence_triggered',
+        payload: { activation, nextRunAt },
+      });
+    } catch (activationError) {
+      const message = activationError instanceof Error ? activationError.message : 'Erro ao reativar campanha recorrente.';
+      console.error('[comm-whatsapp-campaign-worker] erro ao reativar campanha recorrente', { campaignId: campaign.id, error: message });
+      await supabaseAdmin.from('comm_whatsapp_campaigns').update({ last_error: message }).eq('id', campaign.id);
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -1795,6 +2041,22 @@ Deno.serve(async (req) => {
         await finishWorkerRun(supabaseAdmin, run, { status: 'failed', errorMessage: message });
         throw error;
       }
+    }
+
+    if (action === 'test_send') {
+      if (!campaignId) return createJsonResponse({ error: 'Campanha obrigatoria.' }, 400);
+      const phoneNumber = toTrimmedString(body.phoneNumber);
+      if (!phoneNumber) return createJsonResponse({ error: 'Informe um telefone para o envio de teste.' }, 400);
+      const stepIndex = Number.isFinite(body.stepIndex) ? Math.max(Math.floor(body.stepIndex as number), 0) : 0;
+      const variant = body.variant === 'B' ? 'B' : 'A';
+      const result = await sendCampaignTestMessage(supabaseAdmin, {
+        campaignId,
+        phoneNumber,
+        stepIndex,
+        variant,
+        profileId: authorization.profileId,
+      });
+      return createJsonResponse({ success: true, ...result });
     }
 
     if (action === 'process') {

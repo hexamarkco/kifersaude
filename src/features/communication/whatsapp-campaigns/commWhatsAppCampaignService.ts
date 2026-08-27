@@ -3,6 +3,8 @@ import { getSupabaseErrorMessage, supabase } from '../../../lib/supabase';
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CommWhatsAppCampaignAudienceSource = 'crm' | 'csv' | 'manual' | 'mixed';
 
+export type CommWhatsAppCampaignRecurrenceRule = 'none' | 'daily' | 'weekly' | 'monthly';
+
 export type CommWhatsAppCampaign = {
   id: string;
   name: string;
@@ -27,6 +29,13 @@ export type CommWhatsAppCampaign = {
   responded_targets: number;
   stopped_targets: number;
   last_error: string | null;
+  ab_test_enabled: boolean;
+  ab_split_percent: number;
+  recurrence_rule: CommWhatsAppCampaignRecurrenceRule;
+  recurrence_interval: number;
+  recurrence_end_at: string | null;
+  recurrence_next_run_at: string | null;
+  recurrence_runs_completed: number;
   created_at: string;
   updated_at: string;
 };
@@ -37,10 +46,17 @@ export type CommWhatsAppCsvTargetDraft = {
   payload: Record<string, unknown>;
 };
 
+export type CommWhatsAppCampaignMediaType = 'image' | 'document' | 'video';
+
 export type CommWhatsAppCampaignStepDraft = {
   messageText: string;
   delayAmount: number;
   delayUnit: 'seconds' | 'minutes' | 'hours' | 'days';
+  mediaUrl?: string | null;
+  mediaType?: CommWhatsAppCampaignMediaType | null;
+  mediaFilename?: string | null;
+  /** Somente para o step 0: texto alternativo da variante B quando o teste A/B esta ativo. */
+  variantBMessageText?: string;
 };
 
 export type CommWhatsAppCampaignStep = {
@@ -50,6 +66,10 @@ export type CommWhatsAppCampaignStep = {
   message_text: string;
   delay_amount: number;
   delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  media_url: string | null;
+  media_type: CommWhatsAppCampaignMediaType | null;
+  media_filename: string | null;
+  variant_label: 'ANY' | 'A' | 'B';
   created_at: string;
   updated_at: string;
 };
@@ -78,6 +98,7 @@ export type CommWhatsAppCampaignTarget = {
   stopped_reason: string | null;
   error_message: string | null;
   external_message_id: string | null;
+  ab_variant: 'A' | 'B' | null;
   created_at: string;
   updated_at: string;
 };
@@ -97,6 +118,19 @@ export type CreateCampaignInput = {
   createLeadsFromCsv: boolean;
   steps: CommWhatsAppCampaignStepDraft[];
   csvTargets?: CommWhatsAppCsvTargetDraft[];
+  abTestEnabled: boolean;
+  abSplitPercent: number;
+  recurrenceRule: CommWhatsAppCampaignRecurrenceRule;
+  recurrenceInterval: number;
+  recurrenceEndAt?: string | null;
+};
+
+export type CommWhatsAppCampaignTemplate = {
+  id: string;
+  name: string;
+  steps: CommWhatsAppCampaignStepDraft[];
+  created_at: string;
+  updated_at: string;
 };
 
 export type CampaignStats = {
@@ -149,6 +183,7 @@ export type CommWhatsAppCampaignPreviewSample = {
   phone: string;
   status?: string | null;
   responsavel?: string | null;
+  resolvedMessage: string;
 };
 
 export type CommWhatsAppCampaignActivationPreview = {
@@ -257,6 +292,56 @@ const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
     }
   }
   return Array.from(variables).sort();
+};
+
+const resolveSampleMessage = (template: string, sample: { name: string; phone: string; status?: string | null; responsavel?: string | null }) => {
+  const replacements: Record<string, string> = {
+    nome: sample.name || '',
+    primeiro_nome: (sample.name || '').split(/\s+/).filter(Boolean)[0] || '',
+    telefone: sample.phone || '',
+    status: sample.status || '',
+    responsavel: sample.responsavel || '',
+  };
+
+  return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');
+};
+
+type CampaignStepInsertRow = {
+  campaign_id: string;
+  step_index: number;
+  delay_amount: number;
+  delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  media_url: string | null;
+  media_type: CommWhatsAppCampaignMediaType | null;
+  media_filename: string | null;
+  message_text: string;
+  variant_label: 'ANY' | 'A' | 'B';
+};
+
+const buildStepRows = (campaignId: string, steps: CommWhatsAppCampaignStepDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
+  const rows: CampaignStepInsertRow[] = [];
+
+  steps.forEach((step, index) => {
+    const base = {
+      campaign_id: campaignId,
+      step_index: index,
+      delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
+      delay_unit: step.delayUnit,
+      media_url: step.mediaUrl || null,
+      media_type: step.mediaUrl ? step.mediaType || null : null,
+      media_filename: step.mediaUrl ? step.mediaFilename || null : null,
+    };
+
+    const variantBText = step.variantBMessageText?.trim() || '';
+    if (index === 0 && abTestEnabled && variantBText) {
+      rows.push({ ...base, message_text: step.messageText.trim(), variant_label: 'A' });
+      rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
+    } else {
+      rows.push({ ...base, message_text: step.messageText.trim(), variant_label: 'ANY' });
+    }
+  });
+
+  return rows.filter((row) => row.message_text.length > 0 || row.media_url);
 };
 
 export const commWhatsAppCampaignService = {
@@ -378,6 +463,10 @@ export const commWhatsAppCampaignService = {
       message_text: campaign.message_text,
       delay_amount: 0,
       delay_unit: 'minutes' as const,
+      media_url: null,
+      media_type: null,
+      media_filename: null,
+      variant_label: 'ANY' as const,
       created_at: campaign.created_at,
       updated_at: campaign.updated_at,
     }];
@@ -395,6 +484,8 @@ export const commWhatsAppCampaignService = {
 
     let estimatedTargets = materializedTargetsCount ?? 0;
     let sample: CommWhatsAppCampaignPreviewSample[] = [];
+    const firstStep = steps.find((step) => step.step_index === 0 && step.variant_label !== 'B') ?? steps[0];
+    const firstStepTemplate = firstStep?.message_text || '';
 
     if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
       const filters = getNestedRecord(campaign.audience_config, 'filters');
@@ -429,12 +520,15 @@ export const commWhatsAppCampaignService = {
       if (sampleError) throw new Error(getSupabaseErrorMessage(sampleError, 'Nao foi possivel carregar amostra do CRM.'));
 
       estimatedTargets = count ?? 0;
-      sample = (sampleRows ?? []).map((lead) => ({
-        name: lead.nome_completo || 'Lead sem nome',
-        phone: lead.telefone || '',
-        status: lead.status,
-        responsavel: lead.responsavel,
-      }));
+      sample = (sampleRows ?? []).map((lead) => {
+        const entry = {
+          name: lead.nome_completo || 'Lead sem nome',
+          phone: lead.telefone || '',
+          status: lead.status,
+          responsavel: lead.responsavel,
+        };
+        return { ...entry, resolvedMessage: resolveSampleMessage(firstStepTemplate, entry) };
+      });
     } else {
       const { data: targetRows, error: targetRowsError } = await supabase
         .from('comm_whatsapp_campaign_targets')
@@ -447,10 +541,13 @@ export const commWhatsAppCampaignService = {
         throw new Error(getSupabaseErrorMessage(targetRowsError, 'Nao foi possivel carregar amostra dos contatos.'));
       }
 
-      sample = (targetRows ?? []).map((target) => ({
-        name: target.display_name || target.phone_number || target.phone_digits || 'Contato sem nome',
-        phone: target.phone_number || target.phone_digits || '',
-      }));
+      sample = (targetRows ?? []).map((target) => {
+        const entry = {
+          name: target.display_name || target.phone_number || target.phone_digits || 'Contato sem nome',
+          phone: target.phone_number || target.phone_digits || '',
+        };
+        return { ...entry, resolvedMessage: resolveSampleMessage(firstStepTemplate, entry) };
+      });
     }
 
     return {
@@ -483,6 +580,11 @@ export const commWhatsAppCampaignService = {
         send_window_end: input.sendWindowEnd || null,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        ab_test_enabled: input.abTestEnabled,
+        ab_split_percent: input.abSplitPercent,
+        recurrence_rule: input.recurrenceRule,
+        recurrence_interval: input.recurrenceInterval,
+        recurrence_end_at: input.recurrenceEndAt || null,
         created_by: userId,
       })
       .select('*')
@@ -527,15 +629,7 @@ export const commWhatsAppCampaignService = {
       }
     }
 
-    const steps = input.steps
-      .map((step, index) => ({
-        campaign_id: createdCampaign.id,
-        step_index: index,
-        message_text: step.messageText.trim(),
-        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-        delay_unit: step.delayUnit,
-      }))
-      .filter((step) => step.message_text.length > 0);
+    const steps = buildStepRows(createdCampaign.id, input.steps, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -566,6 +660,11 @@ export const commWhatsAppCampaignService = {
         send_window_end: input.sendWindowEnd || null,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        ab_test_enabled: input.abTestEnabled,
+        ab_split_percent: input.abSplitPercent,
+        recurrence_rule: input.recurrenceRule,
+        recurrence_interval: input.recurrenceInterval,
+        recurrence_end_at: input.recurrenceEndAt || null,
       })
       .eq('id', campaignId);
 
@@ -582,15 +681,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
     }
 
-    const steps = input.steps
-      .map((step, index) => ({
-        campaign_id: campaignId,
-        step_index: index,
-        message_text: step.messageText.trim(),
-        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-        delay_unit: step.delayUnit,
-      }))
-      .filter((step) => step.message_text.length > 0);
+    const steps = buildStepRows(campaignId, input.steps, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -740,6 +831,85 @@ export const commWhatsAppCampaignService = {
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel dispensar a sugestao.'));
+    }
+  },
+
+  async uploadCampaignMedia(file: File): Promise<{ url: string; type: CommWhatsAppCampaignMediaType; filename: string }> {
+    const type: CommWhatsAppCampaignMediaType = file.type.startsWith('image/')
+      ? 'image'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : 'document';
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'arquivo';
+    const path = `${crypto.randomUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('whatsapp-campaign-media')
+      .upload(path, file, { contentType: file.type || undefined, upsert: false });
+
+    if (uploadError) {
+      throw new Error(getSupabaseErrorMessage(uploadError, 'Nao foi possivel enviar o arquivo de midia.'));
+    }
+
+    const { data } = supabase.storage.from('whatsapp-campaign-media').getPublicUrl(path);
+    return { url: data.publicUrl, type, filename: file.name };
+  },
+
+  async sendTestMessage(campaignId: string, phoneNumber: string, stepIndex: number, variant: 'A' | 'B' = 'A'): Promise<{ phoneDigits: string }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-campaign-worker', {
+      body: { action: 'test_send', campaignId, phoneNumber, stepIndex, variant },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem de teste.'));
+    }
+
+    const payload = (data ?? {}) as { error?: string; phoneDigits?: string };
+    if (payload.error) {
+      throw new Error(payload.error);
+    }
+
+    return { phoneDigits: payload.phoneDigits || '' };
+  },
+
+  async listTemplates(): Promise<CommWhatsAppCampaignTemplate[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os modelos salvos.'));
+    }
+
+    return (data ?? []) as CommWhatsAppCampaignTemplate[];
+  },
+
+  async saveTemplate(name: string, steps: CommWhatsAppCampaignStepDraft[]): Promise<CommWhatsAppCampaignTemplate> {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .insert({ name: name.trim(), steps, created_by: userId })
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o modelo.'));
+    }
+
+    return data as CommWhatsAppCampaignTemplate;
+  },
+
+  async deleteTemplate(templateId: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .delete()
+      .eq('id', templateId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel remover o modelo.'));
     }
   },
 };

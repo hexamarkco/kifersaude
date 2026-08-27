@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Ban, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
+import { ArrowLeft, Ban, BarChart3, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -102,6 +102,41 @@ export default function WhatsAppCampaignDetailScreen() {
     for (const target of targets) counts[target.status] += 1;
     return counts;
   }, [targets]);
+
+  const contactedCount = targetCounts.sent + targetCounts.responded + targetCounts.failed + targetCounts.invalid + targetCounts.stopped;
+  const conversionRate = contactedCount > 0 ? Math.round((targetCounts.responded / contactedCount) * 1000) / 10 : 0;
+  const failureRate = contactedCount > 0 ? Math.round(((targetCounts.failed + targetCounts.invalid) / contactedCount) * 1000) / 10 : 0;
+
+  const topFailureReasons = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const target of targets) {
+      if (target.status !== 'failed' && target.status !== 'invalid') continue;
+      const reason = target.error_message?.trim() || 'Sem motivo registrado';
+      counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+  }, [targets]);
+
+  const variantBreakdown = useMemo(() => {
+    if (!campaign?.ab_test_enabled) return [];
+    const byVariant: Record<'A' | 'B', { sent: number; responded: number }> = {
+      A: { sent: 0, responded: 0 },
+      B: { sent: 0, responded: 0 },
+    };
+    for (const target of targets) {
+      if (target.ab_variant !== 'A' && target.ab_variant !== 'B') continue;
+      if (['sent', 'responded', 'failed', 'invalid', 'stopped'].includes(target.status)) byVariant[target.ab_variant].sent += 1;
+      if (target.status === 'responded') byVariant[target.ab_variant].responded += 1;
+    }
+    return (['A', 'B'] as const).map((variant) => ({
+      variant,
+      sent: byVariant[variant].sent,
+      responded: byVariant[variant].responded,
+      rate: byVariant[variant].sent > 0 ? Math.round((byVariant[variant].responded / byVariant[variant].sent) * 1000) / 10 : 0,
+    }));
+  }, [targets, campaign?.ab_test_enabled]);
 
   const runAction = async (action: 'pause' | 'resume' | 'cancel' | 'process') => {
     if (!campaign) return;
@@ -210,6 +245,51 @@ export default function WhatsAppCampaignDetailScreen() {
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
+                <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Relatorio</h2>
+                <p className="text-sm text-[color:var(--panel-text-soft)]">Taxas e principais motivos de falha entre os contatos ja processados.</p>
+              </div>
+              <BarChart3 className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Metric label="Taxa de resposta" value={`${conversionRate}%`} />
+              <Metric label="Taxa de falha" value={`${failureRate}%`} />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Principais motivos de falha</h3>
+                {topFailureReasons.length > 0 ? (
+                  <ul className="mt-2 space-y-2">
+                    {topFailureReasons.map(([reason, count]) => (
+                      <li key={reason} className="flex items-start justify-between gap-3 rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-sm">
+                        <span className="text-[color:var(--panel-text-soft)]">{reason}</span>
+                        <Badge tone="danger" size="sm">{count}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-[color:var(--panel-text-muted)]">Nenhuma falha registrada.</p>
+                )}
+              </div>
+              {campaign.ab_test_enabled && (
+                <div>
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Teste A/B - resposta por variante</h3>
+                  <div className="mt-2 space-y-2">
+                    {variantBreakdown.map((row) => (
+                      <div key={row.variant} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-sm">
+                        <span className="text-[color:var(--panel-text-soft)]">Variante {row.variant}</span>
+                        <span className="text-[color:var(--panel-text-muted)]">{row.responded}/{row.sent} respostas</span>
+                        <Badge tone="accent" size="sm">{row.rate}%</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
                 <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</h2>
                 <p className="text-sm text-[color:var(--panel-text-soft)]">Mostrando ate 500 contatos por enquanto.</p>
               </div>
@@ -265,7 +345,7 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number | string }) {
   return (
     <Card className="p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>

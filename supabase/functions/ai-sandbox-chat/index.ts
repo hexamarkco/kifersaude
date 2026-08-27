@@ -18,6 +18,7 @@ declare const Deno: {
 
 type RequestBody = {
   conversationId?: string;
+  leadName?: string;
 };
 
 type SandboxMessageRow = {
@@ -28,6 +29,7 @@ type SandboxMessageRow = {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const SANDBOX_HISTORY_LIMIT = 100;
 const HANDOFF_TAG_REGEX = /\[\[HANDOFF:\s*([^\]]{1,200})\]\]\s*$/i;
+const OPENING_MESSAGE_SPLIT_REGEX = /\n?-{3,}\n?/;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -62,6 +64,23 @@ const SYSTEM_PLAYBOOK = [
   '- Sem markdown, sem bullets, sem numeracao na sua resposta — texto corrido, como uma mensagem de WhatsApp normal.',
 ].join('\n');
 
+const buildStylePrompt = (styleMessages: MessageRow[]): string => {
+  const styleProfileText = buildStyleProfileText(buildStyleProfile(styleMessages));
+  const styleExamples = buildStyleExamples(styleMessages);
+  return [
+    styleProfileText ? `${styleProfileText}\n` : '',
+    styleExamples.length > 0
+      ? `EXEMPLOS REAIS DO SEU ESTILO (copie o padrao de escrita, nunca o conteudo):\n${styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')}`
+      : '',
+  ].filter(Boolean).join('\n');
+};
+
+const extractHandoff = (text: string): { text: string; handoffReason: string | null } => {
+  const match = text.match(HANDOFF_TAG_REGEX);
+  if (!match) return { text: text.trim(), handoffReason: null };
+  return { text: text.slice(0, match.index).trim(), handoffReason: match[1].trim() };
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') {
@@ -80,6 +99,7 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as RequestBody;
     const conversationId = toTrimmedString(body.conversationId);
+    const leadName = toTrimmedString(body.leadName).slice(0, 120);
 
     if (!conversationId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria.' }), { status: 400, headers: jsonHeaders });
@@ -118,32 +138,37 @@ Deno.serve(async (req: Request) => {
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
     const history = (historyResult.data ?? []) as SandboxMessageRow[];
-    if (history.length === 0 || history[history.length - 1].role !== 'lead') {
-      return new Response(JSON.stringify({ error: 'Nao ha mensagem do lead pendente de resposta.' }), { status: 400, headers: jsonHeaders });
+    const isOpeningMode = history.length === 0;
+
+    if (!isOpeningMode && history[history.length - 1].role !== 'lead') {
+      return new Response(JSON.stringify({ error: 'A ultima mensagem ja foi respondida.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'LEAD' : 'VOCE'}: ${row.content}`);
-
     const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
-    const styleProfileText = styleMessagesResult.error ? '' : buildStyleProfileText(buildStyleProfile(styleMessages));
-    const styleExamples = styleMessagesResult.error ? [] : buildStyleExamples(styleMessages);
+    const stylePrompt = styleMessagesResult.error ? '' : buildStylePrompt(styleMessages);
+    const systemPrompt = [SYSTEM_PLAYBOOK, '', stylePrompt].filter(Boolean).join('\n');
 
-    const systemPrompt = [
-      SYSTEM_PLAYBOOK,
-      '',
-      styleProfileText ? `${styleProfileText}\n` : '',
-      styleExamples.length > 0
-        ? `EXEMPLOS REAIS DO SEU ESTILO (copie o padrao de escrita, nunca o conteudo):\n${styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')}`
-        : '',
-    ].filter(Boolean).join('\n');
-
-    const userPrompt = [
-      '--- CONVERSA ATE AGORA (LEAD = pessoa simulando o cliente, VOCE = suas respostas anteriores) ---',
-      transcriptLines.join('\n'),
-      '',
-      '--- TAREFA ---',
-      'Gere a proxima resposta, como VOCE, para a ultima mensagem do LEAD.',
-    ].join('\n');
+    let userPrompt: string;
+    if (isOpeningMode) {
+      userPrompt = [
+        '--- SITUACAO ---',
+        'Voce esta iniciando o contato agora — este e um lead que demonstrou interesse em uma cotacao de plano de saude e ainda nao trocou nenhuma mensagem com voce.',
+        leadName ? `Nome do lead: ${leadName}` : 'Nome do lead: desconhecido — cumprimente sem usar nome.',
+        '',
+        '--- TAREFA ---',
+        'Escreva a abordagem inicial completa (cumprimento + apresentacao rapida + mencionar que viu o interesse na cotacao + a primeira pergunta do roteiro de qualificacao).',
+        'Divida em ate 3 mensagens curtas, do jeito que a operacao realmente manda no WhatsApp (mensagens curtas em sequencia, nao um paragrafo unico). Separe cada mensagem em uma linha contendo apenas "---".',
+      ].join('\n');
+    } else {
+      const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'LEAD' : 'VOCE'}: ${row.content}`);
+      userPrompt = [
+        '--- CONVERSA ATE AGORA (LEAD = pessoa simulando o cliente, VOCE = suas respostas anteriores) ---',
+        transcriptLines.join('\n'),
+        '',
+        '--- TAREFA ---',
+        'Gere a proxima resposta, como VOCE, para a ultima mensagem do LEAD.',
+      ].join('\n');
+    }
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
@@ -151,29 +176,37 @@ Deno.serve(async (req: Request) => {
       systemPrompt,
       userPrompt,
       temperature: 0.6,
-      maxTokens: 350,
+      maxTokens: isOpeningMode ? 450 : 350,
     });
 
-    let replyText = result.text.trim();
-    let handoffReason: string | null = null;
-    const handoffMatch = replyText.match(HANDOFF_TAG_REGEX);
-    if (handoffMatch) {
-      handoffReason = handoffMatch[1].trim();
-      replyText = replyText.slice(0, handoffMatch.index).trim();
-    }
+    const rawParts = isOpeningMode
+      ? result.text.split(OPENING_MESSAGE_SPLIT_REGEX).map((part) => part.trim()).filter(Boolean)
+      : [result.text.trim()];
 
-    if (!replyText) throw new Error('A IA nao retornou uma resposta valida.');
+    if (rawParts.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
+
+    let handoffReason: string | null = null;
+    const finalMessages: string[] = rawParts.map((part, index) => {
+      if (index !== rawParts.length - 1) return part;
+      const extracted = extractHandoff(part);
+      handoffReason = extracted.handoffReason;
+      return extracted.text;
+    }).filter(Boolean);
+
+    if (finalMessages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
+
+    const rowsToInsert = finalMessages.map((content, index) => ({
+      conversation_id: conversationId,
+      role: 'ai' as const,
+      content,
+      handoff_reason: index === finalMessages.length - 1 ? handoffReason : null,
+      provider: result.provider,
+      model: result.model,
+    }));
 
     const { error: insertAiError } = await supabaseAdmin
       .from('ai_sandbox_messages')
-      .insert({
-        conversation_id: conversationId,
-        role: 'ai',
-        content: replyText,
-        handoff_reason: handoffReason,
-        provider: result.provider,
-        model: result.model,
-      });
+      .insert(rowsToInsert);
     if (insertAiError) throw new Error(`Erro ao salvar resposta da IA: ${insertAiError.message}`);
 
     await supabaseAdmin
@@ -184,7 +217,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       success: true,
       conversationId,
-      reply: replyText,
+      messages: finalMessages,
       handoffReason,
       provider: result.provider,
       model: result.model,

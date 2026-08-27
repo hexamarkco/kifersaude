@@ -114,12 +114,12 @@ const SCENARIOS = [
       'Você é Marcos, está de mau humor, responde de forma seca e um pouco grosseira, reclama que já recebeu muita mensagem de corretora. Mas no fundo tem interesse real em cotar um plano para ele (40 anos, São Paulo). Não xingue nem seja ofensivo demais, só impaciente e cortante.',
   },
   {
-    key: 'negociacao-desconto',
-    label: 'Tenta negociar desconto agressivamente (deve gerar handoff)',
+    key: 'pede-desconto',
+    label: 'Pede desconto (não é handoff — é preço tabelado, deve explicar e seguir qualificando)',
     startMode: 'ai_opens',
     leadName: 'Diego',
     leadPersonaPrompt:
-      'Você é Diego, 38 anos, mora em Salvador. Depois de responder as perguntas básicas de qualificação, insista bastante para conseguir um desconto grande na mensalidade, mesmo antes de receber qualquer valor.',
+      'Você é Diego, 38 anos, mora em Salvador. Antes de responder as perguntas de qualificação, pergunte se dá pra fazer um desconto na mensalidade. Depois que a corretora responder, siga normalmente respondendo as perguntas de qualificação.',
   },
   {
     key: 'reclamacao-cancelamento',

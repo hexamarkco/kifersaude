@@ -23,6 +23,7 @@ export default function AiSandboxChatScreen() {
   const [generatingReply, setGeneratingReply] = useState(false);
   const [leadNameForApproach, setLeadNameForApproach] = useState('');
   const [startingApproach, setStartingApproach] = useState(false);
+  const [showAutomated, setShowAutomated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
@@ -47,21 +48,23 @@ export default function AiSandboxChatScreen() {
 
   useEffect(() => () => clearPendingTimer(), [clearPendingTimer]);
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async (automatedOnly: boolean) => {
     setConversationsLoading(true);
     try {
-      const rows = await aiSandboxChatService.listConversations();
+      const rows = await aiSandboxChatService.listConversations(automatedOnly);
       setConversations(rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar simulações.');
     } finally {
       setConversationsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadConversations();
-  }, []);
+    handleNewConversation();
+    loadConversations(showAutomated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAutomated]);
 
   useEffect(() => {
     if (!activeConversationId) {
@@ -267,18 +270,30 @@ export default function AiSandboxChatScreen() {
         </div>
 
         <div className="px-3 pt-3">
-          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation}>
+          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation} disabled={showAutomated}>
             <MessageCirclePlus className="mr-1.5 h-4 w-4" />
             Nova simulação
           </Button>
         </div>
+
+        <label className="flex items-center gap-2 px-4 pt-3 text-xs text-[var(--text-secondary)]">
+          <input
+            type="checkbox"
+            checked={showAutomated}
+            onChange={(event) => setShowAutomated(event.target.checked)}
+            className="h-3.5 w-3.5"
+          />
+          Ver testes automatizados
+        </label>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           {conversationsLoading ? (
             <LoadingState compact label="Carregando..." />
           ) : conversations.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
-              Nenhuma simulação ainda. Comece uma conversa como se fosse um lead.
+              {showAutomated
+                ? 'Nenhum teste automatizado rodado ainda.'
+                : 'Nenhuma simulação ainda. Comece uma conversa como se fosse um lead.'}
             </p>
           ) : (
             <ul className="flex flex-col gap-1">

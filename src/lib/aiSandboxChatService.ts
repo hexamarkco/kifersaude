@@ -4,6 +4,7 @@ export type AiSandboxConversation = {
   id: string;
   title: string;
   created_by: string | null;
+  is_automated: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -40,10 +41,11 @@ const buildTitleFromMessage = (message: string): string => {
 };
 
 export const aiSandboxChatService = {
-  async listConversations(): Promise<AiSandboxConversation[]> {
+  async listConversations(automatedOnly = false): Promise<AiSandboxConversation[]> {
     const { data, error } = await supabase
       .from('ai_sandbox_conversations')
       .select('*')
+      .eq('is_automated', automatedOnly)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as simulacoes.'));

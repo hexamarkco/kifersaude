@@ -4338,6 +4338,86 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === 'check-lead-created-backlog' && req.method === 'POST') {
+      // Rede de segurança do fluxo de abordagem: reavalia um lead que ficou
+      // sem nenhum job de automação porque o disparo síncrono do trigger de
+      // INSERT falhou (ver check_lead_created_backlog_triggers no banco).
+      const deniedResponse = assertInternalServiceRole(req, supabaseServiceKey);
+      if (deniedResponse) {
+        logWithContext('Unauthorized check-lead-created-backlog request', {
+          method: req.method,
+          path,
+          action,
+        });
+        return deniedResponse;
+      }
+
+      const payload = await req.json().catch(() => null);
+      const leadId = typeof payload?.lead_id === 'string' ? payload.lead_id : null;
+      if (!leadId) {
+        return jsonResponse({ success: false, error: 'lead_id é obrigatório' }, 400);
+      }
+
+      const lookups = await getLookups();
+      const settings = await loadAutoContactFlowSettings(supabase);
+
+      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
+        return jsonResponse({ success: true, skipped: true, reason: 'flow_settings_unavailable' }, 200);
+      }
+
+      const { data: lead, error: leadError } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .maybeSingle();
+
+      if (leadError || !lead) {
+        return jsonResponse({ success: false, error: leadError?.message ?? 'Lead not found' }, 404);
+      }
+
+      if (lead.skip_automation === true) {
+        return jsonResponse({ success: true, skipped: true, reason: 'skip_automation' }, 200);
+      }
+
+      if (String((lead as Record<string, unknown>).canal ?? '') === 'whatsapp_campaign') {
+        return jsonResponse({ success: true, skipped: true, reason: 'campaign_lead' }, 200);
+      }
+
+      // Defesa extra contra corrida com o trigger de INSERT: se já existe
+      // algum job (de qualquer status), este lead não está órfão de verdade.
+      const { data: existingJobs } = await supabase
+        .from('auto_contact_flow_jobs')
+        .select('id')
+        .eq('lead_id', leadId)
+        .limit(1);
+
+      if (existingJobs && existingJobs.length > 0) {
+        return jsonResponse({ success: true, skipped: true, reason: 'already_has_job' }, 200);
+      }
+
+      logWithContext('Reprocessando lead sem job de abordagem (rede de segurança)', { leadId });
+
+      try {
+        await runAutoContactFlowEngine({
+          supabase,
+          lead,
+          lookups,
+          logWithContext,
+          settings,
+          event: 'lead_created',
+        });
+      } catch (automationError) {
+        logWithContext('Erro ao reprocessar lead órfão do fluxo de abordagem', {
+          leadId,
+          error: automationError instanceof Error ? automationError.message : String(automationError),
+        });
+
+        return jsonResponse({ success: false, error: 'Erro ao reprocessar lead.' }, 500);
+      }
+
+      return jsonResponse({ success: true, leadId }, 200);
+    }
+
     if (action === 'test-flow' && req.method === 'POST') {
       const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
       if (!authResult.authorized) {

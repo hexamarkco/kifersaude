@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Surface, Textarea } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -43,6 +43,25 @@ const stepKindLabels: Record<CommWhatsAppCampaignStepKind, string> = {
   message: 'Enviar mensagens',
   status_change: 'Mudar status do lead',
 };
+
+/** Rotulo de campo com um icone de ajuda: hover/foco mostra a explicacao do campo. */
+function FieldLabel({ text, hint }: { text: string; hint: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {text}
+      <Tooltip content={hint} size="sm">
+        <Info className="h-3.5 w-3.5 cursor-help text-[color:var(--panel-text-muted)]" aria-label={`Sobre: ${text}`} tabIndex={0} />
+      </Tooltip>
+    </span>
+  );
+}
+
+const campaignWizardSteps = [
+  { label: 'Informacoes', description: 'Nome e objetivo' },
+  { label: 'Publico', description: 'CRM ou CSV' },
+  { label: 'Mensagens', description: 'Sequencia e status' },
+  { label: 'Agendamento', description: 'Quando e como enviar' },
+];
 
 const defaultMessageDraft = (): CommWhatsAppCampaignMessageDraft => ({ messageText: '' });
 
@@ -221,6 +240,7 @@ export default function WhatsAppCampaignsScreen() {
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
   const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const [editingCampaign, setEditingCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [loadingCampaignEdit, setLoadingCampaignEdit] = useState(false);
   const [activationPreview, setActivationPreview] = useState<CommWhatsAppCampaignActivationPreview | null>(null);
@@ -340,6 +360,7 @@ export default function WhatsAppCampaignsScreen() {
     setRecurrenceInterval(1);
     setRecurrenceEndAt('');
     setTestPhoneNumber('');
+    setWizardStep(0);
   };
 
   const openNewCampaignModal = () => {
@@ -350,6 +371,18 @@ export default function WhatsAppCampaignsScreen() {
   const closeCampaignModal = () => {
     setCampaignModalOpen(false);
     resetCampaignForm();
+  };
+
+  const goToWizardStep = (step: number) => {
+    setWizardStep(Math.min(Math.max(step, 0), campaignWizardSteps.length - 1));
+  };
+
+  const handleWizardNext = () => {
+    if (wizardStep === 0 && !name.trim()) {
+      toast.warning('Informe um nome para o disparo antes de continuar.');
+      return;
+    }
+    goToWizardStep(wizardStep + 1);
   };
 
   const openEditCampaignModal = async (campaign: CommWhatsAppCampaign) => {
@@ -433,6 +466,7 @@ export default function WhatsAppCampaignsScreen() {
       }
       const storedRecentDays = Number(filters.exclude_recent_campaign_days);
       if (Number.isFinite(storedRecentDays) && storedRecentDays >= 0) setRecentCampaignDays(storedRecentDays);
+      setWizardStep(0);
       setCampaignModalOpen(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar este disparo para edicao.');
@@ -909,20 +943,28 @@ export default function WhatsAppCampaignsScreen() {
             <DialogHeader onClose={closeCampaignModal}>
               <div>
                 <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
-                <DialogDescription>Configure publico, pacote de mensagens, agendamento e ritmo de envio.</DialogDescription>
+                <DialogDescription>{campaignWizardSteps[wizardStep]?.description}</DialogDescription>
               </div>
             </DialogHeader>
 
+            <div className="shrink-0 px-1 pb-1 pt-2">
+              <Stepper currentStep={wizardStep} steps={campaignWizardSteps} />
+            </div>
+
             <DialogBody className="min-h-0 flex-1 space-y-5">
+          {wizardStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome da campanha">
+            <Field label={<FieldLabel text="Nome da campanha" hint="Nome interno para voce identificar o disparo na lista. O lead nunca ve esse nome." />}>
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativacao PME maio" />
             </Field>
-            <Field label="Objetivo">
+            <Field label={<FieldLabel text="Objetivo" hint="Anotacao livre sobre o proposito da campanha, so para referencia interna da equipe." />}>
               <Input value={objective} onChange={(event) => setObjective(event.target.value)} placeholder="Ex: retomar cotacoes paradas" />
             </Field>
           </div>
+          )}
 
+          {wizardStep === 1 && (
+          <>
           <div className="flex flex-wrap gap-2">
             <AudienceButton active={audienceMode === 'crm'} icon={Users} label="Leads do CRM" onClick={() => setAudienceMode('crm')} />
             <AudienceButton active={audienceMode === 'csv'} icon={FileSpreadsheet} label="Importar CSV" onClick={() => setAudienceMode('csv')} />
@@ -930,10 +972,10 @@ export default function WhatsAppCampaignsScreen() {
 
           {audienceMode === 'crm' ? (
             <Surface variant="muted" padding="sm" className="grid gap-4 md:grid-cols-2">
-              <Field label="Status do lead">
+              <Field label={<FieldLabel text="Status do lead" hint="Filtra o publico pelos status atuais no CRM. Deixe vazio para incluir todos os status." />}>
                 <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
               </Field>
-              <Field label="Responsavel">
+              <Field label={<FieldLabel text="Responsavel" hint="Filtra o publico pelo responsavel atribuido ao lead no CRM." />}>
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
               <label className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
@@ -942,10 +984,10 @@ export default function WhatsAppCampaignsScreen() {
               </label>
               {reactivationMode && (
                 <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
-                  <Field label="Sem contato há pelo menos (dias)">
+                  <Field label={<FieldLabel text="Sem contato ha pelo menos (dias)" hint="So inclui leads cujo ultimo contato registrado foi ha pelo menos esse numero de dias." />}>
                     <Input type="number" min={1} value={inactiveDays} onChange={(event) => setInactiveDays(Math.max(1, Number(event.target.value) || 1))} />
                   </Field>
-                  <Field label="Suprimir campanha recente (dias)">
+                  <Field label={<FieldLabel text="Suprimir campanha recente (dias)" hint="Exclui quem ja recebeu qualquer outra campanha dentro desse numero de dias, para nao repetir contato." />}>
                     <Input type="number" min={0} value={recentCampaignDays} onChange={(event) => setRecentCampaignDays(Math.max(0, Number(event.target.value) || 0))} />
                   </Field>
                 </div>
@@ -976,6 +1018,11 @@ export default function WhatsAppCampaignsScreen() {
               </div>
             </Surface>
           )}
+          </>
+          )}
+
+          {wizardStep === 2 && (
+          <>
 
           <Surface variant="muted" padding="sm" className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -1041,7 +1088,7 @@ export default function WhatsAppCampaignsScreen() {
               </span>
             </label>
             {abTestEnabled && (
-              <Field label={`Percentual para a variante B (${abSplitPercent}%)`}>
+              <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versoes." />}>
                 <Input
                   type="range"
                   min={1}
@@ -1083,10 +1130,10 @@ export default function WhatsAppCampaignsScreen() {
 
                     {!isFirstStage && (
                       <div className="mb-3 grid gap-3 sm:grid-cols-2">
-                        <Field label="Aguardar desde o estagio anterior">
+                        <Field label={<FieldLabel text="Aguardar desde o estagio anterior" hint="Quanto tempo esperar depois que o estagio anterior terminar antes de disparar este." />}>
                           <Input type="number" min={0} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Number(event.target.value) || 0 })} />
                         </Field>
-                        <Field label="Unidade">
+                        <Field label={<FieldLabel text="Unidade" hint="Unidade de tempo do intervalo de espera ao lado." />}>
                           <Select
                             value={stage.delayUnit}
                             onChange={(event) => updateStage(stageIndex, { delayUnit: event.target.value as CommWhatsAppCampaignDelayUnit })}
@@ -1101,7 +1148,7 @@ export default function WhatsAppCampaignsScreen() {
                     )}
 
                     {stage.kind === 'status_change' ? (
-                      <Field label="Novo status do lead">
+                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que sera aplicado ao lead quando este estagio rodar. So vale para contatos vindos do CRM." />}>
                         <Select
                           value={stage.statusToSet ?? ''}
                           onChange={(event) => updateStage(stageIndex, { statusToSet: event.target.value })}
@@ -1211,7 +1258,7 @@ export default function WhatsAppCampaignsScreen() {
 
                                 {isVeryFirstMessage && abTestEnabled && (
                                   <div className="mt-3">
-                                    <Field label="Variante B (texto alternativo)">
+                                    <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versao alternativa da mensagem inicial, sorteada para uma fracao dos contatos, para comparar qual converte mais." />}>
                                       <Textarea
                                         size="compact"
                                         value={message.variantBMessageText ?? ''}
@@ -1240,7 +1287,11 @@ export default function WhatsAppCampaignsScreen() {
               })}
             </div>
           </Surface>
+          </>
+          )}
 
+          {wizardStep === 3 && (
+          <>
           {audienceMode === 'crm' && (
             <Surface variant="muted" padding="sm" className="space-y-3">
               <div className="flex items-center gap-2">
@@ -1248,7 +1299,7 @@ export default function WhatsAppCampaignsScreen() {
                 <span className="text-sm font-semibold text-[color:var(--panel-text)]">Recorrencia</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Repetir">
+                <Field label={<FieldLabel text="Repetir" hint="Define se e com que frequencia esta campanha volta a rodar automaticamente para o mesmo publico de CRM." />}>
                   <Select value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as CommWhatsAppCampaignRecurrenceRule)}>
                     {(Object.keys(recurrenceRuleLabels) as CommWhatsAppCampaignRecurrenceRule[]).map((rule) => (
                       <option key={rule} value={rule}>{recurrenceRuleLabels[rule]}</option>
@@ -1257,10 +1308,10 @@ export default function WhatsAppCampaignsScreen() {
                 </Field>
                 {recurrenceRule !== 'none' && (
                   <>
-                    <Field label="A cada">
+                    <Field label={<FieldLabel text="A cada" hint="Multiplo do intervalo escolhido acima. Ex: 'semanalmente' + '2' repete a cada 2 semanas." />}>
                       <Input type="number" min={1} max={90} value={recurrenceInterval} onChange={(event) => setRecurrenceInterval(Math.max(1, Number(event.target.value) || 1))} />
                     </Field>
-                    <Field label="Repetir ate (opcional)">
+                    <Field label={<FieldLabel text="Repetir ate (opcional)" hint="Data limite para as repeticoes automaticas. Deixe vazio para repetir indefinidamente." />}>
                       <DateTimePicker type="datetime-local" value={recurrenceEndAt} onChange={(event) => setRecurrenceEndAt(event.target.value)} />
                     </Field>
                   </>
@@ -1281,7 +1332,7 @@ export default function WhatsAppCampaignsScreen() {
                 <span className="text-sm font-semibold text-[color:var(--panel-text)]">Enviar teste</span>
               </div>
               <div className="flex flex-wrap items-end gap-2">
-                <Field label="Telefone (com DDD)" className="min-w-[12rem] flex-1">
+                <Field label={<FieldLabel text="Telefone (com DDD)" hint="Numero que vai receber a mensagem de teste. Use o seu proprio WhatsApp." />} className="min-w-[12rem] flex-1">
                   <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
                 </Field>
                 <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
@@ -1294,22 +1345,24 @@ export default function WhatsAppCampaignsScreen() {
           )}
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Field label="Agendar para">
+            <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo comecar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
-            <Field label="Ritmo por minuto">
+            <Field label={<FieldLabel text="Ritmo por minuto" hint="Quantas mensagens o worker envia por minuto. Ritmos muito altos aumentam o risco de bloqueio pela Meta." />}>
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
             </Field>
-            <Field label="Limite a cada 24h">
+            <Field label={<FieldLabel text="Limite a cada 24h" hint="Teto de envios por contato a cada 24 horas. Deixe vazio para nao limitar." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
-            <Field label="Janela inicio">
+            <Field label={<FieldLabel text="Janela inicio" hint="Horario a partir do qual o disparo pode enviar mensagens." />}>
               <DateTimePicker type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
             </Field>
-            <Field label="Janela fim">
+            <Field label={<FieldLabel text="Janela fim" hint="Horario limite para o envio. Fora da janela, o disparo fica pausado ate o proximo horario permitido." />}>
               <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
           </div>
+          </>
+          )}
             </DialogBody>
 
           <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1317,10 +1370,25 @@ export default function WhatsAppCampaignsScreen() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
               Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
             </div>
-            <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
-              <Send className="h-4 w-4" />
-              Salvar
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {wizardStep > 0 && (
+                <Button variant="secondary" className="whitespace-nowrap" onClick={() => goToWizardStep(wizardStep - 1)}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+              )}
+              {wizardStep < campaignWizardSteps.length - 1 ? (
+                <Button className="whitespace-nowrap" onClick={handleWizardNext}>
+                  Proximo
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
+                  <Send className="h-4 w-4" />
+                  Salvar
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </Dialog>
       )}

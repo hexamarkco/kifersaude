@@ -47,25 +47,43 @@ export type CommWhatsAppCsvTargetDraft = {
 };
 
 export type CommWhatsAppCampaignMediaType = 'image' | 'document' | 'video';
+export type CommWhatsAppCampaignDelayUnit = 'seconds' | 'minutes' | 'hours' | 'days';
+export type CommWhatsAppCampaignStepKind = 'message' | 'status_change';
 
-export type CommWhatsAppCampaignStepDraft = {
+export type CommWhatsAppCampaignMessageDraft = {
   messageText: string;
-  delayAmount: number;
-  delayUnit: 'seconds' | 'minutes' | 'hours' | 'days';
   mediaUrl?: string | null;
   mediaType?: CommWhatsAppCampaignMediaType | null;
   mediaFilename?: string | null;
-  /** Somente para o step 0: texto alternativo da variante B quando o teste A/B esta ativo. */
+  /** Somente na primeira mensagem do primeiro estagio: texto alternativo da variante B do teste A/B. */
   variantBMessageText?: string;
+};
+
+/**
+ * Um estagio agrupa um ou mais envios sob o mesmo intervalo de espera desde
+ * o estagio anterior - ex: "3 mensagens imediatas" e depois "2 mensagens 24h
+ * depois" sao dois estagios. Mesma logica de pacote de mensagens por etapa
+ * do construtor de fluxo de automacao, mas sempre linear (sem ramificacao).
+ */
+export type CommWhatsAppCampaignStageDraft = {
+  kind: CommWhatsAppCampaignStepKind;
+  delayAmount: number;
+  delayUnit: CommWhatsAppCampaignDelayUnit;
+  messages: CommWhatsAppCampaignMessageDraft[];
+  /** Usado somente quando kind === 'status_change'. */
+  statusToSet?: string;
 };
 
 export type CommWhatsAppCampaignStep = {
   id: string;
   campaign_id: string;
   step_index: number;
+  stage_index: number;
+  step_kind: CommWhatsAppCampaignStepKind;
+  status_to_set: string | null;
   message_text: string;
   delay_amount: number;
-  delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  delay_unit: CommWhatsAppCampaignDelayUnit;
   media_url: string | null;
   media_type: CommWhatsAppCampaignMediaType | null;
   media_filename: string | null;
@@ -116,7 +134,7 @@ export type CreateCampaignInput = {
   sendWindowEnd?: string | null;
   stopOnReply: boolean;
   createLeadsFromCsv: boolean;
-  steps: CommWhatsAppCampaignStepDraft[];
+  stages: CommWhatsAppCampaignStageDraft[];
   csvTargets?: CommWhatsAppCsvTargetDraft[];
   abTestEnabled: boolean;
   abSplitPercent: number;
@@ -128,7 +146,7 @@ export type CreateCampaignInput = {
 export type CommWhatsAppCampaignTemplate = {
   id: string;
   name: string;
-  steps: CommWhatsAppCampaignStepDraft[];
+  stages: CommWhatsAppCampaignStageDraft[];
   created_at: string;
   updated_at: string;
 };
@@ -309,8 +327,11 @@ const resolveSampleMessage = (template: string, sample: { name: string; phone: s
 type CampaignStepInsertRow = {
   campaign_id: string;
   step_index: number;
+  stage_index: number;
+  step_kind: CommWhatsAppCampaignStepKind;
+  status_to_set: string | null;
   delay_amount: number;
-  delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  delay_unit: CommWhatsAppCampaignDelayUnit;
   media_url: string | null;
   media_type: CommWhatsAppCampaignMediaType | null;
   media_filename: string | null;
@@ -318,30 +339,71 @@ type CampaignStepInsertRow = {
   variant_label: 'ANY' | 'A' | 'B';
 };
 
-const buildStepRows = (campaignId: string, steps: CommWhatsAppCampaignStepDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
+/**
+ * Achata os estagios (cada um com N mensagens ou uma troca de status) em
+ * linhas fisicas de `comm_whatsapp_campaign_steps`. A primeira mensagem (ou
+ * acao) de cada estagio carrega o intervalo configurado para o estagio; as
+ * demais mensagens do mesmo estagio ficam com intervalo zero, ou seja, saem
+ * em sequencia logo depois da anterior. O primeiro passo fisico da campanha
+ * nunca tem intervalo, mesmo que o estagio tenha um configurado.
+ */
+const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
   const rows: CampaignStepInsertRow[] = [];
+  let stepIndex = 0;
 
-  steps.forEach((step, index) => {
-    const base = {
-      campaign_id: campaignId,
-      step_index: index,
-      delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-      delay_unit: step.delayUnit,
-      media_url: step.mediaUrl || null,
-      media_type: step.mediaUrl ? step.mediaType || null : null,
-      media_filename: step.mediaUrl ? step.mediaFilename || null : null,
-    };
+  const resolveDelay = (isFirstInStage: boolean, stage: CommWhatsAppCampaignStageDraft) => (
+    stepIndex === 0 ? 0 : (isFirstInStage ? Math.max(Math.floor(stage.delayAmount || 0), 0) : 0)
+  );
 
-    const variantBText = step.variantBMessageText?.trim() || '';
-    if (index === 0 && abTestEnabled && variantBText) {
-      rows.push({ ...base, message_text: step.messageText.trim(), variant_label: 'A' });
-      rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
-    } else {
-      rows.push({ ...base, message_text: step.messageText.trim(), variant_label: 'ANY' });
+  stages.forEach((stage, stageIndex) => {
+    if (stage.kind === 'status_change') {
+      const statusToSet = stage.statusToSet?.trim();
+      if (!statusToSet) return;
+      rows.push({
+        campaign_id: campaignId,
+        step_index: stepIndex,
+        stage_index: stageIndex,
+        step_kind: 'status_change',
+        status_to_set: statusToSet,
+        message_text: '',
+        delay_amount: resolveDelay(true, stage),
+        delay_unit: stage.delayUnit,
+        media_url: null,
+        media_type: null,
+        media_filename: null,
+        variant_label: 'ANY',
+      });
+      stepIndex += 1;
+      return;
     }
+
+    stage.messages.forEach((message, messageIndex) => {
+      const isFirstInStage = messageIndex === 0;
+      const base = {
+        campaign_id: campaignId,
+        step_index: stepIndex,
+        stage_index: stageIndex,
+        step_kind: 'message' as const,
+        status_to_set: null,
+        delay_amount: resolveDelay(isFirstInStage, stage),
+        delay_unit: stage.delayUnit,
+        media_url: message.mediaUrl || null,
+        media_type: message.mediaUrl ? message.mediaType || null : null,
+        media_filename: message.mediaUrl ? message.mediaFilename || null : null,
+      };
+
+      const variantBText = message.variantBMessageText?.trim() || '';
+      if (stepIndex === 0 && abTestEnabled && variantBText) {
+        rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'A' });
+        rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
+      } else {
+        rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'ANY' });
+      }
+      stepIndex += 1;
+    });
   });
 
-  return rows.filter((row) => row.message_text.length > 0 || row.media_url);
+  return rows.filter((row) => row.step_kind === 'status_change' || row.message_text.length > 0 || row.media_url);
 };
 
 export const commWhatsAppCampaignService = {
@@ -460,6 +522,9 @@ export const commWhatsAppCampaignService = {
       id: 'fallback-message',
       campaign_id: campaign.id,
       step_index: 0,
+      stage_index: 0,
+      step_kind: 'message' as const,
+      status_to_set: null,
       message_text: campaign.message_text,
       delay_amount: 0,
       delay_unit: 'minutes' as const,
@@ -484,8 +549,8 @@ export const commWhatsAppCampaignService = {
 
     let estimatedTargets = materializedTargetsCount ?? 0;
     let sample: CommWhatsAppCampaignPreviewSample[] = [];
-    const firstStep = steps.find((step) => step.step_index === 0 && step.variant_label !== 'B') ?? steps[0];
-    const firstStepTemplate = firstStep?.message_text || '';
+    const firstMessageStep = steps.find((step) => step.step_kind === 'message' && step.variant_label !== 'B');
+    const firstStepTemplate = firstMessageStep?.message_text || '';
 
     if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
       const filters = getNestedRecord(campaign.audience_config, 'filters');
@@ -629,7 +694,7 @@ export const commWhatsAppCampaignService = {
       }
     }
 
-    const steps = buildStepRows(createdCampaign.id, input.steps, input.abTestEnabled);
+    const steps = buildStepRows(createdCampaign.id, input.stages, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -681,7 +746,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
     }
 
-    const steps = buildStepRows(campaignId, input.steps, input.abTestEnabled);
+    const steps = buildStepRows(campaignId, input.stages, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -884,14 +949,16 @@ export const commWhatsAppCampaignService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os modelos salvos.'));
     }
 
-    return (data ?? []) as CommWhatsAppCampaignTemplate[];
+    return (data ?? []).map((row) => ({ ...row, stages: row.steps })) as CommWhatsAppCampaignTemplate[];
   },
 
-  async saveTemplate(name: string, steps: CommWhatsAppCampaignStepDraft[]): Promise<CommWhatsAppCampaignTemplate> {
+  async saveTemplate(name: string, stages: CommWhatsAppCampaignStageDraft[]): Promise<CommWhatsAppCampaignTemplate> {
     const userId = await getCurrentUserId();
+    // Coluna no banco continua chamada `steps` (jsonb opaco); o formato
+    // gravado nela e a lista de estagios.
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_templates')
-      .insert({ name: name.trim(), steps, created_by: userId })
+      .insert({ name: name.trim(), steps: stages, created_by: userId })
       .select('*')
       .single();
 
@@ -899,7 +966,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o modelo.'));
     }
 
-    return data as CommWhatsAppCampaignTemplate;
+    return { ...data, stages: data.steps } as CommWhatsAppCampaignTemplate;
   },
 
   async deleteTemplate(templateId: string): Promise<void> {

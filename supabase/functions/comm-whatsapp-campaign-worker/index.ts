@@ -90,6 +90,9 @@ type CampaignStepRow = {
   id: string;
   campaign_id: string;
   step_index: number;
+  stage_index: number;
+  step_kind: 'message' | 'status_change';
+  status_to_set: string | null;
   message_text: string;
   delay_amount: number;
   delay_unit: 'seconds' | 'minutes' | 'hours' | 'days';
@@ -847,6 +850,9 @@ async function sendCampaignTestMessage(
   if (!step) {
     throw new Error('Esta campanha ainda nao tem nenhuma mensagem configurada.');
   }
+  if (step.step_kind === 'status_change') {
+    throw new Error('Esta etapa muda o status do lead e nao envia mensagem, entao nao ha o que testar.');
+  }
 
   const sampleLead: LeadRow = {
     id: 'test-send',
@@ -1261,7 +1267,7 @@ async function getCampaignSteps(
 ): Promise<CampaignStepRow[]> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_steps')
-    .select('id,campaign_id,step_index,message_text,delay_amount,delay_unit,media_url,media_type,media_filename,variant_label')
+    .select('id,campaign_id,step_index,stage_index,step_kind,status_to_set,message_text,delay_amount,delay_unit,media_url,media_type,media_filename,variant_label')
     .eq('campaign_id', campaign.id)
     .order('step_index', { ascending: true });
 
@@ -1275,6 +1281,9 @@ async function getCampaignSteps(
       id: 'fallback-message',
       campaign_id: campaign.id,
       step_index: 0,
+      stage_index: 0,
+      step_kind: 'message',
+      status_to_set: null,
       message_text: campaign.message_text,
       delay_amount: 0,
       delay_unit: 'minutes',
@@ -1386,6 +1395,126 @@ async function sendCampaignMedia(
   });
 }
 
+const normalizeLeadStatusName = (value: string): string => (
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+);
+
+async function resolveLeadStatusId(supabaseAdmin: ReturnType<typeof createAdminClient>, statusName: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.from('lead_status_config').select('id,nome');
+  if (error) {
+    throw new Error(`Erro ao carregar configuracao de status de leads: ${error.message}`);
+  }
+
+  const target = normalizeLeadStatusName(statusName);
+  const match = (data ?? []).find((row) => normalizeLeadStatusName(String(row.nome ?? '')) === target);
+  return match?.id ?? null;
+}
+
+async function applyCampaignStatusChangeStep(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  campaign: CampaignRow;
+  target: TargetRow;
+  step: CampaignStepRow;
+  nextStep: CampaignStepRow | null;
+  nowIso: string;
+}) {
+  const { supabaseAdmin, campaign, target, step, nextStep, nowIso } = params;
+  const statusToSet = step.status_to_set?.trim();
+
+  if (!statusToSet) {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'failed',
+      error_message: 'Etapa de mudanca de status sem status configurado.',
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
+    return { status: 'failed' };
+  }
+
+  if (!target.lead_id) {
+    // Alvo veio de CSV sem lead correspondente no CRM: nao ha o que mudar,
+    // apenas registra e segue para a proxima etapa da sequencia.
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'status_change_skipped_no_lead',
+      payload: { stepIndex: step.step_index, statusToSet },
+    });
+  } else {
+    // leads.status (texto) e apenas um espelho de leads.status_id, mantido
+    // por um trigger de sincronizacao (trg_sync_lead_status) que prioriza
+    // status_id quando ambos estao presentes no UPDATE. Escrever direto em
+    // `status` seria silenciosamente revertido pelo trigger, entao e preciso
+    // resolver o nome para o id canonico em lead_status_config primeiro
+    // (mesmo padrao usado pela acao "update_status" do fluxo de automacao).
+    const statusId = await resolveLeadStatusId(supabaseAdmin, statusToSet);
+
+    if (!statusId) {
+      const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
+        target,
+        errorMessage: `Status "${statusToSet}" nao encontrado na configuracao de status de leads.`,
+        retryable: false,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_failed',
+        payload: { error: 'status_not_found', statusToSet, stepIndex: step.step_index },
+      });
+      return { status: failureResult.status, error: 'Status nao encontrado.' };
+    }
+
+    const { error: leadUpdateError } = await supabaseAdmin
+      .from('leads')
+      .update({ status_id: statusId })
+      .eq('id', target.lead_id);
+
+    if (leadUpdateError) {
+      const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
+        target,
+        errorMessage: `Erro ao atualizar status do lead: ${leadUpdateError.message}`,
+        retryable: true,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: failureResult.retrying ? 'target_retry_scheduled' : 'target_failed',
+        payload: { error: leadUpdateError.message, stepIndex: step.step_index },
+      });
+      return { status: failureResult.status, error: leadUpdateError.message };
+    }
+
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'status_change_applied',
+      payload: { stepIndex: step.step_index, statusToSet, statusId, leadId: target.lead_id },
+    });
+  }
+
+  const nextSendAt = nextStep ? new Date(Date.now() + getDelayMs(nextStep)).toISOString() : null;
+  const targetStatus = nextStep ? 'scheduled' : 'sent';
+
+  await updateClaimedTarget(supabaseAdmin, target, {
+    status: targetStatus,
+    current_step_index: nextStep ? nextStep.step_index : step.step_index,
+    next_send_at: nextSendAt,
+    next_retry_at: null,
+    error_message: null,
+    last_attempt_at: nowIso,
+    locked_at: null,
+    lock_token: null,
+  });
+
+  return { status: targetStatus };
+}
+
 async function sendTarget(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   campaign: CampaignRow;
@@ -1487,6 +1616,11 @@ async function sendTarget(params: {
   const step = steps.find((item) => item.step_index === currentStepIndex) ?? steps[currentStepIndex] ?? steps[0];
   const stepPosition = Math.max(steps.findIndex((item) => item.step_index === step.step_index), 0);
   const nextStep = steps[stepPosition + 1] ?? null;
+
+  if (step.step_kind === 'status_change') {
+    return applyCampaignStatusChangeStep({ supabaseAdmin, campaign, target, step, nextStep, nowIso });
+  }
+
   const text = resolveMessageText(step.message_text, { lead, target }).trim();
   if (!text && !step.media_url) {
     await updateClaimedTarget(supabaseAdmin, target, {

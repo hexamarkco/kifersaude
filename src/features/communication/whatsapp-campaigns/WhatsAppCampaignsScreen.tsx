@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, Bot, BookmarkPlus, CalendarClock, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -14,9 +14,12 @@ import {
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
   type CommWhatsAppCampaignActivationPreview,
+  type CommWhatsAppCampaignDelayUnit,
   type CommWhatsAppCampaignMediaType,
+  type CommWhatsAppCampaignMessageDraft,
   type CommWhatsAppCampaignRecurrenceRule,
-  type CommWhatsAppCampaignStepDraft,
+  type CommWhatsAppCampaignStageDraft,
+  type CommWhatsAppCampaignStepKind,
   type CommWhatsAppCampaignTemplate,
   type CommWhatsAppCampaignWorkerHealth,
   type CommWhatsAppCampaignWorkerRun,
@@ -36,10 +39,25 @@ const mediaTypeLabels: Record<CommWhatsAppCampaignMediaType, string> = {
   video: 'Video',
 };
 
+const stepKindLabels: Record<CommWhatsAppCampaignStepKind, string> = {
+  message: 'Enviar mensagens',
+  status_change: 'Mudar status do lead',
+};
+
+const defaultMessageDraft = (): CommWhatsAppCampaignMessageDraft => ({ messageText: '' });
+
+const defaultStage = (delayAmount = 0, delayUnit: CommWhatsAppCampaignStageDraft['delayUnit'] = 'minutes'): CommWhatsAppCampaignStageDraft => ({
+  kind: 'message',
+  delayAmount,
+  delayUnit,
+  messages: [defaultMessageDraft()],
+});
+
 type AudienceMode = 'crm' | 'csv';
 
 type VariableAutocompleteState = {
-  stepIndex: number;
+  stageIndex: number;
+  messageIndex: number;
   query: string;
   replaceStart: number;
   replaceEnd: number;
@@ -178,12 +196,13 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
-const getVariableAutocompleteState = (value: string, cursorPosition: number, stepIndex: number): VariableAutocompleteState | null => {
+const getVariableAutocompleteState = (value: string, cursorPosition: number, stageIndex: number, messageIndex: number): VariableAutocompleteState | null => {
   const beforeCursor = value.slice(0, cursorPosition);
   const match = beforeCursor.match(/{{\s*([a-zA-Z0-9_]*)$/);
   if (!match || match.index === undefined) return null;
   return {
-    stepIndex,
+    stageIndex,
+    messageIndex,
     query: match[1].toLowerCase(),
     replaceStart: match.index,
     replaceEnd: cursorPosition,
@@ -210,9 +229,7 @@ export default function WhatsAppCampaignsScreen() {
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
   const [messageText, setMessageText] = useState('');
-  const [steps, setSteps] = useState<CommWhatsAppCampaignStepDraft[]>([
-    { messageText: '', delayAmount: 0, delayUnit: 'minutes' },
-  ]);
+  const [stages, setStages] = useState<CommWhatsAppCampaignStageDraft[]>([defaultStage()]);
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [leadOwnerFilters, setLeadOwnerFilters] = useState<string[]>([]);
   const [csvText, setCsvText] = useState('');
@@ -226,17 +243,17 @@ export default function WhatsAppCampaignsScreen() {
   const [inactiveDays, setInactiveDays] = useState(90);
   const [recentCampaignDays, setRecentCampaignDays] = useState(30);
   const [variableAutocomplete, setVariableAutocomplete] = useState<VariableAutocompleteState | null>(null);
-  const stepTextareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+  const stepTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [abTestEnabled, setAbTestEnabled] = useState(false);
   const [abSplitPercent, setAbSplitPercent] = useState(50);
   const [recurrenceRule, setRecurrenceRule] = useState<CommWhatsAppCampaignRecurrenceRule>('none');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndAt, setRecurrenceEndAt] = useState('');
-  const [uploadingStepIndex, setUploadingStepIndex] = useState<number | null>(null);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [templates, setTemplates] = useState<CommWhatsAppCampaignTemplate[]>([]);
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
-  const mediaFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const mediaFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -247,7 +264,11 @@ export default function WhatsAppCampaignsScreen() {
     () => (options.lead_responsavel || []).filter((option) => option.ativo).map((option) => ({ value: option.value, label: option.label })),
     [options.lead_responsavel],
   );
-  const firstMessageText = steps.find((step) => step.messageText.trim())?.messageText.trim() || messageText.trim();
+  const flatMessages = useMemo(
+    () => stages.flatMap((stage) => (stage.kind === 'message' ? stage.messages : [])),
+    [stages],
+  );
+  const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
     if (!variableAutocomplete) return [];
     return campaignVariableSuggestions.filter((suggestion) => (
@@ -299,7 +320,7 @@ export default function WhatsAppCampaignsScreen() {
     setName('');
     setObjective('');
     setMessageText('');
-    setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
+    setStages([defaultStage()]);
     setLeadStatusFilters([]);
     setLeadOwnerFilters([]);
     setCsvText('');
@@ -343,26 +364,53 @@ export default function WhatsAppCampaignsScreen() {
       setName(campaign.name);
       setObjective(campaign.objective ?? '');
       setMessageText(campaign.message_text ?? '');
-      const stepsByIndex = new Map<number, typeof campaignSteps>();
-      for (const step of campaignSteps) {
-        stepsByIndex.set(step.step_index, [...(stepsByIndex.get(step.step_index) ?? []), step]);
+      // Passo 1: colapsa pares de variante A/B que compartilham o mesmo
+      // step_index em uma unica mensagem com variantBMessageText anexado.
+      const rowsByStepIndex = new Map<number, typeof campaignSteps>();
+      for (const row of campaignSteps) {
+        rowsByStepIndex.set(row.step_index, [...(rowsByStepIndex.get(row.step_index) ?? []), row]);
       }
-      const mergedSteps: CommWhatsAppCampaignStepDraft[] = Array.from(stepsByIndex.entries())
+      const collapsedRows = Array.from(rowsByStepIndex.entries())
         .sort(([a], [b]) => a - b)
         .map(([, group]) => {
           const primary = group.find((item) => item.variant_label !== 'B') ?? group[0];
           const variantB = group.find((item) => item.variant_label === 'B');
+          return { ...primary, variantBMessageText: variantB?.message_text };
+        });
+
+      // Passo 2: agrupa as linhas fisicas (ja colapsadas) em estagios pelo
+      // stage_index, preservando a ordem de step_index dentro do estagio.
+      const rowsByStage = new Map<number, typeof collapsedRows>();
+      for (const row of collapsedRows) {
+        rowsByStage.set(row.stage_index, [...(rowsByStage.get(row.stage_index) ?? []), row]);
+      }
+      const loadedStages: CommWhatsAppCampaignStageDraft[] = Array.from(rowsByStage.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, group]) => {
+          const first = group[0];
+          if (first.step_kind === 'status_change') {
+            return {
+              kind: 'status_change',
+              delayAmount: first.delay_amount,
+              delayUnit: first.delay_unit,
+              messages: [],
+              statusToSet: first.status_to_set ?? '',
+            };
+          }
           return {
-            messageText: primary.message_text,
-            delayAmount: primary.delay_amount,
-            delayUnit: primary.delay_unit,
-            mediaUrl: primary.media_url,
-            mediaType: primary.media_type,
-            mediaFilename: primary.media_filename,
-            variantBMessageText: variantB?.message_text,
+            kind: 'message',
+            delayAmount: first.delay_amount,
+            delayUnit: first.delay_unit,
+            messages: group.map((row) => ({
+              messageText: row.message_text,
+              mediaUrl: row.media_url,
+              mediaType: row.media_type,
+              mediaFilename: row.media_filename,
+              variantBMessageText: row.variantBMessageText,
+            })),
           };
         });
-      setSteps(mergedSteps.length > 0 ? mergedSteps : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
+      setStages(loadedStages.length > 0 ? loadedStages : [{ ...defaultStage(), messages: [{ messageText: campaign.message_text ?? '' }] }]);
       setAbTestEnabled(campaign.ab_test_enabled);
       setAbSplitPercent(campaign.ab_split_percent || 50);
       setRecurrenceRule(campaign.recurrence_rule || 'none');
@@ -399,8 +447,14 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
-    if (!firstMessageText && !steps.some((step) => step.mediaUrl)) {
+    if (!firstMessageText && !flatMessages.some((item) => item.mediaUrl)) {
       toast.warning('Escreva pelo menos uma mensagem ou anexe uma midia no disparo.');
+      return;
+    }
+
+    const emptyStatusStage = stages.find((stage) => stage.kind === 'status_change' && !stage.statusToSet?.trim());
+    if (emptyStatusStage) {
+      toast.warning('Selecione o status a aplicar em cada etapa de "Mudar status do lead".');
       return;
     }
 
@@ -433,17 +487,30 @@ export default function WhatsAppCampaignsScreen() {
             },
           };
 
-      const normalizedSteps = steps
-        .map((step, index) => ({
-          messageText: step.messageText.trim(),
-          delayAmount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-          delayUnit: step.delayUnit,
-          mediaUrl: step.mediaUrl || null,
-          mediaType: step.mediaUrl ? step.mediaType : null,
-          mediaFilename: step.mediaUrl ? step.mediaFilename : null,
-          variantBMessageText: index === 0 ? step.variantBMessageText?.trim() : undefined,
-        }))
-        .filter((step) => step.messageText.length > 0 || step.mediaUrl);
+      const normalizedStages: CommWhatsAppCampaignStageDraft[] = stages.map((stage) => (
+        stage.kind === 'status_change'
+          ? {
+              kind: 'status_change' as const,
+              delayAmount: Math.max(Math.floor(stage.delayAmount || 0), 0),
+              delayUnit: stage.delayUnit,
+              messages: [],
+              statusToSet: stage.statusToSet?.trim() || '',
+            }
+          : {
+              kind: 'message' as const,
+              delayAmount: Math.max(Math.floor(stage.delayAmount || 0), 0),
+              delayUnit: stage.delayUnit,
+              messages: stage.messages.map((message) => ({
+                messageText: message.messageText.trim(),
+                mediaUrl: message.mediaUrl || null,
+                mediaType: message.mediaUrl ? message.mediaType : null,
+                mediaFilename: message.mediaUrl ? message.mediaFilename : null,
+                variantBMessageText: message.variantBMessageText?.trim(),
+              })),
+            }
+      ));
+      const firstStage = normalizedStages[0];
+      const firstMessageHasVariantB = firstStage?.kind === 'message' && Boolean(firstStage.messages[0]?.variantBMessageText);
 
       const payload = {
         name,
@@ -458,9 +525,9 @@ export default function WhatsAppCampaignsScreen() {
         sendWindowEnd: sendWindowEnd || null,
         stopOnReply: true,
         createLeadsFromCsv,
-        steps: normalizedSteps,
+        stages: normalizedStages,
         csvTargets: !editingCampaign && audienceMode === 'csv' ? csvValidTargets : [],
-        abTestEnabled: abTestEnabled && Boolean(normalizedSteps[0]?.variantBMessageText),
+        abTestEnabled: abTestEnabled && firstMessageHasVariantB,
         abSplitPercent,
         recurrenceRule: audienceMode === 'crm' ? recurrenceRule : 'none' as CommWhatsAppCampaignRecurrenceRule,
         recurrenceInterval,
@@ -483,65 +550,98 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
-  const updateVariableAutocomplete = (stepIndex: number, value: string, cursorPosition: number | null) => {
+  const updateVariableAutocomplete = (stageIndex: number, messageIndex: number, value: string, cursorPosition: number | null) => {
     if (cursorPosition === null) {
       setVariableAutocomplete(null);
       return;
     }
 
-    setVariableAutocomplete(getVariableAutocompleteState(value, cursorPosition, stepIndex));
+    setVariableAutocomplete(getVariableAutocompleteState(value, cursorPosition, stageIndex, messageIndex));
   };
 
   const insertVariableSuggestion = (suggestionKey: string) => {
     if (!variableAutocomplete) return;
-    const stepIndex = variableAutocomplete.stepIndex;
-    const currentStep = steps[stepIndex];
-    if (!currentStep) return;
+    const { stageIndex, messageIndex } = variableAutocomplete;
+    const currentMessage = stages[stageIndex]?.messages[messageIndex];
+    if (!currentMessage) return;
 
-    const nextText = `${currentStep.messageText.slice(0, variableAutocomplete.replaceStart)}{{${suggestionKey}}}${currentStep.messageText.slice(variableAutocomplete.replaceEnd)}`;
+    const nextText = `${currentMessage.messageText.slice(0, variableAutocomplete.replaceStart)}{{${suggestionKey}}}${currentMessage.messageText.slice(variableAutocomplete.replaceEnd)}`;
     const nextCursorPosition = variableAutocomplete.replaceStart + suggestionKey.length + 4;
-    updateStep(stepIndex, { messageText: nextText });
-    if (stepIndex === 0) setMessageText(nextText);
+    updateMessage(stageIndex, messageIndex, { messageText: nextText });
+    if (stageIndex === 0 && messageIndex === 0) setMessageText(nextText);
     setVariableAutocomplete(null);
 
+    const refKey = `${stageIndex}-${messageIndex}`;
     window.setTimeout(() => {
-      const textarea = stepTextareaRefs.current[stepIndex];
+      const textarea = stepTextareaRefs.current[refKey];
       textarea?.focus();
       textarea?.setSelectionRange(nextCursorPosition, nextCursorPosition);
     }, 0);
   };
 
-  const updateStep = (index: number, patch: Partial<CommWhatsAppCampaignStepDraft>) => {
-    setSteps((current) => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
+  const updateStage = (stageIndex: number, patch: Partial<CommWhatsAppCampaignStageDraft>) => {
+    setStages((current) => current.map((stage, index) => index === stageIndex ? { ...stage, ...patch } : stage));
   };
 
-  const addStep = () => {
-    setSteps((current) => [...current, { messageText: '', delayAmount: 1, delayUnit: 'days' }]);
+  const updateMessage = (stageIndex: number, messageIndex: number, patch: Partial<CommWhatsAppCampaignMessageDraft>) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex) return stage;
+      return { ...stage, messages: stage.messages.map((message, mIndex) => mIndex === messageIndex ? { ...message, ...patch } : message) };
+    }));
   };
 
-  const removeStep = (index: number) => {
-    setSteps((current) => current.length <= 1 ? current : current.filter((_, stepIndex) => stepIndex !== index));
+  const addStage = () => {
+    setStages((current) => [...current, defaultStage(1, 'days')]);
   };
 
-  const handleStepMediaUpload = async (index: number, event: ChangeEvent<HTMLInputElement>) => {
+  const removeStage = (stageIndex: number) => {
+    setStages((current) => current.length <= 1 ? current : current.filter((_, index) => index !== stageIndex));
+  };
+
+  const addMessageToStage = (stageIndex: number) => {
+    setStages((current) => current.map((stage, index) => (
+      index === stageIndex ? { ...stage, messages: [...stage.messages, defaultMessageDraft()] } : stage
+    )));
+  };
+
+  const removeMessageFromStage = (stageIndex: number, messageIndex: number) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex || stage.messages.length <= 1) return stage;
+      return { ...stage, messages: stage.messages.filter((_, mIndex) => mIndex !== messageIndex) };
+    }));
+  };
+
+  const moveMessageInStage = (stageIndex: number, messageIndex: number, direction: -1 | 1) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex) return stage;
+      const target = messageIndex + direction;
+      if (target < 0 || target >= stage.messages.length) return stage;
+      const nextMessages = [...stage.messages];
+      [nextMessages[messageIndex], nextMessages[target]] = [nextMessages[target], nextMessages[messageIndex]];
+      return { ...stage, messages: nextMessages };
+    }));
+  };
+
+  const handleStepMediaUpload = async (stageIndex: number, messageIndex: number, event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
 
-    setUploadingStepIndex(index);
+    const key = `${stageIndex}-${messageIndex}`;
+    setUploadingKey(key);
     try {
       const uploaded = await commWhatsAppCampaignService.uploadCampaignMedia(file);
-      updateStep(index, { mediaUrl: uploaded.url, mediaType: uploaded.type, mediaFilename: uploaded.filename });
+      updateMessage(stageIndex, messageIndex, { mediaUrl: uploaded.url, mediaType: uploaded.type, mediaFilename: uploaded.filename });
       toast.success('Midia anexada.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a midia.');
     } finally {
-      setUploadingStepIndex(null);
+      setUploadingKey(null);
     }
   };
 
-  const handleRemoveStepMedia = (index: number) => {
-    updateStep(index, { mediaUrl: null, mediaType: null, mediaFilename: null });
+  const handleRemoveStepMedia = (stageIndex: number, messageIndex: number) => {
+    updateMessage(stageIndex, messageIndex, { mediaUrl: null, mediaType: null, mediaFilename: null });
   };
 
   const handleSaveTemplate = async () => {
@@ -549,7 +649,7 @@ export default function WhatsAppCampaignsScreen() {
     if (!templateName || !templateName.trim()) return;
 
     try {
-      const saved = await commWhatsAppCampaignService.saveTemplate(templateName, steps);
+      const saved = await commWhatsAppCampaignService.saveTemplate(templateName, stages);
       setTemplates((current) => [saved, ...current]);
       toast.success('Modelo salvo.');
     } catch (error) {
@@ -561,8 +661,9 @@ export default function WhatsAppCampaignsScreen() {
     if (!templateId) return;
     const template = templates.find((item) => item.id === templateId);
     if (!template) return;
-    setSteps(template.steps.length > 0 ? template.steps : [{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
-    setMessageText(template.steps[0]?.messageText ?? '');
+    setStages(template.stages.length > 0 ? template.stages : [defaultStage()]);
+    const firstStage = template.stages[0];
+    setMessageText(firstStage?.kind === 'message' ? firstStage.messages[0]?.messageText ?? '' : '');
     toast.success(`Modelo "${template.name}" carregado.`);
   };
 
@@ -879,12 +980,14 @@ export default function WhatsAppCampaignsScreen() {
           <Surface variant="muted" padding="sm" className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure a sequencia em blocos compactos. A lista abaixo rola separadamente quando houver muitas mensagens.</p>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequencia do disparo</span>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Como no construtor de fluxo: cada estagio dispara sob o mesmo intervalo (ex: 3 mensagens imediatas, depois 2 mensagens 24h depois) e pode mudar o status do lead entre os envios.</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <Badge tone="neutral">{steps.length} mensagem(ns)</Badge>
-                  <Badge tone="neutral">1 inicial</Badge>
-                  {steps.length > 1 && <Badge tone="neutral">{steps.length - 1} follow-up(s)</Badge>}
+                  <Badge tone="neutral">{stages.length} estagio(s)</Badge>
+                  <Badge tone="neutral">{flatMessages.length} mensagem(ns)</Badge>
+                  {stages.some((stage) => stage.kind === 'status_change') && (
+                    <Badge tone="accent">{stages.filter((stage) => stage.kind === 'status_change').length} mudanca(s) de status</Badge>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -900,9 +1003,9 @@ export default function WhatsAppCampaignsScreen() {
                   <BookmarkPlus className="h-3.5 w-3.5" />
                   Salvar modelo
                 </Button>
-                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
+                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStage}>
                   <Plus className="h-3.5 w-3.5" />
-                  Adicionar
+                  Adicionar estagio
                 </Button>
               </div>
             </div>
@@ -934,7 +1037,7 @@ export default function WhatsAppCampaignsScreen() {
                   Teste A/B na mensagem inicial
                 </span>
                 <br />
-                Sorteia entre duas versoes da primeira mensagem e permite comparar a taxa de resposta de cada uma.
+                Sorteia entre duas versoes da primeira mensagem (primeiro estagio) e permite comparar a taxa de resposta de cada uma.
               </span>
             </label>
             {abTestEnabled && (
@@ -949,135 +1052,192 @@ export default function WhatsAppCampaignsScreen() {
               </Field>
             )}
 
-            <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
-              {steps.map((step, index) => (
-                <div key={index} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{index + 1}</span>
-                      <div>
-                        <p className="text-sm font-semibold text-[color:var(--panel-text)]">{index === 0 ? 'Mensagem inicial' : 'Follow-up'}</p>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">{index === 0 ? 'Enviada ao ativar ou no horario agendado.' : 'Enviado depois do intervalo abaixo, se nao houver resposta.'}</p>
-                      </div>
-                    </div>
-                    {steps.length > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => removeStep(index)}>Remover</Button>
-                    )}
-                  </div>
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div className="relative">
-                      <Textarea
-                        ref={(element) => {
-                          stepTextareaRefs.current[index] = element;
-                        }}
-                        size="compact"
-                        value={step.messageText}
-                        onChange={(event) => {
-                          updateStep(index, { messageText: event.target.value });
-                          if (index === 0) setMessageText(event.target.value);
-                          updateVariableAutocomplete(index, event.target.value, event.target.selectionStart);
-                        }}
-                        onClick={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
-                        onKeyUp={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
-                        onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
-                        placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
-                      />
-                      {variableAutocomplete?.stepIndex === index && visibleVariableSuggestions.length > 0 && (
-                        <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
-                          <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
-                            Variaveis disponiveis
-                          </div>
-                          <div className="max-h-56 overflow-y-auto py-1">
-                            {visibleVariableSuggestions.map((suggestion) => (
-                              <button
-                                key={suggestion.key}
-                                type="button"
-                                className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
-                                onMouseDown={(event) => {
-                                  event.preventDefault();
-                                  insertVariableSuggestion(suggestion.key);
-                                }}
-                              >
-                                <code className="mt-0.5 rounded-[var(--kds-radius-sm)] bg-[color:var(--panel-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--panel-accent-ink)]">{`{{${suggestion.key}}}`}</code>
-                                <span>
-                                  <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
-                                  <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
-                                </span>
-                              </button>
-                            ))}
-                          </div>
+            <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
+              {stages.map((stage, stageIndex) => {
+                const isFirstStage = stageIndex === 0;
+                return (
+                  <div key={stageIndex} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{stageIndex + 1}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Estagio inicial' : `Estagio ${stageIndex + 1}`}</p>
+                          <p className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horario agendado.' : 'Dispara apos o intervalo abaixo, se nao houver resposta.'}</p>
                         </div>
-                      )}
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <input
-                          ref={(element) => { mediaFileInputRefs.current[index] = element; }}
-                          type="file"
-                          accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                          className="sr-only"
-                          onChange={(event) => void handleStepMediaUpload(index, event)}
-                        />
-                        {step.mediaUrl ? (
-                          <>
-                            <Badge tone="accent" size="sm" icon={ImageIcon}>
-                              {mediaTypeLabels[step.mediaType || 'document']}: {step.mediaFilename || 'arquivo anexado'}
-                            </Badge>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(index)}>
-                              <X className="h-3.5 w-3.5" />
-                              Remover midia
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            loading={uploadingStepIndex === index}
-                            onClick={() => mediaFileInputRefs.current[index]?.click()}
-                          >
-                            <Upload className="h-3.5 w-3.5" />
-                            Anexar midia
-                          </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                          className="min-w-[11rem]"
+                          value={stage.kind}
+                          onChange={(event) => updateStage(stageIndex, { kind: event.target.value as CommWhatsAppCampaignStepKind })}
+                        >
+                          {(Object.keys(stepKindLabels) as CommWhatsAppCampaignStepKind[]).map((kind) => (
+                            <option key={kind} value={kind}>{stepKindLabels[kind]}</option>
+                          ))}
+                        </Select>
+                        {stages.length > 1 && (
+                          <Button variant="ghost" size="sm" onClick={() => removeStage(stageIndex)}>Remover estagio</Button>
                         )}
                       </div>
-
-                      {index === 0 && abTestEnabled && (
-                        <div className="mt-3">
-                          <Field label="Variante B (texto alternativo)">
-                            <Textarea
-                              size="compact"
-                              value={step.variantBMessageText ?? ''}
-                              onChange={(event) => updateStep(0, { variantBMessageText: event.target.value })}
-                              placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotacao em aberto - posso te ajudar?"
-                            />
-                          </Field>
-                        </div>
-                      )}
                     </div>
-                    <Surface variant="muted" padding="sm" className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-1 ${index === 0 ? 'items-center' : ''}`}>
-                      {index === 0 ? (
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">Sem atraso nesta etapa.</p>
-                      ) : (
-                        <>
-                          <Field label="Aguardar">
-                            <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
-                          </Field>
-                          <Field label="Unidade">
-                            <Select
-                              value={step.delayUnit}
-                              onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
-                            >
-                              <option value="seconds">segundos</option>
-                              <option value="minutes">minutos</option>
-                              <option value="hours">horas</option>
-                              <option value="days">dias</option>
-                            </Select>
-                          </Field>
-                        </>
-                      )}
-                    </Surface>
+
+                    {!isFirstStage && (
+                      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                        <Field label="Aguardar desde o estagio anterior">
+                          <Input type="number" min={0} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Number(event.target.value) || 0 })} />
+                        </Field>
+                        <Field label="Unidade">
+                          <Select
+                            value={stage.delayUnit}
+                            onChange={(event) => updateStage(stageIndex, { delayUnit: event.target.value as CommWhatsAppCampaignDelayUnit })}
+                          >
+                            <option value="seconds">segundos</option>
+                            <option value="minutes">minutos</option>
+                            <option value="hours">horas</option>
+                            <option value="days">dias</option>
+                          </Select>
+                        </Field>
+                      </div>
+                    )}
+
+                    {stage.kind === 'status_change' ? (
+                      <Field label="Novo status do lead">
+                        <Select
+                          value={stage.statusToSet ?? ''}
+                          onChange={(event) => updateStage(stageIndex, { statusToSet: event.target.value })}
+                        >
+                          <option value="">Selecione um status</option>
+                          {leadStatusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </Select>
+                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Vale so para contatos vindos do CRM; alvos importados por CSV sem lead vinculado pulam esta etapa.</p>
+                      </Field>
+                    ) : (
+                      <div className="space-y-2">
+                        {stage.messages.map((message, messageIndex) => {
+                          const refKey = `${stageIndex}-${messageIndex}`;
+                          const isVeryFirstMessage = isFirstStage && messageIndex === 0;
+                          return (
+                            <div key={messageIndex} className="rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-2">
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}</span>
+                                {stage.messages.length > 1 && (
+                                  <div className="flex items-center gap-0.5">
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
+                                      <ChevronUp className="h-3 w-3" />
+                                    </button>
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === stage.messages.length - 1} onClick={() => moveMessageInStage(stageIndex, messageIndex, 1)} aria-label="Mover para baixo">
+                                      <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--danger-text)] hover:bg-[color:var(--panel-surface)]" onClick={() => removeMessageFromStage(stageIndex, messageIndex)} aria-label="Remover mensagem">
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <Textarea
+                                  ref={(element) => { stepTextareaRefs.current[refKey] = element; }}
+                                  size="compact"
+                                  value={message.messageText}
+                                  onChange={(event) => {
+                                    updateMessage(stageIndex, messageIndex, { messageText: event.target.value });
+                                    if (isVeryFirstMessage) setMessageText(event.target.value);
+                                    updateVariableAutocomplete(stageIndex, messageIndex, event.target.value, event.target.selectionStart);
+                                  }}
+                                  onClick={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
+                                  onKeyUp={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
+                                  onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
+                                  placeholder={isVeryFirstMessage ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                                />
+                                {variableAutocomplete?.stageIndex === stageIndex && variableAutocomplete.messageIndex === messageIndex && visibleVariableSuggestions.length > 0 && (
+                                  <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
+                                    <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
+                                      Variaveis disponiveis
+                                    </div>
+                                    <div className="max-h-56 overflow-y-auto py-1">
+                                      {visibleVariableSuggestions.map((suggestion) => (
+                                        <button
+                                          key={suggestion.key}
+                                          type="button"
+                                          className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
+                                          onMouseDown={(event) => {
+                                            event.preventDefault();
+                                            insertVariableSuggestion(suggestion.key);
+                                          }}
+                                        >
+                                          <code className="mt-0.5 rounded-[var(--kds-radius-sm)] bg-[color:var(--panel-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--panel-accent-ink)]">{`{{${suggestion.key}}}`}</code>
+                                          <span>
+                                            <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
+                                            <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <input
+                                    ref={(element) => { mediaFileInputRefs.current[refKey] = element; }}
+                                    type="file"
+                                    accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                                    className="sr-only"
+                                    onChange={(event) => void handleStepMediaUpload(stageIndex, messageIndex, event)}
+                                  />
+                                  {message.mediaUrl ? (
+                                    <>
+                                      <Badge tone="accent" size="sm" icon={ImageIcon}>
+                                        {mediaTypeLabels[message.mediaType || 'document']}: {message.mediaFilename || 'arquivo anexado'}
+                                      </Badge>
+                                      <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(stageIndex, messageIndex)}>
+                                        <X className="h-3.5 w-3.5" />
+                                        Remover midia
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      loading={uploadingKey === refKey}
+                                      onClick={() => mediaFileInputRefs.current[refKey]?.click()}
+                                    >
+                                      <Upload className="h-3.5 w-3.5" />
+                                      Anexar midia
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {isVeryFirstMessage && abTestEnabled && (
+                                  <div className="mt-3">
+                                    <Field label="Variante B (texto alternativo)">
+                                      <Textarea
+                                        size="compact"
+                                        value={message.variantBMessageText ?? ''}
+                                        onChange={(event) => updateMessage(stageIndex, messageIndex, { variantBMessageText: event.target.value })}
+                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotacao em aberto - posso te ajudar?"
+                                      />
+                                    </Field>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-[color:var(--panel-accent-strong)] hover:underline"
+                          onClick={() => addMessageToStage(stageIndex)}
+                        >
+                          <Plus className="h-3 w-3" /> Adicionar mensagem neste estagio
+                        </button>
+                        <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens deste estagio saem em sequencia, sem intervalo entre elas.</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Surface>
 
@@ -1177,7 +1337,7 @@ export default function WhatsAppCampaignsScreen() {
             <DialogBody className="min-h-0 flex-1 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
-                <PreviewMetric label="Mensagens por contato" value={activationPreview.steps.length} />
+                <PreviewMetric label="Etapas da sequencia" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
                 <PreviewMetric label="Ritmo" value={`${activationPreview.campaign.pacing_per_minute}/min`} />
                 <PreviewMetric label="Duracao estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
@@ -1212,15 +1372,22 @@ export default function WhatsAppCampaignsScreen() {
               </div>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia de mensagens</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia da campanha</h3>
                 <div className="space-y-2">
                   {activationPreview.steps.map((step, index) => (
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <Badge tone="neutral">Mensagem {index + 1}</Badge>
-                        {index > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
+                        <Badge tone={step.step_kind === 'status_change' ? 'accent' : 'neutral'}>
+                          {step.step_kind === 'status_change' ? 'Mudar status' : `Mensagem ${index + 1}`}
+                        </Badge>
+                        {step.variant_label !== 'ANY' && <Badge tone="warning" size="sm">Variante {step.variant_label}</Badge>}
+                        {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text}</p>
+                      {step.step_kind === 'status_change' ? (
+                        <p className="text-sm text-[color:var(--panel-text-soft)]">Status do lead passa a ser: <strong>{step.status_to_set}</strong></p>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem so com midia)'}</p>
+                      )}
                     </div>
                   ))}
                 </div>

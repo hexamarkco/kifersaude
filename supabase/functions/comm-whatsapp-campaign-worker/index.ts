@@ -964,6 +964,17 @@ async function sendCampaignTestMessage(
   return { phoneDigits, stepIndex: step.step_index, messageText: text };
 }
 
+// Uma resposta automatica (ex.: mensagem de ausencia do WhatsApp Business,
+// bastante comum) costuma chegar quase instantaneamente apos o envio -
+// segundos, tempo insuficiente pra uma pessoa de verdade ler e responder.
+// Sem esse intervalo minimo, qualquer auto-reply e tratado como resposta
+// genuina e para a sequencia inteira pro contato pra sempre (nao ha caminho
+// de retomada - ver stop_on_reply em sendTarget). Exigir esse intervalo
+// antes de contar como "respondeu" custa, na pior das hipoteses, 1-2
+// mensagens a mais pra quem responde mesmo assim muito rapido - bem melhor
+// que interromper a sequencia por causa de um auto-reply.
+const MIN_GENUINE_REPLY_DELAY_MS = 20_000;
+
 async function findInboundCampaignChat(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   target: Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>,
@@ -972,6 +983,8 @@ async function findInboundCampaignChat(
     return null;
   }
 
+  const earliestGenuineReplyAt = new Date(new Date(target.sent_at).getTime() + MIN_GENUINE_REPLY_DELAY_MS).toISOString();
+
   const canonicalRoute = target.chat_id
     ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
     : null;
@@ -979,7 +992,7 @@ async function findInboundCampaignChat(
     .from('comm_whatsapp_chats')
     .select('id,last_message_at,last_message_direction')
     .eq('last_message_direction', 'inbound')
-    .gt('last_message_at', target.sent_at)
+    .gt('last_message_at', earliestGenuineReplyAt)
     .is('merged_into_chat_id', null)
     .is('deleted_at', null)
     .order('last_message_at', { ascending: false })

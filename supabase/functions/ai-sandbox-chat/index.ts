@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
     const [historyResult, styleMessagesResult] = await Promise.all([
       supabaseAdmin
         .from('ai_sandbox_messages')
-        .select('role, content')
+        .select('role, content, handoff_reason')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
         .limit(SANDBOX_HISTORY_LIMIT),
@@ -89,8 +89,22 @@ Deno.serve(async (req: Request) => {
 
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
-    const history = (historyResult.data ?? []) as SandboxMessageRow[];
+    const history = (historyResult.data ?? []) as (SandboxMessageRow & { handoff_reason: string | null })[];
     const isOpeningMode = history.length === 0;
+
+    // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa —
+    // mesmo que o lead mande agradecimento ou qualquer outra mensagem. A
+    // partir daqui e atendimento humano.
+    const alreadyHandedOff = history.some((row) => row.role === 'ai' && Boolean(row.handoff_reason));
+    if (alreadyHandedOff) {
+      return new Response(JSON.stringify({
+        success: true,
+        conversationId,
+        messages: [],
+        handoffReason: null,
+        alreadyHandedOff: true,
+      }), { status: 200, headers: jsonHeaders });
+    }
 
     if (!isOpeningMode && history[history.length - 1].role !== 'lead') {
       return new Response(JSON.stringify({ error: 'A ultima mensagem ja foi respondida.' }), { status: 400, headers: jsonHeaders });

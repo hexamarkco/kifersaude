@@ -213,13 +213,14 @@ const parseTimeToMinutes = (value: string): number | null => {
 };
 
 /**
- * Ritmo minimo (mensagens/minuto) para dar conta, dentro da janela de envio,
- * do volume esperado de mensagens por dia: contatos novos admitidos por dia
- * (limite diario) vezes quantas mensagens cada um recebe ao longo de toda a
- * sequencia. Sem janela definida, assume o dia inteiro (24h).
+ * Ritmo minimo (contatos novos/minuto) para espalhar o limite diario de
+ * admissao ao longo da janela de envio, em vez de admitir tudo de uma vez
+ * assim que a janela abre. So governa a ADMISSAO de contatos novos - o
+ * resto da sequencia de quem ja foi admitido nao conta pra esse ritmo.
+ * Sem janela definida, assume o dia inteiro (24h).
  */
-const computeAutoPacing = (dailyLimit: number | null, messagesPerContact: number, windowStart: string, windowEnd: string): number | null => {
-  if (!dailyLimit || dailyLimit <= 0 || messagesPerContact <= 0) return null;
+const computeAutoPacing = (dailyLimit: number | null, windowStart: string, windowEnd: string): number | null => {
+  if (!dailyLimit || dailyLimit <= 0) return null;
 
   const start = parseTimeToMinutes(windowStart);
   const end = parseTimeToMinutes(windowEnd);
@@ -228,7 +229,7 @@ const computeAutoPacing = (dailyLimit: number | null, messagesPerContact: number
     windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
   }
 
-  const pacing = Math.ceil((dailyLimit * messagesPerContact) / Math.max(windowMinutes, 1));
+  const pacing = Math.ceil(dailyLimit / Math.max(windowMinutes, 1));
   return Math.min(Math.max(pacing, 1), 120);
 };
 
@@ -324,9 +325,9 @@ export default function WhatsAppCampaignsScreen() {
 
   useEffect(() => {
     if (!pacingAutoManaged) return;
-    const auto = computeAutoPacing(dailySendLimit, flatMessages.length, sendWindowStart, sendWindowEnd);
+    const auto = computeAutoPacing(dailySendLimit, sendWindowStart, sendWindowEnd);
     if (auto !== null) setPacingPerMinute(auto);
-  }, [pacingAutoManaged, dailySendLimit, flatMessages.length, sendWindowStart, sendWindowEnd]);
+  }, [pacingAutoManaged, dailySendLimit, sendWindowStart, sendWindowEnd]);
   const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
     if (!variableAutocomplete) return [];
@@ -1389,7 +1390,18 @@ export default function WhatsAppCampaignsScreen() {
             <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo comecar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
-            <Field label={<FieldLabel text="Ritmo por minuto" hint="Quantas mensagens o worker envia por minuto. Calculado automaticamente a partir do limite diario, da janela e de quantas mensagens tem a sequencia, pra dar conta do volume dentro do horario permitido. Edite manualmente pra travar um valor fixo." />}>
+            <Field label={(
+              <span className="inline-flex items-center gap-1.5">
+                <FieldLabel text="Ritmo por minuto" hint="Espaca a ADMISSAO de contatos novos (nao as mensagens de follow-up). Calculado automaticamente a partir de novos contatos/dia e da janela, pra nao admitir tudo de uma vez assim que a janela abre. Edite manualmente pra travar um valor fixo." />
+                {pacingAutoManaged ? (
+                  <Badge tone="accent" size="xs">Auto</Badge>
+                ) : (
+                  <button type="button" onClick={() => setPacingAutoManaged(true)} title="Voltar a calcular automaticamente">
+                    <Badge tone="neutral" size="xs">Manual</Badge>
+                  </button>
+                )}
+              </span>
+            )}>
               <Input
                 type="number"
                 min={1}
@@ -1400,17 +1412,8 @@ export default function WhatsAppCampaignsScreen() {
                   setPacingPerMinute(Number(event.target.value) || 1);
                 }}
               />
-              <div className="mt-1 text-[10px] text-[color:var(--panel-text-muted)]">
-                {pacingAutoManaged ? (
-                  'Calculado automaticamente.'
-                ) : (
-                  <button type="button" className="text-[color:var(--panel-accent-strong)] hover:underline" onClick={() => setPacingAutoManaged(true)}>
-                    Voltar a calcular automaticamente
-                  </button>
-                )}
-              </div>
             </Field>
-            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para nao limitar." />}>
+            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite nem no ritmo por minuto. Deixe vazio para nao limitar." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
             <Field label={<FieldLabel text="Janela inicio" hint="Horario a partir do qual o disparo pode enviar mensagens." />}>

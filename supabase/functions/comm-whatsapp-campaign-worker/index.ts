@@ -2024,10 +2024,10 @@ async function processCampaigns(
     }
 
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
-    const campaignLimit = Math.min(
-      Math.max(campaign.pacing_per_minute || 1, 1),
-      maxLimit - processed,
-    );
+    // pacing_per_minute so espaca a admissao de contatos novos (reforcado na
+    // RPC de reserva de despacho); alvos ja admitidos podem ser reivindicados
+    // livremente ate o teto geral da invocacao, sem depender do ritmo.
+    const campaignLimit = maxLimit - processed;
     if (campaignLimit <= 0) break;
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);

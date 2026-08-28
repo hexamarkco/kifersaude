@@ -560,19 +560,59 @@ export const commWhatsAppCampaignService = {
     return data as CommWhatsAppCampaign;
   },
 
-  async listCampaignTargets(campaignId: string): Promise<CommWhatsAppCampaignTarget[]> {
-    const { data, error } = await supabase
+  async listCampaignTargets(
+    campaignId: string,
+    options: { page?: number; pageSize?: number } = {},
+  ): Promise<{ targets: CommWhatsAppCampaignTarget[]; total: number }> {
+    const pageSize = Math.min(Math.max(options.pageSize ?? 50, 1), 200);
+    const page = Math.max(options.page ?? 0, 0);
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
       .from('comm_whatsapp_campaign_targets')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('campaign_id', campaignId)
       .order('created_at', { ascending: true })
-      .limit(500);
+      .range(from, to);
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
     }
 
-    return (data ?? []) as CommWhatsAppCampaignTarget[];
+    return { targets: (data ?? []) as CommWhatsAppCampaignTarget[], total: count ?? 0 };
+  },
+
+  async getCampaignFailureSample(campaignId: string): Promise<Array<{ error_message: string | null }>> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_targets')
+      .select('error_message')
+      .eq('campaign_id', campaignId)
+      .in('status', ['failed', 'invalid'])
+      .order('updated_at', { ascending: false })
+      .limit(500);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os motivos de falha.'));
+    }
+
+    return (data ?? []) as Array<{ error_message: string | null }>;
+  },
+
+  async getCampaignTargetStatusCounts(campaignId: string): Promise<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>> {
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contadores deste disparo.'));
+    }
+
+    return ((data ?? []) as Array<{ status: string; ab_variant: string | null; total_count: number | string; responded_count: number | string }>)
+      .map((row) => ({
+        status: row.status,
+        ab_variant: row.ab_variant === 'A' || row.ab_variant === 'B' ? row.ab_variant : null,
+        total_count: Number(row.total_count),
+        responded_count: Number(row.responded_count),
+      }));
   },
 
   async getPendingWhatsAppValidationCount(campaignId: string): Promise<number> {

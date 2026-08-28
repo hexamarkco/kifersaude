@@ -73,11 +73,18 @@ const formatWindow = (campaign: CommWhatsAppCampaign) => {
   return timeLabel ?? weekdaysLabel ?? 'Sem janela definida';
 };
 
+const TARGETS_PAGE_SIZE = 50;
+
 export default function WhatsAppCampaignDetailScreen() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [targets, setTargets] = useState<CommWhatsAppCampaignTarget[]>([]);
+  const [targetsTotal, setTargetsTotal] = useState(0);
+  const [targetsPage, setTargetsPage] = useState(0);
+  const [loadingTargetsPage, setLoadingTargetsPage] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>>([]);
+  const [failureSample, setFailureSample] = useState<Array<{ error_message: string | null }>>([]);
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -86,13 +93,19 @@ export default function WhatsAppCampaignDetailScreen() {
     if (!campaignId) return;
     setLoading(true);
     try {
-      const [nextCampaign, nextTargets, nextPendingValidation] = await Promise.all([
+      const [nextCampaign, nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.getCampaign(campaignId),
-        commWhatsAppCampaignService.listCampaignTargets(campaignId),
+        commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: 0, pageSize: TARGETS_PAGE_SIZE }),
+        commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
+        commWhatsAppCampaignService.getCampaignFailureSample(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       setCampaign(nextCampaign);
-      setTargets(nextTargets);
+      setTargets(nextTargets.targets);
+      setTargetsTotal(nextTargets.total);
+      setTargetsPage(0);
+      setStatusCounts(nextStatusCounts);
+      setFailureSample(nextFailureSample);
       setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o detalhe do disparo.');
@@ -104,6 +117,21 @@ export default function WhatsAppCampaignDetailScreen() {
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  const goToTargetsPage = useCallback(async (page: number) => {
+    if (!campaignId || page < 0) return;
+    setLoadingTargetsPage(true);
+    try {
+      const result = await commWhatsAppCampaignService.listCampaignTargets(campaignId, { page, pageSize: TARGETS_PAGE_SIZE });
+      setTargets(result.targets);
+      setTargetsTotal(result.total);
+      setTargetsPage(page);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar esta pagina de contatos.');
+    } finally {
+      setLoadingTargetsPage(false);
+    }
+  }, [campaignId]);
 
   const targetCounts = useMemo(() => {
     const counts: Record<CommWhatsAppCampaignTargetStatus, number> = {
@@ -117,25 +145,31 @@ export default function WhatsAppCampaignDetailScreen() {
       invalid: 0,
       cancelled: 0,
     };
-    for (const target of targets) counts[target.status] += 1;
+    for (const row of statusCounts) {
+      if (row.status in counts) counts[row.status as CommWhatsAppCampaignTargetStatus] += row.total_count;
+    }
     return counts;
-  }, [targets]);
+  }, [statusCounts]);
 
-  const contactedCount = targetCounts.sent + targetCounts.responded + targetCounts.failed + targetCounts.invalid + targetCounts.stopped;
-  const conversionRate = contactedCount > 0 ? Math.round((targetCounts.responded / contactedCount) * 1000) / 10 : 0;
+  const respondedCount = useMemo(
+    () => statusCounts.reduce((sum, row) => sum + (row.status === 'responded' ? row.total_count : row.responded_count), 0),
+    [statusCounts],
+  );
+
+  const contactedCount = targetCounts.sent + respondedCount + targetCounts.failed + targetCounts.invalid + targetCounts.stopped;
+  const conversionRate = contactedCount > 0 ? Math.round((respondedCount / contactedCount) * 1000) / 10 : 0;
   const failureRate = contactedCount > 0 ? Math.round(((targetCounts.failed + targetCounts.invalid) / contactedCount) * 1000) / 10 : 0;
 
   const topFailureReasons = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const target of targets) {
-      if (target.status !== 'failed' && target.status !== 'invalid') continue;
-      const reason = target.error_message?.trim() || 'Sem motivo registrado';
+    for (const row of failureSample) {
+      const reason = row.error_message?.trim() || 'Sem motivo registrado';
       counts.set(reason, (counts.get(reason) ?? 0) + 1);
     }
     return Array.from(counts.entries())
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
-  }, [targets]);
+  }, [failureSample]);
 
   const variantBreakdown = useMemo(() => {
     if (!campaign?.ab_test_enabled) return [];
@@ -143,10 +177,10 @@ export default function WhatsAppCampaignDetailScreen() {
       A: { sent: 0, responded: 0 },
       B: { sent: 0, responded: 0 },
     };
-    for (const target of targets) {
-      if (target.ab_variant !== 'A' && target.ab_variant !== 'B') continue;
-      if (['sent', 'responded', 'failed', 'invalid', 'stopped'].includes(target.status)) byVariant[target.ab_variant].sent += 1;
-      if (target.status === 'responded') byVariant[target.ab_variant].responded += 1;
+    for (const row of statusCounts) {
+      if (row.ab_variant !== 'A' && row.ab_variant !== 'B') continue;
+      if (['sent', 'responded', 'failed', 'invalid', 'stopped'].includes(row.status)) byVariant[row.ab_variant].sent += row.total_count;
+      if (row.status === 'responded') byVariant[row.ab_variant].responded += row.total_count;
     }
     return (['A', 'B'] as const).map((variant) => ({
       variant,
@@ -154,7 +188,7 @@ export default function WhatsAppCampaignDetailScreen() {
       responded: byVariant[variant].responded,
       rate: byVariant[variant].sent > 0 ? Math.round((byVariant[variant].responded / byVariant[variant].sent) * 1000) / 10 : 0,
     }));
-  }, [targets, campaign?.ab_test_enabled]);
+  }, [statusCounts, campaign?.ab_test_enabled]);
 
   const runAction = async (action: 'pause' | 'resume' | 'cancel' | 'process') => {
     if (!campaign) return;
@@ -253,10 +287,10 @@ export default function WhatsAppCampaignDetailScreen() {
           </Card>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <Metric label="Total" value={campaign.total_targets || targets.length} />
+            <Metric label="Total" value={campaign.total_targets || targetsTotal} />
             <Metric label="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
             <Metric label="Enviados" value={targetCounts.sent} />
-            <Metric label="Responderam" value={targetCounts.responded} />
+            <Metric label="Responderam" value={respondedCount} />
             <Metric label="Falhas" value={targetCounts.failed + targetCounts.invalid} />
           </div>
 
@@ -284,6 +318,9 @@ export default function WhatsAppCampaignDetailScreen() {
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
                 <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Principais motivos de falha</h3>
+                {failureSample.length >= 500 && (targetCounts.failed + targetCounts.invalid) > failureSample.length && (
+                  <p className="text-xs text-[color:var(--panel-text-muted)]">Baseado nas 500 falhas mais recentes.</p>
+                )}
                 {topFailureReasons.length > 0 ? (
                   <ul className="mt-2 space-y-2">
                     {topFailureReasons.map(([reason, count]) => (
@@ -318,7 +355,11 @@ export default function WhatsAppCampaignDetailScreen() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</h2>
-                <p className="text-sm text-[color:var(--panel-text-soft)]">Mostrando ate 500 contatos por enquanto.</p>
+                <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  {targetsTotal > 0
+                    ? `Mostrando ${targetsPage * TARGETS_PAGE_SIZE + 1}-${Math.min((targetsPage + 1) * TARGETS_PAGE_SIZE, targetsTotal)} de ${targetsTotal.toLocaleString('pt-BR')} contato(s).`
+                    : 'Nenhum contato materializado ainda.'}
+                </p>
               </div>
               <Users className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
@@ -354,6 +395,32 @@ export default function WhatsAppCampaignDetailScreen() {
                   )}
                 </TableBody>
             </Table>
+            {targetsTotal > TARGETS_PAGE_SIZE && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-[color:var(--panel-text-muted)]">
+                  Pagina {targetsPage + 1} de {Math.max(Math.ceil(targetsTotal / TARGETS_PAGE_SIZE), 1)}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={targetsPage === 0 || loadingTargetsPage}
+                    onClick={() => void goToTargetsPage(targetsPage - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingTargetsPage}
+                    disabled={(targetsPage + 1) * TARGETS_PAGE_SIZE >= targetsTotal}
+                    onClick={() => void goToTargetsPage(targetsPage + 1)}
+                  >
+                    Proxima
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </>
       ) : (

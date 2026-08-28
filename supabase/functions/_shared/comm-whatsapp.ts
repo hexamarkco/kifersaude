@@ -2934,6 +2934,72 @@ export async function checkWhapiContactIdentity(params: {
   return extractWhapiCheckedContactIdentity(payload);
 }
 
+export type WhapiContactCheckOutcome = 'valid' | 'invalid' | 'unknown';
+
+export type WhapiContactCheckResult = {
+  outcome: WhapiContactCheckOutcome;
+  waId: string;
+  phone: string;
+};
+
+/**
+ * Variante de checkWhapiContactIdentity que NAO colapsa falha de
+ * rede/rate-limit (HTTP nao-ok) nem um status ausente/inesperado no payload
+ * em "nao existe" - usada por fluxos em lote (validacao de campanha) onde
+ * tratar ambiguidade como "invalido" marcaria numeros validos como sem
+ * WhatsApp so por terem sido rate-limited durante uma checagem concorrente.
+ * So retorna 'invalid' numa confirmacao explicita (status 'invalid' no
+ * payload); qualquer outra coisa vira 'unknown' pra o chamador tentar de
+ * novo depois em vez de excluir o contato.
+ */
+export async function checkWhapiContactStatus(params: {
+  token: string;
+  contactId: string;
+}): Promise<WhapiContactCheckResult> {
+  const digits = normalizeCommWhatsAppPhone(params.contactId);
+  if (!digits) {
+    return { outcome: 'unknown', waId: '', phone: '' };
+  }
+
+  let response: Response;
+  try {
+    response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${params.token}`,
+      },
+      body: JSON.stringify({
+        contacts: [digits],
+        force_check: true,
+      }),
+    }, 10_000);
+  } catch {
+    return { outcome: 'unknown', waId: '', phone: '' };
+  }
+
+  if (!response.ok) {
+    return { outcome: 'unknown', waId: '', phone: '' };
+  }
+
+  const payload = await readResponsePayload(response);
+  const [contact] = extractWhapiContacts(payload);
+  const status = toTrimmedString(contact?.status).toLowerCase();
+
+  if (status === 'valid') {
+    const waId = normalizeWhapiPhoneChatId(contact?.wa_id);
+    if (!waId) return { outcome: 'unknown', waId: '', phone: '' };
+    return { outcome: 'valid', waId, phone: extractPhoneFromChatId(waId) };
+  }
+
+  if (status === 'invalid') {
+    return { outcome: 'invalid', waId: '', phone: '' };
+  }
+
+  return { outcome: 'unknown', waId: '', phone: '' };
+}
+
 export async function ensurePrimaryChannel(
   supabaseAdmin: SupabaseClient,
 ): Promise<CommWhatsAppChannelRow> {

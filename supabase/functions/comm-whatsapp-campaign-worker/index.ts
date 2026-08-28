@@ -3,7 +3,7 @@ import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboa
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
 import {
   buildWhapiDirectChatId,
-  checkWhapiContactIdentity,
+  checkWhapiContactStatus,
   corsHeaders,
   createWhapiClient,
   ensureCommWhatsAppSettings,
@@ -798,36 +798,46 @@ async function materializeCrmTargets(
 }
 
 async function recomputeCampaignCounters(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string) {
+  // Agregado no banco (GROUP BY status) em vez de puxar todas as linhas de
+  // alvos pro worker: uma campanha CSV grande (dezenas de milhares de
+  // alvos) esbarraria no teto padrao de linhas por resposta do PostgREST e
+  // os contadores (e a checagem de "campanha concluida" abaixo) refletiriam
+  // so uma fatia arbitraria da campanha em vez do total real.
   const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .select('status,responded_at')
-    .eq('campaign_id', campaignId);
+    .rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId });
 
   if (error) {
     throw new Error(`Erro ao recalcular contadores da campanha: ${error.message}`);
   }
 
-  const rows = data ?? [];
-  const count = (statuses: string[]) => rows.filter((row) => statuses.includes(String(row.status))).length;
-  const invalid = count(['invalid']);
-  const failed = count(['failed']);
-  const sent = count(['sent']);
-  const responded = rows.filter((row) => String(row.status) === 'responded' || Boolean(row.responded_at)).length;
-  const stopped = count(['stopped', 'cancelled']);
-  const pending = count(['pending', 'scheduled', 'sending']);
+  const statusRows = (data ?? []) as Array<{ status: string; total_count: number | string; responded_count: number | string }>;
+  const totalOf = (statuses: string[]) => statusRows
+    .filter((row) => statuses.includes(row.status))
+    .reduce((sum, row) => sum + Number(row.total_count), 0);
+
+  const total = statusRows.reduce((sum, row) => sum + Number(row.total_count), 0);
+  const invalid = totalOf(['invalid']);
+  const failed = totalOf(['failed']);
+  const sent = totalOf(['sent']);
+  const stopped = totalOf(['stopped', 'cancelled']);
+  const pending = totalOf(['pending', 'scheduled', 'sending']);
+  const responded = statusRows.reduce(
+    (sum, row) => sum + (row.status === 'responded' ? Number(row.total_count) : Number(row.responded_count)),
+    0,
+  );
 
   const { error: updateError } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
     .update({
-      total_targets: rows.length,
-      valid_targets: rows.length - invalid,
+      total_targets: total,
+      valid_targets: total - invalid,
       invalid_targets: invalid,
       pending_targets: pending,
       sent_targets: sent,
       failed_targets: failed,
       responded_targets: responded,
       stopped_targets: stopped,
-      completed_at: pending === 0 && rows.length > 0 ? getNowIso() : null,
+      completed_at: pending === 0 && total > 0 ? getNowIso() : null,
     })
     .eq('id', campaignId);
 
@@ -835,7 +845,7 @@ async function recomputeCampaignCounters(supabaseAdmin: ReturnType<typeof create
     throw new Error(`Erro ao atualizar contadores da campanha: ${updateError.message}`);
   }
 
-  return { total: rows.length, pending, sent, failed, invalid, responded, stopped };
+  return { total, pending, sent, failed, invalid, responded, stopped };
 }
 
 async function activateCampaign(
@@ -2237,14 +2247,16 @@ async function sendTarget(params: {
 
 // Quantos alvos com whatsapp_check_status='pending' este tick tenta checar,
 // e com quantas checagens simultaneas. Cada checagem e uma chamada
-// individual a Whapi (mesma checkWhapiContactIdentity ja usada e testada em
-// comm-whatsapp-contacts para validar um contato) - nao ha endpoint de lote
+// individual a Whapi (checkWhapiContactStatus) - nao ha endpoint de lote
 // documentado/confirmado, entao evita depender de um formato de resposta em
-// lote nao verificado. Valores conservadores para nao estourar rate limit da
-// Whapi; para um CSV de dezenas de milhares de linhas isso roda em segundo
-// plano ao longo de varias horas, um tick por minuto.
+// lote nao verificado. Concorrencia baixa de proposito: uma checagem que
+// falha (rede, rate limit 429 etc.) fica 'unknown' e e tentada de novo no
+// proximo tick, NUNCA e tratada como "nao tem WhatsApp" - so uma resposta
+// explicita da Whapi confirma isso. Para um CSV de dezenas de milhares de
+// linhas isso roda em segundo plano ao longo de varias horas, um tick por
+// minuto.
 const WHATSAPP_VALIDATION_TARGETS_PER_TICK = 300;
-const WHATSAPP_VALIDATION_CONCURRENCY = 15;
+const WHATSAPP_VALIDATION_CONCURRENCY = 5;
 
 async function validatePendingWhatsAppTargets(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
@@ -2282,20 +2294,15 @@ async function validatePendingWhatsAppTargets(
       return;
     }
 
-    let identity: { exists: boolean };
-    try {
-      identity = await checkWhapiContactIdentity({ token, contactId: phoneDigits });
-    } catch (checkError) {
-      // Falha de rede/Whapi: deixa 'pending' pra tentar de novo no proximo
-      // tick, nao marca como invalido sem confirmar.
-      console.error('[comm-whatsapp-campaign-worker] falha ao checar numero no WhatsApp', {
-        targetId: target.id,
-        error: checkError instanceof Error ? checkError.message : checkError,
-      });
+    const result = await checkWhapiContactStatus({ token, contactId: phoneDigits });
+
+    if (result.outcome === 'unknown') {
+      // Falha de rede/Whapi ou resposta ambigua: deixa 'pending' pra tentar
+      // de novo no proximo tick, nao marca como invalido sem confirmar.
       return;
     }
 
-    if (identity.exists) {
+    if (result.outcome === 'valid') {
       validCount += 1;
       await supabaseAdmin
         .from('comm_whatsapp_campaign_targets')

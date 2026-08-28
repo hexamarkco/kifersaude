@@ -5,8 +5,11 @@ import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   buildOpeningUserPrompt,
+  buildReferencePrompt,
   buildReplyUserPrompt,
   buildSystemPrompt,
+  fetchQuickReplies,
+  fetchSimilarSituations,
   splitGeneratedReply,
   type SandboxMessageRow,
 } from '../_shared/ai-sandbox-playbook.ts';
@@ -69,7 +72,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- Load full sandbox history + real style examples in parallel ----
 
-    const [historyResult, styleMessagesResult] = await Promise.all([
+    const [historyResult, styleMessagesResult, quickReplies] = await Promise.all([
       supabaseAdmin
         .from('ai_sandbox_messages')
         .select('role, content, handoff_reason')
@@ -85,6 +88,7 @@ Deno.serve(async (req: Request) => {
         .not('text_content', 'is', null)
         .order('message_at', { ascending: false })
         .limit(120),
+      fetchQuickReplies(supabaseAdmin),
     ]);
 
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
@@ -111,7 +115,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
-    const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages);
+
+    const lastLeadMessage = isOpeningMode ? '' : [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
+    const similarSituations = isOpeningMode ? [] : await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
+    const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
+
+    const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages, referenceBlock);
     const userPrompt = isOpeningMode ? buildOpeningUserPrompt(leadName) : buildReplyUserPrompt(history);
 
     const result = await generateTextWithRouting({

@@ -460,7 +460,15 @@ export default function AiSandboxChatScreen() {
               disabled={sendingDraft}
               className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
             />
-            <Button variant="primary" size="md" loading={sendingDraft} onClick={handleSend} disabled={!draft.trim()}>
+            <Button
+              variant="primary"
+              size="icon"
+              loading={sendingDraft}
+              onClick={handleSend}
+              disabled={!draft.trim()}
+              title="Enviar"
+              aria-label="Enviar"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>

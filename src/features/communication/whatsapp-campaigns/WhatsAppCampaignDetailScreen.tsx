@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, BarChart3, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Card, EmptyState, IconButton, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
+import { Badge, Button, Card, EmptyState, IconButton, Input, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
+import FilterMultiSelect from '../../../components/FilterMultiSelect';
+import Pagination from '../../../components/Pagination';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../lib/toast';
 import {
@@ -74,7 +76,12 @@ const formatWindow = (campaign: CommWhatsAppCampaign) => {
   return timeLabel ?? weekdaysLabel ?? 'Sem janela definida';
 };
 
-const TARGETS_PAGE_SIZE = 50;
+const DEFAULT_TARGETS_PAGE_SIZE = 50;
+
+const targetStatusFilterOptions = (Object.keys(targetStatusLabels) as CommWhatsAppCampaignTargetStatus[]).map((status) => ({
+  value: status,
+  label: targetStatusLabels[status],
+}));
 
 export default function WhatsAppCampaignDetailScreen() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -82,7 +89,11 @@ export default function WhatsAppCampaignDetailScreen() {
   const [campaign, setCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [targets, setTargets] = useState<CommWhatsAppCampaignTarget[]>([]);
   const [targetsTotal, setTargetsTotal] = useState(0);
-  const [targetsPage, setTargetsPage] = useState(0);
+  const [targetsPage, setTargetsPage] = useState(1);
+  const [targetsPageSize, setTargetsPageSize] = useState(DEFAULT_TARGETS_PAGE_SIZE);
+  const [targetsSearch, setTargetsSearch] = useState('');
+  const deferredTargetsSearch = useDeferredValue(targetsSearch);
+  const [targetsStatusFilter, setTargetsStatusFilter] = useState<CommWhatsAppCampaignTargetStatus[]>([]);
   const [loadingTargetsPage, setLoadingTargetsPage] = useState(false);
   const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>>([]);
   const [failureReasons, setFailureReasons] = useState<Array<{ error_message: string; total_count: number }>>([]);
@@ -91,6 +102,11 @@ export default function WhatsAppCampaignDetailScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const targetsPageRef = useRef(0);
+  const targetsFiltersRef = useRef<{ pageSize: number; status: CommWhatsAppCampaignTargetStatus[]; search: string }>({
+    pageSize: DEFAULT_TARGETS_PAGE_SIZE,
+    status: [],
+    search: '',
+  });
   const refreshLiveDataInFlightRef = useRef(false);
   const loadDetailInFlightRef = useRef(false);
 
@@ -99,9 +115,15 @@ export default function WhatsAppCampaignDetailScreen() {
     setLoading(true);
     loadDetailInFlightRef.current = true;
     try {
+      const targetsFilters = targetsFiltersRef.current;
       const [nextCampaign, nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.getCampaign(campaignId),
-        commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: 0, pageSize: TARGETS_PAGE_SIZE }),
+        commWhatsAppCampaignService.listCampaignTargets(campaignId, {
+          page: 0,
+          pageSize: targetsFilters.pageSize,
+          status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
+          search: targetsFilters.search || undefined,
+        }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
@@ -109,7 +131,7 @@ export default function WhatsAppCampaignDetailScreen() {
       setCampaign(nextCampaign);
       setTargets(nextTargets.targets);
       setTargetsTotal(nextTargets.total);
-      setTargetsPage(0);
+      setTargetsPage(1);
       targetsPageRef.current = 0;
       setStatusCounts(nextStatusCounts);
       setFailureReasons(nextFailureReasons);
@@ -127,20 +149,47 @@ export default function WhatsAppCampaignDetailScreen() {
   }, [loadDetail]);
 
   const goToTargetsPage = useCallback(async (page: number) => {
-    if (!campaignId || page < 0) return;
+    if (!campaignId || page < 1) return;
     setLoadingTargetsPage(true);
     try {
-      const result = await commWhatsAppCampaignService.listCampaignTargets(campaignId, { page, pageSize: TARGETS_PAGE_SIZE });
+      const targetsFilters = targetsFiltersRef.current;
+      const result = await commWhatsAppCampaignService.listCampaignTargets(campaignId, {
+        page: page - 1,
+        pageSize: targetsFilters.pageSize,
+        status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
+        search: targetsFilters.search || undefined,
+      });
       setTargets(result.targets);
       setTargetsTotal(result.total);
       setTargetsPage(page);
-      targetsPageRef.current = page;
+      targetsPageRef.current = page - 1;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar esta pagina de contatos.');
     } finally {
       setLoadingTargetsPage(false);
     }
   }, [campaignId]);
+
+  // Mantem a ref de filtros sempre atualizada (para loadDetail/refreshLiveData,
+  // que leem via ref para nao precisar recriar esses callbacks a cada
+  // mudanca de filtro) e refaz a busca a partir da pagina 1 sempre que
+  // busca, status ou itens por pagina mudam - exceto na montagem inicial,
+  // ja coberta pelo loadDetail.
+  const didMountTargetsFiltersRef = useRef(false);
+  useEffect(() => {
+    targetsFiltersRef.current = {
+      pageSize: targetsPageSize,
+      status: targetsStatusFilter,
+      search: deferredTargetsSearch.trim(),
+    };
+
+    if (!didMountTargetsFiltersRef.current) {
+      didMountTargetsFiltersRef.current = true;
+      return;
+    }
+
+    void goToTargetsPage(1);
+  }, [targetsPageSize, targetsStatusFilter, deferredTargetsSearch, goToTargetsPage]);
 
   // Atualizacao leve chamada quando a linha da campanha muda (worker roda um
   // tick por minuto): re-busca so os agregados baratos (contadores via RPC,
@@ -160,8 +209,14 @@ export default function WhatsAppCampaignDetailScreen() {
     if (refreshLiveDataInFlightRef.current || loadDetailInFlightRef.current) return;
     refreshLiveDataInFlightRef.current = true;
     try {
+      const targetsFilters = targetsFiltersRef.current;
       const [nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
-        commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: targetsPageRef.current, pageSize: TARGETS_PAGE_SIZE }),
+        commWhatsAppCampaignService.listCampaignTargets(campaignId, {
+          page: targetsPageRef.current,
+          pageSize: targetsFilters.pageSize,
+          status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
+          search: targetsFilters.search || undefined,
+        }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
@@ -463,13 +518,33 @@ export default function WhatsAppCampaignDetailScreen() {
                 <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</h2>
                 <p className="text-sm text-[color:var(--panel-text-soft)]">
                   {targetsTotal > 0
-                    ? `Mostrando ${targetsPage * TARGETS_PAGE_SIZE + 1}-${Math.min((targetsPage + 1) * TARGETS_PAGE_SIZE, targetsTotal)} de ${targetsTotal.toLocaleString('pt-BR')} contato(s).`
+                    ? `Mostrando ${(targetsPage - 1) * targetsPageSize + 1}-${Math.min(targetsPage * targetsPageSize, targetsTotal)} de ${targetsTotal.toLocaleString('pt-BR')} contato(s).`
                     : 'Nenhum contato materializado ainda.'}
                 </p>
               </div>
               <Users className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
-            <Table size="sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="sm:max-w-xs sm:flex-1">
+                <Input
+                  type="text"
+                  leftIcon={Search}
+                  placeholder="Buscar por nome ou telefone..."
+                  value={targetsSearch}
+                  onChange={(event) => setTargetsSearch(event.target.value)}
+                />
+              </div>
+              <div className="sm:w-64">
+                <FilterMultiSelect
+                  icon={Filter}
+                  options={targetStatusFilterOptions}
+                  placeholder="Todos os status"
+                  values={targetsStatusFilter}
+                  onChange={(values) => setTargetsStatusFilter(values as CommWhatsAppCampaignTargetStatus[])}
+                />
+              </div>
+            </div>
+            <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Contato</TableHead>
@@ -501,31 +576,15 @@ export default function WhatsAppCampaignDetailScreen() {
                   )}
                 </TableBody>
             </Table>
-            {targetsTotal > TARGETS_PAGE_SIZE && (
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-[color:var(--panel-text-muted)]">
-                  Pagina {targetsPage + 1} de {Math.max(Math.ceil(targetsTotal / TARGETS_PAGE_SIZE), 1)}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={targetsPage === 0 || loadingTargetsPage}
-                    onClick={() => void goToTargetsPage(targetsPage - 1)}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={loadingTargetsPage}
-                    disabled={(targetsPage + 1) * TARGETS_PAGE_SIZE >= targetsTotal}
-                    onClick={() => void goToTargetsPage(targetsPage + 1)}
-                  >
-                    Proxima
-                  </Button>
-                </div>
-              </div>
+            {targetsTotal > 0 && (
+              <Pagination
+                currentPage={targetsPage}
+                totalPages={Math.max(Math.ceil(targetsTotal / targetsPageSize), 1)}
+                itemsPerPage={targetsPageSize}
+                totalItems={targetsTotal}
+                onPageChange={(page) => void goToTargetsPage(page)}
+                onItemsPerPageChange={(pageSize) => setTargetsPageSize(pageSize)}
+              />
             )}
           </Card>
         </>

@@ -32,6 +32,7 @@ type GenerateOpeningResult = {
   handoffReason: string | null;
   provider: string | null;
   model: string | null;
+  alreadyHandedOff: boolean;
 };
 
 const buildTitleFromMessage = (message: string): string => {
@@ -103,8 +104,12 @@ export const aiSandboxChatService = {
     return data as AiSandboxMessage;
   },
 
-  async generateReply(conversationId: string): Promise<GenerateReplyResult> {
+  async generateReply(conversationId: string): Promise<GenerateReplyResult | null> {
     const result = await callGenerate({ conversationId });
+    if (result.alreadyHandedOff) {
+      return null;
+    }
+
     const reply = result.messages[0];
     if (!reply) {
       throw new Error('A IA nao retornou uma resposta valida.');
@@ -140,6 +145,7 @@ async function callGenerate(body: { conversationId: string; leadName?: string })
     handoffReason?: string | null;
     provider?: string | null;
     model?: string | null;
+    alreadyHandedOff?: boolean;
     error?: string;
   };
 
@@ -152,5 +158,6 @@ async function callGenerate(body: { conversationId: string; leadName?: string })
     handoffReason: payload.handoffReason ?? null,
     provider: payload.provider ?? null,
     model: payload.model ?? null,
+    alreadyHandedOff: payload.alreadyHandedOff === true,
   };
 }

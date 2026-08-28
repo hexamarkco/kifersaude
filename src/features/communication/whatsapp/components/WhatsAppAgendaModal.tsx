@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   Bell,
   Calendar,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Copy,
   ExternalLink,
   Loader2,
   MessageCircle,
@@ -209,6 +211,7 @@ export default function WhatsAppAgendaModal({
   const [schedulerDraft, setSchedulerDraft] = useState<SchedulerDraft | null>(null);
   const [openingLeadChatId, setOpeningLeadChatId] = useState<string | null>(null);
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
+  const [onlyDuplicates, setOnlyDuplicates] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
@@ -368,6 +371,7 @@ export default function WhatsAppAgendaModal({
     setSearchQuery('');
     setTypeFilter('all');
     setOnlyCurrentLead(false);
+    setOnlyDuplicates(false);
     setShowCompleted(false);
     setError(null);
     setLastUpdated(null);
@@ -932,12 +936,55 @@ export default function WhatsAppAgendaModal({
     ];
   }, [reminders]);
 
+  // Lembretes pendentes agrupados por lead + tipo: mais de um no mesmo grupo
+  // significa risco real de follow-up duplicado no envio em lote.
+  const duplicateReminderGroups = useMemo(() => {
+    const groups = new Map<string, Reminder[]>();
+
+    reminders.forEach((reminder) => {
+      if (reminder.lido) {
+        return;
+      }
+
+      const leadId = getLeadIdForReminder(reminder);
+      if (!leadId) {
+        return;
+      }
+
+      const key = `${leadId}|${reminder.tipo}`;
+      const group = groups.get(key);
+      if (group) {
+        group.push(reminder);
+      } else {
+        groups.set(key, [reminder]);
+      }
+    });
+
+    return groups;
+  }, [getLeadIdForReminder, reminders]);
+
+  const duplicateReminderIds = useMemo(() => {
+    const ids = new Set<string>();
+    duplicateReminderGroups.forEach((group) => {
+      if (group.length > 1) {
+        group.forEach((reminder) => ids.add(reminder.id));
+      }
+    });
+    return ids;
+  }, [duplicateReminderGroups]);
+
+  const duplicateReminderCount = duplicateReminderIds.size;
+
   const filteredReminders = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return reminders
       .filter((reminder) => {
         if (onlyCurrentLead && !currentLeadMatchesReminder(reminder)) {
+          return false;
+        }
+
+        if (onlyDuplicates && !duplicateReminderIds.has(reminder.id)) {
           return false;
         }
 
@@ -958,7 +1005,7 @@ export default function WhatsAppAgendaModal({
           .some((value) => value!.toLowerCase().includes(normalizedQuery));
       })
       .sort(compareRemindersByDueAtThenAlphabetical);
-  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, currentLeadMatchesReminder, getLeadIdForReminder, leadsMap, onlyCurrentLead, reminders, searchQuery, typeFilter]);
+  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, currentLeadMatchesReminder, duplicateReminderIds, getLeadIdForReminder, leadsMap, onlyCurrentLead, onlyDuplicates, reminders, searchQuery, typeFilter]);
 
   const selectedDateKey = getDateKey(selectedDate);
   const selectedDateReminders = useMemo(
@@ -978,7 +1025,7 @@ export default function WhatsAppAgendaModal({
     });
     return Array.from(next.values());
   }, [overdueReminders, pendingSelectedReminders]);
-  const hasActiveFilters = [typeFilter !== 'all', searchQuery.trim() !== '', onlyCurrentLead].filter(Boolean).length;
+  const hasActiveFilters = [typeFilter !== 'all', searchQuery.trim() !== '', onlyCurrentLead, onlyDuplicates].filter(Boolean).length;
 
   const lastUpdatedLabel = lastUpdated
     ? `Atualizado em ${lastUpdated.toLocaleDateString('pt-BR')} às ${lastUpdated.toLocaleTimeString('pt-BR', {
@@ -1030,6 +1077,7 @@ export default function WhatsAppAgendaModal({
     setSearchQuery('');
     setTypeFilter('all');
     setOnlyCurrentLead(false);
+    setOnlyDuplicates(false);
   };
 
 
@@ -1103,6 +1151,7 @@ export default function WhatsAppAgendaModal({
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;
     const hasLeadPhone = Boolean(leadInfo?.telefone);
     const overdue = isOverdue(reminder.data_lembrete) && !reminder.lido;
+    const isDuplicate = duplicateReminderIds.has(reminder.id);
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
     const matchesCurrentLead = currentLeadMatchesReminder(reminder);
     const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
@@ -1129,6 +1178,9 @@ export default function WhatsAppAgendaModal({
                     </h3>
                     {overdue ? (
                       <Badge tone="danger">Atrasado</Badge>
+                    ) : null}
+                    {isDuplicate ? (
+                      <Badge tone="warning" icon={Copy}>Duplicado</Badge>
                     ) : null}
                     {matchesCurrentLead ? (
                       <Badge tone="accent">Chat atual</Badge>
@@ -1481,6 +1533,18 @@ export default function WhatsAppAgendaModal({
                   </Button>
                 ) : null}
 
+                {duplicateReminderCount > 0 ? (
+                  <Button
+                    onClick={() => setOnlyDuplicates((current) => !current)}
+                    variant={onlyDuplicates ? 'primary' : 'warning'}
+                    size="md"
+                    className="h-11"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {onlyDuplicates ? 'Ver todos' : `Duplicados (${duplicateReminderCount})`}
+                  </Button>
+                ) : null}
+
                 {hasActiveFilters > 0 ? (
                   <Button onClick={clearFilters} variant="ghost" size="md" className="h-11">
                     Limpar filtros ({hasActiveFilters})
@@ -1488,6 +1552,18 @@ export default function WhatsAppAgendaModal({
                 ) : null}
               </div>
             </Surface>
+
+            {duplicateReminderCount > 0 ? (
+              <Surface variant="warning" padding="sm" className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>
+                    {duplicateReminderCount} lembrete(s) duplicado(s): mesmo lead e mesmo tipo, ambos pendentes.
+                    Isso pode gerar 2 follow-ups para a mesma pessoa no envio em lote. Use o filtro "Duplicados" acima para revisar e remover os repetidos.
+                  </span>
+                </div>
+              </Surface>
+            ) : null}
 
             {error ? (
               <Surface variant="danger" padding="sm" className="flex items-center gap-2 py-3 text-sm">

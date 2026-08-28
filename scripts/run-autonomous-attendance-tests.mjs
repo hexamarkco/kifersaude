@@ -304,7 +304,7 @@ async function runWithConcurrency(items, limit, worker) {
 async function main() {
   const env = loadEnv();
   const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) {
     console.error('[TESTES] Faltam VITE_SUPABASE_URL/SUPABASE_URL e/ou SUPABASE_SERVICE_ROLE_KEY em .env.local ou no ambiente.');

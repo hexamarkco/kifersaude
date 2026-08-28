@@ -84,7 +84,7 @@ type VariableAutocompleteState = {
 
 const campaignVariableSuggestions = [
   { key: 'nome', label: 'Nome completo', description: 'Nome do lead ou contato.' },
-  { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead ou contato.' },
+  { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead ou contato, sempre com só a inicial maiúscula (ex: "Maria").' },
   { key: 'telefone', label: 'Telefone', description: 'Telefone normalizado do contato.' },
   { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
   { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },

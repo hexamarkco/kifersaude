@@ -313,11 +313,18 @@ const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
   return Array.from(variables).sort();
 };
 
+// {{primeiro_nome}} sempre sai so com a inicial maiuscula, independente de
+// como o nome esta cadastrado (tudo maiusculo, tudo minusculo, etc.).
+const formatFirstNameTitle = (value: string): string => {
+  const trimmed = value.trim();
+  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1).toLowerCase()}` : '';
+};
+
 const resolveSampleMessage = (template: string, sample: { name: string; phone: string; status?: string | null; responsavel?: string | null }) => {
   const greeting = getGreetingForDate(new Date());
   const replacements: Record<string, string> = {
     nome: sample.name || '',
-    primeiro_nome: (sample.name || '').split(/\s+/).filter(Boolean)[0] || '',
+    primeiro_nome: formatFirstNameTitle((sample.name || '').split(/\s+/).filter(Boolean)[0] || ''),
     telefone: sample.phone || '',
     status: sample.status || '',
     responsavel: sample.responsavel || '',

@@ -340,13 +340,20 @@ const formatGreetingTitle = (greeting: string): string => {
   return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}` : '';
 };
 
+// {{primeiro_nome}} sempre sai so com a inicial maiuscula, independente de
+// como o nome esta cadastrado (tudo maiusculo, tudo minusculo, etc.).
+const formatFirstNameTitle = (value: string): string => {
+  const trimmed = value.trim();
+  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1).toLowerCase()}` : '';
+};
+
 const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
   const greeting = resolveCampaignGreeting();
   const replacements: Record<string, string> = {
     nome: lead?.nome_completo || target?.display_name || '',
-    primeiro_nome: (lead?.nome_completo || target?.display_name || '').split(/\s+/).filter(Boolean)[0] || '',
+    primeiro_nome: formatFirstNameTitle((lead?.nome_completo || target?.display_name || '').split(/\s+/).filter(Boolean)[0] || ''),
     telefone: lead?.telefone || target?.phone_number || '',
     status: lead?.status || '',
     responsavel: lead?.responsavel || '',

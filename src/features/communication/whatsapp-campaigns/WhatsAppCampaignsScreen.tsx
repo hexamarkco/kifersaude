@@ -1028,7 +1028,7 @@ export default function WhatsAppCampaignsScreen() {
               <Textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder={'nome;telefone\nMaria Silva;(11) 99999-9999'} />
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
-                Criar ou atualizar leads no CRM quando o CSV nao encontrar um lead existente.
+                Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone ja existir no CRM sao vinculados ao lead existente em vez de duplicados.
               </label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
@@ -1169,7 +1169,7 @@ export default function WhatsAppCampaignsScreen() {
                     )}
 
                     {stage.kind === 'status_change' ? (
-                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que sera aplicado ao lead quando este estagio rodar. So vale para contatos vindos do CRM." />}>
+                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que sera aplicado ao lead quando este estagio rodar. Vale para contatos vindos do CRM e para contatos de CSV com 'Criar leads no CRM' habilitado." />}>
                         <Select
                           value={stage.statusToSet ?? ''}
                           onChange={(event) => updateStage(stageIndex, { statusToSet: event.target.value })}
@@ -1179,7 +1179,7 @@ export default function WhatsAppCampaignsScreen() {
                             <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
                         </Select>
-                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Vale so para contatos vindos do CRM; alvos importados por CSV sem lead vinculado pulam esta etapa.</p>
+                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Alvos de CSV sem lead vinculado (checkbox "Criar leads no CRM" desmarcado, ou falha ao criar) pulam esta etapa.</p>
                       </Field>
                     ) : (
                       <div className="space-y-2">

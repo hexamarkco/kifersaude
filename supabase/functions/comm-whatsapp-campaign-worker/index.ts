@@ -65,6 +65,7 @@ type CampaignRow = {
   recurrence_end_at: string | null;
   recurrence_next_run_at: string | null;
   recurrence_runs_completed: number;
+  create_leads_from_csv: boolean;
 };
 
 type TargetRow = {
@@ -533,7 +534,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -1543,6 +1544,181 @@ async function applyCampaignStatusChangeStep(params: {
   return { status: targetStatus };
 }
 
+type CsvLeadDefaults = {
+  origemNome: string;
+  origemId: string | null;
+  statusNome: string | null;
+  statusId: string | null;
+  tipoContratacaoValue: string | null;
+  tipoContratacaoId: string | null;
+  responsavelValue: string | null;
+};
+
+const CSV_LEAD_ORIGIN_NAME = 'Disparo';
+
+// `leads.origem`/`tipo_contratacao`/`responsavel`/`status` sao colunas
+// legadas NOT NULL com FK por nome/valor para tabelas de configuracao (mesmo
+// padrao documentado em supabase/functions/public-lead-submit/index.ts).
+// Resolve tudo uma unica vez por lote de processamento, nao por alvo.
+async function resolveCsvLeadDefaults(supabaseAdmin: ReturnType<typeof createAdminClient>): Promise<CsvLeadDefaults> {
+  let origemRow: { id: string; nome: string } | null = null;
+  const { data: existingOrigin } = await supabaseAdmin
+    .from('lead_origens')
+    .select('id,nome')
+    .eq('nome', CSV_LEAD_ORIGIN_NAME)
+    .maybeSingle();
+
+  if (existingOrigin) {
+    origemRow = existingOrigin;
+  } else {
+    const { data: createdOrigin } = await supabaseAdmin
+      .from('lead_origens')
+      .insert({ nome: CSV_LEAD_ORIGIN_NAME, ativo: true })
+      .select('id,nome')
+      .maybeSingle();
+    origemRow = createdOrigin
+      ?? (await supabaseAdmin.from('lead_origens').select('id,nome').eq('nome', CSV_LEAD_ORIGIN_NAME).maybeSingle()).data
+      ?? null;
+  }
+
+  const [{ data: statusRows }, { data: contractTypeRows }, { data: responsibleRows }] = await Promise.all([
+    supabaseAdmin.from('lead_status_config').select('id,nome,padrao').eq('ativo', true).order('ordem', { ascending: true }),
+    supabaseAdmin.from('lead_tipos_contratacao').select('id,label,value').eq('ativo', true).order('ordem', { ascending: true }),
+    supabaseAdmin.from('lead_responsaveis').select('id,label,value').eq('ativo', true).order('ordem', { ascending: true }),
+  ]);
+
+  const statuses = statusRows ?? [];
+  const defaultStatus = statuses.find((row) => row.padrao) ?? statuses[0] ?? null;
+
+  // O CSV traz empresas que ja possuem plano por outro corretor: prioriza um
+  // tipo de contratacao empresarial quando existe, com o mesmo criterio de
+  // alias usado em public-lead-submit; senao cai no primeiro ativo.
+  const contractTypes = contractTypeRows ?? [];
+  const businessAliases = ['cnpj', 'pme', 'empresa', 'empresarial', 'pj', 'coletivo empresarial'];
+  const defaultContractType = contractTypes.find((row) => {
+    const candidate = normalizeLeadStatusName(`${row.label ?? ''} ${row.value ?? ''}`);
+    return businessAliases.some((alias) => candidate.includes(alias));
+  }) ?? contractTypes[0] ?? null;
+
+  const responsibles = responsibleRows ?? [];
+  const defaultResponsible = responsibles[0] ?? null;
+
+  return {
+    origemNome: origemRow?.nome ?? CSV_LEAD_ORIGIN_NAME,
+    origemId: origemRow?.id ?? null,
+    statusNome: defaultStatus?.nome ?? null,
+    statusId: defaultStatus?.id ?? null,
+    tipoContratacaoValue: defaultContractType?.value ?? null,
+    tipoContratacaoId: defaultContractType?.id ?? null,
+    responsavelValue: defaultResponsible?.value ?? null,
+  };
+}
+
+// `leads.telefone` e gravado sem o codigo do pais (DDD + numero), enquanto os
+// alvos de campanha normalizam com o prefixo 55. Mesma convencao usada pela
+// resolucao de identidade do WhatsApp (storage_whatsapp_campaign_phone).
+function stripBrazilCountryCode(phoneDigits: string): string {
+  if ((phoneDigits.length === 12 || phoneDigits.length === 13) && phoneDigits.startsWith('55')) {
+    return phoneDigits.slice(2);
+  }
+  return phoneDigits;
+}
+
+async function findLeadIdByPhone(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  phoneDigits: string,
+): Promise<string | null> {
+  const lookupKeys = new Set(getCommWhatsAppPhoneLookupKeys(phoneDigits));
+  if (lookupKeys.size === 0) return null;
+
+  const searchSuffix = phoneDigits.slice(-8);
+  if (!searchSuffix) return null;
+
+  const { data: candidates } = await supabaseAdmin
+    .from('leads')
+    .select('id,telefone')
+    .ilike('telefone', `%${searchSuffix}%`)
+    .limit(20);
+
+  const match = (candidates ?? []).find((row) => {
+    const candidateKeys = getCommWhatsAppPhoneLookupKeys(row.telefone);
+    return candidateKeys.some((key) => lookupKeys.has(key));
+  });
+
+  return match?.id ?? null;
+}
+
+// Vincula um alvo de campanha vindo de CSV a um lead do CRM: reaproveita um
+// lead ja existente com o mesmo telefone (normalizado) ou cria um novo,
+// somente quando a campanha tem `create_leads_from_csv` habilitado. So roda
+// para alvos sem lead_id ainda - depois de resolvido, fica persistido no
+// proprio alvo e nao roda de novo.
+async function resolveOrCreateCsvTargetLead(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaign: CampaignRow,
+  target: TargetRow,
+  defaults: CsvLeadDefaults,
+): Promise<string | null> {
+  if (target.lead_id) return target.lead_id;
+  if (target.source_kind !== 'csv') return null;
+  if (!campaign.create_leads_from_csv) return null;
+
+  const phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
+  if (!phoneDigits) return null;
+
+  const existingLeadId = await findLeadIdByPhone(supabaseAdmin, phoneDigits);
+  const leadId = existingLeadId ?? await (async () => {
+    const now = getNowIso();
+    const displayName = toTrimmedString(target.display_name) || formatPhoneLabel(phoneDigits);
+
+    const { data: createdLead, error: createLeadError } = await supabaseAdmin
+      .from('leads')
+      .insert({
+        nome_completo: displayName,
+        telefone: stripBrazilCountryCode(phoneDigits),
+        origem: defaults.origemNome,
+        origem_id: defaults.origemId,
+        status: defaults.statusNome ?? undefined,
+        status_id: defaults.statusId,
+        tipo_contratacao: defaults.tipoContratacaoValue ?? undefined,
+        tipo_contratacao_id: defaults.tipoContratacaoId,
+        responsavel: defaults.responsavelValue ?? undefined,
+        observacoes: `Lead criado automaticamente pelo disparo "${campaign.name}".`,
+        data_criacao: now,
+        ultimo_contato: now,
+        arquivado: false,
+        skip_automation: true,
+      })
+      .select('id')
+      .maybeSingle();
+
+    if (createLeadError || !createdLead) {
+      console.error('[comm-whatsapp-campaign-worker] falha ao criar lead a partir do CSV', {
+        campaignId: campaign.id,
+        targetId: target.id,
+        error: createLeadError?.message,
+      });
+      return null;
+    }
+
+    return createdLead.id as string;
+  })();
+
+  if (!leadId) return null;
+
+  await updateClaimedTarget(supabaseAdmin, target, { lead_id: leadId });
+  target.lead_id = leadId;
+
+  await insertEvent(supabaseAdmin, {
+    campaignId: campaign.id,
+    targetId: target.id,
+    eventType: existingLeadId ? 'csv_target_linked_to_lead' : 'csv_target_lead_created',
+    payload: { leadId },
+  });
+
+  return leadId;
+}
+
 async function sendTarget(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   campaign: CampaignRow;
@@ -1551,6 +1727,7 @@ async function sendTarget(params: {
   channelId: string;
   senderPhone: string | null;
   senderName: string | null;
+  csvLeadDefaults: CsvLeadDefaults | null;
 }) {
   const { supabaseAdmin, campaign, target } = params;
   let phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
@@ -1566,6 +1743,10 @@ async function sendTarget(params: {
       lock_token: null,
     });
     return { status: 'invalid' };
+  }
+
+  if (params.csvLeadDefaults) {
+    await resolveOrCreateCsvTargetLead(supabaseAdmin, campaign, target, params.csvLeadDefaults);
   }
 
   let chatRoute = target.chat_id
@@ -1997,7 +2178,7 @@ async function processCampaigns(
 
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv')
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -2032,6 +2213,10 @@ async function processCampaigns(
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
 
+    const csvLeadDefaults = campaign.create_leads_from_csv && targets.some((target) => target.source_kind === 'csv' && !target.lead_id)
+      ? await resolveCsvLeadDefaults(supabaseAdmin)
+      : null;
+
     const processTarget = async (target: TargetRow): Promise<{ status?: string; skipped?: boolean }> => {
       const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
       if (currentCampaign.status === 'paused' || currentCampaign.status === 'cancelled') {
@@ -2048,6 +2233,7 @@ async function processCampaigns(
           channelId: channel.id,
           senderPhone: channel.phone_number,
           senderName: channel.connected_user_name,
+          csvLeadDefaults,
         });
       } catch (error) {
         if (error instanceof CampaignTargetLeaseLostError) {

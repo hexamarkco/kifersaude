@@ -562,17 +562,36 @@ export const commWhatsAppCampaignService = {
 
   async listCampaignTargets(
     campaignId: string,
-    options: { page?: number; pageSize?: number } = {},
+    options: {
+      page?: number;
+      pageSize?: number;
+      status?: CommWhatsAppCampaignTargetStatus[];
+      search?: string;
+    } = {},
   ): Promise<{ targets: CommWhatsAppCampaignTarget[]; total: number }> {
     const pageSize = Math.min(Math.max(options.pageSize ?? 50, 1), 200);
     const page = Math.max(options.page ?? 0, 0);
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('comm_whatsapp_campaign_targets')
       .select('*', { count: 'exact' })
-      .eq('campaign_id', campaignId)
+      .eq('campaign_id', campaignId);
+
+    if (options.status && options.status.length > 0) {
+      query = query.in('status', options.status);
+    }
+
+    // Remove caracteres que quebram a sintaxe do filtro .or() do PostgREST
+    // (virgula separa condicoes, parenteses abrem grupo) antes de montar o
+    // padrao ilike.
+    const search = options.search?.trim().replace(/[,()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (search) {
+      query = query.or(`display_name.ilike.%${search}%,phone_number.ilike.%${search}%,phone_digits.ilike.%${search}%`);
+    }
+
+    const { data, error, count } = await query
       .order('created_at', { ascending: true })
       .range(from, to);
 

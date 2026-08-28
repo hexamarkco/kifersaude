@@ -41,6 +41,7 @@ export const SYSTEM_PLAYBOOK = [
   '',
   'REGRAS CRITICAS:',
   '- NUNCA repita uma pergunta cuja resposta ja esta no historico da conversa — mesmo mudando as palavras ou disfarçando de "confirmação" (ex: se o lead ja disse "moro em Niteroi" na mensagem dele, NAO pergunte de novo "voces moram em Niteroi, certo?"). Se a informacao ja apareceu em QUALQUER mensagem anterior do lead, ela conta como respondida. Leia com atencao TODO o historico, inclusive a primeira mensagem, antes de decidir o que perguntar.',
+  '- Preste atencao especial quando a PRIMEIRA mensagem do lead ja e rica em informacao (comum em pedidos por indicacao/terceiros): ex: "Gostaria de cotar um plano para minha mae, que tem 82 anos e mora em Niteroi. Hoje ela nao tem plano nenhum." — essa UNICA mensagem ja responde idade (82), cidade (Niteroi), e se ja tem plano (nao tem). Nesse exemplo, a UNICA coisa que falta e o CNPJ/MEI. Extraia TUDO que ja foi dito antes de decidir a proxima pergunta — nunca confirme de novo idade, cidade ou "e so pra ela mesmo?" se isso ja ficou claro.',
   '- UMA pergunta por mensagem. Nao empilhe varias perguntas na mesma mensagem.',
   '- Se o lead chegar com um pedido especifico e direto (ex: "quero plano so para meu filho de 3 anos"), NAO force o roteiro completo do zero — adapte as perguntas ao que ele realmente precisa. Se ele recusar uma sugestao (ex: upsell para titular adulto), aceite a recusa e continue atendendo o pedido original dele, sem insistir.',
   '- Se o pedido do lead nao for sobre cotacao de plano de saude e/ou odontologico novo (ex: qualquer outro tipo de seguro/produto, duvida sobre plano que ja tem, ou qualquer assunto nao relacionado), NAO tente rodar o roteiro de qualificacao nele. Responda com uma frase curta e educada dizendo que isso foge do que voce trata por aqui / que vai verificar, e acione handoff imediatamente, sem fazer nenhuma pergunta do roteiro.',
@@ -68,8 +69,94 @@ export const buildStylePrompt = (styleMessages: MessageRow[]): string => {
   ].filter(Boolean).join('\n');
 };
 
-export const buildSystemPrompt = (styleMessages: MessageRow[]): string =>
-  [SYSTEM_PLAYBOOK, '', buildStylePrompt(styleMessages)].filter(Boolean).join('\n');
+export type QuickReplyRef = { name: string; text: string };
+export type SimilarSituationRef = { situacao: string; resposta: string };
+
+const QUICK_REPLIES_INTEGRATION_SLUG = 'whatsapp_quick_replies';
+
+/**
+ * Puxa as Mensagens Rapidas cadastradas no inbox (integration_settings) —
+ * templates reais que a operacao ja usa e que a IA pode adaptar ao
+ * contexto em vez de sempre escrever do zero.
+ */
+// deno-lint-ignore no-explicit-any
+export const fetchQuickReplies = async (supabaseAdmin: any): Promise<QuickReplyRef[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('integration_settings')
+    .select('settings')
+    .eq('slug', QUICK_REPLIES_INTEGRATION_SLUG)
+    .maybeSingle();
+
+  if (error || !data?.settings) return [];
+
+  const settings = data.settings as { quickReplies?: unknown[]; quick_replies?: unknown[] };
+  const raw = Array.isArray(settings.quickReplies) ? settings.quickReplies : Array.isArray(settings.quick_replies) ? settings.quick_replies : [];
+
+  return raw
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    .map((item) => ({
+      name: typeof item.name === 'string' ? item.name.trim() : '',
+      text: typeof item.text === 'string' ? item.text.trim() : '',
+    }))
+    .filter((item) => item.text.length > 0)
+    .slice(0, 30);
+};
+
+/**
+ * Busca, via similaridade de texto (pg_trgm) no historico real do
+ * WhatsApp, mensagens de clientes parecidas com a mensagem atual do lead
+ * e a resposta real que a operacao deu na epoca — a "biblioteca de
+ * situacoes ja vividas" que embasa a resposta da IA em casos reais em
+ * vez de so no tom generico.
+ */
+// deno-lint-ignore no-explicit-any
+export const fetchSimilarSituations = async (supabaseAdmin: any, queryText: string, limit = 4): Promise<SimilarSituationRef[]> => {
+  const trimmed = queryText.trim();
+  if (trimmed.length < 8) return [];
+
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_find_similar_situations', {
+    p_query: trimmed.slice(0, 600),
+    p_limit: limit,
+  });
+
+  if (error || !Array.isArray(data)) return [];
+
+  return data
+    .filter((row: { situacao?: unknown; resposta?: unknown }) => typeof row.situacao === 'string' && typeof row.resposta === 'string')
+    .map((row: { situacao: string; resposta: string }) => ({ situacao: row.situacao.trim(), resposta: row.resposta.trim() }))
+    .filter((row: SimilarSituationRef) => row.situacao && row.resposta);
+};
+
+export const buildReferencePrompt = (quickReplies: QuickReplyRef[], similarSituations: SimilarSituationRef[]): string => {
+  const parts: string[] = [];
+
+  if (quickReplies.length > 0) {
+    parts.push(
+      'MENSAGENS RAPIDAS DA OPERACAO (templates reais ja usados no inbox):',
+      quickReplies.map((qr, i) => `${i + 1}. [${qr.name}] "${qr.text}"`).join('\n'),
+      'Quando uma dessas se encaixar na situacao, use como base e ADAPTE ao contexto da conversa (nome, detalhes ja mencionados) em vez de copiar igual. Quando nenhuma se encaixar bem, escreva a resposta livremente seguindo o playbook e o estilo.',
+    );
+  }
+
+  if (similarSituations.length > 0) {
+    parts.push(
+      '',
+      'SITUACOES PARECIDAS JA ATENDIDAS DE VERDADE (exemplos reais do historico, para voce se inspirar em COMO abordar, nao no conteudo especifico):',
+      similarSituations.map((s, i) => `${i + 1}. Cliente disse algo parecido com: "${s.situacao}"\n   Resposta real dada na epoca: "${s.resposta}"`).join('\n'),
+      'Use isso so como referencia de abordagem/tom para uma situacao semelhante — nunca copie valores, nomes, operadoras ou detalhes especificos desses exemplos para o lead atual, cada caso e unico.',
+    );
+  }
+
+  return parts.join('\n');
+};
+
+export const buildSystemPrompt = (
+  styleMessages: MessageRow[],
+  referenceBlock?: string,
+): string =>
+  [SYSTEM_PLAYBOOK, '', buildStylePrompt(styleMessages), referenceBlock ? `\n${referenceBlock}` : '']
+    .filter(Boolean)
+    .join('\n');
 
 export const buildOpeningUserPrompt = (leadName: string): string => [
   '--- SITUACAO ---',

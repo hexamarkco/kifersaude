@@ -5,8 +5,11 @@ import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   buildOpeningUserPrompt,
+  buildReferencePrompt,
   buildReplyUserPrompt,
   buildSystemPrompt,
+  fetchQuickReplies,
+  fetchSimilarSituations,
   SYSTEM_PLAYBOOK,
   splitGeneratedReply,
   type SandboxMessageRow,
@@ -159,7 +162,7 @@ Deno.serve(async (req: Request) => {
       .limit(120);
 
     const styleMessages = (styleError ? [] : styleMessagesData ?? []) as MessageRow[];
-    const attendantSystemPrompt = buildSystemPrompt(styleMessages);
+    const quickReplies = await fetchQuickReplies(supabaseAdmin);
     const leadSystemPrompt = buildLeadSystemPrompt(leadPersonaPrompt);
 
     const { data: conversation, error: createError } = await supabaseAdmin
@@ -187,13 +190,23 @@ Deno.serve(async (req: Request) => {
       for (const row of rows) history.push({ role: row.role, content: row.content });
     };
 
+    // Recalcula a cada turno com base na ultima mensagem do lead — busca
+    // situacoes reais parecidas no historico do WhatsApp (pg_trgm) para
+    // embasar a resposta em casos reais, alem das mensagens rapidas.
+    const buildAttendantSystemPrompt = async (): Promise<string> => {
+      const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
+      const similarSituations = lastLeadMessage ? await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4) : [];
+      const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
+      return buildSystemPrompt(styleMessages, referenceBlock);
+    };
+
     // ---- Abertura ----
 
     if (startMode === 'ai_opens') {
       const result = await generateTextWithRouting({
         supabaseAdmin,
         task: 'autonomous_attendance',
-        systemPrompt: attendantSystemPrompt,
+        systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildOpeningUserPrompt(leadName),
         temperature: 0.6,
         maxTokens: 450,
@@ -238,7 +251,7 @@ Deno.serve(async (req: Request) => {
       const result = await generateTextWithRouting({
         supabaseAdmin,
         task: 'autonomous_attendance',
-        systemPrompt: attendantSystemPrompt,
+        systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildReplyUserPrompt(history),
         temperature: 0.6,
         maxTokens: 350,

@@ -910,6 +910,19 @@ export const commWhatsAppCampaignService = {
     }
   },
 
+  async deleteCampaign(campaignId: string): Promise<void> {
+    // Etapas, alvos e eventos da campanha tem ON DELETE CASCADE para
+    // comm_whatsapp_campaigns, entao apagar a campanha ja remove tudo.
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .delete()
+      .eq('id', campaignId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel excluir o disparo.'));
+    }
+  },
+
   async activateCampaign(campaignId: string): Promise<CampaignWorkerResult> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-campaign-worker', {
       body: {

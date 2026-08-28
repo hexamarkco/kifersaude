@@ -3,7 +3,7 @@ import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, Calend
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -255,6 +255,8 @@ export default function WhatsAppCampaignsScreen() {
   const [saving, setSaving] = useState(false);
   const [csvSaveProgress, setCsvSaveProgress] = useState<{ saved: number; total: number } | null>(null);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
+  const [campaignPendingDelete, setCampaignPendingDelete] = useState<CommWhatsAppCampaign | null>(null);
+  const [deletingCampaign, setDeletingCampaign] = useState(false);
   const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -815,6 +817,21 @@ export default function WhatsAppCampaignsScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel processar o disparo.');
     } finally {
       setCampaignActionId(null);
+    }
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignPendingDelete) return;
+    setDeletingCampaign(true);
+    try {
+      await commWhatsAppCampaignService.deleteCampaign(campaignPendingDelete.id);
+      toast.success('Disparo excluido.');
+      setCampaignPendingDelete(null);
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel excluir o disparo.');
+    } finally {
+      setDeletingCampaign(false);
     }
   };
 
@@ -1633,12 +1650,31 @@ export default function WhatsAppCampaignsScreen() {
                         Processar lote
                       </Button>
                     )}
+                    <Button size="sm" variant="ghost" onClick={() => setCampaignPendingDelete(campaign)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Excluir
+                    </Button>
                   </div>
                 </article>
               ))}
             </div>
           )}
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(campaignPendingDelete)}
+        onOpenChange={(open) => !open && !deletingCampaign && setCampaignPendingDelete(null)}
+        onConfirm={() => void handleDeleteCampaign()}
+        title="Excluir disparo?"
+        description={
+          campaignPendingDelete
+            ? `"${campaignPendingDelete.name}" sera excluido junto com todos os alvos, mensagens e eventos registrados. Essa acao nao pode ser desfeita.${['queued', 'running'].includes(campaignPendingDelete.status) ? ' Essa campanha esta ativa - excluir agora pode interromper envios em andamento.' : ''}`
+            : undefined
+        }
+        confirmLabel="Excluir"
+        destructive
+        loading={deletingCampaign}
+      />
     </div>
   );
 }

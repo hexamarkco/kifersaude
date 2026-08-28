@@ -240,6 +240,47 @@ export type CommWhatsAppCampaignWorkerHealth = {
   recentRuns: CommWhatsAppCampaignWorkerRun[];
 };
 
+const parseTimeToMinutes = (value: string | null | undefined): number | null => {
+  if (!value) return null;
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+/**
+ * Minutos entre a admissao de cada contato novo, derivado direto de
+ * "novos contatos por dia" e da janela de envio (ou 24h corridas sem
+ * janela). E so informativo no front - o worker calcula o mesmo valor de
+ * verdade na RPC de reserva de despacho.
+ */
+export const computeAdmissionIntervalMinutes = (
+  dailyLimit: number | null | undefined,
+  windowStart: string | null | undefined,
+  windowEnd: string | null | undefined,
+): number | null => {
+  if (!dailyLimit || dailyLimit <= 0) return null;
+
+  const start = parseTimeToMinutes(windowStart);
+  const end = parseTimeToMinutes(windowEnd);
+  let windowMinutes = 24 * 60;
+  if (start !== null && end !== null && start !== end) {
+    windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
+  }
+
+  return Math.max(Math.floor(windowMinutes / dailyLimit), 1);
+};
+
+export const formatAdmissionInterval = (minutes: number | null): string => {
+  if (minutes === null) return 'Sem limite diario definido';
+  if (minutes < 60) return `1 novo contato a cada ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return `1 novo contato a cada ${hours}h${remaining > 0 ? ` ${remaining}min` : ''}`;
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -627,12 +668,13 @@ export const commWhatsAppCampaignService = {
       });
     }
 
-    const pacingBasedMinutes = Math.ceil(estimatedTargets / Math.max(campaign.pacing_per_minute || 1, 1));
-    // O limite diario so admite contatos novos por dia (nao mensagens), entao
-    // ele pode ser o gargalo real da campanha mesmo com um ritmo alto.
-    const dailyLimitBasedMinutes = campaign.daily_send_limit
+    // O gargalo real da campanha e o limite diario de admissao de contatos
+    // novos, espalhado pelos dias necessarios. Sem limite diario, o unico
+    // teto que resta e o de reivindicacao por execucao do worker (a cada
+    // minuto), entao usamos isso como estimativa.
+    const estimatedMinutes = campaign.daily_send_limit
       ? Math.ceil(estimatedTargets / campaign.daily_send_limit) * 24 * 60
-      : 0;
+      : Math.ceil(estimatedTargets / 25);
 
     return {
       campaign,
@@ -642,7 +684,7 @@ export const commWhatsAppCampaignService = {
       sample,
       variables,
       unknownVariables,
-      estimatedMinutes: Math.max(pacingBasedMinutes, dailyLimitBasedMinutes),
+      estimatedMinutes,
     };
   },
 

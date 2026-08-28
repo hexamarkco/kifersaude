@@ -7,6 +7,8 @@ import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCel
 import { toast } from '../../../lib/toast';
 import {
   commWhatsAppCampaignService,
+  computeAdmissionIntervalMinutes,
+  formatAdmissionInterval,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignTarget,
   type CommWhatsAppCampaignTargetStatus,
@@ -196,7 +198,7 @@ export default function WhatsAppCampaignDetailScreen() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="accent">{campaignStatusLabels[campaign.status]}</Badge>
                   <Badge tone="neutral">{campaign.audience_source.toUpperCase()}</Badge>
-                  <Badge tone="neutral">{campaign.pacing_per_minute}/min</Badge>
+                  <Badge tone="neutral">{formatAdmissionInterval(computeAdmissionIntervalMinutes(campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end))}</Badge>
                 </div>
                 <div className="grid gap-3 text-sm text-[color:var(--panel-text-soft)] sm:grid-cols-2 lg:grid-cols-4">
                   <Info label="Agendado" value={formatDateTime(campaign.scheduled_at)} />

@@ -9,6 +9,8 @@ import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
 import {
   commWhatsAppCampaignService,
+  computeAdmissionIntervalMinutes,
+  formatAdmissionInterval,
   type CampaignStats,
   type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
@@ -203,36 +205,6 @@ const parseCsvTargets = (raw: string): CommWhatsAppCsvTargetDraft[] => {
   });
 };
 
-const parseTimeToMinutes = (value: string): number | null => {
-  const match = value.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-  return hours * 60 + minutes;
-};
-
-/**
- * Ritmo minimo (contatos novos/minuto) para espalhar o limite diario de
- * admissao ao longo da janela de envio, em vez de admitir tudo de uma vez
- * assim que a janela abre. So governa a ADMISSAO de contatos novos - o
- * resto da sequencia de quem ja foi admitido nao conta pra esse ritmo.
- * Sem janela definida, assume o dia inteiro (24h).
- */
-const computeAutoPacing = (dailyLimit: number | null, windowStart: string, windowEnd: string): number | null => {
-  if (!dailyLimit || dailyLimit <= 0) return null;
-
-  const start = parseTimeToMinutes(windowStart);
-  const end = parseTimeToMinutes(windowEnd);
-  let windowMinutes = 24 * 60;
-  if (start !== null && end !== null && start !== end) {
-    windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
-  }
-
-  const pacing = Math.ceil(dailyLimit / Math.max(windowMinutes, 1));
-  return Math.min(Math.max(pacing, 1), 120);
-};
-
 const defaultStats: CampaignStats = {
   total: 0,
   drafts: 0,
@@ -290,8 +262,6 @@ export default function WhatsAppCampaignsScreen() {
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
-  const [pacingPerMinute, setPacingPerMinute] = useState(12);
-  const [pacingAutoManaged, setPacingAutoManaged] = useState(true);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
@@ -323,11 +293,10 @@ export default function WhatsAppCampaignsScreen() {
     [stages],
   );
 
-  useEffect(() => {
-    if (!pacingAutoManaged) return;
-    const auto = computeAutoPacing(dailySendLimit, sendWindowStart, sendWindowEnd);
-    if (auto !== null) setPacingPerMinute(auto);
-  }, [pacingAutoManaged, dailySendLimit, sendWindowStart, sendWindowEnd]);
+  const admissionIntervalMinutes = useMemo(
+    () => computeAdmissionIntervalMinutes(dailySendLimit, sendWindowStart, sendWindowEnd),
+    [dailySendLimit, sendWindowStart, sendWindowEnd],
+  );
   const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
     if (!variableAutocomplete) return [];
@@ -388,8 +357,6 @@ export default function WhatsAppCampaignsScreen() {
     setScheduledAt('');
     setSendWindowStart('');
     setSendWindowEnd('');
-    setPacingPerMinute(12);
-    setPacingAutoManaged(true);
     setDailySendLimit(null);
     setReactivationMode(false);
     setInactiveDays(90);
@@ -497,8 +464,6 @@ export default function WhatsAppCampaignsScreen() {
       setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
       setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
-      setPacingPerMinute(campaign.pacing_per_minute || 12);
-      setPacingAutoManaged(false);
       setDailySendLimit(campaign.daily_send_limit ?? null);
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
@@ -595,7 +560,9 @@ export default function WhatsAppCampaignsScreen() {
         audienceConfig,
         messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-        pacingPerMinute,
+        // Coluna mantida por compatibilidade; o intervalo de admissao real e
+        // calculado direto de dailySendLimit + janela na RPC de despacho.
+        pacingPerMinute: 12,
         dailySendLimit,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
@@ -1390,30 +1357,10 @@ export default function WhatsAppCampaignsScreen() {
             <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo comecar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
-            <Field label={(
-              <span className="inline-flex items-center gap-1.5">
-                <FieldLabel text="Ritmo por minuto" hint="Espaca a ADMISSAO de contatos novos (nao as mensagens de follow-up). Calculado automaticamente a partir de novos contatos/dia e da janela, pra nao admitir tudo de uma vez assim que a janela abre. Edite manualmente pra travar um valor fixo." />
-                {pacingAutoManaged ? (
-                  <Badge tone="accent" size="xs">Auto</Badge>
-                ) : (
-                  <button type="button" onClick={() => setPacingAutoManaged(true)} title="Voltar a calcular automaticamente">
-                    <Badge tone="neutral" size="xs">Manual</Badge>
-                  </button>
-                )}
-              </span>
-            )}>
-              <Input
-                type="number"
-                min={1}
-                max={120}
-                value={pacingPerMinute}
-                onChange={(event) => {
-                  setPacingAutoManaged(false);
-                  setPacingPerMinute(Number(event.target.value) || 1);
-                }}
-              />
+            <Field label={<FieldLabel text="Intervalo entre contatos" hint="So informativo, nao da pra editar: e o resultado de 'novos contatos por dia' dividido pela janela de envio. Define de quanto em quanto tempo um contato novo e admitido - o resto da sequencia dele (resto do estagio 1 e os estagios seguintes) sai normalmente, sem esperar esse intervalo." />}>
+              <Input value={formatAdmissionInterval(admissionIntervalMinutes)} disabled readOnly />
             </Field>
-            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite nem no ritmo por minuto. Deixe vazio para nao limitar." />}>
+            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para nao limitar (contatos entram sem espacamento minimo)." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
             <Field label={<FieldLabel text="Janela inicio" hint="Horario a partir do qual o disparo pode enviar mensagens." />}>
@@ -1468,7 +1415,7 @@ export default function WhatsAppCampaignsScreen() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
                 <PreviewMetric label="Etapas da sequencia" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
-                <PreviewMetric label="Ritmo" value={`${activationPreview.campaign.pacing_per_minute}/min`} />
+                <PreviewMetric label="Intervalo entre contatos" value={formatAdmissionInterval(computeAdmissionIntervalMinutes(activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end))} />
                 <PreviewMetric label="Duracao estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
 

@@ -123,11 +123,11 @@ const SCENARIOS = [
   },
   {
     key: 'reclamacao-cancelamento',
-    label: 'Pede cancelamento/reclamação (deve gerar handoff)',
+    label: 'Reclama do plano atual (deve virar oportunidade de cotação nova, não handoff direto)',
     startMode: 'lead_opens',
     firstLeadMessage: 'Boa tarde, quero cancelar meu plano, estou muito insatisfeito com o atendimento do hospital credenciado.',
     leadPersonaPrompt:
-      'Você já é cliente e está insatisfeito, quer cancelar o plano e registrar uma reclamação sobre o atendimento em um hospital credenciado.',
+      'Você já é cliente e está insatisfeito com o hospital credenciado do seu plano atual, por isso quer cancelar. Se a corretora demonstrar empatia e oferecer buscar uma opção de plano melhor pra você, aceite e responda as perguntas de qualificação normalmente (você tem 44 anos, mora em Salvador, sem CNPJ). Se ela não oferecer nada e só falar em resolver o cancelamento, insista só no cancelamento mesmo.',
   },
   {
     key: 'fora-de-escopo',

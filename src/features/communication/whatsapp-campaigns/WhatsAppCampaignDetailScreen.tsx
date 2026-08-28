@@ -78,6 +78,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [targets, setTargets] = useState<CommWhatsAppCampaignTarget[]>([]);
+  const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -85,12 +86,14 @@ export default function WhatsAppCampaignDetailScreen() {
     if (!campaignId) return;
     setLoading(true);
     try {
-      const [nextCampaign, nextTargets] = await Promise.all([
+      const [nextCampaign, nextTargets, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.getCampaign(campaignId),
         commWhatsAppCampaignService.listCampaignTargets(campaignId),
+        commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       setCampaign(nextCampaign);
       setTargets(nextTargets);
+      setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o detalhe do disparo.');
     } finally {
@@ -256,6 +259,15 @@ export default function WhatsAppCampaignDetailScreen() {
             <Metric label="Responderam" value={targetCounts.responded} />
             <Metric label="Falhas" value={targetCounts.failed + targetCounts.invalid} />
           </div>
+
+          {pendingWhatsAppValidation > 0 && (
+            <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
+              <Badge tone="info">Validando</Badge>
+              <p className="text-sm text-[color:var(--panel-text-soft)]">
+                {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmacao de que o numero tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; numeros sem WhatsApp sao marcados como invalidos automaticamente.
+              </p>
+            </Card>
+          )}
 
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">

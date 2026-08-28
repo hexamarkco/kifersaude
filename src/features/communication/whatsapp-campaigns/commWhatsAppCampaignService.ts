@@ -22,6 +22,7 @@ export type CommWhatsAppCampaign = {
   active_weekdays: number[];
   stop_on_reply: boolean;
   create_leads_from_csv: boolean;
+  validate_whatsapp_numbers: boolean;
   total_targets: number;
   valid_targets: number;
   invalid_targets: number;
@@ -137,6 +138,7 @@ export type CreateCampaignInput = {
   activeWeekdays: number[];
   stopOnReply: boolean;
   createLeadsFromCsv: boolean;
+  validateWhatsappNumbers: boolean;
   stages: CommWhatsAppCampaignStageDraft[];
   csvTargets?: CommWhatsAppCsvTargetDraft[];
   abTestEnabled: boolean;
@@ -321,6 +323,7 @@ type CsvTargetRow = {
   display_name: string | null;
   source_kind: string;
   source_payload: Record<string, unknown>;
+  whatsapp_check_status: 'skipped' | 'pending';
 };
 
 async function upsertCsvTargetsInBatches(
@@ -572,6 +575,13 @@ export const commWhatsAppCampaignService = {
     return (data ?? []) as CommWhatsAppCampaignTarget[];
   },
 
+  async getPendingWhatsAppValidationCount(campaignId: string): Promise<number> {
+    return getCount('comm_whatsapp_campaign_targets', [
+      { op: 'eq', column: 'campaign_id', value: campaignId },
+      { op: 'eq', column: 'whatsapp_check_status', value: 'pending' },
+    ]);
+  },
+
   async getStats(): Promise<CampaignStats> {
     const [total, drafts, scheduled, active, aiSuggestionsPending] = await Promise.all([
       getCount('comm_whatsapp_campaigns'),
@@ -777,6 +787,7 @@ export const commWhatsAppCampaignService = {
         active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        validate_whatsapp_numbers: input.validateWhatsappNumbers,
         ab_test_enabled: input.abTestEnabled,
         ab_split_percent: input.abSplitPercent,
         recurrence_rule: input.recurrenceRule,
@@ -800,6 +811,7 @@ export const commWhatsAppCampaignService = {
         display_name: target.displayName || null,
         source_kind: 'csv',
         source_payload: target.payload,
+        whatsapp_check_status: (input.validateWhatsappNumbers ? 'pending' : 'skipped') as 'skipped' | 'pending',
       }))
       .filter((target) => target.phone_digits.length > 0);
 
@@ -863,6 +875,7 @@ export const commWhatsAppCampaignService = {
         active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        validate_whatsapp_numbers: input.validateWhatsappNumbers,
         ab_test_enabled: input.abTestEnabled,
         ab_split_percent: input.abSplitPercent,
         recurrence_rule: input.recurrenceRule,

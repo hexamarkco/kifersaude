@@ -3,6 +3,7 @@ import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboa
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
 import {
   buildWhapiDirectChatId,
+  checkWhapiContactIdentity,
   corsHeaders,
   createWhapiClient,
   ensureCommWhatsAppSettings,
@@ -2234,6 +2235,92 @@ async function sendTarget(params: {
   return { status: targetStatus, externalMessageId, deliveryStatus };
 }
 
+// Quantos alvos com whatsapp_check_status='pending' este tick tenta checar,
+// e com quantas checagens simultaneas. Cada checagem e uma chamada
+// individual a Whapi (mesma checkWhapiContactIdentity ja usada e testada em
+// comm-whatsapp-contacts para validar um contato) - nao ha endpoint de lote
+// documentado/confirmado, entao evita depender de um formato de resposta em
+// lote nao verificado. Valores conservadores para nao estourar rate limit da
+// Whapi; para um CSV de dezenas de milhares de linhas isso roda em segundo
+// plano ao longo de varias horas, um tick por minuto.
+const WHATSAPP_VALIDATION_TARGETS_PER_TICK = 300;
+const WHATSAPP_VALIDATION_CONCURRENCY = 15;
+
+async function validatePendingWhatsAppTargets(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  token: string,
+): Promise<{ checked: number; valid: number; invalid: number }> {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_targets')
+    .select('id,campaign_id,phone_number,phone_digits')
+    .eq('whatsapp_check_status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(WHATSAPP_VALIDATION_TARGETS_PER_TICK);
+
+  if (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao buscar alvos pendentes de validacao no WhatsApp', error);
+    return { checked: 0, valid: 0, invalid: 0 };
+  }
+
+  const targets = (data ?? []) as Array<{ id: string; campaign_id: string; phone_number: string; phone_digits: string }>;
+  if (targets.length === 0) return { checked: 0, valid: 0, invalid: 0 };
+
+  let validCount = 0;
+  let invalidCount = 0;
+  const nowIso = getNowIso();
+
+  await mapWithConcurrency(targets, WHATSAPP_VALIDATION_CONCURRENCY, async (target) => {
+    const phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
+
+    if (!phoneDigits) {
+      invalidCount += 1;
+      await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .update({ whatsapp_check_status: 'invalid', whatsapp_checked_at: nowIso, status: 'invalid', error_message: 'Telefone invalido.' })
+        .eq('id', target.id)
+        .eq('whatsapp_check_status', 'pending');
+      return;
+    }
+
+    let identity: { exists: boolean };
+    try {
+      identity = await checkWhapiContactIdentity({ token, contactId: phoneDigits });
+    } catch (checkError) {
+      // Falha de rede/Whapi: deixa 'pending' pra tentar de novo no proximo
+      // tick, nao marca como invalido sem confirmar.
+      console.error('[comm-whatsapp-campaign-worker] falha ao checar numero no WhatsApp', {
+        targetId: target.id,
+        error: checkError instanceof Error ? checkError.message : checkError,
+      });
+      return;
+    }
+
+    if (identity.exists) {
+      validCount += 1;
+      await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .update({ whatsapp_check_status: 'valid', whatsapp_checked_at: nowIso })
+        .eq('id', target.id)
+        .eq('whatsapp_check_status', 'pending');
+    } else {
+      invalidCount += 1;
+      await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .update({ whatsapp_check_status: 'invalid', whatsapp_checked_at: nowIso, status: 'invalid', error_message: 'Numero nao possui WhatsApp.' })
+        .eq('id', target.id)
+        .eq('whatsapp_check_status', 'pending');
+      await insertEvent(supabaseAdmin, {
+        campaignId: target.campaign_id,
+        targetId: target.id,
+        eventType: 'whatsapp_number_invalid',
+        payload: {},
+      });
+    }
+  });
+
+  return { checked: targets.length, valid: validCount, invalid: invalidCount };
+}
+
 async function processCampaigns(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   params: { campaignId?: string; limit?: number },
@@ -2244,6 +2331,13 @@ async function processCampaigns(
 
   if (!settings.enabled) throw new Error('Integracao WhatsApp desabilitada.');
   if (!token) throw new Error('Token da Whapi nao configurado.');
+
+  // Roda independente do status da campanha (inclusive rascunho) - a
+  // validacao comeca assim que o CSV e importado, nao so quando a campanha e
+  // ativada, pra estar pronta quando o usuario ativar.
+  await validatePendingWhatsAppTargets(supabaseAdmin, token).catch((validationError) => {
+    console.error('[comm-whatsapp-campaign-worker] validacao de numeros no WhatsApp falhou', validationError);
+  });
 
   await reconcileAcceptedCampaignPersistences({
     supabaseAdmin,

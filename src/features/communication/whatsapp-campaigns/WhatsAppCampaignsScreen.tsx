@@ -271,6 +271,7 @@ export default function WhatsAppCampaignsScreen() {
   const [leadOwnerFilters, setLeadOwnerFilters] = useState<string[]>([]);
   const [csvText, setCsvText] = useState('');
   const [createLeadsFromCsv, setCreateLeadsFromCsv] = useState(false);
+  const [validateWhatsappNumbers, setValidateWhatsappNumbers] = useState(true);
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
@@ -376,6 +377,7 @@ export default function WhatsAppCampaignsScreen() {
     setLeadOwnerFilters([]);
     setCsvText('');
     setCreateLeadsFromCsv(false);
+    setValidateWhatsappNumbers(true);
     setScheduledAt('');
     setSendWindowStart('');
     setSendWindowEnd('');
@@ -484,6 +486,7 @@ export default function WhatsAppCampaignsScreen() {
       setLeadOwnerFilters(readStringArrayFilter(filters, 'responsaveis', 'responsavel'));
       setCsvText('');
       setCreateLeadsFromCsv(campaign.create_leads_from_csv);
+      setValidateWhatsappNumbers(campaign.validate_whatsapp_numbers);
       setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
       setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
@@ -595,6 +598,7 @@ export default function WhatsAppCampaignsScreen() {
         activeWeekdays: activeWeekdays.length > 0 ? activeWeekdays : [0, 1, 2, 3, 4, 5, 6],
         stopOnReply: true,
         createLeadsFromCsv,
+        validateWhatsappNumbers: audienceMode === 'csv' && validateWhatsappNumbers,
         stages: normalizedStages,
         csvTargets: !editingCampaign && audienceMode === 'csv' ? csvValidTargets : [],
         abTestEnabled: abTestEnabled && firstMessageHasVariantB,
@@ -1050,6 +1054,10 @@ export default function WhatsAppCampaignsScreen() {
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
                 Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone ja existir no CRM sao vinculados ao lead existente em vez de duplicados.
+              </label>
+              <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+                <Checkbox className="mt-1" checked={validateWhatsappNumbers} onChange={(event) => setValidateWhatsappNumbers(event.target.checked)} />
+                Validar no WhatsApp antes de enviar: apos salvar, cada numero e checado em segundo plano (pode levar horas em listas grandes) e numeros sem WhatsApp sao excluidos do envio automaticamente, sem precisar revisar a lista manualmente.
               </label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>

@@ -253,6 +253,7 @@ export default function WhatsAppCampaignsScreen() {
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [csvSaveProgress, setCsvSaveProgress] = useState<{ saved: number; total: number } | null>(null);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
   const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -506,6 +507,7 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const handleCreateDraft = async () => {
+    if (saving) return;
     if (!name.trim()) {
       toast.warning('Informe um nome para o disparo.');
       return;
@@ -528,6 +530,7 @@ export default function WhatsAppCampaignsScreen() {
     }
 
     setSaving(true);
+    setCsvSaveProgress(null);
     try {
       const audienceSource: CommWhatsAppCampaignAudienceSource = audienceMode;
       const audienceConfig = audienceMode === 'crm'
@@ -604,7 +607,9 @@ export default function WhatsAppCampaignsScreen() {
       if (editingCampaign) {
         await commWhatsAppCampaignService.updateCampaign(editingCampaign.id, payload);
       } else {
-        await commWhatsAppCampaignService.createDraft(payload);
+        await commWhatsAppCampaignService.createDraft(payload, (saved, total) => {
+          setCsvSaveProgress({ saved, total });
+        });
       }
 
       toast.success(editingCampaign ? 'Disparo atualizado.' : 'Disparo salvo.');
@@ -614,6 +619,7 @@ export default function WhatsAppCampaignsScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o disparo.');
     } finally {
       setSaving(false);
+      setCsvSaveProgress(null);
     }
   };
 
@@ -972,8 +978,8 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {campaignModalOpen && (
-        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
-            <DialogHeader onClose={closeCampaignModal}>
+        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && !saving && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+            <DialogHeader onClose={saving ? undefined : closeCampaignModal}>
               <div>
                 <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
                 <DialogDescription>{campaignWizardSteps[wizardStep]?.description}</DialogDescription>
@@ -1427,11 +1433,13 @@ export default function WhatsAppCampaignsScreen() {
           <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
-              Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
+              {csvSaveProgress
+                ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Nao feche esta janela.`
+                : 'Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.'}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {wizardStep > 0 && (
-                <Button variant="secondary" className="whitespace-nowrap" onClick={() => goToWizardStep(wizardStep - 1)}>
+                <Button variant="secondary" className="whitespace-nowrap" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
                   <ArrowLeft className="h-4 w-4" />
                   Voltar
                 </Button>
@@ -1444,7 +1452,7 @@ export default function WhatsAppCampaignsScreen() {
               ) : (
                 <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
                   <Send className="h-4 w-4" />
-                  Salvar
+                  {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
                 </Button>
               )}
             </div>

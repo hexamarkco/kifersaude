@@ -296,6 +296,71 @@ const getCurrentUserId = async () => {
   return data.user?.id ?? null;
 };
 
+// CSVs grandes (dezenas de milhares de linhas) nao cabem num unico upsert:
+// o payload fica enorme e o cliente Supabase tem um timeout fixo de 8s por
+// requisicao (src/lib/supabase.ts), pensado para consultas normais - um
+// upsert de dezenas de milhares de linhas de uma vez estoura isso e derruba
+// a criacao do disparo inteiro. Envia em lotes menores, com retry por lote.
+const CSV_TARGET_BATCH_SIZE = 500;
+const CSV_TARGET_BATCH_MAX_ATTEMPTS = 3;
+
+const chunkArray = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+type CsvTargetRow = {
+  campaign_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string | null;
+  source_kind: string;
+  source_payload: Record<string, unknown>;
+};
+
+async function upsertCsvTargetsInBatches(
+  targets: CsvTargetRow[],
+  onProgress?: (saved: number, total: number) => void,
+): Promise<void> {
+  const batches = chunkArray(targets, CSV_TARGET_BATCH_SIZE);
+  let saved = 0;
+
+  for (const batch of batches) {
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= CSV_TARGET_BATCH_MAX_ATTEMPTS; attempt += 1) {
+      const { error } = await supabase
+        .from('comm_whatsapp_campaign_targets')
+        .upsert(batch, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
+
+      if (!error) {
+        lastError = null;
+        break;
+      }
+
+      lastError = error;
+      if (attempt < CSV_TARGET_BATCH_MAX_ATTEMPTS) {
+        await sleep(1000 * attempt);
+      }
+    }
+
+    if (lastError) {
+      throw new Error(getSupabaseErrorMessage(
+        lastError,
+        `O disparo foi criado, mas falhou ao salvar os contatos do CSV apos ${saved} de ${targets.length} importados. Edite o disparo para tentar novamente.`,
+      ));
+    }
+
+    saved += batch.length;
+    onProgress?.(saved, targets.length);
+  }
+}
+
 type CountFilter =
   | { op: 'eq'; column: string; value: string }
   | { op: 'in'; column: string; value: string[] };
@@ -690,7 +755,10 @@ export const commWhatsAppCampaignService = {
     };
   },
 
-  async createDraft(input: CreateCampaignInput): Promise<CommWhatsAppCampaign> {
+  async createDraft(
+    input: CreateCampaignInput,
+    onCsvProgress?: (saved: number, total: number) => void,
+  ): Promise<CommWhatsAppCampaign> {
     const userId = await getCurrentUserId();
     const { data: campaign, error } = await supabase
       .from('comm_whatsapp_campaigns')
@@ -747,13 +815,7 @@ export const commWhatsAppCampaignService = {
     });
 
     if (csvTargets.length > 0) {
-      const { error: targetsError } = await supabase
-        .from('comm_whatsapp_campaign_targets')
-        .upsert(csvTargets, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
-
-      if (targetsError) {
-        throw new Error(getSupabaseErrorMessage(targetsError, 'O disparo foi criado, mas os contatos do CSV nao foram salvos.'));
-      }
+      await upsertCsvTargetsInBatches(csvTargets, onCsvProgress);
 
       const { error: updateError } = await supabase
         .from('comm_whatsapp_campaigns')

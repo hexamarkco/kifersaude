@@ -627,6 +627,13 @@ export const commWhatsAppCampaignService = {
       });
     }
 
+    const pacingBasedMinutes = Math.ceil(estimatedTargets / Math.max(campaign.pacing_per_minute || 1, 1));
+    // O limite diario so admite contatos novos por dia (nao mensagens), entao
+    // ele pode ser o gargalo real da campanha mesmo com um ritmo alto.
+    const dailyLimitBasedMinutes = campaign.daily_send_limit
+      ? Math.ceil(estimatedTargets / campaign.daily_send_limit) * 24 * 60
+      : 0;
+
     return {
       campaign,
       steps,
@@ -635,7 +642,7 @@ export const commWhatsAppCampaignService = {
       sample,
       variables,
       unknownVariables,
-      estimatedMinutes: Math.ceil(estimatedTargets / Math.max(campaign.pacing_per_minute || 1, 1)),
+      estimatedMinutes: Math.max(pacingBasedMinutes, dailyLimitBasedMinutes),
     };
   },
 

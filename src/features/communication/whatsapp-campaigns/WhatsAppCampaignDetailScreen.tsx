@@ -3,7 +3,7 @@ import { ArrowLeft, Ban, BarChart3, PauseCircle, PlayCircle, RefreshCw, Send, Us
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
+import { Badge, Button, Card, EmptyState, IconButton, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../lib/toast';
 import {
@@ -91,10 +91,13 @@ export default function WhatsAppCampaignDetailScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const targetsPageRef = useRef(0);
+  const refreshLiveDataInFlightRef = useRef(false);
+  const loadDetailInFlightRef = useRef(false);
 
   const loadDetail = useCallback(async () => {
     if (!campaignId) return;
     setLoading(true);
+    loadDetailInFlightRef.current = true;
     try {
       const [nextCampaign, nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.getCampaign(campaignId),
@@ -115,6 +118,7 @@ export default function WhatsAppCampaignDetailScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o detalhe do disparo.');
     } finally {
       setLoading(false);
+      loadDetailInFlightRef.current = false;
     }
   }, [campaignId]);
 
@@ -146,6 +150,15 @@ export default function WhatsAppCampaignDetailScreen() {
   // atualizacao em segundo plano, nao uma acao do usuario).
   const refreshLiveData = useCallback(async () => {
     if (!campaignId) return;
+    // O worker pode atualizar a linha da campanha mais de uma vez num unico
+    // ciclo (ex.: status "running" no inicio e contadores no fim do lote),
+    // cada atualizacao dispara este callback via Realtime. Sem essas travas,
+    // as chamadas se sobrepoem (entre si e com loadDetail, disparado apos
+    // acoes como "Processar lote") e multiplicam as requisicoes exatamente
+    // quando o banco esta mais ocupado gravando o lote, aumentando a chance
+    // de estourar o timeout de 8s do cliente Supabase.
+    if (refreshLiveDataInFlightRef.current || loadDetailInFlightRef.current) return;
+    refreshLiveDataInFlightRef.current = true;
     try {
       const [nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: targetsPageRef.current, pageSize: TARGETS_PAGE_SIZE }),
@@ -160,6 +173,8 @@ export default function WhatsAppCampaignDetailScreen() {
       setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
       console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
+    } finally {
+      refreshLiveDataInFlightRef.current = false;
     }
   }, [campaignId]);
 
@@ -325,14 +340,12 @@ export default function WhatsAppCampaignDetailScreen() {
                 {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
               </span>
             )}
-            <Button variant="secondary" className="whitespace-nowrap" onClick={() => navigate('/painel/disparos')}>
+            <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
               <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </Button>
-            <Button variant="secondary" className="whitespace-nowrap" loading={loading} onClick={() => void loadDetail()}>
+            </IconButton>
+            <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
               <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </Button>
+            </IconButton>
           </div>
         )}
       />

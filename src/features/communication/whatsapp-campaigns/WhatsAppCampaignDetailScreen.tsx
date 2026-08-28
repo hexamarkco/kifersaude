@@ -369,7 +369,7 @@ export default function WhatsAppCampaignDetailScreen() {
                   <Info label="Atualizado" value={formatDateTime(campaign.updated_at)} />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-nowrap gap-2 overflow-x-auto">
                 {['queued', 'running', 'scheduled'].includes(campaign.status) && (
                   <Button variant="secondary" className="whitespace-nowrap" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
                     <PauseCircle className="h-4 w-4" />

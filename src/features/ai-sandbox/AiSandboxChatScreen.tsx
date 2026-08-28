@@ -38,6 +38,14 @@ export default function AiSandboxChatScreen() {
     [conversations, activeConversationId],
   );
 
+  // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa, mesmo
+  // que o lead mande agradecimento ou qualquer outra coisa — a partir dai e
+  // atendimento humano.
+  const isHandedOff = useMemo(
+    () => messages.some((message) => message.role === 'ai' && Boolean(message.handoff_reason)),
+    [messages],
+  );
+
   const clearPendingTimer = useCallback(() => {
     if (pendingTimerRef.current) {
       window.clearInterval(pendingTimerRef.current.intervalId);
@@ -124,6 +132,7 @@ export default function AiSandboxChatScreen() {
     setGeneratingReply(true);
     try {
       const result = await aiSandboxChatService.generateReply(conversationId);
+      if (result === null) return; // conversa ja foi encaminhada — IA nao responde mais
 
       if (activeConversationIdRef.current !== conversationId) return;
 
@@ -200,6 +209,10 @@ export default function AiSandboxChatScreen() {
 
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
       setMessages((prev) => [...prev, leadMessage]);
+
+      // Depois do handoff a IA nao responde mais — o lead pode mandar mais
+      // mensagens (ex: agradecendo), mas ninguem gera resposta automatica.
+      if (isHandedOff) return;
 
       // Reinicia a contagem a cada mensagem nova do lead — dá tempo de quem está
       // testando mandar mensagens picotadas antes da IA responder de uma vez.
@@ -427,6 +440,12 @@ export default function AiSandboxChatScreen() {
         {error && (
           <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)]">
             {error}
+          </div>
+        )}
+
+        {isHandedOff && (
+          <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+            🔒 Essa conversa já foi encaminhada — a partir daqui é atendimento humano, a IA não responde mais aqui (mesmo que o lead mande mais mensagens).
           </div>
         )}
 

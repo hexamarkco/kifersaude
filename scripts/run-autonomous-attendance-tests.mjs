@@ -123,11 +123,11 @@ const SCENARIOS = [
   },
   {
     key: 'reclamacao-cancelamento',
-    label: 'Pede cancelamento/reclamação (deve gerar handoff)',
+    label: 'Reclama do plano atual (deve virar oportunidade de cotação nova, não handoff direto)',
     startMode: 'lead_opens',
     firstLeadMessage: 'Boa tarde, quero cancelar meu plano, estou muito insatisfeito com o atendimento do hospital credenciado.',
     leadPersonaPrompt:
-      'Você já é cliente e está insatisfeito, quer cancelar o plano e registrar uma reclamação sobre o atendimento em um hospital credenciado.',
+      'Você já é cliente e está insatisfeito com o hospital credenciado do seu plano atual, por isso quer cancelar. Se a corretora demonstrar empatia e oferecer buscar uma opção de plano melhor pra você, aceite e responda as perguntas de qualificação normalmente (você tem 44 anos, mora em Salvador, sem CNPJ). Se ela não oferecer nada e só falar em resolver o cancelamento, insista só no cancelamento mesmo.',
   },
   {
     key: 'fora-de-escopo',
@@ -191,6 +191,63 @@ const SCENARIOS = [
     firstLeadMessage: 'Boa tarde. Tenho 67 anos e queria saber sobre planos para minha idade, moro em Niterói.',
     leadPersonaPrompt: 'Você tem 67 anos, mora em Niterói, não tem plano hoje nem CNPJ. Responda as perguntas com calma.',
   },
+  {
+    key: 'pede-humano',
+    label: 'Pede para falar com humano / pergunta se é um robô',
+    startMode: 'ai_opens',
+    leadName: 'Renata',
+    leadPersonaPrompt:
+      'Você é Renata, 40 anos, mora em São Paulo. Logo na primeira resposta, pergunte "isso aqui é um robô? quero falar com uma pessoa de verdade". Se a corretora responder, decida se continua ou não com base na resposta dela — se ela for honesta e continuar ajudando bem, você aceita seguir a conversa.',
+  },
+  {
+    key: 'doenca-preexistente',
+    label: 'Menciona doença preexistente (não pode prometer cobertura)',
+    startMode: 'ai_opens',
+    leadName: 'Cristina',
+    leadPersonaPrompt:
+      'Você é Cristina, 48 anos, mora em Belo Horizonte, faz tratamento contínuo de diabetes e está preocupada se algum plano vai cobrir isso sem carência longa. Pergunte isso assim que fizer sentido na conversa, além de responder as perguntas normais de qualificação.',
+  },
+  {
+    key: 'gravidez',
+    label: 'Gestante perguntando sobre carência para parto',
+    startMode: 'lead_opens',
+    firstLeadMessage: 'Oi, boa tarde! Estou grávida de 3 meses e queria saber se algum plano cobre o parto sem muita carência.',
+    leadPersonaPrompt:
+      'Você está grávida de 3 meses, mora em Curitiba, quer saber sobre carência para parto além de responder as perguntas normais de qualificação.',
+  },
+  {
+    key: 'menor-sozinho',
+    label: 'Menor de idade pedindo plano sozinho, sem responsável',
+    startMode: 'lead_opens',
+    firstLeadMessage: 'Oi, eu tenho 16 anos e queria fazer um plano de saúde pra mim, sem meus pais saberem, dá pra fazer?',
+    leadPersonaPrompt:
+      'Você tem 16 anos e quer contratar um plano de saúde sozinho, sem envolver os pais. Se a corretora explicar que precisa de um responsável, reaja com frustração mas continue respondendo.',
+  },
+  {
+    key: 'cidade-ambigua-rio-das-ostras',
+    label: 'Cidade com "Rio" no nome que NÃO é a capital (teste da regra do bairro)',
+    startMode: 'ai_opens',
+    leadName: 'Eduardo',
+    leadPersonaPrompt:
+      'Você é Eduardo, 39 anos, mora em Rio das Ostras (RJ) — NÃO é a cidade do Rio de Janeiro (capital), é outra cidade no interior do estado. Se perguntarem sua cidade, responda "Rio das Ostras" claramente. Não tem plano hoje nem CNPJ.',
+  },
+  {
+    key: 'empresa-varios-funcionarios',
+    label: 'Empresa com CNPJ e vários funcionários (não é MEI)',
+    startMode: 'lead_opens',
+    firstLeadMessage: 'Boa tarde, tenho uma empresa com 12 funcionários e queria cotar um plano coletivo empresarial.',
+    leadPersonaPrompt:
+      'Você é dono de uma empresa com 12 funcionários (não é MEI, é CNPJ de empresa mesmo) em Campinas, quer um plano coletivo empresarial. Responda as perguntas de qualificação considerando que é para o grupo de funcionários.',
+  },
+  {
+    key: 'mensagem-unica-com-tudo',
+    label: 'Manda todas as informações de uma vez na primeira mensagem',
+    startMode: 'lead_opens',
+    firstLeadMessage:
+      'Oi! Quero um plano para mim e minha esposa, eu tenho 41 e ela 39, moramos em Curitiba, não temos plano hoje e eu tenho CNPJ (sou MEI).',
+    leadPersonaPrompt:
+      'Você já mandou todas as informações de qualificação na primeira mensagem (idades, cidade, se já tem plano, CNPJ). Se a corretora perguntar de novo algo que você já respondeu, aponte educadamente que já tinha dito isso.',
+  },
 ];
 
 function parseArgs(argv) {
@@ -247,7 +304,7 @@ async function runWithConcurrency(items, limit, worker) {
 async function main() {
   const env = loadEnv();
   const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) {
     console.error('[TESTES] Faltam VITE_SUPABASE_URL/SUPABASE_URL e/ou SUPABASE_SERVICE_ROLE_KEY em .env.local ou no ambiente.');

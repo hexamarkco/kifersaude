@@ -55,9 +55,22 @@ const formatDateTime = (value: string | null | undefined) => {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 };
 
+const WEEKDAY_SHORT_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+
+const formatActiveWeekdays = (activeWeekdays: number[] | null | undefined) => {
+  if (!activeWeekdays || activeWeekdays.length === 0 || activeWeekdays.length === 7) return null;
+  return [...activeWeekdays].sort((a, b) => a - b).map((day) => WEEKDAY_SHORT_LABELS[day]).join(', ');
+};
+
 const formatWindow = (campaign: CommWhatsAppCampaign) => {
-  if (!campaign.send_window_start || !campaign.send_window_end) return 'Sem janela definida';
-  return `${campaign.send_window_start.slice(0, 5)} - ${campaign.send_window_end.slice(0, 5)}`;
+  const weekdaysLabel = formatActiveWeekdays(campaign.active_weekdays);
+  const timeLabel = campaign.send_window_start && campaign.send_window_end
+    ? `${campaign.send_window_start.slice(0, 5)} - ${campaign.send_window_end.slice(0, 5)}`
+    : null;
+
+  if (!timeLabel && !weekdaysLabel) return 'Sem janela definida';
+  if (timeLabel && weekdaysLabel) return `${timeLabel} (${weekdaysLabel})`;
+  return timeLabel ?? weekdaysLabel ?? 'Sem janela definida';
 };
 
 export default function WhatsAppCampaignDetailScreen() {

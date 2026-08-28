@@ -19,6 +19,7 @@ export type CommWhatsAppCampaign = {
   daily_send_limit: number | null;
   send_window_start: string | null;
   send_window_end: string | null;
+  active_weekdays: number[];
   stop_on_reply: boolean;
   create_leads_from_csv: boolean;
   total_targets: number;
@@ -133,6 +134,7 @@ export type CreateCampaignInput = {
   dailySendLimit?: number | null;
   sendWindowStart?: string | null;
   sendWindowEnd?: string | null;
+  activeWeekdays: number[];
   stopOnReply: boolean;
   createLeadsFromCsv: boolean;
   stages: CommWhatsAppCampaignStageDraft[];
@@ -704,6 +706,7 @@ export const commWhatsAppCampaignService = {
         daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
+        active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
         ab_test_enabled: input.abTestEnabled,
@@ -795,6 +798,7 @@ export const commWhatsAppCampaignService = {
         daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
+        active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
         ab_test_enabled: input.abTestEnabled,

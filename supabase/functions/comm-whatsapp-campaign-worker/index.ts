@@ -66,6 +66,7 @@ type CampaignRow = {
   recurrence_next_run_at: string | null;
   recurrence_runs_completed: number;
   create_leads_from_csv: boolean;
+  active_weekdays: number[];
 };
 
 type TargetRow = {
@@ -278,12 +279,31 @@ const parseTimeOfDayToMinutes = (value: string | null) => {
   return hours * 60 + minutes;
 };
 
+const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// 0 = domingo .. 6 = sabado, mesma convencao de Date.getDay(). Sem
+// active_weekdays configurado (nulo/vazio - nao deveria acontecer com o
+// NOT NULL DEFAULT da coluna, mas o worker nao deve travar por causa disso),
+// trata como "todos os dias" para nao pausar campanhas silenciosamente.
+const isWithinActiveWeekday = (campaign: CampaignRow, now: Date, timeZone: string) => {
+  const activeWeekdays = campaign.active_weekdays;
+  if (!Array.isArray(activeWeekdays) || activeWeekdays.length === 0) return true;
+
+  const weekdayName = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(now);
+  const weekdayIndex = WEEKDAY_NAMES.indexOf(weekdayName);
+  if (weekdayIndex === -1) return true;
+
+  return activeWeekdays.includes(weekdayIndex);
+};
+
 const isWithinSendWindow = (campaign: CampaignRow, now = new Date()) => {
+  const timeZone = Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE;
+  if (!isWithinActiveWeekday(campaign, now, timeZone)) return false;
+
   const start = parseTimeOfDayToMinutes(campaign.send_window_start);
   const end = parseTimeOfDayToMinutes(campaign.send_window_end);
   if (start === null || end === null || start === end) return true;
 
-  const timeZone = Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE;
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hour: '2-digit',
@@ -534,7 +554,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -1552,6 +1572,7 @@ type CsvLeadDefaults = {
   tipoContratacaoValue: string | null;
   tipoContratacaoId: string | null;
   responsavelValue: string | null;
+  responsavelId: string | null;
 };
 
 const CSV_LEAD_ORIGIN_NAME = 'Disparo';
@@ -1560,7 +1581,50 @@ const CSV_LEAD_ORIGIN_NAME = 'Disparo';
 // legadas NOT NULL com FK por nome/valor para tabelas de configuracao (mesmo
 // padrao documentado em supabase/functions/public-lead-submit/index.ts).
 // Resolve tudo uma unica vez por lote de processamento, nao por alvo.
-async function resolveCsvLeadDefaults(supabaseAdmin: ReturnType<typeof createAdminClient>): Promise<CsvLeadDefaults> {
+// Deriva candidatos de "nome" a partir do perfil do criador da campanha
+// (user_profiles.username, e o prefixo do e-mail antes de @/./+), para casar
+// contra lead_responsaveis.label - a tabela hoje guarda primeiros nomes reais
+// dos vendedores (ex.: "Luiza", "Nick"), nao ha vinculo direto usuario<->responsavel
+// em nenhum outro lugar do sistema.
+function deriveResponsibleNameCandidates(profile: { email: string | null; username: string | null } | null): string[] {
+  if (!profile) return [];
+  const candidates = new Set<string>();
+
+  if (profile.username) candidates.add(profile.username);
+
+  const emailLocalPart = profile.email?.split('@')[0] ?? '';
+  if (emailLocalPart) {
+    candidates.add(emailLocalPart);
+    const firstSegment = emailLocalPart.split(/[.+_-]/)[0];
+    if (firstSegment) candidates.add(firstSegment);
+  }
+
+  return Array.from(candidates);
+}
+
+async function resolveCampaignCreatorResponsible(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaign: CampaignRow,
+  responsibles: Array<{ id: string; label: string; value: string }>,
+): Promise<{ id: string; label: string; value: string } | null> {
+  if (!campaign.created_by) return null;
+
+  const { data: profile } = await supabaseAdmin
+    .from('user_profiles')
+    .select('email,username')
+    .eq('id', campaign.created_by)
+    .maybeSingle();
+
+  const candidates = deriveResponsibleNameCandidates(profile ?? null).map(normalizeLeadStatusName);
+  if (candidates.length === 0) return null;
+
+  return responsibles.find((row) => candidates.includes(normalizeLeadStatusName(row.label))) ?? null;
+}
+
+async function resolveCsvLeadDefaults(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaign: CampaignRow,
+): Promise<CsvLeadDefaults> {
   let origemRow: { id: string; nome: string } | null = null;
   const { data: existingOrigin } = await supabaseAdmin
     .from('lead_origens')
@@ -1601,7 +1665,19 @@ async function resolveCsvLeadDefaults(supabaseAdmin: ReturnType<typeof createAdm
   }) ?? contractTypes[0] ?? null;
 
   const responsibles = responsibleRows ?? [];
-  const defaultResponsible = responsibles[0] ?? null;
+  const creatorResponsible = await resolveCampaignCreatorResponsible(supabaseAdmin, campaign, responsibles);
+  const defaultResponsible = creatorResponsible ?? responsibles[0] ?? null;
+
+  if (!creatorResponsible && defaultResponsible) {
+    // Nao foi possivel casar o criador da campanha com nenhum responsavel
+    // cadastrado (sem created_by, sem perfil, ou nome sem correspondencia em
+    // lead_responsaveis) - registra para o fallback nao passar despercebido.
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      eventType: 'csv_lead_responsible_fallback',
+      payload: { createdBy: campaign.created_by, fallbackResponsavel: defaultResponsible.value },
+    });
+  }
 
   return {
     origemNome: origemRow?.nome ?? CSV_LEAD_ORIGIN_NAME,
@@ -1611,6 +1687,7 @@ async function resolveCsvLeadDefaults(supabaseAdmin: ReturnType<typeof createAdm
     tipoContratacaoValue: defaultContractType?.value ?? null,
     tipoContratacaoId: defaultContractType?.id ?? null,
     responsavelValue: defaultResponsible?.value ?? null,
+    responsavelId: defaultResponsible?.id ?? null,
   };
 }
 
@@ -1683,6 +1760,7 @@ async function resolveOrCreateCsvTargetLead(
         tipo_contratacao: defaults.tipoContratacaoValue ?? undefined,
         tipo_contratacao_id: defaults.tipoContratacaoId,
         responsavel: defaults.responsavelValue ?? undefined,
+        responsavel_id: defaults.responsavelId,
         observacoes: `Lead criado automaticamente pelo disparo "${campaign.name}".`,
         data_criacao: now,
         ultimo_contato: now,
@@ -2178,7 +2256,7 @@ async function processCampaigns(
 
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays')
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -2214,7 +2292,7 @@ async function processCampaigns(
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
 
     const csvLeadDefaults = campaign.create_leads_from_csv && targets.some((target) => target.source_kind === 'csv' && !target.lead_id)
-      ? await resolveCsvLeadDefaults(supabaseAdmin)
+      ? await resolveCsvLeadDefaults(supabaseAdmin, campaign)
       : null;
 
     const processTarget = async (target: TargetRow): Promise<{ status?: string; skipped?: boolean }> => {

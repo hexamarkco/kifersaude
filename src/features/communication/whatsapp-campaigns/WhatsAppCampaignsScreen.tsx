@@ -46,6 +46,17 @@ const stepKindLabels: Record<CommWhatsAppCampaignStepKind, string> = {
   status_change: 'Mudar status do lead',
 };
 
+/** 0 = domingo .. 6 = sabado, mesma convencao usada pelo worker (Date.getDay()). */
+const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 0, label: 'Dom' },
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sab' },
+];
+
 /** Rotulo de campo com um icone de ajuda: hover/foco mostra a explicacao do campo. */
 function FieldLabel({ text, hint }: { text: string; hint: string }) {
   return (
@@ -262,6 +273,7 @@ export default function WhatsAppCampaignsScreen() {
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
+  const [activeWeekdays, setActiveWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
@@ -366,6 +378,7 @@ export default function WhatsAppCampaignsScreen() {
     setScheduledAt('');
     setSendWindowStart('');
     setSendWindowEnd('');
+    setActiveWeekdays([1, 2, 3, 4, 5]);
     setDailySendLimit(null);
     setReactivationMode(false);
     setInactiveDays(90);
@@ -473,6 +486,7 @@ export default function WhatsAppCampaignsScreen() {
       setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
       setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
+      setActiveWeekdays(campaign.active_weekdays?.length ? campaign.active_weekdays : [0, 1, 2, 3, 4, 5, 6]);
       setDailySendLimit(campaign.daily_send_limit ?? null);
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
@@ -575,6 +589,7 @@ export default function WhatsAppCampaignsScreen() {
         dailySendLimit,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
+        activeWeekdays: activeWeekdays.length > 0 ? activeWeekdays : [0, 1, 2, 3, 4, 5, 6],
         stopOnReply: true,
         createLeadsFromCsv,
         stages: normalizedStages,
@@ -1382,6 +1397,29 @@ export default function WhatsAppCampaignsScreen() {
               <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
           </div>
+          <Field label={<FieldLabel text="Dias de envio" hint="Dias da semana em que o disparo pode enviar mensagens. Nos dias desmarcados, o disparo fica pausado (igual a fora da janela de horario) e retoma sozinho no proximo dia permitido." />}>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAY_OPTIONS.map((day) => {
+                const isActive = activeWeekdays.includes(day.value);
+                return (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={isActive ? 'primary' : 'ghost'}
+                    size="xs"
+                    onClick={() => setActiveWeekdays((current) => {
+                      const next = current.includes(day.value)
+                        ? current.filter((value) => value !== day.value)
+                        : [...current, day.value];
+                      return next.length > 0 ? next : current;
+                    })}
+                  >
+                    {day.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </Field>
           </>
           )}
             </DialogBody>

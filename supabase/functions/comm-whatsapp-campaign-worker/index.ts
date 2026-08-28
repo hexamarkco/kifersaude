@@ -2246,22 +2246,31 @@ async function sendTarget(params: {
 }
 
 // Quantos alvos com whatsapp_check_status='pending' este tick tenta checar,
-// e com quantas checagens simultaneas. Cada checagem e uma chamada
-// individual a Whapi (checkWhapiContactStatus) - nao ha endpoint de lote
-// documentado/confirmado, entao evita depender de um formato de resposta em
-// lote nao verificado. Concorrencia baixa de proposito: uma checagem que
-// falha (rede, rate limit 429 etc.) fica 'unknown' e e tentada de novo no
-// proximo tick, NUNCA e tratada como "nao tem WhatsApp" - so uma resposta
-// explicita da Whapi confirma isso. Para um CSV de dezenas de milhares de
-// linhas isso roda em segundo plano ao longo de varias horas, um tick por
-// minuto.
+// com quantas checagens simultaneas, e por quanto tempo no maximo. Cada
+// checagem e uma chamada individual a Whapi (checkWhapiContactStatus) - nao
+// ha endpoint de lote documentado/confirmado, entao evita depender de um
+// formato de resposta em lote nao verificado. Concorrencia baixa de
+// proposito: uma checagem que falha (rede, rate limit 429 etc.) fica
+// 'unknown' e e tentada de novo no proximo tick, NUNCA e tratada como "nao
+// tem WhatsApp" - so uma resposta explicita da Whapi confirma isso.
+//
+// O orcamento de tempo (WHATSAPP_VALIDATION_TIME_BUDGET_MS) e o que
+// realmente importa aqui: 300 alvos / 5 simultaneos, se a Whapi estiver
+// lenta ou instavel (timeout de 10s por checagem), pode levar minutos -
+// tempo suficiente pra estourar o limite de execucao da invocacao e matar o
+// tick INTEIRO antes mesmo de chegar no envio de mensagens de verdade, que
+// roda depois desta funcao em processCampaigns. Por isso a validacao para
+// de pegar novos alvos assim que o orcamento estoura (o resto fica
+// 'pending' pro proximo tick) - o envio de mensagens sempre tem que rodar
+// todo tick, mesmo se a Whapi estiver reagindo mal as checagens de numero.
 const WHATSAPP_VALIDATION_TARGETS_PER_TICK = 300;
 const WHATSAPP_VALIDATION_CONCURRENCY = 5;
+const WHATSAPP_VALIDATION_TIME_BUDGET_MS = 15_000;
 
 async function validatePendingWhatsAppTargets(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   token: string,
-): Promise<{ checked: number; valid: number; invalid: number }> {
+): Promise<{ checked: number; valid: number; invalid: number; skippedByBudget: number }> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
     .select('id,campaign_id,phone_number,phone_digits')
@@ -2271,20 +2280,29 @@ async function validatePendingWhatsAppTargets(
 
   if (error) {
     console.error('[comm-whatsapp-campaign-worker] erro ao buscar alvos pendentes de validacao no WhatsApp', error);
-    return { checked: 0, valid: 0, invalid: 0 };
+    return { checked: 0, valid: 0, invalid: 0, skippedByBudget: 0 };
   }
 
   const targets = (data ?? []) as Array<{ id: string; campaign_id: string; phone_number: string; phone_digits: string }>;
-  if (targets.length === 0) return { checked: 0, valid: 0, invalid: 0 };
+  if (targets.length === 0) return { checked: 0, valid: 0, invalid: 0, skippedByBudget: 0 };
 
   let validCount = 0;
   let invalidCount = 0;
+  let checkedCount = 0;
+  let skippedByBudget = 0;
   const nowIso = getNowIso();
+  const deadline = Date.now() + WHATSAPP_VALIDATION_TIME_BUDGET_MS;
 
   await mapWithConcurrency(targets, WHATSAPP_VALIDATION_CONCURRENCY, async (target) => {
+    if (Date.now() > deadline) {
+      skippedByBudget += 1;
+      return;
+    }
+
     const phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
 
     if (!phoneDigits) {
+      checkedCount += 1;
       invalidCount += 1;
       await supabaseAdmin
         .from('comm_whatsapp_campaign_targets')
@@ -2295,6 +2313,7 @@ async function validatePendingWhatsAppTargets(
     }
 
     const result = await checkWhapiContactStatus({ token, contactId: phoneDigits });
+    checkedCount += 1;
 
     if (result.outcome === 'unknown') {
       // Falha de rede/Whapi ou resposta ambigua: deixa 'pending' pra tentar
@@ -2325,7 +2344,14 @@ async function validatePendingWhatsAppTargets(
     }
   });
 
-  return { checked: targets.length, valid: validCount, invalid: invalidCount };
+  if (skippedByBudget > 0) {
+    console.warn('[comm-whatsapp-campaign-worker] validacao de WhatsApp cortada pelo orcamento de tempo do tick', {
+      checked: checkedCount,
+      skippedByBudget,
+    });
+  }
+
+  return { checked: checkedCount, valid: validCount, invalid: invalidCount, skippedByBudget };
 }
 
 async function processCampaigns(

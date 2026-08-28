@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Ban, BarChart3, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
+import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../lib/toast';
 import {
   commWhatsAppCampaignService,
@@ -88,6 +89,8 @@ export default function WhatsAppCampaignDetailScreen() {
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const targetsPageRef = useRef(0);
 
   const loadDetail = useCallback(async () => {
     if (!campaignId) return;
@@ -104,6 +107,7 @@ export default function WhatsAppCampaignDetailScreen() {
       setTargets(nextTargets.targets);
       setTargetsTotal(nextTargets.total);
       setTargetsPage(0);
+      targetsPageRef.current = 0;
       setStatusCounts(nextStatusCounts);
       setFailureSample(nextFailureSample);
       setPendingWhatsAppValidation(nextPendingValidation);
@@ -126,12 +130,101 @@ export default function WhatsAppCampaignDetailScreen() {
       setTargets(result.targets);
       setTargetsTotal(result.total);
       setTargetsPage(page);
+      targetsPageRef.current = page;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar esta pagina de contatos.');
     } finally {
       setLoadingTargetsPage(false);
     }
   }, [campaignId]);
+
+  // Atualizacao leve chamada quando a linha da campanha muda (worker roda um
+  // tick por minuto): re-busca so os agregados baratos (contadores via RPC,
+  // amostra de falhas, contagem de validacao pendente) e a pagina de
+  // contatos que o usuario esta vendo agora - sem mexer no estado de
+  // "loading" da tela nem resetar a paginacao, e sem toast em erro (e uma
+  // atualizacao em segundo plano, nao uma acao do usuario).
+  const refreshLiveData = useCallback(async () => {
+    if (!campaignId) return;
+    try {
+      const [nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
+        commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: targetsPageRef.current, pageSize: TARGETS_PAGE_SIZE }),
+        commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
+        commWhatsAppCampaignService.getCampaignFailureSample(campaignId),
+        commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
+      ]);
+      setTargets(nextTargets.targets);
+      setTargetsTotal(nextTargets.total);
+      setStatusCounts(nextStatusCounts);
+      setFailureSample(nextFailureSample);
+      setPendingWhatsAppValidation(nextPendingValidation);
+    } catch (error) {
+      console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
+    }
+  }, [campaignId]);
+
+  // A linha de comm_whatsapp_campaigns e atualizada pelo worker uma vez por
+  // tick (a cada minuto) enquanto a campanha esta ativa - poucas escritas,
+  // da pra assinar via Realtime sem risco de inundar o navegador. De
+  // proposito NAO assina comm_whatsapp_campaign_targets: numa campanha
+  // grande isso pode ter centenas/milhares de updates por minuto durante
+  // envio ativo. Se o Realtime nao conectar (rede bloqueando websocket,
+  // etc.), cai num polling de 20s como reserva.
+  useEffect(() => {
+    if (!campaignId) {
+      setIsLive(false);
+      return;
+    }
+
+    let active = true;
+    let pollIntervalId: number | null = null;
+
+    const startPollingFallback = () => {
+      if (pollIntervalId !== null) return;
+      pollIntervalId = window.setInterval(() => { void refreshLiveData(); }, 20_000);
+    };
+
+    const fallbackTimeoutId = window.setTimeout(() => {
+      if (active) startPollingFallback();
+    }, 4_000);
+
+    const channel = supabase
+      .channel(`comm-whatsapp-campaign-${campaignId}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'comm_whatsapp_campaigns', filter: `id=eq.${campaignId}` },
+        (payload) => {
+          if (!active) return;
+          setCampaign(payload.new as CommWhatsAppCampaign);
+          void refreshLiveData();
+        },
+      )
+      .subscribe((status) => {
+        if (!active) return;
+
+        if (status === 'SUBSCRIBED') {
+          window.clearTimeout(fallbackTimeoutId);
+          if (pollIntervalId !== null) {
+            window.clearInterval(pollIntervalId);
+            pollIntervalId = null;
+          }
+          setIsLive(true);
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          window.clearTimeout(fallbackTimeoutId);
+          startPollingFallback();
+          setIsLive(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(fallbackTimeoutId);
+      if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
+      void supabase.removeChannel(channel);
+    };
+  }, [campaignId, refreshLiveData]);
 
   const targetCounts = useMemo(() => {
     const counts: Record<CommWhatsAppCampaignTargetStatus, number> = {
@@ -225,7 +318,13 @@ export default function WhatsAppCampaignDetailScreen() {
         title={campaign?.name ?? 'Detalhe do disparo'}
         description="Acompanhe contatos, status da fila, proximos envios e acoes operacionais da campanha."
         actions={(
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {campaign && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--panel-text-muted)]">
+                <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-[color:var(--panel-text-muted)]'}`} />
+                {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
+              </span>
+            )}
             <Button variant="secondary" className="whitespace-nowrap" onClick={() => navigate('/painel/disparos')}>
               <ArrowLeft className="h-4 w-4" />
               Voltar

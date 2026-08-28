@@ -3,7 +3,7 @@ import { ArrowLeft, Ban, BarChart3, PauseCircle, PlayCircle, RefreshCw, Send, Us
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
+import { Badge, Button, Card, EmptyState, IconButton, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../lib/toast';
 import {
@@ -325,14 +325,12 @@ export default function WhatsAppCampaignDetailScreen() {
                 {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
               </span>
             )}
-            <Button variant="secondary" className="whitespace-nowrap" onClick={() => navigate('/painel/disparos')}>
+            <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
               <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </Button>
-            <Button variant="secondary" className="whitespace-nowrap" loading={loading} onClick={() => void loadDetail()}>
+            </IconButton>
+            <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
               <RefreshCw className="h-4 w-4" />
-              Atualizar
-            </Button>
+            </IconButton>
           </div>
         )}
       />

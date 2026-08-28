@@ -349,8 +349,8 @@ export default function WhatsAppCampaignDetailScreen() {
       ) : campaign ? (
         <>
           <Card className="comm-campaign-toolbar space-y-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="accent">{campaignStatusLabels[campaign.status]}</Badge>
                   <Badge tone="neutral">{campaign.audience_source.toUpperCase()}</Badge>

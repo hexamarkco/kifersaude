@@ -583,20 +583,15 @@ export const commWhatsAppCampaignService = {
     return { targets: (data ?? []) as CommWhatsAppCampaignTarget[], total: count ?? 0 };
   },
 
-  async getCampaignFailureSample(campaignId: string): Promise<Array<{ error_message: string | null }>> {
-    const { data, error } = await supabase
-      .from('comm_whatsapp_campaign_targets')
-      .select('error_message')
-      .eq('campaign_id', campaignId)
-      .in('status', ['failed', 'invalid'])
-      .order('updated_at', { ascending: false })
-      .limit(500);
+  async getCampaignFailureReasons(campaignId: string): Promise<Array<{ error_message: string; total_count: number }>> {
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_failure_reasons', { p_campaign_id: campaignId });
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os motivos de falha.'));
     }
 
-    return (data ?? []) as Array<{ error_message: string | null }>;
+    return ((data ?? []) as Array<{ error_message: string; total_count: number | string }>)
+      .map((row) => ({ error_message: row.error_message, total_count: Number(row.total_count) }));
   },
 
   async getCampaignTargetStatusCounts(campaignId: string): Promise<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>> {

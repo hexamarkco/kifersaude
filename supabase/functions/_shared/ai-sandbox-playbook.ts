@@ -144,6 +144,7 @@ export const buildReferencePrompt = (quickReplies: QuickReplyRef[], similarSitua
       'SITUACOES PARECIDAS JA ATENDIDAS DE VERDADE (exemplos reais do historico, para voce se inspirar em COMO abordar, nao no conteudo especifico):',
       similarSituations.map((s, i) => `${i + 1}. Cliente disse algo parecido com: "${s.situacao}"\n   Resposta real dada na epoca: "${s.resposta}"`).join('\n'),
       'Use isso so como referencia de abordagem/tom para uma situacao semelhante — nunca copie valores, nomes, operadoras ou detalhes especificos desses exemplos para o lead atual, cada caso e unico.',
+      'ATENCAO: essas respostas reais foram escritas por uma pessoa e podem conter erros (ex: repetir uma pergunta ja respondida, perguntar bairro fora do Rio, etc.). Copie o TOM delas, mas NUNCA copie um erro — as REGRAS CRITICAS deste prompt sempre valem, mesmo quando o exemplo real nao seguiu.',
     );
   }
 

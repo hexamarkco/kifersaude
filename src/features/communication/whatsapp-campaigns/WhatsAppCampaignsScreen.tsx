@@ -305,10 +305,19 @@ export default function WhatsAppCampaignsScreen() {
       || suggestion.label.toLowerCase().includes(variableAutocomplete.query)
     ));
   }, [variableAutocomplete]);
-  const csvValidTargets = useMemo(
-    () => csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0),
-    [csvTargets],
-  );
+  const csvValidTargets = useMemo(() => {
+    const seenPhoneDigits = new Set<string>();
+    return csvTargets.filter((target) => {
+      const phoneDigits = commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber);
+      if (!phoneDigits || seenPhoneDigits.has(phoneDigits)) return false;
+      seenPhoneDigits.add(phoneDigits);
+      return true;
+    });
+  }, [csvTargets]);
+  const csvDuplicatePhoneCount = useMemo(() => {
+    const validPhoneCount = csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0).length;
+    return validPhoneCount - csvValidTargets.length;
+  }, [csvTargets, csvValidTargets]);
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
@@ -1024,6 +1033,9 @@ export default function WhatsAppCampaignsScreen() {
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
                 <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) validos</Badge>
+                {csvDuplicatePhoneCount > 0 && (
+                  <Badge tone="warning">{csvDuplicatePhoneCount} duplicado(s) removido(s)</Badge>
+                )}
               </div>
             </Surface>
           )}

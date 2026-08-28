@@ -721,7 +721,7 @@ export const commWhatsAppCampaignService = {
     }
 
     const createdCampaign = campaign as CommWhatsAppCampaign;
-    const csvTargets = (input.csvTargets ?? [])
+    const csvTargetsWithDuplicates = (input.csvTargets ?? [])
       .map((target) => ({
         campaign_id: createdCampaign.id,
         phone_number: target.phoneNumber,
@@ -732,10 +732,21 @@ export const commWhatsAppCampaignService = {
       }))
       .filter((target) => target.phone_digits.length > 0);
 
+    // O CSV pode trazer o mesmo telefone repetido (em formatos diferentes ou
+    // nao). Mantem so a primeira ocorrencia por numero normalizado - o banco
+    // tem uma constraint unica (campaign_id, phone_digits) que rejeitaria o
+    // insert inteiro se algum duplicado escapasse daqui.
+    const seenPhoneDigits = new Set<string>();
+    const csvTargets = csvTargetsWithDuplicates.filter((target) => {
+      if (seenPhoneDigits.has(target.phone_digits)) return false;
+      seenPhoneDigits.add(target.phone_digits);
+      return true;
+    });
+
     if (csvTargets.length > 0) {
       const { error: targetsError } = await supabase
         .from('comm_whatsapp_campaign_targets')
-        .insert(csvTargets);
+        .upsert(csvTargets, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
 
       if (targetsError) {
         throw new Error(getSupabaseErrorMessage(targetsError, 'O disparo foi criado, mas os contatos do CSV nao foram salvos.'));

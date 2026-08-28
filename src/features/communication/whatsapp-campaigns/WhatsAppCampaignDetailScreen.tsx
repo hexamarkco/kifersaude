@@ -85,7 +85,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [targetsPage, setTargetsPage] = useState(0);
   const [loadingTargetsPage, setLoadingTargetsPage] = useState(false);
   const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>>([]);
-  const [failureSample, setFailureSample] = useState<Array<{ error_message: string | null }>>([]);
+  const [failureReasons, setFailureReasons] = useState<Array<{ error_message: string; total_count: number }>>([]);
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -99,11 +99,11 @@ export default function WhatsAppCampaignDetailScreen() {
     setLoading(true);
     loadDetailInFlightRef.current = true;
     try {
-      const [nextCampaign, nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
+      const [nextCampaign, nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.getCampaign(campaignId),
         commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: 0, pageSize: TARGETS_PAGE_SIZE }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
-        commWhatsAppCampaignService.getCampaignFailureSample(campaignId),
+        commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       setCampaign(nextCampaign);
@@ -112,7 +112,7 @@ export default function WhatsAppCampaignDetailScreen() {
       setTargetsPage(0);
       targetsPageRef.current = 0;
       setStatusCounts(nextStatusCounts);
-      setFailureSample(nextFailureSample);
+      setFailureReasons(nextFailureReasons);
       setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o detalhe do disparo.');
@@ -160,16 +160,16 @@ export default function WhatsAppCampaignDetailScreen() {
     if (refreshLiveDataInFlightRef.current || loadDetailInFlightRef.current) return;
     refreshLiveDataInFlightRef.current = true;
     try {
-      const [nextTargets, nextStatusCounts, nextFailureSample, nextPendingValidation] = await Promise.all([
+      const [nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
         commWhatsAppCampaignService.listCampaignTargets(campaignId, { page: targetsPageRef.current, pageSize: TARGETS_PAGE_SIZE }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
-        commWhatsAppCampaignService.getCampaignFailureSample(campaignId),
+        commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       setTargets(nextTargets.targets);
       setTargetsTotal(nextTargets.total);
       setStatusCounts(nextStatusCounts);
-      setFailureSample(nextFailureSample);
+      setFailureReasons(nextFailureReasons);
       setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
       console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
@@ -268,16 +268,10 @@ export default function WhatsAppCampaignDetailScreen() {
   const conversionRate = contactedCount > 0 ? Math.round((respondedCount / contactedCount) * 1000) / 10 : 0;
   const failureRate = contactedCount > 0 ? Math.round(((targetCounts.failed + targetCounts.invalid) / contactedCount) * 1000) / 10 : 0;
 
-  const topFailureReasons = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const row of failureSample) {
-      const reason = row.error_message?.trim() || 'Sem motivo registrado';
-      counts.set(reason, (counts.get(reason) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
-  }, [failureSample]);
+  const topFailureReasons = useMemo(
+    () => failureReasons.slice(0, 5).map((row) => [row.error_message, row.total_count] as const),
+    [failureReasons],
+  );
 
   const variantBreakdown = useMemo(() => {
     if (!campaign?.ab_test_enabled) return [];
@@ -430,8 +424,8 @@ export default function WhatsAppCampaignDetailScreen() {
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
                 <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Principais motivos de falha</h3>
-                {failureSample.length >= 500 && (targetCounts.failed + targetCounts.invalid) > failureSample.length && (
-                  <p className="text-xs text-[color:var(--panel-text-muted)]">Baseado nas 500 falhas mais recentes.</p>
+                {failureReasons.length > 5 && (
+                  <p className="text-xs text-[color:var(--panel-text-muted)]">Mostrando os 5 mais comuns de {failureReasons.length} motivo(s) distintos.</p>
                 )}
                 {topFailureReasons.length > 0 ? (
                   <ul className="mt-2 space-y-2">

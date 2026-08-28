@@ -88,6 +88,9 @@ const campaignVariableSuggestions = [
   { key: 'telefone', label: 'Telefone', description: 'Telefone normalizado do contato.' },
   { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
   { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
+  { key: 'saudacao', label: 'Saudacao', description: 'Saudacao atual em minusculo, como "bom dia".' },
+  { key: 'saudacao_titulo', label: 'Saudacao em titulo', description: 'Saudacao atual capitalizada, como "Bom dia".' },
+  { key: 'saudacao_capitalizada', label: 'Saudacao capitalizada', description: 'Alias de saudacao capitalizada, como "Bom dia".' },
 ];
 
 const formatEstimatedDuration = (minutes: number) => {

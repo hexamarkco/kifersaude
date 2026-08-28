@@ -323,15 +323,36 @@ const getDelayMs = (step: CampaignStepRow) => {
   return amount * 60 * 1000;
 };
 
+// Mesma logica de src/lib/greeting.ts, duplicada aqui porque Edge Functions
+// (Deno) nao podem importar codigo do bundle do frontend.
+const resolveCampaignGreeting = (now = new Date()): string => {
+  const timeZone = Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE;
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', hour12: false }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? now.getUTCHours()) % 24;
+
+  if (hour >= 5 && hour < 12) return 'bom dia';
+  if (hour >= 12 && hour < 18) return 'boa tarde';
+  return 'boa noite';
+};
+
+const formatGreetingTitle = (greeting: string): string => {
+  const trimmed = greeting.trim();
+  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}` : '';
+};
+
 const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
+  const greeting = resolveCampaignGreeting();
   const replacements: Record<string, string> = {
     nome: lead?.nome_completo || target?.display_name || '',
     primeiro_nome: (lead?.nome_completo || target?.display_name || '').split(/\s+/).filter(Boolean)[0] || '',
     telefone: lead?.telefone || target?.phone_number || '',
     status: lead?.status || '',
     responsavel: lead?.responsavel || '',
+    saudacao: greeting,
+    saudacao_titulo: formatGreetingTitle(greeting),
+    saudacao_capitalizada: formatGreetingTitle(greeting),
   };
 
   return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');

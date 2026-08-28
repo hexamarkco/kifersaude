@@ -1,3 +1,4 @@
+import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
 import { getSupabaseErrorMessage, supabase } from '../../../lib/supabase';
 
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
@@ -300,7 +301,7 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
-const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel']);
+const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada']);
 
 const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
   const variables = new Set<string>();
@@ -313,12 +314,16 @@ const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
 };
 
 const resolveSampleMessage = (template: string, sample: { name: string; phone: string; status?: string | null; responsavel?: string | null }) => {
+  const greeting = getGreetingForDate(new Date());
   const replacements: Record<string, string> = {
     nome: sample.name || '',
     primeiro_nome: (sample.name || '').split(/\s+/).filter(Boolean)[0] || '',
     telefone: sample.phone || '',
     status: sample.status || '',
     responsavel: sample.responsavel || '',
+    saudacao: greeting,
+    saudacao_titulo: formatGreetingTitle(greeting),
+    saudacao_capitalizada: formatGreetingTitle(greeting),
   };
 
   return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');

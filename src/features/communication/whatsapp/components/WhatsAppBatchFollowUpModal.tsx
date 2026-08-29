@@ -6,11 +6,9 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { supabase } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
-import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
-import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 import WhatsAppDialog from './WhatsAppDialog';
 import {
   AiContextPanel,
@@ -21,9 +19,6 @@ import {
   RefinementChip,
   SIMPLE_REFINEMENT_ACTIONS,
   formatNextActionDate,
-  SalesTechniqueSelector,
-  SituationPresetSelector,
-  ToneSelector,
   VariationCarousel,
 } from './followUpModalUi';
 
@@ -53,11 +48,7 @@ type BatchItemState = {
   reminderTitle: string;
   externalChatId: string | null;
 
-  tone: CommWhatsAppFollowUpTone;
   customInstructions: string;
-  selectedSalesTechniques: string[];
-  selectedSituationPresetIds: string[];
-  manualContext: { tone: boolean; situationPresetIds: boolean; salesTechniques: boolean };
 
   status: 'pending' | 'generating' | 'ready' | 'failed';
   generatedText: string;
@@ -168,11 +159,7 @@ export default function WhatsAppBatchFollowUpModal({
           reminderId: chat.reminder_id,
           reminderTitle: chat.reminder_title,
           externalChatId: chat.external_chat_id,
-          tone: 'consultivo',
           customInstructions: '',
-          selectedSalesTechniques: [],
-          selectedSituationPresetIds: [],
-          manualContext: { tone: false, situationPresetIds: false, salesTechniques: false },
           status: 'pending',
           generatedText: '',
           variations: [],
@@ -229,13 +216,8 @@ export default function WhatsAppBatchFollowUpModal({
 
     try {
       const result = await commWhatsAppService.generateFollowUp(item.chatId, {
-        tone: item.tone,
         customInstructions: item.customInstructions,
-        salesTechniques: item.selectedSalesTechniques,
-        situationPresetIds: item.selectedSituationPresetIds,
         variantCount: options?.variantCount,
-        autoSelectContext: true,
-        manualContext: item.manualContext,
       });
 
       setItems((prev) =>
@@ -246,14 +228,6 @@ export default function WhatsAppBatchFollowUpModal({
           aiContextRationale: result.aiContext?.rationale ?? null,
           emotionalContext: result.aiContext?.emotionalContext ?? null,
           nextAction: result.nextAction ?? null,
-          tone: (result.aiContext?.tone as CommWhatsAppFollowUpTone) ?? item.tone,
-          selectedSituationPresetIds: result.aiContext?.situationPresetIds ?? item.selectedSituationPresetIds,
-          selectedSalesTechniques: result.aiContext?.salesTechniques ?? item.selectedSalesTechniques,
-          manualContext: {
-            tone: Boolean(result.aiContext?.tone) || item.manualContext.tone,
-            situationPresetIds: Boolean(result.aiContext?.situationPresetIds?.length) || item.manualContext.situationPresetIds,
-            salesTechniques: Boolean(result.aiContext?.salesTechniques?.length) || item.manualContext.salesTechniques,
-          },
           error: null,
         }),
       );
@@ -315,69 +289,6 @@ export default function WhatsAppBatchFollowUpModal({
     }
   };
 
-  // ---- Tone / presets / techniques ----
-
-  const handleChangeTone = (value: CommWhatsAppFollowUpTone) => {
-    const idx = activeItemIndex;
-    if (idx === null) return;
-    setItems((prev) =>
-      updateItemInList(prev, idx, {
-        tone: value,
-        manualContext: { ...prev[idx].manualContext, tone: true },
-      }),
-    );
-  };
-
-  const handleToggleSituationPreset = (presetId: string) => {
-    const idx = activeItemIndex;
-    if (idx === null) return;
-    setItems((prev) => {
-      const current = prev[idx].selectedSituationPresetIds;
-      const next = current.includes(presetId) ? current.filter((id) => id !== presetId) : [...current, presetId];
-      return updateItemInList(prev, idx, {
-        selectedSituationPresetIds: next,
-        manualContext: { ...prev[idx].manualContext, situationPresetIds: next.length > 0 },
-      });
-    });
-  };
-
-  const handleToggleSalesTechnique = (techniqueId: string) => {
-    const idx = activeItemIndex;
-    if (idx === null) return;
-    setItems((prev) => {
-      const current = prev[idx].selectedSalesTechniques;
-      const next = current.includes(techniqueId) ? current.filter((id) => id !== techniqueId) : [...current, techniqueId];
-      return updateItemInList(prev, idx, {
-        selectedSalesTechniques: next,
-        manualContext: { ...prev[idx].manualContext, salesTechniques: next.length > 0 },
-      });
-    });
-  };
-
-  // ---- Batch apply config to all ----
-
-  const handleBatchApplyTone = (tone: CommWhatsAppFollowUpTone) => {
-    setItems((prev) => prev.map((it) => ({
-      ...it,
-      tone,
-      manualContext: { ...it.manualContext, tone: true },
-    })));
-    toast.success('Tom aplicado a todos os leads.');
-  };
-
-  const handleBatchApplySituationPreset = (presetId: string) => {
-    setItems((prev) => prev.map((it) => {
-      const current = it.selectedSituationPresetIds;
-      const next = current.includes(presetId) ? current.filter((id) => id !== presetId) : [...current, presetId];
-      return {
-        ...it,
-        selectedSituationPresetIds: next,
-        manualContext: { ...it.manualContext, situationPresetIds: next.length > 0 },
-      };
-    }));
-    toast.success('Cenário atualizado para todos os leads.');
-  };
-
   // ---- Bulk generate ----
 
   const handleGenerateAll = async () => {
@@ -410,12 +321,7 @@ export default function WhatsAppBatchFollowUpModal({
       const results = await Promise.allSettled(
         batch.map((idx) =>
           commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
-            tone: updatedItems[idx].tone,
             customInstructions: updatedItems[idx].customInstructions,
-            salesTechniques: updatedItems[idx].selectedSalesTechniques,
-            situationPresetIds: updatedItems[idx].selectedSituationPresetIds,
-            autoSelectContext: true,
-            manualContext: updatedItems[idx].manualContext,
           }),
         ),
       );
@@ -1013,99 +919,34 @@ export default function WhatsAppBatchFollowUpModal({
                   <NextActionCard nextAction={activeItem.nextAction} title="Próxima ação" />
                 ) : null}
 
-                {/* Configuração da IA accordion */}
+                {/* Ajustes extras accordion */}
                 <details
                   className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm"
-                  open={configOpen || activeItem.customInstructions.trim().length > 0 || activeItem.selectedSalesTechniques.length > 0}
+                  open={configOpen || activeItem.customInstructions.trim().length > 0}
                   onToggle={(e) => setConfigOpen(e.currentTarget.open)}
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4 text-[var(--text-secondary)]" />
                       <div>
-                        <h3 className="text-sm font-bold text-[var(--text-primary)]">Configurar IA</h3>
+                        <h3 className="text-sm font-bold text-[var(--text-primary)]">Ajustes extras</h3>
                         <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                          Tom, cenário, técnicas e instruções
+                          A IA decide sozinha estágio, tom e estratégia — use aqui só o que ela precisa saber.
                         </p>
                       </div>
                     </div>
                     <Pill>{configOpen ? 'Recolher' : 'Abrir'}</Pill>
                   </summary>
                   <div className="space-y-4 border-t border-[var(--border-subtle)] px-4 pb-4 pt-3">
-                    {/* Tone */}
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Tom</h4>
-                        <button
-                          type="button"
-                          className="text-[10px] font-semibold text-[var(--brand-primary)] underline transition hover:opacity-70"
-                          onClick={() => handleBatchApplyTone(activeItem.tone)}
-                          disabled={phase !== 'ready'}
-                        >
-                          Aplicar a todos
-                        </button>
-                      </div>
-                      <ToneSelector value={activeItem.tone} onChange={handleChangeTone} disabled={phase !== 'ready'} />
-                    </div>
-
-                    {/* Situation presets */}
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Cenário</h4>
-                        <button
-                          type="button"
-                          className="text-[10px] font-semibold text-[var(--brand-primary)] underline transition hover:opacity-70"
-                          onClick={() => {
-                            const activePresets = activeItem.selectedSituationPresetIds;
-                            if (activePresets.length > 0) {
-                              activePresets.forEach((id) => handleBatchApplySituationPreset(id));
-                            } else {
-                              handleBatchApplySituationPreset(CONVERSATION_SITUATION_PRESETS[0].id);
-                            }
-                          }}
-                          disabled={phase !== 'ready'}
-                        >
-                          Aplicar a todos
-                        </button>
-                      </div>
-                      <SituationPresetSelector
-                        presets={CONVERSATION_SITUATION_PRESETS}
-                        selectedIds={activeItem.selectedSituationPresetIds}
-                        onToggle={handleToggleSituationPreset}
-                        disabled={phase !== 'ready'}
-                      />
-                    </div>
-
-                    {/* Sales techniques */}
-                    <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                        Técnicas avançadas
-                      </h4>
-                      <div className="max-h-32 overflow-y-auto pr-1">
-                        <SalesTechniqueSelector
-                          techniques={followUpSalesTechniqueOptions}
-                          selectedIds={activeItem.selectedSalesTechniques}
-                          onToggle={handleToggleSalesTechnique}
-                          disabled={phase !== 'ready'}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Custom instructions */}
-                    <div>
-                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                        Instruções extras
-                      </h4>
-                      <VariableAutocompleteTextarea
-                        value={activeItem.customInstructions}
-                        onChange={(val) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { customInstructions: val }))}
-                        suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
-                        rows={3}
-                        size="compact"
-                        placeholder={'Ex.: Fale mais curto, não insista, termine com pergunta objetiva.'}
-                        disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                      />
-                    </div>
+                    <VariableAutocompleteTextarea
+                      value={activeItem.customInstructions}
+                      onChange={(val) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { customInstructions: val }))}
+                      suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
+                      rows={3}
+                      size="compact"
+                      placeholder={'Ex.: Não fale de preço, quero descobrir o que está travando.'}
+                      disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                    />
                   </div>
                 </details>
               </aside>

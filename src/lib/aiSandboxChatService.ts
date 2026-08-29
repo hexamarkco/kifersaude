@@ -4,6 +4,7 @@ export type AiSandboxConversation = {
   id: string;
   title: string;
   created_by: string | null;
+  is_automated: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -26,6 +27,14 @@ type GenerateReplyResult = {
   model: string | null;
 };
 
+type GenerateOpeningResult = {
+  messages: string[];
+  handoffReason: string | null;
+  provider: string | null;
+  model: string | null;
+  alreadyHandedOff: boolean;
+};
+
 const buildTitleFromMessage = (message: string): string => {
   const clean = message.trim().replace(/\s+/g, ' ');
   if (!clean) return 'Nova simulação';
@@ -33,10 +42,11 @@ const buildTitleFromMessage = (message: string): string => {
 };
 
 export const aiSandboxChatService = {
-  async listConversations(): Promise<AiSandboxConversation[]> {
+  async listConversations(automatedOnly = false): Promise<AiSandboxConversation[]> {
     const { data, error } = await supabase
       .from('ai_sandbox_conversations')
       .select('*')
+      .eq('is_automated', automatedOnly)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as simulacoes.'));
@@ -94,36 +104,60 @@ export const aiSandboxChatService = {
     return data as AiSandboxMessage;
   },
 
-  async generateReply(conversationId: string): Promise<GenerateReplyResult> {
-    const { data, error } = await supabase.functions.invoke('ai-sandbox-chat', {
-      body: { conversationId },
-    });
-
-    if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel obter resposta da IA.'));
+  async generateReply(conversationId: string): Promise<GenerateReplyResult | null> {
+    const result = await callGenerate({ conversationId });
+    if (result.alreadyHandedOff) {
+      return null;
     }
 
-    const payload = (data ?? {}) as {
-      reply?: string;
-      handoffReason?: string | null;
-      provider?: string | null;
-      model?: string | null;
-      error?: string;
-    };
-
-    if (payload.error) {
-      throw new Error(payload.error);
-    }
-
-    if (!payload.reply) {
+    const reply = result.messages[0];
+    if (!reply) {
       throw new Error('A IA nao retornou uma resposta valida.');
     }
 
     return {
-      reply: payload.reply,
-      handoffReason: payload.handoffReason ?? null,
-      provider: payload.provider ?? null,
-      model: payload.model ?? null,
+      reply,
+      handoffReason: result.handoffReason,
+      provider: result.provider,
+      model: result.model,
     };
   },
+
+  async generateOpening(conversationId: string, leadName?: string): Promise<GenerateOpeningResult> {
+    const result = await callGenerate({ conversationId, leadName });
+    if (result.messages.length === 0) {
+      throw new Error('A IA nao retornou uma abordagem valida.');
+    }
+
+    return result;
+  },
 };
+
+async function callGenerate(body: { conversationId: string; leadName?: string }): Promise<GenerateOpeningResult> {
+  const { data, error } = await supabase.functions.invoke('ai-sandbox-chat', { body });
+
+  if (error) {
+    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel obter resposta da IA.'));
+  }
+
+  const payload = (data ?? {}) as {
+    messages?: string[];
+    handoffReason?: string | null;
+    provider?: string | null;
+    model?: string | null;
+    alreadyHandedOff?: boolean;
+    error?: string;
+  };
+
+  if (payload.error) {
+    throw new Error(payload.error);
+  }
+
+  return {
+    messages: payload.messages ?? [],
+    handoffReason: payload.handoffReason ?? null,
+    provider: payload.provider ?? null,
+    model: payload.model ?? null,
+    alreadyHandedOff: payload.alreadyHandedOff === true,
+  };
+}

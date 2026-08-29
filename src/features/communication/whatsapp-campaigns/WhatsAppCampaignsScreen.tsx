@@ -1,29 +1,95 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Surface, Textarea } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
 import {
   commWhatsAppCampaignService,
+  computeAdmissionIntervalMinutes,
+  formatAdmissionInterval,
   type CampaignStats,
   type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
   type CommWhatsAppCampaignActivationPreview,
-  type CommWhatsAppCampaignStepDraft,
+  type CommWhatsAppCampaignDelayUnit,
+  type CommWhatsAppCampaignMediaType,
+  type CommWhatsAppCampaignMessageDraft,
+  type CommWhatsAppCampaignRecurrenceRule,
+  type CommWhatsAppCampaignStageDraft,
+  type CommWhatsAppCampaignStepKind,
+  type CommWhatsAppCampaignTemplate,
   type CommWhatsAppCampaignWorkerHealth,
   type CommWhatsAppCampaignWorkerRun,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
 
+const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
+  none: 'Nao repetir',
+  daily: 'Repetir diariamente',
+  weekly: 'Repetir semanalmente',
+  monthly: 'Repetir mensalmente',
+};
+
+const mediaTypeLabels: Record<CommWhatsAppCampaignMediaType, string> = {
+  image: 'Imagem',
+  document: 'Documento',
+  video: 'Video',
+};
+
+const stepKindLabels: Record<CommWhatsAppCampaignStepKind, string> = {
+  message: 'Enviar mensagens',
+  status_change: 'Mudar status do lead',
+};
+
+/** 0 = domingo .. 6 = sabado, mesma convencao usada pelo worker (Date.getDay()). */
+const WEEKDAY_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 0, label: 'Dom' },
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sab' },
+];
+
+/** Rotulo de campo com um icone de ajuda: hover/foco mostra a explicacao do campo. */
+function FieldLabel({ text, hint }: { text: string; hint: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {text}
+      <Tooltip content={hint} size="sm">
+        <Info className="h-3.5 w-3.5 cursor-help text-[color:var(--panel-text-muted)]" aria-label={`Sobre: ${text}`} tabIndex={0} />
+      </Tooltip>
+    </span>
+  );
+}
+
+const campaignWizardSteps = [
+  { label: 'Informacoes', description: 'Nome e objetivo' },
+  { label: 'Publico', description: 'CRM ou CSV' },
+  { label: 'Mensagens', description: 'Sequencia e status' },
+  { label: 'Agendamento', description: 'Quando e como enviar' },
+];
+
+const defaultMessageDraft = (): CommWhatsAppCampaignMessageDraft => ({ messageText: '' });
+
+const defaultStage = (delayAmount = 0, delayUnit: CommWhatsAppCampaignStageDraft['delayUnit'] = 'minutes'): CommWhatsAppCampaignStageDraft => ({
+  kind: 'message',
+  delayAmount,
+  delayUnit,
+  messages: [defaultMessageDraft()],
+});
+
 type AudienceMode = 'crm' | 'csv';
 
 type VariableAutocompleteState = {
-  stepIndex: number;
+  stageIndex: number;
+  messageIndex: number;
   query: string;
   replaceStart: number;
   replaceEnd: number;
@@ -31,10 +97,13 @@ type VariableAutocompleteState = {
 
 const campaignVariableSuggestions = [
   { key: 'nome', label: 'Nome completo', description: 'Nome do lead ou contato.' },
-  { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead ou contato.' },
+  { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead ou contato, sempre com só a inicial maiúscula (ex: "Maria").' },
   { key: 'telefone', label: 'Telefone', description: 'Telefone normalizado do contato.' },
   { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
   { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
+  { key: 'saudacao', label: 'Saudacao', description: 'Saudacao atual em minusculo, como "bom dia".' },
+  { key: 'saudacao_titulo', label: 'Saudacao em titulo', description: 'Saudacao atual capitalizada, como "Bom dia".' },
+  { key: 'saudacao_capitalizada', label: 'Saudacao capitalizada', description: 'Alias de saudacao capitalizada, como "Bom dia".' },
 ];
 
 const formatEstimatedDuration = (minutes: number) => {
@@ -162,12 +231,13 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
-const getVariableAutocompleteState = (value: string, cursorPosition: number, stepIndex: number): VariableAutocompleteState | null => {
+const getVariableAutocompleteState = (value: string, cursorPosition: number, stageIndex: number, messageIndex: number): VariableAutocompleteState | null => {
   const beforeCursor = value.slice(0, cursorPosition);
   const match = beforeCursor.match(/{{\s*([a-zA-Z0-9_]*)$/);
   if (!match || match.index === undefined) return null;
   return {
-    stepIndex,
+    stageIndex,
+    messageIndex,
     query: match[1].toLowerCase(),
     replaceStart: match.index,
     replaceEnd: cursorPosition,
@@ -183,9 +253,13 @@ export default function WhatsAppCampaignsScreen() {
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [csvSaveProgress, setCsvSaveProgress] = useState<{ saved: number; total: number } | null>(null);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
+  const [campaignPendingDelete, setCampaignPendingDelete] = useState<CommWhatsAppCampaign | null>(null);
+  const [deletingCampaign, setDeletingCampaign] = useState(false);
   const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const [editingCampaign, setEditingCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [loadingCampaignEdit, setLoadingCampaignEdit] = useState(false);
   const [activationPreview, setActivationPreview] = useState<CommWhatsAppCampaignActivationPreview | null>(null);
@@ -194,23 +268,32 @@ export default function WhatsAppCampaignsScreen() {
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
   const [messageText, setMessageText] = useState('');
-  const [steps, setSteps] = useState<CommWhatsAppCampaignStepDraft[]>([
-    { messageText: '', delayAmount: 0, delayUnit: 'minutes' },
-  ]);
+  const [stages, setStages] = useState<CommWhatsAppCampaignStageDraft[]>([defaultStage()]);
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [leadOwnerFilters, setLeadOwnerFilters] = useState<string[]>([]);
   const [csvText, setCsvText] = useState('');
   const [createLeadsFromCsv, setCreateLeadsFromCsv] = useState(false);
+  const [validateWhatsappNumbers, setValidateWhatsappNumbers] = useState(true);
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
-  const [pacingPerMinute, setPacingPerMinute] = useState(12);
+  const [activeWeekdays, setActiveWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
   const [recentCampaignDays, setRecentCampaignDays] = useState(30);
   const [variableAutocomplete, setVariableAutocomplete] = useState<VariableAutocompleteState | null>(null);
-  const stepTextareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+  const stepTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [abSplitPercent, setAbSplitPercent] = useState(50);
+  const [recurrenceRule, setRecurrenceRule] = useState<CommWhatsAppCampaignRecurrenceRule>('none');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceEndAt, setRecurrenceEndAt] = useState('');
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<CommWhatsAppCampaignTemplate[]>([]);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
+  const mediaFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -221,7 +304,16 @@ export default function WhatsAppCampaignsScreen() {
     () => (options.lead_responsavel || []).filter((option) => option.ativo).map((option) => ({ value: option.value, label: option.label })),
     [options.lead_responsavel],
   );
-  const firstMessageText = steps.find((step) => step.messageText.trim())?.messageText.trim() || messageText.trim();
+  const flatMessages = useMemo(
+    () => stages.flatMap((stage) => (stage.kind === 'message' ? stage.messages : [])),
+    [stages],
+  );
+
+  const admissionIntervalMinutes = useMemo(
+    () => computeAdmissionIntervalMinutes(dailySendLimit, sendWindowStart, sendWindowEnd),
+    [dailySendLimit, sendWindowStart, sendWindowEnd],
+  );
+  const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
     if (!variableAutocomplete) return [];
     return campaignVariableSuggestions.filter((suggestion) => (
@@ -229,24 +321,35 @@ export default function WhatsAppCampaignsScreen() {
       || suggestion.label.toLowerCase().includes(variableAutocomplete.query)
     ));
   }, [variableAutocomplete]);
-  const csvValidTargets = useMemo(
-    () => csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0),
-    [csvTargets],
-  );
+  const csvValidTargets = useMemo(() => {
+    const seenPhoneDigits = new Set<string>();
+    return csvTargets.filter((target) => {
+      const phoneDigits = commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber);
+      if (!phoneDigits || seenPhoneDigits.has(phoneDigits)) return false;
+      seenPhoneDigits.add(phoneDigits);
+      return true;
+    });
+  }, [csvTargets]);
+  const csvDuplicatePhoneCount = useMemo(() => {
+    const validPhoneCount = csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0).length;
+    return validPhoneCount - csvValidTargets.length;
+  }, [csvTargets, csvValidTargets]);
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth] = await Promise.all([
+      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth, nextTemplates] = await Promise.all([
         commWhatsAppCampaignService.listCampaigns(),
         commWhatsAppCampaignService.getStats(),
         commWhatsAppCampaignService.listPendingAiSuggestions(),
         commWhatsAppCampaignService.getWorkerHealth(),
+        commWhatsAppCampaignService.listTemplates(),
       ]);
       setCampaigns(nextCampaigns);
       setStats(nextStats);
       setAiSuggestions(nextSuggestions);
       setWorkerHealth(nextWorkerHealth);
+      setTemplates(nextTemplates);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os disparos.');
     } finally {
@@ -271,20 +374,28 @@ export default function WhatsAppCampaignsScreen() {
     setName('');
     setObjective('');
     setMessageText('');
-    setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
+    setStages([defaultStage()]);
     setLeadStatusFilters([]);
     setLeadOwnerFilters([]);
     setCsvText('');
     setCreateLeadsFromCsv(false);
+    setValidateWhatsappNumbers(true);
     setScheduledAt('');
     setSendWindowStart('');
     setSendWindowEnd('');
-    setPacingPerMinute(12);
+    setActiveWeekdays([1, 2, 3, 4, 5]);
     setDailySendLimit(null);
     setReactivationMode(false);
     setInactiveDays(90);
     setRecentCampaignDays(30);
     setVariableAutocomplete(null);
+    setAbTestEnabled(false);
+    setAbSplitPercent(50);
+    setRecurrenceRule('none');
+    setRecurrenceInterval(1);
+    setRecurrenceEndAt('');
+    setTestPhoneNumber('');
+    setWizardStep(0);
   };
 
   const openNewCampaignModal = () => {
@@ -295,6 +406,18 @@ export default function WhatsAppCampaignsScreen() {
   const closeCampaignModal = () => {
     setCampaignModalOpen(false);
     resetCampaignForm();
+  };
+
+  const goToWizardStep = (step: number) => {
+    setWizardStep(Math.min(Math.max(step, 0), campaignWizardSteps.length - 1));
+  };
+
+  const handleWizardNext = () => {
+    if (wizardStep === 0 && !name.trim()) {
+      toast.warning('Informe um nome para o disparo antes de continuar.');
+      return;
+    }
+    goToWizardStep(wizardStep + 1);
   };
 
   const openEditCampaignModal = async (campaign: CommWhatsAppCampaign) => {
@@ -309,21 +432,67 @@ export default function WhatsAppCampaignsScreen() {
       setName(campaign.name);
       setObjective(campaign.objective ?? '');
       setMessageText(campaign.message_text ?? '');
-      setSteps(campaignSteps.length > 0
-        ? campaignSteps.map((step) => ({
-            messageText: step.message_text,
-            delayAmount: step.delay_amount,
-            delayUnit: step.delay_unit,
-          }))
-        : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
+      // Passo 1: colapsa pares de variante A/B que compartilham o mesmo
+      // step_index em uma unica mensagem com variantBMessageText anexado.
+      const rowsByStepIndex = new Map<number, typeof campaignSteps>();
+      for (const row of campaignSteps) {
+        rowsByStepIndex.set(row.step_index, [...(rowsByStepIndex.get(row.step_index) ?? []), row]);
+      }
+      const collapsedRows = Array.from(rowsByStepIndex.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, group]) => {
+          const primary = group.find((item) => item.variant_label !== 'B') ?? group[0];
+          const variantB = group.find((item) => item.variant_label === 'B');
+          return { ...primary, variantBMessageText: variantB?.message_text };
+        });
+
+      // Passo 2: agrupa as linhas fisicas (ja colapsadas) em estagios pelo
+      // stage_index, preservando a ordem de step_index dentro do estagio.
+      const rowsByStage = new Map<number, typeof collapsedRows>();
+      for (const row of collapsedRows) {
+        rowsByStage.set(row.stage_index, [...(rowsByStage.get(row.stage_index) ?? []), row]);
+      }
+      const loadedStages: CommWhatsAppCampaignStageDraft[] = Array.from(rowsByStage.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, group]) => {
+          const first = group[0];
+          if (first.step_kind === 'status_change') {
+            return {
+              kind: 'status_change',
+              delayAmount: first.delay_amount,
+              delayUnit: first.delay_unit,
+              messages: [],
+              statusToSet: first.status_to_set ?? '',
+            };
+          }
+          return {
+            kind: 'message',
+            delayAmount: first.delay_amount,
+            delayUnit: first.delay_unit,
+            messages: group.map((row) => ({
+              messageText: row.message_text,
+              mediaUrl: row.media_url,
+              mediaType: row.media_type,
+              mediaFilename: row.media_filename,
+              variantBMessageText: row.variantBMessageText,
+            })),
+          };
+        });
+      setStages(loadedStages.length > 0 ? loadedStages : [{ ...defaultStage(), messages: [{ messageText: campaign.message_text ?? '' }] }]);
+      setAbTestEnabled(campaign.ab_test_enabled);
+      setAbSplitPercent(campaign.ab_split_percent || 50);
+      setRecurrenceRule(campaign.recurrence_rule || 'none');
+      setRecurrenceInterval(campaign.recurrence_interval || 1);
+      setRecurrenceEndAt(campaign.recurrence_end_at ? campaign.recurrence_end_at.slice(0, 16) : '');
       setLeadStatusFilters(readStringArrayFilter(filters, 'statuses', 'status'));
       setLeadOwnerFilters(readStringArrayFilter(filters, 'responsaveis', 'responsavel'));
       setCsvText('');
       setCreateLeadsFromCsv(campaign.create_leads_from_csv);
+      setValidateWhatsappNumbers(campaign.validate_whatsapp_numbers);
       setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
       setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
-      setPacingPerMinute(campaign.pacing_per_minute || 12);
+      setActiveWeekdays(campaign.active_weekdays?.length ? campaign.active_weekdays : [0, 1, 2, 3, 4, 5, 6]);
       setDailySendLimit(campaign.daily_send_limit ?? null);
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
@@ -333,6 +502,7 @@ export default function WhatsAppCampaignsScreen() {
       }
       const storedRecentDays = Number(filters.exclude_recent_campaign_days);
       if (Number.isFinite(storedRecentDays) && storedRecentDays >= 0) setRecentCampaignDays(storedRecentDays);
+      setWizardStep(0);
       setCampaignModalOpen(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar este disparo para edicao.');
@@ -342,13 +512,20 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const handleCreateDraft = async () => {
+    if (saving) return;
     if (!name.trim()) {
       toast.warning('Informe um nome para o disparo.');
       return;
     }
 
-    if (!firstMessageText) {
-      toast.warning('Escreva pelo menos uma mensagem do disparo.');
+    if (!firstMessageText && !flatMessages.some((item) => item.mediaUrl)) {
+      toast.warning('Escreva pelo menos uma mensagem ou anexe uma midia no disparo.');
+      return;
+    }
+
+    const emptyStatusStage = stages.find((stage) => stage.kind === 'status_change' && !stage.statusToSet?.trim());
+    if (emptyStatusStage) {
+      toast.warning('Selecione o status a aplicar em cada etapa de "Mudar status do lead".');
       return;
     }
 
@@ -358,6 +535,7 @@ export default function WhatsAppCampaignsScreen() {
     }
 
     setSaving(true);
+    setCsvSaveProgress(null);
     try {
       const audienceSource: CommWhatsAppCampaignAudienceSource = audienceMode;
       const audienceConfig = audienceMode === 'crm'
@@ -381,13 +559,30 @@ export default function WhatsAppCampaignsScreen() {
             },
           };
 
-      const normalizedSteps = steps
-        .map((step, index) => ({
-          messageText: step.messageText.trim(),
-          delayAmount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-          delayUnit: step.delayUnit,
-        }))
-        .filter((step) => step.messageText.length > 0);
+      const normalizedStages: CommWhatsAppCampaignStageDraft[] = stages.map((stage) => (
+        stage.kind === 'status_change'
+          ? {
+              kind: 'status_change' as const,
+              delayAmount: Math.max(Math.floor(stage.delayAmount || 0), 0),
+              delayUnit: stage.delayUnit,
+              messages: [],
+              statusToSet: stage.statusToSet?.trim() || '',
+            }
+          : {
+              kind: 'message' as const,
+              delayAmount: Math.max(Math.floor(stage.delayAmount || 0), 0),
+              delayUnit: stage.delayUnit,
+              messages: stage.messages.map((message) => ({
+                messageText: message.messageText.trim(),
+                mediaUrl: message.mediaUrl || null,
+                mediaType: message.mediaUrl ? message.mediaType : null,
+                mediaFilename: message.mediaUrl ? message.mediaFilename : null,
+                variantBMessageText: message.variantBMessageText?.trim(),
+              })),
+            }
+      ));
+      const firstStage = normalizedStages[0];
+      const firstMessageHasVariantB = firstStage?.kind === 'message' && Boolean(firstStage.messages[0]?.variantBMessageText);
 
       const payload = {
         name,
@@ -396,20 +591,31 @@ export default function WhatsAppCampaignsScreen() {
         audienceConfig,
         messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-        pacingPerMinute,
+        // Coluna mantida por compatibilidade; o intervalo de admissao real e
+        // calculado direto de dailySendLimit + janela na RPC de despacho.
+        pacingPerMinute: 12,
         dailySendLimit,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
+        activeWeekdays: activeWeekdays.length > 0 ? activeWeekdays : [0, 1, 2, 3, 4, 5, 6],
         stopOnReply: true,
         createLeadsFromCsv,
-        steps: normalizedSteps,
+        validateWhatsappNumbers: audienceMode === 'csv' && validateWhatsappNumbers,
+        stages: normalizedStages,
         csvTargets: !editingCampaign && audienceMode === 'csv' ? csvValidTargets : [],
+        abTestEnabled: abTestEnabled && firstMessageHasVariantB,
+        abSplitPercent,
+        recurrenceRule: audienceMode === 'crm' ? recurrenceRule : 'none' as CommWhatsAppCampaignRecurrenceRule,
+        recurrenceInterval,
+        recurrenceEndAt: recurrenceEndAt ? new Date(recurrenceEndAt).toISOString() : null,
       };
 
       if (editingCampaign) {
         await commWhatsAppCampaignService.updateCampaign(editingCampaign.id, payload);
       } else {
-        await commWhatsAppCampaignService.createDraft(payload);
+        await commWhatsAppCampaignService.createDraft(payload, (saved, total) => {
+          setCsvSaveProgress({ saved, total });
+        });
       }
 
       toast.success(editingCampaign ? 'Disparo atualizado.' : 'Disparo salvo.');
@@ -419,47 +625,153 @@ export default function WhatsAppCampaignsScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o disparo.');
     } finally {
       setSaving(false);
+      setCsvSaveProgress(null);
     }
   };
 
-  const updateVariableAutocomplete = (stepIndex: number, value: string, cursorPosition: number | null) => {
+  const updateVariableAutocomplete = (stageIndex: number, messageIndex: number, value: string, cursorPosition: number | null) => {
     if (cursorPosition === null) {
       setVariableAutocomplete(null);
       return;
     }
 
-    setVariableAutocomplete(getVariableAutocompleteState(value, cursorPosition, stepIndex));
+    setVariableAutocomplete(getVariableAutocompleteState(value, cursorPosition, stageIndex, messageIndex));
   };
 
   const insertVariableSuggestion = (suggestionKey: string) => {
     if (!variableAutocomplete) return;
-    const stepIndex = variableAutocomplete.stepIndex;
-    const currentStep = steps[stepIndex];
-    if (!currentStep) return;
+    const { stageIndex, messageIndex } = variableAutocomplete;
+    const currentMessage = stages[stageIndex]?.messages[messageIndex];
+    if (!currentMessage) return;
 
-    const nextText = `${currentStep.messageText.slice(0, variableAutocomplete.replaceStart)}{{${suggestionKey}}}${currentStep.messageText.slice(variableAutocomplete.replaceEnd)}`;
+    const nextText = `${currentMessage.messageText.slice(0, variableAutocomplete.replaceStart)}{{${suggestionKey}}}${currentMessage.messageText.slice(variableAutocomplete.replaceEnd)}`;
     const nextCursorPosition = variableAutocomplete.replaceStart + suggestionKey.length + 4;
-    updateStep(stepIndex, { messageText: nextText });
-    if (stepIndex === 0) setMessageText(nextText);
+    updateMessage(stageIndex, messageIndex, { messageText: nextText });
+    if (stageIndex === 0 && messageIndex === 0) setMessageText(nextText);
     setVariableAutocomplete(null);
 
+    const refKey = `${stageIndex}-${messageIndex}`;
     window.setTimeout(() => {
-      const textarea = stepTextareaRefs.current[stepIndex];
+      const textarea = stepTextareaRefs.current[refKey];
       textarea?.focus();
       textarea?.setSelectionRange(nextCursorPosition, nextCursorPosition);
     }, 0);
   };
 
-  const updateStep = (index: number, patch: Partial<CommWhatsAppCampaignStepDraft>) => {
-    setSteps((current) => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
+  const updateStage = (stageIndex: number, patch: Partial<CommWhatsAppCampaignStageDraft>) => {
+    setStages((current) => current.map((stage, index) => index === stageIndex ? { ...stage, ...patch } : stage));
   };
 
-  const addStep = () => {
-    setSteps((current) => [...current, { messageText: '', delayAmount: 1, delayUnit: 'days' }]);
+  const updateMessage = (stageIndex: number, messageIndex: number, patch: Partial<CommWhatsAppCampaignMessageDraft>) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex) return stage;
+      return { ...stage, messages: stage.messages.map((message, mIndex) => mIndex === messageIndex ? { ...message, ...patch } : message) };
+    }));
   };
 
-  const removeStep = (index: number) => {
-    setSteps((current) => current.length <= 1 ? current : current.filter((_, stepIndex) => stepIndex !== index));
+  const addStage = () => {
+    setStages((current) => [...current, defaultStage(1, 'days')]);
+  };
+
+  const removeStage = (stageIndex: number) => {
+    setStages((current) => current.length <= 1 ? current : current.filter((_, index) => index !== stageIndex));
+  };
+
+  const addMessageToStage = (stageIndex: number) => {
+    setStages((current) => current.map((stage, index) => (
+      index === stageIndex ? { ...stage, messages: [...stage.messages, defaultMessageDraft()] } : stage
+    )));
+  };
+
+  const removeMessageFromStage = (stageIndex: number, messageIndex: number) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex || stage.messages.length <= 1) return stage;
+      return { ...stage, messages: stage.messages.filter((_, mIndex) => mIndex !== messageIndex) };
+    }));
+  };
+
+  const moveMessageInStage = (stageIndex: number, messageIndex: number, direction: -1 | 1) => {
+    setStages((current) => current.map((stage, index) => {
+      if (index !== stageIndex) return stage;
+      const target = messageIndex + direction;
+      if (target < 0 || target >= stage.messages.length) return stage;
+      const nextMessages = [...stage.messages];
+      [nextMessages[messageIndex], nextMessages[target]] = [nextMessages[target], nextMessages[messageIndex]];
+      return { ...stage, messages: nextMessages };
+    }));
+  };
+
+  const handleStepMediaUpload = async (stageIndex: number, messageIndex: number, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const key = `${stageIndex}-${messageIndex}`;
+    setUploadingKey(key);
+    try {
+      const uploaded = await commWhatsAppCampaignService.uploadCampaignMedia(file);
+      updateMessage(stageIndex, messageIndex, { mediaUrl: uploaded.url, mediaType: uploaded.type, mediaFilename: uploaded.filename });
+      toast.success('Midia anexada.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a midia.');
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const handleRemoveStepMedia = (stageIndex: number, messageIndex: number) => {
+    updateMessage(stageIndex, messageIndex, { mediaUrl: null, mediaType: null, mediaFilename: null });
+  };
+
+  const handleSaveTemplate = async () => {
+    const templateName = window.prompt('Nome do modelo:', name || 'Modelo de disparo');
+    if (!templateName || !templateName.trim()) return;
+
+    try {
+      const saved = await commWhatsAppCampaignService.saveTemplate(templateName, stages);
+      setTemplates((current) => [saved, ...current]);
+      toast.success('Modelo salvo.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o modelo.');
+    }
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    if (!templateId) return;
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) return;
+    setStages(template.stages.length > 0 ? template.stages : [defaultStage()]);
+    const firstStage = template.stages[0];
+    setMessageText(firstStage?.kind === 'message' ? firstStage.messages[0]?.messageText ?? '' : '');
+    toast.success(`Modelo "${template.name}" carregado.`);
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      await commWhatsAppCampaignService.deleteTemplate(templateId);
+      setTemplates((current) => current.filter((item) => item.id !== templateId));
+      toast.success('Modelo removido.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel remover o modelo.');
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!editingCampaign) return;
+    if (!testPhoneNumber.trim()) {
+      toast.warning('Informe um telefone para o envio de teste.');
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      await commWhatsAppCampaignService.sendTestMessage(editingCampaign.id, testPhoneNumber, 0, 'A');
+      toast.success('Mensagem de teste enviada.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem de teste.');
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   const openActivationPreview = async (campaign: CommWhatsAppCampaign) => {
@@ -505,6 +817,21 @@ export default function WhatsAppCampaignsScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel processar o disparo.');
     } finally {
       setCampaignActionId(null);
+    }
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignPendingDelete) return;
+    setDeletingCampaign(true);
+    try {
+      await commWhatsAppCampaignService.deleteCampaign(campaignPendingDelete.id);
+      toast.success('Disparo excluido.');
+      setCampaignPendingDelete(null);
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel excluir o disparo.');
+    } finally {
+      setDeletingCampaign(false);
     }
   };
 
@@ -672,24 +999,32 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {campaignModalOpen && (
-        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
-            <DialogHeader onClose={closeCampaignModal}>
+        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && !saving && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+            <DialogHeader onClose={saving ? undefined : closeCampaignModal}>
               <div>
                 <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
-                <DialogDescription>Configure publico, pacote de mensagens, agendamento e ritmo de envio.</DialogDescription>
+                <DialogDescription>{campaignWizardSteps[wizardStep]?.description}</DialogDescription>
               </div>
             </DialogHeader>
 
+            <div className="shrink-0 px-1 pb-1 pt-2">
+              <Stepper currentStep={wizardStep} steps={campaignWizardSteps} />
+            </div>
+
             <DialogBody className="min-h-0 flex-1 space-y-5">
+          {wizardStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome da campanha">
+            <Field label={<FieldLabel text="Nome da campanha" hint="Nome interno para voce identificar o disparo na lista. O lead nunca ve esse nome." />}>
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativacao PME maio" />
             </Field>
-            <Field label="Objetivo">
+            <Field label={<FieldLabel text="Objetivo" hint="Anotacao livre sobre o proposito da campanha, so para referencia interna da equipe." />}>
               <Input value={objective} onChange={(event) => setObjective(event.target.value)} placeholder="Ex: retomar cotacoes paradas" />
             </Field>
           </div>
+          )}
 
+          {wizardStep === 1 && (
+          <>
           <div className="flex flex-wrap gap-2">
             <AudienceButton active={audienceMode === 'crm'} icon={Users} label="Leads do CRM" onClick={() => setAudienceMode('crm')} />
             <AudienceButton active={audienceMode === 'csv'} icon={FileSpreadsheet} label="Importar CSV" onClick={() => setAudienceMode('csv')} />
@@ -697,10 +1032,10 @@ export default function WhatsAppCampaignsScreen() {
 
           {audienceMode === 'crm' ? (
             <Surface variant="muted" padding="sm" className="grid gap-4 md:grid-cols-2">
-              <Field label="Status do lead">
+              <Field label={<FieldLabel text="Status do lead" hint="Filtra o publico pelos status atuais no CRM. Deixe vazio para incluir todos os status." />}>
                 <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
               </Field>
-              <Field label="Responsavel">
+              <Field label={<FieldLabel text="Responsavel" hint="Filtra o publico pelo responsavel atribuido ao lead no CRM." />}>
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
               <label className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
@@ -709,10 +1044,10 @@ export default function WhatsAppCampaignsScreen() {
               </label>
               {reactivationMode && (
                 <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
-                  <Field label="Sem contato há pelo menos (dias)">
+                  <Field label={<FieldLabel text="Sem contato ha pelo menos (dias)" hint="So inclui leads cujo ultimo contato registrado foi ha pelo menos esse numero de dias." />}>
                     <Input type="number" min={1} value={inactiveDays} onChange={(event) => setInactiveDays(Math.max(1, Number(event.target.value) || 1))} />
                   </Field>
-                  <Field label="Suprimir campanha recente (dias)">
+                  <Field label={<FieldLabel text="Suprimir campanha recente (dias)" hint="Exclui quem ja recebeu qualquer outra campanha dentro desse numero de dias, para nao repetir contato." />}>
                     <Input type="number" min={0} value={recentCampaignDays} onChange={(event) => setRecentCampaignDays(Math.max(0, Number(event.target.value) || 0))} />
                   </Field>
                 </div>
@@ -735,147 +1070,417 @@ export default function WhatsAppCampaignsScreen() {
               <Textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder={'nome;telefone\nMaria Silva;(11) 99999-9999'} />
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
-                Criar ou atualizar leads no CRM quando o CSV nao encontrar um lead existente.
+                Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone ja existir no CRM sao vinculados ao lead existente em vez de duplicados.
+              </label>
+              <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+                <Checkbox className="mt-1" checked={validateWhatsappNumbers} onChange={(event) => setValidateWhatsappNumbers(event.target.checked)} />
+                Validar no WhatsApp antes de enviar: apos salvar, cada numero e checado em segundo plano (pode levar horas em listas grandes) e numeros sem WhatsApp sao excluidos do envio automaticamente, sem precisar revisar a lista manualmente.
               </label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
                 <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) validos</Badge>
+                {csvDuplicatePhoneCount > 0 && (
+                  <Badge tone="warning">{csvDuplicatePhoneCount} duplicado(s) removido(s)</Badge>
+                )}
               </div>
             </Surface>
           )}
+          </>
+          )}
+
+          {wizardStep === 2 && (
+          <>
 
           <Surface variant="muted" padding="sm" className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure a sequencia em blocos compactos. A lista abaixo rola separadamente quando houver muitas mensagens.</p>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequencia do disparo</span>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Como no construtor de fluxo: cada estagio dispara sob o mesmo intervalo (ex: 3 mensagens imediatas, depois 2 mensagens 24h depois) e pode mudar o status do lead entre os envios.</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <Badge tone="neutral">{steps.length} mensagem(ns)</Badge>
-                  <Badge tone="neutral">1 inicial</Badge>
-                  {steps.length > 1 && <Badge tone="neutral">{steps.length - 1} follow-up(s)</Badge>}
+                  <Badge tone="neutral">{stages.length} estagio(s)</Badge>
+                  <Badge tone="neutral">{flatMessages.length} mensagem(ns)</Badge>
+                  {stages.some((stage) => stage.kind === 'status_change') && (
+                    <Badge tone="accent">{stages.filter((stage) => stage.kind === 'status_change').length} mudanca(s) de status</Badge>
+                  )}
                 </div>
               </div>
-              <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
-                <Plus className="h-3.5 w-3.5" />
-                Adicionar
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {templates.length > 0 && (
+                  <Select value="" onChange={(event) => handleLoadTemplate(event.target.value)}>
+                    <option value="">Carregar modelo...</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </Select>
+                )}
+                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={() => void handleSaveTemplate()}>
+                  <BookmarkPlus className="h-3.5 w-3.5" />
+                  Salvar modelo
+                </Button>
+                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStage}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar estagio
+                </Button>
+              </div>
             </div>
-            <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
-              {steps.map((step, index) => (
-                <div key={index} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{index + 1}</span>
-                      <div>
-                        <p className="text-sm font-semibold text-[color:var(--panel-text)]">{index === 0 ? 'Mensagem inicial' : 'Follow-up'}</p>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">{index === 0 ? 'Enviada ao ativar ou no horario agendado.' : 'Enviado depois do intervalo abaixo, se nao houver resposta.'}</p>
+
+            {templates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {templates.map((template) => (
+                  <span key={template.id} className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-surface-soft)] py-1 pl-3 pr-1 text-xs text-[color:var(--panel-text-muted)]">
+                    <FolderOpen className="h-3 w-3" />
+                    {template.name}
+                    <button
+                      type="button"
+                      className="ml-1 rounded-full p-1 hover:bg-[color:var(--panel-surface-soft)]"
+                      onClick={() => void handleDeleteTemplate(template.id)}
+                      title="Remover modelo"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+              <Checkbox checked={abTestEnabled} onChange={(event) => setAbTestEnabled(event.target.checked)} />
+              <span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-[color:var(--panel-text)]">
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Teste A/B na mensagem inicial
+                </span>
+                <br />
+                Sorteia entre duas versoes da primeira mensagem (primeiro estagio) e permite comparar a taxa de resposta de cada uma.
+              </span>
+            </label>
+            {abTestEnabled && (
+              <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versoes." />}>
+                <Input
+                  type="range"
+                  min={1}
+                  max={99}
+                  value={abSplitPercent}
+                  onChange={(event) => setAbSplitPercent(Number(event.target.value) || 50)}
+                />
+              </Field>
+            )}
+
+            <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
+              {stages.map((stage, stageIndex) => {
+                const isFirstStage = stageIndex === 0;
+                return (
+                  <div key={stageIndex} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{stageIndex + 1}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Estagio inicial' : `Estagio ${stageIndex + 1}`}</p>
+                          <p className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horario agendado.' : 'Dispara apos o intervalo abaixo, se nao houver resposta.'}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                          className="min-w-[11rem]"
+                          value={stage.kind}
+                          onChange={(event) => updateStage(stageIndex, { kind: event.target.value as CommWhatsAppCampaignStepKind })}
+                        >
+                          {(Object.keys(stepKindLabels) as CommWhatsAppCampaignStepKind[]).map((kind) => (
+                            <option key={kind} value={kind}>{stepKindLabels[kind]}</option>
+                          ))}
+                        </Select>
+                        {stages.length > 1 && (
+                          <Button variant="ghost" size="sm" onClick={() => removeStage(stageIndex)}>Remover estagio</Button>
+                        )}
                       </div>
                     </div>
-                    {steps.length > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => removeStep(index)}>Remover</Button>
+
+                    {!isFirstStage && (
+                      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                        <Field label={<FieldLabel text="Aguardar desde o estagio anterior" hint="Quanto tempo esperar depois que o estagio anterior terminar antes de disparar este." />}>
+                          <Input type="number" min={0} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Number(event.target.value) || 0 })} />
+                        </Field>
+                        <Field label={<FieldLabel text="Unidade" hint="Unidade de tempo do intervalo de espera ao lado." />}>
+                          <Select
+                            value={stage.delayUnit}
+                            onChange={(event) => updateStage(stageIndex, { delayUnit: event.target.value as CommWhatsAppCampaignDelayUnit })}
+                          >
+                            <option value="seconds">segundos</option>
+                            <option value="minutes">minutos</option>
+                            <option value="hours">horas</option>
+                            <option value="days">dias</option>
+                          </Select>
+                        </Field>
+                      </div>
+                    )}
+
+                    {stage.kind === 'status_change' ? (
+                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que sera aplicado ao lead quando este estagio rodar. Vale para contatos vindos do CRM e para contatos de CSV com 'Criar leads no CRM' habilitado." />}>
+                        <Select
+                          value={stage.statusToSet ?? ''}
+                          onChange={(event) => updateStage(stageIndex, { statusToSet: event.target.value })}
+                        >
+                          <option value="">Selecione um status</option>
+                          {leadStatusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </Select>
+                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Alvos de CSV sem lead vinculado (checkbox "Criar leads no CRM" desmarcado, ou falha ao criar) pulam esta etapa.</p>
+                      </Field>
+                    ) : (
+                      <div className="space-y-2">
+                        {stage.messages.map((message, messageIndex) => {
+                          const refKey = `${stageIndex}-${messageIndex}`;
+                          const isVeryFirstMessage = isFirstStage && messageIndex === 0;
+                          return (
+                            <div key={messageIndex} className="rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-2">
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}</span>
+                                {stage.messages.length > 1 && (
+                                  <div className="flex items-center gap-0.5">
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
+                                      <ChevronUp className="h-3 w-3" />
+                                    </button>
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === stage.messages.length - 1} onClick={() => moveMessageInStage(stageIndex, messageIndex, 1)} aria-label="Mover para baixo">
+                                      <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                    <button type="button" className="rounded-full p-1 text-[color:var(--danger-text)] hover:bg-[color:var(--panel-surface)]" onClick={() => removeMessageFromStage(stageIndex, messageIndex)} aria-label="Remover mensagem">
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <Textarea
+                                  ref={(element) => { stepTextareaRefs.current[refKey] = element; }}
+                                  size="compact"
+                                  value={message.messageText}
+                                  onChange={(event) => {
+                                    updateMessage(stageIndex, messageIndex, { messageText: event.target.value });
+                                    if (isVeryFirstMessage) setMessageText(event.target.value);
+                                    updateVariableAutocomplete(stageIndex, messageIndex, event.target.value, event.target.selectionStart);
+                                  }}
+                                  onClick={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
+                                  onKeyUp={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
+                                  onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
+                                  placeholder={isVeryFirstMessage ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                                />
+                                {variableAutocomplete?.stageIndex === stageIndex && variableAutocomplete.messageIndex === messageIndex && visibleVariableSuggestions.length > 0 && (
+                                  <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
+                                    <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
+                                      Variaveis disponiveis
+                                    </div>
+                                    <div className="max-h-56 overflow-y-auto py-1">
+                                      {visibleVariableSuggestions.map((suggestion) => (
+                                        <button
+                                          key={suggestion.key}
+                                          type="button"
+                                          className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
+                                          onMouseDown={(event) => {
+                                            event.preventDefault();
+                                            insertVariableSuggestion(suggestion.key);
+                                          }}
+                                        >
+                                          <code className="mt-0.5 rounded-[var(--kds-radius-sm)] bg-[color:var(--panel-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--panel-accent-ink)]">{`{{${suggestion.key}}}`}</code>
+                                          <span>
+                                            <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
+                                            <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <input
+                                    ref={(element) => { mediaFileInputRefs.current[refKey] = element; }}
+                                    type="file"
+                                    accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                                    className="sr-only"
+                                    onChange={(event) => void handleStepMediaUpload(stageIndex, messageIndex, event)}
+                                  />
+                                  {message.mediaUrl ? (
+                                    <>
+                                      <Badge tone="accent" size="sm" icon={ImageIcon}>
+                                        {mediaTypeLabels[message.mediaType || 'document']}: {message.mediaFilename || 'arquivo anexado'}
+                                      </Badge>
+                                      <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(stageIndex, messageIndex)}>
+                                        <X className="h-3.5 w-3.5" />
+                                        Remover midia
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      loading={uploadingKey === refKey}
+                                      onClick={() => mediaFileInputRefs.current[refKey]?.click()}
+                                    >
+                                      <Upload className="h-3.5 w-3.5" />
+                                      Anexar midia
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {isVeryFirstMessage && abTestEnabled && (
+                                  <div className="mt-3">
+                                    <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versao alternativa da mensagem inicial, sorteada para uma fracao dos contatos, para comparar qual converte mais." />}>
+                                      <Textarea
+                                        size="compact"
+                                        value={message.variantBMessageText ?? ''}
+                                        onChange={(event) => updateMessage(stageIndex, messageIndex, { variantBMessageText: event.target.value })}
+                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotacao em aberto - posso te ajudar?"
+                                      />
+                                    </Field>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-[color:var(--panel-accent-strong)] hover:underline"
+                          onClick={() => addMessageToStage(stageIndex)}
+                        >
+                          <Plus className="h-3 w-3" /> Adicionar mensagem neste estagio
+                        </button>
+                        <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens deste estagio saem em sequencia, sem intervalo entre elas.</p>
+                      </div>
                     )}
                   </div>
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div className="relative">
-                      <Textarea
-                        ref={(element) => {
-                          stepTextareaRefs.current[index] = element;
-                        }}
-                        size="compact"
-                        value={step.messageText}
-                        onChange={(event) => {
-                          updateStep(index, { messageText: event.target.value });
-                          if (index === 0) setMessageText(event.target.value);
-                          updateVariableAutocomplete(index, event.target.value, event.target.selectionStart);
-                        }}
-                        onClick={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
-                        onKeyUp={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
-                        onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
-                        placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
-                      />
-                      {variableAutocomplete?.stepIndex === index && visibleVariableSuggestions.length > 0 && (
-                        <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
-                          <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
-                            Variaveis disponiveis
-                          </div>
-                          <div className="max-h-56 overflow-y-auto py-1">
-                            {visibleVariableSuggestions.map((suggestion) => (
-                              <button
-                                key={suggestion.key}
-                                type="button"
-                                className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
-                                onMouseDown={(event) => {
-                                  event.preventDefault();
-                                  insertVariableSuggestion(suggestion.key);
-                                }}
-                              >
-                                <code className="mt-0.5 rounded-[var(--kds-radius-sm)] bg-[color:var(--panel-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--panel-accent-ink)]">{`{{${suggestion.key}}}`}</code>
-                                <span>
-                                  <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
-                                  <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <Surface variant="muted" padding="sm" className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-1 ${index === 0 ? 'items-center' : ''}`}>
-                      {index === 0 ? (
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">Sem atraso nesta etapa.</p>
-                      ) : (
-                        <>
-                          <Field label="Aguardar">
-                            <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
-                          </Field>
-                          <Field label="Unidade">
-                            <Select
-                              value={step.delayUnit}
-                              onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
-                            >
-                              <option value="seconds">segundos</option>
-                              <option value="minutes">minutos</option>
-                              <option value="hours">horas</option>
-                              <option value="days">dias</option>
-                            </Select>
-                          </Field>
-                        </>
-                      )}
-                    </Surface>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Surface>
+          </>
+          )}
+
+          {wizardStep === 3 && (
+          <>
+          {audienceMode === 'crm' && (
+            <Surface variant="muted" padding="sm" className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Repeat2 className="h-4 w-4 text-[color:var(--panel-accent-strong)]" />
+                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Recorrencia</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label={<FieldLabel text="Repetir" hint="Define se e com que frequencia esta campanha volta a rodar automaticamente para o mesmo publico de CRM." />}>
+                  <Select value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as CommWhatsAppCampaignRecurrenceRule)}>
+                    {(Object.keys(recurrenceRuleLabels) as CommWhatsAppCampaignRecurrenceRule[]).map((rule) => (
+                      <option key={rule} value={rule}>{recurrenceRuleLabels[rule]}</option>
+                    ))}
+                  </Select>
+                </Field>
+                {recurrenceRule !== 'none' && (
+                  <>
+                    <Field label={<FieldLabel text="A cada" hint="Multiplo do intervalo escolhido acima. Ex: 'semanalmente' + '2' repete a cada 2 semanas." />}>
+                      <Input type="number" min={1} max={90} value={recurrenceInterval} onChange={(event) => setRecurrenceInterval(Math.max(1, Number(event.target.value) || 1))} />
+                    </Field>
+                    <Field label={<FieldLabel text="Repetir ate (opcional)" hint="Data limite para as repeticoes automaticas. Deixe vazio para repetir indefinidamente." />}>
+                      <DateTimePicker type="datetime-local" value={recurrenceEndAt} onChange={(event) => setRecurrenceEndAt(event.target.value)} />
+                    </Field>
+                  </>
+                )}
+              </div>
+              {recurrenceRule !== 'none' && (
+                <p className="text-xs text-[color:var(--panel-text-muted)]">
+                  Quando esta campanha for concluida, o worker rematerializa o mesmo publico de CRM (respeitando opt-outs e o modo de reativacao segura) e ativa uma nova rodada automaticamente.
+                </p>
+              )}
+            </Surface>
+          )}
+
+          {editingCampaign && (
+            <Surface variant="muted" padding="sm" className="space-y-3">
+              <div className="flex items-center gap-2">
+                <TestTube2 className="h-4 w-4 text-[color:var(--panel-accent-strong)]" />
+                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Enviar teste</span>
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label={<FieldLabel text="Telefone (com DDD)" hint="Numero que vai receber a mensagem de teste. Use o seu proprio WhatsApp." />} className="min-w-[12rem] flex-1">
+                  <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
+                </Field>
+                <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
+                  <Send className="h-3.5 w-3.5" />
+                  Enviar mensagem inicial de teste
+                </Button>
+              </div>
+              <p className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variaveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</p>
+            </Surface>
+          )}
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Field label="Agendar para">
+            <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo comecar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
-            <Field label="Ritmo por minuto">
-              <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
+            <Field label={<FieldLabel text="Intervalo entre contatos" hint="So informativo, nao da pra editar: e o resultado de 'novos contatos por dia' dividido pela janela de envio. Define de quanto em quanto tempo um contato novo e admitido - o resto da sequencia dele (resto do estagio 1 e os estagios seguintes) sai normalmente, sem esperar esse intervalo." />}>
+              <Input value={formatAdmissionInterval(admissionIntervalMinutes)} disabled readOnly />
             </Field>
-            <Field label="Limite a cada 24h">
+            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para nao limitar (contatos entram sem espacamento minimo)." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
-            <Field label="Janela inicio">
+            <Field label={<FieldLabel text="Janela inicio" hint="Horario a partir do qual o disparo pode enviar mensagens." />}>
               <DateTimePicker type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
             </Field>
-            <Field label="Janela fim">
+            <Field label={<FieldLabel text="Janela fim" hint="Horario limite para o envio. Fora da janela, o disparo fica pausado ate o proximo horario permitido." />}>
               <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
           </div>
+          <Field label={<FieldLabel text="Dias de envio" hint="Dias da semana em que o disparo pode enviar mensagens. Nos dias desmarcados, o disparo fica pausado (igual a fora da janela de horario) e retoma sozinho no proximo dia permitido." />}>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAY_OPTIONS.map((day) => {
+                const isActive = activeWeekdays.includes(day.value);
+                return (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={isActive ? 'primary' : 'ghost'}
+                    size="xs"
+                    onClick={() => setActiveWeekdays((current) => {
+                      const next = current.includes(day.value)
+                        ? current.filter((value) => value !== day.value)
+                        : [...current, day.value];
+                      return next.length > 0 ? next : current;
+                    })}
+                  >
+                    {day.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </Field>
+          </>
+          )}
             </DialogBody>
 
           <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
-              Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
+              {csvSaveProgress
+                ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Nao feche esta janela.`
+                : 'Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.'}
             </div>
-            <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
-              <Send className="h-4 w-4" />
-              Salvar
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {wizardStep > 0 && (
+                <Button variant="secondary" className="whitespace-nowrap" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+              )}
+              {wizardStep < campaignWizardSteps.length - 1 ? (
+                <Button className="whitespace-nowrap" onClick={handleWizardNext}>
+                  Proximo
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
+                  <Send className="h-4 w-4" />
+                  {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </Dialog>
       )}
@@ -892,8 +1497,8 @@ export default function WhatsAppCampaignsScreen() {
             <DialogBody className="min-h-0 flex-1 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
-                <PreviewMetric label="Mensagens por contato" value={activationPreview.steps.length} />
-                <PreviewMetric label="Ritmo" value={`${activationPreview.campaign.pacing_per_minute}/min`} />
+                <PreviewMetric label="Etapas da sequencia" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
+                <PreviewMetric label="Intervalo entre contatos" value={formatAdmissionInterval(computeAdmissionIntervalMinutes(activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end))} />
                 <PreviewMetric label="Duracao estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
 
@@ -927,22 +1532,29 @@ export default function WhatsAppCampaignsScreen() {
               </div>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia de mensagens</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia da campanha</h3>
                 <div className="space-y-2">
                   {activationPreview.steps.map((step, index) => (
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <Badge tone="neutral">Mensagem {index + 1}</Badge>
-                        {index > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
+                        <Badge tone={step.step_kind === 'status_change' ? 'accent' : 'neutral'}>
+                          {step.step_kind === 'status_change' ? 'Mudar status' : `Mensagem ${index + 1}`}
+                        </Badge>
+                        {step.variant_label !== 'ANY' && <Badge tone="warning" size="sm">Variante {step.variant_label}</Badge>}
+                        {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text}</p>
+                      {step.step_kind === 'status_change' ? (
+                        <p className="text-sm text-[color:var(--panel-text-soft)]">Status do lead passa a ser: <strong>{step.status_to_set}</strong></p>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem so com midia)'}</p>
+                      )}
                     </div>
                   ))}
                 </div>
               </Card>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico (com a mensagem ja resolvida por lead)</h3>
                 {activationPreview.sample.length > 0 ? (
                   <div className="grid gap-2 md:grid-cols-2">
                     {activationPreview.sample.map((sample, index) => (
@@ -950,6 +1562,9 @@ export default function WhatsAppCampaignsScreen() {
                         <p className="text-sm font-medium text-[color:var(--panel-text)]">{sample.name}</p>
                         <p className="text-xs text-[color:var(--panel-text-muted)]">{sample.phone}</p>
                         {(sample.status || sample.responsavel) && <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">{[sample.status, sample.responsavel].filter(Boolean).join(' · ')}</p>}
+                        {sample.resolvedMessage && (
+                          <p className="mt-2 whitespace-pre-wrap rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-xs text-[color:var(--panel-text-soft)]">{sample.resolvedMessage}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1035,12 +1650,31 @@ export default function WhatsAppCampaignsScreen() {
                         Processar lote
                       </Button>
                     )}
+                    <Button size="sm" variant="ghost" onClick={() => setCampaignPendingDelete(campaign)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Excluir
+                    </Button>
                   </div>
                 </article>
               ))}
             </div>
           )}
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(campaignPendingDelete)}
+        onOpenChange={(open) => !open && !deletingCampaign && setCampaignPendingDelete(null)}
+        onConfirm={() => void handleDeleteCampaign()}
+        title="Excluir disparo?"
+        description={
+          campaignPendingDelete
+            ? `"${campaignPendingDelete.name}" sera excluido junto com todos os alvos, mensagens e eventos registrados. Essa acao nao pode ser desfeita.${['queued', 'running'].includes(campaignPendingDelete.status) ? ' Essa campanha esta ativa - excluir agora pode interromper envios em andamento.' : ''}`
+            : undefined
+        }
+        confirmLabel="Excluir"
+        destructive
+        loading={deletingCampaign}
+      />
     </div>
   );
 }

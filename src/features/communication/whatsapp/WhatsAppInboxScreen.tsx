@@ -31,7 +31,6 @@ import {
   type CommWhatsAppOperationalState,
   type CommWhatsAppFollowUpEmotionalContext,
   type CommWhatsAppFollowUpNextAction,
-  type CommWhatsAppFollowUpTone,
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
@@ -56,8 +55,6 @@ import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteMo
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
-import { followUpSalesTechniqueOptions } from './components/followUpSalesTechniques';
-import { CONVERSATION_SITUATION_PRESETS } from './components/followUpSituationPresets';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
@@ -3134,15 +3131,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
-  const [followUpTone, setFollowUpTone] = useState<CommWhatsAppFollowUpTone>('consultivo');
   const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
-  const [followUpSelectedSalesTechniques, setFollowUpSelectedSalesTechniques] = useState<string[]>([]);
-  const [followUpSelectedSituationPresetIds, setFollowUpSelectedSituationPresetIds] = useState<string[]>([]);
-  const [followUpManualContext, setFollowUpManualContext] = useState({
-    tone: false,
-    situationPresetIds: false,
-    salesTechniques: false,
-  });
   const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
   const [followUpEmotionalContext, setFollowUpEmotionalContext] = useState<CommWhatsAppFollowUpEmotionalContext | null>(null);
   const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
@@ -5376,9 +5365,6 @@ export default function WhatsAppInboxScreen() {
     setFollowUpDraft('');
     setFollowUpCustomInstructions('');
     setFollowUpVariations([]);
-    setFollowUpSelectedSalesTechniques([]);
-    setFollowUpSelectedSituationPresetIds([]);
-    setFollowUpManualContext({ tone: false, situationPresetIds: false, salesTechniques: false });
     setFollowUpAiContextRationale(null);
     setFollowUpEmotionalContext(null);
     setFollowUpNextAction(null);
@@ -8612,8 +8598,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
-    tone: CommWhatsAppFollowUpTone,
-    options: { variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; manualContext?: { tone?: boolean; situationPresetIds?: boolean; salesTechniques?: boolean } } = {},
+    options: { variantCount?: number } = {},
   ) => {
     if (!selectedChat) {
       return;
@@ -8623,43 +8608,20 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const validSalesTechniqueIds = new Set<string>(followUpSalesTechniqueOptions.map((technique) => technique.id));
-    const normalizedSalesTechniques = (options.salesTechniques ?? followUpSelectedSalesTechniques)
-      .filter((techniqueId) => validSalesTechniqueIds.has(techniqueId));
-    const validSituationPresetIds = new Set<string>(CONVERSATION_SITUATION_PRESETS.map((preset) => preset.id));
-    const normalizedSituationPresetIds = (options.situationPresetIds ?? followUpSelectedSituationPresetIds)
-      .filter((presetId) => validSituationPresetIds.has(presetId));
-    const manualContextSource = options.manualContext ?? followUpManualContext;
-    const activeManualContext = {
-      tone: manualContextSource.tone === true,
-      situationPresetIds: manualContextSource.situationPresetIds === true,
-      salesTechniques: manualContextSource.salesTechniques === true,
-    };
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
-    const followUpRequestPayload = {
+    console.debug('[FollowUpAI][inbox] request', {
       chatId: selectedChat.id,
       customInstructions,
-      tone,
       variantCount: options.variantCount,
-      salesTechniques: normalizedSalesTechniques,
-      situationPresetIds: normalizedSituationPresetIds,
-      autoSelectContext: true,
-      manualContext: activeManualContext,
       selectedChat,
-    };
-    console.debug('[FollowUpAI][inbox] request', followUpRequestPayload);
+    });
     setGeneratingFollowUp(true);
 
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
-        tone,
         variantCount: options.variantCount,
-        salesTechniques: normalizedSalesTechniques,
-        situationPresetIds: normalizedSituationPresetIds,
-        autoSelectContext: true,
-        manualContext: activeManualContext,
       });
       console.debug('[FollowUpAI][inbox] response', {
         requestId,
@@ -8678,10 +8640,6 @@ export default function WhatsAppInboxScreen() {
       setFollowUpDraft(result.text.trim());
       setFollowUpVariations(result.variations ?? []);
       setFollowUpCustomInstructions(customInstructions);
-      setFollowUpTone(result.aiContext?.tone ?? tone);
-      setFollowUpSelectedSalesTechniques(result.aiContext?.salesTechniques ?? normalizedSalesTechniques);
-      setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
-      setFollowUpManualContext(activeManualContext);
       setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
       setFollowUpEmotionalContext(result.aiContext?.emotionalContext ?? null);
       setFollowUpNextAction(result.nextAction ?? null);
@@ -8703,7 +8661,7 @@ export default function WhatsAppInboxScreen() {
         setGeneratingFollowUp(false);
       }
     }
-  }, [followUpGenerationDisabledReason, followUpManualContext, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, selectedChat]);
+  }, [followUpGenerationDisabledReason, selectedChat]);
 
   const handleOpenFollowUpModal = useCallback(() => {
     if (followUpGenerationDisabledReason) {
@@ -9047,37 +9005,9 @@ export default function WhatsAppInboxScreen() {
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);
 
-  const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
-    setFollowUpManualContext((current) => ({ ...current, salesTechniques: true }));
-    setFollowUpSelectedSalesTechniques((current) => (
-      current.includes(techniqueId)
-        ? current.filter((selectedTechniqueId) => selectedTechniqueId !== techniqueId)
-        : [...current, techniqueId]
-    ));
-  }, []);
-
-  const handleToggleFollowUpSituationPreset = useCallback((presetId: string) => {
-    setFollowUpManualContext((current) => ({ ...current, situationPresetIds: true }));
-    setFollowUpSelectedSituationPresetIds((current) => (
-      current.includes(presetId)
-        ? current.filter((selectedPresetId) => selectedPresetId !== presetId)
-        : [...current, presetId]
-    ));
-  }, []);
-
-  const handleChangeFollowUpTone = useCallback((tone: CommWhatsAppFollowUpTone) => {
-    setFollowUpTone(tone);
-    setFollowUpManualContext((current) => ({ ...current, tone: true }));
-  }, []);
-
   const handleRegenerateFollowUp = useCallback((options: { variantCount?: number; customInstructions?: string } = {}) => {
-    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions, followUpTone, {
-      ...options,
-      salesTechniques: followUpSelectedSalesTechniques,
-      situationPresetIds: followUpSelectedSituationPresetIds,
-      manualContext: followUpManualContext,
-    });
-  }, [followUpCustomInstructions, followUpManualContext, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, followUpTone, handleGenerateFollowUp]);
+    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions, options);
+  }, [followUpCustomInstructions, handleGenerateFollowUp]);
 
   const handleScheduleFollowUpNextAction = useCallback(async () => {
     if (!selectedChat || !followUpNextAction?.suggestedDateTime) {
@@ -11206,10 +11136,7 @@ export default function WhatsAppInboxScreen() {
           leadFavorito={leadPanel?.favorito}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
-          tone={followUpTone}
           variations={followUpVariations}
-          selectedSalesTechniques={followUpSelectedSalesTechniques}
-          selectedSituationPresetIds={followUpSelectedSituationPresetIds}
           aiContextRationale={followUpAiContextRationale}
           emotionalContext={followUpEmotionalContext}
           nextAction={followUpNextAction}
@@ -11217,9 +11144,6 @@ export default function WhatsAppInboxScreen() {
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
-          onChangeTone={handleChangeFollowUpTone}
-          onToggleSituationPreset={handleToggleFollowUpSituationPreset}
-          onToggleSalesTechnique={handleToggleFollowUpSalesTechnique}
           onGenerate={handleRegenerateFollowUp}
           onScheduleNextAction={handleScheduleFollowUpNextAction}
           onSend={handleSendFollowUpDraft}

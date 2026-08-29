@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   Bell,
   Calendar,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Copy,
   ExternalLink,
   Loader2,
   MessageCircle,
@@ -210,6 +212,10 @@ export default function WhatsAppAgendaModal({
   const [openingLeadChatId, setOpeningLeadChatId] = useState<string | null>(null);
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [isDuplicatesModalOpen, setIsDuplicatesModalOpen] = useState(false);
+  const [duplicateKeepSelection, setDuplicateKeepSelection] = useState<Record<string, string>>({});
+  const [dedupingGroupKey, setDedupingGroupKey] = useState<string | null>(null);
+  const [isDedupingAll, setIsDedupingAll] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
@@ -369,6 +375,8 @@ export default function WhatsAppAgendaModal({
     setTypeFilter('all');
     setOnlyCurrentLead(false);
     setShowCompleted(false);
+    setIsDuplicatesModalOpen(false);
+    setDuplicateKeepSelection({});
     setError(null);
     setLastUpdated(null);
     setReminders([]);
@@ -932,6 +940,220 @@ export default function WhatsAppAgendaModal({
     ];
   }, [reminders]);
 
+  // Bucket de duplicidade: lembretes atrasados (de qualquer dia anterior) caem
+  // no mesmo grupo de "hoje", pois e exatamente isso que o envio automatico de
+  // follow-up em lote considera "devido agora" (data <= hoje). Ja um lembrete
+  // futuro so conta como duplicado de outro no mesmo dia futuro.
+  const getDuplicateBucketDateKey = useCallback((reminder: Reminder) => {
+    const todayKey = getDateKey(new Date());
+    const reminderDateKey = getDateKey(reminder.data_lembrete);
+
+    if (!reminderDateKey) {
+      return reminderDateKey;
+    }
+
+    return reminderDateKey < todayKey ? todayKey : reminderDateKey;
+  }, []);
+
+  // Lembretes pendentes agrupados por lead + tipo + bucket de vencimento: mais
+  // de um no mesmo grupo significa risco real de follow-up duplicado no envio
+  // em lote (o mesmo lead receberia 2 mensagens do mesmo tipo).
+  const duplicateReminderGroups = useMemo(() => {
+    const groups = new Map<string, Reminder[]>();
+
+    reminders.forEach((reminder) => {
+      if (reminder.lido) {
+        return;
+      }
+
+      const leadId = getLeadIdForReminder(reminder);
+      if (!leadId) {
+        return;
+      }
+
+      const key = `${leadId}|${reminder.tipo}|${getDuplicateBucketDateKey(reminder)}`;
+      const group = groups.get(key);
+      if (group) {
+        group.push(reminder);
+      } else {
+        groups.set(key, [reminder]);
+      }
+    });
+
+    return groups;
+  }, [getDuplicateBucketDateKey, getLeadIdForReminder, reminders]);
+
+  const duplicateReminderIds = useMemo(() => {
+    const ids = new Set<string>();
+    duplicateReminderGroups.forEach((group) => {
+      if (group.length > 1) {
+        group.forEach((reminder) => ids.add(reminder.id));
+      }
+    });
+    return ids;
+  }, [duplicateReminderGroups]);
+
+  const duplicateReminderCount = duplicateReminderIds.size;
+
+  type DuplicateReminderGroup = {
+    key: string;
+    leadId: string;
+    leadName: string;
+    tipo: string;
+    dateLabel: string;
+    reminders: Reminder[];
+  };
+
+  const duplicateReminderGroupList = useMemo<DuplicateReminderGroup[]>(() => {
+    const list: DuplicateReminderGroup[] = [];
+
+    duplicateReminderGroups.forEach((group, key) => {
+      if (group.length <= 1) {
+        return;
+      }
+
+      const sortedReminders = [...group].sort(
+        (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
+      );
+      const leadId = getLeadIdForReminder(sortedReminders[0]) ?? '';
+      const leadName = leadId ? leadsMap.get(leadId)?.nome_completo ?? 'Lead sem nome' : 'Lead sem nome';
+      const bucketDateKey = getDuplicateBucketDateKey(sortedReminders[0]);
+      const spansDifferentDays = sortedReminders.some(
+        (reminder) => getDateKey(reminder.data_lembrete) !== bucketDateKey,
+      );
+      const dateLabel = spansDifferentDays
+        ? 'Atrasados agrupados com hoje'
+        : new Date(sortedReminders[0].data_lembrete).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          });
+
+      list.push({
+        key,
+        leadId,
+        leadName,
+        tipo: sortedReminders[0].tipo,
+        dateLabel,
+        reminders: sortedReminders,
+      });
+    });
+
+    return list.sort((left, right) => {
+      const dateComparison =
+        new Date(left.reminders[0].data_lembrete).getTime() - new Date(right.reminders[0].data_lembrete).getTime();
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+      return left.leadName.localeCompare(right.leadName, 'pt-BR', { sensitivity: 'base' });
+    });
+  }, [duplicateReminderGroups, getDuplicateBucketDateKey, getLeadIdForReminder, leadsMap]);
+
+  const getKeepIdForGroup = useCallback(
+    (group: DuplicateReminderGroup) => duplicateKeepSelection[group.key] ?? group.reminders[0]?.id ?? null,
+    [duplicateKeepSelection],
+  );
+
+  const handleSelectDuplicateKeep = useCallback((groupKey: string, reminderId: string) => {
+    setDuplicateKeepSelection((current) => ({ ...current, [groupKey]: reminderId }));
+  }, []);
+
+  const handleDedupeGroup = useCallback(async (group: DuplicateReminderGroup) => {
+    const keepId = getKeepIdForGroup(group);
+    const idsToDelete = group.reminders.filter((reminder) => reminder.id !== keepId).map((reminder) => reminder.id);
+
+    if (idsToDelete.length === 0) {
+      return;
+    }
+
+    const confirmed = await requestConfirmation({
+      title: 'Remover duplicados',
+      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) de ${group.leadName} (${group.tipo}, ${group.dateLabel})? O lembrete marcado como "Manter" sera preservado.`,
+      confirmLabel: 'Remover duplicados',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDedupingGroupKey(group.key);
+
+    try {
+      idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
+      const { error: deleteError } = await supabase.from('reminders').delete().in('id', idsToDelete);
+
+      if (deleteError) {
+        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
+        throw deleteError;
+      }
+
+      if (group.leadId) {
+        await updateLeadNextReturnDate(group.leadId);
+      }
+
+      const idsToDeleteSet = new Set(idsToDelete);
+      setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
+      toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
+    } catch (dedupError) {
+      console.error('[WhatsAppAgendaModal] erro ao remover duplicados:', dedupError);
+      toast.error('Nao foi possivel remover os duplicados deste grupo.');
+    } finally {
+      setDedupingGroupKey(null);
+    }
+  }, [getKeepIdForGroup, requestConfirmation, updateLeadNextReturnDate]);
+
+  const handleDedupeAllGroups = useCallback(async () => {
+    const idsToDelete = duplicateReminderGroupList.flatMap((group) => {
+      const keepId = getKeepIdForGroup(group);
+      return group.reminders.filter((reminder) => reminder.id !== keepId).map((reminder) => reminder.id);
+    });
+
+    if (idsToDelete.length === 0) {
+      return;
+    }
+
+    const confirmed = await requestConfirmation({
+      title: 'Deduplicar agenda',
+      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) em ${duplicateReminderGroupList.length} grupo(s)? Os itens marcados como "Manter" serao preservados.`,
+      confirmLabel: 'Deduplicar tudo',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDedupingAll(true);
+
+    try {
+      idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
+      const { error: deleteError } = await supabase.from('reminders').delete().in('id', idsToDelete);
+
+      if (deleteError) {
+        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
+        throw deleteError;
+      }
+
+      const affectedLeadIds = Array.from(
+        new Set(duplicateReminderGroupList.map((group) => group.leadId).filter(Boolean)),
+      );
+      await Promise.all(affectedLeadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+
+      const idsToDeleteSet = new Set(idsToDelete);
+      setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
+      toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
+      setIsDuplicatesModalOpen(false);
+    } catch (dedupError) {
+      console.error('[WhatsAppAgendaModal] erro ao deduplicar agenda:', dedupError);
+      toast.error('Nao foi possivel concluir a deduplicacao.');
+    } finally {
+      setIsDedupingAll(false);
+    }
+  }, [duplicateReminderGroupList, getKeepIdForGroup, requestConfirmation, updateLeadNextReturnDate]);
+
   const filteredReminders = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -1103,6 +1325,7 @@ export default function WhatsAppAgendaModal({
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;
     const hasLeadPhone = Boolean(leadInfo?.telefone);
     const overdue = isOverdue(reminder.data_lembrete) && !reminder.lido;
+    const isDuplicate = duplicateReminderIds.has(reminder.id);
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
     const matchesCurrentLead = currentLeadMatchesReminder(reminder);
     const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
@@ -1129,6 +1352,9 @@ export default function WhatsAppAgendaModal({
                     </h3>
                     {overdue ? (
                       <Badge tone="danger">Atrasado</Badge>
+                    ) : null}
+                    {isDuplicate ? (
+                      <Badge tone="warning" icon={Copy}>Duplicado</Badge>
                     ) : null}
                     {matchesCurrentLead ? (
                       <Badge tone="accent">Chat atual</Badge>
@@ -1481,6 +1707,18 @@ export default function WhatsAppAgendaModal({
                   </Button>
                 ) : null}
 
+                {duplicateReminderCount > 0 ? (
+                  <Button
+                    onClick={() => setIsDuplicatesModalOpen(true)}
+                    variant="warning"
+                    size="md"
+                    className="h-11"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {`Duplicados (${duplicateReminderCount})`}
+                  </Button>
+                ) : null}
+
                 {hasActiveFilters > 0 ? (
                   <Button onClick={clearFilters} variant="ghost" size="md" className="h-11">
                     Limpar filtros ({hasActiveFilters})
@@ -1488,6 +1726,21 @@ export default function WhatsAppAgendaModal({
                 ) : null}
               </div>
             </Surface>
+
+            {duplicateReminderCount > 0 ? (
+              <Surface variant="warning" padding="sm" className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>
+                    {duplicateReminderCount} lembrete(s) duplicado(s): mesmo lead, mesmo tipo e vencendo juntos hoje
+                    (inclui atrasados de outros dias). Isso pode gerar 2 follow-ups para a mesma pessoa no envio em lote.
+                  </span>
+                </div>
+                <Button onClick={() => setIsDuplicatesModalOpen(true)} variant="secondary" size="sm">
+                  Revisar duplicados
+                </Button>
+              </Surface>
+            ) : null}
 
             {error ? (
               <Surface variant="danger" padding="sm" className="flex items-center gap-2 py-3 text-sm">
@@ -1664,6 +1917,111 @@ export default function WhatsAppAgendaModal({
           defaultType={manualReminderQueue[0].defaultType}
           defaultPriority={manualReminderQueue[0].defaultPriority}
         />
+      ) : null}
+
+      {isDuplicatesModalOpen ? (
+        <WhatsAppDialog
+          isOpen
+          onClose={() => setIsDuplicatesModalOpen(false)}
+          title="Lembretes duplicados"
+          description="Mesmo lead, mesmo tipo e vencendo juntos hoje (atrasados de outros dias contam). Escolha qual lembrete manter em cada grupo antes de remover os repetidos."
+          size="lg"
+          panelClassName="max-w-3xl"
+          footer={
+            <div className="flex w-full flex-wrap items-center justify-between gap-3">
+              <span className="text-sm text-[var(--text-muted)]">
+                {duplicateReminderGroupList.length > 0
+                  ? `${duplicateReminderGroupList.length} grupo(s) com duplicidade`
+                  : 'Nenhum duplicado no momento'}
+              </span>
+              <div className="flex items-center gap-3">
+                <Button variant="secondary" onClick={() => setIsDuplicatesModalOpen(false)}>
+                  Fechar
+                </Button>
+                {canEdit && duplicateReminderGroupList.length > 0 ? (
+                  <Button
+                    variant="danger"
+                    onClick={() => void handleDedupeAllGroups()}
+                    loading={isDedupingAll}
+                    disabled={isDedupingAll || dedupingGroupKey !== null}
+                  >
+                    Deduplicar tudo
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          }
+        >
+          {duplicateReminderGroupList.length === 0 ? (
+            <EmptyState
+              icon={<CheckCircle2 className="h-14 w-14" />}
+              title="Sem duplicados"
+              description="Nenhum lembrete duplicado encontrado no momento."
+            />
+          ) : (
+            <div className="space-y-4">
+              {duplicateReminderGroupList.map((group) => {
+                const keepId = getKeepIdForGroup(group);
+                const isDedupingThisGroup = dedupingGroupKey === group.key;
+
+                return (
+                  <Surface key={group.key} variant="warning" padding="sm">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{group.leadName}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{group.tipo} - {group.dateLabel}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge tone="warning">{group.reminders.length} duplicados</Badge>
+                        {canEdit ? (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => void handleDedupeGroup(group)}
+                            loading={isDedupingThisGroup}
+                            disabled={isDedupingThisGroup || isDedupingAll}
+                          >
+                            Remover duplicados
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {group.reminders.map((reminder) => (
+                        <label
+                          key={reminder.id}
+                          className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 text-sm"
+                        >
+                          <input
+                            type="radio"
+                            name={`duplicate-keep-${group.key}`}
+                            checked={keepId === reminder.id}
+                            onChange={() => handleSelectDuplicateKeep(group.key, reminder.id)}
+                            disabled={!canEdit}
+                            className="mt-1"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-[var(--text-primary)]">{reminder.titulo}</span>
+                              {keepId === reminder.id ? <Badge tone="success">Manter</Badge> : null}
+                            </div>
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              {formatDateTimeFullBR(reminder.data_lembrete)}
+                            </p>
+                            {reminder.descricao ? (
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">{reminder.descricao}</p>
+                            ) : null}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </Surface>
+                );
+              })}
+            </div>
+          )}
+        </WhatsAppDialog>
       ) : null}
 
       <WhatsAppBatchFollowUpModal

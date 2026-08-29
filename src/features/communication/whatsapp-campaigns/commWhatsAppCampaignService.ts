@@ -1,7 +1,10 @@
+import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
 import { getSupabaseErrorMessage, supabase } from '../../../lib/supabase';
 
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CommWhatsAppCampaignAudienceSource = 'crm' | 'csv' | 'manual' | 'mixed';
+
+export type CommWhatsAppCampaignRecurrenceRule = 'none' | 'daily' | 'weekly' | 'monthly';
 
 export type CommWhatsAppCampaign = {
   id: string;
@@ -16,8 +19,10 @@ export type CommWhatsAppCampaign = {
   daily_send_limit: number | null;
   send_window_start: string | null;
   send_window_end: string | null;
+  active_weekdays: number[];
   stop_on_reply: boolean;
   create_leads_from_csv: boolean;
+  validate_whatsapp_numbers: boolean;
   total_targets: number;
   valid_targets: number;
   invalid_targets: number;
@@ -27,6 +32,13 @@ export type CommWhatsAppCampaign = {
   responded_targets: number;
   stopped_targets: number;
   last_error: string | null;
+  ab_test_enabled: boolean;
+  ab_split_percent: number;
+  recurrence_rule: CommWhatsAppCampaignRecurrenceRule;
+  recurrence_interval: number;
+  recurrence_end_at: string | null;
+  recurrence_next_run_at: string | null;
+  recurrence_runs_completed: number;
   created_at: string;
   updated_at: string;
 };
@@ -37,19 +49,48 @@ export type CommWhatsAppCsvTargetDraft = {
   payload: Record<string, unknown>;
 };
 
-export type CommWhatsAppCampaignStepDraft = {
+export type CommWhatsAppCampaignMediaType = 'image' | 'document' | 'video';
+export type CommWhatsAppCampaignDelayUnit = 'seconds' | 'minutes' | 'hours' | 'days';
+export type CommWhatsAppCampaignStepKind = 'message' | 'status_change';
+
+export type CommWhatsAppCampaignMessageDraft = {
   messageText: string;
+  mediaUrl?: string | null;
+  mediaType?: CommWhatsAppCampaignMediaType | null;
+  mediaFilename?: string | null;
+  /** Somente na primeira mensagem do primeiro estagio: texto alternativo da variante B do teste A/B. */
+  variantBMessageText?: string;
+};
+
+/**
+ * Um estagio agrupa um ou mais envios sob o mesmo intervalo de espera desde
+ * o estagio anterior - ex: "3 mensagens imediatas" e depois "2 mensagens 24h
+ * depois" sao dois estagios. Mesma logica de pacote de mensagens por etapa
+ * do construtor de fluxo de automacao, mas sempre linear (sem ramificacao).
+ */
+export type CommWhatsAppCampaignStageDraft = {
+  kind: CommWhatsAppCampaignStepKind;
   delayAmount: number;
-  delayUnit: 'seconds' | 'minutes' | 'hours' | 'days';
+  delayUnit: CommWhatsAppCampaignDelayUnit;
+  messages: CommWhatsAppCampaignMessageDraft[];
+  /** Usado somente quando kind === 'status_change'. */
+  statusToSet?: string;
 };
 
 export type CommWhatsAppCampaignStep = {
   id: string;
   campaign_id: string;
   step_index: number;
+  stage_index: number;
+  step_kind: CommWhatsAppCampaignStepKind;
+  status_to_set: string | null;
   message_text: string;
   delay_amount: number;
-  delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  delay_unit: CommWhatsAppCampaignDelayUnit;
+  media_url: string | null;
+  media_type: CommWhatsAppCampaignMediaType | null;
+  media_filename: string | null;
+  variant_label: 'ANY' | 'A' | 'B';
   created_at: string;
   updated_at: string;
 };
@@ -78,6 +119,7 @@ export type CommWhatsAppCampaignTarget = {
   stopped_reason: string | null;
   error_message: string | null;
   external_message_id: string | null;
+  ab_variant: 'A' | 'B' | null;
   created_at: string;
   updated_at: string;
 };
@@ -93,10 +135,25 @@ export type CreateCampaignInput = {
   dailySendLimit?: number | null;
   sendWindowStart?: string | null;
   sendWindowEnd?: string | null;
+  activeWeekdays: number[];
   stopOnReply: boolean;
   createLeadsFromCsv: boolean;
-  steps: CommWhatsAppCampaignStepDraft[];
+  validateWhatsappNumbers: boolean;
+  stages: CommWhatsAppCampaignStageDraft[];
   csvTargets?: CommWhatsAppCsvTargetDraft[];
+  abTestEnabled: boolean;
+  abSplitPercent: number;
+  recurrenceRule: CommWhatsAppCampaignRecurrenceRule;
+  recurrenceInterval: number;
+  recurrenceEndAt?: string | null;
+};
+
+export type CommWhatsAppCampaignTemplate = {
+  id: string;
+  name: string;
+  stages: CommWhatsAppCampaignStageDraft[];
+  created_at: string;
+  updated_at: string;
 };
 
 export type CampaignStats = {
@@ -149,6 +206,7 @@ export type CommWhatsAppCampaignPreviewSample = {
   phone: string;
   status?: string | null;
   responsavel?: string | null;
+  resolvedMessage: string;
 };
 
 export type CommWhatsAppCampaignActivationPreview = {
@@ -186,6 +244,47 @@ export type CommWhatsAppCampaignWorkerHealth = {
   recentRuns: CommWhatsAppCampaignWorkerRun[];
 };
 
+const parseTimeToMinutes = (value: string | null | undefined): number | null => {
+  if (!value) return null;
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+/**
+ * Minutos entre a admissao de cada contato novo, derivado direto de
+ * "novos contatos por dia" e da janela de envio (ou 24h corridas sem
+ * janela). E so informativo no front - o worker calcula o mesmo valor de
+ * verdade na RPC de reserva de despacho.
+ */
+export const computeAdmissionIntervalMinutes = (
+  dailyLimit: number | null | undefined,
+  windowStart: string | null | undefined,
+  windowEnd: string | null | undefined,
+): number | null => {
+  if (!dailyLimit || dailyLimit <= 0) return null;
+
+  const start = parseTimeToMinutes(windowStart);
+  const end = parseTimeToMinutes(windowEnd);
+  let windowMinutes = 24 * 60;
+  if (start !== null && end !== null && start !== end) {
+    windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
+  }
+
+  return Math.max(Math.floor(windowMinutes / dailyLimit), 1);
+};
+
+export const formatAdmissionInterval = (minutes: number | null): string => {
+  if (minutes === null) return 'Sem limite diario definido';
+  if (minutes < 60) return `1 novo contato a cada ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return `1 novo contato a cada ${hours}h${remaining > 0 ? ` ${remaining}min` : ''}`;
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -198,6 +297,72 @@ const getCurrentUserId = async () => {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
 };
+
+// CSVs grandes (dezenas de milhares de linhas) nao cabem num unico upsert:
+// o payload fica enorme e o cliente Supabase tem um timeout fixo de 8s por
+// requisicao (src/lib/supabase.ts), pensado para consultas normais - um
+// upsert de dezenas de milhares de linhas de uma vez estoura isso e derruba
+// a criacao do disparo inteiro. Envia em lotes menores, com retry por lote.
+const CSV_TARGET_BATCH_SIZE = 500;
+const CSV_TARGET_BATCH_MAX_ATTEMPTS = 3;
+
+const chunkArray = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+type CsvTargetRow = {
+  campaign_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string | null;
+  source_kind: string;
+  source_payload: Record<string, unknown>;
+  whatsapp_check_status: 'skipped' | 'pending';
+};
+
+async function upsertCsvTargetsInBatches(
+  targets: CsvTargetRow[],
+  onProgress?: (saved: number, total: number) => void,
+): Promise<void> {
+  const batches = chunkArray(targets, CSV_TARGET_BATCH_SIZE);
+  let saved = 0;
+
+  for (const batch of batches) {
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= CSV_TARGET_BATCH_MAX_ATTEMPTS; attempt += 1) {
+      const { error } = await supabase
+        .from('comm_whatsapp_campaign_targets')
+        .upsert(batch, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
+
+      if (!error) {
+        lastError = null;
+        break;
+      }
+
+      lastError = error;
+      if (attempt < CSV_TARGET_BATCH_MAX_ATTEMPTS) {
+        await sleep(1000 * attempt);
+      }
+    }
+
+    if (lastError) {
+      throw new Error(getSupabaseErrorMessage(
+        lastError,
+        `O disparo foi criado, mas falhou ao salvar os contatos do CSV apos ${saved} de ${targets.length} importados. Edite o disparo para tentar novamente.`,
+      ));
+    }
+
+    saved += batch.length;
+    onProgress?.(saved, targets.length);
+  }
+}
 
 type CountFilter =
   | { op: 'eq'; column: string; value: string }
@@ -247,7 +412,7 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
-const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel']);
+const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada']);
 
 const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
   const variables = new Set<string>();
@@ -257,6 +422,111 @@ const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
     }
   }
   return Array.from(variables).sort();
+};
+
+// {{primeiro_nome}} sempre sai so com a inicial maiuscula, independente de
+// como o nome esta cadastrado (tudo maiusculo, tudo minusculo, etc.).
+const formatFirstNameTitle = (value: string): string => {
+  const trimmed = value.trim();
+  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1).toLowerCase()}` : '';
+};
+
+const resolveSampleMessage = (template: string, sample: { name: string; phone: string; status?: string | null; responsavel?: string | null }) => {
+  const greeting = getGreetingForDate(new Date());
+  const replacements: Record<string, string> = {
+    nome: sample.name || '',
+    primeiro_nome: formatFirstNameTitle((sample.name || '').split(/\s+/).filter(Boolean)[0] || ''),
+    telefone: sample.phone || '',
+    status: sample.status || '',
+    responsavel: sample.responsavel || '',
+    saudacao: greeting,
+    saudacao_titulo: formatGreetingTitle(greeting),
+    saudacao_capitalizada: formatGreetingTitle(greeting),
+  };
+
+  return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');
+};
+
+type CampaignStepInsertRow = {
+  campaign_id: string;
+  step_index: number;
+  stage_index: number;
+  step_kind: CommWhatsAppCampaignStepKind;
+  status_to_set: string | null;
+  delay_amount: number;
+  delay_unit: CommWhatsAppCampaignDelayUnit;
+  media_url: string | null;
+  media_type: CommWhatsAppCampaignMediaType | null;
+  media_filename: string | null;
+  message_text: string;
+  variant_label: 'ANY' | 'A' | 'B';
+};
+
+/**
+ * Achata os estagios (cada um com N mensagens ou uma troca de status) em
+ * linhas fisicas de `comm_whatsapp_campaign_steps`. A primeira mensagem (ou
+ * acao) de cada estagio carrega o intervalo configurado para o estagio; as
+ * demais mensagens do mesmo estagio ficam com intervalo zero, ou seja, saem
+ * em sequencia logo depois da anterior. O primeiro passo fisico da campanha
+ * nunca tem intervalo, mesmo que o estagio tenha um configurado.
+ */
+const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
+  const rows: CampaignStepInsertRow[] = [];
+  let stepIndex = 0;
+
+  const resolveDelay = (isFirstInStage: boolean, stage: CommWhatsAppCampaignStageDraft) => (
+    stepIndex === 0 ? 0 : (isFirstInStage ? Math.max(Math.floor(stage.delayAmount || 0), 0) : 0)
+  );
+
+  stages.forEach((stage, stageIndex) => {
+    if (stage.kind === 'status_change') {
+      const statusToSet = stage.statusToSet?.trim();
+      if (!statusToSet) return;
+      rows.push({
+        campaign_id: campaignId,
+        step_index: stepIndex,
+        stage_index: stageIndex,
+        step_kind: 'status_change',
+        status_to_set: statusToSet,
+        message_text: '',
+        delay_amount: resolveDelay(true, stage),
+        delay_unit: stage.delayUnit,
+        media_url: null,
+        media_type: null,
+        media_filename: null,
+        variant_label: 'ANY',
+      });
+      stepIndex += 1;
+      return;
+    }
+
+    stage.messages.forEach((message, messageIndex) => {
+      const isFirstInStage = messageIndex === 0;
+      const base = {
+        campaign_id: campaignId,
+        step_index: stepIndex,
+        stage_index: stageIndex,
+        step_kind: 'message' as const,
+        status_to_set: null,
+        delay_amount: resolveDelay(isFirstInStage, stage),
+        delay_unit: stage.delayUnit,
+        media_url: message.mediaUrl || null,
+        media_type: message.mediaUrl ? message.mediaType || null : null,
+        media_filename: message.mediaUrl ? message.mediaFilename || null : null,
+      };
+
+      const variantBText = message.variantBMessageText?.trim() || '';
+      if (stepIndex === 0 && abTestEnabled && variantBText) {
+        rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'A' });
+        rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
+      } else {
+        rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'ANY' });
+      }
+      stepIndex += 1;
+    });
+  });
+
+  return rows.filter((row) => row.step_kind === 'status_change' || row.message_text.length > 0 || row.media_url);
 };
 
 export const commWhatsAppCampaignService = {
@@ -290,19 +560,80 @@ export const commWhatsAppCampaignService = {
     return data as CommWhatsAppCampaign;
   },
 
-  async listCampaignTargets(campaignId: string): Promise<CommWhatsAppCampaignTarget[]> {
-    const { data, error } = await supabase
+  async listCampaignTargets(
+    campaignId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+      status?: CommWhatsAppCampaignTargetStatus[];
+      search?: string;
+    } = {},
+  ): Promise<{ targets: CommWhatsAppCampaignTarget[]; total: number }> {
+    const pageSize = Math.min(Math.max(options.pageSize ?? 50, 1), 200);
+    const page = Math.max(options.page ?? 0, 0);
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
       .from('comm_whatsapp_campaign_targets')
-      .select('*')
-      .eq('campaign_id', campaignId)
+      .select('*', { count: 'exact' })
+      .eq('campaign_id', campaignId);
+
+    if (options.status && options.status.length > 0) {
+      query = query.in('status', options.status);
+    }
+
+    // Remove caracteres que quebram a sintaxe do filtro .or() do PostgREST
+    // (virgula separa condicoes, parenteses abrem grupo) antes de montar o
+    // padrao ilike.
+    const search = options.search?.trim().replace(/[,()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (search) {
+      query = query.or(`display_name.ilike.%${search}%,phone_number.ilike.%${search}%,phone_digits.ilike.%${search}%`);
+    }
+
+    const { data, error, count } = await query
       .order('created_at', { ascending: true })
-      .limit(500);
+      .range(from, to);
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
     }
 
-    return (data ?? []) as CommWhatsAppCampaignTarget[];
+    return { targets: (data ?? []) as CommWhatsAppCampaignTarget[], total: count ?? 0 };
+  },
+
+  async getCampaignFailureReasons(campaignId: string): Promise<Array<{ error_message: string; total_count: number }>> {
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_failure_reasons', { p_campaign_id: campaignId });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os motivos de falha.'));
+    }
+
+    return ((data ?? []) as Array<{ error_message: string; total_count: number | string }>)
+      .map((row) => ({ error_message: row.error_message, total_count: Number(row.total_count) }));
+  },
+
+  async getCampaignTargetStatusCounts(campaignId: string): Promise<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>> {
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contadores deste disparo.'));
+    }
+
+    return ((data ?? []) as Array<{ status: string; ab_variant: string | null; total_count: number | string; responded_count: number | string }>)
+      .map((row) => ({
+        status: row.status,
+        ab_variant: row.ab_variant === 'A' || row.ab_variant === 'B' ? row.ab_variant : null,
+        total_count: Number(row.total_count),
+        responded_count: Number(row.responded_count),
+      }));
+  },
+
+  async getPendingWhatsAppValidationCount(campaignId: string): Promise<number> {
+    return getCount('comm_whatsapp_campaign_targets', [
+      { op: 'eq', column: 'campaign_id', value: campaignId },
+      { op: 'eq', column: 'whatsapp_check_status', value: 'pending' },
+    ]);
   },
 
   async getStats(): Promise<CampaignStats> {
@@ -375,9 +706,16 @@ export const commWhatsAppCampaignService = {
       id: 'fallback-message',
       campaign_id: campaign.id,
       step_index: 0,
+      stage_index: 0,
+      step_kind: 'message' as const,
+      status_to_set: null,
       message_text: campaign.message_text,
       delay_amount: 0,
       delay_unit: 'minutes' as const,
+      media_url: null,
+      media_type: null,
+      media_filename: null,
+      variant_label: 'ANY' as const,
       created_at: campaign.created_at,
       updated_at: campaign.updated_at,
     }];
@@ -395,6 +733,8 @@ export const commWhatsAppCampaignService = {
 
     let estimatedTargets = materializedTargetsCount ?? 0;
     let sample: CommWhatsAppCampaignPreviewSample[] = [];
+    const firstMessageStep = steps.find((step) => step.step_kind === 'message' && step.variant_label !== 'B');
+    const firstStepTemplate = firstMessageStep?.message_text || '';
 
     if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
       const filters = getNestedRecord(campaign.audience_config, 'filters');
@@ -429,12 +769,15 @@ export const commWhatsAppCampaignService = {
       if (sampleError) throw new Error(getSupabaseErrorMessage(sampleError, 'Nao foi possivel carregar amostra do CRM.'));
 
       estimatedTargets = count ?? 0;
-      sample = (sampleRows ?? []).map((lead) => ({
-        name: lead.nome_completo || 'Lead sem nome',
-        phone: lead.telefone || '',
-        status: lead.status,
-        responsavel: lead.responsavel,
-      }));
+      sample = (sampleRows ?? []).map((lead) => {
+        const entry = {
+          name: lead.nome_completo || 'Lead sem nome',
+          phone: lead.telefone || '',
+          status: lead.status,
+          responsavel: lead.responsavel,
+        };
+        return { ...entry, resolvedMessage: resolveSampleMessage(firstStepTemplate, entry) };
+      });
     } else {
       const { data: targetRows, error: targetRowsError } = await supabase
         .from('comm_whatsapp_campaign_targets')
@@ -447,11 +790,22 @@ export const commWhatsAppCampaignService = {
         throw new Error(getSupabaseErrorMessage(targetRowsError, 'Nao foi possivel carregar amostra dos contatos.'));
       }
 
-      sample = (targetRows ?? []).map((target) => ({
-        name: target.display_name || target.phone_number || target.phone_digits || 'Contato sem nome',
-        phone: target.phone_number || target.phone_digits || '',
-      }));
+      sample = (targetRows ?? []).map((target) => {
+        const entry = {
+          name: target.display_name || target.phone_number || target.phone_digits || 'Contato sem nome',
+          phone: target.phone_number || target.phone_digits || '',
+        };
+        return { ...entry, resolvedMessage: resolveSampleMessage(firstStepTemplate, entry) };
+      });
     }
+
+    // O gargalo real da campanha e o limite diario de admissao de contatos
+    // novos, espalhado pelos dias necessarios. Sem limite diario, o unico
+    // teto que resta e o de reivindicacao por execucao do worker (a cada
+    // minuto), entao usamos isso como estimativa.
+    const estimatedMinutes = campaign.daily_send_limit
+      ? Math.ceil(estimatedTargets / campaign.daily_send_limit) * 24 * 60
+      : Math.ceil(estimatedTargets / 25);
 
     return {
       campaign,
@@ -461,11 +815,14 @@ export const commWhatsAppCampaignService = {
       sample,
       variables,
       unknownVariables,
-      estimatedMinutes: Math.ceil(estimatedTargets / Math.max(campaign.pacing_per_minute || 1, 1)),
+      estimatedMinutes,
     };
   },
 
-  async createDraft(input: CreateCampaignInput): Promise<CommWhatsAppCampaign> {
+  async createDraft(
+    input: CreateCampaignInput,
+    onCsvProgress?: (saved: number, total: number) => void,
+  ): Promise<CommWhatsAppCampaign> {
     const userId = await getCurrentUserId();
     const { data: campaign, error } = await supabase
       .from('comm_whatsapp_campaigns')
@@ -481,8 +838,15 @@ export const commWhatsAppCampaignService = {
         daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
+        active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        validate_whatsapp_numbers: input.validateWhatsappNumbers,
+        ab_test_enabled: input.abTestEnabled,
+        ab_split_percent: input.abSplitPercent,
+        recurrence_rule: input.recurrenceRule,
+        recurrence_interval: input.recurrenceInterval,
+        recurrence_end_at: input.recurrenceEndAt || null,
         created_by: userId,
       })
       .select('*')
@@ -493,7 +857,7 @@ export const commWhatsAppCampaignService = {
     }
 
     const createdCampaign = campaign as CommWhatsAppCampaign;
-    const csvTargets = (input.csvTargets ?? [])
+    const csvTargetsWithDuplicates = (input.csvTargets ?? [])
       .map((target) => ({
         campaign_id: createdCampaign.id,
         phone_number: target.phoneNumber,
@@ -501,17 +865,23 @@ export const commWhatsAppCampaignService = {
         display_name: target.displayName || null,
         source_kind: 'csv',
         source_payload: target.payload,
+        whatsapp_check_status: (input.validateWhatsappNumbers ? 'pending' : 'skipped') as 'skipped' | 'pending',
       }))
       .filter((target) => target.phone_digits.length > 0);
 
-    if (csvTargets.length > 0) {
-      const { error: targetsError } = await supabase
-        .from('comm_whatsapp_campaign_targets')
-        .insert(csvTargets);
+    // O CSV pode trazer o mesmo telefone repetido (em formatos diferentes ou
+    // nao). Mantem so a primeira ocorrencia por numero normalizado - o banco
+    // tem uma constraint unica (campaign_id, phone_digits) que rejeitaria o
+    // insert inteiro se algum duplicado escapasse daqui.
+    const seenPhoneDigits = new Set<string>();
+    const csvTargets = csvTargetsWithDuplicates.filter((target) => {
+      if (seenPhoneDigits.has(target.phone_digits)) return false;
+      seenPhoneDigits.add(target.phone_digits);
+      return true;
+    });
 
-      if (targetsError) {
-        throw new Error(getSupabaseErrorMessage(targetsError, 'O disparo foi criado, mas os contatos do CSV nao foram salvos.'));
-      }
+    if (csvTargets.length > 0) {
+      await upsertCsvTargetsInBatches(csvTargets, onCsvProgress);
 
       const { error: updateError } = await supabase
         .from('comm_whatsapp_campaigns')
@@ -527,15 +897,7 @@ export const commWhatsAppCampaignService = {
       }
     }
 
-    const steps = input.steps
-      .map((step, index) => ({
-        campaign_id: createdCampaign.id,
-        step_index: index,
-        message_text: step.messageText.trim(),
-        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-        delay_unit: step.delayUnit,
-      }))
-      .filter((step) => step.message_text.length > 0);
+    const steps = buildStepRows(createdCampaign.id, input.stages, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -564,8 +926,15 @@ export const commWhatsAppCampaignService = {
         daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
+        active_weekdays: input.activeWeekdays,
         stop_on_reply: input.stopOnReply,
         create_leads_from_csv: input.createLeadsFromCsv,
+        validate_whatsapp_numbers: input.validateWhatsappNumbers,
+        ab_test_enabled: input.abTestEnabled,
+        ab_split_percent: input.abSplitPercent,
+        recurrence_rule: input.recurrenceRule,
+        recurrence_interval: input.recurrenceInterval,
+        recurrence_end_at: input.recurrenceEndAt || null,
       })
       .eq('id', campaignId);
 
@@ -582,15 +951,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
     }
 
-    const steps = input.steps
-      .map((step, index) => ({
-        campaign_id: campaignId,
-        step_index: index,
-        message_text: step.messageText.trim(),
-        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
-        delay_unit: step.delayUnit,
-      }))
-      .filter((step) => step.message_text.length > 0);
+    const steps = buildStepRows(campaignId, input.stages, input.abTestEnabled);
 
     if (steps.length > 0) {
       const { error: stepsError } = await supabase
@@ -600,6 +961,19 @@ export const commWhatsAppCampaignService = {
       if (stepsError) {
         throw new Error(getSupabaseErrorMessage(stepsError, 'O disparo foi atualizado, mas a nova sequencia nao foi salva.'));
       }
+    }
+  },
+
+  async deleteCampaign(campaignId: string): Promise<void> {
+    // Etapas, alvos e eventos da campanha tem ON DELETE CASCADE para
+    // comm_whatsapp_campaigns, entao apagar a campanha ja remove tudo.
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .delete()
+      .eq('id', campaignId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel excluir o disparo.'));
     }
   },
 
@@ -740,6 +1114,87 @@ export const commWhatsAppCampaignService = {
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel dispensar a sugestao.'));
+    }
+  },
+
+  async uploadCampaignMedia(file: File): Promise<{ url: string; type: CommWhatsAppCampaignMediaType; filename: string }> {
+    const type: CommWhatsAppCampaignMediaType = file.type.startsWith('image/')
+      ? 'image'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : 'document';
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'arquivo';
+    const path = `${crypto.randomUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('whatsapp-campaign-media')
+      .upload(path, file, { contentType: file.type || undefined, upsert: false });
+
+    if (uploadError) {
+      throw new Error(getSupabaseErrorMessage(uploadError, 'Nao foi possivel enviar o arquivo de midia.'));
+    }
+
+    const { data } = supabase.storage.from('whatsapp-campaign-media').getPublicUrl(path);
+    return { url: data.publicUrl, type, filename: file.name };
+  },
+
+  async sendTestMessage(campaignId: string, phoneNumber: string, stepIndex: number, variant: 'A' | 'B' = 'A'): Promise<{ phoneDigits: string }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-campaign-worker', {
+      body: { action: 'test_send', campaignId, phoneNumber, stepIndex, variant },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem de teste.'));
+    }
+
+    const payload = (data ?? {}) as { error?: string; phoneDigits?: string };
+    if (payload.error) {
+      throw new Error(payload.error);
+    }
+
+    return { phoneDigits: payload.phoneDigits || '' };
+  },
+
+  async listTemplates(): Promise<CommWhatsAppCampaignTemplate[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os modelos salvos.'));
+    }
+
+    return (data ?? []).map((row) => ({ ...row, stages: row.steps })) as CommWhatsAppCampaignTemplate[];
+  },
+
+  async saveTemplate(name: string, stages: CommWhatsAppCampaignStageDraft[]): Promise<CommWhatsAppCampaignTemplate> {
+    const userId = await getCurrentUserId();
+    // Coluna no banco continua chamada `steps` (jsonb opaco); o formato
+    // gravado nela e a lista de estagios.
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .insert({ name: name.trim(), steps: stages, created_by: userId })
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o modelo.'));
+    }
+
+    return { ...data, stages: data.steps } as CommWhatsAppCampaignTemplate;
+  },
+
+  async deleteTemplate(templateId: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_campaign_templates')
+      .delete()
+      .eq('id', templateId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel remover o modelo.'));
     }
   },
 };

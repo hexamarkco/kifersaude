@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2 } from 'lucide-react';
-import { Badge, Button, EmptyState, LoadingState } from '../../design-system';
+import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
+import { Badge, Button, EmptyState, Input, LoadingState } from '../../design-system';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   aiSandboxChatService,
@@ -21,6 +21,9 @@ export default function AiSandboxChatScreen() {
   const [sendingDraft, setSendingDraft] = useState(false);
   const [secondsUntilReply, setSecondsUntilReply] = useState<number | null>(null);
   const [generatingReply, setGeneratingReply] = useState(false);
+  const [leadNameForApproach, setLeadNameForApproach] = useState('');
+  const [startingApproach, setStartingApproach] = useState(false);
+  const [showAutomated, setShowAutomated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
@@ -35,6 +38,14 @@ export default function AiSandboxChatScreen() {
     [conversations, activeConversationId],
   );
 
+  // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa, mesmo
+  // que o lead mande agradecimento ou qualquer outra coisa — a partir dai e
+  // atendimento humano.
+  const isHandedOff = useMemo(
+    () => messages.some((message) => message.role === 'ai' && Boolean(message.handoff_reason)),
+    [messages],
+  );
+
   const clearPendingTimer = useCallback(() => {
     if (pendingTimerRef.current) {
       window.clearInterval(pendingTimerRef.current.intervalId);
@@ -45,21 +56,23 @@ export default function AiSandboxChatScreen() {
 
   useEffect(() => () => clearPendingTimer(), [clearPendingTimer]);
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async (automatedOnly: boolean) => {
     setConversationsLoading(true);
     try {
-      const rows = await aiSandboxChatService.listConversations();
+      const rows = await aiSandboxChatService.listConversations(automatedOnly);
       setConversations(rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar simulações.');
     } finally {
       setConversationsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadConversations();
-  }, []);
+    handleNewConversation();
+    loadConversations(showAutomated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAutomated]);
 
   useEffect(() => {
     if (!activeConversationId) {
@@ -93,6 +106,7 @@ export default function AiSandboxChatScreen() {
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
+    setLeadNameForApproach('');
     setError(null);
   };
 
@@ -118,6 +132,7 @@ export default function AiSandboxChatScreen() {
     setGeneratingReply(true);
     try {
       const result = await aiSandboxChatService.generateReply(conversationId);
+      if (result === null) return; // conversa ja foi encaminhada — IA nao responde mais
 
       if (activeConversationIdRef.current !== conversationId) return;
 
@@ -195,6 +210,10 @@ export default function AiSandboxChatScreen() {
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
       setMessages((prev) => [...prev, leadMessage]);
 
+      // Depois do handoff a IA nao responde mais — o lead pode mandar mais
+      // mensagens (ex: agradecendo), mas ninguem gera resposta automatica.
+      if (isHandedOff) return;
+
       // Reinicia a contagem a cada mensagem nova do lead — dá tempo de quem está
       // testando mandar mensagens picotadas antes da IA responder de uma vez.
       startReplyCountdown(conversationId);
@@ -203,6 +222,43 @@ export default function AiSandboxChatScreen() {
       setDraft(text);
     } finally {
       setSendingDraft(false);
+    }
+  };
+
+  const handleStartWithApproach = async () => {
+    if (!user || startingApproach) return;
+
+    setError(null);
+    setStartingApproach(true);
+    const name = leadNameForApproach.trim();
+
+    try {
+      const conversation = await aiSandboxChatService.createConversation(name || 'Abordagem', user.id);
+      setConversations((prev) => [conversation, ...prev]);
+      setActiveConversationId(conversation.id);
+      setLeadNameForApproach('');
+
+      setGeneratingReply(true);
+      const result = await aiSandboxChatService.generateOpening(conversation.id, name || undefined);
+      if (activeConversationIdRef.current !== conversation.id) return;
+
+      const now = Date.now();
+      const openingMessages: AiSandboxMessage[] = result.messages.map((content, index) => ({
+        id: `ai-opening-${now}-${index}`,
+        conversation_id: conversation.id,
+        role: 'ai',
+        content,
+        handoff_reason: index === result.messages.length - 1 ? result.handoffReason : null,
+        provider: result.provider,
+        model: result.model,
+        created_at: new Date().toISOString(),
+      }));
+      setMessages(openingMessages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
+    } finally {
+      setStartingApproach(false);
+      setGeneratingReply(false);
     }
   };
 
@@ -227,18 +283,30 @@ export default function AiSandboxChatScreen() {
         </div>
 
         <div className="px-3 pt-3">
-          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation}>
+          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation} disabled={showAutomated}>
             <MessageCirclePlus className="mr-1.5 h-4 w-4" />
             Nova simulação
           </Button>
         </div>
+
+        <label className="flex items-center gap-2 px-4 pt-3 text-xs text-[var(--text-secondary)]">
+          <input
+            type="checkbox"
+            checked={showAutomated}
+            onChange={(event) => setShowAutomated(event.target.checked)}
+            className="h-3.5 w-3.5"
+          />
+          Ver testes automatizados
+        </label>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           {conversationsLoading ? (
             <LoadingState compact label="Carregando..." />
           ) : conversations.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
-              Nenhuma simulação ainda. Comece uma conversa como se fosse um lead.
+              {showAutomated
+                ? 'Nenhum teste automatizado rodado ainda.'
+                : 'Nenhuma simulação ainda. Comece uma conversa como se fosse um lead.'}
             </p>
           ) : (
             <ul className="flex flex-col gap-1">
@@ -282,12 +350,33 @@ export default function AiSandboxChatScreen() {
           </div>
         )}
         {!activeConversationId && messages.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center">
-            <EmptyState
-              icon={<Sparkles className="h-6 w-6" />}
-              title="Simule um atendimento"
-              description="Digite como se você fosse um lead chegando no WhatsApp. A IA responde seguindo o playbook e o estilo real da operação."
-            />
+          <div className="flex flex-1 items-center justify-center px-6">
+            <div className="w-full max-w-sm">
+              <EmptyState
+                icon={<Sparkles className="h-6 w-6" />}
+                title="Simule um atendimento"
+                description="Na maioria dos casos é você quem aborda o lead primeiro — a IA pode puxar o mesmo fluxo de abordagem. Se for um lead que te procurou por indicação, é só mandar a primeira mensagem no campo abaixo."
+              />
+              <div className="mt-4 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
+                <p className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</p>
+                <Input
+                  value={leadNameForApproach}
+                  onChange={(event) => setLeadNameForApproach(event.target.value)}
+                  placeholder="Nome do lead (opcional)"
+                  size="compact"
+                  disabled={startingApproach}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={startingApproach}
+                  onClick={handleStartWithApproach}
+                >
+                  <UserRoundPlus className="mr-1.5 h-4 w-4" />
+                  Iniciar abordagem
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
@@ -354,6 +443,12 @@ export default function AiSandboxChatScreen() {
           </div>
         )}
 
+        {isHandedOff && (
+          <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+            🔒 Essa conversa já foi encaminhada — a partir daqui é atendimento humano, a IA não responde mais aqui (mesmo que o lead mande mais mensagens).
+          </div>
+        )}
+
         <div className="border-t border-[var(--border-subtle)] px-6 py-4">
           <div className="mx-auto flex max-w-2xl items-end gap-2">
             <textarea
@@ -365,7 +460,15 @@ export default function AiSandboxChatScreen() {
               disabled={sendingDraft}
               className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
             />
-            <Button variant="primary" size="md" loading={sendingDraft} onClick={handleSend} disabled={!draft.trim()}>
+            <Button
+              variant="primary"
+              size="icon"
+              loading={sendingDraft}
+              onClick={handleSend}
+              disabled={!draft.trim()}
+              title="Enviar"
+              aria-label="Enviar"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>

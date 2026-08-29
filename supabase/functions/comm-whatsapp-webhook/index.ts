@@ -61,6 +61,11 @@ const isOwnChannelName = (value: string | null | undefined, connectedUserName: s
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
+// Espera essa quantidade de segundos em silencio apos a ultima mensagem
+// inbound antes da IA responder num chat com atendimento autonomo ativo —
+// da tempo do lead terminar de digitar mensagens picotadas.
+const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 60;
+
 declare const Deno: {
   env: {
     get: (key: string) => string | undefined;
@@ -366,6 +371,19 @@ async function persistMessageFromWebhook(
     } catch {
       // Non-critical: stop_on_reply is best-effort. Failure does not
       // affect message persistence.
+    }
+
+    try {
+      // No-op para qualquer chat que nao esteja com atendimento autonomo
+      // ativado (a funcao verifica isso internamente) — so agenda/reagenda
+      // a resposta da IA quando esse chat especifico foi ativado por um
+      // fluxo de Abordagem.
+      await supabaseAdmin.rpc('schedule_ai_autonomous_reply_job', {
+        p_chat_id: result.chatId,
+        p_delay_seconds: AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS,
+      });
+    } catch {
+      // Best-effort: falha aqui nao pode impedir a persistencia da mensagem.
     }
   }
 

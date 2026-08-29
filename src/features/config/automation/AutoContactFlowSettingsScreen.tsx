@@ -927,6 +927,7 @@ export default function AutoContactFlowSettingsScreen() {
     webhook: "Disparar webhook",
     archive_lead: "Arquivar lead",
     delete_lead: "Excluir lead",
+    activate_autonomous_service: "Ativar atendimento autônomo (IA)",
   };
   const delayUnitLabels: Record<
     AutoContactDelayUnit,
@@ -1298,6 +1299,8 @@ export default function AutoContactFlowSettingsScreen() {
         return "Arquivar lead";
       case "delete_lead":
         return "Excluir lead";
+      case "activate_autonomous_service":
+        return "Ativar atendimento autônomo (IA)";
       default:
         return flowActionLabels[step.actionType] ?? "Ação";
     }
@@ -3145,6 +3148,20 @@ export default function AutoContactFlowSettingsScreen() {
                               <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                                 Esta ação será aplicada automaticamente ao lead
                                 ao chegar nesta etapa.
+                              </div>
+                            )}
+
+                            {step.actionType === "activate_autonomous_service" && (
+                              <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                                A partir desta etapa, a IA (Luiza) passa a
+                                responder sozinha nesse chat específico do
+                                WhatsApp, fazendo a qualificação do lead. Ela
+                                nunca monta ou envia cotação — isso continua
+                                manual. Quando a qualificação termina (ou a
+                                IA identifica que precisa de um humano), o
+                                atendimento autônomo é encerrado naquele chat
+                                e o status do lead é atualizado automaticamente.
+                                Nenhum outro chat é afetado.
                               </div>
                             )}
 

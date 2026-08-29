@@ -940,9 +940,24 @@ export default function WhatsAppAgendaModal({
     ];
   }, [reminders]);
 
-  // Lembretes pendentes agrupados por lead + tipo + dia: mais de um no mesmo
-  // grupo significa risco real de follow-up duplicado no envio em lote.
-  // Lembretes do mesmo lead/tipo em dias diferentes nao contam como duplicidade.
+  // Bucket de duplicidade: lembretes atrasados (de qualquer dia anterior) caem
+  // no mesmo grupo de "hoje", pois e exatamente isso que o envio automatico de
+  // follow-up em lote considera "devido agora" (data <= hoje). Ja um lembrete
+  // futuro so conta como duplicado de outro no mesmo dia futuro.
+  const getDuplicateBucketDateKey = useCallback((reminder: Reminder) => {
+    const todayKey = getDateKey(new Date());
+    const reminderDateKey = getDateKey(reminder.data_lembrete);
+
+    if (!reminderDateKey) {
+      return reminderDateKey;
+    }
+
+    return reminderDateKey < todayKey ? todayKey : reminderDateKey;
+  }, []);
+
+  // Lembretes pendentes agrupados por lead + tipo + bucket de vencimento: mais
+  // de um no mesmo grupo significa risco real de follow-up duplicado no envio
+  // em lote (o mesmo lead receberia 2 mensagens do mesmo tipo).
   const duplicateReminderGroups = useMemo(() => {
     const groups = new Map<string, Reminder[]>();
 
@@ -956,7 +971,7 @@ export default function WhatsAppAgendaModal({
         return;
       }
 
-      const key = `${leadId}|${reminder.tipo}|${getDateKey(reminder.data_lembrete)}`;
+      const key = `${leadId}|${reminder.tipo}|${getDuplicateBucketDateKey(reminder)}`;
       const group = groups.get(key);
       if (group) {
         group.push(reminder);
@@ -966,7 +981,7 @@ export default function WhatsAppAgendaModal({
     });
 
     return groups;
-  }, [getLeadIdForReminder, reminders]);
+  }, [getDuplicateBucketDateKey, getLeadIdForReminder, reminders]);
 
   const duplicateReminderIds = useMemo(() => {
     const ids = new Set<string>();
@@ -1002,11 +1017,17 @@ export default function WhatsAppAgendaModal({
       );
       const leadId = getLeadIdForReminder(sortedReminders[0]) ?? '';
       const leadName = leadId ? leadsMap.get(leadId)?.nome_completo ?? 'Lead sem nome' : 'Lead sem nome';
-      const dateLabel = new Date(sortedReminders[0].data_lembrete).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      });
+      const bucketDateKey = getDuplicateBucketDateKey(sortedReminders[0]);
+      const spansDifferentDays = sortedReminders.some(
+        (reminder) => getDateKey(reminder.data_lembrete) !== bucketDateKey,
+      );
+      const dateLabel = spansDifferentDays
+        ? 'Atrasados agrupados com hoje'
+        : new Date(sortedReminders[0].data_lembrete).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          });
 
       list.push({
         key,
@@ -1026,7 +1047,7 @@ export default function WhatsAppAgendaModal({
       }
       return left.leadName.localeCompare(right.leadName, 'pt-BR', { sensitivity: 'base' });
     });
-  }, [duplicateReminderGroups, getLeadIdForReminder, leadsMap]);
+  }, [duplicateReminderGroups, getDuplicateBucketDateKey, getLeadIdForReminder, leadsMap]);
 
   const getKeepIdForGroup = useCallback(
     (group: DuplicateReminderGroup) => duplicateKeepSelection[group.key] ?? group.reminders[0]?.id ?? null,
@@ -1711,8 +1732,8 @@ export default function WhatsAppAgendaModal({
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <span>
-                    {duplicateReminderCount} lembrete(s) duplicado(s): mesmo lead, mesmo tipo e mesmo dia.
-                    Isso pode gerar 2 follow-ups para a mesma pessoa no envio em lote.
+                    {duplicateReminderCount} lembrete(s) duplicado(s): mesmo lead, mesmo tipo e vencendo juntos hoje
+                    (inclui atrasados de outros dias). Isso pode gerar 2 follow-ups para a mesma pessoa no envio em lote.
                   </span>
                 </div>
                 <Button onClick={() => setIsDuplicatesModalOpen(true)} variant="secondary" size="sm">
@@ -1903,7 +1924,7 @@ export default function WhatsAppAgendaModal({
           isOpen
           onClose={() => setIsDuplicatesModalOpen(false)}
           title="Lembretes duplicados"
-          description="Mesmo lead, mesmo tipo e mesmo dia. Escolha qual lembrete manter em cada grupo antes de remover os repetidos."
+          description="Mesmo lead, mesmo tipo e vencendo juntos hoje (atrasados de outros dias contam). Escolha qual lembrete manter em cada grupo antes de remover os repetidos."
           size="lg"
           panelClassName="max-w-3xl"
           footer={

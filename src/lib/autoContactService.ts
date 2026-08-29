@@ -30,7 +30,8 @@ export type AutoContactFlowActionType =
   | 'delete_lead'
   | 'webhook'
   | 'create_task'
-  | 'send_email';
+  | 'send_email'
+  | 'activate_autonomous_service';
 
 export type AutoContactFlowMessageSource = 'template' | 'custom';
 
@@ -613,6 +614,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       case 'update_status':
       case 'archive_lead':
       case 'delete_lead':
+      case 'webhook':
+      case 'create_task':
+      case 'send_email':
+      case 'activate_autonomous_service':
         return value;
       default:
         return 'send_message';

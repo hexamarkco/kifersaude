@@ -874,7 +874,9 @@ export default function FlowBuilder({
                 ? "Arquivar lead"
                 : nextStep.actionType === "delete_lead"
                   ? "Excluir lead"
-                  : "Enviar mensagem";
+                  : nextStep.actionType === "activate_autonomous_service"
+                    ? "Ativar atendimento autônomo (IA)"
+                    : "Enviar mensagem";
     updateSelectedNode({ step: nextStep, label });
   };
 
@@ -1845,6 +1847,17 @@ export default function FlowBuilder({
                         suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
+                  </div>
+                )}
+
+                {selectedNode.data.step?.actionType ===
+                  "activate_autonomous_service" && (
+                  <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
+                    A partir desta etapa, a IA (Luiza) passa a responder
+                    sozinha nesse chat, fazendo a qualificação do lead — nunca
+                    monta cotação. Ao final ela encerra o atendimento autônomo
+                    e o status do lead é atualizado automaticamente. Nenhum
+                    outro chat é afetado.
                   </div>
                 )}
               </div>

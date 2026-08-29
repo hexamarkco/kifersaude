@@ -398,7 +398,8 @@ type AutoContactFlowActionType =
   | 'delete_lead'
   | 'webhook'
   | 'create_task'
-  | 'send_email';
+  | 'send_email'
+  | 'activate_autonomous_service';
 
 type AutoContactFlowMessageSource = 'template' | 'custom';
 
@@ -1818,6 +1819,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
     case 'webhook':
     case 'create_task':
     case 'send_email':
+    case 'activate_autonomous_service':
       return value;
     default:
       return 'send_message';
@@ -3263,6 +3265,10 @@ async function processFlowJobs({
         await supabase.from('leads').delete().eq('id', lead.id);
       }
 
+      if (job.action_type === 'activate_autonomous_service') {
+        await activateAutonomousServiceForLead({ supabase, lead });
+      }
+
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'completed', last_error: null })
@@ -3285,7 +3291,10 @@ async function processFlowJobs({
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      if (job.action_type === 'send_message' && isInvalidNumberError(error)) {
+      if (
+        (job.action_type === 'send_message' || job.action_type === 'activate_autonomous_service')
+        && isInvalidNumberError(error)
+      ) {
         const reason = 'invalid_number: Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
         try {
           await applyInvalidNumberAction({
@@ -3385,6 +3394,61 @@ async function processFlowJobs({
         });
       }
     }
+  }
+}
+
+// Ativa o atendimento autonomo (IA) para o chat de WhatsApp deste lead
+// especifico. Nao manda nenhuma mensagem — so liga o "interruptor" naquele
+// chat; a partir dai, cada mensagem inbound nele agenda uma resposta da IA
+// (ver webhook + ai-autonomous-reply-worker). Todo outro chat do numero
+// (leads ja atendidos, clientes, conversas pessoais) permanece manual.
+async function activateAutonomousServiceForLead({
+  supabase,
+  lead,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lead: any;
+}): Promise<void> {
+  const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
+  if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
+    throw new Error('Telefone invalido para ativar atendimento autonomo.');
+  }
+
+  const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
+  if (!whatsappCheck.exists) {
+    throw new Error('Numero nao possui WhatsApp.');
+  }
+
+  const channel = await ensurePrimaryChannel(supabase);
+  const requestedChatId = whatsappCheck.chatId ?? `${whapiPhone}@s.whatsapp.net`;
+  const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabase, {
+    channelId: channel.id,
+    externalChatId: requestedChatId,
+  });
+
+  if (chatRoute.identityConflict) {
+    throw new Error('Identidade WhatsApp exige revisao manual antes de ativar o atendimento autonomo.');
+  }
+  if (chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
+    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+  }
+  const requestedPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(whapiPhone));
+  if (
+    chatRoute.phoneNumber
+    && !getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
+  ) {
+    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+  }
+  if (!chatRoute.chatId) {
+    throw new Error('Conversa do WhatsApp ainda nao existe para este lead.');
+  }
+
+  const { error: updateError } = await supabase
+    .from('comm_whatsapp_chats')
+    .update({ autonomous_attendance_status: 'active' })
+    .eq('id', chatRoute.chatId);
+  if (updateError) {
+    throw new Error(`Erro ao ativar atendimento autonomo: ${updateError.message}`);
   }
 }
 

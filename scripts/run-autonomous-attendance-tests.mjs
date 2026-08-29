@@ -327,7 +327,8 @@ async function main() {
     try {
       const result = await runScenario(supabaseUrl, serviceKey, scenario, args.maxTurns);
       const icon = result.passed === true ? '✅' : result.passed === false ? '❌' : '⚠️ ';
-      console.log(`  ${icon} ${scenario.label} — ${result.turns} turnos, handoff: ${result.handoffTriggered ? 'sim' : 'não'}`);
+      const handoffLabel = result.handoffTriggered ? `sim (${result.handoffCode ?? '?'})` : 'não';
+      console.log(`  ${icon} ${scenario.label} — ${result.turns} turnos, handoff: ${handoffLabel}`);
       return { scenario, ...result };
     } catch (error) {
       console.log(`  💥 ${scenario.label} — ERRO: ${error.message}`);

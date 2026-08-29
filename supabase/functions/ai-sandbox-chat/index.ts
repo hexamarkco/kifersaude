@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     const [historyResult, styleMessagesResult, quickReplies] = await Promise.all([
       supabaseAdmin
         .from('ai_sandbox_messages')
-        .select('role, content, handoff_reason')
+        .select('role, content, handoff_reason, handoff_code')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
         .limit(SANDBOX_HISTORY_LIMIT),
@@ -93,18 +93,19 @@ Deno.serve(async (req: Request) => {
 
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
-    const history = (historyResult.data ?? []) as (SandboxMessageRow & { handoff_reason: string | null })[];
+    const history = (historyResult.data ?? []) as (SandboxMessageRow & { handoff_reason: string | null; handoff_code: string | null })[];
     const isOpeningMode = history.length === 0;
 
     // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa —
     // mesmo que o lead mande agradecimento ou qualquer outra mensagem. A
     // partir daqui e atendimento humano.
-    const alreadyHandedOff = history.some((row) => row.role === 'ai' && Boolean(row.handoff_reason));
+    const alreadyHandedOff = history.some((row) => row.role === 'ai' && Boolean(row.handoff_code));
     if (alreadyHandedOff) {
       return new Response(JSON.stringify({
         success: true,
         conversationId,
         messages: [],
+        handoffCode: null,
         handoffReason: null,
         alreadyHandedOff: true,
       }), { status: 200, headers: jsonHeaders });
@@ -132,14 +133,15 @@ Deno.serve(async (req: Request) => {
       maxTokens: isOpeningMode ? 450 : 350,
     });
 
-    const { messages: finalMessages, handoffReason } = splitGeneratedReply(result.text, isOpeningMode);
+    const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);
     if (finalMessages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
 
     const rowsToInsert = finalMessages.map((content, index) => ({
       conversation_id: conversationId,
       role: 'ai' as const,
       content,
-      handoff_reason: index === finalMessages.length - 1 ? handoffReason : null,
+      handoff_reason: index === finalMessages.length - 1 ? handoffNote : null,
+      handoff_code: index === finalMessages.length - 1 ? handoffCode : null,
       provider: result.provider,
       model: result.model,
     }));
@@ -158,7 +160,8 @@ Deno.serve(async (req: Request) => {
       success: true,
       conversationId,
       messages: finalMessages,
-      handoffReason,
+      handoffCode,
+      handoffReason: handoffNote,
       provider: result.provider,
       model: result.model,
       fallbackUsed: result.fallbackUsed,

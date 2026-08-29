@@ -2112,6 +2112,36 @@ export const extractWhapiContacts = (payload: unknown): Array<Record<string, unk
   return [];
 };
 
+export const extractWhapiChats = (payload: unknown): Array<Record<string, unknown>> => {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord);
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.chats)) {
+      return payload.chats.filter(isRecord);
+    }
+
+    if (Array.isArray(payload.data)) {
+      return payload.data.filter(isRecord);
+    }
+  }
+
+  return [];
+};
+
+export const extractWhapiChatId = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.id, payload.chat_id, payload.wa_id];
+  for (const candidate of candidates) {
+    const normalized = normalizeWhapiChatId(candidate);
+    if (normalized) return normalized;
+  }
+
+  return '';
+};
+
 export const extractWhapiContactPhone = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
@@ -2507,6 +2537,37 @@ export async function fetchWhapiMessage(params: {
 
   const [message] = extractWhapiMessages(payload);
   return message ?? null;
+}
+
+export async function fetchWhapiChatsPage(params: {
+  token: string;
+  count?: number;
+  offset?: number;
+}): Promise<{ chats: Array<Record<string, unknown>>; hasMore: boolean }> {
+  const count = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 200);
+  const offset = Math.max(Math.floor(Number(params.offset) || 0), 0);
+
+  const query = new URLSearchParams();
+  query.set('count', String(count));
+  if (offset > 0) {
+    query.set('offset', String(offset));
+  }
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/chats?${query.toString()}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  }, 15_000);
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar conversas na Whapi.');
+  }
+
+  const chats = extractWhapiChats(payload);
+  return { chats, hasMore: chats.length >= count };
 }
 
 export async function fetchWhapiContactsPage(params: {
@@ -3227,6 +3288,375 @@ export async function persistCommWhatsAppMessage(
     inserted: row.inserted === true,
     unreadCount: typeof row.unread_count === 'number' ? row.unread_count : 0,
     summaryUpdated: row.summary_updated === true,
+  };
+}
+
+const isOwnCommWhatsAppChannelName = (value: string | null | undefined, connectedUserName: string | null | undefined) => {
+  const normalizedValue = toTrimmedString(value).toLowerCase();
+  const normalizedChannelUser = toTrimmedString(connectedUserName).toLowerCase();
+  return Boolean(normalizedValue && normalizedChannelUser && normalizedValue === normalizedChannelUser);
+};
+
+const normalizeCommWhatsAppSemanticText = (value: unknown) => toTrimmedString(value).replace(/\s+/g, ' ').toLowerCase();
+
+const buildWhapiHistoryMessageKey = (message: Record<string, unknown>) => {
+  const externalMessageId = extractWhapiMessageId(message);
+  if (externalMessageId) {
+    return `external:${externalMessageId}`;
+  }
+
+  const direction = message.from_me === true ? 'outbound' : 'inbound';
+  const messageAt = unixTimestampToIso(message.timestamp) || '';
+  const messageType = toTrimmedString(message.type) || 'text';
+  const text = normalizeCommWhatsAppSemanticText(summarizeWhapiMessage(message));
+  const mediaId = extractWhapiMediaMeta(message).mediaId || '';
+  const sender = toTrimmedString(message.from) || toTrimmedString(message.from_name) || '';
+
+  if (!mediaId && text.length < 12) {
+    return '';
+  }
+
+  return `semantic:${direction}:${messageType}:${messageAt}:${sender}:${mediaId}:${text}`;
+};
+
+const dedupeWhapiHistoryMessages = (messages: Array<Record<string, unknown>>) => {
+  const byKey = new Map<string, Record<string, unknown>>();
+  const passthrough: Array<Record<string, unknown>> = [];
+
+  for (const message of messages) {
+    const key = buildWhapiHistoryMessageKey(message);
+    if (!key) {
+      passthrough.push(message);
+      continue;
+    }
+
+    if (byKey.has(key)) {
+      continue;
+    }
+
+    byKey.set(key, message);
+  }
+
+  return [...passthrough, ...byKey.values()];
+};
+
+export type SyncWhapiDirectChatMessagesParams = {
+  channel: Pick<CommWhatsAppChannelRow, 'id' | 'connected_user_name' | 'phone_number'>;
+  token: string;
+  externalChatId: string;
+  offset?: number;
+  count?: number;
+  timeTo?: number;
+};
+
+export type SyncWhapiDirectChatMessagesResult = {
+  chatId: string;
+  canonicalExternalChatId: string;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  hasMore: boolean;
+  nextOffset: number | null;
+  timeTo: number;
+  identityConflict: boolean;
+};
+
+// Nucleo compartilhado de sincronizacao de historico por conversa, usado tanto
+// pela recuperacao manual de um unico chat (comm-whatsapp-sync-chat) quanto
+// pela sincronizacao em lote de todo o inbox (comm-whatsapp-sync-all-chats).
+export async function syncWhapiDirectChatMessages(
+  supabaseAdmin: SupabaseClient,
+  params: SyncWhapiDirectChatMessagesParams,
+): Promise<SyncWhapiDirectChatMessagesResult> {
+  const { channel, token } = params;
+  const externalChatId = normalizeWhapiChatId(params.externalChatId);
+  const offset = Math.max(Math.floor(Number(params.offset) || 0), 0);
+  const pageSize = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 500);
+  const requestedTimeTo = Number(params.timeTo);
+  const timeTo = Number.isFinite(requestedTimeTo) && requestedTimeTo > 0
+    ? Math.floor(requestedTimeTo)
+    : Math.floor(Date.now() / 1000);
+
+  if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
+    throw new Error('Conversa invalida para sincronizacao.');
+  }
+
+  let phoneDigits = extractPhoneFromChatId(externalChatId);
+  let canonicalExternalChatId = externalChatId;
+  const identity = await resolveVerifiedWhapiDirectIdentity({ token, chatId: externalChatId }).catch(() => null);
+  let identityConflict = false;
+
+  if (identity?.verified) {
+    const { data: reconcileData, error: reconcileError } = await supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
+      p_channel_id: channel.id,
+      p_lid_external_chat_id: identity.lidChatId,
+      p_phone_external_chat_id: identity.phoneChatId,
+      p_mapping_evidence: {
+        round_trip_verified: true,
+        source: 'comm-whatsapp-sync-chat',
+      },
+    });
+    if (reconcileError) throw new Error(`Erro ao reconciliar identidade da conversa: ${reconcileError.message}`);
+
+    const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
+    if (!reconcileRow?.merged || !reconcileRow.external_chat_id) {
+      throw new Error(`Identidade nao reconciliada: ${reconcileRow?.conflict_reason || 'sem chat canonico'}.`);
+    }
+
+    canonicalExternalChatId = reconcileRow.external_chat_id;
+    phoneDigits = identity.phone;
+  } else if (isWhapiLidChatId(externalChatId)) {
+    phoneDigits = '';
+  }
+
+  let whapiName = await fetchWhapiChatName({ token, chatId: externalChatId }).catch(() => '');
+  if (
+    whapiName &&
+    channel.connected_user_name &&
+    whapiName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase()
+  ) {
+    whapiName = '';
+  }
+  if (whapiName && isPhoneLabelLikeDisplayName(whapiName)) {
+    whapiName = '';
+  }
+
+  const { data: ensuredData, error: ensureError } = await supabaseAdmin.rpc('comm_whatsapp_ensure_observed_chat', {
+    p_channel_id: channel.id,
+    p_external_chat_id: canonicalExternalChatId,
+    p_phone_number: phoneDigits || null,
+    p_push_name: isValidCommWhatsAppDisplayName(whapiName) ? whapiName : null,
+  });
+  if (ensureError) throw new Error(`Nao foi possivel preparar a conversa para sincronizacao: ${ensureError.message}`);
+
+  const chat = (Array.isArray(ensuredData) ? ensuredData[0] : ensuredData) as {
+    id: string;
+    unread_count: number;
+    display_name: string;
+    push_name: string | null;
+  } | null;
+  if (!chat?.id) throw new Error('A conversa canonica nao foi retornada pela preparacao da sincronizacao.');
+
+  if (identity?.reason === 'reverse_mismatch') {
+    identityConflict = true;
+    const dedupeKey = `reverse:${channel.id}:${identity.lidChatId || externalChatId}:${identity.phoneChatId || 'unknown'}`;
+    const { error: conflictError } = await supabaseAdmin
+      .from('comm_whatsapp_identity_conflicts')
+      .upsert({
+        dedupe_key: dedupeKey,
+        channel_id: channel.id,
+        chat_id: chat.id,
+        conflict_type: 'reverse_mapping_conflict',
+        status: 'open',
+        details: {
+          observed_chat_id: externalChatId,
+          lid_chat_id: identity.lidChatId || null,
+          phone_chat_id: identity.phoneChatId || null,
+          source: 'comm-whatsapp-sync-chat',
+        },
+        updated_at: getNowIso(),
+        resolved_at: null,
+        resolved_by: null,
+      }, { onConflict: 'dedupe_key' });
+    if (conflictError) throw new Error(`Erro ao registrar conflito de identidade: ${conflictError.message}`);
+
+    const { error: flagError } = await supabaseAdmin
+      .from('comm_whatsapp_chats')
+      .update({ identity_conflict: true, updated_at: getNowIso() })
+      .eq('id', chat.id);
+    if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
+  }
+
+  const displayName = chat.display_name;
+  const pushName = whapiName || (!isOwnCommWhatsAppChannelName(chat.push_name, channel.connected_user_name) ? chat.push_name : null);
+
+  const messagePage = await fetchWhapiChatMessagesPage({
+    token,
+    chatId: externalChatId,
+    count: pageSize,
+    offset,
+    timeTo,
+    sort: 'asc',
+  });
+  const messages = dedupeWhapiHistoryMessages(messagePage.messages);
+  const orderedMessages = [...messages].sort((a, b) => {
+    const aTime = Number(a.timestamp ?? 0);
+    const bTime = Number(b.timestamp ?? 0);
+    return aTime - bTime;
+  });
+
+  let insertedCount = 0;
+  let updatedCount = 0;
+
+  for (const message of orderedMessages) {
+    const reactionEvent = extractWhapiReactionEvent(message, 'messages');
+    if (reactionEvent?.targetExternalMessageId) {
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: reactionEvent.targetExternalMessageId,
+        mutationType: 'reaction',
+        eventExternalMessageId: reactionEvent.eventExternalMessageId,
+        occurredAt: reactionEvent.reactedAt,
+        payload: {
+          actor_key: reactionEvent.actorKey,
+          emoji: reactionEvent.emoji,
+          from_me: reactionEvent.fromMe,
+          from: reactionEvent.from,
+          from_name: reactionEvent.fromName,
+        },
+        dedupeKey: reactionEvent.eventExternalMessageId
+          || `history-reaction:${reactionEvent.targetExternalMessageId}:${reactionEvent.actorKey}:${reactionEvent.reactedAt}`,
+      });
+      continue;
+    }
+
+    const deletedEvent = extractWhapiDeletedMessageEvent(message, 'messages');
+    if (deletedEvent?.targetExternalMessageId) {
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: deletedEvent.targetExternalMessageId,
+        mutationType: 'delete',
+        eventExternalMessageId: deletedEvent.eventExternalMessageId,
+        occurredAt: deletedEvent.deletedAt,
+        payload: {
+          original_text: deletedEvent.originalText,
+          action_type: deletedEvent.actionType,
+          deleted_by: deletedEvent.deletedBy,
+        },
+        dedupeKey: deletedEvent.eventExternalMessageId
+          || `history-delete:${deletedEvent.targetExternalMessageId}:${deletedEvent.deletedAt}`,
+      });
+      continue;
+    }
+
+    const editedEvent = extractWhapiEditedMessageEvent(message, 'messages');
+    if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
+      const editedAt = editedEvent.editedAt || getNowIso();
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: editedEvent.targetExternalMessageId,
+        mutationType: 'edit',
+        eventExternalMessageId: editedEvent.eventExternalMessageId,
+        occurredAt: editedAt,
+        payload: {
+          edited_text: editedEvent.editedText,
+          original_text: editedEvent.originalText,
+          action_type: editedEvent.actionType,
+        },
+        dedupeKey: editedEvent.eventExternalMessageId
+          || `history-edit:${editedEvent.targetExternalMessageId}:${editedAt}`,
+      });
+      continue;
+    }
+
+    const direction = message.from_me === true ? 'outbound' : 'inbound';
+    const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
+    const externalMessageId = extractWhapiMessageId(message);
+    const mediaMeta = extractWhapiMediaMeta(message);
+    const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
+    const quoteMeta = extractWhapiQuotedMessageMeta(message);
+    const contactCardMeta = extractWhapiContactCardMeta(message);
+    const summaryText = summarizeWhapiMessage(message);
+
+    if (!externalMessageId) {
+      // Mensagens sem id externo (resyncs de historico antigo) nao voltam a
+      // ser inseridas quando ja existe conteudo identico (media ou texto) no
+      // mesmo chat/direcao/tipo. Nao depende de message_at exato: re-imports
+      // com timestamp ausente (fallback para agora) recriavam duplicatas.
+      const hasContentSignal = Boolean(mediaMeta.mediaId || normalizeCommWhatsAppSemanticText(summaryText).length > 0);
+      const canCheckSemanticDuplicate = hasContentSignal && (
+        Boolean(mediaMeta.mediaId)
+        || (toTrimmedString(message.type) || 'text') === 'text'
+      );
+
+      if (canCheckSemanticDuplicate) {
+        let existingMessageQuery = supabaseAdmin
+          .from('comm_whatsapp_messages')
+          .select('id')
+          .eq('chat_id', chat.id)
+          .eq('direction', direction)
+          .eq('message_type', toTrimmedString(message.type) || 'text');
+
+        if (mediaMeta.mediaId) {
+          existingMessageQuery = existingMessageQuery.eq('media_id', mediaMeta.mediaId);
+        } else if ((normalizeCommWhatsAppSemanticText(summaryText).length || 0) > 0) {
+          existingMessageQuery = existingMessageQuery.eq('text_content', summaryText);
+        }
+
+        const { data: existingMessage, error: existingMessageError } = await existingMessageQuery
+          .limit(1)
+          .maybeSingle();
+
+        if (existingMessageError) {
+          throw new Error(`Erro ao verificar duplicata sem ID externo: ${existingMessageError.message}`);
+        }
+
+        if (existingMessage) {
+          updatedCount += 1;
+          continue;
+        }
+      }
+    }
+
+    const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
+      channelId: channel.id,
+      externalChatId,
+      phoneNumber: phoneDigits,
+      displayName,
+      pushName,
+      lastMessageText: summaryText,
+      lastMessageDirection: direction,
+      lastMessageAt: messageAt,
+      incrementUnread: false,
+      externalMessageId: externalMessageId || null,
+      direction,
+      messageType: toTrimmedString(message.type) || 'text',
+      deliveryStatus: toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent'),
+      textContent: summaryText,
+      createdBy: null,
+      source: toTrimmedString(message.source) || null,
+      senderName: getDirectChatDisplayNameCandidate(message, direction) || (direction === 'outbound' ? displayName : whapiName) || null,
+      senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits,
+      statusUpdatedAt: messageAt,
+      errorMessage: null,
+      mediaId: mediaMeta.mediaId,
+      mediaUrl: mediaMeta.mediaUrl,
+      mediaMimeType: mediaMeta.mediaMimeType,
+      mediaFileName: mediaMeta.mediaFileName,
+      mediaSizeBytes: mediaMeta.mediaSizeBytes,
+      mediaDurationSeconds: mediaMeta.mediaDurationSeconds,
+      mediaCaption: mediaMeta.mediaCaption,
+      metadata: {
+        from_me: message.from_me === true,
+        chat_id: externalChatId,
+        from: toTrimmedString(message.from) || null,
+        from_name: toTrimmedString(message.from_name) || null,
+        chat_name: toTrimmedString(message.chat_name) || null,
+        link_preview: linkPreviewMeta,
+        ...(quoteMeta ? { quote: quoteMeta } : {}),
+        ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+      },
+    });
+
+    if (persisted.inserted) {
+      insertedCount += 1;
+    } else {
+      updatedCount += 1;
+    }
+  }
+
+  const hasMore = messagePage.hasMore && messagePage.nextOffset > offset;
+
+  return {
+    chatId: chat.id,
+    canonicalExternalChatId,
+    fetched: orderedMessages.length,
+    inserted: insertedCount,
+    updated: updatedCount,
+    hasMore,
+    nextOffset: hasMore ? messagePage.nextOffset : null,
+    timeTo,
+    identityConflict,
   };
 }
 

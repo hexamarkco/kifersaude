@@ -4,7 +4,6 @@ import {
   Briefcase,
   Calendar,
   CalendarPlus,
-  Check,
   Clock3,
   Feather,
   HeartHandshake,
@@ -21,7 +20,6 @@ import { cx } from '../../../../lib/cx';
 import type {
   CommWhatsAppFollowUpEmotionalContext,
   CommWhatsAppFollowUpNextAction,
-  CommWhatsAppFollowUpTone,
   CommWhatsAppFollowUpVariation,
   CommWhatsAppRewriteTone,
 } from '../../../../lib/commWhatsAppService';
@@ -29,146 +27,6 @@ import type {
 // ---- Shared visual building blocks for the follow-up (single + batch) modals.
 // Centralized here so both flows look and behave identically instead of
 // drifting apart with copy-pasted, slightly-different markup. ----
-
-// ---- Tone ----
-
-export type FollowUpToneOption = { value: CommWhatsAppFollowUpTone; label: string; description: string };
-
-export const FOLLOW_UP_TONE_OPTIONS: FollowUpToneOption[] = [
-  { value: 'consultivo', label: 'Consultivo', description: 'Orienta com contexto, escuta ativa e próximo passo claro.' },
-  { value: 'amigavel', label: 'Amigável', description: 'Soa leve, acolhedor e próximo sem perder objetividade.' },
-  { value: 'direto', label: 'Direto', description: 'Vai ao ponto com chamada objetiva e pouco texto.' },
-  { value: 'reativacao', label: 'Reativação', description: 'Retoma contato parado com naturalidade e baixa pressão.' },
-  { value: 'premium', label: 'Premium', description: 'Comunica cuidado, exclusividade e atenção personalizada.' },
-];
-
-export function ToneSelector({
-  value,
-  onChange,
-  disabled,
-  options = FOLLOW_UP_TONE_OPTIONS,
-}: {
-  value: CommWhatsAppFollowUpTone;
-  onChange: (value: CommWhatsAppFollowUpTone) => void;
-  disabled?: boolean;
-  options?: FollowUpToneOption[];
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tom do follow-up">
-      {options.map((option) => {
-        const active = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.value)}
-            disabled={disabled}
-            title={option.description}
-            className={cx(
-              'rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
-              active
-                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]',
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---- Situation presets (scenario chips) ----
-
-export type SituationPresetLike = { id: string; label: string };
-
-export function SituationPresetSelector({
-  presets,
-  selectedIds,
-  onToggle,
-  disabled,
-}: {
-  presets: ReadonlyArray<SituationPresetLike>;
-  selectedIds: string[];
-  onToggle: (id: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {presets.map((preset) => {
-        const active = selectedIds.includes(preset.id);
-        return (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={() => onToggle(preset.id)}
-            disabled={disabled}
-            title={active ? `Remover cenário: ${preset.label}` : `Aplicar cenário: ${preset.label}`}
-            className={cx(
-              'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
-              active
-                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]',
-            )}
-          >
-            {active && <Check className="h-3.5 w-3.5" />}
-            {preset.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---- Sales techniques (list rows) ----
-
-export type SalesTechniqueLike = { id: string; name: string; description: string };
-
-export function SalesTechniqueSelector({
-  techniques,
-  selectedIds,
-  onToggle,
-  disabled,
-}: {
-  techniques: ReadonlyArray<SalesTechniqueLike>;
-  selectedIds: string[];
-  onToggle: (id: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5" role="group" aria-label="Técnicas de venda para o follow-up">
-      {techniques.map((technique) => {
-        const selected = selectedIds.includes(technique.id);
-        return (
-          <button
-            key={technique.id}
-            type="button"
-            onClick={() => onToggle(technique.id)}
-            aria-pressed={selected}
-            disabled={disabled}
-            title={technique.description}
-            className={cx(
-              'flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
-              selected
-                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--accent-gold-hover)]',
-            )}
-          >
-            {selected ? (
-              <Check className="h-3.5 w-3.5 shrink-0" />
-            ) : (
-              <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-subtle)]" />
-            )}
-            <span>{technique.name}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ---- AI insight panel: surfaces the model's own reading of the conversation
 // (situationSummary/rationale) and, distinctly, when it detected something
@@ -367,12 +225,15 @@ export type SimpleRefinementAction = RefinementChipAction & { id: CommWhatsAppRe
 export const SIMPLE_REFINEMENT_ACTIONS: SimpleRefinementAction[] = [
   { id: 'shorter', label: 'Encurtar', description: 'Reescrever a sugestão de forma mais curta e objetiva.', icon: Scissors },
   { id: 'friendly', label: 'Mais amigável', description: 'Deixar a mensagem mais leve, humana e acolhedora.', icon: Smile },
-  { id: 'assertive', label: 'Mais direta', description: 'Tornar o próximo passo mais claro sem soar agressivo.', icon: Target },
   { id: 'professional', label: 'Mais profissional', description: 'Ajustar o texto para um tom mais consultivo e profissional.', icon: Briefcase },
 ];
 
 export type ContextRefinementAction = RefinementChipAction & { instruction: string };
 
+// Refinamentos que podem mudar a ESTRATEGIA comercial da mensagem (nao so o
+// estilo) sempre releem o contexto completo do chat (mode: 'refine'), para
+// nao contrariar a leitura real da conversa nem repetir uma abordagem ja
+// tentada sem resposta.
 export const CONTEXT_REFINEMENT_ACTIONS: ContextRefinementAction[] = [
   {
     id: 'add-context',
@@ -394,6 +255,20 @@ export const CONTEXT_REFINEMENT_ACTIONS: ContextRefinementAction[] = [
     description: 'Reforçar uma ação objetiva para avançar a conversa.',
     icon: ArrowRightCircle,
     instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
+  },
+  {
+    id: 'more-assertive',
+    label: 'Mais firme',
+    description: 'Deixar a mensagem comercialmente mais firme, sem perder a coerência com o histórico.',
+    icon: Target,
+    instruction: 'Refine a mensagem para ficar comercialmente mais firme e direta, sem perder a coerência com o histórico e sem soar agressiva ou pressionar artificialmente.',
+  },
+  {
+    id: 'find-blocker',
+    label: 'Investigar bloqueio',
+    description: 'Focar em descobrir o que realmente está travando a decisão do cliente.',
+    icon: Sparkles,
+    instruction: 'Refine a mensagem para investigar com sutileza qual é o real bloqueio do cliente neste momento (preço, insegurança, terceiro decisor, comparação, falta de urgência, etc.), em vez de apenas perguntar se ele já decidiu ou analisou.',
   },
 ];
 

@@ -272,12 +272,52 @@ export type CommWhatsAppFollowUpEmotionalContext = {
   guidance: string | null;
 };
 
+export type CommWhatsAppFollowUpStage =
+  | 'qualificacao'
+  | 'cotacao_apresentada'
+  | 'avaliando_opcoes'
+  | 'objecao'
+  | 'aguardando_decisor'
+  | 'sinal_de_compra'
+  | 'aguardando_acao'
+  | 'proposta_em_andamento'
+  | 'reativacao'
+  | 'pos_venda'
+  | 'outro';
+
+export type CommWhatsAppFollowUpBlocker =
+  | 'preco'
+  | 'inseguranca'
+  | 'comparacao'
+  | 'terceiro_decisor'
+  | 'sem_urgencia'
+  | 'falta_de_informacao'
+  | 'acao_nao_executada'
+  | 'silencio'
+  | 'contexto_pessoal'
+  | 'nao_identificado';
+
+export type CommWhatsAppFollowUpGoal =
+  | 'retomar_conversa'
+  | 'obter_preferencia'
+  | 'reduzir_objecao'
+  | 'descobrir_bloqueio'
+  | 'confirmar_decisao'
+  | 'solicitar_documentos'
+  | 'avancar_proposta'
+  | 'definir_vigencia'
+  | 'envolver_decisor'
+  | 'reativar_oportunidade'
+  | 'encerrar_sem_pressao';
+
+// stage/blocker/goal sao metadados internos da leitura comercial da IA —
+// hoje nao aparecem no modal, mas voltam no endpoint para permitir
+// analytics futuro (quais combinacoes tem melhor taxa de resposta/conversao).
 export type CommWhatsAppFollowUpAiContext = {
-  situationSummary?: string | null;
+  stage: CommWhatsAppFollowUpStage | null;
+  blocker: CommWhatsAppFollowUpBlocker | null;
+  goal: CommWhatsAppFollowUpGoal | null;
   emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
-  situationPresetIds: string[];
-  tone: CommWhatsAppFollowUpTone;
-  salesTechniques: string[];
   rationale?: string | null;
 };
 
@@ -303,8 +343,6 @@ export type CommWhatsAppFollowUpSuggestion = {
   model?: string | null;
   fallback_used?: boolean;
 };
-
-export type CommWhatsAppFollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'reativacao' | 'premium';
 
 export type FollowUpAgendaOrganizerMode = 'balanced' | 'urgency' | 'minimal_changes';
 
@@ -1527,16 +1565,11 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; autoSelectContext?: boolean; manualContext?: { tone?: boolean; situationPresetIds?: boolean; salesTechniques?: boolean } } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; variantCount?: number } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const requestBody = {
       chatId,
       customInstructions: options.customInstructions?.trim() || '',
-      tone: options.tone ?? 'consultivo',
       variantCount: options.variantCount,
-      salesTechniques: options.salesTechniques ?? [],
-      situationPresetIds: options.situationPresetIds ?? [],
-      autoSelectContext: options.autoSelectContext !== false,
-      manualContext: options.manualContext ?? {},
     };
     console.debug('[FollowUpAI][service] invoke request', requestBody);
 

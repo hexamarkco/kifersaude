@@ -6,24 +6,18 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
-import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
-import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 import WhatsAppDialog from './WhatsAppDialog';
 import {
   AiContextPanel,
   CONTEXT_REFINEMENT_ACTIONS,
   ChatBubblePreview,
-  FOLLOW_UP_TONE_OPTIONS,
   NextActionCard,
   Pill,
   RefinementChip,
   SIMPLE_REFINEMENT_ACTIONS,
-  SalesTechniqueSelector,
   SectionCard,
-  SituationPresetSelector,
-  ToneSelector,
   VariationCarousel,
 } from './followUpModalUi';
 
@@ -56,10 +50,7 @@ type WhatsAppFollowUpModalProps = {
   leadFavorito?: boolean | null;
   value: string;
   customInstructions: string;
-  tone: CommWhatsAppFollowUpTone;
   variations?: CommWhatsAppFollowUpVariation[];
-  selectedSalesTechniques: string[];
-  selectedSituationPresetIds: string[];
   aiContextRationale?: string | null;
   emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
   nextAction?: CommWhatsAppFollowUpNextAction | null;
@@ -67,9 +58,6 @@ type WhatsAppFollowUpModalProps = {
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
-  onChangeTone: (value: CommWhatsAppFollowUpTone) => void;
-  onToggleSituationPreset: (presetId: string) => void;
-  onToggleSalesTechnique: (techniqueId: string) => void;
   onGenerate: (options?: { variantCount?: number; customInstructions?: string }) => void;
   onScheduleNextAction: () => void;
   onSend: () => void;
@@ -84,10 +72,7 @@ export default function WhatsAppFollowUpModal({
   leadFavorito,
   value,
   customInstructions,
-  tone,
   variations = [],
-  selectedSalesTechniques,
-  selectedSituationPresetIds,
   aiContextRationale,
   emotionalContext,
   nextAction,
@@ -95,9 +80,6 @@ export default function WhatsAppFollowUpModal({
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
-  onChangeTone,
-  onToggleSituationPreset,
-  onToggleSalesTechnique,
   onGenerate,
   onScheduleNextAction,
   onSend,
@@ -112,7 +94,6 @@ export default function WhatsAppFollowUpModal({
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
   const hasVariations = variations.length > 0;
   const hasAiInsight = Boolean(aiContextRationale || emotionalContext?.detected);
-  const selectedToneOption = FOLLOW_UP_TONE_OPTIONS.find((option) => option.value === tone) ?? FOLLOW_UP_TONE_OPTIONS[0];
 
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
@@ -305,81 +286,52 @@ export default function WhatsAppFollowUpModal({
               {hasAiInsight ? <AiContextPanel rationale={aiContextRationale} emotionalContext={emotionalContext} /> : null}
 
               <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Cenário</h3>
-                  <span className="text-[11px] font-medium text-[var(--text-muted)]">IA seleciona ao gerar</span>
-                </div>
-                <SituationPresetSelector
-                  presets={CONVERSATION_SITUATION_PRESETS}
-                  selectedIds={selectedSituationPresetIds}
-                  onToggle={onToggleSituationPreset}
-                  disabled={generating || submitting}
-                />
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Tom</h3>
-                  <span className="text-[11px] font-medium text-[var(--accent-gold-hover)]">{selectedToneOption.label}</span>
-                </div>
-                <ToneSelector value={tone} onChange={onChangeTone} disabled={generating || submitting} />
-              </div>
-
-              <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3" open={Boolean(localCustomInstructions.trim())}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ajustes extras</h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Instruções, variáveis e áudio ficam aqui.</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Diga à IA o que ela precisa saber para escrever a melhor mensagem agora — a IA decide sozinha o estágio, o tom e a estratégia com base no histórico.</p>
                   </div>
-                  <Pill tone={localCustomInstructions.trim() ? 'accent' : 'neutral'}>
-                    {localCustomInstructions.trim() ? 'Ativo' : 'Abrir'}
-                  </Pill>
-                </summary>
-                <div className="mt-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Instruções personalizadas</span>
-                    <span className="text-[11px] text-[var(--text-muted)]">Digite {'{{'} para variáveis</span>
-                  </div>
-                  <VariableAutocompleteTextarea
-                    value={localCustomInstructions}
-                    onChange={setLocalCustomInstructions}
-                    onBlur={() => commitCustomInstructions()}
-                    suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
-                    rows={5}
-                    size="compact"
-                    placeholder={
-                      'Ex.:\n' +
-                      '- Fale mais curto.\n' +
-                      '- Não insista demais.\n' +
-                      '- Termine com uma pergunta objetiva.'
-                    }
-                    disabled={generating || submitting || Boolean(refiningActionId)}
-                  />
-                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    {isRecording && currentTranscript ? (
-                      <div className="text-xs italic text-[var(--text-muted)]">
-                        "...{currentTranscript}"
-                      </div>
-                    ) : (
-                      <p className="text-[11px] leading-5 text-[var(--text-muted)]">
-                        O áudio entra como instrução corrigida automaticamente.
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant={isRecording ? 'primary' : 'secondary'}
-                      size="sm"
-                      onClick={handleToggleRecording}
-                      loading={isCorrecting}
-                      disabled={generating || submitting || Boolean(refiningActionId)}
-                      className={isRecording ? 'animate-pulse' : ''}
-                    >
-                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                      <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
-                    </Button>
-                  </div>
+                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">Digite {'{{'} para variáveis</span>
                 </div>
-              </details>
+                <VariableAutocompleteTextarea
+                  value={localCustomInstructions}
+                  onChange={setLocalCustomInstructions}
+                  onBlur={() => commitCustomInstructions()}
+                  suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
+                  rows={5}
+                  size="compact"
+                  placeholder={
+                    'Ex.:\n' +
+                    '- Ela me falou por telefone que vai viajar amanhã.\n' +
+                    '- Não fale de preço.\n' +
+                    '- Quero descobrir o que está travando.'
+                  }
+                  disabled={generating || submitting || Boolean(refiningActionId)}
+                />
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  {isRecording && currentTranscript ? (
+                    <div className="text-xs italic text-[var(--text-muted)]">
+                      "...{currentTranscript}"
+                    </div>
+                  ) : (
+                    <p className="text-[11px] leading-5 text-[var(--text-muted)]">
+                      O áudio entra como instrução corrigida automaticamente.
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant={isRecording ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={handleToggleRecording}
+                    loading={isCorrecting}
+                    disabled={generating || submitting || Boolean(refiningActionId)}
+                    className={isRecording ? 'animate-pulse' : ''}
+                  >
+                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </SectionCard>
 
@@ -466,24 +418,6 @@ export default function WhatsAppFollowUpModal({
               ) : null}
             />
           ) : null}
-
-          <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4" open={selectedSalesTechniques.length > 0}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Técnicas avançadas</h3>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">Opcional para a próxima geração.</p>
-              </div>
-              <Pill>{selectedSalesTechniques.length || 'Abrir'}</Pill>
-            </summary>
-            <div className="mt-3 max-h-44 overflow-y-auto pr-1">
-              <SalesTechniqueSelector
-                techniques={followUpSalesTechniqueOptions}
-                selectedIds={selectedSalesTechniques}
-                onToggle={onToggleSalesTechnique}
-                disabled={generating || submitting}
-              />
-            </div>
-          </details>
         </aside>
       </div>
     </WhatsAppDialog>

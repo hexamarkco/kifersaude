@@ -179,6 +179,25 @@ export type CommWhatsAppRefreshMessageStatusResult = {
   updated: number;
 };
 
+export type CommWhatsAppSyncAllChatsBatchResult = {
+  totalKnownChats: number | null;
+  processedChats: number;
+  discoveredChats: number;
+  importedMessages: number;
+  updatedMessages: number;
+  identityConflicts: number;
+  hasMoreChats: boolean;
+  nextChatOffset: number | null;
+  timeTo: number | null;
+  chats: Array<{
+    externalChatId: string;
+    imported: number;
+    updated: number;
+    discovered: boolean;
+    error: string | null;
+  }>;
+};
+
 export type CommWhatsAppMessageSearchResult = {
   message: CommWhatsAppMessage;
   chat: CommWhatsAppChat;
@@ -1403,6 +1422,99 @@ export const commWhatsAppService = {
       nextOffset: typeof payload.nextOffset === 'number' && payload.nextOffset >= 0 ? payload.nextOffset : null,
       timeTo: typeof payload.timeTo === 'number' && payload.timeTo > 0 ? payload.timeTo : null,
     };
+  },
+
+  async syncAllChatsBatch(
+    options: { chatOffset?: number; chatCount?: number; pagesPerChat?: number; timeTo?: number } = {},
+  ): Promise<CommWhatsAppSyncAllChatsBatchResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-sync-all-chats', {
+      body: options,
+    });
+
+    if (error) {
+      const context = (error as { context?: unknown }).context;
+      if (context instanceof Response) {
+        const payload = await context.clone().json().catch(() => null) as { error?: unknown } | null;
+        const message = typeof payload?.error === 'string' ? payload.error.trim() : '';
+        if (message) {
+          throw new Error(message);
+        }
+      }
+
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar todas as conversas.'));
+    }
+
+    const payload = (data ?? {}) as {
+      totalKnownChats?: number | null;
+      processedChats?: number;
+      discoveredChats?: number;
+      importedMessages?: number;
+      updatedMessages?: number;
+      identityConflicts?: number;
+      hasMoreChats?: boolean;
+      nextChatOffset?: number | null;
+      timeTo?: number | null;
+      chats?: Array<{ externalChatId?: string; imported?: number; updated?: number; discovered?: boolean; error?: string }>;
+    };
+
+    return {
+      totalKnownChats: typeof payload.totalKnownChats === 'number' ? payload.totalKnownChats : null,
+      processedChats: typeof payload.processedChats === 'number' ? payload.processedChats : 0,
+      discoveredChats: typeof payload.discoveredChats === 'number' ? payload.discoveredChats : 0,
+      importedMessages: typeof payload.importedMessages === 'number' ? payload.importedMessages : 0,
+      updatedMessages: typeof payload.updatedMessages === 'number' ? payload.updatedMessages : 0,
+      identityConflicts: typeof payload.identityConflicts === 'number' ? payload.identityConflicts : 0,
+      hasMoreChats: payload.hasMoreChats === true,
+      nextChatOffset: typeof payload.nextChatOffset === 'number' && payload.nextChatOffset >= 0 ? payload.nextChatOffset : null,
+      timeTo: typeof payload.timeTo === 'number' && payload.timeTo > 0 ? payload.timeTo : null,
+      chats: Array.isArray(payload.chats)
+        ? payload.chats.map((chat) => ({
+            externalChatId: typeof chat.externalChatId === 'string' ? chat.externalChatId : '',
+            imported: typeof chat.imported === 'number' ? chat.imported : 0,
+            updated: typeof chat.updated === 'number' ? chat.updated : 0,
+            discovered: chat.discovered === true,
+            error: typeof chat.error === 'string' ? chat.error : null,
+          }))
+        : [],
+    };
+  },
+
+  async syncAllChats(
+    options: {
+      pagesPerChat?: number;
+      onProgress?: (progress: { chatsProcessed: number; importedMessages: number; discoveredChats: number }) => void;
+    } = {},
+  ): Promise<{ chatsProcessed: number; importedMessages: number; updatedMessages: number; discoveredChats: number; identityConflicts: number }> {
+    let chatOffset = 0;
+    let chatsProcessed = 0;
+    let importedMessages = 0;
+    let updatedMessages = 0;
+    let discoveredChats = 0;
+    let identityConflicts = 0;
+    let hasMoreChats = true;
+    let batches = 0;
+    const timeTo = Math.floor(Date.now() / 1000);
+
+    while (hasMoreChats && batches < 200) {
+      const batch = await this.syncAllChatsBatch({ chatOffset, pagesPerChat: options.pagesPerChat, timeTo });
+
+      chatsProcessed += batch.processedChats;
+      importedMessages += batch.importedMessages;
+      updatedMessages += batch.updatedMessages;
+      discoveredChats += batch.discoveredChats;
+      identityConflicts += batch.identityConflicts;
+      hasMoreChats = batch.hasMoreChats && batch.nextChatOffset !== null;
+      chatOffset = batch.nextChatOffset ?? chatOffset;
+      batches += 1;
+
+      options.onProgress?.({ chatsProcessed, importedMessages, discoveredChats });
+
+      if (batch.processedChats === 0 && !hasMoreChats) {
+        break;
+      }
+    }
+
+    return { chatsProcessed, importedMessages, updatedMessages, discoveredChats, identityConflicts };
   },
 
   async refreshMessageStatuses(params: {

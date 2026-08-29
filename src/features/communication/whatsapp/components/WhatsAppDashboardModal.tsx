@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, SendHorizontal, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
 import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem } from '../../../../design-system';
 import {
@@ -249,6 +249,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [error, setError] = useState<string | null>(null);
   const [exportingInbox, setExportingInbox] = useState(false);
   const [exportProgress, setExportProgress] = useState<string | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncAllProgress, setSyncAllProgress] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView>('priorities');
 
   const loadMetrics = useCallback(async () => {
@@ -316,6 +318,47 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
     }
   }, [exportingInbox]);
 
+  const handleSyncAllChats = useCallback(async () => {
+    if (syncingAll) {
+      return;
+    }
+
+    setSyncingAll(true);
+    setSyncAllProgress('Preparando sincronização geral...');
+
+    try {
+      const result = await commWhatsAppService.syncAllChats({
+        onProgress: (progress) => {
+          setSyncAllProgress(
+            `${progress.chatsProcessed} conversa(s) verificadas · ${progress.importedMessages} mensagem(ns) recuperada(s)`
+            + (progress.discoveredChats > 0 ? ` · ${progress.discoveredChats} conversa(s) nova(s) encontrada(s)` : ''),
+          );
+        },
+      });
+
+      await loadMetrics();
+
+      if (result.importedMessages > 0 || result.discoveredChats > 0) {
+        toast.success(
+          `Sincronização concluída: ${result.importedMessages} mensagem(ns) recuperada(s) em ${result.chatsProcessed} conversa(s)`
+          + (result.discoveredChats > 0 ? `, incluindo ${result.discoveredChats} conversa(s) nova(s).` : '.'),
+        );
+      } else {
+        toast.info(`Sincronização concluída: nenhuma mensagem nova encontrada em ${result.chatsProcessed} conversa(s).`);
+      }
+
+      if (result.identityConflicts > 0) {
+        toast.warning(`${result.identityConflicts} conflito(s) de identidade foram sinalizados durante a sincronização. Revise-os no inbox.`);
+      }
+    } catch (syncError) {
+      console.error('[WhatsAppDashboardModal] erro ao forçar sincronização geral', syncError);
+      toast.error(syncError instanceof Error ? syncError.message : 'Não foi possível sincronizar todas as conversas.');
+    } finally {
+      setSyncingAll(false);
+      setSyncAllProgress(null);
+    }
+  }, [loadMetrics, syncingAll]);
+
   return (
     <WhatsAppDialog
       isOpen={isOpen}
@@ -327,9 +370,18 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[var(--text-muted)]">
-            {exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
+            {syncAllProgress ?? exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => void handleSyncAllChats()}
+              loading={syncingAll}
+              title="Recupera mensagens que a Whapi não entregou por webhook (ex.: durante uma queda de conexão ou assinatura vencida)."
+            >
+              <RotateCw className="h-4 w-4" />
+              Forçar sincronização geral
+            </Button>
             <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
               <Download className="h-4 w-4" />
               Exportar JSON

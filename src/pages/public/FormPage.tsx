@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, Check, MapPin, MessageCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, MessageCircle, Moon, ShieldCheck, Sun } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
@@ -8,11 +8,26 @@ import { formsService, type PublicFormSubmitPayload } from '../../lib/formsServi
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
-import { Button, Field, getPanelButtonClass, Input, LoadingState, Progress } from '../../design-system';
+import { Button, Field, getPanelButtonClass, Input, LoadingState, Stepper } from '../../design-system';
 
 const DARK_CANVAS_COLOR = '#16110c';
-const DEFAULT_THEME_COLOR = '#f4f0e7';
+const LIGHT_CANVAS_COLOR = '#f4f0e7';
 const WHATSAPP_PHONE = '5521979302389';
+const THEME_STORAGE_KEY = 'kifer-forms-theme';
+const MIN_STEP_WIDTH_PX = 44;
+const MIN_STEPPER_WIDTH_PX = 180;
+
+type FormTheme = 'light' | 'dark';
+
+const getInitialTheme = (): FormTheme => {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // Private browsing / storage blocked — fall through to system preference.
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 type ContactFormState = { name: string; phone: string; email: string };
 type GeoState = {
@@ -49,14 +64,33 @@ export default function FormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const [theme, setTheme] = useState<FormTheme>(getInitialTheme);
+  const originalThemeColorRef = useRef<string | null>(null);
+
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
-    const previousColor = meta?.getAttribute('content') ?? DEFAULT_THEME_COLOR;
-    meta?.setAttribute('content', DARK_CANVAS_COLOR);
+    originalThemeColorRef.current = meta?.getAttribute('content') ?? LIGHT_CANVAS_COLOR;
     return () => {
-      meta?.setAttribute('content', previousColor);
+      meta?.setAttribute('content', originalThemeColorRef.current ?? LIGHT_CANVAS_COLOR);
     };
   }, []);
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute('content', theme === 'dark' ? DARK_CANVAS_COLOR : LIGHT_CANVAS_COLOR);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next: FormTheme = prev === 'dark' ? 'light' : 'dark';
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // Private browsing / storage blocked — the choice just won't persist.
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!slug) {
@@ -223,12 +257,23 @@ export default function FormPage() {
   const pageTitle = form?.title || 'Kifer Saúde';
 
   return (
-    <div className="painel-theme kifer-ds theme-dark flex min-h-dvh w-full justify-center overflow-y-auto [background:var(--surface-hero-bg)] px-4 py-10 sm:py-16">
+    <div
+      className={`painel-theme kifer-ds relative flex min-h-dvh w-full justify-center overflow-y-auto [background:var(--surface-hero-bg)] px-4 py-10 sm:py-16${theme === 'dark' ? ' theme-dark' : ''}`}
+    >
       <PublicSeo
         title={pageTitle}
         description={form?.description || 'Fale com a Kifer Saúde e receba uma cotação personalizada.'}
         canonicalPath={`/forms/${slug ?? ''}`}
       />
+
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] shadow-[var(--shadow-button)] transition hover:text-[color:var(--brand-primary)] sm:right-6 sm:top-6"
+      >
+        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </button>
 
       <div className="w-full max-w-md">
         {loading ? (
@@ -272,9 +317,16 @@ export default function FormPage() {
           </div>
         ) : (
           <>
-            <div className="mb-6 flex flex-col items-center gap-3 text-center">
-              <PublicBrandMark className="h-7 w-auto text-[color:var(--brand-primary)]" />
-              <Progress value={stepIndex + 1} max={totalSteps} showLabel />
+            <div className="mb-6 flex flex-col items-center gap-2 text-center">
+              <PublicBrandMark className="mb-1 h-7 w-auto text-[color:var(--brand-primary)]" />
+              <div className="w-full overflow-x-auto">
+                <div style={{ minWidth: `${Math.max(totalSteps * MIN_STEP_WIDTH_PX, MIN_STEPPER_WIDTH_PX)}px` }}>
+                  <Stepper currentStep={stepIndex} steps={sequence.map(() => ({ label: '' }))} />
+                </div>
+              </div>
+              <p className="text-xs font-medium text-[color:var(--text-muted)]">
+                Etapa {stepIndex + 1} de {totalSteps}
+              </p>
             </div>
 
             <div key={stepIndex} className="form-step-in space-y-5">

@@ -298,7 +298,7 @@ export default function WhatsAppApiSettingsPanel() {
                     <p className="text-xs text-[var(--text-muted)]">
                       {webhookAuthentication === "header"
                         ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
-                        : "Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel."}
+                        : "Cole esta URL exatamente como está no campo URL da Whapi (modo Body, eventos messages, statuses e channel). O segredo já vem embutido nela — não precisa configurar header."}
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
                       Status atual: <span className="font-semibold text-[var(--text-secondary)]">{channelStatus || "unknown"}</span>
@@ -328,8 +328,8 @@ export default function WhatsAppApiSettingsPanel() {
                     O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
                   </p>
                 ) : (
-                  <p className="mt-2 text-xs text-[var(--warning-text)]">
-                    Migre para `COMM_WHATSAPP_WEBHOOK_SECRET` e um header customizado da Whapi para remover o segredo da URL.
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    Se ao salvar essa URL na Whapi ela oferecer um campo de header customizado, prefira configurar {webhookHeaderName || "X-Kifer-Webhook-Secret"} lá e remover o `secret` da URL — mas se não houver esse campo (comum no plano/tela padrão), pode colar a URL como está.
                   </p>
                 )}
               </Card>

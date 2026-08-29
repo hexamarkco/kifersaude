@@ -3,6 +3,7 @@ import {
   applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_CHANNEL_SLUG,
   COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
+  COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
   ensurePrimaryChannel,
@@ -21,6 +22,7 @@ import {
   getNowIso,
   isCommWhatsAppWebhookSecretValid,
   isDirectWhapiChatId,
+  resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
   isRecord,
   normalizeCommWhatsAppPhone,
@@ -512,7 +514,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const providedSecret = req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER);
+    const providedSecret = resolveCommWhatsAppWebhookProvidedSecret(
+      req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER),
+      requestUrl.searchParams.get(COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM),
+    );
     if (!isCommWhatsAppWebhookSecretValid(providedSecret, webhookSecret)) {
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,

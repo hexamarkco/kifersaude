@@ -46,16 +46,20 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
-  const webhookSecretConfigured = Boolean(getCommWhatsAppWebhookSecret());
+  const webhookSecret = getCommWhatsAppWebhookSecret();
 
+  // A tela de webhook da Whapi (Body/Path/Method + eventos) nao expoe um
+  // campo de header customizado em todo plano — por isso a URL ja sai com o
+  // segredo embutido, pronta pra colar. O endpoint aceita esse mesmo segredo
+  // via header X-Kifer-Webhook-Secret tambem, para quem conseguir configura-lo.
   return {
     channel: sanitizeChannelForClient(channel),
     config: {
       enabled: settings.enabled,
       tokenConfigured: Boolean(settings.token),
-      webhookUrl: buildWebhookUrl(supabaseUrl),
-      webhookAuthentication: 'header',
-      webhookHeaderName: webhookSecretConfigured ? COMM_WHATSAPP_WEBHOOK_SECRET_HEADER : null,
+      webhookUrl: buildWebhookUrl(supabaseUrl, webhookSecret),
+      webhookAuthentication: 'legacy_query',
+      webhookHeaderName: webhookSecret ? COMM_WHATSAPP_WEBHOOK_SECRET_HEADER : null,
     },
   };
 }

@@ -1151,7 +1151,7 @@ export default function HomePage() {
               <img
                 src="/luiza-kifer-hero.png"
                 alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
-                className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:max-h-[900px] lg:w-[125%] lg:max-w-none"
+                className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:w-full"
               />
               <div className="absolute bottom-[9%] right-0 z-20 flex items-center gap-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)] sm:right-[2%] sm:px-5 sm:py-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary-muted)] text-[color:var(--brand-primary)]">

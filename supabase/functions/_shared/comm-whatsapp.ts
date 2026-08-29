@@ -26,6 +26,12 @@ export const COMM_WHATSAPP_CHANNEL_SLUG = 'primary';
 export const COMM_WHATSAPP_MODULE = 'whatsapp-inbox';
 export const COMM_WHATSAPP_WEBHOOK_SECRET_ENV = 'COMM_WHATSAPP_WEBHOOK_SECRET';
 export const COMM_WHATSAPP_WEBHOOK_SECRET_HEADER = 'X-Kifer-Webhook-Secret';
+// A Whapi nem sempre expoe um campo de header customizado na configuracao de
+// webhook do painel dela (so URL, modo do body e metodos por evento) — nesses
+// planos/telas o unico jeito de autenticar a chamada e embutir o segredo na
+// propria URL. Aceito como fallback do header, nao como substituto: quando o
+// header vier presente e valido ele tem prioridade.
+export const COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM = 'secret';
 
 const MAX_WHAPI_MEDIA_RESPONSE_BYTES = 32 * 1024 * 1024;
 const DEFAULT_WHAPI_REQUEST_TIMEOUT_MS = 12_000;
@@ -466,6 +472,25 @@ export const isCommWhatsAppWebhookSecretValid = (
 ): boolean => {
   const provided = toTrimmedString(providedHeaderValue);
   return Boolean(provided) && Boolean(expectedSecret) && timingSafeStringEqual(provided, expectedSecret);
+};
+
+/**
+ * Resolve o segredo do webhook informado na requisicao, priorizando o header
+ * (`X-Kifer-Webhook-Secret`) e caindo para o query param `secret` quando o
+ * header nao vier — a tela de configuracao de webhook da Whapi nem sempre
+ * expoe um campo de header customizado, entao o segredo pode ter que viajar
+ * embutido na URL. Extraída como função pura para ser coberta por teste sem
+ * precisar subir a Edge Function inteira.
+ */
+export const resolveCommWhatsAppWebhookProvidedSecret = (
+  headerValue: string | null | undefined,
+  queryValue: string | null | undefined,
+): string | null => {
+  const header = toTrimmedString(headerValue);
+  if (header) return header;
+
+  const query = toTrimmedString(queryValue);
+  return query || null;
 };
 
 export async function fetchWhapiWithTimeout(
@@ -2248,9 +2273,13 @@ export const getHealthStatusText = (payload: unknown): string => {
   return 'unknown';
 };
 
-export const buildWebhookUrl = (supabaseUrl: string): string => {
+export const buildWebhookUrl = (supabaseUrl: string, secret?: string): string => {
   const normalizedUrl = supabaseUrl.replace(/\/$/, '');
   const query = new URLSearchParams({ channel: COMM_WHATSAPP_CHANNEL_SLUG });
+  const trimmedSecret = toTrimmedString(secret);
+  if (trimmedSecret) {
+    query.set(COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM, trimmedSecret);
+  }
 
   return `${normalizedUrl}/functions/v1/comm-whatsapp-webhook?${query.toString()}`;
 };

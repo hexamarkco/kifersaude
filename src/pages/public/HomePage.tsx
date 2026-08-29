@@ -15,10 +15,8 @@ import {
   Phone,
   Plus,
   Search,
-  Shield,
   Sparkles,
   Star,
-  ThumbsUp,
   TrendingUp,
   Users,
   UserRound,
@@ -125,15 +123,6 @@ const partnerLogos: PartnerLogo[] = [
   { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saúde' },
 ];
 
-const heroRibbonItems = [
-  'Consultoria em planos de saúde',
-  'Atendimento humanizado',
-  'Cotação sem compromisso',
-  'Especialista no RJ',
-  'Suporte do início ao pós-venda',
-];
-
-const loopedHeroRibbonItems = [...heroRibbonItems, ...heroRibbonItems];
 const loopedPartnerLogos = [...partnerLogos, ...partnerLogos];
 const metricIcons = [Users, Building2, TrendingUp];
 
@@ -969,39 +958,7 @@ export default function HomePage() {
           width: clamp(6.75rem, 11vw, 9rem);
         }
 
-        @keyframes hero-ribbon-slide {
-          from {
-            transform: translateX(0);
-          }
-
-          to {
-            transform: translateX(-50%);
-          }
-        }
-
-        .hero-ribbon-marquee {
-          overflow: hidden;
-          background: linear-gradient(90deg, var(--brand-primary-muted), var(--bg-canvas-subtle), var(--brand-primary-muted));
-          border-top: 1px solid var(--brand-primary-border);
-          border-bottom: 1px solid var(--brand-primary-border);
-          box-shadow: var(--shadow-card);
-        }
-
-        .hero-ribbon-track {
-          display: flex;
-          width: max-content;
-          animation: hero-ribbon-slide 46s linear infinite;
-        }
-
-        .hero-ribbon-item {
-          flex: 0 0 auto;
-        }
-
         @media (max-width: 768px) {
-          .hero-ribbon-track {
-            animation-duration: 32s;
-          }
-
           .partner-logos-track {
             animation-duration: 18s;
           }
@@ -1057,7 +1014,6 @@ export default function HomePage() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .hero-ribbon-track,
           .partner-logos-track {
             animation: none;
           }
@@ -1138,125 +1094,76 @@ export default function HomePage() {
           </div>
         </nav>
 
-        <section
-          id="topo"
-          className="relative flex min-h-[85vh] items-center overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-20 pt-24 sm:px-6 lg:px-8"
-        >
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-[var(--brand-primary)] blur-3xl" />
-            <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-[var(--accent-gold)] blur-3xl" />
-          </div>
+        <section id="topo" className="relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-0 lg:pt-20">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_78%_43%,var(--brand-primary-muted),transparent_36%)]" />
+          <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-4">
+            <div className="relative z-10 max-w-2xl py-6 sm:py-10 lg:py-16">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)]">
+                <Heart aria-hidden="true" className="h-4 w-4 fill-current text-[color:var(--brand-primary)]" />
+                Especialista em planos de saúde no RJ
+              </div>
 
-          <div className="relative z-10 mx-auto w-full max-w-7xl">
-            <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
-              <div className="order-2 text-left lg:order-1">
-                <div className="mb-6">
-                  <span className="inline-flex items-center rounded-full [background:var(--brand-primary-gradient)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
-                    <Star className="mr-2 h-4 w-4 fill-current" />
-                    Especialista em planos de saúde no RJ
-                  </span>
-                </div>
+              <h1 className="mt-7 max-w-[11ch] font-[var(--font-display)] text-[clamp(3rem,6.2vw,5.75rem)] font-bold leading-[0.94] tracking-[-0.035em] text-[color:var(--text-primary)]">
+                O plano ideal começa com <span className="text-[color:var(--brand-primary)]">gente de verdade.</span>
+              </h1>
 
-                <h1 className="mb-6 font-[var(--font-display)] text-4xl font-extrabold leading-tight text-[color:var(--text-primary)] md:text-5xl lg:text-6xl">
-                  O plano ideal começa com{' '}
-                  <span className="text-[color:var(--brand-primary)]">gente de verdade.</span>
-                </h1>
+              <p className="mt-7 max-w-xl text-lg leading-8 text-[color:var(--text-secondary)] sm:text-xl">
+                Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
+              </p>
 
-                <p className="mb-5 text-lg font-light leading-relaxed text-[color:var(--text-secondary)] md:text-xl">
-                  Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
-                  <span className="mt-2 block font-semibold text-[color:var(--brand-primary)]">Mais de 500 clientes satisfeitos.</span>
-                </p>
+              <div aria-hidden="true" className="mt-7 h-0.5 w-14 rounded-full bg-[var(--brand-primary)]" />
+              <p className="mt-7 font-[var(--font-display)] text-xl font-semibold text-[color:var(--text-primary)] sm:text-2xl">
+                Seu cuidado é a nossa prioridade
+              </p>
 
-                <div className="mb-6 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
-                    <Shield className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
-                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">100% Gratuito</span>
-                  </div>
-                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
-                    <CheckCircle className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
-                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">Sem compromisso</span>
-                  </div>
-                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
-                    <ThumbsUp className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
-                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">98% Satisfação</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => setShowQuoteModal(true)}
-                    className="whitespace-nowrap rounded-full [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] md:text-lg"
-                  >
-                    Quero minha cotação gratuita
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openWhatsApp()}
-                    className="whitespace-nowrap rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--success-hover)] md:text-lg"
-                  >
-                    <MessageCircle className="mr-2 inline-block h-5 w-5" />
-                    Falar no WhatsApp
-                  </button>
-                </div>
-
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
-                  className="mt-4 inline-flex items-center text-sm font-semibold text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
+                  onClick={() => setShowQuoteModal(true)}
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] [background:var(--brand-primary-gradient)] px-6 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition duration-200 hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand-primary)]"
                 >
-                  Já sou cliente e preciso de suporte
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                  <MessageCircle aria-hidden="true" className="h-5 w-5" />
+                  Quero minha cotação gratuita
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openWhatsApp()}
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] border border-[color:var(--success-border)] bg-[var(--bg-surface)] px-6 text-base font-bold text-[color:var(--success)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--success-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--success)]"
+                >
+                  <MessageCircle aria-hidden="true" className="h-5 w-5" />
+                  Falar no WhatsApp
                 </button>
               </div>
 
-              <div className="order-1 flex justify-center lg:order-2">
-                <div className="relative pb-8 pt-20">
-                  <div className="absolute -left-2 top-20 z-10 rounded-full bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
-                    <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">500+</div>
-                    <div className="text-xs font-medium text-[color:var(--text-secondary)]">Clientes</div>
-                  </div>
+              <button
+                type="button"
+                onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
+                className="mt-5 inline-flex items-center border-b border-[color:var(--border-default)] pb-1 text-sm font-medium text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--brand-primary)] hover:text-[color:var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--brand-primary)]"
+              >
+                Já sou cliente e preciso de suporte
+                <ArrowUpRight aria-hidden="true" className="ml-2 h-4 w-4" />
+              </button>
+            </div>
 
-                  <div className="absolute -right-2 bottom-32 z-10 rounded-full bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
-                    <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">4.9★</div>
-                    <div className="text-xs font-medium text-[color:var(--text-secondary)]">Avaliação</div>
-                  </div>
-
-                  <div className="relative h-[480px] w-[320px] md:h-[540px] md:w-[360px]">
-                    <div className="absolute right-0 top-0 z-20 flex items-center gap-2 rounded-full [background:var(--brand-primary-gradient)] px-4 py-2 shadow-[var(--shadow-button)]">
-                      <div className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
-                      <span className="text-xs font-bold whitespace-nowrap text-[color:var(--text-on-brand)]">Online agora</span>
-                    </div>
-                    <div className="absolute inset-0 overflow-hidden rounded-[var(--kds-radius-md)] border-4 border-[color:var(--text-on-brand)] [background:var(--surface-hero-bg)] shadow-[var(--shadow-modal)]">
-                      <img
-                        src="/luiza-kifer-hero.png"
-                        alt="Luiza Kifer - especialista em planos de saúde"
-                        className="h-full w-full object-cover object-[center_35%] scale-105"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-full bg-[var(--bg-elevated)] px-8 py-4 text-center shadow-[var(--shadow-card)]">
-                    <h3 className="mb-1 text-xl font-bold text-[color:var(--text-primary)]">Luiza Kifer</h3>
-                    <p className="font-semibold whitespace-nowrap text-[color:var(--brand-primary)]">Sua especialista em saúde</p>
-                  </div>
-                </div>
+            <div className="relative mx-auto flex w-full max-w-xl items-end justify-center self-end lg:h-[calc(100vh-5rem)] lg:min-h-[640px]">
+              <div aria-hidden="true" className="absolute bottom-[7%] left-1/2 aspect-square w-[92%] -translate-x-1/2 rounded-full bg-[var(--brand-primary-muted)]" />
+              <div aria-hidden="true" className="absolute bottom-[10%] left-[4%] h-[54%] w-[92%] rounded-[50%] border border-[color:var(--brand-primary-border)] opacity-50" />
+              <img
+                src="/luiza-kifer-hero.png"
+                alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
+                className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:w-full"
+              />
+              <div className="absolute bottom-[9%] right-0 z-20 flex items-center gap-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)] sm:right-[2%] sm:px-5 sm:py-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary-muted)] text-[color:var(--brand-primary)]">
+                  <UserRound aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold leading-5 text-[color:var(--text-primary)] sm:text-base">
+                  Atendimento<br /><strong className="text-[color:var(--brand-primary)]">100% gratuito</strong>
+                </span>
               </div>
             </div>
           </div>
         </section>
-
-        <div className="hero-ribbon-marquee relative z-20 -mt-8">
-          <div className="hero-ribbon-track items-center gap-5 px-4 py-3 sm:gap-6 sm:px-6">
-            {loopedHeroRibbonItems.map((item, index) => (
-              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-5 sm:gap-6" aria-hidden={index >= heroRibbonItems.length}>
-                <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.01em] text-[color:var(--text-secondary)] sm:text-xs lg:text-sm">{item}</span>
-                <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand-primary)] sm:h-4 sm:w-4" />
-              </div>
-            ))}
-          </div>
-        </div>
 
         <section id="prova-social" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">

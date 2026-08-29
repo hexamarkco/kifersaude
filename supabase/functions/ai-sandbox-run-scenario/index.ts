@@ -12,6 +12,7 @@ import {
   fetchSimilarSituations,
   SYSTEM_PLAYBOOK,
   splitGeneratedReply,
+  type HandoffCode,
   type SandboxMessageRow,
 } from '../_shared/ai-sandbox-playbook.ts';
 
@@ -64,7 +65,11 @@ const buildLeadUserPrompt = (history: SandboxMessageRow[]): string => {
   ].join('\n');
 };
 
-const buildJudgePrompt = (history: SandboxMessageRow[], handoffTriggered: boolean): { systemPrompt: string; userPrompt: string } => {
+const buildJudgePrompt = (
+  history: SandboxMessageRow[],
+  handoffTriggered: boolean,
+  handoffCode: HandoffCode | null,
+): { systemPrompt: string; userPrompt: string } => {
   const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'LEAD' : 'ATENDENTE'}: ${row.content}`);
   const systemPrompt = [
     'Voce e um avaliador de qualidade rigoroso de atendimento automatizado.',
@@ -78,7 +83,7 @@ const buildJudgePrompt = (history: SandboxMessageRow[], handoffTriggered: boolea
     '--- CONVERSA PARA AVALIAR ---',
     transcriptLines.join('\n'),
     '',
-    `--- HANDOFF DISPARADO NESTA CONVERSA: ${handoffTriggered ? 'sim' : 'nao'} ---`,
+    `--- HANDOFF DISPARADO NESTA CONVERSA: ${handoffTriggered ? `sim, codigo ${handoffCode ?? '(nenhum)'}` : 'nao'} ---`,
     '',
     '--- CHECKLIST ---',
     '1. So perguntou bairro quando a cidade era Rio de Janeiro?',
@@ -93,6 +98,7 @@ const buildJudgePrompt = (history: SandboxMessageRow[], handoffTriggered: boolea
     '10. Se o lead perguntou se e um robo ou pediu para falar com um humano, o atendente manteve o personagem da Luiza (pessoa real) e desviou da pergunta com naturalidade, sem confirmar ser IA/robo/sistema automatizado e sem mencionar handoff/repasse para outra pessoa?',
     '11. Se a cidade mencionada tinha "Rio" no nome mas nao era a cidade do Rio de Janeiro (capital) — ex: Rio das Ostras, Rio Grande — o atendente NAO perguntou bairro por engano?',
     '12. Se o lead mencionou gravidez, o atendente informou corretamente que a carencia de parto e SEMPRE 10 meses (sem reducao mesmo com plano anterior)? Se mencionou doenca preexistente, informou que a CPT e 24 meses APENAS para procedimentos de alta complexidade daquela doenca (nao afeta o resto da cobertura)? Essas sao regras fixas da ANS que podem ser informadas com seguranca — so operadora/valores especificos ficam para a cotacao manual.',
+    '13. Se houve handoff, o codigo usado bate com o motivo real da conversa? QUALIFICACAO_COMPLETA so quando idade(s), localizacao e CNPJ/MEI foram coletados normalmente; RECUSOU_COTACAO so quando o lead recusou a oferta de nova cotacao numa reclamacao/cancelamento (ou so queria cancelar sem interesse em recotar); FORA_DE_ESCOPO so quando o pedido nao era sobre plano de saude/odontologico novo; PRECISA_HUMANO para qualquer outra situacao que exigiu julgamento humano. Um codigo trocado (ex: QUALIFICACAO_COMPLETA usado numa reclamacao recusada) conta como violacao.',
     '',
     '--- FORMATO DA RESPOSTA ---',
     'Responda APENAS com um JSON valido, sem markdown, no formato:',
@@ -179,10 +185,11 @@ Deno.serve(async (req: Request) => {
 
     const history: SandboxMessageRow[] = [];
     let handoffTriggered = false;
+    let finalHandoffCode: HandoffCode | null = null;
     let lastProvider: string | null = null;
     let lastModel: string | null = null;
 
-    const persist = async (rows: Array<{ role: 'lead' | 'ai'; content: string; handoff_reason: string | null; provider: string | null; model: string | null }>) => {
+    const persist = async (rows: Array<{ role: 'lead' | 'ai'; content: string; handoff_reason: string | null; handoff_code: string | null; provider: string | null; model: string | null }>) => {
       const { error } = await supabaseAdmin.from('ai_sandbox_messages').insert(
         rows.map((row) => ({ conversation_id: conversationId, ...row })),
       );
@@ -211,21 +218,25 @@ Deno.serve(async (req: Request) => {
         temperature: 0.6,
         maxTokens: 450,
       });
-      const { messages, handoffReason } = splitGeneratedReply(result.text, true);
+      const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, true);
       lastProvider = result.provider;
       lastModel = result.model;
       if (messages.length > 0) {
         await persist(messages.map((content, index) => ({
           role: 'ai' as const,
           content,
-          handoff_reason: index === messages.length - 1 ? handoffReason : null,
+          handoff_reason: index === messages.length - 1 ? handoffNote : null,
+          handoff_code: index === messages.length - 1 ? handoffCode : null,
           provider: result.provider,
           model: result.model,
         })));
-        if (handoffReason) handoffTriggered = true;
+        if (handoffCode) {
+          handoffTriggered = true;
+          finalHandoffCode = handoffCode;
+        }
       }
     } else if (firstLeadMessage) {
-      await persist([{ role: 'lead', content: firstLeadMessage, handoff_reason: null, provider: null, model: null }]);
+      await persist([{ role: 'lead', content: firstLeadMessage, handoff_reason: null, handoff_code: null, provider: null, model: null }]);
     }
 
     // ---- Loop de turnos ----
@@ -244,7 +255,7 @@ Deno.serve(async (req: Request) => {
         });
         const leadText = leadResult.text.trim();
         if (!leadText) break;
-        await persist([{ role: 'lead', content: leadText, handoff_reason: null, provider: null, model: null }]);
+        await persist([{ role: 'lead', content: leadText, handoff_reason: null, handoff_code: null, provider: null, model: null }]);
       }
 
       // Turno do atendente
@@ -258,16 +269,20 @@ Deno.serve(async (req: Request) => {
       });
       lastProvider = result.provider;
       lastModel = result.model;
-      const { messages, handoffReason } = splitGeneratedReply(result.text, false);
+      const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, false);
       if (messages.length === 0) break;
       await persist(messages.map((content, index) => ({
         role: 'ai' as const,
         content,
-        handoff_reason: index === messages.length - 1 ? handoffReason : null,
+        handoff_reason: index === messages.length - 1 ? handoffNote : null,
+        handoff_code: index === messages.length - 1 ? handoffCode : null,
         provider: result.provider,
         model: result.model,
       })));
-      if (handoffReason) handoffTriggered = true;
+      if (handoffCode) {
+        handoffTriggered = true;
+        finalHandoffCode = handoffCode;
+      }
 
       turn += 1;
     }
@@ -279,7 +294,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- Avaliacao (juiz) ----
 
-    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(history, handoffTriggered);
+    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(history, handoffTriggered, finalHandoffCode);
     const judgeResult = await generateTextWithRouting({
       supabaseAdmin,
       task: 'attendance_critique',
@@ -296,6 +311,7 @@ Deno.serve(async (req: Request) => {
       scenario_label: scenarioLabel,
       turns: turn,
       handoff_triggered: handoffTriggered,
+      handoff_code: finalHandoffCode,
       passed: verdict.passed,
       verdict: { violations: verdict.violations, notes: verdict.notes },
       provider: lastProvider,
@@ -310,6 +326,7 @@ Deno.serve(async (req: Request) => {
       scenarioLabel,
       turns: turn,
       handoffTriggered,
+      handoffCode: finalHandoffCode,
       passed: verdict.passed,
       violations: verdict.violations,
       notes: verdict.notes,

@@ -42,7 +42,7 @@ export default function AiSandboxChatScreen() {
   // que o lead mande agradecimento ou qualquer outra coisa — a partir dai e
   // atendimento humano.
   const isHandedOff = useMemo(
-    () => messages.some((message) => message.role === 'ai' && Boolean(message.handoff_reason)),
+    () => messages.some((message) => message.role === 'ai' && Boolean(message.handoff_code)),
     [messages],
   );
 
@@ -142,6 +142,7 @@ export default function AiSandboxChatScreen() {
         role: 'ai',
         content: result.reply,
         handoff_reason: result.handoffReason,
+        handoff_code: result.handoffCode,
         provider: result.provider,
         model: result.model,
         created_at: new Date().toISOString(),
@@ -249,6 +250,7 @@ export default function AiSandboxChatScreen() {
         role: 'ai',
         content,
         handoff_reason: index === result.messages.length - 1 ? result.handoffReason : null,
+        handoff_code: index === result.messages.length - 1 ? result.handoffCode : null,
         provider: result.provider,
         model: result.model,
         created_at: new Date().toISOString(),
@@ -399,12 +401,14 @@ export default function AiSandboxChatScreen() {
                         {message.content}
                       </div>
                     </div>
-                    {message.handoff_reason && (
+                    {message.handoff_code && (
                       <div className="flex justify-start">
                         <div className="flex max-w-[75%] items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-1.5 text-xs text-[var(--warning-text)]">
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                           <span>
-                            <Badge tone="warning" size="sm" className="mr-1.5 align-middle">Handoff</Badge>
+                            <Badge tone="warning" size="sm" className="mr-1.5 align-middle">
+                              Handoff: {message.handoff_code}
+                            </Badge>
                             {message.handoff_reason}
                           </span>
                         </div>

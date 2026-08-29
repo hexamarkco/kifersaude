@@ -15,6 +15,7 @@ export type AiSandboxMessage = {
   role: 'lead' | 'ai';
   content: string;
   handoff_reason: string | null;
+  handoff_code: string | null;
   provider: string | null;
   model: string | null;
   created_at: string;
@@ -22,6 +23,7 @@ export type AiSandboxMessage = {
 
 type GenerateReplyResult = {
   reply: string;
+  handoffCode: string | null;
   handoffReason: string | null;
   provider: string | null;
   model: string | null;
@@ -29,6 +31,7 @@ type GenerateReplyResult = {
 
 type GenerateOpeningResult = {
   messages: string[];
+  handoffCode: string | null;
   handoffReason: string | null;
   provider: string | null;
   model: string | null;
@@ -117,6 +120,7 @@ export const aiSandboxChatService = {
 
     return {
       reply,
+      handoffCode: result.handoffCode,
       handoffReason: result.handoffReason,
       provider: result.provider,
       model: result.model,
@@ -142,6 +146,7 @@ async function callGenerate(body: { conversationId: string; leadName?: string })
 
   const payload = (data ?? {}) as {
     messages?: string[];
+    handoffCode?: string | null;
     handoffReason?: string | null;
     provider?: string | null;
     model?: string | null;
@@ -155,6 +160,7 @@ async function callGenerate(body: { conversationId: string; leadName?: string })
 
   return {
     messages: payload.messages ?? [],
+    handoffCode: payload.handoffCode ?? null,
     handoffReason: payload.handoffReason ?? null,
     provider: payload.provider ?? null,
     model: payload.model ?? null,

@@ -493,6 +493,22 @@ export const resolveCommWhatsAppWebhookProvidedSecret = (
   return query || null;
 };
 
+/**
+ * Autoriza a requisicao do webhook se o header OU o query param baterem com o
+ * segredo esperado — nao so um dos dois por prioridade fixa. Isso evita que a
+ * autenticacao quebre inteira quando um dos dois canais fica desatualizado
+ * (ex: a Whapi guarda um `headers` custom via API que nao aparece/edita pela
+ * tela deles, e ele pode ficar com um segredo antigo enquanto a URL, que a
+ * gente reescreve automaticamente a cada rotacao, ja esta correta).
+ */
+export const isCommWhatsAppWebhookRequestAuthorized = (
+  headerValue: string | null | undefined,
+  queryValue: string | null | undefined,
+  expectedSecret: string,
+): boolean =>
+  isCommWhatsAppWebhookSecretValid(headerValue, expectedSecret)
+  || isCommWhatsAppWebhookSecretValid(queryValue, expectedSecret);
+
 export async function fetchWhapiWithTimeout(
   url: string,
   init: RequestInit,

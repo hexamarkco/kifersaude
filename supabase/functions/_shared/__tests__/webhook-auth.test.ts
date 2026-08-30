@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   buildWebhookUrl,
   corsHeaders,
+  isCommWhatsAppWebhookRequestAuthorized,
   isCommWhatsAppWebhookSecretValid,
   resolveCommWhatsAppWebhookProvidedSecret,
 } from '../comm-whatsapp';
@@ -85,4 +86,29 @@ test('buildWebhookUrl omite o parametro secret quando nenhum segredo e informado
     url,
     'https://exemplo.supabase.co/functions/v1/comm-whatsapp-webhook?channel=primary',
   );
+});
+
+test('isCommWhatsAppWebhookRequestAuthorized aceita quando so o header bate', () => {
+  assert.equal(
+    isCommWhatsAppWebhookRequestAuthorized('meu-segredo-123', 'errado', 'meu-segredo-123'),
+    true,
+  );
+});
+
+test('isCommWhatsAppWebhookRequestAuthorized aceita quando so o query param bate (header desatualizado)', () => {
+  assert.equal(
+    isCommWhatsAppWebhookRequestAuthorized('header-velho-e-invalido', 'meu-segredo-123', 'meu-segredo-123'),
+    true,
+  );
+});
+
+test('isCommWhatsAppWebhookRequestAuthorized rejeita quando nenhum dos dois bate', () => {
+  assert.equal(
+    isCommWhatsAppWebhookRequestAuthorized('errado-1', 'errado-2', 'meu-segredo-123'),
+    false,
+  );
+});
+
+test('isCommWhatsAppWebhookRequestAuthorized rejeita quando nenhum dos dois vem preenchido', () => {
+  assert.equal(isCommWhatsAppWebhookRequestAuthorized(null, null, 'meu-segredo-123'), false);
 });

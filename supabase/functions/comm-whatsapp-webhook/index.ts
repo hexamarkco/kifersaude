@@ -20,7 +20,7 @@ import {
   getDirectChatDisplayNameCandidate,
   getHealthStatusText,
   getNowIso,
-  isCommWhatsAppWebhookSecretValid,
+  isCommWhatsAppWebhookRequestAuthorized,
   isDirectWhapiChatId,
   resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
@@ -538,17 +538,23 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const providedSecret = resolveCommWhatsAppWebhookProvidedSecret(
-      req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER),
-      requestUrl.searchParams.get(COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM),
-    );
-    if (!isCommWhatsAppWebhookSecretValid(providedSecret, webhookSecret)) {
+    const headerSecret = req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER);
+    const querySecret = requestUrl.searchParams.get(COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM);
+    // Autoriza se o header OU o query param baterem — a Whapi guarda o header
+    // custom via API (nao aparece na tela deles pra editar), entao ele pode
+    // ficar desatualizado numa rotacao de segredo enquanto a URL, que a gente
+    // reescreve automaticamente no painel, ja esta correta. Ver comentario em
+    // isCommWhatsAppWebhookRequestAuthorized.
+    if (!isCommWhatsAppWebhookRequestAuthorized(headerSecret, querySecret, webhookSecret)) {
       // Nao logamos os segredos inteiros, so tamanho + ultimos 4 chars de cada
-      // lado, o suficiente pra diferenciar "URL desatualizada na Whapi" de
-      // "bug na comparacao" sem expor o segredo nos logs.
+      // lado, o suficiente pra diferenciar "header/URL desatualizados na Whapi"
+      // de "bug na comparacao" sem expor o segredo nos logs.
+      const providedSecret = resolveCommWhatsAppWebhookProvidedSecret(headerSecret, querySecret);
       console.warn(
         `[${correlationId}] webhook nao autorizado `
-        + `provided_len=${providedSecret?.length ?? 0} provided_tail=${(providedSecret ?? '').slice(-4)} `
+        + `header_len=${toTrimmedString(headerSecret).length} header_tail=${toTrimmedString(headerSecret).slice(-4)} `
+        + `query_len=${toTrimmedString(querySecret).length} query_tail=${toTrimmedString(querySecret).slice(-4)} `
+        + `resolved_tail=${(providedSecret ?? '').slice(-4)} `
         + `expected_len=${webhookSecret.length} expected_tail=${webhookSecret.slice(-4)}`,
       );
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {

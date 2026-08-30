@@ -3450,6 +3450,22 @@ async function activateAutonomousServiceForLead({
   if (updateError) {
     throw new Error(`Erro ao ativar atendimento autonomo: ${updateError.message}`);
   }
+
+  // Como as etapas do fluxo passam pela fila (cron de 1 em 1 minuto), o lead
+  // pode responder ANTES desta etapa rodar de fato — o webhook nao agenda
+  // resposta nesse caso porque o chat ainda estava 'inactive' na hora. Sem
+  // esse catch-up, essa mensagem ficaria sem resposta pra sempre (so
+  // mensagens NOVAS disparam o agendamento). A funcao no banco e segura
+  // mesmo se nao houver nada pendente: o worker cancela o job se a ultima
+  // mensagem ja for nossa.
+  try {
+    await supabase.rpc('schedule_ai_autonomous_reply_job', {
+      p_chat_id: chatRoute.chatId,
+      p_delay_seconds: 30,
+    });
+  } catch {
+    // Best-effort: a proxima mensagem inbound do lead ainda vai disparar normalmente.
+  }
 }
 
 async function sendAutoContactMessage({

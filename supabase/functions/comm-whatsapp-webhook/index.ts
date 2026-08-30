@@ -533,7 +533,13 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const payload = JSON.parse(rawPayloadText);
+    const parsedPayload: unknown = JSON.parse(rawPayloadText);
+    // O body customizado da Whapi pode ser apenas o array de mensagens. O
+    // restante do handler trabalha com envelope, então normalizamos o array
+    // sem perder o suporte já existente no parser compartilhado.
+    const payload = Array.isArray(parsedPayload)
+      ? { messages: parsedPayload }
+      : parsedPayload;
     if (!isRecord(payload)) {
       return new Response(JSON.stringify({ error: 'Payload invalido' }), {
         status: 400,
@@ -564,9 +570,14 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', channel.id);
 
-    const messageItems = eventType === 'messages' || eventType === 'message'
-      ? extractWhapiWebhookMessageItems(payload)
-      : [];
+    // Não condicionar ao `event.type`: no body customizado da Whapi esse
+    // envelope pode não existir, embora `messages`, `message` ou `data`
+    // contenham uma mensagem válida. O parser é conservador e retorna vazio
+    // para status/canal, portanto é seguro inspecionar todo payload.
+    const messageItems = extractWhapiWebhookMessageItems(payload);
+    let persistedMessages = 0;
+    let duplicateMessages = 0;
+    let skippedMessages = 0;
 
     if (messageItems.length > 0) {
       for (const rawItem of messageItems) {
@@ -576,10 +587,16 @@ Deno.serve(async (req: Request) => {
         };
 
         const chatId = resolveMessageChatId(item.message);
-        if (!chatId || !isDirectWhapiChatId(chatId)) continue;
+        if (!chatId || !isDirectWhapiChatId(chatId)) {
+          skippedMessages += 1;
+          continue;
+        }
 
         const eventKey = buildWhapiWebhookMessageReceiptKey(eventAction, item);
-        if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
+        if (await hasEventReceipt(supabaseAdmin, eventKey)) {
+          duplicateMessages += 1;
+          continue;
+        }
 
         const chat = await persistMessageFromWebhook(
           supabaseAdmin,
@@ -588,7 +605,10 @@ Deno.serve(async (req: Request) => {
           eventAction,
           item.patch,
         );
-        if (!chat) continue;
+        if (!chat) {
+          skippedMessages += 1;
+          continue;
+        }
 
         await recordEventReceipt(
           supabaseAdmin,
@@ -603,7 +623,12 @@ Deno.serve(async (req: Request) => {
           },
           archivePath,
         );
+        persistedMessages += 1;
       }
+    }
+
+    if ((eventType === 'messages' || eventType === 'message') && messageItems.length === 0) {
+      console.warn(`[${correlationId}] evento de mensagem sem itens reconhecidos`);
     }
 
     if (eventType === 'statuses' && Array.isArray(payload.statuses)) {
@@ -672,9 +697,21 @@ Deno.serve(async (req: Request) => {
     }
 
     const elapsed = Date.now() - startedAt;
-    console.log(`[${correlationId}] complete elapsed=${elapsed}ms success=true`);
+    console.log(
+      `[${correlationId}] complete elapsed=${elapsed}ms success=true `
+      + `message_items=${messageItems.length} persisted=${persistedMessages} `
+      + `duplicates=${duplicateMessages} skipped=${skippedMessages}`,
+    );
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({
+      success: true,
+      messages: {
+        received: messageItems.length,
+        persisted: persistedMessages,
+        duplicates: duplicateMessages,
+        skipped: skippedMessages,
+      },
+    }), {
       status: 200,
       headers: jsonHeaders,
     });

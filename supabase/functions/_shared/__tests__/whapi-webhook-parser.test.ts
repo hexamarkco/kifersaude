@@ -60,6 +60,45 @@ test('keeps regular Whapi message payloads unchanged', () => {
   assert.equal(item.patch, null);
 });
 
+test('accepts a message sent directly inside data by a custom webhook body', () => {
+  const [item] = extractWhapiWebhookMessageItems({
+    data: {
+      id: 'message-in-data',
+      chat_id: '5511999999999@s.whatsapp.net',
+      from_me: false,
+      timestamp: 1712995245,
+      type: 'text',
+    },
+  });
+
+  assert.ok(item);
+  assert.equal(item.message.id, 'message-in-data');
+  assert.equal(item.patch, null);
+});
+
+test('accepts a custom webhook body containing the message itself', () => {
+  const [item] = extractWhapiWebhookMessageItems({
+    id: 'direct-message',
+    from: '5511999999999@s.whatsapp.net',
+    from_me: false,
+    timestamp: 1712995245,
+    type: 'text',
+  });
+
+  assert.ok(item);
+  assert.equal(item.message.id, 'direct-message');
+});
+
+test('does not mistake a status object for a direct message', () => {
+  const items = extractWhapiWebhookMessageItems({
+    id: 'message-status',
+    status: 'delivered',
+    timestamp: '1712995245',
+  });
+
+  assert.deepEqual(items, []);
+});
+
 test('unwraps documented messages.patch payloads from after_update', () => {
   const [item] = extractWhapiWebhookMessageItems(pollPatchPayload('vote-event-1'));
 

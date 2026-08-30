@@ -4094,11 +4094,20 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!newMatchingFlow) {
-        await cancelFlowJobs({
-          supabase,
-          leadId: record.id,
-          reason: 'Lead não atende mais as condições do fluxo',
-        });
+        // 'activate_autonomous_service' e sempre a ULTIMA etapa de um fluxo,
+        // pensada pra rodar logo depois de uma etapa 'update_status' do
+        // MESMO fluxo — e normal, portanto, o lead deixar de bater com o
+        // gatilho original (ex: "Lead criado" com status Novo) exatamente
+        // por causa dessa mudanca de status que o proprio fluxo fez. Sem
+        // essa excecao, a etapa de ativar a IA seria sempre cancelada antes
+        // de rodar. Outras etapas pendentes continuam sendo canceladas
+        // normalmente quando o lead sai das condicoes do fluxo.
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'skipped', last_error: 'Lead não atende mais as condições do fluxo' })
+          .eq('lead_id', record.id)
+          .eq('status', 'pending')
+          .neq('action_type', 'activate_autonomous_service');
 
         return new Response(JSON.stringify({ success: true, skipped: true }), {
           status: 200,

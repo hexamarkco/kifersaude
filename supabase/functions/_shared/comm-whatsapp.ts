@@ -1687,7 +1687,7 @@ export const extractWhapiStarEvent = (
     ? true
     : explicitStarred === 'false'
       ? false
-      : normalizedActionType === 'unstar' || normalizedActionType === 'unstarred';
+      : normalizedActionType === 'star' || normalizedActionType === 'starred';
 
   return {
     eventExternalMessageId: toTrimmedString(message.id) || null,

@@ -379,7 +379,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               loading={syncingAll}
               title="Recupera mensagens que a Whapi não entregou por webhook (ex.: durante uma queda de conexão ou assinatura vencida)."
             >
-              <RotateCw className="h-4 w-4" />
+              {!syncingAll && <RotateCw className="h-4 w-4" />}
               Forçar sincronização geral
             </Button>
             <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>

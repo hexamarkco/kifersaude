@@ -275,11 +275,11 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
         <DialogFooter className="flex-wrap">
           <Button variant="secondary" onClick={onClose} disabled={loadingPreview || applying}>Fechar</Button>
           <Button variant="primary" onClick={() => void handleGeneratePreview()} loading={loadingPreview} disabled={applying}>
-            <Sparkles className="h-4 w-4" />
+            {!loadingPreview && <Sparkles className="h-4 w-4" />}
             Gerar previa
           </Button>
           <Button variant="success" onClick={() => void handleApply()} loading={applying} disabled={!preview || changedItems.length === 0 || loadingPreview}>
-            <CheckCircle2 className="h-4 w-4" />
+            {!applying && <CheckCircle2 className="h-4 w-4" />}
             Aplicar
           </Button>
         </DialogFooter>

@@ -109,7 +109,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={() => void handleGenerate()} loading={generating} disabled={!chatId || generating}>
-          <Sparkles className="h-4 w-4" />
+          {!generating && <Sparkles className="h-4 w-4" />}
           Analisar atendimento
         </Button>
       </div>

@@ -879,7 +879,7 @@ export default function WhatsAppCampaignsScreen() {
               Novo disparo
             </Button>
             <Button variant="secondary" className="whitespace-nowrap" onClick={() => void loadCampaigns()} loading={loading}>
-              <RefreshCw className="h-4 w-4" />
+              {!loading && <RefreshCw className="h-4 w-4" />}
               Atualizar
             </Button>
           </div>
@@ -1317,7 +1317,7 @@ export default function WhatsAppCampaignsScreen() {
                                       loading={uploadingKey === refKey}
                                       onClick={() => mediaFileInputRefs.current[refKey]?.click()}
                                     >
-                                      <Upload className="h-3.5 w-3.5" />
+                                      {uploadingKey !== refKey && <Upload className="h-3.5 w-3.5" />}
                                       Anexar midia
                                     </Button>
                                   )}
@@ -1403,7 +1403,7 @@ export default function WhatsAppCampaignsScreen() {
                   <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
                 </Field>
                 <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
-                  <Send className="h-3.5 w-3.5" />
+                  {!sendingTest && <Send className="h-3.5 w-3.5" />}
                   Enviar mensagem inicial de teste
                 </Button>
               </div>
@@ -1476,7 +1476,7 @@ export default function WhatsAppCampaignsScreen() {
                 </Button>
               ) : (
                 <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
-                  <Send className="h-4 w-4" />
+                  {!saving && <Send className="h-4 w-4" />}
                   {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
                 </Button>
               )}
@@ -1579,7 +1579,7 @@ export default function WhatsAppCampaignsScreen() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" className="whitespace-nowrap" onClick={closeActivationPreview}>Cancelar</Button>
                 <Button className="whitespace-nowrap" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
-                  <PlayCircle className="h-4 w-4" />
+                  {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="h-4 w-4" />}
                   Confirmar ativacao
                 </Button>
               </div>
@@ -1635,18 +1635,18 @@ export default function WhatsAppCampaignsScreen() {
                       setCampaignActionId(campaign.id);
                       void openEditCampaignModal(campaign).finally(() => setCampaignActionId(null));
                     }}>
-                      <Pencil className="h-3.5 w-3.5" />
+                      {!(loadingCampaignEdit && campaignActionId === campaign.id) && <Pencil className="h-3.5 w-3.5" />}
                       Editar
                     </Button>
                     {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
                       <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id && loadingActivationPreview} onClick={() => void openActivationPreview(campaign)}>
-                        <PlayCircle className="h-3.5 w-3.5" />
+                        {!(campaignActionId === campaign.id && loadingActivationPreview) && <PlayCircle className="h-3.5 w-3.5" />}
                         Ativar
                       </Button>
                     )}
                     {['queued', 'running', 'scheduled'].includes(campaign.status) && (
                       <Button size="sm" variant="primary" loading={campaignActionId === campaign.id} onClick={() => void handleProcessCampaign(campaign)}>
-                        <Send className="h-3.5 w-3.5" />
+                        {campaignActionId !== campaign.id && <Send className="h-3.5 w-3.5" />}
                         Processar lote
                       </Button>
                     )}

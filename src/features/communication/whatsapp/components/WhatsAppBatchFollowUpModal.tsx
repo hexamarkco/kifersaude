@@ -896,7 +896,7 @@ export default function WhatsAppBatchFollowUpModal({
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!)}
                       >
-                        <Sparkles className="h-3.5 w-3.5" />
+                        {activeItem.status !== 'generating' && <Sparkles className="h-3.5 w-3.5" />}
                         {activeItem.generatedText.trim() ? 'Regenerar' : 'Gerar'}
                       </Button>
                       <Button
@@ -905,7 +905,7 @@ export default function WhatsAppBatchFollowUpModal({
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!, { variantCount: 3 })}
                       >
-                        <Sparkles className="h-3.5 w-3.5" />
+                        {activeItem.status !== 'generating' && <Sparkles className="h-3.5 w-3.5" />}
                         3 opções
                       </Button>
                     </div>

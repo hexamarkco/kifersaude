@@ -372,7 +372,7 @@ export default function AiSandboxChatScreen() {
                   loading={startingApproach}
                   onClick={handleStartWithApproach}
                 >
-                  <UserRoundPlus className="mr-1.5 h-4 w-4" />
+                  {!startingApproach && <UserRoundPlus className="mr-1.5 h-4 w-4" />}
                   Iniciar abordagem
                 </Button>
               </div>

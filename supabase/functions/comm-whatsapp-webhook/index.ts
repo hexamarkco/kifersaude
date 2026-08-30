@@ -42,7 +42,7 @@ import {
   type WhapiWebhookMessagePatch,
 } from '../_shared/whapi-webhook-parser.ts';
 import {
-  hasCommWhatsAppEventReceipt as hasEventReceipt,
+  findCommWhatsAppEventReceipt as findEventReceipt,
   recordCommWhatsAppEventReceipt as recordEventReceipt,
 } from '../_shared/webhook-event-receipts.ts';
 
@@ -62,6 +62,24 @@ const isOwnChannelName = (value: string | null | undefined, connectedUserName: s
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+const WEBHOOK_HANDLER_VERSION = '20260830-duplicate-diagnostics-v2';
+const MAX_DUPLICATE_DIAGNOSTICS = 10;
+
+type DuplicateMessageDiagnostic = {
+  event_key: string;
+  event_action: string | null;
+  chat_id: string;
+  message_id: string | null;
+  receipt_id: string | null;
+  message_timestamp: string | null;
+  receipt_timestamp: string | null;
+  current_archive_path: string | null;
+  matched_receipt_id: string;
+  matched_channel_id: string;
+  matched_resource_id: string | null;
+  matched_received_at: string;
+  matched_archive_path: string | null;
+};
 
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo —
@@ -552,7 +570,10 @@ Deno.serve(async (req: Request) => {
     const eventAction = toTrimmedString(event.event).toLowerCase();
     const nowIso = getNowIso();
 
-    console.log(`[${correlationId}] entry event_type=${eventType} event_action=${eventAction} method=${req.method}`);
+    console.log(
+      `[${correlationId}] entry handler_version=${WEBHOOK_HANDLER_VERSION} `
+      + `event_type=${eventType} event_action=${eventAction} method=${req.method}`,
+    );
 
     startedAt = Date.now();
 
@@ -578,6 +599,7 @@ Deno.serve(async (req: Request) => {
     let persistedMessages = 0;
     let duplicateMessages = 0;
     let skippedMessages = 0;
+    const duplicateDiagnostics: DuplicateMessageDiagnostic[] = [];
 
     if (messageItems.length > 0) {
       for (const rawItem of messageItems) {
@@ -593,8 +615,30 @@ Deno.serve(async (req: Request) => {
         }
 
         const eventKey = buildWhapiWebhookMessageReceiptKey(eventAction, item);
-        if (await hasEventReceipt(supabaseAdmin, eventKey)) {
+        const matchingReceipt = await findEventReceipt(supabaseAdmin, eventKey);
+        if (matchingReceipt) {
           duplicateMessages += 1;
+          const diagnostic: DuplicateMessageDiagnostic = {
+            event_key: eventKey,
+            event_action: eventAction || null,
+            chat_id: chatId,
+            message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
+            receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
+            message_timestamp: toTrimmedString(item.message.timestamp) || null,
+            receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+            current_archive_path: archivePath,
+            matched_receipt_id: matchingReceipt.id,
+            matched_channel_id: matchingReceipt.channel_id,
+            matched_resource_id: matchingReceipt.resource_id,
+            matched_received_at: matchingReceipt.received_at,
+            matched_archive_path: matchingReceipt.payload_archive_path,
+          };
+          if (duplicateDiagnostics.length < MAX_DUPLICATE_DIAGNOSTICS) {
+            duplicateDiagnostics.push(diagnostic);
+          }
+          // Uma unica string em nivel info: o dashboard do Supabase pode ocultar
+          // warnings ou nao renderizar o segundo argumento estruturado do console.
+          console.log(`[${correlationId}] duplicate_message diagnostic=${JSON.stringify(diagnostic)}`);
           continue;
         }
 
@@ -636,7 +680,7 @@ Deno.serve(async (req: Request) => {
         if (!isRecord(item)) continue;
 
         const eventKey = buildStatusEventKey(eventAction, item);
-        if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
+        if (await findEventReceipt(supabaseAdmin, eventKey)) continue;
 
         await applyMessageStatus(supabaseAdmin, channel.id, item);
 
@@ -697,19 +741,25 @@ Deno.serve(async (req: Request) => {
     }
 
     const elapsed = Date.now() - startedAt;
+    const duplicateDiagnosticJson = JSON.stringify(duplicateDiagnostics);
     console.log(
-      `[${correlationId}] complete elapsed=${elapsed}ms success=true `
+      `[${correlationId}] complete handler_version=${WEBHOOK_HANDLER_VERSION} elapsed=${elapsed}ms success=true `
       + `message_items=${messageItems.length} persisted=${persistedMessages} `
-      + `duplicates=${duplicateMessages} skipped=${skippedMessages}`,
+      + `duplicates=${duplicateMessages} skipped=${skippedMessages} `
+      + `duplicate_diagnostics=${duplicateDiagnosticJson}`,
     );
 
     return new Response(JSON.stringify({
       success: true,
+      correlation_id: correlationId,
+      handler_version: WEBHOOK_HANDLER_VERSION,
       messages: {
         received: messageItems.length,
         persisted: persistedMessages,
         duplicates: duplicateMessages,
         skipped: skippedMessages,
+        duplicate_diagnostics: duplicateDiagnostics,
+        duplicate_diagnostics_truncated: duplicateMessages > duplicateDiagnostics.length,
       },
     }), {
       status: 200,

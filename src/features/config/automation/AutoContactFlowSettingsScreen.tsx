@@ -64,6 +64,7 @@ import type {
   LeadStatusConfig,
   Lead,
 } from "../../../lib/supabase";
+import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import { MessageListEditor } from "./components/MessageListEditor";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
@@ -86,10 +87,6 @@ import {
   Tabs,
 } from "../../../design-system";
 
-type MessageState = {
-  type: "success" | "error" | "warning";
-  text: string;
-} | null;
 type TemplateDraft = {
   id: string;
   name: string;
@@ -125,7 +122,6 @@ export default function AutoContactFlowSettingsScreen() {
   const loadingUi = useAdaptiveLoading(loadingFlow);
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<MessageState>(null);
   const [autoSaveState, setAutoSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -181,7 +177,6 @@ export default function AutoContactFlowSettingsScreen() {
 
   const loadAutoContactSettings = async () => {
     setLoadingFlow(true);
-    setStatusMessage(null);
 
     const [integration, statusConfig] = await Promise.all([
       configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
@@ -411,15 +406,11 @@ export default function AutoContactFlowSettingsScreen() {
     setTemplateDraft(null);
 
     if (!autoContactIntegration) {
-      setStatusMessage({
-        type: "error",
-        text: "Integração de automação não configurada.",
-      });
+      toast.error("Integração de automação não configurada.");
       return;
     }
 
     setSavingTemplate(true);
-    setStatusMessage(null);
 
     const currentSettings =
       autoContactSettings || normalizeAutoContactSettings(null);
@@ -435,10 +426,7 @@ export default function AutoContactFlowSettingsScreen() {
     );
 
     if (error) {
-      setStatusMessage({
-        type: "error",
-        text: "Erro ao salvar o template. Tente novamente.",
-      });
+      toast.error("Erro ao salvar o template. Tente novamente.");
     } else {
       const updatedIntegration = data ?? autoContactIntegration;
       const normalized = normalizeAutoContactSettings(
@@ -450,10 +438,7 @@ export default function AutoContactFlowSettingsScreen() {
       autoSaveSkipRef.current = true;
       setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-      setStatusMessage({
-        type: "success",
-        text: "Template salvo no banco de dados.",
-      });
+      toast.success("Template salvo no banco de dados.");
     }
 
     setSavingTemplate(false);
@@ -487,15 +472,11 @@ export default function AutoContactFlowSettingsScreen() {
 
   const handleSaveFlow = async () => {
     if (!autoContactIntegration) {
-      setStatusMessage({
-        type: "error",
-        text: "Integração de automação não configurada.",
-      });
+      toast.error("Integração de automação não configurada.");
       return;
     }
 
     setSavingFlow(true);
-    setStatusMessage(null);
 
     const sanitizedTemplates = normalizeTemplatesForSettings(
       messageTemplatesDraft,
@@ -716,10 +697,7 @@ export default function AutoContactFlowSettingsScreen() {
     );
 
     if (error) {
-      setStatusMessage({
-        type: "error",
-        text: "Erro ao salvar a configuração. Tente novamente.",
-      });
+      toast.error("Erro ao salvar a configuração. Tente novamente.");
     } else {
       const updatedIntegration = data ?? autoContactIntegration;
       const normalized = normalizeAutoContactSettings(
@@ -735,10 +713,7 @@ export default function AutoContactFlowSettingsScreen() {
       setSchedulingDraft(normalized.scheduling);
       setMonitoringDraft(normalized.monitoring);
       setLoggingDraft(normalized.logging);
-      setStatusMessage({
-        type: "success",
-        text: "Fluxos e templates de automação salvos com sucesso.",
-      });
+      toast.success("Fluxos e templates de automação salvos com sucesso.");
     }
 
     setSavingFlow(false);
@@ -1479,15 +1454,11 @@ export default function AutoContactFlowSettingsScreen() {
     if (!activeFlow) return;
     const stepId = testStepId || testableSteps[0]?.id;
     if (!stepId || !testPhone.trim()) {
-      setStatusMessage({
-        type: "warning",
-        text: "Informe um número de WhatsApp e selecione uma etapa para o teste.",
-      });
+      toast.warning("Informe um número de WhatsApp e selecione uma etapa para o teste.");
       return;
     }
 
     setSendingTest(true);
-    setStatusMessage(null);
     const { data, error } = await supabase.functions.invoke("leads-api", {
       headers: { "x-action": "test-flow" },
       body: {
@@ -1500,14 +1471,11 @@ export default function AutoContactFlowSettingsScreen() {
     setSendingTest(false);
 
     if (error || !data?.success) {
-      setStatusMessage({
-        type: "error",
-        text: data?.error || error?.message || "Não foi possível enviar a mensagem de teste.",
-      });
+      toast.error(data?.error || error?.message || "Não foi possível enviar a mensagem de teste.");
       return;
     }
 
-    setStatusMessage({ type: "success", text: "Mensagem de teste enviada para o número informado." });
+    toast.success("Mensagem de teste enviada para o número informado.");
   };
 
   useEffect(() => {
@@ -1935,25 +1903,6 @@ export default function AutoContactFlowSettingsScreen() {
                 automação.
               </p>
             </div>
-            {statusMessage && (
-              <Alert
-                tone={
-                  statusMessage.type === "success"
-                    ? "success"
-                    : statusMessage.type === "warning"
-                      ? "warning"
-                      : "danger"
-                }
-                className="mt-4 flex-row items-center gap-2"
-              >
-                {statusMessage.type === "success" ? (
-                  <ShieldCheck className="w-4 h-4" />
-                ) : (
-                  <Info className="w-4 h-4" />
-                )}
-                <span>{statusMessage.text}</span>
-              </Alert>
-            )}
             {autoContactSettings?.enabled === false && (
               <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
                 <AlertCircle className="h-4 w-4" />

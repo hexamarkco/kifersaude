@@ -383,11 +383,11 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               Forçar sincronização geral
             </Button>
             <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
-              <Download className="h-4 w-4" />
+              {!exportingInbox && <Download className="h-4 w-4" />}
               Exportar JSON
             </Button>
             <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}>
-              <RefreshCw className="h-4 w-4" />
+              {!loading && <RefreshCw className="h-4 w-4" />}
               Atualizar
             </Button>
             <Button variant="secondary" onClick={onClose}>Fechar</Button>

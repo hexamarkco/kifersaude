@@ -421,25 +421,25 @@ export default function WhatsAppCampaignDetailScreen() {
               <div className="flex flex-nowrap gap-2 overflow-x-auto">
                 {['queued', 'running', 'scheduled'].includes(campaign.status) && (
                   <Button variant="secondary" className="whitespace-nowrap" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
-                    <PauseCircle className="h-4 w-4" />
+                    {actionLoading !== 'pause' && <PauseCircle className="h-4 w-4" />}
                     Pausar
                   </Button>
                 )}
                 {campaign.status === 'paused' && (
                   <Button variant="primary" className="whitespace-nowrap" loading={actionLoading === 'resume'} onClick={() => void runAction('resume')}>
-                    <PlayCircle className="h-4 w-4" />
+                    {actionLoading !== 'resume' && <PlayCircle className="h-4 w-4" />}
                     Retomar
                   </Button>
                 )}
                 {['queued', 'running', 'scheduled', 'paused'].includes(campaign.status) && (
                   <Button variant="secondary" className="whitespace-nowrap" loading={actionLoading === 'process'} onClick={() => void runAction('process')}>
-                    <Send className="h-4 w-4" />
+                    {actionLoading !== 'process' && <Send className="h-4 w-4" />}
                     Processar lote
                   </Button>
                 )}
                 {['draft', 'scheduled', 'queued', 'running', 'paused'].includes(campaign.status) && (
                   <Button variant="danger" className="whitespace-nowrap" loading={actionLoading === 'cancel'} onClick={() => void runAction('cancel')}>
-                    <Ban className="h-4 w-4" />
+                    {actionLoading !== 'cancel' && <Ban className="h-4 w-4" />}
                     Cancelar
                   </Button>
                 )}

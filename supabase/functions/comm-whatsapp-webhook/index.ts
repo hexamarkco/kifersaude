@@ -87,6 +87,16 @@ type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
   matched_archive_path: string | null;
 };
 
+const describeMessageIdentity = (item: {
+  message: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+}) => ({
+  message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
+  receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
+  message_timestamp: toTrimmedString(item.message.timestamp) || null,
+  receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+});
+
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo —
 // da tempo do lead terminar de digitar mensagens picotadas.
@@ -624,7 +634,7 @@ Deno.serve(async (req: Request) => {
         const matchingReceipt = await findEventReceipt(supabaseAdmin, eventKey);
         if (matchingReceipt) {
           duplicateMessages += 1;
-          const diagnostic: DuplicateMessageDiagnostic = {
+          console.warn(`[${correlationId}] duplicate message`, {
             event_key: eventKey,
             event_action: eventAction || null,
             chat_id: chatId,
@@ -635,13 +645,7 @@ Deno.serve(async (req: Request) => {
             matched_resource_id: matchingReceipt.resource_id,
             matched_received_at: matchingReceipt.received_at,
             matched_archive_path: matchingReceipt.payload_archive_path,
-          };
-          if (duplicateDiagnostics.length < MAX_DUPLICATE_DIAGNOSTICS) {
-            duplicateDiagnostics.push(diagnostic);
-          }
-          // Uma unica string em nivel info: o dashboard do Supabase pode ocultar
-          // warnings ou nao renderizar o segundo argumento estruturado do console.
-          console.log(`[${correlationId}] duplicate_message diagnostic=${JSON.stringify(diagnostic)}`);
+          });
           continue;
         }
 

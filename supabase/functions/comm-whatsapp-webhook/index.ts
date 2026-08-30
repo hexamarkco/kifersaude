@@ -543,6 +543,14 @@ Deno.serve(async (req: Request) => {
       requestUrl.searchParams.get(COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM),
     );
     if (!isCommWhatsAppWebhookSecretValid(providedSecret, webhookSecret)) {
+      // Nao logamos os segredos inteiros, so tamanho + ultimos 4 chars de cada
+      // lado, o suficiente pra diferenciar "URL desatualizada na Whapi" de
+      // "bug na comparacao" sem expor o segredo nos logs.
+      console.warn(
+        `[${correlationId}] webhook nao autorizado `
+        + `provided_len=${providedSecret?.length ?? 0} provided_tail=${(providedSecret ?? '').slice(-4)} `
+        + `expected_len=${webhookSecret.length} expected_tail=${webhookSecret.slice(-4)}`,
+      );
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,
         headers: jsonHeaders,

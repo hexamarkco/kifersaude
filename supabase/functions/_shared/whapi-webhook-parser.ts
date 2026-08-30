@@ -20,6 +20,16 @@ const asRecords = (value: unknown): Array<Record<string, unknown>> => (
   Array.isArray(value) ? value.filter(isRecord) : []
 );
 
+const looksLikeMessage = (value: Record<string, unknown>): boolean => Boolean(
+  toTrimmedString(value.id)
+  && (
+    toTrimmedString(value.chat_id)
+    || toTrimmedString(value.from)
+    || toTrimmedString(value.to)
+    || isRecord(value.chat)
+  )
+);
+
 const extractRegularMessages = (payload: unknown): Array<Record<string, unknown>> => {
   if (Array.isArray(payload)) {
     return asRecords(payload);
@@ -49,6 +59,19 @@ const extractRegularMessages = (payload: unknown): Array<Record<string, unknown>
     if (isRecord(payload.data.message)) {
       return [payload.data.message];
     }
+
+    // A Whapi permite configurar o body do webhook. Em alguns formatos o
+    // objeto da mensagem vem diretamente em `data`, sem `data.message`.
+    if (looksLikeMessage(payload.data)) {
+      return [payload.data];
+    }
+  }
+
+  // Também tolera o corpo customizado contendo diretamente a mensagem. O
+  // endpoint ainda exige os campos mínimos acima para não confundir eventos
+  // de status/canal com mensagens.
+  if (looksLikeMessage(payload)) {
+    return [payload];
   }
 
   return [];

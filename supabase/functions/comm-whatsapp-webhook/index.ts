@@ -65,14 +65,20 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const WEBHOOK_HANDLER_VERSION = '20260830-duplicate-diagnostics-v2';
 const MAX_DUPLICATE_DIAGNOSTICS = 10;
 
-type DuplicateMessageDiagnostic = {
+const describeMessageIdentity = (item: {
+  message: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+}) => ({
+  message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
+  receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
+  message_timestamp: toTrimmedString(item.message.timestamp) || null,
+  receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+});
+
+type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
   event_key: string;
   event_action: string | null;
   chat_id: string;
-  message_id: string | null;
-  receipt_id: string | null;
-  message_timestamp: string | null;
-  receipt_timestamp: string | null;
   current_archive_path: string | null;
   matched_receipt_id: string;
   matched_channel_id: string;
@@ -80,6 +86,16 @@ type DuplicateMessageDiagnostic = {
   matched_received_at: string;
   matched_archive_path: string | null;
 };
+
+const describeMessageIdentity = (item: {
+  message: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+}) => ({
+  message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
+  receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
+  message_timestamp: toTrimmedString(item.message.timestamp) || null,
+  receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+});
 
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo —
@@ -618,27 +634,18 @@ Deno.serve(async (req: Request) => {
         const matchingReceipt = await findEventReceipt(supabaseAdmin, eventKey);
         if (matchingReceipt) {
           duplicateMessages += 1;
-          const diagnostic: DuplicateMessageDiagnostic = {
+          console.warn(`[${correlationId}] duplicate message`, {
             event_key: eventKey,
             event_action: eventAction || null,
             chat_id: chatId,
-            message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
-            receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
-            message_timestamp: toTrimmedString(item.message.timestamp) || null,
-            receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+            ...describeMessageIdentity(item),
             current_archive_path: archivePath,
             matched_receipt_id: matchingReceipt.id,
             matched_channel_id: matchingReceipt.channel_id,
             matched_resource_id: matchingReceipt.resource_id,
             matched_received_at: matchingReceipt.received_at,
             matched_archive_path: matchingReceipt.payload_archive_path,
-          };
-          if (duplicateDiagnostics.length < MAX_DUPLICATE_DIAGNOSTICS) {
-            duplicateDiagnostics.push(diagnostic);
-          }
-          // Uma unica string em nivel info: o dashboard do Supabase pode ocultar
-          // warnings ou nao renderizar o segundo argumento estruturado do console.
-          console.log(`[${correlationId}] duplicate_message diagnostic=${JSON.stringify(diagnostic)}`);
+          });
           continue;
         }
 

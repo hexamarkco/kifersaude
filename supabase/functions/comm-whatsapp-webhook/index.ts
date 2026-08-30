@@ -87,16 +87,6 @@ type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
   matched_archive_path: string | null;
 };
 
-const describeMessageIdentity = (item: {
-  message: Record<string, unknown>;
-  receipt: Record<string, unknown>;
-}) => ({
-  message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
-  receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
-  message_timestamp: toTrimmedString(item.message.timestamp) || null,
-  receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
-});
-
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo —
 // da tempo do lead terminar de digitar mensagens picotadas.

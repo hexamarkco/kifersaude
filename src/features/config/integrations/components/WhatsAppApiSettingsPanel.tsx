@@ -27,6 +27,11 @@ import {
 } from "../../../../design-system";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
+type WebhookDiagnosticStatus =
+  | "error"
+  | "message_event_missing"
+  | "receiving_messages"
+  | "waiting_first_event";
 type ChannelAdminState = {
   channel: {
     connection_status?: string | null;
@@ -38,8 +43,20 @@ type ChannelAdminState = {
     webhookUrl?: string;
     webhookAuthentication?: "header" | "legacy_query";
     webhookHeaderName?: string | null;
+    webhookDiagnostics?: {
+      status?: WebhookDiagnosticStatus;
+      lastWebhookAt?: string | null;
+      lastMessageWebhookAt?: string | null;
+      lastInboundMessageAt?: string | null;
+      lastError?: string | null;
+    };
   };
 };
+
+const formatDiagnosticDate = (value: string) => new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "medium",
+}).format(new Date(value));
 
 export default function WhatsAppApiSettingsPanel() {
   const [autoContactIntegration, setAutoContactIntegration] =
@@ -65,6 +82,9 @@ export default function WhatsAppApiSettingsPanel() {
   const [webhookHeaderName, setWebhookHeaderName] = useState("");
   const [channelStatus, setChannelStatus] = useState("unknown");
   const [channelPhone, setChannelPhone] = useState("");
+  const [webhookDiagnostics, setWebhookDiagnostics] = useState<
+    NonNullable<ChannelAdminState["config"]["webhookDiagnostics"]>
+  >({});
 
   const loadChannelState = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke("comm-whatsapp-admin", {
@@ -84,6 +104,7 @@ export default function WhatsAppApiSettingsPanel() {
         : "legacy_query",
     );
     setWebhookHeaderName(payload.config?.webhookHeaderName?.trim() || "");
+    setWebhookDiagnostics(payload.config?.webhookDiagnostics ?? {});
     setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
     setChannelPhone(payload.channel?.phone_number?.trim() || "");
   }, []);
@@ -206,6 +227,7 @@ export default function WhatsAppApiSettingsPanel() {
           : "legacy_query",
       );
       setWebhookHeaderName(payload.config?.webhookHeaderName?.trim() || "");
+      setWebhookDiagnostics(payload.config?.webhookDiagnostics ?? {});
       setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
       setChannelPhone(payload.channel?.phone_number?.trim() || "");
       toast.success("Saúde do canal atualizada.");
@@ -332,6 +354,45 @@ export default function WhatsAppApiSettingsPanel() {
                     Se ao salvar essa URL na Whapi ela oferecer um campo de header customizado, prefira configurar {webhookHeaderName || "X-Kifer-Webhook-Secret"} lá e remover o `secret` da URL — mas se não houver esse campo (comum no plano/tela padrão), pode colar a URL como está.
                   </p>
                 )}
+                <div className="mt-3">
+                  {webhookDiagnostics.status === "message_event_missing" ? (
+                    <Alert tone="warning">
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold">O webhook responde, mas nenhuma mensagem chegou</p>
+                        <p>
+                          Na Whapi, edite este webhook e habilite o evento <strong>messages</strong>,
+                          ação <strong>post</strong>, método <strong>POST</strong> e modo <strong>Body</strong>.
+                          O evento de canal sozinho atualiza QR/AUTH, mas não entrega mensagens ao Inbox.
+                        </p>
+                        {webhookDiagnostics.lastWebhookAt ? (
+                          <p>Último evento geral: {formatDiagnosticDate(webhookDiagnostics.lastWebhookAt)}.</p>
+                        ) : null}
+                      </div>
+                    </Alert>
+                  ) : webhookDiagnostics.status === "error" ? (
+                    <Alert tone="danger">
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold">O último webhook falhou</p>
+                        <p>{webhookDiagnostics.lastError || "Consulte os logs da Edge Function."}</p>
+                      </div>
+                    </Alert>
+                  ) : webhookDiagnostics.status === "receiving_messages" ? (
+                    <Alert tone="success">
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold">Eventos de mensagem estão chegando</p>
+                        {webhookDiagnostics.lastMessageWebhookAt ? (
+                          <p>Último evento persistido: {formatDiagnosticDate(webhookDiagnostics.lastMessageWebhookAt)}.</p>
+                        ) : null}
+                      </div>
+                    </Alert>
+                  ) : (
+                    <Alert tone="info">
+                      <p className="text-xs">
+                        Aguardando a primeira mensagem real. O botão de check da Whapi não testa o evento messages.post.
+                      </p>
+                    </Alert>
+                  )}
+                </div>
               </Card>
 
               <Card variant="muted" padding="sm">

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { hasCommWhatsAppEventReceipt, recordCommWhatsAppEventReceipt } from '../webhook-event-receipts';
+import {
+  findCommWhatsAppEventReceipt,
+  hasCommWhatsAppEventReceipt,
+  recordCommWhatsAppEventReceipt,
+} from '../webhook-event-receipts';
 
 const makeReceiptsTableStub = (existingEventKeys: Set<string> = new Set()) => {
   const insertCalls: Record<string, unknown>[] = [];
@@ -21,7 +25,15 @@ const makeReceiptsTableStub = (existingEventKeys: Set<string> = new Set()) => {
       select: (_columns: string) => ({
         eq: (_column: string, value: string) => ({
           maybeSingle: async () => ({
-            data: existingEventKeys.has(value) ? { id: 'receipt-1' } : null,
+            data: existingEventKeys.has(value) ? {
+              id: 'receipt-1',
+              channel_id: 'channel-1',
+              event_key: value,
+              event_type: 'message',
+              resource_id: 'msg-1',
+              received_at: '2026-08-30T12:00:00.000Z',
+              payload_archive_path: '2026-08-30/first.json',
+            } : null,
             error: null,
           }),
         }),
@@ -82,6 +94,20 @@ test('hasCommWhatsAppEventReceipt detecta evento já processado', async () => {
 
   assert.equal(await hasCommWhatsAppEventReceipt(client, 'event-key-1'), true);
   assert.equal(await hasCommWhatsAppEventReceipt(client, 'event-key-2'), false);
+});
+
+test('findCommWhatsAppEventReceipt retorna metadados da entrega que causou a colisão', async () => {
+  const { client } = makeReceiptsTableStub(new Set(['event-key-1']));
+
+  assert.deepEqual(await findCommWhatsAppEventReceipt(client, 'event-key-1'), {
+    id: 'receipt-1',
+    channel_id: 'channel-1',
+    event_key: 'event-key-1',
+    event_type: 'message',
+    resource_id: 'msg-1',
+    received_at: '2026-08-30T12:00:00.000Z',
+    payload_archive_path: '2026-08-30/first.json',
+  });
 });
 
 test('fluxo completo de dedupe: mesmo evento entregue duas vezes só é processado uma', async () => {

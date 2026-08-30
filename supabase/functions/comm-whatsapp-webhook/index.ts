@@ -42,7 +42,7 @@ import {
   type WhapiWebhookMessagePatch,
 } from '../_shared/whapi-webhook-parser.ts';
 import {
-  hasCommWhatsAppEventReceipt as hasEventReceipt,
+  findCommWhatsAppEventReceipt as findEventReceipt,
   recordCommWhatsAppEventReceipt as recordEventReceipt,
 } from '../_shared/webhook-event-receipts.ts';
 
@@ -62,6 +62,16 @@ const isOwnChannelName = (value: string | null | undefined, connectedUserName: s
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+
+const describeMessageIdentity = (item: {
+  message: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+}) => ({
+  message_id: toTrimmedString(item.message.id) || toTrimmedString(item.message.message_id) || null,
+  receipt_id: toTrimmedString(item.receipt.id) || toTrimmedString(item.receipt.message_id) || null,
+  message_timestamp: toTrimmedString(item.message.timestamp) || null,
+  receipt_timestamp: toTrimmedString(item.receipt.timestamp) || null,
+});
 
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo —
@@ -593,8 +603,21 @@ Deno.serve(async (req: Request) => {
         }
 
         const eventKey = buildWhapiWebhookMessageReceiptKey(eventAction, item);
-        if (await hasEventReceipt(supabaseAdmin, eventKey)) {
+        const matchingReceipt = await findEventReceipt(supabaseAdmin, eventKey);
+        if (matchingReceipt) {
           duplicateMessages += 1;
+          console.warn(`[${correlationId}] duplicate message`, {
+            event_key: eventKey,
+            event_action: eventAction || null,
+            chat_id: chatId,
+            ...describeMessageIdentity(item),
+            current_archive_path: archivePath,
+            matched_receipt_id: matchingReceipt.id,
+            matched_channel_id: matchingReceipt.channel_id,
+            matched_resource_id: matchingReceipt.resource_id,
+            matched_received_at: matchingReceipt.received_at,
+            matched_archive_path: matchingReceipt.payload_archive_path,
+          });
           continue;
         }
 
@@ -636,7 +659,7 @@ Deno.serve(async (req: Request) => {
         if (!isRecord(item)) continue;
 
         const eventKey = buildStatusEventKey(eventAction, item);
-        if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
+        if (await findEventReceipt(supabaseAdmin, eventKey)) continue;
 
         await applyMessageStatus(supabaseAdmin, channel.id, item);
 

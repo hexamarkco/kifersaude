@@ -47,6 +47,42 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
   const webhookSecret = getCommWhatsAppWebhookSecret();
+  const [messageReceiptResult, inboundMessageResult] = await Promise.all([
+    supabaseAdmin
+      .from('comm_whatsapp_event_receipts')
+      .select('received_at')
+      .eq('channel_id', channel.id)
+      .eq('event_type', 'message')
+      .order('received_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('message_at')
+      .eq('channel_id', channel.id)
+      .eq('direction', 'inbound')
+      .order('message_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (messageReceiptResult.error) {
+    throw new Error(`Erro ao consultar atividade do webhook: ${messageReceiptResult.error.message}`);
+  }
+  if (inboundMessageResult.error) {
+    throw new Error(`Erro ao consultar mensagens recebidas: ${inboundMessageResult.error.message}`);
+  }
+
+  const lastMessageWebhookAt = messageReceiptResult.data?.received_at ?? null;
+  const lastInboundMessageAt = inboundMessageResult.data?.message_at ?? null;
+  const hasGenericWebhookActivity = Boolean(channel.last_webhook_received_at);
+  const webhookMessageStatus = channel.last_error
+    ? 'error'
+    : hasGenericWebhookActivity && !lastMessageWebhookAt
+      ? 'message_event_missing'
+      : lastMessageWebhookAt
+        ? 'receiving_messages'
+        : 'waiting_first_event';
 
   // A tela de webhook da Whapi (Body/Path/Method + eventos) nao expoe um
   // campo de header customizado em todo plano — por isso a URL ja sai com o
@@ -60,6 +96,13 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
       webhookUrl: buildWebhookUrl(supabaseUrl, webhookSecret),
       webhookAuthentication: 'legacy_query',
       webhookHeaderName: webhookSecret ? COMM_WHATSAPP_WEBHOOK_SECRET_HEADER : null,
+      webhookDiagnostics: {
+        status: webhookMessageStatus,
+        lastWebhookAt: channel.last_webhook_received_at,
+        lastMessageWebhookAt,
+        lastInboundMessageAt,
+        lastError: channel.last_error,
+      },
     },
   };
 }

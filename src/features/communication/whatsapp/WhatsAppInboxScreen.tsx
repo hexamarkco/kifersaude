@@ -203,6 +203,19 @@ type MessageContactCardInfo = {
   }>;
 };
 
+type MessageInteractiveInfo = {
+  kind: 'buttons' | 'list' | 'reply' | 'template' | 'unknown';
+  header: string | null;
+  body: string | null;
+  footer: string | null;
+  buttons: Array<{ id: string | null; title: string | null }>;
+  sections: Array<{
+    title: string | null;
+    rows: Array<{ id: string | null; title: string | null; description: string | null }>;
+  }>;
+  selectedReply: { id: string | null; title: string | null } | null;
+};
+
 const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
 
 const normalizeQuickReplyLookup = (value: string) =>
@@ -835,6 +848,80 @@ const getMessageContactCardInfo = (message?: CommWhatsAppMessage | null): Messag
     kind: kind as 'contact' | 'contact_list',
     count: count || (kind === 'contact' ? 1 : 0),
     items,
+  };
+};
+
+const getMessageInteractiveInfo = (message?: CommWhatsAppMessage | null): MessageInteractiveInfo | null => {
+  if (!message) {
+    return null;
+  }
+
+  const interactive = readRecord(getMessageMetadataRecord(message).interactive);
+  if (!interactive) {
+    return null;
+  }
+
+  const kind = String(interactive.kind ?? '').trim().toLowerCase();
+  const validKinds = ['buttons', 'list', 'reply', 'template', 'unknown'];
+  if (!validKinds.includes(kind)) {
+    return null;
+  }
+
+  const readButton = (value: unknown) => {
+    const record = readRecord(value);
+    if (!record) return null;
+    const id = String(record.id ?? '').trim() || null;
+    const title = String(record.title ?? '').trim() || null;
+    if (!id && !title) return null;
+    return { id, title };
+  };
+
+  const buttons = Array.isArray(interactive.buttons)
+    ? interactive.buttons.map(readButton).filter((button): button is { id: string | null; title: string | null } => Boolean(button))
+    : [];
+
+  const sections = Array.isArray(interactive.sections)
+    ? interactive.sections
+        .map((entry) => {
+          const record = readRecord(entry);
+          if (!record) return null;
+          const title = String(record.title ?? '').trim() || null;
+          const rows = Array.isArray(record.rows)
+            ? record.rows
+                .map((row) => {
+                  const rowRecord = readRecord(row);
+                  if (!rowRecord) return null;
+                  const id = String(rowRecord.id ?? '').trim() || null;
+                  const rowTitle = String(rowRecord.title ?? '').trim() || null;
+                  const description = String(rowRecord.description ?? '').trim() || null;
+                  if (!id && !rowTitle && !description) return null;
+                  return { id, title: rowTitle, description };
+                })
+                .filter((row): row is { id: string | null; title: string | null; description: string | null } => Boolean(row))
+            : [];
+          if (!title && rows.length === 0) return null;
+          return { title, rows };
+        })
+        .filter((section): section is { title: string | null; rows: Array<{ id: string | null; title: string | null; description: string | null }> } => Boolean(section))
+    : [];
+
+  const selectedReply = readButton(interactive.selectedReply);
+  const header = String(interactive.header ?? '').trim() || null;
+  const body = String(interactive.body ?? '').trim() || null;
+  const footer = String(interactive.footer ?? '').trim() || null;
+
+  if (!header && !body && !footer && buttons.length === 0 && sections.length === 0 && !selectedReply) {
+    return null;
+  }
+
+  return {
+    kind: kind as MessageInteractiveInfo['kind'],
+    header,
+    body,
+    footer,
+    buttons,
+    sections,
+    selectedReply,
   };
 };
 
@@ -2708,6 +2795,7 @@ function WhatsAppMessageBody({
   const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
   const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
   const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
+  const interactiveInfo = useMemo(() => getMessageInteractiveInfo(message), [message]);
   const visibleTextContent = getVisiblePreviewText(message.text_content, message.message_type);
 
   useEffect(() => {
@@ -2846,6 +2934,72 @@ function WhatsAppMessageBody({
         </div>
       </div>
     </div>
+  ) : null;
+
+  const interactiveNode = interactiveInfo ? (
+    interactiveInfo.kind === 'reply' ? (
+      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
+        <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-70" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Opção selecionada</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">
+            {interactiveInfo.selectedReply?.title || interactiveInfo.selectedReply?.id || '[Resposta interativa]'}
+          </p>
+        </div>
+      </div>
+    ) : (
+      <div className="w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
+        {interactiveInfo.header ? (
+          <p className="border-b border-[var(--border-subtle)] px-3 py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
+            {interactiveInfo.header}
+          </p>
+        ) : null}
+        <div className="space-y-1.5 px-3 py-3">
+          {interactiveInfo.body ? (
+            <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={interactiveInfo.body} />
+          ) : null}
+          {interactiveInfo.footer ? (
+            <p className="text-xs text-[var(--text-muted)]">{interactiveInfo.footer}</p>
+          ) : null}
+        </div>
+        {interactiveInfo.buttons.length > 0 ? (
+          <div className="border-t border-[var(--border-subtle)]">
+            {interactiveInfo.buttons.map((button, index) => (
+              <p
+                key={button.id ?? `${button.title}-${index}`}
+                className={cx(
+                  'px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))]',
+                  index > 0 ? 'border-t border-[var(--border-subtle)]' : null,
+                )}
+              >
+                {button.title || button.id}
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {interactiveInfo.sections.length > 0 ? (
+          <div className="border-t border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
+            {interactiveInfo.sections.map((section, sectionIndex) => (
+              <div key={section.title ?? `section-${sectionIndex}`} className="px-3 py-2.5">
+                {section.title ? (
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</p>
+                ) : null}
+                <div className="mt-1.5 space-y-1.5">
+                  {section.rows.map((row, rowIndex) => (
+                    <div key={row.id ?? `${section.title}-row-${rowIndex}`}>
+                      <p className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</p>
+                      {row.description ? (
+                        <p className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    )
   ) : null;
 
   const hasPreservableDeletedMedia = deletedInfo.deleted
@@ -3064,6 +3218,16 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {quotePreviewNode}
         {contactCardNode || <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Contato]'} />}
+        {editInfoNode}
+      </div>
+    );
+  }
+
+  if (interactiveInfo && (kind === 'interactive' || kind === 'hsm' || kind === 'carousel' || kind === 'reply')) {
+    return (
+      <div className="space-y-3">
+        {quotePreviewNode}
+        {interactiveNode}
         {editInfoNode}
       </div>
     );

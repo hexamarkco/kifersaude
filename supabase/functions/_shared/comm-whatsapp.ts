@@ -374,6 +374,32 @@ export type CommWhatsAppContactCardMeta = {
   items: CommWhatsAppContactCardMetaItem[];
 };
 
+export type CommWhatsAppInteractiveButton = {
+  id: string | null;
+  title: string | null;
+};
+
+export type CommWhatsAppInteractiveListRow = {
+  id: string | null;
+  title: string | null;
+  description: string | null;
+};
+
+export type CommWhatsAppInteractiveListSection = {
+  title: string | null;
+  rows: CommWhatsAppInteractiveListRow[];
+};
+
+export type CommWhatsAppInteractiveMeta = {
+  kind: 'buttons' | 'list' | 'reply' | 'template' | 'unknown';
+  header: string | null;
+  body: string | null;
+  footer: string | null;
+  buttons: CommWhatsAppInteractiveButton[];
+  sections: CommWhatsAppInteractiveListSection[];
+  selectedReply: CommWhatsAppInteractiveButton | null;
+};
+
 export type CommWhatsAppEditedMessageEvent = {
   eventExternalMessageId: string | null;
   targetExternalMessageId: string | null;
@@ -1291,6 +1317,187 @@ export const extractWhapiContactCardMeta = (message: unknown): CommWhatsAppConta
   }
 
   return null;
+};
+
+const buildInteractiveButton = (value: unknown): CommWhatsAppInteractiveButton | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const reply = isRecord(value.reply) ? value.reply : null;
+  const id = firstNonEmpty(reply?.id, value.id, value.button_id, value.value) || null;
+  const title = firstNonEmpty(reply?.title, value.title, value.text, value.name) || null;
+
+  if (!id && !title) {
+    return null;
+  }
+
+  return { id, title };
+};
+
+const buildInteractiveListRow = (value: unknown): CommWhatsAppInteractiveListRow | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = firstNonEmpty(value.id, value.row_id, value.value) || null;
+  const title = firstNonEmpty(value.title, value.text, value.name) || null;
+  const description = firstNonEmpty(value.description, value.subtitle) || null;
+
+  if (!id && !title && !description) {
+    return null;
+  }
+
+  return { id, title, description };
+};
+
+const buildInteractiveSection = (value: unknown): CommWhatsAppInteractiveListSection | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const title = firstNonEmpty(value.title, value.name) || null;
+  const rows = Array.isArray(value.rows)
+    ? value.rows.map(buildInteractiveListRow).filter((row): row is CommWhatsAppInteractiveListRow => row !== null)
+    : [];
+
+  if (!title && rows.length === 0) {
+    return null;
+  }
+
+  return { title, rows };
+};
+
+const extractInteractiveText = (container: Record<string, unknown>, key: string): string | null => {
+  const raw = container[key];
+  const text = isRecord(raw) ? firstNonEmpty(raw.text, raw.body) : firstNonEmpty(raw);
+  return text || null;
+};
+
+/**
+ * Extrai o conteudo estruturado de mensagens interativas da Whapi (botoes,
+ * listas, templates com botao e a resposta que o contato escolheu), pra
+ * exibir de verdade no inbox em vez do rotulo generico "[Mensagem
+ * interativa]". A Whapi encaminha o payload do WhatsApp Cloud API quase sem
+ * alteracao, entao seguimos os nomes de campo de la (header/body/footer,
+ * action.buttons, action.sections com rows) com fallbacks tolerantes pras
+ * variacoes que ja vimos em outros pontos do parser (buttons_reply/list_reply
+ * em `reply`, cards de carousel, templates hsm).
+ */
+export const extractWhapiInteractiveMeta = (message: unknown): CommWhatsAppInteractiveMeta | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const type = toTrimmedString(message.type).toLowerCase();
+
+  if (type === 'reply') {
+    const reply = isRecord(message.reply) ? message.reply : null;
+    const buttonsReply = isRecord(reply?.buttons_reply) ? reply.buttons_reply : null;
+    const listReply = isRecord(reply?.list_reply) ? reply.list_reply : null;
+    const selectedReply = buildInteractiveButton(buttonsReply) || buildInteractiveButton(listReply);
+
+    if (!selectedReply) {
+      return null;
+    }
+
+    return {
+      kind: 'reply',
+      header: null,
+      body: null,
+      footer: null,
+      buttons: [],
+      sections: [],
+      selectedReply,
+    };
+  }
+
+  if (type !== 'interactive' && type !== 'hsm' && type !== 'carousel') {
+    return null;
+  }
+
+  const container = isRecord(message.interactive)
+    ? message.interactive
+    : isRecord(message.hsm)
+      ? message.hsm
+      : isRecord(message.carousel)
+        ? message.carousel
+        : null;
+
+  if (!container) {
+    return null;
+  }
+
+  const action = isRecord(container.action) ? container.action : null;
+  const header = extractInteractiveText(container, 'header');
+  const body = extractInteractiveText(container, 'body');
+  const footer = extractInteractiveText(container, 'footer');
+
+  const rawButtons = Array.isArray(action?.buttons)
+    ? action.buttons
+    : Array.isArray(container.buttons)
+      ? container.buttons
+      : [];
+  const buttons = rawButtons
+    .map(buildInteractiveButton)
+    .filter((button): button is CommWhatsAppInteractiveButton => button !== null);
+
+  const rawSections = Array.isArray(action?.sections) ? action.sections : [];
+  const sections = rawSections
+    .map(buildInteractiveSection)
+    .filter((section): section is CommWhatsAppInteractiveListSection => section !== null);
+
+  // Carousel: cada card vira uma "secao" pra reaproveitar a mesma renderizacao
+  // de lista no inbox, com os botoes do card como linhas da secao.
+  const cardSections = Array.isArray(container.cards)
+    ? container.cards
+        .map((card): CommWhatsAppInteractiveListSection | null => {
+          if (!isRecord(card)) return null;
+
+          const cardBody = extractInteractiveText(card, 'body');
+          const cardAction = isRecord(card.action) ? card.action : null;
+          const cardRawButtons = Array.isArray(cardAction?.buttons)
+            ? cardAction.buttons
+            : Array.isArray(card.buttons)
+              ? card.buttons
+              : [];
+          const cardButtons = cardRawButtons
+            .map(buildInteractiveButton)
+            .filter((button): button is CommWhatsAppInteractiveButton => button !== null);
+
+          if (!cardBody && cardButtons.length === 0) return null;
+
+          return {
+            title: cardBody,
+            rows: cardButtons.map((button) => ({ id: button.id, title: button.title, description: null })),
+          };
+        })
+        .filter((section): section is CommWhatsAppInteractiveListSection => section !== null)
+    : [];
+
+  const allSections = [...sections, ...cardSections];
+
+  if (!header && !body && !footer && buttons.length === 0 && allSections.length === 0) {
+    return null;
+  }
+
+  const kind: CommWhatsAppInteractiveMeta['kind'] = type === 'hsm'
+    ? 'template'
+    : allSections.length > 0
+      ? 'list'
+      : buttons.length > 0
+        ? 'buttons'
+        : 'unknown';
+
+  return {
+    kind,
+    header,
+    body,
+    footer,
+    buttons,
+    sections: allSections,
+    selectedReply: null,
+  };
 };
 
 const summarizeMessageLikeValue = (value: unknown) => {

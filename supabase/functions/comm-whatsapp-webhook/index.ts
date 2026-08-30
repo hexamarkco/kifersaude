@@ -9,6 +9,7 @@ import {
   ensurePrimaryChannel,
   extractWhapiContactCardMeta,
   extractWhapiEditedMessageEvent,
+  extractWhapiInteractiveMeta,
   extractWhapiLinkPreviewMeta,
   extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
@@ -333,6 +334,7 @@ async function persistMessageFromWebhook(
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
   const contactCardMeta = extractWhapiContactCardMeta(message);
+  const interactiveMeta = extractWhapiInteractiveMeta(message);
   const patchStatusUpdatedAt = patch
     ? unixTimestampToIso(patch.trigger?.timestamp) || messageAt
     : messageAt;
@@ -373,6 +375,7 @@ async function persistMessageFromWebhook(
       link_preview: linkPreviewMeta,
       ...(quoteMeta ? { quote: quoteMeta } : {}),
       ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+      ...(interactiveMeta ? { interactive: interactiveMeta } : {}),
       ...(patch ? {
         whapi_patch: {
           changes: patch.changes,
@@ -638,7 +641,7 @@ Deno.serve(async (req: Request) => {
         const matchingReceipt = await findEventReceipt(supabaseAdmin, eventKey);
         if (matchingReceipt) {
           duplicateMessages += 1;
-          console.warn(`[${correlationId}] duplicate message`, {
+          const diagnostic: DuplicateMessageDiagnostic = {
             event_key: eventKey,
             event_action: eventAction || null,
             chat_id: chatId,
@@ -649,7 +652,11 @@ Deno.serve(async (req: Request) => {
             matched_resource_id: matchingReceipt.resource_id,
             matched_received_at: matchingReceipt.received_at,
             matched_archive_path: matchingReceipt.payload_archive_path,
-          });
+          };
+          if (duplicateDiagnostics.length < MAX_DUPLICATE_DIAGNOSTICS) {
+            duplicateDiagnostics.push(diagnostic);
+          }
+          console.warn(`[${correlationId}] duplicate message`, diagnostic);
           continue;
         }
 

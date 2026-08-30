@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   extractWhapiDeletedMessageEvent,
   extractWhapiEditedMessageEvent,
+  extractWhapiInteractiveMeta,
   extractWhapiReactionEvent,
   extractWhapiStarEvent,
   summarizeWhapiMessage,
@@ -213,4 +214,99 @@ test('summarizeWhapiMessage descreve uma acao de exclusao quando nao ha texto', 
 test('summarizeWhapiMessage cai no rotulo generico para payload que nao e um record', () => {
   assert.equal(summarizeWhapiMessage(null), '[Mensagem]');
   assert.equal(summarizeWhapiMessage('texto solto'), '[Mensagem]');
+});
+
+// Mensagens interativas (botoes/listas) chegam no formato do WhatsApp Cloud
+// API que a Whapi repassa quase sem alteracao: `type: 'interactive'` com um
+// objeto `interactive.{header,body,footer,action}`.
+
+test('extractWhapiInteractiveMeta reconhece uma mensagem de botoes', () => {
+  const meta = extractWhapiInteractiveMeta({
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      header: { type: 'text', text: 'Confirmação de horário' },
+      body: { text: 'Você confirma seu horário amanhã às 14h?' },
+      footer: { text: 'Responda para confirmar' },
+      action: {
+        buttons: [
+          { type: 'reply', reply: { id: 'confirm', title: 'Confirmar' } },
+          { type: 'reply', reply: { id: 'cancel', title: 'Cancelar' } },
+        ],
+      },
+    },
+  });
+
+  assert.ok(meta);
+  assert.equal(meta?.kind, 'buttons');
+  assert.equal(meta?.header, 'Confirmação de horário');
+  assert.equal(meta?.body, 'Você confirma seu horário amanhã às 14h?');
+  assert.equal(meta?.buttons.length, 2);
+  assert.equal(meta?.buttons[0].title, 'Confirmar');
+  assert.equal(meta?.buttons[1].id, 'cancel');
+});
+
+test('extractWhapiInteractiveMeta reconhece uma mensagem de lista', () => {
+  const meta = extractWhapiInteractiveMeta({
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: 'Escolha um horário disponível' },
+      action: {
+        button: 'Ver horários',
+        sections: [
+          {
+            title: 'Manhã',
+            rows: [
+              { id: 'slot-1', title: '09:00', description: 'Disponível' },
+              { id: 'slot-2', title: '10:00', description: 'Disponível' },
+            ],
+          },
+        ],
+      },
+    },
+  });
+
+  assert.ok(meta);
+  assert.equal(meta?.kind, 'list');
+  assert.equal(meta?.sections.length, 1);
+  assert.equal(meta?.sections[0].title, 'Manhã');
+  assert.equal(meta?.sections[0].rows.length, 2);
+  assert.equal(meta?.sections[0].rows[0].title, '09:00');
+});
+
+test('extractWhapiInteractiveMeta reconhece a resposta que o contato escolheu (buttons_reply)', () => {
+  const meta = extractWhapiInteractiveMeta({
+    type: 'reply',
+    reply: {
+      buttons_reply: { id: 'confirm', title: 'Confirmar' },
+    },
+  });
+
+  assert.ok(meta);
+  assert.equal(meta?.kind, 'reply');
+  assert.equal(meta?.selectedReply?.title, 'Confirmar');
+});
+
+test('extractWhapiInteractiveMeta reconhece a resposta que o contato escolheu (list_reply)', () => {
+  const meta = extractWhapiInteractiveMeta({
+    type: 'reply',
+    reply: {
+      list_reply: { id: 'slot-1', title: '09:00', description: 'Disponível' },
+    },
+  });
+
+  assert.ok(meta);
+  assert.equal(meta?.kind, 'reply');
+  assert.equal(meta?.selectedReply?.title, '09:00');
+});
+
+test('extractWhapiInteractiveMeta retorna null para mensagem de texto comum', () => {
+  const meta = extractWhapiInteractiveMeta({ type: 'text', text: { body: 'Oi' } });
+  assert.equal(meta, null);
+});
+
+test('extractWhapiInteractiveMeta retorna null quando o payload interactive nao tem nada util', () => {
+  const meta = extractWhapiInteractiveMeta({ type: 'interactive', interactive: {} });
+  assert.equal(meta, null);
 });

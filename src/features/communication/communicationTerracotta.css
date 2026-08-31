@@ -145,6 +145,30 @@
   opacity: 0.9;
 }
 
+.comm-terracotta .whatsapp-inbox-ai-toggle.is-inactive {
+  border-color: var(--accent-gold-border);
+  background: color-mix(in srgb, var(--accent-gold-soft) 64%, var(--bg-inset));
+  color: var(--accent-gold-hover);
+}
+
+.comm-terracotta .whatsapp-inbox-ai-toggle.is-inactive:hover:not(:disabled) {
+  border-color: var(--accent-gold);
+  background: var(--accent-gold-soft);
+  color: var(--accent-gold);
+}
+
+.comm-terracotta .whatsapp-inbox-ai-toggle.is-active {
+  border-color: var(--success-border);
+  background: color-mix(in srgb, var(--success-soft) 72%, var(--bg-inset));
+  color: var(--success-text);
+}
+
+.comm-terracotta .whatsapp-inbox-ai-toggle.is-active:hover:not(:disabled) {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
 .comm-terracotta .whatsapp-inbox-attach-menu,
 .comm-terracotta .whatsapp-inbox-quick-replies-menu {
   border-color: var(--border-default);

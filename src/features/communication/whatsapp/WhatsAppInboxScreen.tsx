@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
@@ -9948,13 +9948,15 @@ export default function WhatsAppInboxScreen() {
                       </Badge>
                     ) : null}
                     {selectedChat.autonomous_attendance_status === 'active' ? (
-                      <Badge tone="warning" size="xs" icon={Bot} className="uppercase tracking-[0.12em]">
+                      <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--accent-gold)' } as CSSProperties}>
+                        <Bot className="h-3 w-3" aria-hidden="true" />
                         IA atendendo
-                      </Badge>
+                      </span>
                     ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
-                      <Badge tone="neutral" size="xs" icon={Bot} className="uppercase tracking-[0.12em]">
+                      <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--text-muted)' } as CSSProperties}>
+                        <Bot className="h-3 w-3" aria-hidden="true" />
                         IA encerrada
-                      </Badge>
+                      </span>
                     ) : null}
                   </div>
                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
@@ -10009,32 +10011,34 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
-                  {selectedChat.autonomous_attendance_status === 'active' ? (
-                    <Button
-                      type="button"
-                      onClick={() => void handleDeactivateAutonomousAttendance(selectedChat)}
-                      variant="secondary"
-                      size="sm"
-                      loading={assumingControlChatId === selectedChat.id}
-                      title="Desativa o atendimento autônomo da IA neste chat."
-                    >
-                      <Pause className="h-4 w-4" />
-                      Desativar IA
-                    </Button>
-                  ) : selectedChat.lead_id ? (
-                    <Button
-                      type="button"
-                      onClick={() => void handleActivateAutonomousAttendance(selectedChat)}
-                      variant="secondary"
-                      size="sm"
-                      loading={assumingControlChatId === selectedChat.id}
-                      title="Ativa manualmente o atendimento autônomo da IA neste chat."
-                    >
-                      <Bot className="h-4 w-4" />
-                      Ativar IA
-                    </Button>
-                  ) : null}
                   <div className="flex shrink-0 items-center gap-2">
+                    {selectedChat.lead_id ? (
+                      <Button
+                        type="button"
+                        onClick={() => (
+                          selectedChat.autonomous_attendance_status === 'active'
+                            ? void handleDeactivateAutonomousAttendance(selectedChat)
+                            : void handleActivateAutonomousAttendance(selectedChat)
+                        )}
+                        variant="icon"
+                        size="icon"
+                        loading={assumingControlChatId === selectedChat.id}
+                        aria-label={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
+                        title={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
+                        className={cx(
+                          'whatsapp-inbox-ai-toggle',
+                          selectedChat.autonomous_attendance_status === 'active'
+                            ? 'is-active'
+                            : 'is-inactive',
+                        )}
+                      >
+                        {selectedChat.autonomous_attendance_status === 'active' ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Bot className="h-4 w-4" />
+                        )}
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       onClick={() => setChatFilesOpen(true)}

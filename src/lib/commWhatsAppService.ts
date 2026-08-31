@@ -944,7 +944,7 @@ export const commWhatsAppService = {
 
   async setAutonomousAttendanceStatus(
     chatId: string,
-    status: 'inactive' | 'handed_off',
+    status: 'inactive' | 'active' | 'handed_off',
   ): Promise<CommWhatsAppChat> {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para atualizar esta conversa.' });
 

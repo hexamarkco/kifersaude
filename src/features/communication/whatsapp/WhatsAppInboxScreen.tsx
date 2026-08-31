@@ -9096,6 +9096,24 @@ export default function WhatsAppInboxScreen() {
     }
   }, [assumingControlChatId, upsertChatLocally]);
 
+  const handleActivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
+    if (assumingControlChatId) {
+      return;
+    }
+
+    setAssumingControlChatId(chat.id);
+    try {
+      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'active');
+      upsertChatLocally(updatedChat);
+      toast.success('Atendimento autônomo ativado nesta conversa.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao ativar atendimento autonomo', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível ativar o atendimento autônomo desta conversa.');
+    } finally {
+      setAssumingControlChatId((current) => (current === chat.id ? null : current));
+    }
+  }, [assumingControlChatId, upsertChatLocally]);
+
   const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
     if (deletingChatId) {
       return;
@@ -10002,6 +10020,18 @@ export default function WhatsAppInboxScreen() {
                     >
                       <Bot className="h-4 w-4" />
                       Assumir controle
+                    </Button>
+                  ) : selectedChat.lead_id ? (
+                    <Button
+                      type="button"
+                      onClick={() => void handleActivateAutonomousAttendance(selectedChat)}
+                      variant="secondary"
+                      size="sm"
+                      loading={assumingControlChatId === selectedChat.id}
+                      title="Ativa manualmente o atendimento autônomo da IA neste chat."
+                    >
+                      <Bot className="h-4 w-4" />
+                      Ativar IA
                     </Button>
                   ) : null}
                   <div className="flex shrink-0 items-center gap-2">

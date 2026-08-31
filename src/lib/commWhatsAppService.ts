@@ -827,6 +827,30 @@ export const commWhatsAppService = {
     return row;
   },
 
+  async setAutonomousAttendanceStatus(
+    chatId: string,
+    status: 'inactive' | 'handed_off',
+  ): Promise<CommWhatsAppChat> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para atualizar esta conversa.' });
+
+    const { data, error } = await supabase.rpc('comm_whatsapp_set_autonomous_attendance_status', {
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
+      p_status: status,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o atendimento autonomo desta conversa.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = rows[0] as CommWhatsAppChat | undefined;
+    if (!row) {
+      throw new Error('A conversa atualizada nao foi retornada.');
+    }
+
+    return row;
+  },
+
   async deleteChat(chatId: string): Promise<CommWhatsAppChat> {
     const { data, error } = await supabase.rpc('comm_whatsapp_delete_chat', {
       p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),

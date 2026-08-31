@@ -1749,6 +1749,10 @@ const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous
   const savedContactName = getValidWhatsAppDisplayName(incoming.saved_contact_name) || getValidWhatsAppDisplayName(previous?.saved_contact_name);
   const leadName = getValidWhatsAppDisplayName(incoming.lead_name) || getValidWhatsAppDisplayName(previous?.lead_name);
   const leadStatus = String(incoming.lead_status ?? '').trim() || String(previous?.lead_status ?? '').trim() || null;
+  const canReusePreviousLeadLink = Boolean(incoming.lead_id && previous?.lead_id === incoming.lead_id);
+  const leadLinkSource = incoming.lead_link_source ?? (canReusePreviousLeadLink ? previous?.lead_link_source ?? null : null);
+  const leadLinkedAt = incoming.lead_linked_at ?? (canReusePreviousLeadLink ? previous?.lead_linked_at ?? null : null);
+  const leadLinkedBy = incoming.lead_linked_by ?? (canReusePreviousLeadLink ? previous?.lead_linked_by ?? null : null);
   const pushName = getValidWhatsAppDisplayName(incoming.push_name) || getValidWhatsAppDisplayName(previous?.push_name);
   const displayName = getValidWhatsAppDisplayName(incoming.display_name);
   const resolvedDisplayName = savedContactName || leadName || pushName || displayName;
@@ -1758,6 +1762,9 @@ const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous
     saved_contact_name: savedContactName || null,
     lead_name: leadName || null,
     lead_status: leadStatus,
+    lead_link_source: leadLinkSource,
+    lead_linked_at: leadLinkedAt,
+    lead_linked_by: leadLinkedBy,
     push_name: pushName || null,
     display_name: resolvedDisplayName || formatCommWhatsAppPhoneLabel(incoming.phone_number),
   };
@@ -4425,7 +4432,7 @@ export default function WhatsAppInboxScreen() {
         if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at && !incomingChat.merged_into_chat_id) {
           const existingChat = current.find((chat) => chat.id === incomingChat.id) ?? null;
           const hydratedChat = applyPendingChatInboxState(
-            applyFrontendSavedContactNames(applyPrefetchedLeadNames([preserveUsefulChatPreview(incomingChat, existingChat)])),
+            applyFrontendSavedContactNames(applyPrefetchedLeadNames([preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge(incomingChat, existingChat), existingChat)])),
             pendingChatInboxStateRef.current,
           )[0];
         const shouldKeepSelectedChat = selectedChatIdRef.current === hydratedChat.id;

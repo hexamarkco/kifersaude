@@ -411,7 +411,17 @@ async function persistMessageFromWebhook(
         p_chat_id: result.chatId,
         p_delay_seconds: AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS,
       });
-    } catch {
+      console.log('[comm-whatsapp-webhook] agendamento de resposta autonoma avaliado', {
+        chatId: result.chatId,
+        messageAt,
+        debounceSeconds: AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS,
+      });
+    } catch (error) {
+      console.error('[comm-whatsapp-webhook] falha ao agendar resposta autonoma', {
+        chatId: result.chatId,
+        messageAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Best-effort: falha aqui nao pode impedir a persistencia da mensagem.
     }
   }

@@ -1,7 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextWithRouting, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
 import {
+  cacheCommWhatsAppMedia,
   corsHeaders,
   extractPhoneFromChatId,
   extractWhapiMessageId,
@@ -18,7 +19,7 @@ import {
   WHAPI_BASE_URL,
   type CommWhatsAppCanonicalChatRoute,
 } from '../_shared/comm-whatsapp.ts';
-import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
+import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   buildReferencePrompt,
   buildReplyUserPrompt,
@@ -41,6 +42,15 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
+
+type AutonomousHistoryMessageRow = MessageRow & {
+  media_id: string | null;
+  media_url: string | null;
+  media_mime_type: string | null;
+  media_file_name: string | null;
+  transcription_status: string | null;
+  transcription_error: string | null;
+};
 
 // Handoff -> status do lead no CRM. QUALIFICACAO_COMPLETA e RECUSOU_COTACAO
 // mudam o status; FORA_DE_ESCOPO e PRECISA_HUMANO deixam como esta (nao e
@@ -68,6 +78,115 @@ function normalizeText(value: string): string {
     .normalize('NFD')
     .replace(DIACRITICS_REGEX, '')
     .replace(/\s+/g, ' ');
+}
+
+const isAudioMessage = (messageType: string | null | undefined) => {
+  const kind = (messageType ?? '').trim().toLowerCase();
+  return kind === 'audio' || kind === 'voice';
+};
+
+async function ensureAudioTranscriptionForAutonomousReply(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  row: AutonomousHistoryMessageRow;
+  jobId: string;
+  chatId: string;
+  leadId: string;
+}): Promise<AutonomousHistoryMessageRow> {
+  const { supabaseAdmin, row, jobId, chatId, leadId } = params;
+  if (row.direction !== 'inbound' || !isAudioMessage(row.message_type) || row.transcription_text?.trim()) {
+    return row;
+  }
+
+  const token = getWhapiToken();
+  if (!token) {
+    throw new Error('WHAPI_TOKEN nao configurado para transcrever audio do atendimento autonomo.');
+  }
+
+  console.log('[ai-autonomous-reply-worker] transcricao automatica de audio iniciada', {
+    jobId,
+    chatId,
+    leadId,
+    messageId: row.id,
+    messageType: row.message_type,
+    transcriptionStatus: row.transcription_status ?? null,
+  });
+
+  await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .update({
+      transcription_status: 'processing',
+      transcription_error: null,
+      transcription_updated_at: new Date().toISOString(),
+    })
+    .eq('id', row.id);
+
+  try {
+    const media = await cacheCommWhatsAppMedia(supabaseAdmin, {
+      token,
+      mediaId: row.media_id,
+      mediaUrl: row.media_url,
+      fallbackFileName: row.media_file_name,
+      fallbackMimeType: row.media_mime_type,
+    });
+
+    const transcription = await transcribeAudioWithRouting({
+      supabaseAdmin,
+      audioBlob: media.blob,
+      fileName: media.fileName,
+      mimeType: media.mimeType,
+      prompt: 'Transcreva o audio do WhatsApp em portugues do Brasil, preservando nomes, numeros e contexto comercial.',
+    });
+
+    await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .update({
+        transcription_text: transcription.text,
+        transcription_status: 'completed',
+        transcription_provider: transcription.provider,
+        transcription_model: transcription.model,
+        transcription_error: null,
+        transcription_updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id);
+
+    console.log('[ai-autonomous-reply-worker] transcricao automatica de audio concluida', {
+      jobId,
+      chatId,
+      leadId,
+      messageId: row.id,
+      provider: transcription.provider,
+      model: transcription.model,
+      fallbackUsed: transcription.fallbackUsed,
+      transcriptionPreview: transcription.text.slice(0, 120),
+    });
+
+    return {
+      ...row,
+      transcription_text: transcription.text,
+      transcription_status: 'completed',
+      transcription_error: null,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .update({
+        transcription_status: 'failed',
+        transcription_error: message,
+        transcription_updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id);
+
+    console.error('[ai-autonomous-reply-worker] falha na transcricao automatica de audio', {
+      jobId,
+      chatId,
+      leadId,
+      messageId: row.id,
+      error: message,
+    });
+
+    throw new Error(`Falha ao transcrever audio para resposta autonoma: ${message}`);
+  }
 }
 
 async function sendAutonomousWhatsAppText(params: {
@@ -154,6 +273,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseAdmin = createAdminClient();
     const nowIso = new Date().toISOString();
+    console.log('[ai-autonomous-reply-worker] run iniciado', { nowIso });
 
     // Self-healing: jobs travados em 'processing' (funcao caiu no meio) voltam a pending.
     await supabaseAdmin
@@ -172,8 +292,13 @@ Deno.serve(async (req: Request) => {
 
     if (jobsError) throw new Error(`Erro ao buscar jobs pendentes: ${jobsError.message}`);
     if (!jobs || jobs.length === 0) {
+      console.log('[ai-autonomous-reply-worker] nenhum job pendente vencido', { nowIso });
       return new Response(JSON.stringify({ success: true, processed: 0 }), { status: 200, headers: jsonHeaders });
     }
+    console.log('[ai-autonomous-reply-worker] jobs pendentes encontrados', {
+      count: jobs.length,
+      jobIds: jobs.map((job: { id: string }) => job.id),
+    });
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     let processed = 0;
@@ -191,7 +316,22 @@ Deno.serve(async (req: Request) => {
       // Reagendado (nova mensagem inbound empurrou scheduled_at) entre a
       // busca e a tentativa de captura deste job — pula, o job seguinte
       // (com o novo scheduled_at) sera pego numa proxima execucao do cron.
-      if (!claimed) continue;
+      if (!claimed) {
+        console.log('[ai-autonomous-reply-worker] job nao capturado; possivelmente reagendado', {
+          jobId: job.id,
+          chatId: job.chat_id,
+          scheduledAt: job.scheduled_at,
+        });
+        continue;
+      }
+
+      console.log('[ai-autonomous-reply-worker] job capturado', {
+        jobId: job.id,
+        chatId: job.chat_id,
+        leadId: job.lead_id ?? null,
+        scheduledAt: job.scheduled_at,
+        attempts: (job.attempts ?? 0) + 1,
+      });
 
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
@@ -202,6 +342,12 @@ Deno.serve(async (req: Request) => {
         if (chatError) throw new Error(`Erro ao carregar chat: ${chatError.message}`);
 
         if (!chat || chat.autonomous_attendance_status !== 'active') {
+          console.warn('[ai-autonomous-reply-worker] job cancelado: atendimento autonomo inativo', {
+            jobId: job.id,
+            chatId: job.chat_id,
+            chatFound: Boolean(chat),
+            autonomousAttendanceStatus: chat?.autonomous_attendance_status ?? null,
+          });
           await supabaseAdmin
             .from('ai_autonomous_reply_jobs')
             .update({ status: 'cancelled', last_error: 'Atendimento autonomo nao esta mais ativo neste chat.' })
@@ -211,6 +357,10 @@ Deno.serve(async (req: Request) => {
 
         const leadId: string | null = chat.lead_id ?? job.lead_id;
         if (!leadId) {
+          console.warn('[ai-autonomous-reply-worker] job cancelado: chat sem lead vinculado', {
+            jobId: job.id,
+            chatId: chat.id,
+          });
           await supabaseAdmin
             .from('ai_autonomous_reply_jobs')
             .update({ status: 'cancelled', last_error: 'Chat sem lead vinculado.' })
@@ -221,12 +371,11 @@ Deno.serve(async (req: Request) => {
         const [historyResult, styleMessagesResult, quickReplies] = await Promise.all([
           supabaseAdmin
             .from('comm_whatsapp_messages')
-            .select('direction, text_content')
+            .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name')
             .eq('chat_id', chat.id)
-            .eq('message_type', 'text')
             .neq('delivery_status', 'failed')
-            .not('text_content', 'is', null)
-            .order('message_at', { ascending: true })
+            .neq('direction', 'system')
+            .order('message_at', { ascending: false })
             .limit(CONVERSATION_HISTORY_LIMIT),
           supabaseAdmin
             .from('comm_whatsapp_messages')
@@ -242,14 +391,40 @@ Deno.serve(async (req: Request) => {
 
         if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
-        const history: SandboxMessageRow[] = (historyResult.data ?? [])
-          .map((row: { direction: string; text_content: string | null }) => ({
+        const fetchedHistoryRows = (historyResult.data ?? []) as AutonomousHistoryMessageRow[];
+        if (fetchedHistoryRows[0]) {
+          fetchedHistoryRows[0] = await ensureAudioTranscriptionForAutonomousReply({
+            supabaseAdmin,
+            row: fetchedHistoryRows[0],
+            jobId: job.id,
+            chatId: chat.id,
+            leadId,
+          });
+        }
+
+        const recentHistoryRows = [...fetchedHistoryRows].reverse();
+        const history: SandboxMessageRow[] = recentHistoryRows
+          .map((row) => ({
             role: row.direction === 'inbound' ? ('lead' as const) : ('ai' as const),
-            content: (row.text_content ?? '').trim(),
+            content: getMessageContent(row),
           }))
           .filter((row) => row.content.length > 0);
 
         if (history.length === 0 || history[history.length - 1].role !== 'lead') {
+          const latestFetched = fetchedHistoryRows[0];
+          console.warn('[ai-autonomous-reply-worker] job cancelado: sem mensagem pendente do lead no historico recente', {
+            jobId: job.id,
+            chatId: chat.id,
+            leadId,
+            fetchedRows: fetchedHistoryRows.length,
+            usableHistoryRows: history.length,
+            latestFetchedDirection: latestFetched?.direction ?? null,
+            latestFetchedAt: latestFetched?.message_at ?? null,
+            latestFetchedType: latestFetched?.message_type ?? null,
+            latestFetchedTranscriptionStatus: latestFetched?.transcription_status ?? null,
+            latestFetchedPreview: latestFetched ? getMessageContent(latestFetched).slice(0, 80) : null,
+            latestUsableRole: history.at(-1)?.role ?? null,
+          });
           // Nada novo do lead pra responder (ex: a ultima mensagem ja e nossa) — nada a fazer.
           await supabaseAdmin
             .from('ai_autonomous_reply_jobs')
@@ -260,6 +435,15 @@ Deno.serve(async (req: Request) => {
 
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
         const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
+        console.log('[ai-autonomous-reply-worker] contexto pronto para gerar resposta', {
+          jobId: job.id,
+          chatId: chat.id,
+          leadId,
+          historyRows: history.length,
+          styleRows: styleMessages.length,
+          quickReplies: quickReplies.length,
+          lastLeadMessagePreview: lastLeadMessage.slice(0, 120),
+        });
         const similarSituations = await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
         const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
         const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages, referenceBlock);
@@ -276,6 +460,13 @@ Deno.serve(async (req: Request) => {
 
         const { messages, handoffCode } = splitGeneratedReply(result.text, false);
         if (messages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
+        console.log('[ai-autonomous-reply-worker] resposta gerada', {
+          jobId: job.id,
+          chatId: chat.id,
+          leadId,
+          messageCount: messages.length,
+          handoffCode: handoffCode ?? null,
+        });
 
         const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chat.id);
         if (!chatRoute || chatRoute.identityConflict) {
@@ -330,6 +521,12 @@ Deno.serve(async (req: Request) => {
           .eq('id', job.id);
 
         processed += 1;
+        console.log('[ai-autonomous-reply-worker] job concluido', {
+          jobId: job.id,
+          chatId: chat.id,
+          leadId,
+          sentMessages: messages.length,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error('[ai-autonomous-reply-worker] erro ao processar job', { jobId: job.id, error: message });

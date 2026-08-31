@@ -1748,6 +1748,7 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
 const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {
   const savedContactName = getValidWhatsAppDisplayName(incoming.saved_contact_name) || getValidWhatsAppDisplayName(previous?.saved_contact_name);
   const leadName = getValidWhatsAppDisplayName(incoming.lead_name) || getValidWhatsAppDisplayName(previous?.lead_name);
+  const leadStatus = String(incoming.lead_status ?? '').trim() || String(previous?.lead_status ?? '').trim() || null;
   const pushName = getValidWhatsAppDisplayName(incoming.push_name) || getValidWhatsAppDisplayName(previous?.push_name);
   const displayName = getValidWhatsAppDisplayName(incoming.display_name);
   const resolvedDisplayName = savedContactName || leadName || pushName || displayName;
@@ -1756,6 +1757,7 @@ const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous
     ...incoming,
     saved_contact_name: savedContactName || null,
     lead_name: leadName || null,
+    lead_status: leadStatus,
     push_name: pushName || null,
     display_name: resolvedDisplayName || formatCommWhatsAppPhoneLabel(incoming.phone_number),
   };
@@ -3624,7 +3626,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (chat) =>
-            `${chat.id}:${chat.updated_at}:${chat.external_chat_id}:${chat.phone_number}:${chat.phone_digits}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.push_name ?? ''}:${chat.lead_id ?? ''}:${chat.lead_name ?? ''}:${chat.lead_link_source ?? ''}:${chat.merged_into_chat_id ?? ''}:${chat.auto_link_blocked}:${chat.identity_conflict}:${chat.deleted_at ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
+            `${chat.id}:${chat.updated_at}:${chat.external_chat_id}:${chat.phone_number}:${chat.phone_digits}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.push_name ?? ''}:${chat.lead_id ?? ''}:${chat.lead_name ?? ''}:${chat.lead_status ?? ''}:${chat.autonomous_attendance_status}:${chat.lead_link_source ?? ''}:${chat.merged_into_chat_id ?? ''}:${chat.auto_link_blocked}:${chat.identity_conflict}:${chat.deleted_at ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
         )
         .join('|'),
     [],
@@ -4673,6 +4675,59 @@ export default function WhatsAppInboxScreen() {
       }
     }
   }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, loadLeadContracts, upsertChatLocally]);
+
+  useEffect(() => {
+    const leadId = selectedChat?.lead_id?.trim();
+    if (!leadId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`comm-whatsapp-selected-lead-${leadId}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'leads',
+          filter: `id=eq.${leadId}`,
+        },
+        (payload: RealtimePostgresChangesPayload<Partial<Lead>>) => {
+          const updatedLead = payload.new as Partial<Lead> | null;
+          const statusName =
+            typeof updatedLead?.status === 'string' && updatedLead.status.trim()
+              ? updatedLead.status.trim()
+              : typeof updatedLead?.status_id === 'string'
+                ? leadStatuses.find((status) => status.id === updatedLead.status_id)?.nome ?? null
+                : null;
+
+          const currentChat = latestChatsRef.current.find((chat) => chat.lead_id === leadId) ?? null;
+          if (!statusName) {
+            void loadLeadPanel(currentChat);
+            return;
+          }
+
+          setLeadPanel((current) => (
+            current?.id === leadId
+              ? { ...current, status_nome: statusName, status_value: statusName }
+              : current
+          ));
+
+          if (currentChat) {
+            upsertChatLocally({ ...currentChat, lead_status: statusName });
+          }
+        },
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[WhatsAppInbox] realtime do lead selecionado indisponivel; polling permanece ativo.');
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [leadStatuses, loadLeadPanel, selectedChat?.lead_id, upsertChatLocally]);
 
   const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
     const requestId = ++chatAgendaSummaryRequestIdRef.current;

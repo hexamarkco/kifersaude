@@ -2788,7 +2788,9 @@ async function scheduleNextFlowStep({
 }
 
 const canContinueLeadCreatedAdministrativeStep = (flow: AutoContactFlow, job: any): boolean =>
-  flow.triggerType === 'lead_created' && job.action_type === 'activate_autonomous_service';
+  job.action_type === 'activate_autonomous_service'
+    && flow.triggerType !== 'inactivity_duration'
+    && flow.steps.some((step) => step.id === job.step_id && step.actionType === 'activate_autonomous_service');
 
 async function cancelFlowJobs({
   supabase,

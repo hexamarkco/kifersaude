@@ -114,6 +114,7 @@ export const applyPendingChatInboxState = (
     const serverMessageAt = getMessageTimestampMs(chat.last_message_at);
     const serverUnarchivedByNewMessage = remaining.is_archived
       && !chat.is_archived
+      && chat.last_message_direction === 'inbound'
       && archivedAt !== null
       && serverMessageAt !== null
       && serverMessageAt > archivedAt;

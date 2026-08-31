@@ -42,6 +42,13 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
+const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
+
+type WorkerRequestBody = {
+  source?: string;
+  chatId?: string;
+  waitUntilDue?: boolean;
+};
 
 type AutonomousHistoryMessageRow = MessageRow & {
   media_id: string | null;
@@ -272,8 +279,42 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createAdminClient();
-    const nowIso = new Date().toISOString();
-    console.log('[ai-autonomous-reply-worker] run iniciado', { nowIso });
+    const body = await req.json().catch(() => ({})) as WorkerRequestBody;
+    const requestedChatId = typeof body.chatId === 'string' && body.chatId.trim() ? body.chatId.trim() : null;
+    let nowIso = new Date().toISOString();
+    console.log('[ai-autonomous-reply-worker] run iniciado', {
+      nowIso,
+      source: body.source ?? null,
+      requestedChatId,
+      waitUntilDue: body.waitUntilDue === true,
+    });
+
+    if (requestedChatId && body.waitUntilDue === true) {
+      const { data: pendingJob, error: pendingJobError } = await supabaseAdmin
+        .from('ai_autonomous_reply_jobs')
+        .select('id, scheduled_at')
+        .eq('chat_id', requestedChatId)
+        .eq('status', 'pending')
+        .order('scheduled_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pendingJobError) throw new Error(`Erro ao buscar job do chat para debounce: ${pendingJobError.message}`);
+
+      const scheduledAtMs = pendingJob?.scheduled_at ? new Date(pendingJob.scheduled_at).getTime() : 0;
+      const waitMs = Math.max(0, scheduledAtMs - Date.now());
+
+      if (pendingJob && waitMs > 0 && waitMs <= INLINE_DUE_WAIT_LIMIT_MS) {
+        console.log('[ai-autonomous-reply-worker] aguardando debounce curto do chat', {
+          chatId: requestedChatId,
+          jobId: pendingJob.id,
+          scheduledAt: pendingJob.scheduled_at,
+          waitMs,
+        });
+        await new Promise((resolve) => setTimeout(resolve, waitMs + 250));
+        nowIso = new Date().toISOString();
+      }
+    }
 
     // Self-healing: jobs travados em 'processing' (funcao caiu no meio) voltam a pending.
     await supabaseAdmin
@@ -282,13 +323,19 @@ Deno.serve(async (req: Request) => {
       .eq('status', 'processing')
       .lt('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
-    const { data: jobs, error: jobsError } = await supabaseAdmin
+    let jobsQuery = supabaseAdmin
       .from('ai_autonomous_reply_jobs')
       .select('*')
       .eq('status', 'pending')
       .lte('scheduled_at', nowIso)
       .order('scheduled_at', { ascending: true })
-      .limit(MAX_JOBS_PER_RUN);
+      .limit(requestedChatId ? 1 : MAX_JOBS_PER_RUN);
+
+    if (requestedChatId) {
+      jobsQuery = jobsQuery.eq('chat_id', requestedChatId);
+    }
+
+    const { data: jobs, error: jobsError } = await jobsQuery;
 
     if (jobsError) throw new Error(`Erro ao buscar jobs pendentes: ${jobsError.message}`);
     if (!jobs || jobs.length === 0) {

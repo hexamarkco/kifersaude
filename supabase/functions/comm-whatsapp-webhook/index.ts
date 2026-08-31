@@ -89,9 +89,9 @@ type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
 };
 
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
-// inbound antes da IA responder num chat com atendimento autonomo ativo —
-// da tempo do lead terminar de digitar mensagens picotadas.
-const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 60;
+// inbound antes da IA responder num chat com atendimento autonomo ativo.
+// Nova mensagem nesse intervalo reagenda o mesmo job no banco.
+const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 15;
 
 declare const Deno: {
   env: {

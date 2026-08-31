@@ -27,6 +27,7 @@ const baseChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat =
   lead_linked_by: overrides.lead_linked_by ?? null,
   auto_link_blocked: overrides.auto_link_blocked ?? false,
   identity_conflict: overrides.identity_conflict ?? false,
+  autonomous_attendance_status: overrides.autonomous_attendance_status ?? 'inactive',
   is_archived: overrides.is_archived ?? false,
   archived_at: overrides.archived_at ?? null,
   is_muted: overrides.is_muted ?? false,
@@ -72,7 +73,7 @@ test('keeps explicit archive patch alive through stale refetches until TTL', () 
   assert.equal(state.has(activeChat.id), false);
 });
 
-test('releases an archive patch when a newer server message unarchives the chat', () => {
+test('releases an archive patch when a newer inbound server message unarchives the chat', () => {
   const state = new Map<string, PendingChatInboxStatePatch>();
   const activeChat = baseChat({ is_archived: false, archived_at: null });
   const archivedAt = new Date(Date.now() - 1_000).toISOString();
@@ -93,4 +94,28 @@ test('releases an archive patch when a newer server message unarchives the chat'
 
   assert.equal(result.is_archived, false);
   assert.equal(state.has(activeChat.id), false);
+});
+
+test('keeps archive patch when newer outbound activity reaches the server', () => {
+  const state = new Map<string, PendingChatInboxStatePatch>();
+  const activeChat = baseChat({ is_archived: false, archived_at: null });
+  const archivedAt = new Date(Date.now() - 1_000).toISOString();
+  const patch: PendingChatInboxStatePatch = {
+    is_archived: true,
+    archived_at: archivedAt,
+    __issuedAt: Date.now(),
+    __actions: { isArchived: Date.now() },
+  };
+  mergePendingChatInboxState(state, activeChat.id, patch);
+
+  const serverChat = baseChat({
+    is_archived: false,
+    archived_at: null,
+    last_message_direction: 'outbound',
+    last_message_at: new Date(Date.now() + 1_000).toISOString(),
+  });
+  const result = applyPendingChatInboxState([serverChat], state)[0];
+
+  assert.equal(result.is_archived, true);
+  assert.equal(state.has(activeChat.id), true);
 });

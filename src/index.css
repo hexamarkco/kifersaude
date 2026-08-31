@@ -1205,7 +1205,7 @@ html,
   border-color: var(--success);
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1023px) {
   .painel-theme .whatsapp-inbox-thread-header {
     gap: 0.75rem;
   }

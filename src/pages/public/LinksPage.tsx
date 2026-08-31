@@ -3,15 +3,15 @@ import { ArrowUpRight, BadgeCheck } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
-import { getPanelButtonClass, LoadingState } from '../../design-system';
+import { KIFER_THEME_COLORS, getPanelButtonClass, LoadingState } from '../../design-system';
 import { getLinkIcon } from '../../lib/linkIcons';
 import { linksService } from '../../lib/linksService';
 import type { PublicLinkItem, PublicLinkPageSettings } from '../../lib/supabase';
 
 const LINK_REVEAL_BASE_DELAY_MS = 200;
 const LINK_REVEAL_STEP_MS = 70;
-const DARK_CANVAS_COLOR = '#16110c';
-const DEFAULT_THEME_COLOR = '#f4f0e7';
+const DARK_CANVAS_COLOR = KIFER_THEME_COLORS.darkCanvas;
+const DEFAULT_THEME_COLOR = KIFER_THEME_COLORS.lightCanvas;
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);

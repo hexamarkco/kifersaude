@@ -8,10 +8,10 @@ import { formsService, type PublicFormSubmitPayload } from '../../lib/formsServi
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
-import { Button, Field, getPanelButtonClass, Input, LoadingState, Stepper } from '../../design-system';
+import { Button, Field, KIFER_THEME_COLORS, getPanelButtonClass, Input, LoadingState, Stepper } from '../../design-system';
 
-const DARK_CANVAS_COLOR = '#16110c';
-const LIGHT_CANVAS_COLOR = '#f4f0e7';
+const DARK_CANVAS_COLOR = KIFER_THEME_COLORS.darkCanvas;
+const LIGHT_CANVAS_COLOR = KIFER_THEME_COLORS.lightCanvas;
 const WHATSAPP_PHONE = '5521979302389';
 const THEME_STORAGE_KEY = 'kifer-forms-theme';
 const MIN_STEP_WIDTH_PX = 44;

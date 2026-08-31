@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -3350,6 +3350,8 @@ export default function WhatsAppInboxScreen() {
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
   const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
+  const [threadActionsMenuOpen, setThreadActionsMenuOpen] = useState(false);
+  const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [removedAttachmentForUndo, setRemovedAttachmentForUndo] = useState<PendingAttachment | null>(null);
@@ -3404,6 +3406,8 @@ export default function WhatsAppInboxScreen() {
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
   const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
   const chatMenuRef = useRef<HTMLDivElement | null>(null);
+  const threadActionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const threadActionsMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const reactionAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const reactionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const messageActionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -5249,6 +5253,13 @@ export default function WhatsAppInboxScreen() {
     [openChatMenuChatId],
   );
 
+  useClickOutside(
+    threadActionsMenuOpen,
+    () => [threadActionsMenuRef.current, threadActionsMenuTriggerRef.current],
+    () => setThreadActionsMenuOpen(false),
+    [threadActionsMenuOpen],
+  );
+
   useEffect(() => {
     if (openReactionPickerMessageId && !openReactionPickerMessage) {
       setOpenReactionPickerMessageId(null);
@@ -5268,6 +5279,10 @@ export default function WhatsAppInboxScreen() {
       setOpenChatMenuChatId(null);
     }
   }, [openChatMenuChat, openChatMenuChatId]);
+
+  useEffect(() => {
+    setThreadActionsMenuOpen(false);
+  }, [selectedChatId]);
 
   useLayoutEffect(() => {
     if (!openReactionPickerMessageId || typeof window === 'undefined') {
@@ -5498,6 +5513,51 @@ export default function WhatsAppInboxScreen() {
       window.removeEventListener('scroll', syncPosition, true);
     };
   }, [advancedFiltersOpen]);
+
+  useLayoutEffect(() => {
+    if (!threadActionsMenuOpen || !threadActionsMenuTriggerRef.current || typeof window === 'undefined') {
+      setThreadActionsMenuPosition((current) => (current === null ? current : null));
+      return;
+    }
+
+    const syncPosition = () => {
+      const triggerRect = threadActionsMenuTriggerRef.current?.getBoundingClientRect();
+      if (!triggerRect) {
+        return;
+      }
+
+      const viewportPadding = 12;
+      const width = Math.min(288, window.innerWidth - viewportPadding * 2);
+      const maxHeight = Math.min(420, window.innerHeight - viewportPadding * 2);
+      const left = Math.min(
+        Math.max(viewportPadding, triggerRect.right - width),
+        window.innerWidth - width - viewportPadding,
+      );
+      const top = Math.min(
+        triggerRect.bottom + 8,
+        window.innerHeight - maxHeight - viewportPadding,
+      );
+
+      setThreadActionsMenuPosition((current) => (
+        current
+        && current.top === top
+        && current.left === left
+        && current.width === width
+        && current.maxHeight === maxHeight
+          ? current
+          : { top, left, width, maxHeight }
+      ));
+    };
+
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [threadActionsMenuOpen]);
 
   useLayoutEffect(() => {
     if (!mediaDrawerOpen || !mediaDrawerTriggerRef.current || typeof window === 'undefined') {
@@ -9919,7 +9979,7 @@ export default function WhatsAppInboxScreen() {
               </div>
           ) : (
             <>
-              <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 xl:flex-row xl:items-start xl:justify-between xl:p-5">
+              <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
                 <div className="flex min-w-0 items-start gap-2">
                   <button
                     type="button"
@@ -10006,8 +10066,8 @@ export default function WhatsAppInboxScreen() {
                   ) : null}
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-2 xl:shrink-0 xl:items-end">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-left xl:flex-col xl:items-end xl:text-right">
+                <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:shrink-0 lg:items-start">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-left lg:flex-col lg:items-end lg:text-right">
                     <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
                       <span className="whatsapp-inbox-status-pill-dot" aria-hidden="true" />
                       {connectionStatusLabel}
@@ -10018,7 +10078,21 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
-                  <div className="whatsapp-inbox-thread-actions flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
+                  <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
+                    <Button
+                      ref={threadActionsMenuTriggerRef}
+                      type="button"
+                      onClick={() => setThreadActionsMenuOpen((current) => !current)}
+                      variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
+                      size="sm"
+                      className="lg:hidden"
+                      aria-label="Abrir ações da conversa"
+                      aria-expanded={threadActionsMenuOpen}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                      Ações
+                    </Button>
+                    <div className="hidden shrink-0 items-center gap-2 lg:flex">
                     {selectedChat.lead_id ? (
                       <Button
                         type="button"
@@ -10120,6 +10194,7 @@ export default function WhatsAppInboxScreen() {
                         ) : null}
                       </span>
                     </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -11818,6 +11893,118 @@ export default function WhatsAppInboxScreen() {
               >
                 {deletingChatId === openChatMenuChat.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
                 <span>Excluir conversa</span>
+              </button>
+            </div>
+          ) : null}
+        </PanelPopoverShell>
+
+        <PanelPopoverShell
+          ref={threadActionsMenuRef}
+          isOpen={Boolean(selectedChat && threadActionsMenuOpen && threadActionsMenuPosition)}
+          position={threadActionsMenuPosition}
+          onClose={() => setThreadActionsMenuOpen(false)}
+          ariaLabel="Ações da conversa"
+          role="menu"
+          className="kds-dropdown-menu before:hidden overflow-y-auto p-1"
+          style={{ width: threadActionsMenuPosition?.width ?? 288, maxHeight: threadActionsMenuPosition?.maxHeight }}
+        >
+          {selectedChat ? (
+            <div className="flex flex-col gap-1">
+              {selectedChat.lead_id ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setThreadActionsMenuOpen(false);
+                    if (selectedChat.autonomous_attendance_status === 'active') {
+                      void handleDeactivateAutonomousAttendance(selectedChat);
+                    } else {
+                      void handleActivateAutonomousAttendance(selectedChat);
+                    }
+                  }}
+                  disabled={assumingControlChatId === selectedChat.id}
+                  className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
+                >
+                  {assumingControlChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bot className="h-4 w-4 shrink-0" />}
+                  <span>{selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  setChatFilesOpen(true);
+                }}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+              >
+                <FolderOpen className="h-4 w-4 shrink-0" />
+                <span>Arquivos da conversa</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  handleToggleChatMessageSearch();
+                }}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                <span>Pesquisar neste chat</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  void handleCopyChatTranscript();
+                }}
+                disabled={copyingTranscript}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
+              >
+                {copyingTranscript ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Copy className="h-4 w-4 shrink-0" />}
+                <span>Copiar conversa formatada</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  void handleRecoverChatHistory();
+                }}
+                disabled={Boolean(historyRecoveryDisabledReason)}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
+                title={historyRecoveryDisabledReason ?? undefined}
+              >
+                {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
+                <span>Recuperar histórico antigo</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  handleOpenFollowUpModal();
+                }}
+                disabled={Boolean(followUpGenerationDisabledReason)}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
+                title={followUpGenerationDisabledReason ?? undefined}
+              >
+                {generatingFollowUp ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
+                <span>Gerar follow-up com IA</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  handleOpenLeadDrawer();
+                }}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+              >
+                <Info className="h-4 w-4 shrink-0" />
+                <span>{selectedChat.lead_id ? 'Informações do lead' : 'Vincular lead do CRM'}</span>
               </button>
             </div>
           ) : null}

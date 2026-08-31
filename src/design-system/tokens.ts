@@ -1,5 +1,10 @@
 import { cx } from '../lib/cx';
 
+export const KIFER_THEME_COLORS = {
+  darkCanvas: '#16110c',
+  lightCanvas: '#f4f0e7',
+} as const;
+
 export type PanelButtonVariant =
   | 'primary'
   | 'secondary'

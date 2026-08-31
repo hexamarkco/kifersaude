@@ -13,6 +13,7 @@ import {
   buildStyleProfileText,
   STYLE_SAMPLE_LIMIT,
 } from '../_shared/comm-whatsapp-transcript.ts';
+import { COMMERCIAL_THREAD_RULE } from '../_shared/comm-whatsapp-follow-up-commercial-thread.ts';
 
 declare const Deno: {
   env: {
@@ -1042,7 +1043,7 @@ const loadLeadContext = async (
 
 const CORE_STRATEGY_RULES = [
   'Voce e responsavel por decidir e escrever o proximo follow-up de vendas mais eficaz para fazer esta oportunidade comercial avancar pelo WhatsApp.',
-  'Antes de escrever qualquer mensagem, raciocine internamente (nao precisa mostrar esse raciocinio, so aplica-lo) respondendo: 1) em que estagio da venda este lead esta? 2) o que ele realmente quer? 3) o que ja sabemos sobre ele e a negociacao? 4) o que ainda precisamos descobrir? 5) qual e o principal bloqueio atual? 6) existem sinais de compra? 7) qual foi a ultima microdecisao solicitada a ele? 8) ele executou essa acao? 9) ja houve follow-up tentando provocar exatamente a mesma acao, sem resposta? 10) qual e a proxima microdecisao mais adequada agora? 11) qual funcao comercial esta nova mensagem precisa cumprir?',
+  'Antes de escrever qualquer mensagem, raciocine internamente (nao precisa mostrar esse raciocinio, so aplica-lo) respondendo: 1) qual e o ultimo fio comercial ainda nao resolvido? 2) em que estagio da venda este lead esta? 3) o que ele realmente quer? 4) o que ja sabemos sobre ele e a negociacao? 5) o que ainda precisamos descobrir? 6) qual e o principal bloqueio atual? 7) existem sinais de compra? 8) qual foi a ultima microdecisao solicitada a ele? 9) ele executou essa acao? 10) ja houve follow-up tentando provocar exatamente a mesma acao, sem resposta? 11) qual e a proxima microdecisao mais adequada agora? 12) qual funcao comercial esta nova mensagem precisa cumprir?',
   'PRINCIPIO CENTRAL: toda mensagem de follow-up precisa ter uma funcao comercial clara. Nunca gere uma mensagem apenas para "manter contato" ou por habito de cadencia.',
   'A pergunta que guia a mensagem e sempre: qual e o melhor proximo movimento para aumentar a chance desta venda avancar?',
 ].join('\n');
@@ -1109,7 +1110,7 @@ const MULTI_MESSAGE_MECHANISM_NOTE = 'MECANISMO DO SISTEMA: uma linha contendo A
 
 const MESSAGE_SPLITTING_INSTRUCTION = 'DIVISAO EM MENSAGENS: sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer uma pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas em sequencia usando o separador "---", como uma pessoa real digitando mensagens separadas em vez de um unico bloco longo. So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta. Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?';
 
-const GUIDELINE_FRAMING_INSTRUCTION = 'COMO DECIDIR (nesta ordem): 1) interprete o que realmente aconteceu na conversa e o historico completo; 2) entenda o momento (fatos temporais acima); 3) entenda a pessoa (contexto humano/emocional acima); 4) identifique o estagio, o bloqueio e a ultima microdecisao pedida (regras acima); 5) defina qual funcao comercial esta mensagem precisa cumprir agora; 6) so entao escreva a mensagem mais adequada para cumprir essa funcao.';
+const GUIDELINE_FRAMING_INSTRUCTION = 'COMO DECIDIR (nesta ordem): 1) interprete o que realmente aconteceu na conversa e o historico completo; 2) reconstrua o ultimo fio comercial ainda nao resolvido, sem confundi-lo com a ultima mensagem cronologica; 3) entenda o momento (fatos temporais acima); 4) entenda a pessoa (contexto humano/emocional acima); 5) identifique o estagio, o bloqueio e a ultima microdecisao pedida; 6) defina qual funcao comercial esta mensagem precisa cumprir agora; 7) so entao escreva a mensagem mais adequada para cumprir essa funcao.';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -1306,7 +1307,7 @@ Deno.serve(async (req: Request) => {
     // nucleares — ele so complementa personalidade/atendimento/linguagem.
     const baseIdentityBlock = [
       `Voce gera follow-ups de WhatsApp para a operacao ${companyName}.`,
-      'Cada mensagem deve ser contextualizada no historico real do chat: retome o ultimo assunto tratado, use os detalhes especificos da conversa e evite frases que sirvam para qualquer lead.',
+      'Cada mensagem deve ser contextualizada no historico real do chat: recupere o ultimo fio comercial ainda nao resolvido quando ele for mais relevante que o ultimo assunto cronologico, use os detalhes especificos da conversa e evite frases que sirvam para qualquer lead.',
       'A mensagem precisa soar como uma continuacao natural do ultimo contato, nao como um template pre-definido.',
     ].join('\n');
 
@@ -1366,6 +1367,7 @@ Deno.serve(async (req: Request) => {
           STYLE_RULE,
           DEFAULT_CONDUCT_RULES,
           ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao — use apenas o padrao de tom e estrutura; se algum exemplo real usar abreviacoes como "pra"/"pro" ou contrariar as regras de estilo obrigatorias acima, ignore esse detalhe e mantenha as regras obrigatorias):', styleProfileText].join('\n'),
+          COMMERCIAL_THREAD_RULE,
           NO_REPEAT_STRATEGY_RULE,
           NOT_A_COLLECTION_CALL_RULE,
           OBJECTION_READING_RULE,
@@ -1387,6 +1389,7 @@ Deno.serve(async (req: Request) => {
           STYLE_RULE,
           DEFAULT_CONDUCT_RULES,
           ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao — use apenas o padrao de tom e estrutura; se algum exemplo real usar abreviacoes como "pra"/"pro" ou contrariar as regras de estilo obrigatorias acima, ignore esse detalhe e mantenha as regras obrigatorias):', styleProfileText].join('\n'),
+          COMMERCIAL_THREAD_RULE,
           NO_REPEAT_STRATEGY_RULE,
           STAGE_AWARENESS_RULE,
           NOT_A_COLLECTION_CALL_RULE,

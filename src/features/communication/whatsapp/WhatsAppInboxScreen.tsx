@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -3280,6 +3280,7 @@ export default function WhatsAppInboxScreen() {
   const [archivedChatsHasMore, setArchivedChatsHasMore] = useState(false);
   const [archivedChatsPage, setArchivedChatsPage] = useState(0);
   const [updatingChatStateId, setUpdatingChatStateId] = useState<string | null>(null);
+  const [assumingControlChatId, setAssumingControlChatId] = useState<string | null>(null);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [quickReplyIntegration, setQuickReplyIntegration] = useState<IntegrationSetting | null>(null);
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
@@ -9022,6 +9023,24 @@ export default function WhatsAppInboxScreen() {
     }
   }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);
 
+  const handleAssumeManualControl = useCallback(async (chat: CommWhatsAppChat) => {
+    if (assumingControlChatId) {
+      return;
+    }
+
+    setAssumingControlChatId(chat.id);
+    try {
+      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'handed_off');
+      upsertChatLocally(updatedChat);
+      toast.success('Você assumiu o controle desta conversa — a IA não responde mais aqui.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao assumir controle do atendimento autonomo', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível assumir o controle desta conversa.');
+    } finally {
+      setAssumingControlChatId((current) => (current === chat.id ? null : current));
+    }
+  }, [assumingControlChatId, upsertChatLocally]);
+
   const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
     if (deletingChatId) {
       return;
@@ -9855,6 +9874,15 @@ export default function WhatsAppInboxScreen() {
                         Auto
                       </Badge>
                     ) : null}
+                    {selectedChat.autonomous_attendance_status === 'active' ? (
+                      <Badge tone="warning" size="xs" icon={Bot} className="uppercase tracking-[0.12em]">
+                        IA atendendo
+                      </Badge>
+                    ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
+                      <Badge tone="neutral" size="xs" icon={Bot} className="uppercase tracking-[0.12em]">
+                        IA encerrada
+                      </Badge>
+                    ) : null}
                   </div>
                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
@@ -9908,6 +9936,19 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
+                  {selectedChat.autonomous_attendance_status === 'active' ? (
+                    <Button
+                      type="button"
+                      onClick={() => void handleAssumeManualControl(selectedChat)}
+                      variant="secondary"
+                      size="sm"
+                      loading={assumingControlChatId === selectedChat.id}
+                      title="Encerra o atendimento autônomo da IA neste chat — a partir daí é você quem responde."
+                    >
+                      <Bot className="h-4 w-4" />
+                      Assumir controle
+                    </Button>
+                  ) : null}
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       type="button"

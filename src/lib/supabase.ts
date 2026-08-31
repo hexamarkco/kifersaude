@@ -657,6 +657,7 @@ export type CommWhatsAppChat = {
   last_message_delivery_status?: string | null;
   unread_count: number;
   status: 'open' | 'pending' | 'closed';
+  autonomous_attendance_status: 'inactive' | 'active' | 'handed_off';
   last_read_at?: string | null;
   deleted_at?: string | null;
   created_at: string;

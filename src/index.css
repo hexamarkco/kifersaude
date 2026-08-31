@@ -579,10 +579,15 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-shell {
+  min-width: 0;
   font-family: var(--font-sans);
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 26%),
     radial-gradient(circle at bottom right, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent 28%);
+}
+
+.painel-theme .whatsapp-inbox-shell * {
+  min-width: 0;
 }
 
 .painel-theme .whatsapp-inbox-shell :is(button, input, textarea, select, option) {
@@ -591,10 +596,12 @@ html,
 
 .painel-theme .whatsapp-inbox-heading {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .painel-theme .whatsapp-inbox-panel {
+  min-width: 0;
+  overflow: hidden;
   border-color: var(--border-subtle);
   background: var(--surface-bg);
   box-shadow: var(--shadow-card);
@@ -625,6 +632,7 @@ html,
 .painel-theme .whatsapp-inbox-status-pill {
   display: inline-flex;
   min-height: 1.9rem;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
@@ -633,7 +641,8 @@ html,
   padding: 0.3rem var(--space-3);
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .painel-theme .whatsapp-inbox-status-pill-dot {
@@ -701,6 +710,14 @@ html,
 
 .painel-theme .whatsapp-inbox-thread-header {
   background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--app-surface-inset) 100%);
+}
+
+.painel-theme .whatsapp-inbox-thread-actions {
+  max-width: 100%;
+}
+
+.painel-theme .whatsapp-inbox-thread-actions > * {
+  flex: 0 0 auto;
 }
 
 .painel-theme .whatsapp-inbox-messages {
@@ -774,6 +791,7 @@ html,
 
 .painel-theme .whatsapp-inbox-audio-native-card {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: var(--space-3);
   border: 0;
@@ -809,9 +827,11 @@ html,
 .painel-theme .whatsapp-inbox-audio-native-waveform,
 .painel-theme .whatsapp-inbox-waveform {
   display: flex;
+  min-width: 0;
   min-height: 1.5rem;
   align-items: center;
   gap: 0.15rem;
+  overflow: hidden;
 }
 
 .painel-theme :is(.whatsapp-inbox-audio-native-waveform-bar, .whatsapp-inbox-waveform-bar) {
@@ -1183,6 +1203,85 @@ html,
 
 .whatsapp-inbox-media-viewer-thumb.is-active {
   border-color: var(--success);
+}
+
+@media (max-width: 1279px) {
+  .painel-theme .whatsapp-inbox-thread-header {
+    gap: 0.75rem;
+  }
+
+  .painel-theme .whatsapp-inbox-thread-actions {
+    align-self: stretch;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.75rem;
+  }
+
+  .painel-theme .whatsapp-inbox-messages {
+    padding-inline: clamp(0.75rem, 3.5vw, 1.25rem);
+    padding-block: 0.875rem;
+  }
+
+  .painel-theme .whatsapp-inbox-thread .message-bubble-row > .relative {
+    max-width: min(92%, 38rem) !important;
+  }
+
+  .painel-theme .whatsapp-inbox-composer-area {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .painel-theme .whatsapp-inbox-shell {
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .painel-theme .whatsapp-inbox-status-banner {
+    margin: 0.75rem;
+    margin-bottom: 0;
+  }
+
+  .painel-theme .whatsapp-inbox-sidebar,
+  .painel-theme .whatsapp-inbox-thread {
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .painel-theme .whatsapp-inbox-sidebar-header {
+    padding: 0.875rem;
+  }
+
+  .painel-theme .whatsapp-inbox-thread-header {
+    padding: 0.75rem;
+  }
+
+  .painel-theme .whatsapp-inbox-thread-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(2.5rem, max-content));
+    justify-content: start;
+    gap: 0.5rem;
+  }
+
+  .painel-theme .whatsapp-inbox-thread .message-bubble-row > .relative {
+    max-width: 94% !important;
+  }
+
+  .painel-theme .whatsapp-inbox-thread .message-bubble {
+    overflow-wrap: anywhere;
+  }
+
+  .painel-theme .whatsapp-inbox-chat-card {
+    box-shadow: none;
+  }
+
+  .painel-theme .whatsapp-inbox-composer {
+    border-radius: var(--radius-xl);
+  }
+
+  .painel-theme .whatsapp-inbox-composer-input {
+    max-height: min(7rem, 26dvh);
+  }
 }
 
 @keyframes whatsapp-waveform-pulse {

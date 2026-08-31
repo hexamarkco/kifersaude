@@ -36,6 +36,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Toolbar,
+  ToolbarActions,
+  ToolbarSearch,
   Tooltip,
   type PanelTone,
 } from "../../design-system";
@@ -629,8 +632,8 @@ export default function ContractsManager({
         </PageHeader>
 
         <Surface className="space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="none" className="kds-op-toolbar">
-            <div className="kds-op-toolbar-search relative">
+          <Toolbar>
+            <ToolbarSearch className="relative">
               <Input
                 type="text"
                 leftIcon={Search}
@@ -638,8 +641,8 @@ export default function ContractsManager({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            <div className="kds-op-toolbar-actions">
+            </ToolbarSearch>
+            <ToolbarActions>
               <Button
                 type="button"
                 onClick={resetFilters}
@@ -651,8 +654,8 @@ export default function ContractsManager({
                 Limpar
               </Button>
               <OperationalMetricChip value={filteredContracts.length} label="contratos" />
-            </div>
-          </Surface>
+            </ToolbarActions>
+          </Toolbar>
 
           <div>
             <p className="kds-op-section-label mb-3">Filtros principais</p>

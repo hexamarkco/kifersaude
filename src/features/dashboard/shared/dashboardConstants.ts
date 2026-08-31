@@ -1,4 +1,4 @@
-import type { TabItem } from '../../../components/ui/Tabs';
+import type { TabItem } from '../../../design-system';
 import type { DashboardChartDatum, DashboardMetric } from './dashboardTypes';
 
 export const DASHBOARD_METRIC_TABS: TabItem<DashboardMetric>[] = [
@@ -19,14 +19,14 @@ export const DASHBOARD_CHART_RANGE_OPTIONS = [
 ] as const;
 
 export const DASHBOARD_CHART_PALETTE = [
-  'var(--brand-primary)',
-  '#d97b3f',
-  '#c68a4e',
-  '#b3985e',
-  '#9ca36d',
-  '#8a9e6f',
-  '#5f8f5c',
-  '#4a7a52',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--chart-6)',
+  'var(--chart-7)',
+  'var(--chart-8)',
 ] as const;
 
 export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {

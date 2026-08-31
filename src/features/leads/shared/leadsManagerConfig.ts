@@ -1,6 +1,6 @@
 import { LayoutGrid, List } from "lucide-react";
 
-import type { TabItem } from "../../../components/ui/Tabs";
+import type { TabItem } from "../../../design-system";
 import type {
   LeadsSortField,
   LeadsViewMode,

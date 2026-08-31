@@ -385,7 +385,7 @@ export default function WhatsAppCampaignDetailScreen() {
           <div className="flex flex-wrap items-center gap-2">
             {campaign && (
               <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--panel-text-muted)]">
-                <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-[color:var(--panel-text-muted)]'}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-[color:var(--success)] animate-pulse' : 'bg-[color:var(--panel-text-muted)]'}`} />
                 {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
               </span>
             )}

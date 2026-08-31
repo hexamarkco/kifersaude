@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 
-import { Input, Popover, PopoverContent, PopoverTrigger, type PanelInputSize } from '../design-system';
+import { FilterTrigger, Input, Popover, PopoverContent, PopoverTrigger, type PanelInputSize } from '../design-system';
 import { cx } from '../lib/cx';
 
 type Option = { value: string; label: string };
@@ -52,22 +52,6 @@ export default function FilterSingleSelect({
   const isNeutral = !selected || selected.value === '' || neutralValues.includes(selected.value);
   const displayLabel = selected?.label ?? placeholder;
 
-  const triggerSizeClasses: Record<PanelInputSize, string> = {
-    compact: 'h-8 px-8 text-xs',
-    default: 'h-10 px-9 text-sm',
-    large: 'h-12 px-10 text-base',
-  };
-  const iconSizeClasses: Record<PanelInputSize, string> = {
-    compact: 'left-2 h-3 w-3',
-    default: 'left-3 h-4 w-4',
-    large: 'left-3.5 h-5 w-5',
-  };
-  const chevronSizeClasses: Record<PanelInputSize, string> = {
-    compact: 'right-2 h-3 w-3',
-    default: 'right-3 h-4 w-4',
-    large: 'right-3.5 h-5 w-5',
-  };
-
   useEffect(() => {
     if (!isOpen) return;
     const selectedIndex = filteredOptions.findIndex((option) => option.value === value);
@@ -102,19 +86,23 @@ export default function FilterSingleSelect({
 
   return <Popover open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setSearchTerm(''); }}>
     <PopoverTrigger className="block">
-      <button type="button" disabled={disabled} title={displayLabel} onKeyDown={(event) => {
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault();
-          setIsOpen(true);
-          setActiveIndex(event.key === 'ArrowUp' ? Math.max(0, filteredOptions.length - 1) : 0);
-        }
-      }} className={cx('kds-select panel-ui-input relative w-full text-left', triggerSizeClasses[size])} aria-haspopup="listbox" aria-expanded={isOpen}>
-        <Icon className={cx('absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)]', iconSizeClasses[size])} aria-hidden="true" />
-        <span className={cx('block truncate whitespace-nowrap pr-5', isNeutral ? 'text-[var(--text-secondary)]' : 'font-medium text-[var(--text-primary)]')}>
-          {displayLabel}
-        </span>
-        <ChevronDown className={cx('absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-transform', chevronSizeClasses[size], isOpen && 'rotate-180')} aria-hidden="true" />
-      </button>
+      <FilterTrigger
+        icon={Icon}
+        value={displayLabel}
+        active={!isNeutral}
+        open={isOpen}
+        size={size}
+        disabled={disabled}
+        title={displayLabel}
+        aria-haspopup="listbox"
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            setIsOpen(true);
+            setActiveIndex(event.key === 'ArrowUp' ? Math.max(0, filteredOptions.length - 1) : 0);
+          }
+        }}
+      />
     </PopoverTrigger>
     <PopoverContent className="w-[min(20rem,calc(100vw-1rem))] p-1" role="listbox" aria-label={placeholder}>
       {searchable && <div className="border-b border-[var(--border-subtle)] p-2"><Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={searchPlaceholder} autoFocus /></div>}

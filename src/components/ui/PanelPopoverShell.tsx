@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { forwardRef, useEffect, type AriaRole, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cx } from '../../lib/cx';
@@ -16,12 +16,13 @@ type PanelPopoverShellProps = {
   children: ReactNode;
   onClose?: () => void;
   ariaLabel?: string;
+  role?: AriaRole;
   className?: string;
   style?: CSSProperties;
 };
 
 const PanelPopoverShell = forwardRef<HTMLDivElement, PanelPopoverShellProps>(function PanelPopoverShell(
-  { isOpen, position, children, onClose, ariaLabel, className, style },
+  { isOpen, position, children, onClose, ariaLabel, role = 'dialog', className, style },
   ref,
 ) {
   const portalTarget = typeof document === 'undefined' ? null : document.body;
@@ -56,10 +57,10 @@ const PanelPopoverShell = forwardRef<HTMLDivElement, PanelPopoverShellProps>(fun
     <div className={themeScopeClassName}>
       <div
         ref={ref}
-        role="dialog"
+        role={role}
         aria-label={ariaLabel}
         className={cx(
-          'panel-glass-panel fixed z-[120] flex flex-col overflow-hidden rounded-2xl border shadow-xl',
+          'kds-popover panel-glass-panel fixed z-[120] flex flex-col overflow-hidden',
           className,
         )}
         style={{

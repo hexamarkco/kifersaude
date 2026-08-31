@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
 
-import { Button, Checkbox, Popover, PopoverContent, PopoverTrigger, type PanelInputSize } from '../design-system';
-import { cx } from '../lib/cx';
+import { Button, Checkbox, FilterTrigger, Popover, PopoverContent, PopoverTrigger, type PanelInputSize } from '../design-system';
 
 type Option = { value: string; label: string };
 
@@ -34,38 +32,14 @@ export default function FilterMultiSelect({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger className="block">
-        <button
-          type="button"
-          className={cx(
-            'kds-select panel-ui-input relative w-full text-left',
-            size === 'compact' && 'h-8 px-8 text-xs',
-            size === 'default' && 'h-10 px-9 text-sm',
-            size === 'large' && 'h-12 px-10 text-base',
-          )}
+        <FilterTrigger
+          icon={Icon}
+          value={displayText}
+          active={values.length > 0}
+          open={isOpen}
+          size={size}
           aria-haspopup="listbox"
-          aria-expanded={isOpen}
-        >
-          <Icon
-            className={cx(
-              'absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)]',
-              size === 'compact' && 'left-2 h-3 w-3',
-              size === 'default' && 'left-3 h-4 w-4',
-              size === 'large' && 'left-3.5 h-5 w-5',
-            )}
-            aria-hidden="true"
-          />
-          <span className={values.length ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}>{displayText}</span>
-          <ChevronDown
-            className={cx(
-              'absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-transform',
-              size === 'compact' && 'right-2 h-3 w-3',
-              size === 'default' && 'right-3 h-4 w-4',
-              size === 'large' && 'right-3.5 h-5 w-5',
-              isOpen && 'rotate-180',
-            )}
-            aria-hidden="true"
-          />
-        </button>
+        />
       </PopoverTrigger>
       <PopoverContent className="w-[min(18rem,calc(100vw-1rem))] p-2" role="listbox" aria-label={placeholder}>
         <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])} className="w-full justify-start">Limpar selecao</Button>

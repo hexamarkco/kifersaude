@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
-import { Button, DateTimePicker, Field, Popover, PopoverContent, PopoverTrigger } from '../design-system';
+import { Button, DateTimePicker, Field, FilterTrigger, Popover, PopoverContent, PopoverTrigger } from '../design-system';
 
 export type FilterDateRangeProps = {
   icon: LucideIcon;
@@ -70,36 +69,14 @@ export default function FilterDateRange({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger className="block">
-        <button
-          type="button"
-          className="kds-select panel-ui-input relative h-10 w-full px-9 text-left text-sm"
+        <FilterTrigger
+          icon={Icon}
+          leadingLabel={label}
+          value={displayValue}
+          active={hasActiveFilter}
+          open={isOpen}
           aria-haspopup="dialog"
-          aria-expanded={isOpen}
-        >
-          <Icon
-            className={cx(
-              'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2',
-              'text-[var(--text-muted)]',
-            )}
-          />
-          <span
-            className={cx(
-              'block truncate',
-              hasActiveFilter
-                ? 'text-[var(--text-primary)]'
-                : 'text-[var(--text-secondary)]',
-            )}
-          >
-            {label}: {displayValue}
-          </span>
-          <ChevronDown
-            className={cx(
-              'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
-              'text-[var(--text-muted)]',
-              isOpen && 'rotate-180',
-            )}
-          />
-        </button>
+        />
       </PopoverTrigger>
 
       <PopoverContent

@@ -1,5 +1,7 @@
 export { default as Alert } from './components/Alert';
 export type { AlertProps, AlertTone } from './components/Alert';
+export { PageContainer, PageSection, Toolbar, ToolbarActions, ToolbarSearch } from './components/Application';
+export type { PageContainerProps, PageContainerSize, PageContainerSpacing, PageSectionProps, ToolbarActionsProps, ToolbarProps, ToolbarSearchProps } from './components/Application';
 export { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './components/Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItemProps, BreadcrumbLinkProps, BreadcrumbSeparatorProps } from './components/Breadcrumb';
 export { default as Badge } from './components/Badge';
@@ -34,6 +36,8 @@ export {
 export type { DialogProps, DialogSize, DialogBodyProps, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogTitleProps } from './components/Dialog';
 export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
+export { default as FilterTrigger } from './components/FilterTrigger';
+export type { FilterTriggerProps } from './components/FilterTrigger';
 export { Drawer, DrawerBody, DrawerFooter, DrawerHeader } from './components/Drawer';
 export type { DrawerProps, DrawerSide, DrawerBodyProps, DrawerFooterProps, DrawerHeaderProps } from './components/Drawer';
 export { default as DateTimePicker } from './components/DateTimePicker';

@@ -60,6 +60,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Toolbar,
+  ToolbarActions,
+  ToolbarSearch,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
@@ -1507,8 +1510,8 @@ export default function LeadsManager({
           onCreateLead={handleCreateLead}
         />
         <Surface className="space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="none" className="kds-op-toolbar">
-            <div className="kds-op-toolbar-search relative">
+          <Toolbar>
+            <ToolbarSearch className="relative">
               <Input
                 type="text"
                 leftIcon={Search}
@@ -1516,8 +1519,8 @@ export default function LeadsManager({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            <div className="kds-op-toolbar-actions">
+            </ToolbarSearch>
+            <ToolbarActions>
               <Button
                 type="button"
                 onClick={resetFilters}
@@ -1549,8 +1552,8 @@ export default function LeadsManager({
                 Página
               </Button>
               <OperationalMetricChip value={filteredLeads.length} label="leads" />
-            </div>
-          </Surface>
+            </ToolbarActions>
+          </Toolbar>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -1,7 +1,7 @@
 import { Clock, Filter, RefreshCw, Target, Users } from 'lucide-react';
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import { Badge, Button, Input, PageHeader } from '../../../design-system';
+import { Button, Input, OperationalMetricChip, PageHeader } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
 
@@ -136,10 +136,10 @@ export function DashboardHeader({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Badge tone="neutral" size="sm" className="min-h-10 justify-center gap-2 rounded-[var(--radius-lg)] normal-case tracking-normal">
-            <Clock className="h-4 w-4 text-[var(--brand-primary)]" />
-            <span>{lastUpdatedLabel || 'Aguardando atualizacao...'}</span>
-          </Badge>
+          <OperationalMetricChip
+            icon={<Clock className="h-3.5 w-3.5" />}
+            value={lastUpdatedLabel || 'Aguardando atualizacao...'}
+          />
 
           <Button type="button" onClick={onRefresh} disabled={loading} size="md" className="w-full sm:w-auto">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

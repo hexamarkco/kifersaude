@@ -1,6 +1,6 @@
 import { BookOpen, Clock3, Filter, LayoutList, Plus, RefreshCw, Users } from "lucide-react";
 
-import { Button, OperationalMetricChip, PageHeader, getPanelButtonClass } from "../../../design-system";
+import { Button, OperationalMetricChip, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
@@ -56,27 +56,15 @@ export function LeadsHeader({
     >
       <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
-            {VIEW_MODE_TABS.map((tab) => {
-              const isActive = tab.id === viewMode;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onViewModeChange(tab.id)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors sm:flex-initial ${
-                    isActive
-                      ? "bg-[var(--text-primary)] text-[var(--text-inverse)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {Icon ? <Icon className="h-4 w-4" aria-hidden="true" /> : null}
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+          <Tabs
+            items={VIEW_MODE_TABS}
+            value={viewMode}
+            onChange={onViewModeChange}
+            variant="pill"
+            size="sm"
+            listClassName="w-full flex-nowrap sm:w-auto"
+            triggerClassName="flex-1 sm:flex-initial"
+          />
 
           <OperationalMetricChip
             icon={<Clock3 className="h-3.5 w-3.5" />}

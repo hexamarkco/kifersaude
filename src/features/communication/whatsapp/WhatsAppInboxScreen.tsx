@@ -9648,8 +9648,8 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className="grid h-full min-h-0 flex-1 gap-0 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar h-full min-h-0 flex-col border shadow-sm xl:flex xl:rounded-r-none xl:border-r ${selectedChat ? 'hidden' : 'flex'}`}>
+        <section className="grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-r-none lg:border-r ${selectedChat ? 'hidden lg:flex' : 'flex'}`}>
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
@@ -9898,7 +9898,7 @@ export default function WhatsAppInboxScreen() {
         </div>
 
         <div
-          className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm xl:flex xl:rounded-l-none xl:border-l-0 ${selectedChat ? 'flex' : 'hidden xl:flex'}`}
+          className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-l-none lg:border-l-0 ${selectedChat ? 'flex' : 'hidden lg:flex'}`}
           onDragEnter={handleThreadDragEnter}
           onDragOver={handleThreadDragOver}
           onDragLeave={handleThreadDragLeave}
@@ -9919,19 +9919,19 @@ export default function WhatsAppInboxScreen() {
               </div>
           ) : (
             <>
-              <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
-                <div className="flex items-start gap-2">
+              <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 xl:flex-row xl:items-start xl:justify-between xl:p-5">
+                <div className="flex min-w-0 items-start gap-2">
                   <button
                     type="button"
                     onClick={() => setSelectedChatId(null)}
-                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] xl:hidden"
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] lg:hidden"
                     aria-label="Voltar para a lista de conversas"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="whatsapp-inbox-heading flex items-center gap-1.5 text-lg font-semibold text-[var(--text-primary)]">
+                  <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
                       {leadPanel?.id ? (
                         <LeadFavoriteToggle
                           leadId={leadPanel.id}
@@ -9939,7 +9939,7 @@ export default function WhatsAppInboxScreen() {
                           size="sm"
                         />
                       ) : null}
-                      {selectedChatDisplayName}
+                      <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
                     </p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                       <StatusDropdown
@@ -9966,8 +9966,8 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     ) : null}
                   </div>
-                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
-                    <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
+                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
+                    <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
                     {!selectedChat.saved_contact_name ? (
                       <button
                         type="button"
@@ -9992,7 +9992,7 @@ export default function WhatsAppInboxScreen() {
                         Renomear contato
                       </button>
                     )}
-                    {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
+                    {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -10000,14 +10000,14 @@ export default function WhatsAppInboxScreen() {
                         tone={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete) ? 'danger' : 'neutral'}
                         icon={CalendarDays}
                       >
-                        <span className="max-w-[34rem] truncate">{nextChatReminderSummary}</span>
+                        <span className="min-w-0 max-w-full truncate">{nextChatReminderSummary}</span>
                       </Badge>
                     </div>
                   ) : null}
                   </div>
                 </div>
-                <div className="flex shrink-0 items-start gap-3">
-                  <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                <div className="flex min-w-0 flex-col gap-2 xl:shrink-0 xl:items-end">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-left xl:flex-col xl:items-end xl:text-right">
                     <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
                       <span className="whatsapp-inbox-status-pill-dot" aria-hidden="true" />
                       {connectionStatusLabel}
@@ -10018,7 +10018,7 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="whatsapp-inbox-thread-actions flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
                     {selectedChat.lead_id ? (
                       <Button
                         type="button"

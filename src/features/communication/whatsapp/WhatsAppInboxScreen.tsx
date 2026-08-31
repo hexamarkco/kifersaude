@@ -9990,41 +9990,56 @@ export default function WhatsAppInboxScreen() {
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
-                      {leadPanel?.id ? (
-                        <LeadFavoriteToggle
+                  <div className="flex min-w-0 items-start gap-2">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                      <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
+                        {leadPanel?.id ? (
+                          <LeadFavoriteToggle
+                            leadId={leadPanel.id}
+                            favorito={favoritedLeadIds.has(leadPanel.id)}
+                            size="sm"
+                          />
+                        ) : null}
+                        <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
+                      </p>
+                      {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
+                        <StatusDropdown
+                          currentStatus={leadPanel.status_nome}
                           leadId={leadPanel.id}
-                          favorito={favoritedLeadIds.has(leadPanel.id)}
-                          size="sm"
+                          onStatusChange={handleLeadStatusChange}
+                          statusOptions={leadStatuses}
                         />
                       ) : null}
-                      <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
-                    </p>
-                    {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
-                      <StatusDropdown
-                        currentStatus={leadPanel.status_nome}
-                        leadId={leadPanel.id}
-                        onStatusChange={handleLeadStatusChange}
-                        statusOptions={leadStatuses}
-                      />
-                    ) : null}
-                    {selectedChatWasAutoLinked ? (
-                      <Badge tone="primary" size="xs" className="uppercase tracking-[0.12em]">
-                        Auto
-                      </Badge>
-                    ) : null}
-                    {selectedChat.autonomous_attendance_status === 'active' ? (
-                      <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--accent-gold)' } as CSSProperties}>
-                        <Bot className="h-3 w-3" aria-hidden="true" />
-                        IA atendendo
-                      </span>
-                    ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
-                      <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--text-muted)' } as CSSProperties}>
-                        <Bot className="h-3 w-3" aria-hidden="true" />
-                        IA encerrada
-                      </span>
-                    ) : null}
+                      {selectedChatWasAutoLinked ? (
+                        <Badge tone="primary" size="xs" className="uppercase tracking-[0.12em]">
+                          Auto
+                        </Badge>
+                      ) : null}
+                      {selectedChat.autonomous_attendance_status === 'active' ? (
+                        <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--accent-gold)' } as CSSProperties}>
+                          <Bot className="h-3 w-3" aria-hidden="true" />
+                          IA atendendo
+                        </span>
+                      ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
+                        <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--text-muted)' } as CSSProperties}>
+                          <Bot className="h-3 w-3" aria-hidden="true" />
+                          IA encerrada
+                        </span>
+                      ) : null}
+                    </div>
+                    <Button
+                      ref={threadActionsMenuTriggerRef}
+                      type="button"
+                      onClick={() => setThreadActionsMenuOpen((current) => !current)}
+                      variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
+                      size="icon"
+                      className="h-9 w-9 shrink-0 lg:hidden"
+                      aria-label="Abrir ações da conversa"
+                      aria-expanded={threadActionsMenuOpen}
+                      title="Ações da conversa"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </div>
                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
                     <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
@@ -10066,32 +10081,8 @@ export default function WhatsAppInboxScreen() {
                   ) : null}
                   </div>
                 </div>
-                <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:shrink-0 lg:items-start">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-left lg:flex-col lg:items-end lg:text-right">
-                    <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
-                      <span className="whatsapp-inbox-status-pill-dot" aria-hidden="true" />
-                      {connectionStatusLabel}
-                    </span>
-                    {channelState?.last_webhook_received_at && (
-                      <span className="text-xs text-[var(--text-secondary)]">
-                        Webhook: {formatMessageTime(channelState.last_webhook_received_at)}
-                      </span>
-                    )}
-                  </div>
+                <div className="hidden min-w-0 shrink-0 items-start lg:flex lg:justify-end">
                   <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
-                    <Button
-                      ref={threadActionsMenuTriggerRef}
-                      type="button"
-                      onClick={() => setThreadActionsMenuOpen((current) => !current)}
-                      variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
-                      size="sm"
-                      className="lg:hidden"
-                      aria-label="Abrir ações da conversa"
-                      aria-expanded={threadActionsMenuOpen}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                      Ações
-                    </Button>
                     <div className="hidden shrink-0 items-center gap-2 lg:flex">
                     {selectedChat.lead_id ? (
                       <Button

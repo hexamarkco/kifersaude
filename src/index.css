@@ -629,42 +629,6 @@ html,
   color: var(--danger-text);
 }
 
-.painel-theme .whatsapp-inbox-status-pill {
-  display: inline-flex;
-  min-height: 1.9rem;
-  max-width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  padding: 0.3rem var(--space-3);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
-.painel-theme .whatsapp-inbox-status-pill-dot {
-  height: 0.45rem;
-  width: 0.45rem;
-  border-radius: var(--radius-full);
-  background: currentColor;
-  opacity: 0.9;
-}
-
-.painel-theme .whatsapp-inbox-status-pill-success {
-  border-color: var(--success-border);
-  background: var(--success-soft);
-  color: var(--success-text);
-}
-
-.painel-theme .whatsapp-inbox-status-pill-warning {
-  border-color: var(--warning-border);
-  background: var(--warning-soft);
-  color: var(--warning-text);
-}
-
 .painel-theme :is(.whatsapp-inbox-sidebar-header, .whatsapp-inbox-thread-header, .whatsapp-inbox-composer-area) {
   border-color: var(--border-subtle);
 }

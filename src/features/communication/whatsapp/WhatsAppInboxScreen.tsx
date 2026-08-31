@@ -9078,19 +9078,19 @@ export default function WhatsAppInboxScreen() {
     }
   }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);
 
-  const handleAssumeManualControl = useCallback(async (chat: CommWhatsAppChat) => {
+  const handleDeactivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
     if (assumingControlChatId) {
       return;
     }
 
     setAssumingControlChatId(chat.id);
     try {
-      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'handed_off');
+      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'inactive');
       upsertChatLocally(updatedChat);
-      toast.success('Você assumiu o controle desta conversa — a IA não responde mais aqui.');
+      toast.success('Atendimento autônomo desativado nesta conversa.');
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao assumir controle do atendimento autonomo', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível assumir o controle desta conversa.');
+      console.error('[WhatsAppInbox] erro ao desativar atendimento autonomo', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível desativar o atendimento autônomo desta conversa.');
     } finally {
       setAssumingControlChatId((current) => (current === chat.id ? null : current));
     }
@@ -10012,14 +10012,14 @@ export default function WhatsAppInboxScreen() {
                   {selectedChat.autonomous_attendance_status === 'active' ? (
                     <Button
                       type="button"
-                      onClick={() => void handleAssumeManualControl(selectedChat)}
+                      onClick={() => void handleDeactivateAutonomousAttendance(selectedChat)}
                       variant="secondary"
                       size="sm"
                       loading={assumingControlChatId === selectedChat.id}
-                      title="Encerra o atendimento autônomo da IA neste chat — a partir daí é você quem responde."
+                      title="Desativa o atendimento autônomo da IA neste chat."
                     >
-                      <Bot className="h-4 w-4" />
-                      Assumir controle
+                      <Pause className="h-4 w-4" />
+                      Desativar IA
                     </Button>
                   ) : selectedChat.lead_id ? (
                     <Button

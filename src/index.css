@@ -460,6 +460,23 @@ html,
   border-radius: var(--kds-radius-xl);
 }
 
+.comm-media-picker-mode-tabs {
+  flex-wrap: nowrap;
+}
+
+.comm-media-picker-mode-tabs.kds-tabs-list-pill .kds-tab {
+  min-width: max-content;
+  flex: 1 1 auto;
+  padding-inline: var(--space-3);
+  white-space: nowrap;
+}
+
+.comm-media-picker-mode-tabs .kds-tab > span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .comm-media-picker-shortcut,
 .comm-media-picker-modebar,
 .comm-media-picker-gif-card,
@@ -586,10 +603,6 @@ html,
     radial-gradient(circle at bottom right, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent 28%);
 }
 
-.painel-theme .whatsapp-inbox-shell * {
-  min-width: 0;
-}
-
 .painel-theme .whatsapp-inbox-shell :is(button, input, textarea, select, option) {
   font-family: inherit;
 }
@@ -667,8 +680,12 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-unread-badge {
+  flex: 0 0 auto;
+  min-width: 1.5rem;
   background: var(--brand-primary);
   color: var(--text-on-brand);
+  line-height: 1;
+  white-space: nowrap;
   box-shadow: var(--shadow-button);
 }
 
@@ -682,6 +699,34 @@ html,
 
 .painel-theme .whatsapp-inbox-thread-actions > * {
   flex: 0 0 auto;
+}
+
+.painel-theme :is(
+  .whatsapp-inbox-composer-icon,
+  .whatsapp-inbox-thread-actions button,
+  .whatsapp-inbox-thread-header button,
+  .whatsapp-inbox-attach-menu-icon,
+  .kds-op-status-badge
+) {
+  flex-shrink: 0;
+}
+
+.painel-theme .whatsapp-inbox-action-sheet {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: var(--kds-radius-xl) var(--kds-radius-xl) 0 0;
+  box-shadow: var(--shadow-modal);
+}
+
+.painel-theme .whatsapp-inbox-action-sheet .kds-dropdown-option {
+  min-height: 2.75rem;
+  border-radius: var(--kds-radius-md);
+  font-size: 0.875rem;
 }
 
 .painel-theme .whatsapp-inbox-messages {

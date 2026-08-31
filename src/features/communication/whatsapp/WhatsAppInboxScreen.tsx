@@ -3351,7 +3351,7 @@ export default function WhatsAppInboxScreen() {
   const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
   const [threadActionsMenuOpen, setThreadActionsMenuOpen] = useState(false);
-  const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number; placement?: 'popover' | 'sheet' } | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [removedAttachmentForUndo, setRemovedAttachmentForUndo] = useState<PendingAttachment | null>(null);
@@ -5527,6 +5527,24 @@ export default function WhatsAppInboxScreen() {
       }
 
       const viewportPadding = 12;
+      const isMobileSheet = window.innerWidth < 1024;
+      if (isMobileSheet) {
+        const width = window.innerWidth;
+        const maxHeight = Math.min(520, window.innerHeight - viewportPadding * 2);
+
+        setThreadActionsMenuPosition((current) => (
+          current
+          && current.top === 0
+          && current.left === 0
+          && current.width === width
+          && current.maxHeight === maxHeight
+          && current.placement === 'sheet'
+            ? current
+            : { top: 0, left: 0, width, maxHeight, placement: 'sheet' }
+        ));
+        return;
+      }
+
       const width = Math.min(288, window.innerWidth - viewportPadding * 2);
       const maxHeight = Math.min(420, window.innerHeight - viewportPadding * 2);
       const left = Math.min(
@@ -5544,8 +5562,9 @@ export default function WhatsAppInboxScreen() {
         && current.left === left
         && current.width === width
         && current.maxHeight === maxHeight
+        && current.placement === 'popover'
           ? current
-          : { top, left, width, maxHeight }
+          : { top, left, width, maxHeight, placement: 'popover' }
       ));
     };
 
@@ -10033,7 +10052,7 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => setThreadActionsMenuOpen((current) => !current)}
                       variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
                       size="icon"
-                      className="h-9 w-9 shrink-0 lg:hidden"
+                      className="h-9 w-9 min-w-9 shrink-0 lg:hidden"
                       aria-label="Abrir ações da conversa"
                       aria-expanded={threadActionsMenuOpen}
                       title="Ações da conversa"
@@ -11098,13 +11117,14 @@ export default function WhatsAppInboxScreen() {
                         >
                           <button
                             type="button"
-                            disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
-                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
-                            aria-label="Ações com IA"
+                            disabled={(Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)) || rewritingComposer}
+                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || rewritingComposer || replySuggestionText ? 'is-open' : ''}`}
+                            aria-label={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
                             aria-expanded={composerAiMenuOpen}
-                            title="Ações com IA"
+                            aria-busy={rewritingComposer || replySuggestionLoading}
+                            title={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
                           >
-                            {replySuggestionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                            {replySuggestionLoading || rewritingComposer ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                           </button>
                         </PopoverTrigger>
                         <PopoverContent
@@ -11896,11 +11916,41 @@ export default function WhatsAppInboxScreen() {
           onClose={() => setThreadActionsMenuOpen(false)}
           ariaLabel="Ações da conversa"
           role="menu"
-          className="kds-dropdown-menu before:hidden overflow-y-auto p-1"
-          style={{ width: threadActionsMenuPosition?.width ?? 288, maxHeight: threadActionsMenuPosition?.maxHeight }}
+          className={cx(
+            'before:hidden overflow-y-auto',
+            threadActionsMenuPosition?.placement === 'sheet'
+              ? 'whatsapp-inbox-action-sheet kds-dropdown-menu p-2'
+              : 'kds-dropdown-menu p-1',
+          )}
+          style={threadActionsMenuPosition?.placement === 'sheet'
+            ? {
+                top: 'auto',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                maxHeight: threadActionsMenuPosition?.maxHeight,
+              }
+            : { width: threadActionsMenuPosition?.width ?? 288, maxHeight: threadActionsMenuPosition?.maxHeight }}
         >
           {selectedChat ? (
             <div className="flex flex-col gap-1">
+              <div className="whatsapp-inbox-action-sheet-header px-3 pb-2 pt-1 lg:hidden">
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-strong)]" aria-hidden="true" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">Ações da conversa</p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">{selectedChatDisplayName}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setThreadActionsMenuOpen(false)}
+                    className="inline-flex h-9 w-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                    aria-label="Fechar ações da conversa"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
               {selectedChat.lead_id ? (
                 <button
                   type="button"

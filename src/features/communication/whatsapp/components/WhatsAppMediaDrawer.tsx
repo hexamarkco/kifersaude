@@ -683,6 +683,7 @@ export default function WhatsAppMediaDrawer({
         variant="pill"
         size="sm"
         className="mx-3 mb-3 mt-1"
+        listClassName="comm-media-picker-mode-tabs"
       />
 
       {!canSendMedia && mode !== 'emoji' ? (

@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
   Users,
@@ -134,6 +134,7 @@ export default function Layout({
     ease,
   } = usePanelMotion();
   const isSidebarCollapsed = isMenuCollapsed && !isMobileMenuOpen;
+  const sidebarOffset = isSidebarCollapsed ? '4rem' : '16rem';
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -1221,7 +1222,10 @@ export default function Layout({
         </div>
       )}
 
-      <div className={`terracota-content-shell relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}>
+      <div
+        className={`terracota-content-shell relative z-10 flex min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}
+        style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
+      >
         <main className={`terracota-main flex-1 min-h-0 ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}

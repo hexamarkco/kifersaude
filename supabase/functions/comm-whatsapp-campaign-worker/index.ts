@@ -86,6 +86,7 @@ type TargetRow = {
   locked_at: string | null;
   lock_token: string | null;
   sent_at: string | null;
+  responded_at: string | null;
   ab_variant: 'A' | 'B' | null;
 };
 
@@ -1011,10 +1012,31 @@ async function findInboundCampaignChat(
   return data as { id: string; last_message_at: string | null; last_message_direction: string | null } | null;
 }
 
+const shouldStopSequenceBeforeStep = (
+  step: Pick<CampaignStepRow, 'delay_amount'> | null,
+  targetStatus?: string | null,
+) => {
+  if (targetStatus === 'sent') return true;
+  if (!step) return true;
+  return Math.max(Number(step.delay_amount) || 0, 0) > 0;
+};
+
+async function getCachedCampaignSteps(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaign: CampaignRow,
+  cache: Map<string, CampaignStepRow[]>,
+) {
+  const cached = cache.get(campaign.id);
+  if (cached) return cached;
+  const steps = await getCampaignSteps(supabaseAdmin, campaign);
+  cache.set(campaign.id, steps);
+  return steps;
+}
+
 async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId?: string) {
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at')
+    .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at,status,current_step_index')
     .in('status', ['sent', 'scheduled'])
     .not('sent_at', 'is', null)
     .limit(500);
@@ -1030,6 +1052,8 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
 
   let responded = 0;
   const stopOnReplyByCampaign = new Map<string, boolean>();
+  const campaignById = new Map<string, CampaignRow>();
+  const stepsByCampaignId = new Map<string, CampaignStepRow[]>();
   for (const target of data ?? []) {
     const chat = await findInboundCampaignChat(supabaseAdmin, target as Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>);
 
@@ -1053,11 +1077,20 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     const nowIso = getNowIso();
     let stopOnReply = stopOnReplyByCampaign.get(target.campaign_id);
     if (stopOnReply === undefined) {
-      stopOnReply = (await getCampaign(supabaseAdmin, target.campaign_id)).stop_on_reply;
+      const campaign = await getCampaign(supabaseAdmin, target.campaign_id);
+      campaignById.set(target.campaign_id, campaign);
+      stopOnReply = campaign.stop_on_reply;
       stopOnReplyByCampaign.set(target.campaign_id, stopOnReply);
     }
 
-    const responseUpdate = stopOnReply
+    const campaign = campaignById.get(target.campaign_id) ?? await getCampaign(supabaseAdmin, target.campaign_id);
+    campaignById.set(target.campaign_id, campaign);
+    const steps = stopOnReply ? await getCachedCampaignSteps(supabaseAdmin, campaign, stepsByCampaignId) : [];
+    const currentStepIndex = Math.max(Number(target.current_step_index) || 0, 0);
+    const currentStep = steps.find((item) => item.step_index === currentStepIndex) ?? null;
+    const shouldStop = stopOnReply && shouldStopSequenceBeforeStep(currentStep, target.status);
+
+    const responseUpdate = shouldStop
       ? { status: 'responded', responded_at: chat.last_message_at || nowIso, chat_id: chat.id }
       : { responded_at: chat.last_message_at || nowIso, chat_id: chat.id };
     const { data: updatedTarget, error: updateTargetError } = await supabaseAdmin
@@ -1897,20 +1930,6 @@ async function sendTarget(params: {
     return { status: 'stopped', reason: 'opt_out' };
   }
 
-  if (campaign.stop_on_reply && target.sent_at) {
-    const replyChat = await findInboundCampaignChat(supabaseAdmin, target);
-    if (replyChat) {
-      await updateClaimedTarget(supabaseAdmin, target, {
-        status: 'responded',
-        responded_at: replyChat.last_message_at || nowIso,
-        chat_id: replyChat.id,
-        locked_at: null,
-        lock_token: null,
-      });
-      return { status: 'responded' };
-    }
-  }
-
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
 
   // Sorteia a variante A/B na primeira tentativa de envio do alvo e persiste,
@@ -1927,6 +1946,30 @@ async function sendTarget(params: {
   const step = steps.find((item) => item.step_index === currentStepIndex) ?? steps[currentStepIndex] ?? steps[0];
   const stepPosition = Math.max(steps.findIndex((item) => item.step_index === step.step_index), 0);
   const nextStep = steps[stepPosition + 1] ?? null;
+
+  if (campaign.stop_on_reply && target.sent_at) {
+    const replyChat = target.responded_at ? null : await findInboundCampaignChat(supabaseAdmin, target);
+    const respondedAt = target.responded_at || replyChat?.last_message_at || null;
+    if (respondedAt && shouldStopSequenceBeforeStep(step)) {
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'responded',
+        responded_at: respondedAt,
+        chat_id: replyChat?.id || target.chat_id,
+        locked_at: null,
+        lock_token: null,
+      });
+      return { status: 'responded' };
+    }
+
+    if (replyChat && !target.responded_at) {
+      await updateClaimedTarget(supabaseAdmin, target, {
+        responded_at: replyChat.last_message_at || nowIso,
+        chat_id: replyChat.id,
+      });
+      target.responded_at = replyChat.last_message_at || nowIso;
+      target.chat_id = replyChat.id;
+    }
+  }
 
   if (step.step_kind === 'status_change') {
     return applyCampaignStatusChangeStep({ supabaseAdmin, campaign, target, step, nextStep, nowIso });

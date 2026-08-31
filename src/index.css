@@ -1200,6 +1200,17 @@ html,
   box-shadow: none;
 }
 
+.terracota-content-shell {
+  width: calc(100vw - var(--terracota-sidebar-width, 16rem));
+  max-width: calc(100vw - var(--terracota-sidebar-width, 16rem));
+}
+
+.terracota-main,
+.terracota-panel-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .terracota-sidebar-popover {
   border-color: var(--border-default);
   background: var(--bg-surface);
@@ -1281,6 +1292,8 @@ html,
 
   .terracota-content-shell {
     margin-left: 0 !important;
+    width: 100vw;
+    max-width: 100vw;
   }
 }
 

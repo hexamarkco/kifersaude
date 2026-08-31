@@ -2707,9 +2707,9 @@ async function scheduleNextFlowStep({
   flow: AutoContactFlow;
   completedJob: any;
   scheduling: AutoContactSchedulingSettings;
-}): Promise<void> {
+}): Promise<Date | null> {
   const nextStep = flow.steps[completedJob.step_order + 1];
-  if (!nextStep) return;
+  if (!nextStep) return null;
 
   const { data: existing } = await supabase
     .from('auto_contact_flow_jobs')
@@ -2719,7 +2719,7 @@ async function scheduleNextFlowStep({
     .eq('step_order', completedJob.step_order + 1)
     .limit(1)
     .maybeSingle();
-  if (existing) return;
+  if (existing) return null;
 
   const effectiveScheduling: AutoContactSchedulingSettings = {
     ...scheduling,
@@ -2783,7 +2783,12 @@ async function scheduleNextFlowStep({
     scheduled_at: scheduledAt.toISOString(),
     status: 'pending',
   });
+
+  return scheduledAt;
 }
+
+const canContinueLeadCreatedAdministrativeStep = (flow: AutoContactFlow, job: any): boolean =>
+  flow.triggerType === 'lead_created' && job.action_type === 'activate_autonomous_service';
 
 async function cancelFlowJobs({
   supabase,
@@ -2815,15 +2820,18 @@ async function processFlowJobs({
   settings,
   logWithContext,
   leadId,
+  cascadeDepth = 0,
 }: {
   supabase: ReturnType<typeof createClient>;
   lookups: LeadLookupMaps;
   settings: AutoContactFlowSettings;
   logWithContext: (message: string, details?: Record<string, unknown>) => void;
   leadId?: string;
+  cascadeDepth?: number;
 }): Promise<void> {
   const flowDailyUsageCache = new Map<string, { count: number }>();
   const nowIso = new Date().toISOString();
+  const maxCascadeDepth = 5;
 
   // Self-healing: jobs stuck in 'processing' (edge function died mid-send) are
   // reset to pending so the lead is not blocked forever.
@@ -2944,12 +2952,13 @@ async function processFlowJobs({
         leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations);
       }
 
+      const canContinueAdministrativeStep = canContinueLeadCreatedAdministrativeStep(flow, job);
       if (
         shouldExitFlow(flow, leadWithRelations) ||
-        !matchesAutoContactFlow(flow, leadWithRelations, undefined, {
+        (!canContinueAdministrativeStep && !matchesAutoContactFlow(flow, leadWithRelations, undefined, {
           enforceTrigger: false,
           ignoreEventConditions: true,
-        })
+        }))
       ) {
         await supabase
           .from('auto_contact_flow_jobs')
@@ -3274,13 +3283,28 @@ async function processFlowJobs({
         .update({ status: 'completed', last_error: null })
         .eq('id', job.id);
 
-      await scheduleNextFlowStep({
+      const nextScheduledAt = await scheduleNextFlowStep({
         supabase,
         lead: leadWithRelations,
         flow,
         completedJob: job,
         scheduling: effectiveScheduling,
       });
+
+      if (
+        nextScheduledAt &&
+        nextScheduledAt.getTime() <= Date.now() &&
+        cascadeDepth < maxCascadeDepth
+      ) {
+        await processFlowJobs({
+          supabase,
+          lookups,
+          settings,
+          logWithContext,
+          leadId: lead.id,
+          cascadeDepth: cascadeDepth + 1,
+        });
+      }
 
       if (job.action_type === 'send_message' && flowDailyUsageCacheKey) {
         const cachedUsage = flowDailyUsageCache.get(flowDailyUsageCacheKey);
@@ -3380,6 +3404,14 @@ async function processFlowJobs({
         continue;
       }
 
+      if (job.action_type === 'activate_autonomous_service' && message.startsWith('autonomous_service_skipped:')) {
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'skipped', last_error: message.replace(/^autonomous_service_skipped:\s*/, '') })
+          .eq('id', job.id);
+        continue;
+      }
+
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'failed', last_error: message })
@@ -3441,6 +3473,28 @@ async function activateAutonomousServiceForLead({
   }
   if (!chatRoute.chatId) {
     throw new Error('Conversa do WhatsApp ainda nao existe para este lead.');
+  }
+
+  const leadCreatedAt = typeof lead?.created_at === 'string' ? lead.created_at : null;
+  if (!leadCreatedAt) {
+    throw new Error('autonomous_service_skipped: Atendimento autonomo nao ativado: lead sem data de criacao confiavel.');
+  }
+
+  const { data: previousMessages, error: previousMessagesError } = await supabase
+    .from('comm_whatsapp_messages')
+    .select('message_at,text_content,media_caption,message_type')
+    .eq('chat_id', chatRoute.chatId)
+    .lt('message_at', leadCreatedAt)
+    .order('message_at', { ascending: false })
+    .limit(50);
+
+  if (previousMessagesError) {
+    throw new Error(`Erro ao verificar historico do chat antes de ativar atendimento autonomo: ${previousMessagesError.message}`);
+  }
+
+  const hasVisiblePreviousHistory = (previousMessages ?? []).some((message) => isMessageVisible(message));
+  if (hasVisiblePreviousHistory) {
+    throw new Error('autonomous_service_skipped: Atendimento autonomo nao ativado: chat possui historico visivel anterior ao lead.');
   }
 
   const { error: updateError } = await supabase

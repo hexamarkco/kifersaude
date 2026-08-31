@@ -73,6 +73,7 @@ export const SYSTEM_PLAYBOOK = [
   'ESTILO:',
   '- Escreva como a Luiza escreveria de verdade no WhatsApp: mensagens curtas, diretas, sem parecer roteiro decorado.',
   '- Sem markdown, sem bullets, sem numeracao na sua resposta — texto corrido, como uma mensagem de WhatsApp normal.',
+  '- Nao use dois-pontos nem travessao no texto visivel para o lead. Esses sinais deixam a mensagem com cara de IA. Escreva de forma natural, com virgulas, pontos ou frases separadas. A unica excecao e a tag interna de handoff, quando ela for obrigatoria, porque essa tag nao aparece para o lead.',
 ].join('\n');
 
 export const buildStylePrompt = (styleMessages: MessageRow[]): string => {
@@ -209,6 +210,17 @@ export const extractHandoff = (
   return { text: text.slice(0, match.index).trim(), handoffCode, handoffNote };
 };
 
+export const normalizeLeadVisibleMessageStyle = (text: string): string =>
+  text
+    .replace(/(\d{1,2}):(\d{2})/g, '$1h$2')
+    .replace(/\s*[:：]\s*/g, ', ')
+    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/\s+([,.!?])/g, '$1')
+    .replace(/,\s*([!?])/g, '$1')
+    .replace(/,{2,}/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 /**
  * Recebe o texto bruto do modelo (que pode vir com o separador "---" no modo
  * abertura) e devolve as mensagens finais + o handoff extraido da ultima parte.
@@ -226,11 +238,11 @@ export const splitGeneratedReply = (
   let handoffCode: HandoffCode | null = null;
   let handoffNote: string | null = null;
   const messages = rawParts.map((part, index) => {
-    if (index !== rawParts.length - 1) return part;
+    if (index !== rawParts.length - 1) return normalizeLeadVisibleMessageStyle(part);
     const extracted = extractHandoff(part);
     handoffCode = extracted.handoffCode;
     handoffNote = extracted.handoffNote;
-    return extracted.text;
+    return normalizeLeadVisibleMessageStyle(extracted.text);
   }).filter(Boolean);
 
   return { messages, handoffCode, handoffNote };

@@ -381,7 +381,7 @@ export default function AiSandboxChatScreen() {
             </div>
           </div>
         ) : (
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6">
             <div className="mx-auto flex max-w-2xl flex-col gap-3">
               {messagesLoading ? (
                 <LoadingState compact label="Carregando conversa..." />
@@ -392,7 +392,7 @@ export default function AiSandboxChatScreen() {
                       className={`flex ${message.role === 'lead' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[75%] whitespace-pre-wrap rounded-[var(--radius-lg)] px-4 py-2.5 text-sm shadow-[var(--shadow-card)] ${
+                        className={`max-w-[92%] whitespace-pre-wrap rounded-[var(--radius-lg)] px-4 py-2.5 text-sm shadow-[var(--shadow-card)] sm:max-w-[75%] ${
                           message.role === 'lead'
                             ? 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]'
                             : 'border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
@@ -403,7 +403,7 @@ export default function AiSandboxChatScreen() {
                     </div>
                     {message.handoff_code && (
                       <div className="flex justify-start">
-                        <div className="flex max-w-[75%] items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-1.5 text-xs text-[var(--warning-text)]">
+                        <div className="flex max-w-[92%] items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-1.5 text-xs text-[var(--warning-text)] sm:max-w-[75%]">
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                           <span>
                             <Badge tone="warning" size="sm" className="mr-1.5 align-middle">
@@ -419,8 +419,8 @@ export default function AiSandboxChatScreen() {
               )}
 
               {secondsUntilReply !== null && (
-                <div className="flex items-center justify-start gap-2">
-                  <div className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                <div className="flex flex-wrap items-center justify-start gap-2">
+                  <div className="flex min-w-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
                     <Clock className="h-3.5 w-3.5" />
                     <span>IA responde em {secondsUntilReply}s (aguardando novas mensagens)</span>
                   </div>
@@ -442,18 +442,18 @@ export default function AiSandboxChatScreen() {
         )}
 
         {error && (
-          <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)]">
+          <div className="mx-3 mb-2 rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)] sm:mx-6">
             {error}
           </div>
         )}
 
         {isHandedOff && (
-          <div className="mx-6 mb-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+          <div className="mx-3 mb-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)] sm:mx-6">
             🔒 Essa conversa já foi encaminhada — a partir daqui é atendimento humano, a IA não responde mais aqui (mesmo que o lead mande mais mensagens).
           </div>
         )}
 
-        <div className="border-t border-[var(--border-subtle)] px-6 py-4">
+        <div className="border-t border-[var(--border-subtle)] px-3 py-3 sm:px-6 sm:py-4">
           <div className="mx-auto flex max-w-2xl items-end gap-2">
             <textarea
               value={draft}

@@ -418,27 +418,27 @@ export default function WhatsAppCampaignDetailScreen() {
                   <Info label="Atualizado" value={formatDateTime(campaign.updated_at)} />
                 </div>
               </div>
-              <div className="flex flex-nowrap gap-2 overflow-x-auto">
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                 {['queued', 'running', 'scheduled'].includes(campaign.status) && (
-                  <Button variant="secondary" className="whitespace-nowrap" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
+                  <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
                     {actionLoading !== 'pause' && <PauseCircle className="h-4 w-4" />}
                     Pausar
                   </Button>
                 )}
                 {campaign.status === 'paused' && (
-                  <Button variant="primary" className="whitespace-nowrap" loading={actionLoading === 'resume'} onClick={() => void runAction('resume')}>
+                  <Button variant="primary" className="w-full sm:w-auto" loading={actionLoading === 'resume'} onClick={() => void runAction('resume')}>
                     {actionLoading !== 'resume' && <PlayCircle className="h-4 w-4" />}
                     Retomar
                   </Button>
                 )}
                 {['queued', 'running', 'scheduled', 'paused'].includes(campaign.status) && (
-                  <Button variant="secondary" className="whitespace-nowrap" loading={actionLoading === 'process'} onClick={() => void runAction('process')}>
+                  <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'process'} onClick={() => void runAction('process')}>
                     {actionLoading !== 'process' && <Send className="h-4 w-4" />}
                     Processar lote
                   </Button>
                 )}
                 {['draft', 'scheduled', 'queued', 'running', 'paused'].includes(campaign.status) && (
-                  <Button variant="danger" className="whitespace-nowrap" loading={actionLoading === 'cancel'} onClick={() => void runAction('cancel')}>
+                  <Button variant="danger" className="w-full sm:w-auto" loading={actionLoading === 'cancel'} onClick={() => void runAction('cancel')}>
                     {actionLoading !== 'cancel' && <Ban className="h-4 w-4" />}
                     Cancelar
                   </Button>
@@ -544,7 +544,28 @@ export default function WhatsAppCampaignDetailScreen() {
                 />
               </div>
             </div>
-            <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+            <div className="grid gap-3 lg:hidden">
+              {targets.map((target) => (
+                <Card key={target.id} className="space-y-3 bg-[color:var(--panel-surface-soft)] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-[var(--text-primary)]">{target.display_name || target.phone_number}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
+                    </div>
+                    <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
+                  </div>
+                  <div className="grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                    <Info label="Etapa" value={String(target.current_step_index + 1)} />
+                    <Info label="Proximo envio" value={formatDateTime(target.next_send_at)} />
+                    <Info label="Ultima tentativa" value={formatDateTime(target.last_attempt_at)} />
+                    <Info label="Erro" value={target.error_message || '-'} />
+                  </div>
+                </Card>
+              ))}
+              {targets.length === 0 && <EmptyState title="Nenhum contato materializado ainda." />}
+            </div>
+            <div className="hidden lg:block">
+              <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Contato</TableHead>
@@ -575,7 +596,8 @@ export default function WhatsAppCampaignDetailScreen() {
                     </TableRow>
                   )}
                 </TableBody>
-            </Table>
+              </Table>
+            </div>
             {targetsTotal > 0 && (
               <Pagination
                 currentPage={targetsPage}

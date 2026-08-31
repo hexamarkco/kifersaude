@@ -129,12 +129,12 @@ export default function LinksPage() {
                         variant: 'secondary',
                         size: 'lg',
                         fullWidth: true,
-                        className: 'links-reveal justify-between',
+                        className: 'links-reveal justify-between text-left',
                       })}
                     >
-                      <span className="flex items-center gap-3">
+                      <span className="flex min-w-0 items-center gap-3">
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span>{link.title}</span>
+                        <span className="min-w-0 truncate">{link.title}</span>
                       </span>
                       <ArrowUpRight className="h-4 w-4 shrink-0" />
                     </a>

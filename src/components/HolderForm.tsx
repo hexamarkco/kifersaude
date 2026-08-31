@@ -484,7 +484,7 @@ export default function HolderForm({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="p-0">
-        <form id="holder-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+        <form id="holder-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
               <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informacoes Pessoais</h4>

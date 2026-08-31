@@ -408,7 +408,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           action={<Button variant="secondary" size="sm" onClick={() => void loadMetrics()}>Tentar novamente</Button>}
         />
       ) : metrics ? (
-        <div className="flex min-h-[560px] flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="flex min-h-[min(560px,calc(100dvh-12rem))] flex-col gap-5 lg:flex-row lg:items-start">
           {/* Left rail: channel health + at-a-glance metrics */}
           <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-0 lg:w-[280px]">
             <Surface

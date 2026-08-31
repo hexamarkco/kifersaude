@@ -242,7 +242,7 @@ export default function DependentForm({
         <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
       </DialogHeader>
       <DialogBody className="p-0">
-      <form id="dependent-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+      <form id="dependent-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
             <FilterSingleSelect

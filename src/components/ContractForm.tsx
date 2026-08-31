@@ -1208,7 +1208,7 @@ export default function ContractForm({
         <form
           id="contract-form"
           onSubmit={handleSubmit}
-          className="max-h-[70vh] overflow-y-auto p-4 sm:p-5"
+          className="p-4 sm:p-5"
         >
           <Surface variant="muted" padding="sm" className="mb-4">
             <h4 className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">

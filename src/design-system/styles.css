@@ -452,6 +452,7 @@
 
 .kds-page-header {
   color: var(--text-primary);
+  min-width: 0;
 }
 
 .kds-page-eyebrow {
@@ -465,24 +466,30 @@
   margin-top: var(--space-3);
   color: var(--text-primary);
   font: var(--type-heading-2);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .kds-page-description {
   margin-top: var(--space-2);
   color: var(--text-secondary);
   font: var(--type-body);
+  max-width: 68ch;
 }
 
 .kds-page-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .kds-surface,
 .kds-card {
   position: relative;
+  min-width: 0;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-2xl);
   background: var(--surface-bg);
@@ -619,17 +626,25 @@
 
 .kds-card-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   color: var(--text-muted);
 }
 
 .kds-button {
+  min-width: 0;
+  max-width: 100%;
   border-radius: var(--radius-full);
   font: var(--type-button);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  line-height: 1.2;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.kds-button > span {
+  min-width: 0;
 }
 
 .kds-button:hover:not(:disabled) {
@@ -789,6 +804,7 @@
 .kds-select,
 .kds-textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-full);
   background: var(--control-bg);
@@ -1005,6 +1021,7 @@
   display: flex;
   width: 100%;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .kds-tabs-list-underline {
@@ -1026,12 +1043,18 @@
 }
 
 .kds-tab {
+  min-width: 0;
   color: var(--text-muted);
   font: var(--type-button);
-  min-height: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-full);
   letter-spacing: 0.01em;
+}
+
+.kds-tab > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kds-tab:hover:not(:disabled) {
@@ -1446,7 +1469,10 @@
 /* ── Table ─────────────────────────────────────────── */
 .kds-table-wrapper {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-default);
   background: var(--bg-surface);
@@ -1456,6 +1482,7 @@
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-sans);
+  table-layout: auto;
 }
 .kds-table-fixed {
   table-layout: fixed;
@@ -1490,7 +1517,9 @@
   padding: 0.75rem 1rem;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .kds-table-row:last-child .kds-table-cell {
@@ -1545,13 +1574,14 @@
   align-items: center;
   justify-content: center;
   overflow-y: auto;
-  padding: 1rem;
+  padding: clamp(0.5rem, 2vw, 1rem);
 }
 
 .kds-dialog {
   position: relative;
   width: 100%;
   max-height: calc(100dvh - 2rem);
+  max-width: min(calc(100vw - 1rem), 42rem);
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-xl);
@@ -1569,7 +1599,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.25rem 1.5rem;
+  padding: clamp(1rem, 2.4vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
   border-bottom: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 58%, transparent), transparent);
 }
@@ -1580,12 +1610,14 @@
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .kds-dialog-description {
   margin-top: 0.25rem;
   font-size: 0.8125rem;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .kds-dialog-close {
@@ -1608,15 +1640,17 @@
 .kds-dialog-body {
   flex: 1;
   min-height: 0;
-  padding: 1.25rem 1.5rem;
+  padding: clamp(1rem, 2.4vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
+  overscroll-behavior: contain;
 }
 
 .kds-dialog-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  padding: clamp(0.875rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem);
   border-top: 1px solid var(--border-subtle);
   background: color-mix(in srgb, var(--bg-inset) 45%, transparent);
 }
@@ -1637,6 +1671,7 @@
 .kds-drawer-right,
 .kds-drawer-left {
   width: min(100%, 34rem);
+  max-width: 100vw;
 }
 
 .kds-drawer-left {
@@ -1680,6 +1715,8 @@
   z-index: 150;
   min-width: 12rem;
   max-width: min(calc(100vw - 1rem), 24rem);
+  max-height: min(calc(100dvh - 1rem), 32rem);
+  overflow: auto;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-2xl);
   background: var(--bg-elevated);
@@ -1745,6 +1782,30 @@
 }
 
 @media (max-width: 640px) {
+  .kds-page-title {
+    font-size: clamp(1.5rem, 8vw, 2rem);
+    line-height: 1.12;
+  }
+
+  .kds-page-description {
+    font-size: 0.8125rem;
+  }
+
+  .kds-dialog-container {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .kds-dialog {
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .kds-dialog-footer {
+    justify-content: stretch;
+  }
+
   .kds-drawer-right,
   .kds-drawer-left {
     width: 100%;
@@ -2778,6 +2839,7 @@
 .kds-op-chip {
   display: inline-flex;
   min-height: 2.05rem;
+  max-width: 100%;
   align-items: center;
   gap: 0.5rem;
   border: 1px solid var(--border-default);
@@ -2786,7 +2848,7 @@
   color: var(--text-secondary);
   padding: 0.35rem 0.7rem;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 12px 24px -22px rgba(0,0,0,0.85);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .kds-op-chip.is-active,
@@ -2806,11 +2868,13 @@
   align-items: baseline;
   gap: 0.35rem;
   line-height: 1;
+  min-width: 0;
 }
 
 .kds-op-chip-value {
   color: var(--text-primary);
   font: 700 0.8125rem / 1 var(--font-sans);
+  overflow-wrap: anywhere;
 }
 
 .kds-op-chip-label {
@@ -2818,6 +2882,7 @@
   font: 700 0.6875rem / 1 var(--font-sans);
   letter-spacing: 0.035em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .kds-op-toolbar,
@@ -2835,19 +2900,22 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem;
+  min-width: 0;
 }
 
 .kds-op-toolbar-search {
   flex: 1 1 22rem;
-  min-width: min(100%, 18rem);
+  min-width: min(100%, 14rem);
 }
 
 .kds-op-toolbar-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  min-width: min(100%, 14rem);
 }
 
 .kds-op-section-label {

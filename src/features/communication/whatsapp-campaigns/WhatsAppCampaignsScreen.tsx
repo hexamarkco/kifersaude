@@ -1113,11 +1113,11 @@ export default function WhatsAppCampaignsScreen() {
                     ))}
                   </Select>
                 )}
-                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={() => void handleSaveTemplate()}>
+                <Button variant="secondary" size="sm" onClick={() => void handleSaveTemplate()}>
                   <BookmarkPlus className="h-3.5 w-3.5" />
                   Salvar modelo
                 </Button>
-                <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStage}>
+                <Button variant="secondary" size="sm" onClick={addStage}>
                   <Plus className="h-3.5 w-3.5" />
                   Adicionar estagio
                 </Button>
@@ -1462,20 +1462,20 @@ export default function WhatsAppCampaignsScreen() {
                 ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Nao feche esta janela.`
                 : 'Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.'}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {wizardStep > 0 && (
-                <Button variant="secondary" className="whitespace-nowrap" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
                   <ArrowLeft className="h-4 w-4" />
                   Voltar
                 </Button>
               )}
               {wizardStep < campaignWizardSteps.length - 1 ? (
-                <Button className="whitespace-nowrap" onClick={handleWizardNext}>
+                <Button className="w-full sm:w-auto" onClick={handleWizardNext}>
                   Proximo
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
+                <Button className="w-full sm:w-auto" onClick={() => void handleCreateDraft()} loading={saving}>
                   {!saving && <Send className="h-4 w-4" />}
                   {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
                 </Button>
@@ -1576,9 +1576,9 @@ export default function WhatsAppCampaignsScreen() {
 
             <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha sera materializada e processada pelo cron mesmo com o navegador fechado.</p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" className="whitespace-nowrap" onClick={closeActivationPreview}>Cancelar</Button>
-                <Button className="whitespace-nowrap" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
+                <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
                   {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="h-4 w-4" />}
                   Confirmar ativacao
                 </Button>

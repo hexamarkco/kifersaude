@@ -466,7 +466,7 @@ export default function WhatsAppLeadDrawer({
               </div>
 
               <LeadDetailsPanel
-                className="whatsapp-lead-drawer-panel min-h-[520px] rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
+                className="whatsapp-lead-drawer-panel min-h-[min(520px,calc(100dvh-12rem))] rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
                 lead={{ ...linkedLead, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}

@@ -48,7 +48,7 @@ export function SectionHeader({
           </p>
         )}
       </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+      {action && <div className="min-w-0 flex-shrink-0 max-sm:w-full">{action}</div>}
     </div>
   );
 }

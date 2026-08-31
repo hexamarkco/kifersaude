@@ -119,7 +119,7 @@ export default function WhatsAppStartChatModal({
                 </p>
                 <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
-                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="shrink-0 whitespace-nowrap">
+                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="w-full sm:w-auto sm:shrink-0">
                     {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
                     Iniciar chat
                   </Button>
@@ -157,9 +157,9 @@ export default function WhatsAppStartChatModal({
                         disabled={starting}
                         variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
                       >
-                        <ContactAvatar label={contact.display_name || contact.phone_number} />
+                        <ContactAvatar label={contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</p>
                           <p className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</p>
                         </div>
                         {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}

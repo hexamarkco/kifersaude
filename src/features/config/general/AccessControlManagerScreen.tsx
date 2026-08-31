@@ -414,9 +414,10 @@ export default function AccessControlManagerScreen() {
         </div>
       </Card>
 
-      <Table>
+      <div className="hidden lg:block">
+        <Table>
           <TableHeader>
-            <tr>
+            <TableRow>
               <TableHead>
                 Módulo
               </TableHead>
@@ -431,7 +432,7 @@ export default function AccessControlManagerScreen() {
                   {formatProfileLabel(profile.slug, profile.name)}
                 </TableHead>
               ))}
-            </tr>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {ACCESS_MODULES.map((module) => (
@@ -496,7 +497,83 @@ export default function AccessControlManagerScreen() {
               </TableRow>
             ))}
           </TableBody>
-      </Table>
+        </Table>
+      </div>
+
+      <div className="grid gap-3 lg:hidden">
+        {ACCESS_MODULES.map((module) => (
+          <Card key={module.id} padding="md" className="space-y-4">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-[color:var(--text-primary)]">{module.label}</h3>
+              <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{module.description}</p>
+            </div>
+
+            <div className="grid gap-2">
+              {accessProfiles.map((profile) => {
+                const permission = getPermission(
+                  profile.slug,
+                  module.id,
+                  profile.is_admin,
+                );
+                const canEdit = permission.can_edit;
+                const canView = permission.can_view;
+                const isUpdating =
+                  updatingKey === `${profile.slug}:${module.id}`;
+
+                return (
+                  <div
+                    key={`${profile.id}:${module.id}`}
+                    className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-muted)] p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                        {formatProfileLabel(profile.slug, profile.name)}
+                      </p>
+                      {profile.is_admin && (
+                        <p className="mt-1 text-xs text-[color:var(--text-muted)]">
+                          Perfil administrador com acesso total.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex min-h-10 items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+                        <Checkbox
+                          checked={canView}
+                          onChange={() =>
+                            void handleToggleView(
+                              profile.slug,
+                              module.id,
+                              canView,
+                            )
+                          }
+                          disabled={profile.is_admin || isUpdating}
+                        />
+                        <span>Ver</span>
+                      </label>
+                      <label className="inline-flex min-h-10 items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+                        <Checkbox
+                          checked={canEdit}
+                          onChange={() =>
+                            void handleToggleEdit(
+                              profile.slug,
+                              module.id,
+                              canEdit,
+                            )
+                          }
+                          disabled={
+                            profile.is_admin || !canView || isUpdating
+                          }
+                        />
+                        <span>Editar</span>
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        ))}
+      </div>
       {ConfirmationDialog}
     </div>
   );

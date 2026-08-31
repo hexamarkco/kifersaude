@@ -21,13 +21,13 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={cx('kds-page-header', className)} {...props}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
           {eyebrow && <p className="kds-page-eyebrow">{eyebrow}</p>}
           <h1 className="kds-page-title">{title}</h1>
           {description && <p className="kds-page-description">{description}</p>}
         </div>
-        {actions && <div className="kds-page-actions">{actions}</div>}
+        {actions && <div className="kds-page-actions w-full lg:w-auto lg:justify-end">{actions}</div>}
       </div>
       {children && <div className="mt-4">{children}</div>}
     </header>

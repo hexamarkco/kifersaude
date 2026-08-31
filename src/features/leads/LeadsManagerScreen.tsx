@@ -1609,7 +1609,7 @@ export default function LeadsManager({
                     </span>
                   </Surface>
                 </summary>
-                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid grid-cols-1 gap-3 p-4 sm:absolute sm:left-0 sm:top-full sm:z-20 sm:mt-2 sm:w-[38rem] sm:grid-cols-2 sm:shadow-lg lg:grid-cols-3">
+                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid w-full max-w-full grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
                   {[
                     {
                       id: "tags",
@@ -2015,7 +2015,7 @@ export default function LeadsManager({
                               <span>{lead.telefone}</span>
                             </div>
                             {lead.email && (
-                              <div className="flex items-center gap-2 truncate">
+                              <div className="flex min-w-0 items-center gap-2">
                                 <Button
                                   type="button"
                                   onClick={() => handleEmailContact(lead)}
@@ -2027,7 +2027,7 @@ export default function LeadsManager({
                                 >
                                   <Mail className="h-4 w-4" />
                                 </Button>
-                                <span className="truncate">{lead.email}</span>
+                                <span className="min-w-0 truncate">{lead.email}</span>
                               </div>
                             )}
                             <div>
@@ -2097,10 +2097,11 @@ export default function LeadsManager({
                           onClick={() => handleConvertToContract(lead)}
                           variant="soft"
                           size="sm"
-                          className="kds-op-inline-action hidden md:inline-flex space-x-1.5"
+                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
+                          aria-label="Converter em contrato"
                         >
                           <FileText className="h-4 w-4" />
-                          <span>Converter em Contrato</span>
+                          <span className="hidden sm:inline">Converter</span>
                         </Button>
                         <Button
                           onClick={() => openReminderScheduler(lead)}

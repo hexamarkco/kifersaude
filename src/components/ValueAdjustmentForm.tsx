@@ -81,7 +81,7 @@ export default function ValueAdjustmentForm({
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>
       <DialogBody className="p-0">
-        <form id="value-adjustment-form" onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+        <form id="value-adjustment-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
           {error && (
             <Alert tone="danger" className="mb-4" role="alert">
               {error}

@@ -1103,7 +1103,7 @@ export default function HomePage() {
                 Especialista em planos de saúde no RJ
               </div>
 
-              <h1 className="mt-7 max-w-[11ch] font-[var(--font-display)] text-[clamp(3rem,6.2vw,5.75rem)] font-bold leading-[0.94] tracking-[-0.035em] text-[color:var(--text-primary)]">
+              <h1 className="mt-7 max-w-[11ch] font-[var(--font-display)] text-[clamp(2.75rem,6.2vw,5.75rem)] font-bold leading-[0.96] text-[color:var(--text-primary)]">
                 O plano ideal começa com <span className="text-[color:var(--brand-primary)]">gente de verdade.</span>
               </h1>
 
@@ -1553,11 +1553,11 @@ export default function HomePage() {
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group mt-5 inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold whitespace-nowrap text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  className="group mt-5 inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
-                  <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex min-w-0 items-center gap-2">
                     <MessageCircle className="h-5 w-5 shrink-0" />
-                    Falar no WhatsApp
+                    <span className="min-w-0 truncate">Falar no WhatsApp</span>
                   </span>
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
                     <ArrowUpRight className="h-5 w-5" />

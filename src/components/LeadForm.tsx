@@ -532,7 +532,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
       <form
         id="lead-form"
         onSubmit={handleSubmit}
-        className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5"
+        className="px-4 py-4 sm:px-5 sm:py-5"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Nome Completo *" htmlFor="lead-nome" className="md:col-span-2">

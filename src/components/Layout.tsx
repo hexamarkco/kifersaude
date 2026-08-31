@@ -410,7 +410,8 @@ export default function Layout({
             side = 'left';
           }
 
-          const top = Math.max(viewportPadding, triggerRect.top);
+          const maxTop = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
+          const top = Math.min(Math.max(viewportPadding, triggerRect.top), maxTop);
 
           const triggerCenterY = triggerRect.top + triggerRect.height / 2;
           const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
@@ -466,7 +467,8 @@ export default function Layout({
       side = 'left';
     }
 
-    const top = Math.max(viewportPadding, triggerRect.top);
+    const maxTop = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
+    const top = Math.min(Math.max(viewportPadding, triggerRect.top), maxTop);
 
     const triggerCenterY = triggerRect.top + triggerRect.height / 2;
     const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
@@ -915,6 +917,8 @@ export default function Layout({
   useEffect(() => {
     if (!isMobileMenuOpen) return;
 
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const menu = sidebarRef.current;
     const menuTrigger = mobileMenuTriggerRef.current;
     const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -946,6 +950,7 @@ export default function Layout({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => {
+      document.body.style.overflow = originalOverflow;
       document.removeEventListener('keydown', handleKeyDown);
       menuTrigger?.focus();
     };

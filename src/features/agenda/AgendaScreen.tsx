@@ -1659,7 +1659,7 @@ export default function AgendaScreen() {
             <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
               <span className="inline-flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-[var(--brand-primary)] text-[var(--brand-primary)]" /> Pendentes</span>
               <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[var(--success)]" /> Concluídos</span>
-              <span className="ml-auto">{lastUpdatedLabel}</span>
+              <span className="sm:ml-auto">{lastUpdatedLabel}</span>
             </div>
           </Surface>
 
@@ -1674,7 +1674,7 @@ export default function AgendaScreen() {
                       : "Nenhum item encontrado para este dia com os filtros atuais."}
                   />
 
-                  <div className="grid grid-cols-3 gap-2 sm:min-w-80">
+                  <div className="grid grid-cols-1 gap-2 sm:min-w-80 sm:grid-cols-3">
                     {[
                       { label: "Atrasados", value: overdueSelectedReminders.length, tone: "danger" as const },
                       { label: "Pendentes", value: activeSelectedReminders.length, tone: "accent" as const },

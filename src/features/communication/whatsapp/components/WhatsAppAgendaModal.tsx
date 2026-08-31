@@ -1651,16 +1651,16 @@ export default function WhatsAppAgendaModal({
                   <Button onClick={goToPreviousDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Dia anterior">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <div className="w-[176px]">
+                  <div className="min-w-0 flex-1 sm:flex-none sm:w-[176px]">
                     <DateTimePicker type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
                   </div>
                   <Button onClick={goToNextDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Próximo dia">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="h-11">
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="h-11 flex-1 sm:flex-none">
                     Hoje
                   </Button>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="h-11" disabled={!canEdit}>
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="h-11 flex-1 sm:flex-none" disabled={!canEdit}>
                     <Plus className="h-4 w-4" />
                     Nova tarefa
                   </Button>

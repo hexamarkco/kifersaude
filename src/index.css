@@ -1590,6 +1590,7 @@ html,
   }
 
   .terracota-mobile-more-item.is-active {
+    border-radius: var(--radius-full);
     background: var(--brand-primary-muted);
     color: var(--text-primary);
   }

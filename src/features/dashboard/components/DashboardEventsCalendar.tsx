@@ -219,7 +219,7 @@ export function DashboardEventsCalendar({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2 sm:gap-2">
+          <div className="kds-calendar-grid grid grid-cols-7 gap-1 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2 sm:gap-2">
             {WEEK_DAYS.map((day) => (
               <div
                 key={day}

@@ -87,7 +87,7 @@ export default function CommissionMonthGrid({
   }
 
   return (
-    <div className="grid grid-cols-7 gap-1 sm:gap-2">
+    <div className="kds-calendar-grid grid grid-cols-7 gap-1 sm:gap-2">
       {COMMISSION_WEEK_DAYS.map((day) => (
         <div
           key={day}

@@ -129,7 +129,7 @@ export default function CommissionCalendarScreen() {
         title="Agenda de comissoes e bonificacoes"
         description="Visualize as previsoes de recebimento para o mes selecionado e organize o fluxo financeiro."
         actions={(
-          <div className="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto">
+          <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-2 lg:flex lg:w-auto">
             <OperationalMetricChip
               tone="gold"
               icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
@@ -224,7 +224,7 @@ export default function CommissionCalendarScreen() {
                     : "Escolha um dia no calendario para ver os detalhes."
                 }
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <OperationalMetricChip
                   tone="gold"
                   icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}

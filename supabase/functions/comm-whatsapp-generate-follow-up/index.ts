@@ -8,7 +8,6 @@ import {
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 import {
-  buildStyleExamples,
   buildStyleProfile,
   buildStyleProfileText,
   STYLE_SAMPLE_LIMIT,
@@ -29,6 +28,9 @@ type GenerateFollowUpBody = {
   currentMessage?: string;
   adjustmentInstruction?: string;
   variantCount?: number;
+  sourceReminderId?: string;
+  batchId?: string;
+  triggerSource?: 'individual' | 'batch' | 'refine' | 'other';
 };
 
 type ChatRow = {
@@ -92,6 +94,7 @@ const DAILY_FOLLOW_UP_CAPACITY = 15;
 const WAIT_COOLDOWN_BUSINESS_DAYS = 7;
 const FOLLOW_UP_SCHEDULE_HOURS = [10, 11, 14, 15, 16] as const;
 const OUTBOUND_ATTEMPT_GROUP_GAP_MS = 2 * 60 * 60 * 1000;
+const RECENT_OUTBOUND_WAIT_MS = 12 * 60 * 60 * 1000;
 // Teto de sanidade para qualquer sugestao de data/prazo vinda da IA (combinado
 // explicito ou atraso sugerido): o backend nunca aceita algo alem disso,
 // mesmo que a IA sugira — evita agendamentos "impossiveis" ou absurdamente
@@ -206,14 +209,28 @@ type AiContextRecommendation = {
   goal: FollowUpGoal | null;
   emotionalContext: EmotionalContext | null;
   rationale: string | null;
-  nextActionType: FollowUpNextActionType | null;
-  nextActionReason: string | null;
-  nextActionPriority: FollowUpNextAction['priority'] | null;
+  currentAction: 'send' | 'wait' | null;
+  currentActionReason: string | null;
+  opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended' | null;
+  commercialFunction: CommercialFunction | null;
+  nextActionOwner: NextActionOwner | null;
+  pendingMicrodecision: string | null;
+  lastCommercialCommitment: string | null;
+  decisionMaker: string | null;
+  scheduleAction: 'schedule' | 'no_schedule' | null;
+  scheduleReason: string | null;
+  scheduleConfidence: 'high' | 'medium' | 'low' | null;
   // Sugestoes opcionais do modelo para o agendamento — o backend valida e
   // pode descartar qualquer uma delas (ver resolveInitialCandidateDay).
   nextActionSuggestedDelayBusinessDays: number | null;
   nextActionSuggestedDate: string | null; // "YYYY-MM-DD"
 };
+
+const COMMERCIAL_FUNCTIONS = ['retomar_contexto', 'obter_microdecisao', 'reduzir_opcoes', 'remover_atrito', 'esclarecer_objecao', 'diagnosticar_bloqueio', 'cobrar_acao_combinada', 'confirmar_decisao', 'facilitar_documentacao', 'retomar_em_data_combinada', 'obter_posicionamento', 'reativar', 'encerrar_elegantemente', 'nenhuma'] as const;
+type CommercialFunction = (typeof COMMERCIAL_FUNCTIONS)[number];
+type NextActionOwner = 'client' | 'seller' | 'third_party' | 'operator' | 'date' | 'none';
+const isCommercialFunction = (value: string): value is CommercialFunction => (COMMERCIAL_FUNCTIONS as readonly string[]).includes(value);
+const isNextActionOwner = (value: string): value is NextActionOwner => ['client', 'seller', 'third_party', 'operator', 'date', 'none'].includes(value);
 
 const normalizeNextActionType = (value: unknown): FollowUpNextActionType | null => {
   const candidate = toTrimmedString(value);
@@ -254,7 +271,11 @@ const parseAiContextFromRecord = (parsed: Record<string, unknown>): AiContextRec
   const stageCandidate = toTrimmedString(parsed.stage);
   const blockerCandidate = toTrimmedString(parsed.blocker);
   const goalCandidate = toTrimmedString(parsed.goal);
-  const nextAction = isRecord(parsed.nextAction) ? parsed.nextAction : null;
+  const scheduleRecommendation = isRecord(parsed.scheduleRecommendation) ? parsed.scheduleRecommendation : null;
+  const currentAction = toTrimmedString(parsed.currentAction);
+  const opportunityRecommendation = toTrimmedString(parsed.opportunityRecommendation);
+  // Compatibilidade para respostas geradas antes do deploy completo da V2.
+  const legacyNextAction = isRecord(parsed.nextAction) ? parsed.nextAction : null;
 
   return {
     // Se o modelo mandar algo fora da lista, cai num "outro"/"nao_identificado"
@@ -265,11 +286,27 @@ const parseAiContextFromRecord = (parsed: Record<string, unknown>): AiContextRec
     goal: isFollowUpGoal(goalCandidate) ? goalCandidate : null,
     emotionalContext: parseEmotionalContext(parsed.emotionalContext),
     rationale: toTrimmedString(parsed.rationale) || null,
-    nextActionType: normalizeNextActionType(nextAction?.type),
-    nextActionReason: toTrimmedString(nextAction?.reason) || null,
-    nextActionPriority: normalizeNextActionPriority(nextAction?.priority),
-    nextActionSuggestedDelayBusinessDays: normalizeSuggestedDelayBusinessDays(nextAction?.suggestedDelayBusinessDays),
-    nextActionSuggestedDate: toTrimmedString(nextAction?.suggestedDate) || null,
+    currentAction: currentAction === 'send' || currentAction === 'wait'
+      ? currentAction
+      : (normalizeNextActionType(legacyNextAction?.type) === 'wait' ? 'wait' : 'send'),
+    currentActionReason: toTrimmedString(parsed.currentActionReason) || toTrimmedString(legacyNextAction?.reason) || null,
+    opportunityRecommendation: opportunityRecommendation === 'continue' || opportunityRecommendation === 'pause' || opportunityRecommendation === 'mark_lost_recommended'
+      ? opportunityRecommendation
+      : (normalizeNextActionType(legacyNextAction?.type) === 'mark_lost_recommended' ? 'mark_lost_recommended' : 'continue'),
+    commercialFunction: isCommercialFunction(toTrimmedString(parsed.commercialFunction)) ? toTrimmedString(parsed.commercialFunction) as CommercialFunction : null,
+    nextActionOwner: isNextActionOwner(toTrimmedString(parsed.nextActionOwner)) ? toTrimmedString(parsed.nextActionOwner) as NextActionOwner : null,
+    pendingMicrodecision: toTrimmedString(parsed.pendingMicrodecision) || null,
+    lastCommercialCommitment: toTrimmedString(parsed.lastCommercialCommitment) || null,
+    decisionMaker: toTrimmedString(parsed.decisionMaker) || null,
+    scheduleAction: toTrimmedString(scheduleRecommendation?.action) === 'schedule' || toTrimmedString(scheduleRecommendation?.action) === 'no_schedule'
+      ? toTrimmedString(scheduleRecommendation?.action) as 'schedule' | 'no_schedule'
+      : (normalizeNextActionType(legacyNextAction?.type) === 'mark_lost_recommended' ? 'no_schedule' : 'schedule'),
+    scheduleReason: toTrimmedString(scheduleRecommendation?.reason) || toTrimmedString(legacyNextAction?.reason) || null,
+    scheduleConfidence: ['high', 'medium', 'low'].includes(toTrimmedString(scheduleRecommendation?.confidence))
+      ? toTrimmedString(scheduleRecommendation?.confidence) as 'high' | 'medium' | 'low'
+      : null,
+    nextActionSuggestedDelayBusinessDays: normalizeSuggestedDelayBusinessDays(scheduleRecommendation?.suggestedDelayBusinessDays ?? legacyNextAction?.suggestedDelayBusinessDays),
+    nextActionSuggestedDate: toTrimmedString(scheduleRecommendation?.suggestedDate ?? legacyNextAction?.suggestedDate) || null,
   };
 };
 
@@ -347,7 +384,7 @@ const parseFollowUpGenerationResult = (value: string, shouldGenerateVariations: 
 const isValidFollowUpGenerationResult = (result: FollowUpGenerationResult, shouldGenerateVariations: boolean): boolean => (
   shouldGenerateVariations
     ? result.variations.length > 0 && result.variations.every((variation) => Boolean(variation.text))
-    : Boolean(result.text)
+    : result.aiContext?.currentAction === 'wait' || Boolean(result.text)
 );
 
 const normalizeSystemTimeZone = (value: unknown) => {
@@ -613,6 +650,26 @@ const buildTemporalFacts = (messages: MessageRow[], now: Date, timeZone: string)
   };
 };
 
+const hasRecentOutboundWithoutInbound = (messages: MessageRow[], now: Date): boolean => {
+  const useful = messages.filter((message) => Boolean(buildTranscriptContent(message)));
+  const lastOutbound = [...useful].reverse().find((message) => message.direction === 'outbound');
+  if (!lastOutbound) return false;
+  const outboundAt = Date.parse(lastOutbound.message_at);
+  if (Number.isNaN(outboundAt) || now.getTime() - outboundAt >= RECENT_OUTBOUND_WAIT_MS) return false;
+  return !useful.some((message) => message.direction === 'inbound' && Date.parse(message.message_at) > outboundAt);
+};
+
+const normalizeGreetingForTemporalFacts = (text: string, facts: TemporalFacts): string => {
+  if (!text) return text;
+  const lines = text.split('\n');
+  const greetingPattern = /\b(bom dia|boa tarde|boa noite)\b/iu;
+  if (facts.contactedToday) {
+    return lines.filter((line) => !greetingPattern.test(line)).join('\n').replace(/^\s*---\s*$/m, '').trim();
+  }
+  const expected = facts.periodOfDay === 'manha' ? 'Bom dia' : facts.periodOfDay === 'tarde' ? 'Boa tarde' : 'Boa noite';
+  return lines.map((line) => line.replace(greetingPattern, expected)).join('\n');
+};
+
 const formatTemporalFactsForPrompt = (facts: TemporalFacts): string => [
   'FATOS TEMPORAIS (calculados pelo sistema — use exatamente estes fatos, nao tente recalcular tempo decorrido lendo os timestamps do historico):',
   `- Ultima mensagem nesta conversa, de qualquer lado: ${facts.lastMessageElapsed ?? 'sem historico util'}.`,
@@ -676,9 +733,13 @@ const buildFollowUpNextAction = async (params: {
   const attemptNumber = Math.min(Math.max(consecutiveOutboundAttempts, 1), 5);
   const maxAttempts = 4;
   const leadStatus = toTrimmedString(params.lead?.status).toLowerCase();
-  const aiNextActionType = params.aiContext?.nextActionType ?? null;
-  const aiNextActionReason = params.aiContext?.nextActionReason ?? null;
-  const aiNextActionPriority = params.aiContext?.nextActionPriority ?? null;
+  const aiNextActionType: FollowUpNextActionType | null = params.aiContext?.opportunityRecommendation === 'mark_lost_recommended'
+    ? 'mark_lost_recommended'
+    : params.aiContext?.currentAction === 'wait'
+      ? 'wait'
+      : 'schedule';
+  const aiNextActionReason = params.aiContext?.scheduleReason ?? params.aiContext?.currentActionReason ?? null;
+  const aiNextActionPriority: FollowUpNextAction['priority'] | null = null;
 
   if (['perdido', 'convertido', 'fechado', 'duplicado'].includes(leadStatus)) {
     return {
@@ -724,7 +785,7 @@ const buildFollowUpNextAction = async (params: {
     };
   }
 
-  if (aiNextActionType === 'mark_lost_recommended' || (!params.aiContext && attemptNumber > maxAttempts)) {
+  if (aiNextActionType === 'mark_lost_recommended') {
     return {
       type: 'mark_lost_recommended',
       suggestedDateTime: null,
@@ -1215,11 +1276,15 @@ Deno.serve(async (req: Request) => {
 
     const chat = chatData as ChatRow;
 
-    const [messages, lead, systemSettingsResult, promptResult] = await Promise.all([
+    const [messages, lead, systemSettingsResult, promptResult, recentAuditsResult, remindersResult] = await Promise.all([
       loadAllMessagesForChat(supabaseAdmin, chat.id),
       loadLeadContext(supabaseAdmin, chat.lead_id),
       supabaseAdmin.from('system_settings').select('company_name, timezone').limit(1).maybeSingle(),
       supabaseAdmin.from('integration_settings').select('settings').eq('slug', AI_FOLLOW_UP_PROMPT_SLUG).maybeSingle(),
+      supabaseAdmin.from('comm_follow_up_audit_log').select('id, sent_at, sent_at_actual, current_action, commercial_function, goal, generated_text, sent_text, text_content').eq('chat_id', chat.id).order('sent_at', { ascending: false }).limit(8),
+      chat.lead_id
+        ? supabaseAdmin.from('reminders').select('id, titulo, descricao, data_lembrete, lido, follow_up_origin').eq('lead_id', chat.lead_id).order('data_lembrete', { ascending: false }).limit(8)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (systemSettingsResult.error) {
@@ -1229,6 +1294,8 @@ Deno.serve(async (req: Request) => {
     if (promptResult.error) {
       throw new Error(`Erro ao carregar prompt de follow-up: ${promptResult.error.message}`);
     }
+    if (recentAuditsResult.error) throw new Error(`Erro ao carregar historico de follow-ups: ${recentAuditsResult.error.message}`);
+    if (remindersResult.error) throw new Error(`Erro ao carregar lembretes: ${remindersResult.error.message}`);
     const systemSettings = (systemSettingsResult.data ?? null) as SystemSettingsRow | null;
     const promptIntegration = (promptResult.data ?? null) as IntegrationSettingRow | null;
     const systemTimeZone = normalizeSystemTimeZone(systemSettings?.timezone);
@@ -1251,7 +1318,6 @@ Deno.serve(async (req: Request) => {
       .slice(-STYLE_SAMPLE_LIMIT);
     const styleProfile = buildStyleProfile(styleMessages);
     const styleProfileText = buildStyleProfileText(styleProfile);
-    const styleExamples = buildStyleExamples(styleMessages);
 
     console.log('[FollowUpAI][edge] loaded context', {
       chat,
@@ -1285,6 +1351,13 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const temporalFacts = buildTemporalFacts(messages, now, systemTimeZone);
     const temporalFactsText = formatTemporalFactsForPrompt(temporalFacts);
+    const recentAudits = (recentAuditsResult.data ?? []) as Array<Record<string, unknown>>;
+    const recentFollowUpsText = recentAudits.length === 0 ? 'Nenhum follow-up auditado anteriormente.' : recentAudits.map((audit) => {
+      const sentAt = toTrimmedString(audit.sent_at_actual) || toTrimmedString(audit.sent_at);
+      const hasReply = messages.some((message) => message.direction === 'inbound' && Date.parse(message.message_at) > Date.parse(sentAt));
+      return `- ${sentAt ? formatDateForPrompt(new Date(sentAt), systemTimeZone) : 'data indisponivel'}: commercialFunction=${toTrimmedString(audit.commercial_function) || 'nao registrada'} | goal=${toTrimmedString(audit.goal) || 'nao registrado'} | cliente respondeu depois? ${hasReply ? 'sim' : 'nao'}.`;
+    }).join('\n');
+    const reminderContextText = ((remindersResult.data ?? []) as Array<Record<string, unknown>>).map((reminder) => `- ${toTrimmedString(reminder.lido) === 'true' ? 'concluido' : 'aberto'} | ${toTrimmedString(reminder.data_lembrete)} | ${toTrimmedString(reminder.titulo)}${toTrimmedString(reminder.descricao) ? ` | ${toTrimmedString(reminder.descricao)}` : ''}`).join('\n') || 'Nenhum lembrete relevante.';
 
     const baseContextPrompt = [
       'Contexto do chat:',
@@ -1297,6 +1370,12 @@ Deno.serve(async (req: Request) => {
       `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
       '',
       temporalFactsText,
+      '',
+      'FOLLOW-UPS RECENTES (evidencia auxiliar; transcript prevalece):',
+      recentFollowUpsText,
+      '',
+      'LEMBRETES RELACIONADOS (evidencia auxiliar; transcript prevalece):',
+      reminderContextText,
       '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),
@@ -1339,8 +1418,8 @@ Deno.serve(async (req: Request) => {
     const goalCatalog = FOLLOW_UP_GOALS.join(', ');
 
     const jsonShape = shouldGenerateVariations
-      ? '{"stage":"...","blocker":"...","goal":"...","emotionalContext":{"detected":true|false,"guidance":"..."|null},"nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta","suggestedDelayBusinessDays":number|null,"suggestedDate":"YYYY-MM-DD"|null},"rationale":"...","variations":[{"label":"...","text":"..."}]}'
-      : '{"stage":"...","blocker":"...","goal":"...","emotionalContext":{"detected":true|false,"guidance":"..."|null},"nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta","suggestedDelayBusinessDays":number|null,"suggestedDate":"YYYY-MM-DD"|null},"rationale":"...","text":"..."}';
+      ? '{"currentAction":"send","currentActionReason":"...","stage":"...","blocker":"...","goal":"...","commercialFunction":"...","nextActionOwner":"client|seller|third_party|operator|date|none","pendingMicrodecision":"..."|null,"lastCommercialCommitment":"..."|null,"decisionMaker":"..."|null,"emotionalContext":{"detected":true|false,"guidance":"..."|null},"opportunityRecommendation":"continue|pause|mark_lost_recommended","scheduleRecommendation":{"action":"schedule|no_schedule","suggestedDate":"YYYY-MM-DD"|null,"suggestedDelayBusinessDays":number|null,"reason":"...","confidence":"high|medium|low"},"rationale":"...","variations":[{"label":"...","text":"..."}]}'
+      : '{"currentAction":"send|wait","currentActionReason":"...","stage":"...","blocker":"...","goal":"...","commercialFunction":"...|nenhuma","nextActionOwner":"client|seller|third_party|operator|date|none","pendingMicrodecision":"..."|null,"lastCommercialCommitment":"..."|null,"decisionMaker":"..."|null,"emotionalContext":{"detected":true|false,"guidance":"..."|null},"opportunityRecommendation":"continue|pause|mark_lost_recommended","scheduleRecommendation":{"action":"schedule|no_schedule","suggestedDate":"YYYY-MM-DD"|null,"suggestedDelayBusinessDays":number|null,"reason":"...","confidence":"high|medium|low"},"rationale":"...","text":"..."|null}';
 
     const responseFormatInstruction = [
       `Retorne SOMENTE um JSON valido, sem markdown, no formato exato: ${jsonShape}`,
@@ -1348,9 +1427,11 @@ Deno.serve(async (req: Request) => {
       `"blocker": principal bloqueio percebido agora — use exatamente um destes ids: ${blockerCatalog}. Nao afirme um bloqueio como certo sem evidencia clara no historico — nesse caso use "nao_identificado".`,
       `"goal": a funcao comercial que esta mensagem precisa cumprir — use exatamente um destes ids: ${goalCatalog}.`,
       '"emotionalContext": preencha conforme a regra de CONTEXTO HUMANO E EMPATIA acima.',
-      '"nextAction": decida lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao varias tentativas. Use "mark_lost_recommended" so com sinais claros de varias tentativas reais em dias diferentes sem resposta util. Use "wait" quando o cliente ja respondeu, existe combinado pendente, o contexto emocional pede pausa, ou ainda nao cabe nova cobranca.',
-      '"nextAction.suggestedDelayBusinessDays": opcional (numero de dias uteis, ex.: 1, 2, 3, 5, 7). Preencha so se fizer sentido sugerir um prazo diferente do padrao do sistema; caso contrario retorne null e o sistema decide sozinho.',
-      '"nextAction.suggestedDate": opcional, formato "YYYY-MM-DD". Preencha SOMENTE quando o historico tiver um combinado explicito de data/dia (ex.: "me chama segunda", "fala comigo semana que vem", "so depois do dia 10") — calcule a data real com base em "Agora no sistema" informado no contexto. Nunca invente uma data sem essa base explicita; caso contrario retorne null.',
+      '"currentAction": decida primeiro se e apropriado enviar agora. Use "wait" quando o cliente acabou de receber uma proposta/alternativa, existe combinado pendente, terceiro decisor precisa agir, cliente respondeu e espera acao da corretora, ou contexto emocional pede pausa. Quando for wait, text DEVE ser null e commercialFunction deve ser "nenhuma".',
+      `"commercialFunction": use exatamente um destes ids: ${COMMERCIAL_FUNCTIONS.join(', ')}. Nunca repita a ultima funcao sem resposta listada acima; se ela falhou, mude de funcao comercial.`,
+      '"nextActionOwner": identifique quem precisa agir agora. Em terceiro decisor, nao cobre imediatamente o intermediario.',
+      '"scheduleRecommendation.reason" e obrigatoria, inclusive em no_schedule; deve ser especifica e sustentada pelo historico. A IA recomenda, a corretora aprova.',
+      'Quando a conversa ja reduziu a decisao a um trade-off concreto, use esse trade-off como base da microdecisao e nao reabra opcoes genericas.',
       '"rationale": resumo curto e legivel (1-3 frases) do seu raciocinio — inclua o estagio, o bloqueio, o objetivo da mensagem e qualquer contexto temporal ou emocional relevante. Isso e mostrado para quem esta usando o sistema.',
       shouldGenerateVariations
         ? `"variations": gere exatamente ${variantCount} variacoes com labels curtos e distintos (ex.: "Direta", "Consultiva", "Leve"); todas cumprem a MESMA funcao comercial ("goal") e seguem a regra de divisao em multiplas mensagens — elas variam a forma de dizer, nunca a estrategia.`
@@ -1408,9 +1489,7 @@ Deno.serve(async (req: Request) => {
     const baseUserPrompt = [
       baseContextPrompt,
       '',
-      styleExamples.length > 0
-        ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n') + '\n'
-        : '',
+      '',
       shouldGenerateVariations
         ? `Interprete a conversa acima e gere ${variantCount} variacoes do proximo follow-up mais adequado para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
         : 'Interprete a conversa acima e gere o proximo follow-up mais adequado para enviar agora neste chat. Deve soar humano, comercialmente coerente e pronto para copiar e enviar no WhatsApp.',
@@ -1489,7 +1568,22 @@ Deno.serve(async (req: Request) => {
 
       aiContext = parsed.aiContext;
 
-      if (shouldGenerateVariations) {
+      if (hasRecentOutboundWithoutInbound(messages, now) && !customInstructions) {
+        aiContext = {
+          ...(aiContext ?? parseAiContextFromRecord({})),
+          currentAction: 'wait',
+          currentActionReason: 'Há uma mensagem outbound útil enviada há menos de 12 horas sem resposta; aguarde tempo razoável de análise.',
+          commercialFunction: 'nenhuma',
+          scheduleAction: aiContext?.scheduleAction ?? 'schedule',
+          scheduleReason: aiContext?.scheduleReason ?? 'Dar tempo para avaliação antes de nova retomada.',
+          scheduleConfidence: aiContext?.scheduleConfidence ?? 'high',
+        };
+      }
+
+      if (aiContext?.currentAction === 'wait') {
+        variations = [];
+        responseText = '';
+      } else if (shouldGenerateVariations) {
         variations = parsed.variations;
         responseText = variations[0]?.text ? sanitizeGeneratedText(variations[0].text) : '';
       } else {
@@ -1499,13 +1593,17 @@ Deno.serve(async (req: Request) => {
       // Se o modelo nao seguiu o formato JSON pedido mesmo apos a
       // correcao (raro, mas providers podem falhar nisso), cai pro texto
       // bruto em vez de retornar vazio.
-      if (!responseText) {
+      if (!responseText && aiContext?.currentAction !== 'wait') {
         responseText = sanitizeGeneratedText(result.text.trim());
       }
     }
 
-    if (!responseText) {
+    if (!responseText && aiContext?.currentAction !== 'wait') {
       throw new Error('A IA nao retornou um follow-up valido.');
+    }
+
+    if (responseText) {
+      responseText = normalizeGreetingForTemporalFacts(responseText, temporalFacts);
     }
 
     const nextAction = refinementMode ? null : await buildFollowUpNextAction({
@@ -1525,10 +1623,53 @@ Deno.serve(async (req: Request) => {
       nextAction,
     });
 
+    const scheduleRecommendation = !refinementMode
+      ? {
+          action: aiContext?.scheduleAction ?? (nextAction?.suggestedDateTime ? 'schedule' : 'no_schedule'),
+          suggestedDate: aiContext?.scheduleAction === 'no_schedule' ? null : nextAction?.suggestedDateTime ?? null,
+          reason: aiContext?.scheduleReason ?? nextAction?.reason ?? 'Recomendação de agenda indisponível.',
+          confidence: aiContext?.scheduleConfidence ?? 'medium',
+        }
+      : null;
+
+    let generationId: string | null = null;
+    if (!refinementMode && chat.lead_id) {
+      const { data: auditRow, error: auditError } = await supabaseAdmin.from('comm_follow_up_audit_log').insert({
+        lead_id: chat.lead_id,
+        chat_id: chat.id,
+        source_reminder_id: toTrimmedString(body.sourceReminderId) || null,
+        batch_id: toTrimmedString(body.batchId) || null,
+        trigger_source: toTrimmedString(body.triggerSource) || 'individual',
+        generated_by: authResult.user.profileId,
+        provider: result.provider,
+        model: result.model,
+        current_action: aiContext?.currentAction,
+        current_action_reason: aiContext?.currentActionReason,
+        stage: aiContext?.stage,
+        blocker: aiContext?.blocker,
+        goal: aiContext?.goal,
+        commercial_function: aiContext?.commercialFunction,
+        next_action_owner: aiContext?.nextActionOwner,
+        pending_microdecision: aiContext?.pendingMicrodecision,
+        last_commercial_commitment: aiContext?.lastCommercialCommitment,
+        decision_maker: aiContext?.decisionMaker,
+        opportunity_recommendation: aiContext?.opportunityRecommendation,
+        schedule_action: scheduleRecommendation?.action,
+        schedule_suggested_date: scheduleRecommendation?.suggestedDate,
+        schedule_reason: scheduleRecommendation?.reason,
+        schedule_confidence: scheduleRecommendation?.confidence,
+        rationale: aiContext?.rationale,
+        generated_text: responseText || null,
+        text_content: responseText || '[WAIT — sem mensagem gerada]',
+      }).select('id').maybeSingle();
+      if (auditError) console.error('[FollowUpAI][edge] erro ao registrar geracao', auditError);
+      generationId = toTrimmedString(auditRow?.id) || null;
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        text: responseText,
+        text: responseText || null,
         variations: variations.length > 0 ? variations : undefined,
         aiContext: {
           stage: aiContext?.stage ?? null,
@@ -1536,8 +1677,17 @@ Deno.serve(async (req: Request) => {
           goal: aiContext?.goal ?? null,
           emotionalContext: aiContext?.emotionalContext ?? null,
           rationale: aiContext?.rationale ?? null,
+          commercialFunction: aiContext?.commercialFunction ?? null,
+          nextActionOwner: aiContext?.nextActionOwner ?? null,
+          pendingMicrodecision: aiContext?.pendingMicrodecision ?? null,
+          lastCommercialCommitment: aiContext?.lastCommercialCommitment ?? null,
+          decisionMaker: aiContext?.decisionMaker ?? null,
         },
-        nextAction,
+        currentAction: refinementMode ? null : aiContext?.currentAction ?? 'send',
+        currentActionReason: refinementMode ? null : aiContext?.currentActionReason ?? null,
+        opportunityRecommendation: refinementMode ? null : aiContext?.opportunityRecommendation ?? 'continue',
+        scheduleRecommendation,
+        generationId,
         provider: result.provider,
         model: result.model,
         fallback_used: result.fallbackUsed,

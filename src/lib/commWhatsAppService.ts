@@ -338,6 +338,20 @@ export type CommWhatsAppFollowUpAiContext = {
   goal: CommWhatsAppFollowUpGoal | null;
   emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
   rationale?: string | null;
+  commercialFunction?: CommWhatsAppCommercialFunction | null;
+  nextActionOwner?: CommWhatsAppNextActionOwner | null;
+  pendingMicrodecision?: string | null;
+  lastCommercialCommitment?: string | null;
+  decisionMaker?: string | null;
+};
+
+export type CommWhatsAppCommercialFunction = 'retomar_contexto' | 'obter_microdecisao' | 'reduzir_opcoes' | 'remover_atrito' | 'esclarecer_objecao' | 'diagnosticar_bloqueio' | 'cobrar_acao_combinada' | 'confirmar_decisao' | 'facilitar_documentacao' | 'retomar_em_data_combinada' | 'obter_posicionamento' | 'reativar' | 'encerrar_elegantemente' | 'nenhuma';
+export type CommWhatsAppNextActionOwner = 'client' | 'seller' | 'third_party' | 'operator' | 'date' | 'none';
+export type CommWhatsAppScheduleRecommendation = {
+  action: 'schedule' | 'no_schedule';
+  suggestedDate: string | null;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
 };
 
 export type CommWhatsAppFollowUpNextAction = {
@@ -354,9 +368,15 @@ export type CommWhatsAppFollowUpNextAction = {
 };
 
 export type CommWhatsAppFollowUpSuggestion = {
-  text: string;
+  text: string | null;
   variations?: CommWhatsAppFollowUpVariation[];
   aiContext?: CommWhatsAppFollowUpAiContext;
+  currentAction?: 'send' | 'wait' | null;
+  currentActionReason?: string | null;
+  opportunityRecommendation?: 'continue' | 'pause' | 'mark_lost_recommended' | null;
+  scheduleRecommendation?: CommWhatsAppScheduleRecommendation | null;
+  generationId?: string | null;
+  /** @deprecated V2 consumers use currentAction and scheduleRecommendation. */
   nextAction?: CommWhatsAppFollowUpNextAction | null;
   provider?: string | null;
   model?: string | null;
@@ -1701,11 +1721,14 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string; variantCount?: number } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; variantCount?: number; sourceReminderId?: string; batchId?: string; triggerSource?: 'individual' | 'batch' | 'refine' | 'other' } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const requestBody = {
       chatId,
       customInstructions: options.customInstructions?.trim() || '',
       variantCount: options.variantCount,
+      sourceReminderId: options.sourceReminderId,
+      batchId: options.batchId,
+      triggerSource: options.triggerSource,
     };
     console.debug('[FollowUpAI][service] invoke request', requestBody);
 
@@ -1730,15 +1753,19 @@ export const commWhatsAppService = {
       : [];
     const text = payload.text?.trim() || variations[0]?.text || '';
 
-    if (!text) {
+    if (!text && payload.currentAction !== 'wait') {
       throw new Error('A IA nao retornou uma sugestao de follow-up.');
     }
 
     return {
-      text,
+      text: text || null,
       variations: variations.length > 0 ? variations : undefined,
       aiContext: payload.aiContext,
-      nextAction: payload.nextAction ?? null,
+      currentAction: payload.currentAction ?? 'send',
+      currentActionReason: payload.currentActionReason ?? null,
+      opportunityRecommendation: payload.opportunityRecommendation ?? 'continue',
+      scheduleRecommendation: payload.scheduleRecommendation ?? null,
+      generationId: payload.generationId ?? null,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

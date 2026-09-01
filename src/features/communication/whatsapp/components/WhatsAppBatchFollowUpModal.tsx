@@ -6,7 +6,7 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpScheduleRecommendation, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { supabase } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
@@ -55,7 +55,13 @@ type BatchItemState = {
   variations: CommWhatsAppFollowUpVariation[];
   aiContextRationale: string | null;
   emotionalContext: CommWhatsAppFollowUpEmotionalContext | null;
-  nextAction: CommWhatsAppFollowUpNextAction | null;
+  currentAction: 'send' | 'wait';
+  currentActionReason: string | null;
+  opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended';
+  scheduleRecommendation: CommWhatsAppScheduleRecommendation | null;
+  generationId: string | null;
+  approvedScheduleAction: 'schedule' | 'no_schedule';
+  approvedScheduleDate: string | null;
   error: string | null;
   selected: boolean;
   sendStatus: 'idle' | 'queued' | 'sending' | 'sent' | 'failed';
@@ -89,12 +95,10 @@ type WhatsAppBatchFollowUpModalProps = {
     reminderId: string;
     leadId: string;
     phone: string | null;
-    nextAction: {
-      suggestedDateTime: string | null;
-      priority: string;
-      title: string;
-      reason: string;
-    } | null;
+    generationId: string | null;
+    approvedScheduleAction: 'schedule' | 'no_schedule';
+    approvedScheduleDate: string | null;
+    scheduleReason: string | null;
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => Promise<SentSummary>;
@@ -165,7 +169,13 @@ export default function WhatsAppBatchFollowUpModal({
           variations: [],
           aiContextRationale: null,
           emotionalContext: null,
-          nextAction: null,
+          currentAction: 'send',
+          currentActionReason: null,
+          opportunityRecommendation: 'continue',
+          scheduleRecommendation: null,
+          generationId: null,
+          approvedScheduleAction: 'no_schedule',
+          approvedScheduleDate: null,
           error: null,
           selected: true,
           sendStatus: 'idle',
@@ -227,7 +237,13 @@ export default function WhatsAppBatchFollowUpModal({
           variations: result.variations ?? [],
           aiContextRationale: result.aiContext?.rationale ?? null,
           emotionalContext: result.aiContext?.emotionalContext ?? null,
-          nextAction: result.nextAction ?? null,
+          currentAction: result.currentAction ?? 'send',
+          currentActionReason: result.currentActionReason ?? null,
+          opportunityRecommendation: result.opportunityRecommendation ?? 'continue',
+          scheduleRecommendation: result.scheduleRecommendation ?? null,
+          generationId: result.generationId ?? null,
+          approvedScheduleAction: result.scheduleRecommendation?.action ?? 'no_schedule',
+          approvedScheduleDate: result.scheduleRecommendation?.suggestedDate ?? null,
           error: null,
         }),
       );
@@ -336,7 +352,13 @@ export default function WhatsAppBatchFollowUpModal({
             variations: result.value.variations ?? [],
             aiContextRationale: result.value.aiContext?.rationale ?? null,
             emotionalContext: result.value.aiContext?.emotionalContext ?? null,
-            nextAction: result.value.nextAction ?? null,
+            currentAction: result.value.currentAction ?? 'send',
+            currentActionReason: result.value.currentActionReason ?? null,
+            opportunityRecommendation: result.value.opportunityRecommendation ?? 'continue',
+            scheduleRecommendation: result.value.scheduleRecommendation ?? null,
+            generationId: result.value.generationId ?? null,
+            approvedScheduleAction: result.value.scheduleRecommendation?.action ?? 'no_schedule',
+            approvedScheduleDate: result.value.scheduleRecommendation?.suggestedDate ?? null,
           };
         } else {
           allReady = false;
@@ -365,7 +387,7 @@ export default function WhatsAppBatchFollowUpModal({
   // ---- Send ----
 
   const handleSendSelected = async () => {
-    const readyItems = items.filter((it) => it.status === 'ready' && it.selected);
+    const readyItems = items.filter((it) => it.status === 'ready' && it.selected && it.currentAction === 'send');
     if (readyItems.length === 0 || !onSendBatchFollowUps) {
       if (!onSendBatchFollowUps) toast.error('Envio não disponível.');
       return;
@@ -392,14 +414,10 @@ export default function WhatsAppBatchFollowUpModal({
           reminderId: it.reminderId,
           leadId: it.leadId,
           phone: it.leadPhone,
-          nextAction: it.nextAction
-            ? {
-                suggestedDateTime: it.nextAction.suggestedDateTime,
-                priority: it.nextAction.priority,
-                title: it.nextAction.title,
-                reason: it.nextAction.reason,
-              }
-            : null,
+          generationId: it.generationId,
+          approvedScheduleAction: it.approvedScheduleAction,
+          approvedScheduleDate: it.approvedScheduleDate,
+          scheduleReason: it.scheduleRecommendation?.reason ?? null,
         })),
         {
           onProgress: (progress) => {

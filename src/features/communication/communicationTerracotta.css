@@ -91,11 +91,21 @@
 
 .comm-terracotta .whatsapp-inbox-image-card,
 .comm-terracotta .whatsapp-inbox-document-card,
-.comm-terracotta .whatsapp-inbox-audio-native-card,
 .comm-terracotta .whatsapp-inbox-composer {
   border-color: var(--border-default);
   background: var(--bg-surface);
   box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-audio-native-card {
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-audio-native-card.is-playing {
+  border-color: var(--brand-primary-border);
+  background: color-mix(in srgb, var(--brand-primary-muted) 48%, var(--bg-elevated));
 }
 
 .comm-terracotta .whatsapp-inbox-composer.is-focused {
@@ -108,8 +118,7 @@
   color: var(--text-secondary);
 }
 
-.comm-terracotta .whatsapp-inbox-document-thumb,
-.comm-terracotta .whatsapp-inbox-audio-native-badge {
+.comm-terracotta .whatsapp-inbox-document-thumb {
   border-color: var(--brand-primary-border);
   background: var(--brand-primary-muted);
   color: var(--brand-primary);

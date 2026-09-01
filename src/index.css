@@ -50,7 +50,7 @@ html,
 }
 
 .kifer-ds,
-.kifer-ds * {
+.kifer-ds *:not(.kds-sidebar-badge) {
   min-width: 0;
 }
 
@@ -782,36 +782,56 @@ html,
 .painel-theme .whatsapp-inbox-audio-native-card {
   display: flex;
   min-width: 0;
-  align-items: center;
-  gap: var(--space-3);
-  border: 0;
-  background: transparent;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--kds-radius-md);
+  background: var(--bg-elevated);
   color: inherit;
+  padding: 0.75rem;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
-.painel-theme :is(.whatsapp-inbox-audio-native-badge, .whatsapp-inbox-audio-native-play) {
+.painel-theme .whatsapp-inbox-audio-native-card.is-playing {
+  border-color: var(--brand-primary-border);
+  background: color-mix(in srgb, var(--brand-primary-muted) 48%, var(--bg-elevated));
+}
+
+.painel-theme .whatsapp-inbox-audio-native-content {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.painel-theme .whatsapp-inbox-audio-native-play {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border: 1px solid var(--brand-primary-border);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, currentColor 12%, var(--bg-surface));
-  color: inherit;
-}
-
-.painel-theme .whatsapp-inbox-audio-native-badge {
-  height: 2.75rem;
-  width: 2.75rem;
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--brand-primary) 22%, transparent);
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-play {
-  height: 2.25rem;
-  width: 2.25rem;
+  height: 2.625rem;
+  width: 2.625rem;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-play:hover {
-  background: color-mix(in srgb, currentColor 22%, var(--bg-surface));
+  background: var(--brand-primary-hover);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  transform: translateY(-1px);
+}
+
+.painel-theme .whatsapp-inbox-audio-native-play:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-waveform,
@@ -824,6 +844,19 @@ html,
   overflow: hidden;
 }
 
+.painel-theme button.whatsapp-inbox-audio-native-waveform {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.painel-theme button.whatsapp-inbox-audio-native-waveform:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 3px;
+}
+
 .painel-theme :is(.whatsapp-inbox-audio-native-waveform-bar, .whatsapp-inbox-waveform-bar) {
   flex-shrink: 0;
   border-radius: var(--radius-full);
@@ -832,7 +865,8 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-audio-native-waveform-bar {
-  width: 0.16rem;
+  width: 0.18rem;
+  background: color-mix(in srgb, var(--text-muted) 42%, transparent);
 }
 
 .painel-theme .whatsapp-inbox-waveform-bar {
@@ -841,7 +875,7 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-audio-native-waveform-bar.is-played {
-  background: currentColor;
+  background: var(--brand-primary);
 }
 
 .painel-theme :is(.whatsapp-inbox-audio-native-waveform-bar, .whatsapp-inbox-waveform-bar).is-active {

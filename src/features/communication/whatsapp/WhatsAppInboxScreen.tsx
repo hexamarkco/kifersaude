@@ -2315,6 +2315,17 @@ function WhatsAppAudioPlayerCard({
       : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.62 : value * 0.92));
   const playedBars = duration > 0 ? Math.min(waveformBars.length, Math.ceil((currentTime / duration) * waveformBars.length)) : 0;
 
+  const handleSeek = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const audio = audioRef.current;
+    if (!audio || duration <= 0) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const progress = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+    const nextTime = progress * duration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
   if (!mediaUrl) {
     return (
       <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
@@ -2330,46 +2341,48 @@ function WhatsAppAudioPlayerCard({
   }
 
   return (
-    <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+    <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'} ${isPlaying ? 'is-playing' : ''}`}>
       <audio ref={audioRef} preload="metadata">
         <source src={mediaUrl} type={mediaMimeType || undefined} />
       </audio>
 
-      <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-        {kind === 'voice' ? <Mic className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}
-      </div>
-
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
+        <div className="whatsapp-inbox-audio-native-content">
           <button
             type="button"
             onClick={handleTogglePlayback}
             className="whatsapp-inbox-audio-native-play"
             aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
           >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+            {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
           </button>
 
-          <div className={`min-w-0 flex-1 ${kind === 'voice' ? 'space-y-1.5' : 'space-y-2'}`}>
-            {kind !== 'voice' ? (
-              <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p>
-                <span className="text-[11px] font-medium opacity-70">Áudio enviado</span>
-              </div>
-            ) : null}
-            <div className="whatsapp-inbox-audio-native-waveform">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
+              </p>
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                {formatDurationLabel(Math.round(duration))}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="whatsapp-inbox-audio-native-waveform"
+              onClick={handleSeek}
+              aria-label={`Avançar áudio. Posição atual: ${formatDurationLabel(Math.round(currentTime))} de ${formatDurationLabel(Math.round(duration))}`}
+            >
               {waveformBars.map((bar, index) => (
                 <span
                   key={`${kind}-${index}-${bar}`}
                   className={`whatsapp-inbox-audio-native-waveform-bar ${index < playedBars ? 'is-played' : ''} ${isPlaying ? 'is-active' : ''}`}
-                  style={{ height: `${Math.max(10, Math.round(bar * 22))}px` }}
+                  style={{ height: `${Math.max(9, Math.round(bar * 20))}px` }}
                 />
               ))}
-            </div>
-            <div className="flex items-center justify-between gap-3 text-xs opacity-80">
-              <span>{formatDurationLabel(Math.round(currentTime))}</span>
-              <span>{formatDurationLabel(Math.round(duration))}</span>
-            </div>
+            </button>
+            <p className="mt-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
+              {formatDurationLabel(Math.round(currentTime))} reproduzidos
+            </p>
           </div>
         </div>
       </div>

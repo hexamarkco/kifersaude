@@ -53,7 +53,10 @@ export function isPlausibleMediaSignature(kind: MediaFileKind, bytes: Uint8Array
       return isIsoBaseMedia(bytes) || isWebm(bytes) || isAvi(bytes);
     case 'audio':
     case 'voice':
-      return isMp3(bytes) || isOgg(bytes) || isWav(bytes) || isIsoBaseMedia(bytes);
+      // O MediaRecorder gera audio/webm (EBML) em Chrome/Edge quando OGG não
+      // está disponível. WebM também pode conter vídeo, mas continua sendo um
+      // contêiner de mídia válido — a Whapi valida o codec/stream ao receber.
+      return isMp3(bytes) || isOgg(bytes) || isWav(bytes) || isIsoBaseMedia(bytes) || isWebm(bytes);
     case 'document':
     default:
       return !(isWindowsExecutable(bytes) || isElfExecutable(bytes) || isMachOExecutable(bytes) || isShellScript(bytes));

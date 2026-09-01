@@ -42,6 +42,7 @@ test('áudio/voice: aceita mp3 (com/sem ID3), ogg, wav', () => {
   assert.equal(isPlausibleMediaSignature('audio', asciiBytes('ID3.............')), true);
   assert.equal(isPlausibleMediaSignature('voice', asciiBytes('OggS............')), true);
   assert.equal(isPlausibleMediaSignature('voice', asciiBytes('RIFF....WAVE')), true);
+  assert.equal(isPlausibleMediaSignature('voice', bytes(0x1a, 0x45, 0xdf, 0xa3)), true);
 });
 
 test('áudio: rejeita script de shell disfarçado', () => {

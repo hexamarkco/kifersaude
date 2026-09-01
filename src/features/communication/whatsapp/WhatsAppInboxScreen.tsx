@@ -2326,13 +2326,22 @@ function WhatsAppAudioPlayerCard({
 
   const handleSeek = (event: React.MouseEvent<HTMLButtonElement>) => {
     const audio = audioRef.current;
-    if (!audio || duration <= 0) return;
+    if (!audio) return;
+
+    const mediaDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : duration;
+    if (mediaDuration <= 0) return;
 
     const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width <= 0) return;
+
     const progress = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-    const nextTime = progress * duration;
+    const nextTime = Math.min(progress * mediaDuration, Math.max(0, mediaDuration - 0.05));
     audio.currentTime = nextTime;
     setCurrentTime(nextTime);
+
+    if (audio.paused) {
+      void audio.play().then(() => setIsPlaying(true)).catch(() => undefined);
+    }
   };
 
   const formatPlaybackRate = (rate: number) => `${rate.toString().replace('.', ',')}×`;
@@ -2417,7 +2426,7 @@ function WhatsAppAudioPlayerCard({
               type="button"
               className="whatsapp-inbox-audio-native-waveform"
               onClick={handleSeek}
-              aria-label={`Avançar áudio. Posição atual: ${formatDurationLabel(Math.round(currentTime))} de ${formatDurationLabel(Math.round(duration))}`}
+              aria-label={`Reproduzir áudio a partir de uma posição. Posição atual: ${formatDurationLabel(Math.round(currentTime))} de ${formatDurationLabel(Math.round(duration))}`}
             >
               {waveformBars.map((bar, index) => (
                 <span

@@ -1375,6 +1375,7 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
 };
 
 const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
+const AUDIO_PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
 
 const inboxInlineActionClassName = getPanelButtonClass({
   variant: 'soft',
@@ -1894,21 +1895,22 @@ const formatDurationLabel = (seconds: number) => {
   return `${mins}:${secs}`;
 };
 
-function WaveformBars({ bars, active = false }: { bars?: number[]; active?: boolean }) {
-  const resolvedBars = bars && bars.length > 0 ? bars : DEFAULT_WAVEFORM;
+function VoiceComposerTimeline({ progress = 0, recording = false }: { progress?: number; recording?: boolean }) {
+  const normalizedProgress = Math.min(100, Math.max(0, progress));
 
   return (
-    <div className={`whatsapp-inbox-waveform ${active ? 'is-active' : ''}`} aria-hidden="true">
-      {resolvedBars.map((bar, index) => (
-        <span
-          key={index}
-          className="whatsapp-inbox-waveform-bar"
-          style={{
-            height: `${Math.max(16, Math.round(bar * 34))}px`,
-            animationDelay: `${index * 24}ms`,
-          }}
-        />
-      ))}
+    <div
+      className={`whatsapp-inbox-voice-timeline ${recording ? 'is-recording' : ''}`}
+      role="progressbar"
+      aria-label={recording ? 'Gravação em andamento' : 'Progresso da nota de voz'}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={recording ? undefined : Math.round(normalizedProgress)}
+    >
+      <span
+        className="whatsapp-inbox-voice-timeline-fill"
+        style={recording ? undefined : { width: `${normalizedProgress}%` }}
+      />
     </div>
   );
 }
@@ -2266,6 +2268,8 @@ function WhatsAppAudioPlayerCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [resolvedDuration, setResolvedDuration] = useState(durationSeconds ?? 0);
+  const [playbackRate, setPlaybackRate] = useState<(typeof AUDIO_PLAYBACK_RATES)[number]>(1);
+  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -2294,6 +2298,11 @@ function WhatsAppAudioPlayerCard({
       audio.removeEventListener('ended', handleEnded);
     };
   }, [mediaUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) audio.playbackRate = playbackRate;
+  }, [mediaUrl, playbackRate]);
 
   const handleTogglePlayback = () => {
     const audio = audioRef.current;
@@ -2325,6 +2334,8 @@ function WhatsAppAudioPlayerCard({
     audio.currentTime = nextTime;
     setCurrentTime(nextTime);
   };
+
+  const formatPlaybackRate = (rate: number) => `${rate.toString().replace('.', ',')}×`;
 
   if (!mediaUrl) {
     return (
@@ -2362,9 +2373,45 @@ function WhatsAppAudioPlayerCard({
               <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
               </p>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
-                {formatDurationLabel(Math.round(duration))}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <Popover open={speedMenuOpen} onOpenChange={setSpeedMenuOpen}>
+                  <PopoverTrigger>
+                    <button
+                      type="button"
+                      className="whatsapp-inbox-audio-speed-trigger"
+                      aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}`}
+                      aria-expanded={speedMenuOpen}
+                    >
+                      {formatPlaybackRate(playbackRate)}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="top"
+                    align="end"
+                    sideOffset={6}
+                    className="whatsapp-inbox-audio-speed-menu grid grid-cols-4 gap-1 border p-1 shadow-lg"
+                    aria-label="Velocidade de reprodução"
+                  >
+                    {AUDIO_PLAYBACK_RATES.map((rate) => (
+                      <button
+                        key={rate}
+                        type="button"
+                        onClick={() => {
+                          setPlaybackRate(rate);
+                          setSpeedMenuOpen(false);
+                        }}
+                        className={`whatsapp-inbox-audio-speed-option ${playbackRate === rate ? 'is-selected' : ''}`}
+                        aria-pressed={playbackRate === rate}
+                      >
+                        {formatPlaybackRate(rate)}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                  {formatDurationLabel(Math.round(duration))}
+                </span>
+              </div>
             </div>
             <button
               type="button"
@@ -3632,7 +3679,6 @@ export default function WhatsAppInboxScreen() {
   const {
     voiceRecordingState,
     voiceRecordingSeconds,
-    voiceRecordingWaveform,
     voicePreviewPlaying,
     voicePreviewDuration,
     voicePreviewCurrentTime,
@@ -10788,31 +10834,33 @@ export default function WhatsAppInboxScreen() {
                             {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
                           </button>
 
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="whatsapp-inbox-voice-time-pill inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums">
-                            <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
-                            {formatDurationLabel(
-                              Math.max(
-                                0,
-                                Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0)),
-                              ),
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <WaveformBars bars={voiceAttachment.waveform} active={voicePreviewPlaying} />
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1.5 flex items-center justify-between gap-3">
+                            <span className="whatsapp-inbox-voice-label">Nota de voz</span>
+                            <span className="whatsapp-inbox-voice-time">
+                              {formatDurationLabel(Math.max(0, Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : 0)))} / {formatDurationLabel(Math.max(0, Math.round(voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0)))}
+                            </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleClearAttachment();
-                              void handleStartVoiceRecording();
-                            }}
-                            className="whatsapp-inbox-voice-side-action is-accent inline-flex items-center justify-center rounded-full transition"
-                            aria-label="Regravar nota de voz"
-                          >
-                            <Mic className="h-4 w-4" />
-                          </button>
+                          <VoiceComposerTimeline
+                            progress={
+                              (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0) > 0
+                                ? (voicePreviewCurrentTime / (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 1)) * 100
+                                : 0
+                            }
+                          />
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleClearAttachment();
+                            void handleStartVoiceRecording();
+                          }}
+                          className="whatsapp-inbox-voice-side-action is-accent inline-flex items-center justify-center rounded-full transition"
+                          aria-label="Regravar nota de voz"
+                        >
+                          <Mic className="h-4 w-4" />
+                        </button>
 
                           <button
                             type="button"
@@ -10836,25 +10884,25 @@ export default function WhatsAppInboxScreen() {
                         <Trash2 className="h-5 w-5" />
                       </button>
 
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <span className="whatsapp-inbox-voice-time-pill inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums">
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--danger)]" />
-                          {formatDurationLabel(voiceRecordingSeconds)}
-                        </span>
-
-                        <div className="min-w-0 flex-1">
-                          <WaveformBars bars={voiceRecordingWaveform} active />
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex items-center justify-between gap-3">
+                          <span className="whatsapp-inbox-voice-label is-recording">
+                            <span className="whatsapp-inbox-voice-recording-dot" />
+                            Gravando
+                          </span>
+                          <span className="whatsapp-inbox-voice-time">{formatDurationLabel(voiceRecordingSeconds)}</span>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleStopVoiceRecording()}
-                          className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                          aria-label="Parar gravação"
-                        >
-                          <Pause className="h-4 w-4" />
-                        </button>
+                        <VoiceComposerTimeline recording />
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStopVoiceRecording()}
+                        className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
+                        aria-label="Parar gravação"
+                      >
+                        <Pause className="h-4 w-4 fill-current" />
+                      </button>
 
                       <button
                         type="button"

@@ -924,7 +924,7 @@ export default function HomePage() {
   return (
     <>
       <PublicSeo
-        title="Kifer Saúde | Plano de saúde no RJ com atendimento humano"
+        title="Planos de saúde no Rio de Janeiro com atendimento humano"
         description="Plano de saúde no RJ com atendimento humano, cotação gratuita e suporte consultivo pelo WhatsApp para pessoa física, MEI e empresa pequena."
         canonicalPath="/"
         faqItems={faqItems}
@@ -1033,7 +1033,9 @@ export default function HomePage() {
       `}</style>
 
       <div className="painel-theme kifer-ds theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
+        <header>
         <nav
+          aria-label="Navegação principal"
           className={`fixed top-0 z-40 w-full transition-all duration-300 ${
             isScrolled ? 'bg-[var(--panel-glass-bg-lite)] shadow-[var(--shadow-card)] backdrop-blur-sm' : 'bg-transparent'
           }`}
@@ -1093,7 +1095,9 @@ export default function HomePage() {
             </button>
           </div>
         </nav>
+        </header>
 
+        <main id="conteudo-principal">
         <section id="topo" className="relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-0 lg:pt-20">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_78%_43%,var(--brand-primary-muted),transparent_36%)]" />
           <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-4">
@@ -1151,6 +1155,10 @@ export default function HomePage() {
               <img
                 src="/luiza-kifer-hero.png"
                 alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
+                width="1728"
+                height="2304"
+                fetchPriority="high"
+                loading="eager"
                 className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:w-full"
               />
               <div className="absolute bottom-[9%] right-0 z-20 flex items-center gap-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)] sm:right-[2%] sm:px-5 sm:py-4">
@@ -1360,6 +1368,10 @@ export default function HomePage() {
                 <img
                   src="/image.png"
                   alt="Luiza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
+                  width="1024"
+                  height="1536"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full min-h-[420px] w-full object-cover object-[center_28%]"
                 />
               </div>
@@ -1500,7 +1512,7 @@ export default function HomePage() {
                 <div className="mb-6 flex items-center gap-4">
                   <div className="relative h-20 w-20 shrink-0">
                     <div className="h-full w-full overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
-                      <img src="/image.png" alt="Luiza Kifer" className="h-full w-full object-cover object-[center_20%]" />
+                      <img src="/image.png" alt="Luiza Kifer" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[color:var(--text-primary)] bg-[var(--success)]">
                       <span className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
@@ -1531,7 +1543,7 @@ export default function HomePage() {
                 <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-modal)]">
                   <div className="flex items-center gap-3 border-b border-[color:var(--border-subtle)] pb-3">
                     <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full">
-                      <img src="/image.png" alt="" className="h-full w-full object-cover object-[center_20%]" />
+                      <img src="/image.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-[color:var(--text-primary)]">Luiza Kifer</p>
@@ -1567,6 +1579,8 @@ export default function HomePage() {
             </div>
           </Reveal>
         </section>
+
+        </main>
 
         <footer className="bg-[var(--text-primary)] px-4 py-14 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">

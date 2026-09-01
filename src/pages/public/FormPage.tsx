@@ -264,6 +264,7 @@ export default function FormPage() {
         title={pageTitle}
         description={form?.description || 'Fale com a Kifer Saúde e receba uma cotação personalizada.'}
         canonicalPath={`/forms/${slug ?? ''}`}
+        indexable={false}
       />
 
       <button
@@ -275,7 +276,7 @@ export default function FormPage() {
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </button>
 
-      <div className="w-full max-w-md">
+      <main className="w-full max-w-md">
         {loading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
@@ -381,7 +382,7 @@ export default function FormPage() {
             </div>
           </>
         )}
-      </div>
+      </main>
 
       <style>{`
         @keyframes form-step-fade-in {

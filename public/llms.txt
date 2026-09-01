@@ -1,0 +1,22 @@
+# Kifer Saúde
+
+Kifer Saúde é a corretora de Luiza Kifer, especialista em planos de saúde no Rio de Janeiro. O atendimento é humano e consultivo, com comparação de opções, apoio na contratação e acompanhamento até o pós-venda.
+
+## Serviços e públicos atendidos
+
+- Planos de saúde para pessoa física, MEI e empresas.
+- Comparação de custo, rede credenciada, carências e regras de contratação.
+- Atendimento pelo WhatsApp e solicitação de cotação pelo site.
+
+## Páginas canônicas
+
+- [Página inicial](https://www.kifersaude.com.br/): apresentação dos serviços, públicos atendidos, como funciona e perguntas frequentes.
+- [Sitemap](https://www.kifersaude.com.br/sitemap.xml): URLs públicas indexáveis.
+
+## Informações institucionais
+
+- Profissional: Luiza Kifer.
+- Marca: Kifer Saúde.
+- Área de atuação apresentada no site: Rio de Janeiro, RJ.
+- Instagram: https://instagram.com/souluizakifer
+- WhatsApp: https://wa.me/5521979302389

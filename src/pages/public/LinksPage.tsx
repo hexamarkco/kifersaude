@@ -55,9 +55,10 @@ export default function LinksPage() {
         title={`${pageTitle} — Links`}
         description={settings?.bio || 'Todos os canais e redes sociais em um só lugar.'}
         canonicalPath="/links"
+        indexable={false}
       />
 
-      <div className="w-full max-w-sm sm:max-w-md">
+      <main className="w-full max-w-sm sm:max-w-md">
         {loading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
@@ -153,7 +154,7 @@ export default function LinksPage() {
             </a>
           </>
         )}
-      </div>
+      </main>
 
       <style>{`
         @keyframes links-fade-in-up {

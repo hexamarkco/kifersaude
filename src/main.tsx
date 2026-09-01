@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
 import ToastViewport from './components/ui/ToastViewport';
+import NoIndex from './components/seo/NoIndex';
 import {
   AiSandboxChatWrapper,
   BlogTab,
@@ -51,26 +52,20 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/depoimentos" element={<Navigate to="/" replace />} />
             <Route path="/faq" element={<Navigate to="/" replace />} />
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<NoIndex><LoginPage /></NoIndex>} />
             <Route path="/links" element={<LinksPage />} />
             <Route path="/forms/:slug" element={<FormPage />} />
-            <Route path="/design-system" element={<DesignSystemShowcase />} />
+            <Route path="/design-system" element={<NoIndex><DesignSystemShowcase /></NoIndex>} />
             <Route
               path="/chat"
               element={
-                <ProtectedRoute>
-                  <AiSandboxChatWrapper />
-                </ProtectedRoute>
+                <NoIndex><ProtectedRoute><AiSandboxChatWrapper /></ProtectedRoute></NoIndex>
               }
             />
             <Route
               path="/painel"
               element={
-                <ProtectedRoute>
-                  <ConfigProvider>
-                    <PainelWrapper />
-                  </ConfigProvider>
-                </ProtectedRoute>
+                <NoIndex><ProtectedRoute><ConfigProvider><PainelWrapper /></ConfigProvider></ProtectedRoute></NoIndex>
               }
             >
               <Route index element={<Navigate to="/painel/dashboard" replace />} />

@@ -1,0 +1,17 @@
+{
+  "name": "Kifer Saúde",
+  "short_name": "Kifer Saúde",
+  "description": "Atendimento consultivo para planos de saúde no Rio de Janeiro.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f4f0e7",
+  "theme_color": "#f4f0e7",
+  "icons": [
+    {
+      "src": "/image.png",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

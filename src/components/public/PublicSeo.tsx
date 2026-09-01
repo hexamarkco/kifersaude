@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet';
+import { absoluteUrl, isIndexableDeployment, siteConfig } from '../../config/site';
 
 export type PublicBreadcrumbItem = {
   name: string;
@@ -16,25 +17,8 @@ type PublicSeoProps = {
   canonicalPath: string;
   breadcrumbs?: PublicBreadcrumbItem[];
   faqItems?: PublicFaqItem[];
-};
-
-const siteUrl = 'https://www.kifersaude.com.br';
-
-const organizationSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Kifer Saúde',
-  url: siteUrl,
-  logo: `${siteUrl}/image.png`,
-  email: 'contato@kifersaude.com.br',
-  telephone: '+55 21 97930-2389',
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: 'Rio de Janeiro',
-    addressRegion: 'RJ',
-    addressCountry: 'BR',
-  },
-  sameAs: ['https://instagram.com/souluizakifer'],
+  indexable?: boolean;
+  imagePath?: string;
 };
 
 export default function PublicSeo({
@@ -43,25 +27,68 @@ export default function PublicSeo({
   canonicalPath,
   breadcrumbs = [],
   faqItems = [],
+  indexable = true,
+  imagePath = siteConfig.defaultOgImage,
 }: PublicSeoProps) {
-  const canonicalUrl = `${siteUrl}${canonicalPath}`;
+  const canonicalUrl = absoluteUrl(canonicalPath);
+  const socialImageUrl = absoluteUrl(imagePath);
+  const fullTitle = title.includes(siteConfig.name) ? title : `${title} | ${siteConfig.name}`;
+  const allowIndexing = indexable && isIndexableDeployment;
   const breadcrumbItems =
     breadcrumbs.length > 0 && breadcrumbs[0].path !== '/'
       ? [{ name: 'Início', path: '/' }, ...breadcrumbs]
       : breadcrumbs;
 
-  const webPageSchema = {
+  const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: title,
-    description,
-    url: canonicalUrl,
-    inLanguage: 'pt-BR',
-    publisher: {
-      '@type': 'Organization',
-      name: 'Kifer Saúde',
-      url: siteUrl,
-    },
+    '@graph': [
+      {
+        '@type': ['Organization', 'InsuranceAgency'],
+        '@id': `${siteConfig.url}/#organization`,
+        name: siteConfig.legalName,
+        url: siteConfig.url,
+        logo: absoluteUrl('/image.png'),
+        image: socialImageUrl,
+        description: siteConfig.description,
+        email: siteConfig.email,
+        telephone: siteConfig.telephone,
+        areaServed: {
+          '@type': 'State',
+          name: siteConfig.areaServed,
+          address: { '@type': 'PostalAddress', addressCountry: 'BR' },
+        },
+        sameAs: [siteConfig.instagramUrl],
+      },
+      {
+        '@type': 'Person',
+        '@id': `${siteConfig.url}/#luiza-kifer`,
+        name: siteConfig.personName,
+        jobTitle: 'Especialista em planos de saúde',
+        image: absoluteUrl('/image.png'),
+        url: siteConfig.url,
+        sameAs: [siteConfig.instagramUrl],
+        worksFor: { '@id': `${siteConfig.url}/#organization` },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${siteConfig.url}/#website`,
+        name: siteConfig.name,
+        url: siteConfig.url,
+        inLanguage: siteConfig.language,
+        publisher: { '@id': `${siteConfig.url}/#organization` },
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${canonicalUrl}#webpage`,
+        name: fullTitle,
+        description,
+        url: canonicalUrl,
+        inLanguage: siteConfig.language,
+        isPartOf: { '@id': `${siteConfig.url}/#website` },
+        about: { '@id': `${siteConfig.url}/#luiza-kifer` },
+        primaryImageOfPage: socialImageUrl,
+      },
+    ],
   };
 
   const breadcrumbSchema =
@@ -73,7 +100,7 @@ export default function PublicSeo({
             '@type': 'ListItem',
             position: index + 1,
             name: item.name,
-            item: `${siteUrl}${item.path}`,
+            item: absoluteUrl(item.path),
           })),
         }
       : null;
@@ -94,22 +121,43 @@ export default function PublicSeo({
         }
       : null;
 
+  const robots = allowIndexing
+    ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+    : 'noindex, nofollow, noarchive';
+
   return (
     <Helmet>
-      <title>{title}</title>
+      <title>{fullTitle}</title>
       <meta name="description" content={description} />
-      <meta property="og:title" content={title} />
+      <meta name="application-name" content={siteConfig.name} />
+      <meta name="author" content={siteConfig.personName} />
+      <meta name="creator" content={siteConfig.personName} />
+      <meta name="publisher" content={siteConfig.name} />
+      <meta name="robots" content={robots} />
+      <meta name="googlebot" content={robots} />
+      {import.meta.env.VITE_GOOGLE_SITE_VERIFICATION && (
+        <meta name="google-site-verification" content={import.meta.env.VITE_GOOGLE_SITE_VERIFICATION} />
+      )}
+      {import.meta.env.VITE_BING_SITE_VERIFICATION && (
+        <meta name="msvalidate.01" content={import.meta.env.VITE_BING_SITE_VERIFICATION} />
+      )}
+      <link rel="canonical" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="pt-BR" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+      <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:site_name" content="Kifer Saúde" />
-      <meta property="og:locale" content="pt_BR" />
+      <meta property="og:site_name" content={siteConfig.name} />
+      <meta property="og:locale" content={siteConfig.locale} />
+      <meta property="og:image" content={socialImageUrl} />
+      <meta property="og:image:alt" content={`${siteConfig.personName}, ${siteConfig.description}`} />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={title} />
+      <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
-      <link rel="canonical" href={canonicalUrl} />
-      <script type="application/ld+json">{JSON.stringify(organizationSchema)}</script>
-      <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
+      <meta name="twitter:image" content={socialImageUrl} />
+      <meta name="twitter:image:alt" content={`${siteConfig.personName}, ${siteConfig.description}`} />
+      <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       {breadcrumbSchema && <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>}
       {faqSchema && <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>}
     </Helmet>

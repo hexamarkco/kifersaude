@@ -10,13 +10,11 @@ import {
   SAO_PAULO_TIMEZONE,
 } from "../../lib/dateUtils";
 import { useAuth } from "../../contexts/AuthContext";
-import { CalendarDays, Cake, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import LeadFunnel from "../../components/LeadFunnel";
 import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
-import { Badge, Button, EmptyState, SectionHeader, Surface } from "../../design-system";
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -32,6 +30,7 @@ import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardHeroCard } from "./components/DashboardHeroCard";
+import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardSummaryCards } from "./components/DashboardSummaryCards";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import {
@@ -48,6 +47,10 @@ import {
 } from "./shared/dashboardUtils";
 import type {
   DashboardProps,
+  AdjustmentItem,
+  AgeBand,
+  BirthdayEvent,
+  CalendarEvent,
   Dependent,
   Holder,
   ReminderRequest,
@@ -1402,7 +1405,7 @@ export default function DashboardScreen({
     () => [19, 24, 29, 34, 39, 44, 49, 54, 59],
     [],
   );
-  const ageBands = useMemo(
+  const ageBands = useMemo<AgeBand[]>(
     () => [
       { min: 0, max: 18 },
       { min: 19, max: 23 },
@@ -1417,16 +1420,6 @@ export default function DashboardScreen({
     ],
     [],
   );
-
-  type AdjustmentItem = {
-    id: string;
-    date: Date;
-    tipo: "idade" | "anual";
-    contract?: Contract;
-    personName?: string;
-    role?: string;
-    age?: number;
-  };
 
   const buildAdjustmentEventsInRange = useCallback(
     (rangeStart: Date, rangeEnd: Date) => {
@@ -1731,17 +1724,6 @@ export default function DashboardScreen({
     return true;
   }, [activeContractsForReminders, getAdjustmentDateForDirection]);
 
-  type BirthdayEvent = {
-    nome: string;
-    data_nascimento: string;
-    tipo: "Titular" | "Dependente";
-    contract_id: string;
-    contract?: Contract;
-    holder?: Holder;
-    isPJ: boolean;
-    nextBirthday: Date;
-  };
-
   const calendarMonthRange = useMemo(() => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
@@ -1770,20 +1752,6 @@ export default function DashboardScreen({
       ),
     [buildBirthdayEventsInRange, calendarMonthRange],
   );
-
-  type CalendarEvent =
-    | {
-        id: string;
-        date: Date;
-        kind: "adjustment";
-        adjustment: AdjustmentItem;
-      }
-    | {
-        id: string;
-        date: Date;
-        kind: "birthday";
-        birthday: BirthdayEvent;
-      };
 
   const calendarEvents = useMemo(() => {
     const events: CalendarEvent[] = [];
@@ -1939,65 +1907,6 @@ export default function DashboardScreen({
     selectedBaseDate,
     selectedCalendarDate,
   ]);
-
-  const calendarDays = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay();
-    const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-    const todayKey = getDateKey(new Date(), SAO_PAULO_TIMEZONE);
-    const cells: JSX.Element[] = [];
-
-    for (let i = 0; i < firstDay; i += 1) {
-      cells.push(<div key={`empty-${i}`} className="aspect-square" />);
-    }
-
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const date = new Date(year, month, day);
-      date.setHours(0, 0, 0, 0);
-      const dateKey = getDateKey(date, SAO_PAULO_TIMEZONE);
-      const dayEvents = calendarEventsByDate.get(dateKey) ?? [];
-      const isToday = dateKey === todayKey;
-      const isSelected = selectedCalendarKey === dateKey;
-      const kinds = Array.from(new Set(dayEvents.map((event) => event.kind)));
-
-      const stateClass = isSelected
-        ? "border-transparent !bg-[var(--text-primary)] text-[var(--text-inverse)]"
-        : isToday
-          ? "border-[var(--brand-primary-border)] !bg-[var(--brand-primary-muted)] text-[var(--text-primary)]"
-          : dayEvents.length > 0
-            ? "border-transparent !bg-[var(--bg-hover)] text-[var(--text-primary)]"
-            : "border-transparent text-[var(--text-secondary)]";
-      const badgeClass = isSelected
-        ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
-        : kinds.includes("adjustment")
-          ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
-          : "bg-[var(--border-strong)] text-[var(--text-inverse)]";
-
-      cells.push(
-        <button
-          key={day}
-          type="button"
-          onClick={() => setSelectedCalendarDate(date)}
-          aria-pressed={isSelected}
-          className={`kds-action-surface relative flex aspect-square items-center justify-center rounded-full border transition-colors ${stateClass}`}
-        >
-          <span className="font-[var(--font-sans)] text-xs font-bold tabular-nums sm:text-sm">{day}</span>
-          {dayEvents.length > 0 && (
-            <span
-              className={`absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none sm:h-5 sm:min-w-5 sm:text-[10px] ${badgeClass}`}
-              title={`${dayEvents.length} evento(s)`}
-            >
-              {dayEvents.length}
-            </span>
-          )}
-        </button>,
-      );
-    }
-
-    return { weekDays, cells };
-  }, [calendarMonth, calendarEventsByDate, selectedCalendarKey]);
 
   const calendarMonthEventCount = useMemo(
     () => calendarEvents.length,
@@ -2249,407 +2158,25 @@ export default function DashboardScreen({
         />
 
         {!isObserver && (
-          <>
-            <Surface padding="sm" data-panel-animate className="space-y-4">
-              <SectionHeader
-                title="Calendário de eventos"
-                description="Reajustes e aniversários agrupados pelo período selecionado."
-                action={(
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                    <Badge tone="neutral">
-                      <span className="text-[var(--text-primary)]">
-                        {calendarMonthEventCount}
-                      </span>{" "}
-                      eventos no mês
-                    </Badge>
-                    <Badge
-                      tone="accent"
-                      icon={<span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />}
-                    >
-                      Reajustes
-                    </Badge>
-                    <Badge
-                      tone="neutral"
-                      icon={<span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />}
-                    >
-                      Aniversarios
-                    </Badge>
-                  </div>
-                )}
-                as="h3"
-              />
-
-              <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
-                <div className="rounded-2xl bg-[var(--bg-hover)] p-3">
-                  <div className="mb-2.5 flex items-center justify-between gap-2">
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        setCalendarMonth(
-                          new Date(
-                            calendarMonth.getFullYear(),
-                            calendarMonth.getMonth() - 1,
-                            1,
-                          ),
-                        )
-                      }
-                      variant="icon"
-                      size="icon"
-                      className="h-7 w-7"
-                      aria-label="Mês anterior"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <h4 className="flex items-center gap-1.5 text-sm font-semibold capitalize leading-tight text-[var(--text-primary)]">
-                      <CalendarDays className="h-3.5 w-3.5 text-[var(--brand-primary)]" strokeWidth={1.75} />
-                      {calendarMonthLabel}
-                    </h4>
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        setCalendarMonth(
-                          new Date(
-                            calendarMonth.getFullYear(),
-                            calendarMonth.getMonth() + 1,
-                            1,
-                          ),
-                        )
-                      }
-                      variant="icon"
-                      size="icon"
-                      className="h-7 w-7"
-                      aria-label="Próximo mês"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mb-2.5 flex items-center justify-center gap-1 rounded-full bg-[var(--bg-surface)] p-1">
-                    {[
-                      {
-                        id: "day" as const,
-                        label: "Hoje",
-                        onClick: () => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          setCalendarView("day");
-                          setCalendarMonth(
-                            new Date(today.getFullYear(), today.getMonth(), 1),
-                          );
-                          setSelectedCalendarDate(today);
-                        },
-                      },
-                      {
-                        id: "week" as const,
-                        label: "Semana",
-                        onClick: () => {
-                          if (!selectedCalendarDate) {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            setSelectedCalendarDate(today);
-                          }
-                          setCalendarView("week");
-                        },
-                      },
-                      {
-                        id: "month" as const,
-                        label: "Mês",
-                        onClick: () => setCalendarView("month"),
-                      },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={tab.onClick}
-                        className={
-                          calendarView === tab.id
-                            ? "flex-1 rounded-full bg-[var(--text-primary)] px-2 py-1 text-[11px] font-medium text-[var(--text-inverse)] transition"
-                            : "flex-1 rounded-full px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition"
-                        }
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 rounded-2xl bg-[var(--bg-surface)] p-2">
-                    {calendarDays.weekDays.map((day) => (
-                      <div
-                        key={day}
-                        className="text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
-                      >
-                        {day.slice(0, 1)}
-                      </div>
-                    ))}
-                    {calendarDays.cells}
-                  </div>
-                </div>
-
-                <div className="flex h-full min-h-0 flex-col rounded-2xl bg-[var(--bg-hover)] p-3">
-                  <div className="mb-2.5 flex items-center justify-between gap-2 rounded-full bg-[var(--bg-surface)] py-1.5 pl-3 pr-1.5">
-                    <span className="min-w-0 truncate text-xs font-semibold text-[var(--text-primary)]">
-                      {calendarViewLabel}
-                    </span>
-                    <span className="shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
-                      {calendarViewEvents.length} evento
-                      {calendarViewEvents.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-
-                  {calendarViewEvents.length === 0 ? (
-                    <EmptyState
-                      title="Nenhum evento no período selecionado."
-                      className="flex-1"
-                    />
-                  ) : (
-                    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                      {calendarViewEvents.map((event) => {
-                        if (event.kind === "adjustment") {
-                          const adjustment = event.adjustment;
-                          const holder = adjustment.contract
-                            ? (holderByContractId.get(adjustment.contract.id) ??
-                              null)
-                            : null;
-                          const holderName = holder
-                            ? holder.nome_fantasia ||
-                              holder.razao_social ||
-                              holder.nome_completo
-                            : null;
-                          const ageBandIndex = adjustment.age
-                            ? ageBands.findIndex(
-                                (band) =>
-                                  adjustment.age! >= band.min &&
-                                  (band.max === null ||
-                                    adjustment.age! <= band.max),
-                              )
-                            : -1;
-                          const currentAgeBand =
-                            ageBandIndex >= 0 ? ageBands[ageBandIndex] : null;
-                          const previousAgeBand =
-                            ageBandIndex > 0
-                              ? ageBands[ageBandIndex - 1]
-                              : null;
-                          const formatBandLabel = (band: {
-                            min: number;
-                            max: number | null;
-                          }) =>
-                            band.max === null
-                              ? `${band.min}+`
-                              : `${band.min}-${band.max}`;
-                          const contractInfoParts = [
-                            holderName && `Titular: ${holderName}`,
-                            adjustment.contract?.modalidade &&
-                              `Modalidade: ${adjustment.contract.modalidade}`,
-                            adjustment.contract?.responsavel &&
-                              `Responsável: ${adjustment.contract.responsavel}`,
-                          ].filter(Boolean) as string[];
-
-                          return (
-                            <div
-                              key={event.id}
-                              className="overflow-hidden rounded-2xl bg-[var(--bg-surface)] p-2.5"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex min-w-0 gap-2.5">
-                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--brand-primary)]">
-                                    <Sparkles className="h-4 w-4" strokeWidth={1.75} />
-                                  </span>
-                                  <div className="min-w-0 space-y-0.5">
-                                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
-                                      Reajuste
-                                    </div>
-                                  {adjustment.tipo === "idade" ? (
-                                    <div>
-                                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                                        {adjustment.personName}
-                                        {adjustment.age &&
-                                          ` • ${adjustment.age} anos`}
-                                      </p>
-                                      {currentAgeBand && previousAgeBand && (
-                                        <p className="truncate text-xs text-[var(--text-muted)]">
-                                          {adjustment.role} • Faixa:{" "}
-                                          {formatBandLabel(previousAgeBand)}{" "}
-                                          {"->"}{" "}
-                                          {formatBandLabel(currentAgeBand)}
-                                        </p>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                                      Reajuste contratual
-                                    </p>
-                                  )}
-                                  {contractInfoParts.length > 0 && (
-                                    <p className="truncate text-xs text-[var(--text-muted)]">
-                                      {contractInfoParts.join(" • ")}
-                                    </p>
-                                  )}
-                                  </div>
-                                </div>
-                                <div className="shrink-0 text-right text-xs text-[var(--text-muted)]">
-                                  <p className="font-semibold text-[var(--text-primary)]">
-                                    {adjustment.contract?.codigo_contrato}
-                                  </p>
-                                  <p>{adjustment.contract?.operadora}</p>
-                                </div>
-                              </div>
-                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                <Button
-                                  type="button"
-                                  onClick={() =>
-                                    handleNavigateToContract(
-                                      adjustment.contract,
-                                    )
-                                  }
-                                  variant="secondary"
-                                  size="xs"
-                                >
-                                  Ver contrato
-                                </Button>
-                                {adjustment.contract?.lead_id && (
-                                  <Button
-                                    type="button"
-                                    onClick={() =>
-                                      handleNavigateToLead(
-                                        adjustment.contract?.lead_id,
-                                      )
-                                    }
-                                    variant="secondary"
-                                    size="xs"
-                                  >
-                                    Abrir lead
-                                  </Button>
-                                )}
-                                <Button
-                                  type="button"
-                                  onClick={() =>
-                                    handleCreateReminderRequest({
-                                      contractId: adjustment.contract?.id,
-                                      leadId: adjustment.contract?.lead_id,
-                                      title:
-                                        adjustment.tipo === "idade"
-                                          ? `Reajuste por idade - ${adjustment.personName ?? "beneficiário"}`
-                                          : `Reajuste anual - ${adjustment.contract?.operadora ?? ""}`,
-                                      description: `Data: ${adjustment.date.toLocaleDateString("pt-BR")}`,
-                                    })
-                                  }
-                                  variant="soft"
-                                  size="xs"
-                                >
-                                  Criar lembrete
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        const birthday = event.birthday;
-
-                        return (
-                          <div
-                            key={event.id}
-                            className="overflow-hidden rounded-2xl bg-[var(--bg-surface)] p-2.5"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex min-w-0 gap-2.5">
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--accent-copper)]">
-                                  <Cake className="h-4 w-4" strokeWidth={1.75} />
-                                </span>
-                                <div className="min-w-0">
-                                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-copper)]">
-                                    Aniversário
-                                  </div>
-                                <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                                  {birthday.nome}
-                                </p>
-                                <p className="truncate text-xs text-[var(--text-muted)]">
-                                  {birthday.tipo}
-                                  {birthday.tipo === "Dependente" &&
-                                    birthday.holder && (
-                                      <span className="text-[var(--text-muted)]">
-                                        {" "}
-                                        • Titular:{" "}
-                                        {birthday.holder.nome_completo}
-                                      </span>
-                                    )}
-                                  {birthday.isPJ &&
-                                    birthday.holder &&
-                                    (birthday.holder.razao_social ||
-                                      birthday.holder.nome_fantasia) && (
-                                      <span className="font-medium text-[var(--brand-primary)]">
-                                        {" "}
-                                        • {birthday.holder.razao_social ||
-                                          birthday.holder.nome_fantasia}
-                                      </span>
-                                    )}
-                                </p>
-                                {birthday.contract && (
-                                  <p className="truncate text-xs text-[var(--text-muted)]">
-                                    {birthday.contract.codigo_contrato} • {birthday.contract.operadora}
-                                  </p>
-                                )}
-                                </div>
-                              </div>
-                              <div className="shrink-0 text-right text-xs text-[var(--text-muted)]">
-                                <p className="font-semibold text-[var(--text-primary)]">
-                                  {birthday.nextBirthday.toLocaleDateString(
-                                    "pt-BR",
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <div
-                              className="mt-2 flex flex-wrap items-center gap-1.5"
-                            >
-                              {birthday.contract && (
-                                <Button
-                                  type="button"
-                                  onClick={() =>
-                                    handleNavigateToContract(birthday.contract)
-                                  }
-                                  variant="secondary"
-                                  size="xs"
-                                >
-                                  Ver contrato
-                                </Button>
-                              )}
-                              {birthday.contract?.lead_id && (
-                                <Button
-                                  type="button"
-                                  onClick={() =>
-                                    handleNavigateToLead(
-                                      birthday.contract?.lead_id,
-                                    )
-                                  }
-                                  variant="secondary"
-                                  size="xs"
-                                >
-                                  Abrir lead
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                onClick={() =>
-                                  handleCreateReminderRequest({
-                                    contractId: birthday.contract?.id,
-                                    leadId: birthday.contract?.lead_id,
-                                    title: `Aniversário de ${birthday.nome}`,
-                                    description: `Data: ${birthday.nextBirthday.toLocaleDateString("pt-BR")}`,
-                                  })
-                                }
-                                variant="soft"
-                                size="xs"
-                              >
-                                Criar lembrete
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Surface>
-          </>
+          <DashboardEventsCalendar
+            calendarMonth={calendarMonth}
+            calendarMonthLabel={calendarMonthLabel}
+            calendarMonthEventCount={calendarMonthEventCount}
+            calendarEventsByDate={calendarEventsByDate}
+            calendarView={calendarView}
+            calendarViewEvents={calendarViewEvents}
+            calendarViewLabel={calendarViewLabel}
+            selectedCalendarKey={selectedCalendarKey}
+            selectedCalendarDate={selectedCalendarDate}
+            ageBands={ageBands}
+            holderByContractId={holderByContractId}
+            onCalendarMonthChange={setCalendarMonth}
+            onCalendarViewChange={setCalendarView}
+            onSelectedCalendarDateChange={setSelectedCalendarDate}
+            onNavigateToContract={handleNavigateToContract}
+            onNavigateToLead={handleNavigateToLead}
+            onCreateReminder={handleCreateReminderRequest}
+          />
         )}
         <DashboardHeroCard />
 

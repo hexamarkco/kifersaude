@@ -129,18 +129,20 @@ export default function CommissionCalendarScreen() {
         title="Agenda de comissoes e bonificacoes"
         description="Visualize as previsoes de recebimento para o mes selecionado e organize o fluxo financeiro."
         actions={(
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto">
             <OperationalMetricChip
               tone="gold"
               icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
               label="Comissao prevista"
               value={formatCommissionCurrency(totals.commission)}
+              className="min-w-0 justify-center"
             />
             <OperationalMetricChip
               tone="accent"
               icon={<Gift className="h-4 w-4" aria-hidden="true" />}
               label="Bonificacao prevista"
               value={formatCommissionCurrency(totals.bonus)}
+              className="min-w-0 justify-center"
             />
           </div>
         )}

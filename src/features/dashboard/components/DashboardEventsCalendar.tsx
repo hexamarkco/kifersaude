@@ -97,7 +97,7 @@ export function DashboardEventsCalendar({
         aria-pressed={isSelected}
         aria-label={`${day} de ${calendarMonthLabel}, ${dayEvents.length} evento${dayEvents.length === 1 ? '' : 's'}`}
         className={[
-          'group relative flex min-h-12 flex-col items-start justify-between rounded-[var(--kds-radius-md)] border p-2 text-left transition',
+          'group relative flex min-h-12 flex-col items-start justify-between rounded-full border p-2 text-left transition',
           isSelected
             ? 'border-[var(--brand-primary-border)] bg-[var(--text-primary)] text-[var(--text-inverse)] shadow-[var(--shadow-card)]'
             : isToday
@@ -174,7 +174,7 @@ export function DashboardEventsCalendar({
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] xl:items-stretch">
-        <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+        <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Button
               type="button"
@@ -207,7 +207,7 @@ export function DashboardEventsCalendar({
             </Button>
           </div>
 
-          <div className="mb-3 grid grid-cols-3 gap-1 rounded-[var(--kds-radius-md)] bg-[var(--bg-surface)] p-1">
+          <div className="mb-3 grid grid-cols-3 gap-1 rounded-full bg-[var(--bg-surface)] p-1">
             {viewTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -215,8 +215,8 @@ export function DashboardEventsCalendar({
                 onClick={tab.onClick}
                 className={
                   calendarView === tab.id
-                    ? 'rounded-[var(--kds-radius-sm)] bg-[var(--text-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-inverse)] transition'
-                    : 'rounded-[var(--kds-radius-sm)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                    ? 'rounded-full bg-[var(--text-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-inverse)] transition'
+                    : 'rounded-full px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
                 }
               >
                 {tab.label}
@@ -224,7 +224,7 @@ export function DashboardEventsCalendar({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2">
+          <div className="grid grid-cols-7 gap-1.5 rounded-full bg-[var(--bg-surface)] p-2">
             {WEEK_DAYS.map((day) => (
               <div
                 key={day}
@@ -237,8 +237,8 @@ export function DashboardEventsCalendar({
           </div>
         </div>
 
-        <div className="flex min-h-[28rem] flex-col rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--kds-radius-md)] bg-[var(--bg-surface)] px-3 py-2.5">
+        <div className="flex min-h-[28rem] flex-col rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full bg-[var(--bg-surface)] px-3 py-2.5">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{calendarViewLabel}</p>
               <p className="text-xs text-[var(--text-muted)]">Agenda comercial e relacional</p>
@@ -307,7 +307,7 @@ function CalendarEventRow({
       : 'Reajuste contratual';
 
     return (
-      <article className="group rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
+      <article className="group rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
         <div className="flex items-start gap-3">
           <div className="flex w-12 shrink-0 flex-col items-center rounded-[var(--kds-radius-md)] bg-[var(--brand-primary-muted)] px-2 py-2 text-center text-[var(--brand-primary)]">
             <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
@@ -335,7 +335,7 @@ function CalendarEventRow({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <div className="dashboard-event-actions mt-3 flex flex-wrap items-center gap-1.5">
           <Button type="button" onClick={() => onNavigateToContract(adjustment.contract)} variant="secondary" size="xs">
             Ver contrato
           </Button>
@@ -369,7 +369,7 @@ function CalendarEventRow({
   const birthday = event.birthday;
 
   return (
-    <article className="group rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
+    <article className="group rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
       <div className="flex items-start gap-3">
         <div className="flex w-12 shrink-0 flex-col items-center rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-2 py-2 text-center text-[var(--accent-copper)]">
           <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
@@ -397,7 +397,7 @@ function CalendarEventRow({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <div className="dashboard-event-actions mt-3 flex flex-wrap items-center gap-1.5">
         {birthday.contract && (
           <Button type="button" onClick={() => onNavigateToContract(birthday.contract)} variant="secondary" size="xs">
             Ver contrato

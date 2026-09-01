@@ -36,17 +36,20 @@ export function LeadsHeader({
       actions={(
         <>
           <OperationalMetricChip
+            className="kds-mobile-compact-metric"
             icon={<Users className="h-3.5 w-3.5" />}
             value={filteredLeadCount}
             label="leads no recorte"
           />
           <OperationalMetricChip
+            className="kds-mobile-compact-metric"
             icon={<Filter className="h-3.5 w-3.5" />}
             value={activeFilterCount}
             label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
             active={activeFilterCount > 0}
           />
           <OperationalMetricChip
+            className="kds-mobile-compact-metric"
             icon={<LayoutList className="h-3.5 w-3.5" />}
             value={viewMode === "kanban" ? "Kanban" : "Lista"}
             label="modo atual"
@@ -67,6 +70,7 @@ export function LeadsHeader({
           />
 
           <OperationalMetricChip
+            className="kds-mobile-compact-metric"
             icon={<Clock3 className="h-3.5 w-3.5" />}
             value={lastUpdatedLabel || "Aguardando atualizacao..."}
           />
@@ -93,11 +97,12 @@ export function LeadsHeader({
             onClick={onRefresh}
             disabled={loading}
             variant="secondary"
-            size="md"
-            className="w-full sm:w-auto"
+            size="icon"
+            className="kds-header-refresh"
+            aria-label="Atualizar dados"
+            title="Atualizar dados"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span>Atualizar</span>
           </Button>
 
           <Button

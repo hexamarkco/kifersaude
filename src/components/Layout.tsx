@@ -179,6 +179,13 @@ export default function Layout({
     ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]
     : baseTabs;
 
+  const mobileNavItems: Array<{ id: string; label: string; icon: LucideIcon }> = [
+    { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
+    { id: 'leads', label: 'Leads', icon: Users },
+    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle },
+    { id: 'contracts', label: 'Contratos', icon: FileText },
+  ].filter((item) => canView(item.id));
+
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
@@ -1170,6 +1177,40 @@ export default function Layout({
           </div>
         </div>
       </aside>
+
+      <nav
+        className={cx('terracota-mobile-bottom-nav', isMobileMenuOpen && 'is-menu-open')}
+        aria-label="Navegação principal"
+        style={{ gridTemplateColumns: `repeat(${mobileNavItems.length + 1}, minmax(0, 1fr))` }}
+      >
+        {mobileNavItems.map((item) => {
+          const ItemIcon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onTabChange(item.id)}
+              className={cx('terracota-mobile-bottom-nav-item', isActive && 'is-active')}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <ItemIcon className="h-5 w-5" aria-hidden="true" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="terracota-mobile-bottom-nav-item"
+          aria-label="Abrir mais opções"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="painel-navigation"
+        >
+          <Menu className="h-5 w-5" aria-hidden="true" />
+          <span>Mais</span>
+        </button>
+      </nav>
 
       {activeCollapsedParentTab?.children && collapsedDropdownPosition && (
         <div

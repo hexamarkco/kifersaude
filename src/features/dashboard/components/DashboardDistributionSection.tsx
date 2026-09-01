@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import DonutChart from '../../../components/charts/DonutChart';
-import { Badge, Popover, PopoverContent, PopoverTrigger, SectionHeader, Surface } from '../../../design-system';
+import { Badge, Popover, PopoverContent, PopoverTrigger, SectionHeader, Surface, Tabs } from '../../../design-system';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
 const VISIBLE_LEGEND_ITEMS = 3;
@@ -21,6 +22,7 @@ export function DashboardDistributionSection({
   onLeadStatusSegmentClick,
   onOperadoraSegmentClick,
 }: DashboardDistributionSectionProps) {
+  const [mobileDistribution, setMobileDistribution] = useState<'leads' | 'operadoras'>('leads');
   const renderDistributionCard = ({
     title,
     description,
@@ -105,25 +107,41 @@ export function DashboardDistributionSection({
     );
   };
 
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" data-panel-animate>
-      {renderDistributionCard({
+  const leadsCard = renderDistributionCard({
         title: 'Distribuicao de Leads por Status',
         description: 'Mapa de concentração por etapa do funil ativo.',
         emptyLabel: 'Nenhum lead ativo',
         data: donutChartData,
         total: leadStatusData.reduce((sum, item) => sum + item.count, 0),
         onSegmentClick: onLeadStatusSegmentClick,
-      })}
-
-      {renderDistributionCard({
+      });
+  const operadorasCard = renderDistributionCard({
         title: 'Contratos por Operadora',
         description: 'Participação das operadoras na carteira vigente.',
         emptyLabel: 'Nenhum contrato ativo',
         data: operadoraChartData,
         total: operadoraChartData.reduce((sum, item) => sum + item.value, 0),
         onSegmentClick: onOperadoraSegmentClick,
-      })}
-    </div>
+      });
+
+  return (
+    <section data-panel-animate>
+      <div className="mb-3 lg:hidden">
+        <Tabs
+          items={[{ id: 'leads', label: 'Leads por status' }, { id: 'operadoras', label: 'Por operadora' }]}
+          value={mobileDistribution}
+          onChange={(value) => setMobileDistribution(value as 'leads' | 'operadoras')}
+          variant="pill"
+          size="sm"
+          listClassName="w-full"
+          triggerClassName="flex-1 px-2"
+        />
+      </div>
+      <div className="lg:hidden">{mobileDistribution === 'leads' ? leadsCard : operadorasCard}</div>
+      <div className="hidden grid-cols-1 gap-4 lg:grid lg:grid-cols-2">
+        {leadsCard}
+        {operadorasCard}
+      </div>
+    </section>
   );
 }

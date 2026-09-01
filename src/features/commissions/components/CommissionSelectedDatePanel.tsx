@@ -63,7 +63,7 @@ export default function CommissionSelectedDatePanel({
               </div>
 
               <span className={cx(
-                "shrink-0 text-sm font-semibold",
+                "shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums",
                 isCommission
                   ? "text-[var(--accent-gold-hover)]"
                   : "text-[var(--text-primary)]",

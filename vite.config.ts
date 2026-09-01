@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { loadEnv, type Plugin } from 'vite';
 import path from 'node:path';
-import { indexablePublicRoutes } from './scripts/seo-routes.mjs';
+import { indexablePublicRoutes } from './scripts/seo-routes';
 
 const deploymentEnvironment = process.env.VERCEL_ENV ?? 'development';
 const FALLBACK_SITE_URL = 'https://www.kifersaude.com.br';
@@ -55,69 +55,69 @@ export default defineConfig(({ mode }) => {
     (deploymentEnvironment === 'production' || env.VITE_SITE_INDEXABLE === 'true');
 
   return {
-  define: {
-    __KIFER_DEPLOYMENT_ENV__: JSON.stringify(deploymentEnvironment),
-  },
-  plugins: [react(), seoDiscoveryAssets(siteUrl, indexable)],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          const pkg = getPackageName(id);
+    define: {
+      __KIFER_DEPLOYMENT_ENV__: JSON.stringify(deploymentEnvironment),
+    },
+    plugins: [react(), seoDiscoveryAssets(siteUrl, indexable)],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const pkg = getPackageName(id);
 
-          if (!pkg) {
-            return undefined;
-          }
+            if (!pkg) {
+              return undefined;
+            }
 
-          if (pkg === 'react' || pkg === 'react-dom' || pkg === 'react-router-dom' || pkg === 'react-helmet') {
+            if (pkg === 'react' || pkg === 'react-dom' || pkg === 'react-router-dom' || pkg === 'react-helmet') {
+              return 'vendor';
+            }
+
+            if (pkg === 'lucide-react') {
+              return 'icons';
+            }
+
+            if (pkg === '@supabase/supabase-js') {
+              return 'supabase';
+            }
+
+            if (pkg === 'react-quill' || pkg === 'quill') {
+              return 'vendor';
+            }
+
+            if (pkg === 'reactflow' || pkg.startsWith('d3-')) {
+              return 'flow';
+            }
+
+            if (pkg === 'jspdf' || pkg === 'html-to-image') {
+              return 'export';
+            }
+
+            if (pkg === 'gsap') {
+              return 'animation';
+            }
+
+            if (pkg === 'dompurify' || pkg === 'date-fns') {
+              return 'utils';
+            }
+
             return 'vendor';
-          }
-
-          if (pkg === 'lucide-react') {
-            return 'icons';
-          }
-
-          if (pkg === '@supabase/supabase-js') {
-            return 'supabase';
-          }
-
-          if (pkg === 'react-quill' || pkg === 'quill') {
-            return 'vendor';
-          }
-
-          if (pkg === 'reactflow' || pkg.startsWith('d3-')) {
-            return 'flow';
-          }
-
-          if (pkg === 'jspdf' || pkg === 'html-to-image') {
-            return 'export';
-          }
-
-          if (pkg === 'gsap') {
-            return 'animation';
-          }
-
-          if (pkg === 'dompurify' || pkg === 'date-fns') {
-            return 'utils';
-          }
-
-          return 'vendor';
+          },
         },
       },
     },
-  },
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
-  resolve: {
-    alias: {
-      '@testing-library/react': path.resolve(__dirname, 'src/testing-library/react.ts'),
+    optimizeDeps: {
+      exclude: ['lucide-react'],
     },
-  },
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.ts',
-    globals: true,
-  },
-};
+    resolve: {
+      alias: {
+        '@testing-library/react': path.resolve(__dirname, 'src/testing-library/react.ts'),
+      },
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: './src/setupTests.ts',
+      globals: true,
+    },
+  };
 });

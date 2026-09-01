@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ListFilter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListFilter, MoreHorizontal } from 'lucide-react';
 import { cx } from '../lib/cx';
 import FilterSingleSelect from './FilterSingleSelect';
 
@@ -56,8 +56,8 @@ export default function Pagination({
 
   return (
     <div className="kds-op-pagination">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="kds-op-lead-meta">Itens por página:</span>
+      <div className="kds-op-pagination-summary">
+        <span className="kds-op-lead-meta kds-op-pagination-label">Itens por página:</span>
         <div className="w-20">
           <FilterSingleSelect
             icon={ListFilter}
@@ -79,7 +79,7 @@ export default function Pagination({
         </span>
       </div>
 
-      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+      <div className="kds-op-pagination-controls">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
@@ -90,11 +90,11 @@ export default function Pagination({
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <div className="flex min-w-0 items-center gap-1 overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
+        <div className="kds-op-pagination-pages" aria-label="Páginas disponíveis">
           {getPageNumbers().map((page, index) => (
             <div key={index}>
               {page === '...' ? (
-                <span className="kds-op-page-ellipsis">...</span>
+                <span className="kds-op-page-ellipsis" aria-hidden="true"><MoreHorizontal className="h-4 w-4" /></span>
               ) : (
                 <button
                   type="button"

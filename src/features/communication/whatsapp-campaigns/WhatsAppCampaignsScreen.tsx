@@ -868,19 +868,18 @@ export default function WhatsAppCampaignsScreen() {
         title="Disparos WhatsApp"
         description="Crie campanhas conversacionais para leads do CRM ou contatos importados por CSV, com base preparada para opt-out sinalizado por IA."
         actions={(
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <OperationalMetricChip icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
-            <OperationalMetricChip icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
-            <OperationalMetricChip icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
-            <OperationalMetricChip icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
-            <OperationalMetricChip icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
+          <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 lg:justify-end">
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
             <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
               <Plus className="h-4 w-4" />
               Novo disparo
             </Button>
-            <Button variant="secondary" className="whitespace-nowrap" onClick={() => void loadCampaigns()} loading={loading}>
+            <Button variant="secondary" size="icon" className="kds-header-refresh" aria-label="Atualizar disparos" title="Atualizar disparos" onClick={() => void loadCampaigns()} loading={loading}>
               {!loading && <RefreshCw className="h-4 w-4" />}
-              Atualizar
             </Button>
           </div>
         )}

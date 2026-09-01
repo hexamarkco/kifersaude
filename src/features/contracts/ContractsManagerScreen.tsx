@@ -580,8 +580,9 @@ export default function ContractsManager({
           data-panel-animate
           actions={(
             <>
-              <OperationalMetricChip value={filteredContracts.length} label="contratos no recorte" />
+              <OperationalMetricChip className="kds-mobile-compact-metric" value={filteredContracts.length} label="contratos no recorte" />
               <OperationalMetricChip
+                className="kds-mobile-compact-metric"
                 icon={<AlertCircle className="h-3.5 w-3.5" />}
                 value={upcomingImportantCount}
                 label="com data sensivel"
@@ -589,6 +590,7 @@ export default function ContractsManager({
                 active={upcomingImportantCount > 0}
               />
               <OperationalMetricChip
+                className="kds-mobile-compact-metric"
                 icon={<Layers className="h-3.5 w-3.5" />}
                 value={activeFilterCount}
                 label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
@@ -600,6 +602,7 @@ export default function ContractsManager({
         >
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
             <OperationalMetricChip
+              className="kds-mobile-compact-metric"
               icon={<Clock3 className="h-3.5 w-3.5" />}
               value={lastUpdatedLabel}
             />
@@ -609,10 +612,12 @@ export default function ContractsManager({
                 onClick={() => void loadContracts()}
                 disabled={loading}
                 variant="secondary"
-                className="w-full sm:w-auto"
+                size="icon"
+                className="kds-header-refresh"
+                aria-label="Atualizar contratos"
+                title="Atualizar contratos"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                <span>Atualizar</span>
               </Button>
 
               {canEditContracts && (
@@ -648,10 +653,12 @@ export default function ContractsManager({
                 onClick={resetFilters}
                 variant="soft"
                 size="sm"
-                className="whitespace-nowrap"
+                className="whitespace-nowrap kds-mobile-icon-action"
+                aria-label="Limpar filtros"
+                title="Limpar filtros"
               >
                 <Filter className="h-4 w-4" />
-                Limpar
+                <span className="kds-mobile-icon-action-label">Limpar</span>
               </Button>
               <OperationalMetricChip value={filteredContracts.length} label="contratos" />
             </ToolbarActions>
@@ -863,7 +870,7 @@ export default function ContractsManager({
                           {getContractDisplayName(contract)}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 text-sm text-[var(--text-secondary)] sm:grid-cols-2 xl:grid-cols-5">
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-[var(--text-secondary)] xl:grid-cols-5">
                         <div>
                           <span className="font-medium">Operadora:</span>{" "}
                           {normalizeOperadoraLabel(contract.operadora)}
@@ -942,7 +949,7 @@ export default function ContractsManager({
                         )}
                       </div>
                     </div>
-                    <div className="text-sm text-[var(--text-muted)] lg:text-right">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-[var(--text-muted)] lg:block lg:text-right">
                       <div>
                         Responsável:{" "}
                         <span className="font-medium text-[var(--text-secondary)]">
@@ -957,11 +964,12 @@ export default function ContractsManager({
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4 sm:justify-start">
+                  <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-subtle)] pt-4 sm:flex sm:flex-wrap sm:items-center sm:justify-start">
                     <Button
                       onClick={() => setSelectedContract(contract)}
                       variant="soft"
                       size="sm"
+                      className="w-full sm:w-auto"
                     >
                       <Eye className="h-4 w-4" />
                       <span>Abrir</span>
@@ -971,6 +979,7 @@ export default function ContractsManager({
                         onClick={() => handleDeleteContract(contract)}
                         variant="danger"
                         size="sm"
+                        className="w-full sm:w-auto"
                         type="button"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -53,6 +53,9 @@ import {
   Input,
   OperationalMetricChip,
   OperationalStatusBadge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Surface,
   Table,
   TableBody,
@@ -1526,31 +1529,25 @@ export default function LeadsManager({
                 onClick={resetFilters}
                 variant="soft"
                 size="md"
-                className="whitespace-nowrap"
+                className="whitespace-nowrap kds-mobile-icon-action"
+                aria-label="Limpar filtros"
+                title="Limpar filtros"
               >
                 <Filter className="h-4 w-4" />
-                Limpar
+                <span className="kds-mobile-icon-action-label">Limpar</span>
               </Button>
-              <Button
-                type="button"
-                onClick={handleExportFilteredLeads}
-                variant="secondary"
-                size="md"
-                className="whitespace-nowrap"
-              >
-                <Download className="h-4 w-4" />
-                Exportar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleExportCurrentPage}
-                variant="secondary"
-                size="md"
-                className="whitespace-nowrap"
-              >
-                <Download className="h-4 w-4" />
-                Página
-              </Button>
+              <Popover>
+                <PopoverTrigger className="inline-flex">
+                  <Button type="button" variant="secondary" size="md" className="whitespace-nowrap kds-mobile-icon-action" aria-label="Opções de exportação" title="Exportar">
+                    <Download className="h-4 w-4" />
+                    <span className="kds-mobile-icon-action-label">Exportar</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Opções de exportação">
+                  <button type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</button>
+                  <button type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</button>
+                </PopoverContent>
+              </Popover>
               <OperationalMetricChip value={filteredLeads.length} label="leads" />
             </ToolbarActions>
           </Toolbar>

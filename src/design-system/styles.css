@@ -661,8 +661,10 @@
 
 .kds-card-icon {
   display: inline-flex;
+  flex: 0 0 2.5rem;
   height: 2.5rem;
   width: 2.5rem;
+  aspect-ratio: 1;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-accent);
@@ -3074,6 +3076,8 @@
 
 .kds-op-icon-chip {
   border: 1px solid var(--border-default);
+  flex: 0 0 auto;
+  aspect-ratio: 1;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--bg-inset) 82%, transparent);
   color: var(--text-secondary);

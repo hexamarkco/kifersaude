@@ -76,7 +76,7 @@ export function DashboardEventsCalendar({
 
   const calendarCells = Array.from({ length: firstDay + daysInMonth }, (_, index) => {
     if (index < firstDay) {
-      return <div key={`empty-${index}`} className="min-h-12" aria-hidden="true" />;
+      return <div key={`empty-${index}`} className="aspect-square min-h-0" aria-hidden="true" />;
     }
 
     const day = index - firstDay + 1;
@@ -97,7 +97,7 @@ export function DashboardEventsCalendar({
         aria-pressed={isSelected}
         aria-label={`${day} de ${calendarMonthLabel}, ${dayEvents.length} evento${dayEvents.length === 1 ? '' : 's'}`}
         className={[
-          'group relative flex min-h-12 flex-col items-start justify-between rounded-full border p-2 text-left transition',
+          'group relative flex aspect-square min-h-0 w-full flex-col items-start justify-between rounded-full border p-2 text-left transition',
           isSelected
             ? 'border-[var(--brand-primary-border)] bg-[var(--text-primary)] text-[var(--text-inverse)] shadow-[var(--shadow-card)]'
             : isToday
@@ -307,7 +307,7 @@ function CalendarEventRow({
       : 'Reajuste contratual';
 
     return (
-      <article className="group rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
+      <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
         <div className="flex items-start gap-3">
           <div className="flex w-12 shrink-0 flex-col items-center rounded-[var(--kds-radius-md)] bg-[var(--brand-primary-muted)] px-2 py-2 text-center text-[var(--brand-primary)]">
             <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
@@ -369,7 +369,7 @@ function CalendarEventRow({
   const birthday = event.birthday;
 
   return (
-    <article className="group rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
+    <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
       <div className="flex items-start gap-3">
         <div className="flex w-12 shrink-0 flex-col items-center rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-2 py-2 text-center text-[var(--accent-copper)]">
           <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>

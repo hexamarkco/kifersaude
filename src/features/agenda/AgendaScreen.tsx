@@ -1603,11 +1603,18 @@ export default function AgendaScreen() {
               listClassName="flex-nowrap overflow-x-auto pb-1"
               triggerClassName="min-w-[7.5rem] shrink-0 whitespace-nowrap"
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={goToToday} variant="secondary" size="md">Hoje</Button>
+            <div className="kds-agenda-filter-actions flex flex-nowrap items-center gap-2">
+              <Button onClick={goToToday} variant="secondary" size="md" className="shrink-0 whitespace-nowrap">Hoje</Button>
               {filteredReminders.some((item) => !item.lido) && (
-                <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="md">
-                  Marcar como lidos
+                <Button
+                  onClick={() => void handleMarkAllFilteredAsRead()}
+                  variant="soft"
+                  size="md"
+                  className="shrink-0 whitespace-nowrap"
+                  aria-label="Marcar itens filtrados como lidos"
+                  title="Marcar itens filtrados como lidos"
+                >
+                  Marcar <span className="hidden sm:inline">como </span>lidos
                 </Button>
               )}
               {hasActiveFilters > 0 && (
@@ -1621,8 +1628,11 @@ export default function AgendaScreen() {
                   }}
                   variant="ghost"
                   size="md"
+                  className="shrink-0 whitespace-nowrap"
+                  aria-label={`Limpar filtros (${hasActiveFilters})`}
+                  title={`Limpar filtros (${hasActiveFilters})`}
                 >
-                  Limpar filtros ({hasActiveFilters})
+                  Limpar <span className="hidden sm:inline">filtros </span>({hasActiveFilters})
                 </Button>
               )}
             </div>

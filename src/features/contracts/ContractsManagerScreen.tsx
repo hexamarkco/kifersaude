@@ -584,7 +584,7 @@ export default function ContractsManager({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </ToolbarSearch>
-            <ToolbarActions>
+            <ToolbarActions className="kds-contracts-toolbar-actions">
               <Button
                 type="button"
                 onClick={resetFilters}

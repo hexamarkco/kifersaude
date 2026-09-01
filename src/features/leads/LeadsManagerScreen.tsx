@@ -1471,7 +1471,7 @@ export default function LeadsManager({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </ToolbarSearch>
-            <ToolbarActions>
+            <ToolbarActions className="kds-leads-toolbar-actions">
               <Button
                 type="button"
                 onClick={resetFilters}

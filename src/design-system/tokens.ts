@@ -46,7 +46,7 @@ export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
   sm: 'min-h-8 px-3 py-1.5 text-xs',
   md: 'min-h-10 px-3.5 py-2 text-sm',
   lg: 'min-h-12 px-4 py-2.5 text-sm',
-  icon: 'h-10 w-10 p-0',
+  icon: 'kds-button-size-icon h-10 w-10 shrink-0 p-0',
 };
 
 export const panelButtonSpinnerSizeClasses: Record<PanelButtonSize, string> = {

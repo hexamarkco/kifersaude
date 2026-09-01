@@ -10050,7 +10050,7 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => setThreadActionsMenuOpen((current) => !current)}
                       variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
                       size="icon"
-                      className="h-9 w-9 min-w-9 shrink-0 lg:hidden"
+                      className="h-11 min-h-11 w-11 min-w-11 shrink-0 lg:hidden"
                       aria-label="Abrir ações da conversa"
                       aria-expanded={threadActionsMenuOpen}
                       title="Ações da conversa"

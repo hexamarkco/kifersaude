@@ -1452,6 +1452,17 @@ html,
     min-height: 2.75rem;
   }
 
+  /* Icon actions must stay square when the mobile touch target increases. */
+  .painel-theme .kds-button.kds-button-size-icon {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    flex: 0 0 2.75rem;
+    aspect-ratio: 1;
+    padding: 0;
+  }
+
   .painel-theme .kds-button-group,
   .painel-theme .kds-page-actions,
   .painel-theme .kds-dialog-footer,
@@ -1707,6 +1718,39 @@ html,
   .painel-theme .kds-op-toolbar-actions > .kds-toolbar-inline-metric {
     width: auto;
     flex: 0 0 auto;
+  }
+
+  .painel-theme .kds-op-toolbar-actions.kds-leads-toolbar-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(2.75rem, 1fr) minmax(2.75rem, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .painel-theme .kds-leads-toolbar-actions > .kds-mobile-icon-action {
+    justify-self: start;
+  }
+
+  .painel-theme .kds-leads-toolbar-actions > .kds-popover-trigger {
+    justify-self: center;
+  }
+
+  .painel-theme .kds-leads-toolbar-actions > .kds-toolbar-inline-metric {
+    justify-self: end;
+  }
+
+  .painel-theme .kds-op-toolbar-actions.kds-contracts-toolbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .kds-agenda-filter-actions {
+    gap: 0.375rem;
+  }
+
+  .kds-agenda-filter-actions .kds-button {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
   }
 
   .kds-leads-list-summary {

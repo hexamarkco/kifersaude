@@ -1826,6 +1826,16 @@ html,
     width: 100%;
   }
 
+  .kds-campaign-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kds-campaign-card-actions .kds-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .kds-leads-list-summary {
     flex-wrap: nowrap;
     align-items: center;

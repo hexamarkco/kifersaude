@@ -1643,7 +1643,7 @@ export default function WhatsAppCampaignsScreen() {
                     <MiniStat label="Enviados" value={campaign.sent_targets} />
                     <MiniStat label="Resp." value={campaign.responded_targets} />
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="kds-campaign-card-actions mt-4 flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => navigate(`/painel/disparos/${campaign.id}`)}>
                       <Eye className="h-3.5 w-3.5" />
                       Detalhe

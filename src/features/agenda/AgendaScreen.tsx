@@ -1247,14 +1247,14 @@ export default function AgendaScreen() {
           onClick={() => {
             void handleDayClick(cellDate);
           }}
-          className={`kds-action-surface relative flex aspect-square items-center justify-center border transition-colors ${stateClass}`}
+          className={`kds-action-surface kds-calendar-day border transition-colors ${stateClass}`}
           aria-pressed={isSelected}
           aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${totalCount} item(ns)`}
         >
           <span className="text-sm font-bold sm:text-base">{day}</span>
           {totalCount > 0 && (
             <span
-              className={`absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none sm:h-5 sm:min-w-5 sm:text-[10px] ${
+              className={`kds-calendar-event-count ${
                 isSelected
                   ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
                   : "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
@@ -1527,17 +1527,25 @@ export default function AgendaScreen() {
           title="Agenda"
           description="Planeje o dia, trate pendências e mantenha cada próximo passo no contexto do lead."
           actions={(
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
-              <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="md">
-                <Sparkles className="h-4 w-4" />
-                Organizar
-              </Button>
-              <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
-                <Plus className="h-4 w-4" />
-                Nova tarefa
-              </Button>
+              <div className="flex w-full items-center justify-end gap-2 lg:w-auto">
+                <Button
+                  onClick={() => setOrganizerOpen(true)}
+                  variant="secondary"
+                  size="icon"
+                  className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                  aria-label="Organizar agenda"
+                  title="Organizar agenda"
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+                <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
+                  <Plus className="h-4 w-4" />
+                  Nova tarefa
+                </Button>
+              </div>
             </div>
           )}
         />
@@ -1627,12 +1635,12 @@ export default function AgendaScreen() {
                     setStatusFilter("todos");
                   }}
                   variant="ghost"
-                  size="md"
-                  className="shrink-0 whitespace-nowrap"
+                  size="icon"
+                  className="kds-agenda-clear-filters shrink-0"
                   aria-label={`Limpar filtros (${hasActiveFilters})`}
                   title={`Limpar filtros (${hasActiveFilters})`}
                 >
-                  Limpar <span className="hidden sm:inline">filtros </span>({hasActiveFilters})
+                  <X className="h-4 w-4" />
                 </Button>
               )}
             </div>

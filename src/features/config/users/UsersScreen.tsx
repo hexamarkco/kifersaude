@@ -346,7 +346,7 @@ export default function UsersScreen() {
           title="Usuários"
           description="Gerencie contas e os perfis de acesso da equipe."
           action={
-            <Button onClick={() => setShowAddUser(true)} variant="primary">
+            <Button onClick={() => setShowAddUser(true)} variant="primary" className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               <span>Novo Usuário</span>
             </Button>

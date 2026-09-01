@@ -243,7 +243,33 @@ export default function WhatsAppApiSettingsPanel() {
     if (!webhookUrl) return;
 
     try {
-      await navigator.clipboard.writeText(webhookUrl);
+      let copied = false;
+
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(webhookUrl);
+          copied = true;
+        } catch {
+          // Safari pode bloquear a API mesmo em contexto seguro; use o fallback abaixo.
+        }
+      }
+
+      if (!copied) {
+        const fallbackInput = document.createElement("textarea");
+        fallbackInput.value = webhookUrl;
+        fallbackInput.setAttribute("readonly", "");
+        fallbackInput.style.position = "fixed";
+        fallbackInput.style.opacity = "0";
+        fallbackInput.style.pointerEvents = "none";
+        document.body.appendChild(fallbackInput);
+        fallbackInput.select();
+
+        copied = document.execCommand("copy");
+        fallbackInput.remove();
+
+        if (!copied) throw new Error("Clipboard fallback failed");
+      }
+
       toast.success("Webhook copiado para a area de transferencia.");
     } catch {
       toast.error("Nao foi possivel copiar o webhook agora.");
@@ -340,7 +366,7 @@ export default function WhatsAppApiSettingsPanel() {
                     aria-label="Copiar webhook"
                     onClick={handleCopyWebhook}
                     disabled={!webhookUrl}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    className="absolute right-2 top-1/2 h-11 min-h-11 w-11 min-w-11 -translate-y-1/2 shrink-0"
                   >
                     <Copy className="w-4 h-4" />
                   </IconButton>

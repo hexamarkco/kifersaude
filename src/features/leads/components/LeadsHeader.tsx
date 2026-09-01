@@ -22,6 +22,22 @@ export function LeadsHeader({
       eyebrow="Operacao comercial"
       title="Gestao de Leads"
       description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
+      actions={(
+        <a
+          href="/api-docs.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={getPanelButtonClass({
+            variant: "text",
+            size: "sm",
+            className: "h-auto min-h-0 w-auto px-0 py-1 text-sm",
+          })}
+          title="Abrir documentacao da API"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          <span>API Docs</span>
+        </a>
+      )}
       data-panel-animate
     >
       <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
@@ -32,28 +48,14 @@ export function LeadsHeader({
             onChange={onViewModeChange}
             variant="pill"
             size="sm"
-            listClassName="w-full flex-nowrap md:w-auto"
-            triggerClassName="min-w-0 flex-1 whitespace-nowrap md:flex-initial"
+            className="kds-leads-view-tabs w-full md:w-auto"
+            listClassName="w-full min-w-[17rem] max-w-full flex-nowrap md:w-auto md:min-w-0"
+            triggerClassName="min-w-0 flex-1 whitespace-nowrap px-3 md:flex-initial md:px-4"
           />
 
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <a
-            href="/api-docs.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={getPanelButtonClass({
-              variant: "secondary",
-              size: "md",
-              className: "w-full sm:w-auto",
-            })}
-            title="Documentacao da API"
-          >
-            <BookOpen className="h-4 w-4" />
-            <span>API Docs</span>
-          </a>
-
           <Button
             type="button"
             onClick={onCreateLead}

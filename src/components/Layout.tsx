@@ -1290,7 +1290,7 @@ export default function Layout({
                     setIsMobileMenuOpen(false);
                   }}
                   className={cx(
-                    'kds-sidebar-item flex min-w-[156px] items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                    'kds-sidebar-item flex w-full min-w-[156px] items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
                     isChildActive && 'is-active',
                   )}
                 >

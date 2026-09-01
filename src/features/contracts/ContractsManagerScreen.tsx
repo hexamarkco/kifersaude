@@ -21,7 +21,6 @@ import Pagination from "../../components/Pagination";
 import {
   Badge,
   Button,
-  Field,
   Input,
   OperationalMetricChip,
   PageHeader,
@@ -605,88 +604,77 @@ export default function ContractsManager({
             </ToolbarActions>
           </Toolbar>
 
-          <div>
-            <p className="kds-op-section-label mb-3">Filtros principais</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Field label="Status">
-                <FilterSingleSelect
-                  icon={Filter}
-                  value={filterStatus}
-                  onChange={(value) => setFilterStatus(value)}
-                  placeholder="Todos os status"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: "todos", label: "Todos os status" },
-                    { value: "Rascunho", label: "Rascunho" },
-                    { value: "Em análise", label: "Em análise" },
-                    {
-                      value: "Documentos pendentes",
-                      label: "Documentos pendentes",
-                    },
-                    { value: "Proposta enviada", label: "Proposta enviada" },
-                    {
-                      value: "Aguardando assinatura",
-                      label: "Aguardando assinatura",
-                    },
-                    { value: "Emitido", label: "Emitido" },
-                    { value: "Ativo", label: "Ativo" },
-                    { value: "Suspenso", label: "Suspenso" },
-                    { value: "Cancelado", label: "Cancelado" },
-                    { value: "Encerrado", label: "Encerrado" },
-                  ]}
-                />
-              </Field>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <FilterSingleSelect
+              icon={Filter}
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value)}
+              placeholder="Todos os status"
+              includePlaceholderOption={false}
+              options={[
+                { value: "todos", label: "Todos os status" },
+                { value: "Rascunho", label: "Rascunho" },
+                { value: "Em análise", label: "Em análise" },
+                {
+                  value: "Documentos pendentes",
+                  label: "Documentos pendentes",
+                },
+                { value: "Proposta enviada", label: "Proposta enviada" },
+                {
+                  value: "Aguardando assinatura",
+                  label: "Aguardando assinatura",
+                },
+                { value: "Emitido", label: "Emitido" },
+                { value: "Ativo", label: "Ativo" },
+                { value: "Suspenso", label: "Suspenso" },
+                { value: "Cancelado", label: "Cancelado" },
+                { value: "Encerrado", label: "Encerrado" },
+              ]}
+            />
 
-              <Field label="Responsável">
-                <FilterSingleSelect
-                  icon={Users}
-                  value={filterResponsavel}
-                  onChange={(value) => setFilterResponsavel(value)}
-                  placeholder="Todos os responsáveis"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: "todos", label: "Todos os responsáveis" },
-                    ...responsavelFilterOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    })),
-                  ]}
-                />
-              </Field>
+            <FilterSingleSelect
+              icon={Users}
+              value={filterResponsavel}
+              onChange={(value) => setFilterResponsavel(value)}
+              placeholder="Todos os responsáveis"
+              includePlaceholderOption={false}
+              options={[
+                { value: "todos", label: "Todos os responsáveis" },
+                ...responsavelFilterOptions.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                })),
+              ]}
+            />
 
-              <Field label="Operadora">
-                <FilterSingleSelect
-                  icon={FileText}
-                  value={filterOperadora}
-                  onChange={(value) => setFilterOperadora(value)}
-                  placeholder="Todas as operadoras"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: "todas", label: "Todas as operadoras" },
-                    ...operadoraOptions.map((operadora) => ({
-                      value: operadora,
-                      label: operadora,
-                    })),
-                  ]}
-                />
-              </Field>
+            <FilterSingleSelect
+              icon={FileText}
+              value={filterOperadora}
+              onChange={(value) => setFilterOperadora(value)}
+              placeholder="Todas as operadoras"
+              includePlaceholderOption={false}
+              options={[
+                { value: "todas", label: "Todas as operadoras" },
+                ...operadoraOptions.map((operadora) => ({
+                  value: operadora,
+                  label: operadora,
+                })),
+              ]}
+            />
 
-              <Field label="Datas importantes">
-                <FilterSingleSelect
-                  icon={Calendar}
-                  value={dateProximityFilter}
-                  onChange={(value) =>
-                    setDateProximityFilter(value as "todos" | "proximos-30")
-                  }
-                  placeholder="Todas as datas"
-                  includePlaceholderOption={false}
-                  options={[
-                    { value: "todos", label: "Todas as datas" },
-                    { value: "proximos-30", label: "Próximos 30 dias" },
-                  ]}
-                />
-              </Field>
-            </div>
+            <FilterSingleSelect
+              icon={Calendar}
+              value={dateProximityFilter}
+              onChange={(value) =>
+                setDateProximityFilter(value as "todos" | "proximos-30")
+              }
+              placeholder="Todas as datas"
+              includePlaceholderOption={false}
+              options={[
+                { value: "todos", label: "Todas as datas" },
+                { value: "proximos-30", label: "Próximos 30 dias" },
+              ]}
+            />
           </div>
         </Surface>
 

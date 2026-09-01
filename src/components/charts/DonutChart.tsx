@@ -67,15 +67,7 @@ export default function DonutChart({
 
   return (
     <div className="flex flex-col items-center">
-      <div
-        className="flex items-center justify-center rounded-[var(--radius-2xl)] border p-4"
-        style={{
-          borderColor: 'var(--border-subtle)',
-          background: 'var(--bg-inset)',
-          boxShadow: 'var(--control-inset-shadow)',
-        }}
-      >
-        <svg width={size} height={size} className="transform -rotate-90">
+      <svg width={size} height={size} className="shrink-0 transform -rotate-90">
           <circle
             cx={center}
             cy={center}
@@ -139,8 +131,7 @@ export default function DonutChart({
           >
             TOTAL
           </text>
-        </svg>
-      </div>
+      </svg>
 
       {!compact && (
         <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">

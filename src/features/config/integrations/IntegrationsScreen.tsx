@@ -1001,7 +1001,7 @@ export default function IntegrationsScreen() {
               return (
                 <Card key={provider}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                         {providerMeta.name}
                       </h3>
@@ -1033,7 +1033,7 @@ export default function IntegrationsScreen() {
                     </p>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+                  <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                     <Button
                       onClick={() => handleSaveProvider(provider)}
                       loading={savingAiProvider[provider]}
@@ -1230,7 +1230,7 @@ export default function IntegrationsScreen() {
                 })}
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+              <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button onClick={handleSaveRouting} loading={savingAiRouting}>
                   {!savingAiRouting && <Save className="w-4 h-4" />}
                   <span>
@@ -1288,7 +1288,7 @@ export default function IntegrationsScreen() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+              <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button
                   onClick={handleSaveFollowUpPrompt}
                   loading={savingAiFollowUpPrompt}
@@ -1343,7 +1343,7 @@ export default function IntegrationsScreen() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+              <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button
                   onClick={handleSaveReplySuggestionPrompt}
                   loading={savingAiReplySuggestion}

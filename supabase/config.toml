@@ -21,3 +21,9 @@ verify_jwt = false
 
 [functions.comm-whatsapp-transcribe]
 verify_jwt = false
+
+# O endpoint MCP faz sua propria autenticacao por um token de acesso exclusivo
+# configurado como secret. O JWT padrao da plataforma nao deve interpretar esse
+# token como uma sessao Supabase.
+[functions.chatgpt-mcp]
+verify_jwt = false

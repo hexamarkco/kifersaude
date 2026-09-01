@@ -1241,8 +1241,13 @@
 
 .kds-tabs-badge {
   display: inline-flex;
-  height: 1.25rem;
-  min-width: 1.25rem;
+  box-sizing: border-box;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  padding-inline: 0.25rem;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
@@ -1250,6 +1255,8 @@
   color: var(--accent-gold-hover);
   font-size: 0.6875rem;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .kds-badge {
@@ -1513,7 +1520,11 @@
 
 .kds-sidebar-badge {
   display: flex;
+  box-sizing: border-box;
+  min-height: 1rem;
   min-width: 1rem;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
   height: 1rem;
   align-items: center;
   justify-content: center;
@@ -1524,6 +1535,7 @@
   font-weight: 800;
   line-height: 1;
   padding-inline: 0.125rem;
+  white-space: nowrap;
 }
 
 .kds-brand-mark {
@@ -2245,7 +2257,9 @@
 .kds-switch {
   position: relative;
   display: inline-flex;
+  flex: 0 0 auto;
   cursor: pointer;
+  line-height: 0;
 }
 
 .kds-switch-input {
@@ -2262,10 +2276,14 @@
 
 .kds-switch-track {
   display: flex;
+  box-sizing: border-box;
+  flex: 0 0 auto;
   align-items: center;
   border-radius: var(--radius-full);
   background: var(--bg-inset);
   border: 1px solid var(--border-default);
+  padding-inline: 0.0625rem;
+  overflow: hidden;
   transition: all 200ms;
 }
 .kds-switch-sm .kds-switch-track { width: 2rem; height: 1.125rem; }
@@ -2274,14 +2292,17 @@
 
 .kds-switch-thumb {
   display: block;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
   border-radius: var(--radius-full);
   background: var(--text-muted);
   transition: all 200ms;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-.kds-switch-sm .kds-switch-thumb { width: 0.875rem; height: 0.875rem; margin-left: 0.125rem; }
-.kds-switch-md .kds-switch-thumb { width: 1.125rem; height: 1.125rem; margin-left: 0.125rem; }
-.kds-switch-lg .kds-switch-thumb { width: 1.375rem; height: 1.375rem; margin-left: 0.125rem; }
+.kds-switch-sm .kds-switch-thumb { width: 0.875rem; height: 0.875rem; }
+.kds-switch-md .kds-switch-thumb { width: 1.125rem; height: 1.125rem; }
+.kds-switch-lg .kds-switch-thumb { width: 1.375rem; height: 1.375rem; }
 
 .kds-switch-input:checked + .kds-switch-track {
   background: var(--text-primary);
@@ -2306,14 +2327,17 @@
 
 .kds-switch-field {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.75rem;
+  white-space: nowrap;
 }
 
 .kds-switch-label {
   font-size: 0.875rem;
   color: var(--text-secondary);
   user-select: none;
+  white-space: nowrap;
 }
 
 /* ── Radio ─────────────────────────────────────────── */
@@ -2887,9 +2911,36 @@
 
 .kds-calendar-day,
 .calendar-day {
+  position: relative;
+  display: flex;
+  aspect-ratio: 1;
+  min-height: 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
   border-color: var(--border-default) !important;
   border-radius: var(--radius-full) !important;
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
+}
+
+.kds-calendar-event-count {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  display: inline-flex;
+  box-sizing: border-box;
+  height: 1.25rem;
+  min-height: 1.25rem;
+  min-width: 1.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  padding-inline: 0.2rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .kds-calendar-day:hover:not(.kds-calendar-day-selected):not(.kds-calendar-day-today),

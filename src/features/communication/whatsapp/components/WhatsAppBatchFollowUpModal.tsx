@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CalendarPlus, Check, CheckCircle2, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
 import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
@@ -935,7 +935,13 @@ export default function WhatsAppBatchFollowUpModal({
                         </p>
                       </div>
                     </div>
-                    <Pill>{configOpen ? 'Recolher' : 'Abrir'}</Pill>
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)] text-[var(--text-muted)]"
+                      title={configOpen ? 'Recolher ajustes extras' : 'Abrir ajustes extras'}
+                      aria-hidden="true"
+                    >
+                      {configOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </span>
                   </summary>
                   <div className="space-y-4 border-t border-[var(--border-subtle)] px-4 pb-4 pt-3">
                     <VariableAutocompleteTextarea

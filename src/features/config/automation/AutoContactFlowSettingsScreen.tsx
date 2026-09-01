@@ -1647,6 +1647,7 @@ export default function AutoContactFlowSettingsScreen() {
               value={activeWorkspace}
               onChange={setActiveWorkspace}
               variant="pill"
+              className="kds-automation-workspace-tabs"
               listClassName="flex-nowrap overflow-x-auto"
             />
           </div>
@@ -1663,12 +1664,12 @@ export default function AutoContactFlowSettingsScreen() {
                 </p>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={metrics.totalFlows} label="fluxos" />
-              <OperationalMetricChip icon={<Timer className="h-3.5 w-3.5" />} value={metrics.totalSteps} label="etapas" />
-              <OperationalMetricChip icon={<Tag className="h-3.5 w-3.5" />} value={metrics.taggedFlows} label="com tags" />
-              <OperationalMetricChip icon={<Activity className="h-3.5 w-3.5" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="atualizado" />
-              <OperationalMetricChip icon={<AlarmClock className="h-3.5 w-3.5" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} />
+            <div className="mt-4 grid grid-cols-6 gap-2 lg:grid-cols-5">
+              <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={metrics.totalFlows} label="fluxos" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
+              <OperationalMetricChip icon={<Timer className="h-3.5 w-3.5" />} value={metrics.totalSteps} label="etapas" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
+              <OperationalMetricChip icon={<Tag className="h-3.5 w-3.5" />} value={metrics.taggedFlows} label="com tags" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
+              <OperationalMetricChip icon={<Activity className="h-3.5 w-3.5" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="atualizado" className="col-span-3 min-w-0 justify-center lg:col-span-1" />
+              <OperationalMetricChip icon={<AlarmClock className="h-3.5 w-3.5" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} className="col-span-3 min-w-0 justify-center lg:col-span-1" />
             </div>
 
             <div className="mt-8">

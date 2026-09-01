@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Clock,
+  Info,
   RotateCcw,
   Save,
   Search,
@@ -20,7 +21,7 @@ import LeadStatusManager from "../../../components/config/LeadStatusManager";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
-import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs } from "../../../design-system";
+import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs, Tooltip } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -353,8 +354,20 @@ export default function SystemSettingsScreen() {
                     />
                   </Field>
 
-                  <div>
-                    <Field label="Tempo de sessão (minutos)" description="Padrão recomendado: 480 minutos (8 horas).">
+                  <Field
+                    label={(
+                      <span className="inline-flex items-center gap-1.5">
+                        Tempo de sessão (minutos)
+                        <Tooltip content="Padrão recomendado: 480 minutos (8 horas)." size="sm">
+                          <Info
+                            className="h-3.5 w-3.5 cursor-help text-[var(--text-muted)]"
+                            aria-label="Ver recomendação de tempo de sessão"
+                            tabIndex={0}
+                          />
+                        </Tooltip>
+                      </span>
+                    )}
+                  >
                     <Input
                       type="number"
                       min="30"
@@ -368,8 +381,7 @@ export default function SystemSettingsScreen() {
                         })
                       }
                     />
-                    </Field>
-                  </div>
+                  </Field>
 
                   <Field label="Fuso horário do sistema" description="Usado como referência para prompts de follow-up com IA e demais rotinas que dependem do horário local.">
                     <Select
@@ -460,6 +472,7 @@ export default function SystemSettingsScreen() {
                   <Button
                     onClick={handleSave}
                     disabled={saving || !hasPendingGeneralChanges}
+                    className="w-full sm:w-auto"
                   >
                     <Save className="h-4 w-4" />
                     <span>

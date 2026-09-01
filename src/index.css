@@ -1684,6 +1684,15 @@ html,
     white-space: nowrap;
   }
 
+  .kds-config-screen .kds-automation-workspace-tabs .kds-tabs-list {
+    overflow: visible;
+  }
+
+  .kds-config-screen .kds-automation-workspace-tabs .kds-tabs-list > .kds-tab {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
   .painel-theme .kds-config-screen :is(.kds-page-actions, .kds-button-group) {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1723,34 +1732,97 @@ html,
   .painel-theme .kds-op-toolbar-actions.kds-leads-toolbar-actions {
     display: grid;
     width: 100%;
-    grid-template-columns: minmax(2.75rem, 1fr) minmax(2.75rem, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: center;
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-mobile-icon-action {
-    justify-self: start;
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-popover-trigger {
-    justify-self: center;
+    display: flex;
+    width: 100%;
+  }
+
+  .painel-theme .kds-leads-toolbar-actions > .kds-popover-trigger > .kds-mobile-icon-action {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-toolbar-inline-metric {
-    justify-self: end;
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  @media (min-width: 390px) {
+    .kds-leads-toolbar-actions .kds-mobile-icon-action-label {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+      clip: auto;
+      white-space: nowrap;
+    }
   }
 
   .painel-theme .kds-op-toolbar-actions.kds-contracts-toolbar-actions {
+    display: grid;
     width: 100%;
-    justify-content: space-between;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+
+  .painel-theme .kds-contracts-toolbar-actions > .kds-mobile-icon-action,
+  .painel-theme .kds-contracts-toolbar-actions > .kds-toolbar-inline-metric {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  @media (min-width: 390px) {
+    .kds-contracts-toolbar-actions .kds-mobile-icon-action-label {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+      clip: auto;
+      white-space: nowrap;
+    }
   }
 
   .kds-agenda-filter-actions {
+    width: 100%;
     gap: 0.375rem;
   }
 
   .kds-agenda-filter-actions .kds-button {
     min-height: 2.75rem;
     padding-inline: 0.75rem;
+  }
+
+  .kds-agenda-filter-actions .kds-button:not(.kds-agenda-clear-filters) {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .kds-agenda-filter-actions .kds-agenda-clear-filters {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    flex: 0 0 2.75rem;
+    padding: 0;
+  }
+
+  .kds-ai-integration-action,
+  .kds-ai-integration-action .kds-button {
+    width: 100%;
   }
 
   .kds-leads-list-summary {

@@ -1393,13 +1393,13 @@ export default function WhatsAppAgendaModal({
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-2 lg:max-w-[360px] lg:justify-end">
+          <div className="flex w-full flex-wrap items-center gap-2 min-[400px]:justify-between lg:max-w-[360px] lg:justify-end">
             {onOpenLeadChat && leadId ? (
               <Button
                 onClick={() => void handleOpenReminderChat(reminder)}
                 variant={matchesCurrentLead ? 'primary' : 'secondary'}
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 loading={isOpeningChat}
                 disabled={isOpeningChat}
                 title={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
@@ -1437,7 +1437,7 @@ export default function WhatsAppAgendaModal({
                     disabled={isQuickSchedulingCurrentReminder}
                     variant="primary"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                     title="Agendar dias uteis e marcar atual como lido"
                     aria-label="Agendar dias uteis e marcar atual como lido"
                   >
@@ -1488,7 +1488,7 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
                 variant={reminder.lido ? 'secondary' : 'soft'}
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
                 aria-label={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
               >
@@ -1501,7 +1501,7 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleOpenScheduler(reminder)}
                 variant="secondary"
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title="Novo lembrete"
                 aria-label="Novo lembrete"
               >
@@ -1517,7 +1517,7 @@ export default function WhatsAppAgendaModal({
                 }}
                 variant="warning"
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title="Gerar follow-up"
                 aria-label="Gerar follow-up"
               >
@@ -1530,7 +1530,7 @@ export default function WhatsAppAgendaModal({
                 onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
                 variant="soft"
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title="Abrir WhatsApp oficial"
                 aria-label="Abrir WhatsApp oficial"
               >
@@ -1543,7 +1543,7 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleMarkLeadAsLost(reminder)}
                 variant="danger"
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title="Marcar lead como perdido e limpar lembretes"
                 aria-label="Marcar lead como perdido e limpar lembretes"
                 disabled={markingLostLeadId === leadId}
@@ -1558,7 +1558,7 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleDeleteReminder(reminder)}
                 variant="danger"
                 size="icon"
-                className="h-9 w-9"
+                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
                 title="Excluir item"
                 aria-label="Excluir item"
               >
@@ -1617,7 +1617,7 @@ export default function WhatsAppAgendaModal({
                   </p>
                 </div>
 
-                <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:w-auto">
+                <div className="grid w-full grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
                       <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
@@ -1633,16 +1633,16 @@ export default function WhatsAppAgendaModal({
                   <Button onClick={goToPreviousDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Dia anterior">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <div className="min-w-0 flex-1 sm:flex-none sm:w-[176px]">
+                  <div className={onSendBatchFollowUps ? "min-w-0 w-full sm:flex-none sm:w-[176px]" : "col-span-2 min-w-0 w-full sm:flex-none sm:w-[176px]"}>
                     <DateTimePicker type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
                   </div>
                   <Button onClick={goToNextDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Próximo dia">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="h-11 flex-1 sm:flex-none">
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="col-span-2 h-11 w-full sm:w-auto">
                     Hoje
                   </Button>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="h-11 flex-1 sm:flex-none" disabled={!canEdit}>
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="col-span-2 h-11 w-full sm:w-auto" disabled={!canEdit}>
                     <Plus className="h-4 w-4" />
                     Nova tarefa
                   </Button>

@@ -6007,6 +6007,14 @@ export default function WhatsAppInboxScreen() {
             return null;
           }
 
+          // Em telas mobile a coluna de conversas é a tela inicial do Inbox.
+          // Só abrimos a thread de imediato quando existe um deep link explícito.
+          const isMobileInboxLayout = typeof window !== 'undefined'
+            && window.matchMedia('(max-width: 1023px)').matches;
+          if (!current && isMobileInboxLayout && !requestedChatId) {
+            return null;
+          }
+
           if (requestedChatId && current === requestedChatId) {
             return current;
           }

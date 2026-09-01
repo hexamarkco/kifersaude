@@ -86,8 +86,6 @@ export function DashboardEventsCalendar({
     const dayEvents = calendarEventsByDate.get(dateKey) ?? [];
     const isToday = dateKey === todayKey;
     const isSelected = selectedCalendarKey === dateKey;
-    const hasAdjustment = dayEvents.some((event) => event.kind === 'adjustment');
-    const hasBirthday = dayEvents.some((event) => event.kind === 'birthday');
 
     return (
       <button
@@ -97,30 +95,27 @@ export function DashboardEventsCalendar({
         aria-pressed={isSelected}
         aria-label={`${day} de ${calendarMonthLabel}, ${dayEvents.length} evento${dayEvents.length === 1 ? '' : 's'}`}
         className={[
-          'group relative flex aspect-square min-h-0 w-full flex-col items-start justify-between rounded-full border p-2 text-left transition',
+          'group kds-action-surface kds-calendar-day border text-[var(--text-secondary)] transition',
           isSelected
-            ? 'border-[var(--brand-primary-border)] bg-[var(--text-primary)] text-[var(--text-inverse)] shadow-[var(--shadow-card)]'
+            ? 'kds-calendar-day-selected'
             : isToday
-              ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--text-primary)]'
+              ? 'kds-calendar-day-today'
               : dayEvents.length > 0
-                ? 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:border-[var(--brand-primary-border)]'
-                : 'border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]',
+                ? 'kds-surface-muted text-[var(--text-primary)]'
+                : '',
         ].join(' ')}
       >
         <span className="text-sm font-semibold leading-none tabular-nums">{day}</span>
-        <span className="flex min-h-2 items-center gap-1" aria-hidden="true">
-          {hasAdjustment && (
-            <span className={isSelected ? 'h-1.5 w-3 rounded-full bg-[var(--brand-primary)]' : 'h-1.5 w-3 rounded-full bg-[var(--brand-primary)]'} />
-          )}
-          {hasBirthday && (
-            <span className={isSelected ? 'h-1.5 w-3 rounded-full bg-[var(--accent-copper)]' : 'h-1.5 w-3 rounded-full bg-[var(--accent-copper)]'} />
-          )}
-          {dayEvents.length > 2 && (
-            <span className={isSelected ? 'text-[10px] font-bold text-[var(--text-inverse)]' : 'text-[10px] font-bold text-[var(--text-muted)]'}>
-              +{dayEvents.length - 2}
-            </span>
-          )}
-        </span>
+        {dayEvents.length > 0 && (
+          <span
+            className={isSelected
+              ? 'kds-calendar-event-count bg-[var(--bg-surface)] text-[var(--text-primary)]'
+              : 'kds-calendar-event-count bg-[var(--brand-primary)] text-[var(--text-on-brand)]'}
+            aria-hidden="true"
+          >
+            {dayEvents.length}
+          </span>
+        )}
       </button>
     );
   });
@@ -224,7 +219,7 @@ export function DashboardEventsCalendar({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2">
+          <div className="grid grid-cols-7 gap-1 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2 sm:gap-2">
             {WEEK_DAYS.map((day) => (
               <div
                 key={day}

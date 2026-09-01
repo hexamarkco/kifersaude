@@ -261,6 +261,7 @@ export default function AccessControlManagerScreen() {
               resetProfileForm();
               setCreatingProfile(true);
             }}
+            className="w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             <span>Novo perfil</span>

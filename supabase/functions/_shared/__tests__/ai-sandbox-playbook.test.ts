@@ -71,6 +71,14 @@ test('aplica as regras comerciais de MEI, CNPJ e quantidade minima de vidas', ()
   assert.match(SYSTEM_PLAYBOOK, /nao liste operadoras sem necessidade/i);
 });
 
+test('pede o numero do CNPJ primeiro e so pergunta sobre MEI quando ele nao estiver disponivel', () => {
+  assert.match(SYSTEM_PLAYBOOK, /Pergunte o numero do CNPJ da empresa/i);
+  assert.match(SYSTEM_PLAYBOOK, /Pode me mandar o numero do CNPJ, por favor/i);
+  assert.match(SYSTEM_PLAYBOOK, /Se o lead nao estiver com o numero em maos, ai sim pergunte se a empresa e MEI ou outro tipo de CNPJ/i);
+  assert.match(SYSTEM_PLAYBOOK, /isso influencia as opcoes e o valor/i);
+  assert.match(SYSTEM_PLAYBOOK, /algumas operadoras so permitem fazer a cotacao com o CNPJ/i);
+});
+
 test('nao repete a apresentacao depois da primeira resposta', () => {
   const prompt = buildReplyUserPrompt([
     { role: 'ai', content: 'Oi, tudo bem?' },

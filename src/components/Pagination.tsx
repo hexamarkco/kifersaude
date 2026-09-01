@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, ListFilter, MoreHorizontal } from 'lucide-react';
 import { cx } from '../lib/cx';
 import FilterSingleSelect from './FilterSingleSelect';
@@ -20,30 +19,18 @@ export default function Pagination({
   onPageChange,
   onItemsPerPageChange,
 }: PaginationProps) {
-  const [isDesktopPagination, setIsDesktopPagination] = useState(() => (
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-  ));
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 1024px)');
-    const syncViewport = () => setIsDesktopPagination(mediaQuery.matches);
-
-    syncViewport();
-    mediaQuery.addEventListener('change', syncViewport);
-    return () => mediaQuery.removeEventListener('change', syncViewport);
-  }, []);
-
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxVisible = isDesktopPagination ? 9 : 5;
+    const maxVisible = 5;
 
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
-    } else if (!isDesktopPagination) {
+    } else {
       pages.push(1);
 
       if (currentPage > 3) {
@@ -60,23 +47,6 @@ export default function Pagination({
       if (currentPage < totalPages - 2) {
         pages.push('...');
       }
-
-      pages.push(totalPages);
-    } else {
-      const innerSlots = maxVisible - 2;
-      let start = Math.max(2, currentPage - Math.floor(innerSlots / 2));
-      let end = Math.min(totalPages - 1, start + innerSlots - 1);
-
-      start = Math.max(2, end - innerSlots + 1);
-
-      pages.push(1);
-      if (start > 2) pages.push('...');
-
-      for (let page = start; page <= end; page += 1) {
-        pages.push(page);
-      }
-
-      if (end < totalPages - 1) pages.push('...');
       pages.push(totalPages);
     }
 

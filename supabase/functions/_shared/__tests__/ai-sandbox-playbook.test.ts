@@ -59,6 +59,16 @@ test('exige variacao de confirmacoes e evita perfeito como muleta', () => {
   assert.match(SYSTEM_PLAYBOOK, /detalhe concreto da resposta/i);
 });
 
+test('aplica as regras comerciais de MEI, CNPJ e quantidade minima de vidas', () => {
+  assert.match(SYSTEM_PLAYBOOK, /MEI com mais de 6 meses de abertura/i);
+  assert.match(SYSTEM_PLAYBOOK, /MEI tiver 6 meses ou menos.*NAO habilita plano empresarial/i);
+  assert.match(SYSTEM_PLAYBOOK, /plano pessoa fisica por enquanto.*migrar para um plano PJ/i);
+  assert.match(SYSTEM_PLAYBOOK, /PJ, que costuma ser mais em conta/i);
+  assert.match(SYSTEM_PLAYBOOK, /CNPJ que NAO e MEI.*varia por operadora/i);
+  assert.match(SYSTEM_PLAYBOOK, /algumas operadoras aceitam a partir de 1 vida, outras exigem 2 e outras 3/i);
+  assert.match(SYSTEM_PLAYBOOK, /nao liste operadoras sem necessidade/i);
+});
+
 test('nao repete a apresentacao depois da primeira resposta', () => {
   const prompt = buildReplyUserPrompt([
     { role: 'ai', content: 'Oi, tudo bem?' },

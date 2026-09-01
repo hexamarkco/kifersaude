@@ -3528,6 +3528,46 @@ export default function WhatsAppInboxScreen() {
     resetComposerDraft,
     composerDraftsByChatId,
   } = useComposerDraft(selectedChatId);
+  const mobileViewportBaselineRef = useRef({ height: 0, width: 0 });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const root = document.documentElement;
+    const syncViewportHeight = () => {
+      const viewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
+      const viewportWidth = Math.round(window.visualViewport?.width ?? window.innerWidth);
+      const baseline = mobileViewportBaselineRef.current;
+
+      if (!baseline.width || Math.abs(baseline.width - viewportWidth) > 80) {
+        mobileViewportBaselineRef.current = { height: viewportHeight, width: viewportWidth };
+      } else if (viewportHeight > baseline.height) {
+        mobileViewportBaselineRef.current = { ...baseline, height: viewportHeight };
+      }
+
+      const keyboardOpen = Boolean(
+        selectedChatId
+        && composerFocused
+        && mobileViewportBaselineRef.current.height - viewportHeight > 120,
+      );
+      root.style.setProperty('--comm-inbox-viewport-height', `${viewportHeight}px`);
+      root.classList.toggle('comm-inbox-keyboard-open', keyboardOpen);
+    };
+
+    syncViewportHeight();
+    window.visualViewport?.addEventListener('resize', syncViewportHeight);
+    window.addEventListener('resize', syncViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', syncViewportHeight);
+      window.removeEventListener('resize', syncViewportHeight);
+      root.style.removeProperty('--comm-inbox-viewport-height');
+      root.classList.remove('comm-inbox-keyboard-open');
+    };
+  }, [composerFocused, selectedChatId]);
+
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const channelState = operationalState?.channel ?? null;

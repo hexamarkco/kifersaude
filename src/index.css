@@ -1347,6 +1347,26 @@ html,
 }
 
 @media (max-width: 767px) {
+  /* iOS amplia automaticamente campos abaixo de 16px. Manter a base em 16px
+     evita o zoom acidental sem bloquear o gesto de zoom do usuário. */
+  .painel-theme :is(
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='search'],
+    input[type='number'],
+    input[type='tel'],
+    input[type='url'],
+    input[type='date'],
+    input[type='datetime-local'],
+    input[type='month'],
+    input[type='time'],
+    textarea,
+    select
+  ) {
+    font-size: 1rem !important;
+  }
+
   .terracota-mobile-menu-trigger {
     position: fixed;
     top: max(0.5rem, env(safe-area-inset-top));
@@ -1549,6 +1569,32 @@ html,
   .terracota-mobile-bottom-nav.is-menu-open {
     opacity: 0;
     pointer-events: none;
+  }
+
+  /* O chat é uma área operacional fixa: quando o teclado abre, a navegação
+     inferior some temporariamente e o composer usa toda a viewport visível. */
+  .terracota-shell.is-whatsapp-inbox-active {
+    height: var(--comm-inbox-viewport-height, 100dvh);
+    min-height: var(--comm-inbox-viewport-height, 100dvh);
+    max-height: var(--comm-inbox-viewport-height, 100dvh);
+    overflow: hidden;
+  }
+
+  .terracota-shell.is-whatsapp-inbox-active .terracota-content-shell,
+  .terracota-shell.is-whatsapp-inbox-active .terracota-main {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.comm-inbox-keyboard-open .terracota-shell.is-whatsapp-inbox-active .terracota-panel-content {
+    height: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  html.comm-inbox-keyboard-open .terracota-mobile-bottom-nav {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(calc(100% + 1rem));
   }
 
   .terracota-mobile-more-backdrop {

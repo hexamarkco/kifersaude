@@ -416,12 +416,80 @@ const normalizeClassification = (value: Record<string, unknown>): IntentClassifi
   };
 };
 
-const getInboundMessageText = (message: InboundMessageRow) => (
-  toTrimmedString(message.text_content)
-  || toTrimmedString(message.media_caption)
-  || toTrimmedString(message.transcription_text)
-  || `[${message.message_type || 'mensagem sem texto'}]`
-);
+const isHiddenInboundPreviewText = (value: string, messageType: string) => {
+  const normalizedValue = value.trim().toLowerCase();
+  const normalizedType = messageType.trim().toLowerCase();
+  if (!normalizedValue) return true;
+
+  const visibleMarkers = new Set([
+    '[imagem]',
+    '[video]',
+    '[documento]',
+    '[audio]',
+    '[link]',
+    '[localizacao]',
+    '[sticker]',
+    '[contato]',
+    '[enquete]',
+    '[resposta]',
+    '[mensagem interativa]',
+  ]);
+  const messageMarker = normalizedType
+    ? normalizedType === 'text'
+      ? '[mensagem]'
+      : `[${normalizedType}]`
+    : null;
+
+  return [
+    '[mensagem]',
+    '[mensagem sem texto]',
+    '[mensagem sem conteudo]',
+    '[mensagem sem conteúdo]',
+    '[payload invalido]',
+    '[payload inválido]',
+    '[acao]',
+    '[ação]',
+    '[action]',
+    '[reacao]',
+    '[reação]',
+    '[reaction]',
+    '[atualizacao de midia]',
+    '[atualização de mídia]',
+    '[media update]',
+    '[voto em enquete]',
+  ].includes(normalizedValue)
+    || (messageMarker !== null && normalizedValue === messageMarker && !visibleMarkers.has(normalizedValue))
+    || (/^\[[^\]]+\]$/.test(normalizedValue) && !visibleMarkers.has(normalizedValue));
+};
+
+const getInboundMessagePreviewText = (message: InboundMessageRow) => {
+  const messageType = toTrimmedString(message.message_type).toLowerCase();
+  const candidates = [
+    toTrimmedString(message.media_caption),
+    toTrimmedString(message.text_content),
+    toTrimmedString(message.transcription_text),
+  ];
+  for (const candidate of candidates) {
+    if (candidate && !isHiddenInboundPreviewText(candidate, messageType)) {
+      return candidate;
+    }
+  }
+
+  if (['audio', 'voice'].includes(messageType)) return '[Áudio]';
+  if (messageType === 'image') return '[Imagem]';
+  if (['video', 'gif', 'short'].includes(messageType)) return '[Vídeo]';
+  if (messageType === 'document') return '[Documento]';
+  if (messageType === 'link_preview') return '[Link]';
+  if (['location', 'live_location'].includes(messageType)) return '[Localização]';
+  if (messageType === 'sticker') return '[Sticker]';
+  if (['contact', 'contact_list'].includes(messageType)) return '[Contato]';
+  if (messageType === 'poll') return '[Enquete]';
+  if (messageType === 'reply') return '[Resposta]';
+  if (['interactive', 'hsm', 'carousel'].includes(messageType)) return '[Mensagem interativa]';
+  return '';
+};
+
+const getInboundMessageText = (message: InboundMessageRow) => getInboundMessagePreviewText(message);
 
 async function classifyInboundCampaignIntent(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
@@ -976,6 +1044,12 @@ async function sendCampaignTestMessage(
 // que interromper a sequencia por causa de um auto-reply.
 const MIN_GENUINE_REPLY_DELAY_MS = 20_000;
 
+type InboundCampaignChat = {
+  id: string;
+  last_message_at: string | null;
+  last_message_direction: string | null;
+};
+
 async function findInboundCampaignChat(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   target: Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>,
@@ -1009,7 +1083,47 @@ async function findInboundCampaignChat(
     throw new Error(`Erro ao localizar resposta da campanha: ${error.message}`);
   }
 
-  return data as { id: string; last_message_at: string | null; last_message_direction: string | null } | null;
+  return data as InboundCampaignChat | null;
+}
+
+async function findVisibleInboundCampaignReply(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  target: Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>,
+) {
+  if (!target.sent_at) {
+    return null;
+  }
+
+  const chat = await findInboundCampaignChat(supabaseAdmin, target);
+  if (!chat) {
+    return null;
+  }
+
+  const earliestGenuineReplyAt = new Date(new Date(target.sent_at).getTime() + MIN_GENUINE_REPLY_DELAY_MS).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('id,chat_id,message_type,text_content,media_caption,transcription_text,message_at')
+    .eq('chat_id', chat.id)
+    .eq('direction', 'inbound')
+    .gt('message_at', earliestGenuineReplyAt)
+    .order('message_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    throw new Error(`Erro ao carregar mensagens inbound da campanha: ${error.message}`);
+  }
+
+  const message = (data ?? []).find((item) => getInboundMessagePreviewText(item as InboundMessageRow));
+  if (!message) {
+    return null;
+  }
+
+  return {
+    chat,
+    message: message as InboundMessageRow,
+    respondedAt: (message as InboundMessageRow).message_at || chat.last_message_at,
+  };
 }
 
 const shouldStopSequenceBeforeStep = (
@@ -1055,24 +1169,9 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   const campaignById = new Map<string, CampaignRow>();
   const stepsByCampaignId = new Map<string, CampaignStepRow[]>();
   for (const target of data ?? []) {
-    const chat = await findInboundCampaignChat(supabaseAdmin, target as Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>);
+    const reply = await findVisibleInboundCampaignReply(supabaseAdmin, target as Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>);
 
-    if (!chat) continue;
-
-    const { data: inboundMessage, error: inboundMessageError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .select('id,chat_id,message_type,text_content,media_caption,transcription_text,message_at')
-      .eq('chat_id', chat.id)
-      .eq('direction', 'inbound')
-      .gt('message_at', target.sent_at)
-      .order('message_at', { ascending: false })
-      .order('id', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (inboundMessageError) {
-      throw new Error(`Erro ao carregar mensagem inbound da campanha: ${inboundMessageError.message}`);
-    }
+    if (!reply) continue;
 
     const nowIso = getNowIso();
     let stopOnReply = stopOnReplyByCampaign.get(target.campaign_id);
@@ -1091,8 +1190,8 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     const shouldStop = stopOnReply && shouldStopSequenceBeforeStep(currentStep, target.status);
 
     const responseUpdate = shouldStop
-      ? { status: 'responded', responded_at: chat.last_message_at || nowIso, chat_id: chat.id }
-      : { responded_at: chat.last_message_at || nowIso, chat_id: chat.id };
+      ? { status: 'responded', responded_at: reply.respondedAt || nowIso, chat_id: reply.chat.id }
+      : { responded_at: reply.respondedAt || nowIso, chat_id: reply.chat.id };
     const { data: updatedTarget, error: updateTargetError } = await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
       .update(responseUpdate)
@@ -1108,17 +1207,15 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
 
     if (!updatedTarget) continue;
 
-    if (inboundMessage) {
-      await classifyInboundCampaignIntent({
-        supabaseAdmin,
-        campaignId: target.campaign_id,
-        targetId: target.id,
-        chatId: chat.id,
-        message: inboundMessage as InboundMessageRow,
-        leadId: target.lead_id,
-        phoneDigits: target.phone_digits,
-      });
-    }
+    await classifyInboundCampaignIntent({
+      supabaseAdmin,
+      campaignId: target.campaign_id,
+      targetId: target.id,
+      chatId: reply.chat.id,
+      message: reply.message,
+      leadId: target.lead_id,
+      phoneDigits: target.phone_digits,
+    });
     responded += 1;
   }
 
@@ -1948,26 +2045,26 @@ async function sendTarget(params: {
   const nextStep = steps[stepPosition + 1] ?? null;
 
   if (campaign.stop_on_reply && target.sent_at) {
-    const replyChat = target.responded_at ? null : await findInboundCampaignChat(supabaseAdmin, target);
-    const respondedAt = target.responded_at || replyChat?.last_message_at || null;
+    const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
+    const respondedAt = target.responded_at || reply?.respondedAt || null;
     if (respondedAt && shouldStopSequenceBeforeStep(step)) {
       await updateClaimedTarget(supabaseAdmin, target, {
         status: 'responded',
         responded_at: respondedAt,
-        chat_id: replyChat?.id || target.chat_id,
+        chat_id: reply?.chat.id || target.chat_id,
         locked_at: null,
         lock_token: null,
       });
       return { status: 'responded' };
     }
 
-    if (replyChat && !target.responded_at) {
+    if (reply && !target.responded_at) {
       await updateClaimedTarget(supabaseAdmin, target, {
-        responded_at: replyChat.last_message_at || nowIso,
-        chat_id: replyChat.id,
+        responded_at: reply.respondedAt || nowIso,
+        chat_id: reply.chat.id,
       });
-      target.responded_at = replyChat.last_message_at || nowIso;
-      target.chat_id = replyChat.id;
+      target.responded_at = reply.respondedAt || nowIso;
+      target.chat_id = reply.chat.id;
     }
   }
 

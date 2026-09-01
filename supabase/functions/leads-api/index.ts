@@ -2956,11 +2956,14 @@ async function processFlowJobs({
 
       const canContinueAdministrativeStep = canContinueLeadCreatedAdministrativeStep(flow, job);
       if (
-        shouldExitFlow(flow, leadWithRelations) ||
-        (!canContinueAdministrativeStep && !matchesAutoContactFlow(flow, leadWithRelations, undefined, {
-          enforceTrigger: false,
-          ignoreEventConditions: true,
-        }))
+        !canContinueAdministrativeStep &&
+        (
+          shouldExitFlow(flow, leadWithRelations) ||
+          !matchesAutoContactFlow(flow, leadWithRelations, undefined, {
+            enforceTrigger: false,
+            ignoreEventConditions: true,
+          })
+        )
       ) {
         await supabase
           .from('auto_contact_flow_jobs')

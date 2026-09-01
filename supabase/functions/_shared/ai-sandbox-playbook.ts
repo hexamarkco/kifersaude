@@ -72,6 +72,9 @@ export const SYSTEM_PLAYBOOK = [
   '',
   'ESTILO:',
   '- Escreva como a Luiza escreveria de verdade no WhatsApp: mensagens curtas, diretas, sem parecer roteiro decorado.',
+  '- Antes de responder, releia as suas ultimas mensagens visiveis. Nao repita a mesma abertura, elogio ou estrutura em respostas proximas. "Perfeito" pode ser usado quando for genuino, mas NUNCA como muleta, em respostas consecutivas ou para quase toda resposta do lead.',
+  '- Mostre que entendeu o que o lead acabou de dizer usando, quando fizer sentido, um detalhe concreto da resposta antes de seguir. Alterne naturalmente entre ir direto para a proxima pergunta, confirmar de forma especifica (ex: "Entendi, e para sua esposa"), agradecer a explicacao ou usar reacoes curtas como "Boa", "Certo", "Faz sentido" e "Maravilha". Nao use uma confirmacao generica se uma leitura especifica deixa a conversa mais humana.',
+  '- Se o primeiro nome validado for fornecido no contexto, use-o so ocasionalmente para dar calor humano, nunca em mensagens consecutivas e nunca como formula fixa. Se o nome nao for fornecido, nao invente nem tente deduzi-lo.',
   '- Sem markdown, sem bullets, sem numeracao na sua resposta — texto corrido, como uma mensagem de WhatsApp normal.',
   '- Nao use dois-pontos nem travessao no texto visivel para o lead. Esses sinais deixam a mensagem com cara de IA. Escreva de forma natural, com virgulas, pontos ou frases separadas. A unica excecao e a tag interna de handoff, quando ela for obrigatoria, porque essa tag nao aparece para o lead.',
 ].join('\n');
@@ -187,11 +190,69 @@ export const buildOpeningUserPrompt = (leadName: string): string => [
   'Divida em ate 3 mensagens curtas, do jeito que a operacao realmente manda no WhatsApp (mensagens curtas em sequencia, nao um paragrafo unico). Separe cada mensagem em uma linha contendo apenas "---".',
 ].join('\n');
 
-export const buildReplyUserPrompt = (history: SandboxMessageRow[]): string => {
+export type ReplyPromptOptions = {
+  isFirstLeadReplyAfterApproach?: boolean;
+  leadFirstName?: string;
+};
+
+const NAME_CONNECTORS = new Set(['da', 'das', 'de', 'do', 'dos', 'e']);
+const UNSAFE_LEAD_NAME_TOKENS = new Set([
+  'cliente', 'contato', 'lead', 'leads', 'nome', 'semnome', 'desconhecido',
+  'teste', 'test', 'null', 'undefined', 'unknown', 'whatsapp', 'naoinformado',
+]);
+const NAME_TOKEN_REGEX = /^[\p{L}]+(?:['-][\p{L}]+)*$/u;
+
+/**
+ * O nome no CRM pode vir de formulario ou importacao. So usamos o primeiro
+ * nome se o valor inteiro parecer um nome humano completo; caso contrario a
+ * IA abre a conversa sem arriscar chamar a pessoa por um apelido ou lixo.
+ */
+export const getReliableLeadFirstName = (fullName: string | null | undefined): string | null => {
+  const normalized = fullName?.trim().replace(/\s+/g, ' ') ?? '';
+  if (!normalized || normalized.length > 80) return null;
+
+  const tokens = normalized.split(' ');
+  if (tokens.length < 2 || tokens.length > 6 || !tokens.every((token) => NAME_TOKEN_REGEX.test(token))) {
+    return null;
+  }
+
+  const normalizedTokens = tokens.map((token) => token.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+  if (normalizedTokens.some((token) => UNSAFE_LEAD_NAME_TOKENS.has(token))) return null;
+
+  const nameTokens = tokens.filter((token, index) => !NAME_CONNECTORS.has(normalizedTokens[index]));
+  if (nameTokens.length < 2) return null;
+
+  const firstName = nameTokens[0];
+  const comparableFirstName = normalizedTokens[tokens.indexOf(firstName)];
+  if (!firstName || /^(.)(\1){2,}$/i.test(comparableFirstName)) return null;
+
+  return firstName.charAt(0).toLocaleUpperCase('pt-BR') + firstName.slice(1).toLocaleLowerCase('pt-BR');
+};
+
+export const buildReplyUserPrompt = (
+  history: SandboxMessageRow[],
+  options: ReplyPromptOptions = {},
+): string => {
   const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'LEAD' : 'VOCE'}: ${row.content}`);
+  const firstName = options.leadFirstName ?? '';
+  const nameUsageGuidance = firstName
+    ? `Primeiro nome validado para uso eventual: "${firstName}". Use somente esse primeiro nome, nunca o nome completo; use-o apenas quando soar natural e nao em mensagens consecutivas.`
+    : 'Nenhum primeiro nome foi validado para esta conversa. Nao use nem invente nome.';
+  const mandatoryOpening = options.isFirstLeadReplyAfterApproach
+    ? [
+        '--- ABERTURA OBRIGATORIA DESTA RESPOSTA ---',
+        'Esta e a primeira resposta apos a abordagem inicial. Comece a mensagem visivel com uma apresentacao curta e pessoal ANTES de responder ao conteudo ou fazer a proxima pergunta.',
+        firstName
+          ? `Use somente este primeiro nome validado, nunca o nome completo: "${firstName}". Escolha uma abertura natural no mesmo sentido de "${firstName}, prazer em falar com você." ou "${firstName}, que bom falar com você.".`
+          : 'O nome do CRM nao foi validado. Nao use nem invente nome; abra naturalmente, por exemplo "Prazer em falar com você." ou "Que bom falar com você.".',
+        'Nao use bom dia, boa tarde, boa noite ou outra saudacao de horario. Use essa apresentacao mesmo que o lead ja tenha dado informacoes na primeira mensagem. Em seguida, acolha o que ele disse e continue a qualificacao com no maximo uma pergunta. Nao repita essa apresentacao nas respostas seguintes.',
+      ].join('\n')
+    : '';
   return [
     '--- CONVERSA ATE AGORA (LEAD = pessoa simulando o cliente, VOCE = suas respostas anteriores) ---',
     transcriptLines.join('\n'),
+    nameUsageGuidance,
+    mandatoryOpening,
     '',
     '--- TAREFA ---',
     'Gere a proxima resposta, como VOCE, para a ultima mensagem do LEAD.',

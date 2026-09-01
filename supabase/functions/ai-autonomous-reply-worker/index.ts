@@ -26,6 +26,7 @@ import {
   buildSystemPrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
+  getReliableLeadFirstName,
   splitGeneratedReply,
   type HandoffCode,
   type SandboxMessageRow,
@@ -415,7 +416,7 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const [historyResult, styleMessagesResult, quickReplies] = await Promise.all([
+        const [historyResult, styleMessagesResult, quickReplies, leadResult] = await Promise.all([
           supabaseAdmin
             .from('comm_whatsapp_messages')
             .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name')
@@ -434,6 +435,11 @@ Deno.serve(async (req: Request) => {
             .order('message_at', { ascending: false })
             .limit(120),
           fetchQuickReplies(supabaseAdmin),
+          supabaseAdmin
+            .from('leads')
+            .select('nome_completo')
+            .eq('id', leadId)
+            .maybeSingle(),
         ]);
 
         if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
@@ -494,7 +500,11 @@ Deno.serve(async (req: Request) => {
         const similarSituations = await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
         const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
         const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages, referenceBlock);
-        const userPrompt = buildReplyUserPrompt(history);
+        const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
+        const userPrompt = buildReplyUserPrompt(history, {
+          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
+          leadFirstName: leadFirstName ?? undefined,
+        });
 
         const result = await generateTextWithRouting({
           supabaseAdmin,

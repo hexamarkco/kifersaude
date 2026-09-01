@@ -53,6 +53,9 @@ type WhatsAppFollowUpModalProps = {
   variations?: CommWhatsAppFollowUpVariation[];
   aiContextRationale?: string | null;
   emotionalContext?: CommWhatsAppFollowUpEmotionalContext | null;
+  currentAction?: 'send' | 'wait' | null;
+  currentActionReason?: string | null;
+  opportunityRecommendation?: 'continue' | 'pause' | 'mark_lost_recommended' | null;
   nextAction?: CommWhatsAppFollowUpNextAction | null;
   schedulingNextAction?: boolean;
   onClose: () => void;
@@ -75,6 +78,9 @@ export default function WhatsAppFollowUpModal({
   variations = [],
   aiContextRationale,
   emotionalContext,
+  currentAction = 'send',
+  currentActionReason,
+  opportunityRecommendation,
   nextAction,
   schedulingNextAction = false,
   onClose,
@@ -125,6 +131,14 @@ export default function WhatsAppFollowUpModal({
     onGenerate({ ...options, customInstructions: localCustomInstructions });
   };
 
+  const handleManualSendOverride = () => {
+    const overrideInstruction = 'A corretora revisou o caso e solicitou explicitamente uma mensagem agora. Gere uma mensagem apenas se continuar coerente com o histórico.';
+    const nextInstructions = [localCustomInstructions.trim(), overrideInstruction].filter(Boolean).join('\n');
+    setLocalCustomInstructions(nextInstructions);
+    onChangeCustomInstructions(nextInstructions);
+    onGenerate({ customInstructions: nextInstructions });
+  };
+
   const handleClose = () => {
     commitCustomInstructions();
     onClose();
@@ -173,7 +187,7 @@ export default function WhatsAppFollowUpModal({
         message: currentMessage,
         tone: refinementTone,
       });
-      onChangeValue(result.text);
+      onChangeValue(result.text ?? currentMessage);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar a mensagem sugerida.');
     } finally {
@@ -198,7 +212,7 @@ export default function WhatsAppFollowUpModal({
         currentMessage,
         adjustmentInstruction: action.instruction,
       });
-      onChangeValue(result.text);
+      onChangeValue(result.text ?? currentMessage);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
     } finally {
@@ -266,7 +280,13 @@ export default function WhatsAppFollowUpModal({
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{hasVariations ? 'Novas opções' : 'Gerar 3 opções'}</span>
             </Button>
-            <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim()}>
+            {currentAction === 'wait' ? (
+              <Button variant="secondary" onClick={handleManualSendOverride} loading={generating} disabled={submitting}>
+                <Sparkles className="h-4 w-4" />
+                Gerar mesmo assim
+              </Button>
+            ) : null}
+            <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim() || currentAction === 'wait'}>
               Enviar
             </Button>
           </div>
@@ -284,6 +304,17 @@ export default function WhatsAppFollowUpModal({
           <SectionCard>
             <div className="flex flex-col gap-4">
               {hasAiInsight ? <AiContextPanel rationale={aiContextRationale} emotionalContext={emotionalContext} /> : null}
+              {currentAction === 'wait' ? (
+                <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-2 text-sm text-[var(--warning-text)]">
+                  <strong>Aguardar antes de enviar.</strong>{' '}
+                  {currentActionReason || 'A IA identificou que ainda não é o momento de um novo contato.'}
+                </div>
+              ) : null}
+              {opportunityRecommendation === 'mark_lost_recommended' ? (
+                <div className="rounded-xl border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-2 text-sm text-[var(--warning-text)]">
+                  A IA recomenda avaliar o encerramento desta oportunidade, sem enviar uma nova cobrança automática.
+                </div>
+              ) : null}
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">

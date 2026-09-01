@@ -85,6 +85,9 @@ type FollowUpLeadContext = {
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+
+class FollowUpValidationError extends Error {}
+
 const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
@@ -1099,6 +1102,100 @@ const loadLeadContext = async (
   };
 };
 
+type FollowUpAuditContextRow = Record<string, unknown>;
+type FollowUpReminderContextRow = Record<string, unknown>;
+
+// A Edge Function pode ser implantada antes da migration correspondente. Para
+// esse intervalo de rollout, nao podemos deixar uma coluna V2 ausente derrubar
+// toda a geracao. Reexecutamos a leitura com o contrato legado; apos a
+// migration, a primeira consulta volta a fornecer a contextualizacao completa.
+const loadRecentFollowUpAudits = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  chatId: string,
+): Promise<FollowUpAuditContextRow[]> => {
+  const v2Result = await supabaseAdmin
+    .from('comm_follow_up_audit_log')
+    .select('id, sent_at, sent_at_actual, current_action, commercial_function, goal, generated_text, sent_text, text_content')
+    .eq('chat_id', chatId)
+    .order('sent_at', { ascending: false })
+    .limit(8);
+
+  if (!v2Result.error) {
+    return (v2Result.data ?? []) as FollowUpAuditContextRow[];
+  }
+
+  console.warn('[FollowUpAI][edge] contexto V2 de auditoria indisponivel; usando contrato legado', {
+    message: v2Result.error.message,
+  });
+  const legacyResult = await supabaseAdmin
+    .from('comm_follow_up_audit_log')
+    .select('id, sent_at, text_content')
+    .eq('chat_id', chatId)
+    .order('sent_at', { ascending: false })
+    .limit(8);
+
+  if (legacyResult.error) {
+    throw new Error(`Erro ao carregar historico de follow-ups: ${legacyResult.error.message}`);
+  }
+
+  return (legacyResult.data ?? []) as FollowUpAuditContextRow[];
+};
+
+const loadFollowUpReminders = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  leadId: string | null,
+): Promise<FollowUpReminderContextRow[]> => {
+  if (!leadId) return [];
+
+  const v2Result = await supabaseAdmin
+    .from('reminders')
+    .select('id, titulo, descricao, data_lembrete, lido, follow_up_origin')
+    .eq('lead_id', leadId)
+    .order('data_lembrete', { ascending: false })
+    .limit(8);
+
+  if (!v2Result.error) {
+    return (v2Result.data ?? []) as FollowUpReminderContextRow[];
+  }
+
+  console.warn('[FollowUpAI][edge] contexto V2 de lembretes indisponivel; usando contrato legado', {
+    message: v2Result.error.message,
+  });
+  const legacyResult = await supabaseAdmin
+    .from('reminders')
+    .select('id, titulo, descricao, data_lembrete, lido')
+    .eq('lead_id', leadId)
+    .order('data_lembrete', { ascending: false })
+    .limit(8);
+
+  if (legacyResult.error) {
+    throw new Error(`Erro ao carregar lembretes: ${legacyResult.error.message}`);
+  }
+
+  return (legacyResult.data ?? []) as FollowUpReminderContextRow[];
+};
+
+const getLastUnansweredCommercialFunction = (
+  audits: FollowUpAuditContextRow[],
+  messages: MessageRow[],
+): CommercialFunction | null => {
+  for (const audit of audits) {
+    const commercialFunction = toTrimmedString(audit.commercial_function);
+    const sentAt = toTrimmedString(audit.sent_at_actual) || toTrimmedString(audit.sent_at);
+    const sentAtMs = Date.parse(sentAt);
+    if (!isCommercialFunction(commercialFunction) || commercialFunction === 'nenhuma' || Number.isNaN(sentAtMs)) {
+      continue;
+    }
+
+    const hasInboundAfter = messages.some((message) => (
+      message.direction === 'inbound' && Date.parse(message.message_at) > sentAtMs
+    ));
+    if (!hasInboundAfter) return commercialFunction;
+  }
+
+  return null;
+};
+
 // ---- Blocos de prompt: regras nucleares (sempre ativas, nunca substituiveis
 // pelo prompt customizado da operacao) ----
 
@@ -1276,15 +1373,13 @@ Deno.serve(async (req: Request) => {
 
     const chat = chatData as ChatRow;
 
-    const [messages, lead, systemSettingsResult, promptResult, recentAuditsResult, remindersResult] = await Promise.all([
+    const [messages, lead, systemSettingsResult, promptResult, recentAudits, reminders] = await Promise.all([
       loadAllMessagesForChat(supabaseAdmin, chat.id),
       loadLeadContext(supabaseAdmin, chat.lead_id),
       supabaseAdmin.from('system_settings').select('company_name, timezone').limit(1).maybeSingle(),
       supabaseAdmin.from('integration_settings').select('settings').eq('slug', AI_FOLLOW_UP_PROMPT_SLUG).maybeSingle(),
-      supabaseAdmin.from('comm_follow_up_audit_log').select('id, sent_at, sent_at_actual, current_action, commercial_function, goal, generated_text, sent_text, text_content').eq('chat_id', chat.id).order('sent_at', { ascending: false }).limit(8),
-      chat.lead_id
-        ? supabaseAdmin.from('reminders').select('id, titulo, descricao, data_lembrete, lido, follow_up_origin').eq('lead_id', chat.lead_id).order('data_lembrete', { ascending: false }).limit(8)
-        : Promise.resolve({ data: [], error: null }),
+      loadRecentFollowUpAudits(supabaseAdmin, chat.id),
+      loadFollowUpReminders(supabaseAdmin, chat.lead_id),
     ]);
 
     if (systemSettingsResult.error) {
@@ -1294,8 +1389,6 @@ Deno.serve(async (req: Request) => {
     if (promptResult.error) {
       throw new Error(`Erro ao carregar prompt de follow-up: ${promptResult.error.message}`);
     }
-    if (recentAuditsResult.error) throw new Error(`Erro ao carregar historico de follow-ups: ${recentAuditsResult.error.message}`);
-    if (remindersResult.error) throw new Error(`Erro ao carregar lembretes: ${remindersResult.error.message}`);
     const systemSettings = (systemSettingsResult.data ?? null) as SystemSettingsRow | null;
     const promptIntegration = (promptResult.data ?? null) as IntegrationSettingRow | null;
     const systemTimeZone = normalizeSystemTimeZone(systemSettings?.timezone);
@@ -1351,13 +1444,12 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const temporalFacts = buildTemporalFacts(messages, now, systemTimeZone);
     const temporalFactsText = formatTemporalFactsForPrompt(temporalFacts);
-    const recentAudits = (recentAuditsResult.data ?? []) as Array<Record<string, unknown>>;
     const recentFollowUpsText = recentAudits.length === 0 ? 'Nenhum follow-up auditado anteriormente.' : recentAudits.map((audit) => {
       const sentAt = toTrimmedString(audit.sent_at_actual) || toTrimmedString(audit.sent_at);
       const hasReply = messages.some((message) => message.direction === 'inbound' && Date.parse(message.message_at) > Date.parse(sentAt));
       return `- ${sentAt ? formatDateForPrompt(new Date(sentAt), systemTimeZone) : 'data indisponivel'}: commercialFunction=${toTrimmedString(audit.commercial_function) || 'nao registrada'} | goal=${toTrimmedString(audit.goal) || 'nao registrado'} | cliente respondeu depois? ${hasReply ? 'sim' : 'nao'}.`;
     }).join('\n');
-    const reminderContextText = ((remindersResult.data ?? []) as Array<Record<string, unknown>>).map((reminder) => `- ${toTrimmedString(reminder.lido) === 'true' ? 'concluido' : 'aberto'} | ${toTrimmedString(reminder.data_lembrete)} | ${toTrimmedString(reminder.titulo)}${toTrimmedString(reminder.descricao) ? ` | ${toTrimmedString(reminder.descricao)}` : ''}`).join('\n') || 'Nenhum lembrete relevante.';
+    const reminderContextText = reminders.map((reminder) => `- ${reminder.lido === true ? 'concluido' : 'aberto'} | ${toTrimmedString(reminder.data_lembrete)} | ${toTrimmedString(reminder.titulo)}${toTrimmedString(reminder.descricao) ? ` | ${toTrimmedString(reminder.descricao)}` : ''}`).join('\n') || 'Nenhum lembrete relevante.';
 
     const baseContextPrompt = [
       'Contexto do chat:',
@@ -1566,6 +1658,33 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      const lastUnansweredCommercialFunction = getLastUnansweredCommercialFunction(recentAudits, messages);
+      if (
+        lastUnansweredCommercialFunction
+        && parsed.aiContext?.currentAction === 'send'
+        && parsed.aiContext.commercialFunction === lastUnansweredCommercialFunction
+      ) {
+        console.warn('[FollowUpAI][edge] funcao comercial repetida sem resposta; solicitando uma unica alternativa', {
+          commercialFunction: lastUnansweredCommercialFunction,
+        });
+        const semanticRetryResult = await generateTextWithRouting({
+          supabaseAdmin,
+          task: 'follow_up_generation',
+          systemPrompt: `${systemPrompt}\n\nATENCAO: a funcao comercial "${lastUnansweredCommercialFunction}" ja foi usada no ultimo follow-up sem resposta. Nao a repita com sinonimos. Escolha outra funcao comercial coerente com o historico ou retorne currentAction="wait" se nao houver movimento adequado.`,
+          userPrompt,
+          temperature,
+          maxTokens,
+        });
+        const semanticRetryParsed = parseFollowUpGenerationResult(semanticRetryResult.text, shouldGenerateVariations);
+        const repeatedAgain = semanticRetryParsed.aiContext?.currentAction === 'send'
+          && semanticRetryParsed.aiContext.commercialFunction === lastUnansweredCommercialFunction;
+        if (!isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations) || repeatedAgain) {
+          throw new FollowUpValidationError('A IA repetiu uma estratégia comercial já tentada sem resposta. Revise o caso ou gere novamente com uma orientação explícita.');
+        }
+        parsed = semanticRetryParsed;
+        result = semanticRetryResult;
+      }
+
       aiContext = parsed.aiContext;
 
       if (hasRecentOutboundWithoutInbound(messages, now) && !customInstructions) {
@@ -1687,6 +1806,9 @@ Deno.serve(async (req: Request) => {
         currentActionReason: refinementMode ? null : aiContext?.currentActionReason ?? null,
         opportunityRecommendation: refinementMode ? null : aiContext?.opportunityRecommendation ?? 'continue',
         scheduleRecommendation,
+        // Compatibilidade temporaria para o modal individual legado durante a
+        // transicao da UI para currentAction/scheduleRecommendation.
+        nextAction,
         generationId,
         provider: result.provider,
         model: result.model,
@@ -1702,7 +1824,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao gerar follow-up.' }),
       {
-        status: 500,
+        status: error instanceof FollowUpValidationError ? 422 : 500,
         headers: jsonHeaders,
       },
     );

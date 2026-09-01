@@ -1766,6 +1766,7 @@ export const commWhatsAppService = {
       opportunityRecommendation: payload.opportunityRecommendation ?? 'continue',
       scheduleRecommendation: payload.scheduleRecommendation ?? null,
       generationId: payload.generationId ?? null,
+      nextAction: payload.nextAction ?? null,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

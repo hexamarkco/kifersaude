@@ -5,6 +5,8 @@ import {
   extractWhapiContactPhone,
   extractWhapiContactSaved,
   extractWhapiSavedContactName,
+  fetchWhapiChatName,
+  getDirectChatDisplayNameCandidate,
   isValidCommWhatsAppDisplayName,
   resolveVerifiedWhapiDirectIdentity,
 } from '../comm-whatsapp';
@@ -42,6 +44,29 @@ test('ignores Whapi "saved" flag, since it is true for every chat partner, not j
 test('rejects provider identifiers as display names', () => {
   assert.equal(isValidCommWhatsAppDisplayName('123456@lid'), false);
   assert.equal(isValidCommWhatsAppDisplayName('5511999999999@s.whatsapp.net'), false);
+});
+
+test('prioritizes a profile push name over chat_name from an inbound webhook', () => {
+  const name = getDirectChatDisplayNameCandidate({
+    chat_name: 'Unidade: CMK - Nova Iguaçu',
+    push_name: 'Klini Saúde',
+  }, 'inbound');
+
+  assert.equal(name, 'Klini Saúde');
+});
+
+test('uses contact profile metadata before a low-confidence chat label', async () => {
+  mockIdentityFetch({
+    '/chats/552130550790@s.whatsapp.net': { chat_name: 'Unidade: CMK - Nova Iguaçu' },
+    '/contacts/552130550790@s.whatsapp.net': { pushname: 'Klini Saúde' },
+  });
+
+  const name = await fetchWhapiChatName({
+    token: 'test',
+    chatId: '552130550790@s.whatsapp.net',
+  });
+
+  assert.equal(name, 'Klini Saúde');
 });
 
 test('accepts only a round-trip verified LID and WA ID pair', async () => {

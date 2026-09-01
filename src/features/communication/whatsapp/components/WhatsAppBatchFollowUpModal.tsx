@@ -6,7 +6,7 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpScheduleRecommendation, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../../../../lib/commWhatsAppService';
 import { supabase } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
@@ -14,11 +14,9 @@ import {
   AiContextPanel,
   CONTEXT_REFINEMENT_ACTIONS,
   ChatBubblePreview,
-  NextActionCard,
   Pill,
   RefinementChip,
   SIMPLE_REFINEMENT_ACTIONS,
-  formatNextActionDate,
   VariationCarousel,
 } from './followUpModalUi';
 
@@ -95,6 +93,7 @@ type WhatsAppBatchFollowUpModalProps = {
     reminderId: string;
     leadId: string;
     phone: string | null;
+    currentAction: 'send' | 'wait';
     generationId: string | null;
     approvedScheduleAction: 'schedule' | 'no_schedule';
     approvedScheduleDate: string | null;
@@ -124,6 +123,7 @@ export default function WhatsAppBatchFollowUpModal({
   const [configOpen, setConfigOpen] = useState(false);
   const [markingLostReminderIds, setMarkingLostReminderIds] = useState<Set<string>>(new Set());
   const [markedLostReminderIds, setMarkedLostReminderIds] = useState<Set<string>>(new Set());
+  const [batchId, setBatchId] = useState<string | null>(null);
   const cancelRequestedRef = useRef(false);
 
   const currentStep = phase === 'loading' ? 0 : phase === 'generating' ? 1 : phase === 'sending' ? 3 : phase === 'sent' ? 4 : items.some((i) => i.status === 'pending') ? 1 : 2;
@@ -145,6 +145,7 @@ export default function WhatsAppBatchFollowUpModal({
     setActiveItemIndex(null);
     setSentSummary(null);
     setConfigOpen(false);
+    setBatchId(typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : null);
 
     void (async () => {
       try {
@@ -228,12 +229,15 @@ export default function WhatsAppBatchFollowUpModal({
       const result = await commWhatsAppService.generateFollowUp(item.chatId, {
         customInstructions: item.customInstructions,
         variantCount: options?.variantCount,
+        sourceReminderId: item.reminderId,
+        batchId: batchId ?? undefined,
+        triggerSource: 'batch',
       });
 
       setItems((prev) =>
         updateItemInList(prev, index, {
           status: 'ready',
-          generatedText: result.text.trim(),
+          generatedText: result.text ?? '',
           variations: result.variations ?? [],
           aiContextRationale: result.aiContext?.rationale ?? null,
           emotionalContext: result.aiContext?.emotionalContext ?? null,
@@ -242,8 +246,8 @@ export default function WhatsAppBatchFollowUpModal({
           opportunityRecommendation: result.opportunityRecommendation ?? 'continue',
           scheduleRecommendation: result.scheduleRecommendation ?? null,
           generationId: result.generationId ?? null,
-          approvedScheduleAction: result.scheduleRecommendation?.action ?? 'no_schedule',
-          approvedScheduleDate: result.scheduleRecommendation?.suggestedDate ?? null,
+          approvedScheduleAction: 'no_schedule',
+          approvedScheduleDate: null,
           error: null,
         }),
       );
@@ -278,7 +282,7 @@ export default function WhatsAppBatchFollowUpModal({
         message: activeItem.generatedText.trim(),
         tone,
       });
-      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text }));
+      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text ?? activeItem.generatedText }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar a mensagem.');
     } finally {
@@ -297,7 +301,7 @@ export default function WhatsAppBatchFollowUpModal({
         currentMessage: activeItem.generatedText.trim(),
         adjustmentInstruction: action.instruction,
       });
-      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text }));
+      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text ?? activeItem.generatedText }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
     } finally {
@@ -338,6 +342,9 @@ export default function WhatsAppBatchFollowUpModal({
         batch.map((idx) =>
           commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
             customInstructions: updatedItems[idx].customInstructions,
+            sourceReminderId: updatedItems[idx].reminderId,
+            batchId: batchId ?? undefined,
+            triggerSource: 'batch',
           }),
         ),
       );
@@ -348,7 +355,7 @@ export default function WhatsAppBatchFollowUpModal({
           updatedItems[idx] = {
             ...updatedItems[idx],
             status: 'ready',
-            generatedText: result.value.text.trim(),
+            generatedText: result.value.text ?? '',
             variations: result.value.variations ?? [],
             aiContextRationale: result.value.aiContext?.rationale ?? null,
             emotionalContext: result.value.aiContext?.emotionalContext ?? null,
@@ -357,8 +364,8 @@ export default function WhatsAppBatchFollowUpModal({
             opportunityRecommendation: result.value.opportunityRecommendation ?? 'continue',
             scheduleRecommendation: result.value.scheduleRecommendation ?? null,
             generationId: result.value.generationId ?? null,
-            approvedScheduleAction: result.value.scheduleRecommendation?.action ?? 'no_schedule',
-            approvedScheduleDate: result.value.scheduleRecommendation?.suggestedDate ?? null,
+            approvedScheduleAction: 'no_schedule',
+            approvedScheduleDate: null,
           };
         } else {
           allReady = false;
@@ -387,7 +394,7 @@ export default function WhatsAppBatchFollowUpModal({
   // ---- Send ----
 
   const handleSendSelected = async () => {
-    const readyItems = items.filter((it) => it.status === 'ready' && it.selected && it.currentAction === 'send');
+    const readyItems = items.filter((it) => it.status === 'ready' && it.selected && (it.currentAction === 'send' || (it.approvedScheduleAction === 'schedule' && Boolean(it.approvedScheduleDate))));
     if (readyItems.length === 0 || !onSendBatchFollowUps) {
       if (!onSendBatchFollowUps) toast.error('Envio não disponível.');
       return;
@@ -395,7 +402,7 @@ export default function WhatsAppBatchFollowUpModal({
 
     setPhase('sending');
     setItems((prev) => prev.map((item) => {
-      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId)) return item;
+      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId) || item.currentAction === 'wait') return item;
       return {
         ...item,
         sendStatus: 'queued',
@@ -414,6 +421,7 @@ export default function WhatsAppBatchFollowUpModal({
           reminderId: it.reminderId,
           leadId: it.leadId,
           phone: it.leadPhone,
+          currentAction: it.currentAction,
           generationId: it.generationId,
           approvedScheduleAction: it.approvedScheduleAction,
           approvedScheduleDate: it.approvedScheduleDate,
@@ -538,9 +546,9 @@ export default function WhatsAppBatchFollowUpModal({
             </p>
             <div className="max-h-[320px] space-y-1.5 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
               {items.filter((item) => item.selected && item.sendStatus !== 'idle').map((item) => {
-                const willReschedule = item.sendStatus === 'sent' && item.nextAction?.type !== 'mark_lost_recommended' && Boolean(item.nextAction?.suggestedDateTime);
-                const isWaitReschedule = item.nextAction?.type === 'wait';
-                const recommendsLost = item.sendStatus === 'sent' && item.nextAction?.type === 'mark_lost_recommended';
+                const willReschedule = item.sendStatus === 'sent' && item.approvedScheduleAction === 'schedule' && Boolean(item.approvedScheduleDate);
+                const isWaitReschedule = item.currentAction === 'wait';
+                const recommendsLost = item.sendStatus === 'sent' && item.opportunityRecommendation === 'mark_lost_recommended';
                 const isMarkingLost = markingLostReminderIds.has(item.reminderId);
                 const isMarkedLost = markedLostReminderIds.has(item.reminderId);
                 return (
@@ -553,7 +561,7 @@ export default function WhatsAppBatchFollowUpModal({
                       {willReschedule ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
                           <CalendarPlus className="h-3 w-3 shrink-0" />
-                          {isWaitReschedule ? 'Retorno agendado' : 'Reagendado'} para {formatNextActionDate(item.nextAction!.suggestedDateTime)}
+                          {isWaitReschedule ? 'Retorno agendado' : 'Reagendado'} para {new Date(item.approvedScheduleDate!).toLocaleString('pt-BR')}
                         </p>
                       ) : recommendsLost ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">
@@ -932,10 +940,42 @@ export default function WhatsAppBatchFollowUpModal({
                   </div>
                 </div>
 
-                {/* Next action */}
-                {activeItem.nextAction ? (
-                  <NextActionCard nextAction={activeItem.nextAction} title="Próxima ação" />
-                ) : null}
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">Decisão da IA</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                    {activeItem.currentAction === 'wait'
+                      ? activeItem.currentActionReason || 'Aguardar antes de novo contato.'
+                      : 'Enviar a mensagem e revisar a próxima ação abaixo.'}
+                  </p>
+                  {(
+                    <label className="mt-3 flex items-start gap-2 text-xs text-[var(--text-secondary)]">
+                      <input
+                        type="checkbox"
+                        checked={activeItem.approvedScheduleAction === 'schedule'}
+                        onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
+                          approvedScheduleAction: event.target.checked ? 'schedule' : 'no_schedule',
+                          approvedScheduleDate: event.target.checked ? activeItem.scheduleRecommendation?.suggestedDate ?? null : null,
+                        }))}
+                        disabled={phase !== 'ready'}
+                      />
+                      <span>
+                        Criar lembrete {activeItem.scheduleRecommendation?.suggestedDate ? `para ${new Date(activeItem.scheduleRecommendation.suggestedDate).toLocaleString('pt-BR')}` : 'mesmo sem sugestão automática'}.
+                        <span className="mt-1 block text-[var(--text-muted)]">{activeItem.scheduleRecommendation?.reason || 'Defina uma data se quiser manter a oportunidade na agenda.'}</span>
+                      </span>
+                    </label>
+                  )}
+                  {activeItem.approvedScheduleAction === 'schedule' ? (
+                    <input
+                      type="datetime-local"
+                      className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
+                      value={activeItem.approvedScheduleDate ? new Date(activeItem.approvedScheduleDate).toISOString().slice(0, 16) : ''}
+                      onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
+                        approvedScheduleDate: event.target.value ? new Date(event.target.value).toISOString() : null,
+                      }))}
+                      disabled={phase !== 'ready'}
+                    />
+                  ) : null}
+                </div>
 
                 {/* Ajustes extras accordion */}
                 <details

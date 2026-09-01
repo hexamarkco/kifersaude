@@ -59,12 +59,11 @@ type WhatsAppAgendaModalProps = {
     reminderId: string;
     leadId: string;
     phone: string | null;
-    nextAction: {
-      suggestedDateTime: string | null;
-      priority: string;
-      title: string;
-      reason: string;
-    } | null;
+    currentAction: 'send' | 'wait';
+    generationId: string | null;
+    approvedScheduleAction: 'schedule' | 'no_schedule';
+    approvedScheduleDate: string | null;
+    scheduleReason: string | null;
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => Promise<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string }>;

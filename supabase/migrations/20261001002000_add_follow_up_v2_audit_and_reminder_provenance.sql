@@ -94,3 +94,4 @@ $$;
 GRANT EXECUTE ON FUNCTION public.schedule_follow_up_reminder_v2(uuid, text, text, timestamptz, text, uuid, uuid, text, uuid, timestamptz) TO authenticated;
 
 COMMIT;
+

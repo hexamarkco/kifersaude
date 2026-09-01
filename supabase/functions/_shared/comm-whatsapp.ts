@@ -804,25 +804,34 @@ export const getDirectChatDisplayNameCandidate = (
 ): string => {
   if (direction === 'outbound') {
     return pickHumanName(
-      message.chat_name,
       message.pushname,
       message.push_name,
-      isRecord(message.chat) ? message.chat.name : null,
       isRecord(message.business) ? message.business.name : null,
       isRecord(message.profile) ? message.profile.name : null,
+      isRecord(message.chat) ? message.chat.pushname : null,
+      isRecord(message.chat) ? message.chat.push_name : null,
+      isRecord(message.chat) ? message.chat.name : null,
+      message.chat_name,
     );
   }
 
   return pickHumanName(
-    message.chat_name,
-    message.from_name,
     isRecord(message.business) ? message.business.name : null,
+    isRecord(message.business) ? message.business.display_name : null,
     isRecord(message.profile) ? message.profile.name : null,
-    isRecord(message.chat) ? message.chat.name : null,
+    isRecord(message.profile) ? message.profile.display_name : null,
     message.pushname,
     message.push_name,
+    isRecord(message.contact) ? message.contact.pushname : null,
+    isRecord(message.contact) ? message.contact.push_name : null,
+    isRecord(message.contact) ? message.contact.name : null,
+    message.from_name,
     message.notify_name,
     message.sender_name,
+    isRecord(message.chat) ? message.chat.pushname : null,
+    isRecord(message.chat) ? message.chat.push_name : null,
+    isRecord(message.chat) ? message.chat.name : null,
+    message.chat_name,
   );
 };
 
@@ -2254,32 +2263,6 @@ export const extractWhapiUploadMediaId = (payload: unknown): string => {
 export const extractWhapiChatName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
-  const directName = pickHumanName(
-    payload.name,
-    payload.chat_name,
-    payload.pushname,
-    payload.push_name,
-    payload.notify_name,
-    payload.from_name,
-  );
-  if (directName) return directName;
-
-  if (isRecord(payload.contact)) {
-    const contactName = pickHumanName(
-      payload.contact.name,
-      payload.contact.pushname,
-      payload.contact.push_name,
-      payload.contact.short_name,
-      payload.contact.notify_name,
-    );
-    if (contactName) return contactName;
-  }
-
-  if (isRecord(payload.chat)) {
-    const chatName = pickHumanName(payload.chat.name, payload.chat.pushname, payload.chat.short_name);
-    if (chatName) return chatName;
-  }
-
   if (isRecord(payload.business)) {
     const businessName = pickHumanName(payload.business.name, payload.business.display_name);
     if (businessName) return businessName;
@@ -2289,6 +2272,39 @@ export const extractWhapiChatName = (payload: unknown): string => {
     const profileName = pickHumanName(payload.profile.name, payload.profile.display_name);
     if (profileName) return profileName;
   }
+
+  if (isRecord(payload.contact)) {
+    const contactName = pickHumanName(
+      payload.contact.pushname,
+      payload.contact.push_name,
+      payload.contact.name,
+      payload.contact.short_name,
+      payload.contact.notify_name,
+    );
+    if (contactName) return contactName;
+  }
+
+  if (isRecord(payload.chat)) {
+    const chatName = pickHumanName(
+      payload.chat.pushname,
+      payload.chat.push_name,
+      payload.chat.name,
+      payload.chat.short_name,
+    );
+    if (chatName) return chatName;
+  }
+
+  const directName = pickHumanName(
+    payload.pushname,
+    payload.push_name,
+    payload.notify_name,
+    payload.from_name,
+    payload.name,
+    // chat_name e o fallback menos confiavel: em alguns webhooks de
+    // mensagens interativas ele pode trazer parte do conteudo da mensagem.
+    payload.chat_name,
+  );
+  if (directName) return directName;
 
   if (isRecord(payload.user)) {
     const userName = pickHumanName(payload.user.name, payload.user.pushname, payload.user.short_name);
@@ -2405,7 +2421,19 @@ export const extractWhapiContactPhone = (payload: unknown): string => {
 export const extractWhapiContactName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
-  const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
+  const candidates = [
+    payload.pushname,
+    payload.push_name,
+    payload.notify_name,
+    isRecord(payload.business) ? payload.business.name : null,
+    isRecord(payload.business) ? payload.business.display_name : null,
+    isRecord(payload.profile) ? payload.profile.name : null,
+    isRecord(payload.profile) ? payload.profile.display_name : null,
+    payload.name,
+    payload.short,
+    payload.short_name,
+    payload.full_name,
+  ];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
     if (isValidCommWhatsAppDisplayName(normalized)) return normalized;
@@ -2520,11 +2548,17 @@ export async function fetchWhapiChatName(params: {
   });
 
   const payload = await readResponsePayload(response);
-  if (!response.ok) {
-    return '';
-  }
+  const chatName = response.ok ? extractWhapiChatName(payload) : '';
 
-  return extractWhapiChatName(payload);
+  // O endpoint de contatos e a fonte mais confiavel para perfis Business e
+  // para numeros que nao estao salvos na agenda. O endpoint de chats pode
+  // devolver um `chat_name` derivado do evento; nunca o deixamos sobrepor o
+  // nome de perfil retornado por /contacts/{id}.
+  const contactName = await fetchWhapiContactName({
+    token: params.token,
+    contactId: params.chatId,
+  }).catch(() => '');
+  return contactName || chatName;
 }
 
 export async function fetchWhapiContactName(params: {
@@ -2544,7 +2578,10 @@ export async function fetchWhapiContactName(params: {
     return '';
   }
 
-  return extractWhapiSavedContactName(payload);
+  // `phonebook` informa apenas se o numero esta salvo localmente. Nomes de
+  // empresas normalmente nao estao na agenda, mas o pushname/profile ainda e
+  // valido e deve ser usado como identidade do chat.
+  return extractWhapiContactName(payload);
 }
 
 export type WhapiContactIdentity = {

@@ -2782,6 +2782,7 @@ function WhatsAppMessageBody({
   message,
   onOpenImage,
   onTranscribe,
+  onSelectInteractiveReply,
   onOpenSharedContactChat,
   onSaveSharedContact,
   sharedContactActionKey,
@@ -2790,6 +2791,7 @@ function WhatsAppMessageBody({
   message: CommWhatsAppMessage;
   onOpenImage: (messageId: string) => void;
   onTranscribe: (message: CommWhatsAppMessage) => void;
+  onSelectInteractiveReply: (message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => void;
   onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
   onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
   sharedContactActionKey: string | null;
@@ -2974,15 +2976,18 @@ function WhatsAppMessageBody({
         {interactiveInfo.buttons.length > 0 ? (
           <div className="border-t border-[var(--border-subtle)]">
             {interactiveInfo.buttons.map((button, index) => (
-              <p
+              <button
+                type="button"
                 key={button.id ?? `${button.title}-${index}`}
+                onClick={() => onSelectInteractiveReply(message, button)}
+                disabled={message.direction !== 'inbound' || (!button.title && !button.id)}
                 className={cx(
-                  'px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))]',
+                  'w-full px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))] transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent',
                   index > 0 ? 'border-t border-[var(--border-subtle)]' : null,
                 )}
               >
                 {button.title || button.id}
-              </p>
+              </button>
             ))}
           </div>
         ) : null}
@@ -2995,12 +3000,18 @@ function WhatsAppMessageBody({
                 ) : null}
                 <div className="mt-1.5 space-y-1.5">
                   {section.rows.map((row, rowIndex) => (
-                    <div key={row.id ?? `${section.title}-row-${rowIndex}`}>
+                    <button
+                      type="button"
+                      key={row.id ?? `${section.title}-row-${rowIndex}`}
+                      onClick={() => onSelectInteractiveReply(message, row)}
+                      disabled={message.direction !== 'inbound' || (!row.title && !row.id)}
+                      className="w-full rounded-md px-1 py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
+                    >
                       <p className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</p>
                       {row.description ? (
                         <p className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</p>
                       ) : null}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -3308,6 +3319,10 @@ export default function WhatsAppInboxScreen() {
   const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
   const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
   const [followUpEmotionalContext, setFollowUpEmotionalContext] = useState<CommWhatsAppFollowUpEmotionalContext | null>(null);
+  const [followUpCurrentAction, setFollowUpCurrentAction] = useState<'send' | 'wait'>('send');
+  const [followUpCurrentActionReason, setFollowUpCurrentActionReason] = useState<string | null>(null);
+  const [followUpOpportunityRecommendation, setFollowUpOpportunityRecommendation] = useState<'continue' | 'pause' | 'mark_lost_recommended'>('continue');
+  const [followUpGenerationId, setFollowUpGenerationId] = useState<string | null>(null);
   const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
   const [schedulingFollowUpNextAction, setSchedulingFollowUpNextAction] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
@@ -5698,6 +5713,10 @@ export default function WhatsAppInboxScreen() {
     setFollowUpVariations([]);
     setFollowUpAiContextRationale(null);
     setFollowUpEmotionalContext(null);
+    setFollowUpCurrentAction('send');
+    setFollowUpCurrentActionReason(null);
+    setFollowUpOpportunityRecommendation('continue');
+    setFollowUpGenerationId(null);
     setFollowUpNextAction(null);
   }, []);
 
@@ -7408,7 +7427,7 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null) => {
+  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null, onSent?: () => void | Promise<void>) => {
     if (textSegments.length === 0) {
       return;
     }
@@ -7484,6 +7503,9 @@ export default function WhatsAppInboxScreen() {
       }
 
       if (hadSuccessfulSend) {
+        void Promise.resolve(onSent?.()).catch((error) => {
+          console.error('[WhatsAppInbox] erro ao atualizar auditoria do follow-up enviado', error);
+        });
         // BUG FIX (BUG #13): erro de pós-envio agora avisa o usuário
         // de forma discreta (warning), em vez de falhar silenciosamente.
         void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
@@ -7493,6 +7515,25 @@ export default function WhatsAppInboxScreen() {
       }
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
+
+  const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
+    if (!selectedChat || message.direction !== 'inbound') return;
+
+    const replyText = (option.title || option.id || '').trim();
+    if (!replyText) return;
+
+    if (sendDisabledReason) {
+      toast.error(sendDisabledReason);
+      return;
+    }
+
+    // A Whapi expoe a leitura e o envio de mensagens interativas, mas nao um
+    // endpoint para sintetizar o evento nativo de "button reply" recebido de
+    // uma mensagem de terceiros. Enviamos o titulo escolhido como texto,
+    // citado na mensagem original — formato que os bots de atendimento usam
+    // como fallback e que deixa a escolha visivel no historico.
+    sendTextSegments(selectedChat, [replyText], getQuotePayloadFromMessage(message));
+  }, [selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
@@ -8967,6 +9008,7 @@ export default function WhatsAppInboxScreen() {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
         variantCount: options.variantCount,
+        triggerSource: 'individual',
       });
       console.debug('[FollowUpAI][inbox] response', {
         requestId,
@@ -8982,11 +9024,15 @@ export default function WhatsAppInboxScreen() {
         });
         return;
       }
-      setFollowUpDraft(result.text.trim());
+      setFollowUpDraft(result.text ?? '');
       setFollowUpVariations(result.variations ?? []);
       setFollowUpCustomInstructions(customInstructions);
       setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
       setFollowUpEmotionalContext(result.aiContext?.emotionalContext ?? null);
+      setFollowUpCurrentAction(result.currentAction ?? 'send');
+      setFollowUpCurrentActionReason(result.currentActionReason ?? null);
+      setFollowUpOpportunityRecommendation(result.opportunityRecommendation ?? 'continue');
+      setFollowUpGenerationId(result.generationId ?? null);
       setFollowUpNextAction(result.nextAction ?? null);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
@@ -9442,12 +9488,11 @@ export default function WhatsAppInboxScreen() {
     reminderId: string;
     leadId: string;
     phone: string | null;
-    nextAction: {
-      suggestedDateTime: string | null;
-      priority: string;
-      title: string;
-      reason: string;
-    } | null;
+    currentAction: 'send' | 'wait';
+    generationId: string | null;
+    approvedScheduleAction: 'schedule' | 'no_schedule';
+    approvedScheduleDate: string | null;
+    scheduleReason: string | null;
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => {
@@ -9455,8 +9500,8 @@ export default function WhatsAppInboxScreen() {
     const sentIds: string[] = [];
     const failures: string[] = [];
     const warnings: string[] = [];
-    const nextActions: Array<{ leadId: string; nextAction: NonNullable<typeof results[number]['nextAction']> }> = [];
-    const auditEntries: Array<{
+    const approvedSchedules: Array<{ leadId: string; generationId: string | null; sourceReminderId: string; dueAt: string; reason: string | null }> = [];
+    const legacyAuditEntries: Array<{
       lead_id: string;
       chat_id: string;
       text_content: string;
@@ -9466,6 +9511,24 @@ export default function WhatsAppInboxScreen() {
 
     for (const [index, result] of results.entries()) {
       const totalSegments = result.textSegments.length;
+      if (result.currentAction === 'wait') {
+        if (result.approvedScheduleAction === 'schedule' && result.approvedScheduleDate) {
+          approvedSchedules.push({
+            leadId: result.leadId,
+            generationId: result.generationId,
+            sourceReminderId: result.reminderId,
+            dueAt: result.approvedScheduleDate,
+            reason: result.scheduleReason,
+          });
+          options?.onProgress?.({
+            reminderId: result.reminderId,
+            status: 'sent',
+            sentSegments: 0,
+            totalSegments: 0,
+          });
+        }
+        continue;
+      }
       options?.onProgress?.({
         reminderId: result.reminderId,
         status: 'sending',
@@ -9555,49 +9618,102 @@ export default function WhatsAppInboxScreen() {
         sentSegments: totalSegments,
         totalSegments,
       });
-      if (result.nextAction?.suggestedDateTime) {
-        nextActions.push({ leadId: result.leadId, nextAction: result.nextAction });
+      if (result.approvedScheduleAction === 'schedule' && result.approvedScheduleDate) {
+        approvedSchedules.push({
+          leadId: result.leadId,
+          generationId: result.generationId,
+          sourceReminderId: result.reminderId,
+          dueAt: result.approvedScheduleDate,
+          reason: result.scheduleReason,
+        });
       }
-      auditEntries.push({
-        lead_id: result.leadId,
-        chat_id: result.chatId,
-        text_content: result.textSegments.join('\n\n'),
-        next_action_title: result.nextAction?.title ?? null,
-        next_action_due_at: result.nextAction?.suggestedDateTime ?? null,
-      });
+      if (!result.generationId) {
+        legacyAuditEntries.push({
+          lead_id: result.leadId,
+          chat_id: result.chatId,
+          text_content: result.textSegments.join('\n\n'),
+          next_action_title: null,
+          next_action_due_at: result.approvedScheduleDate,
+        });
+      }
       if (index < results.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
 
-    if (sentIds.length === 0) {
-      throw new Error(failures[0] || 'Nenhum lead possui chat ou telefone valido para envio.');
+    if (sentIds.length === 0 && approvedSchedules.length === 0) {
+      throw new Error(failures[0] || 'Nenhum follow-up selecionado possui mensagem para enviar ou agenda aprovada.');
     }
 
-    const { error: remindersError } = await supabase.from('reminders').update({ lido: true }).in('id', sentIds);
+    const resolvedReminderIds = [...sentIds];
+
+    let scheduledCount = 0;
+    for (const schedule of approvedSchedules) {
+      const title = 'Retomar follow-up de WhatsApp';
+      const description = schedule.reason || 'Lembrete aprovado após revisão do follow-up gerado por IA.';
+      const { data: scheduledReminder, error: scheduleError } = schedule.generationId
+        ? await supabase.rpc('schedule_follow_up_reminder_v2' as never, {
+            p_lead_id: schedule.leadId,
+            p_title: title,
+            p_description: description,
+            p_due_at: schedule.dueAt,
+            p_priority: 'normal',
+            p_generation_id: schedule.generationId,
+            p_origin: 'follow_up_v2_batch',
+          } as never)
+        : await supabase.rpc('schedule_follow_up_reminder', {
+            p_lead_id: schedule.leadId,
+            p_title: title,
+            p_description: description,
+            p_due_at: schedule.dueAt,
+            p_priority: 'normal',
+          });
+      if (scheduleError) {
+        warnings.push(`Erro ao agendar proximo follow-up para lead ${schedule.leadId}: ${scheduleError.message}`);
+      } else {
+        scheduledCount += 1;
+        if (!resolvedReminderIds.includes(schedule.sourceReminderId)) resolvedReminderIds.push(schedule.sourceReminderId);
+        if (schedule.generationId) {
+          const reminder = Array.isArray(scheduledReminder) ? scheduledReminder[0] : scheduledReminder;
+          const { error: auditUpdateError } = await supabase
+            .from('comm_follow_up_audit_log')
+            .update({
+              schedule_approved: true,
+              schedule_approved_at: new Date().toISOString(),
+              approved_schedule_date: schedule.dueAt,
+              created_reminder_id: reminder && typeof reminder === 'object' && 'reminder_id' in reminder ? String(reminder.reminder_id) : null,
+            })
+            .eq('id', schedule.generationId);
+          if (auditUpdateError) warnings.push(`Lembrete criado, mas a proveniência não foi atualizada: ${auditUpdateError.message}`);
+        }
+      }
+    }
+
+    const { error: remindersError } = resolvedReminderIds.length > 0
+      ? await supabase.from('reminders').update({ lido: true }).in('id', resolvedReminderIds)
+      : { error: null };
     if (remindersError) {
       warnings.push(`Erro ao marcar lembretes como lidos: ${remindersError.message}`);
     }
 
-    let scheduledCount = 0;
-    for (const { leadId, nextAction } of nextActions) {
-      const { error: scheduleError } = await supabase.rpc('schedule_follow_up_reminder', {
-        p_lead_id: leadId,
-        p_title: nextAction.title,
-        p_description: nextAction.reason,
-        p_due_at: nextAction.suggestedDateTime,
-        p_priority: nextAction.priority,
-      });
-      if (scheduleError) {
-        warnings.push(`Erro ao agendar proximo follow-up para lead ${leadId}: ${scheduleError.message}`);
-      } else {
-        scheduledCount += 1;
-      }
+    const sentAtActual = new Date().toISOString();
+    const generatedAuditUpdates = results
+      .filter((result) => sentIds.includes(result.reminderId) && result.generationId)
+      .map((result) => ({ id: result.generationId as string, sentText: result.textSegments.join('\n\n') }));
+    if (generatedAuditUpdates.length > 0) {
+      const auditUpdates = await Promise.all(generatedAuditUpdates.map(async (audit) =>
+        supabase
+          .from('comm_follow_up_audit_log')
+          .update({ sent_text: audit.sentText, sent_at_actual: sentAtActual })
+          .eq('id', audit.id),
+      ));
+      const sentAuditError = auditUpdates.find((result) => result.error)?.error;
+      if (sentAuditError) warnings.push(`Follow-ups enviados, mas a auditoria V2 não foi atualizada: ${sentAuditError.message}`);
     }
 
-    if (auditEntries.length > 0) {
+    if (legacyAuditEntries.length > 0) {
       try {
-        await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
+        await supabase.from('comm_follow_up_audit_log').insert(legacyAuditEntries);
       } catch (auditError) {
         console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
         warnings.push('Follow-ups enviados, mas nao foi possivel registrar a auditoria.');
@@ -9642,14 +9758,24 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      sendTextSegments(selectedChat, textSegments);
+      const sentText = textSegments.join('\n\n');
+      const generationId = followUpGenerationId;
+      sendTextSegments(selectedChat, textSegments, null, generationId
+        ? async () => {
+            const { error } = await supabase
+              .from('comm_follow_up_audit_log')
+              .update({ sent_text: sentText, sent_at_actual: new Date().toISOString() })
+              .eq('id', generationId);
+            if (error) throw error;
+          }
+        : undefined);
       resetFollowUpComposer();
       handleCloseFollowUpModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.');
     }
-  }, [followUpDraft, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [followUpDraft, followUpGenerationId, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleComposerSubmit = () => {
     if (generatingFollowUp) return;
@@ -10502,6 +10628,7 @@ export default function WhatsAppInboxScreen() {
                               message={message}
                               onOpenImage={setLightboxMessageId}
                               onTranscribe={(target) => void handleTranscribeMessage(target)}
+                              onSelectInteractiveReply={handleSelectInteractiveReply}
                               onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
                               onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
                               sharedContactActionKey={sharedContactActionKey}
@@ -11572,6 +11699,9 @@ export default function WhatsAppInboxScreen() {
           variations={followUpVariations}
           aiContextRationale={followUpAiContextRationale}
           emotionalContext={followUpEmotionalContext}
+          currentAction={followUpCurrentAction}
+          currentActionReason={followUpCurrentActionReason}
+          opportunityRecommendation={followUpOpportunityRecommendation}
           nextAction={followUpNextAction}
           schedulingNextAction={schedulingFollowUpNextAction}
           onClose={handleCloseFollowUpModal}

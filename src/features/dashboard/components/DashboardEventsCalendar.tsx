@@ -174,7 +174,7 @@ export function DashboardEventsCalendar({
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] xl:items-stretch">
-        <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+        <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Button
               type="button"
@@ -224,7 +224,7 @@ export function DashboardEventsCalendar({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 rounded-full bg-[var(--bg-surface)] p-2">
+          <div className="grid grid-cols-7 gap-1.5 rounded-[var(--kds-radius-lg)] bg-[var(--bg-surface)] p-2">
             {WEEK_DAYS.map((day) => (
               <div
                 key={day}
@@ -237,8 +237,8 @@ export function DashboardEventsCalendar({
           </div>
         </div>
 
-        <div className="flex min-h-[28rem] flex-col rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-full bg-[var(--bg-surface)] px-3 py-2.5">
+        <div className="flex min-h-[28rem] flex-col rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--kds-radius-md)] bg-[var(--bg-surface)] px-3 py-2.5">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{calendarViewLabel}</p>
               <p className="text-xs text-[var(--text-muted)]">Agenda comercial e relacional</p>

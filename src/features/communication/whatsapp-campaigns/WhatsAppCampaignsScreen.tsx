@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, RefreshCw, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -7,6 +7,7 @@ import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePi
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
+import { supabase } from '../../../lib/supabase';
 import {
   commWhatsAppCampaignService,
   computeAdmissionIntervalMinutes,
@@ -359,6 +360,26 @@ export default function WhatsAppCampaignsScreen() {
 
   useEffect(() => {
     void loadCampaigns();
+  }, [loadCampaigns]);
+
+  useEffect(() => {
+    let refreshTimer: number | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => void loadCampaigns(), 350);
+    };
+
+    const channel = supabase
+      .channel(`comm-whatsapp-campaigns-screen-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_campaigns' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_campaign_worker_runs' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_ai_intent_suggestions' }, scheduleRefresh)
+      .subscribe();
+
+    return () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
   }, [loadCampaigns]);
 
   const handleCsvFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -877,9 +898,6 @@ export default function WhatsAppCampaignsScreen() {
             <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
               <Plus className="h-4 w-4" />
               Novo disparo
-            </Button>
-            <Button variant="secondary" size="icon" className="kds-header-refresh" aria-label="Atualizar disparos" title="Atualizar disparos" onClick={() => void loadCampaigns()} loading={loading}>
-              {!loading && <RefreshCw className="h-4 w-4" />}
             </Button>
           </div>
         )}

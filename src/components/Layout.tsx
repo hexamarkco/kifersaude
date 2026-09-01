@@ -91,6 +91,7 @@ export default function Layout({
     return stored === 'true';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
@@ -185,6 +186,9 @@ export default function Layout({
     { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle },
     { id: 'contracts', label: 'Contratos', icon: FileText },
   ].filter((item) => canView(item.id));
+  const mobileMoreItems = tabs
+    .flatMap((tab) => tab.children ?? [tab])
+    .filter((item) => !mobileNavItems.some((mobileItem) => mobileItem.id === item.id));
 
   const handleLogout = async () => {
     await signOut();
@@ -573,6 +577,7 @@ export default function Layout({
     const closeMobileMenuOnDesktop = () => {
       if (!mobileQuery.matches) {
         setIsMobileMenuOpen(false);
+        setIsMobileMoreOpen(false);
       }
     };
 
@@ -1033,24 +1038,24 @@ export default function Layout({
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
-                className={`kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
+                className={`kds-sidebar-item relative flex items-center text-sm font-medium transition-all duration-200 ${
                   isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
                 }`}
                 title="Notificações"
                 aria-expanded={showNotificationsDropdown}
                 aria-haspopup="true"
               >
-                <div className="relative flex h-5 w-5 items-center justify-center">
+                <div className="flex h-5 w-5 items-center justify-center">
                   <BellRing className="h-5 w-5" />
-                  {unreadReminders > 0 && (
-                      renderSidebarBadge(unreadReminders, {
-                        floating: true,
-                        pulse: Boolean(hasActiveNotification),
-                      })
-                    )}
-                  </div>
-                  <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
-                </button>
+                </div>
+                {unreadReminders > 0 && (
+                  renderSidebarBadge(unreadReminders, {
+                    floating: true,
+                    pulse: Boolean(hasActiveNotification),
+                  })
+                )}
+                <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
+              </button>
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
@@ -1179,7 +1184,7 @@ export default function Layout({
       </aside>
 
       <nav
-        className={cx('terracota-mobile-bottom-nav', isMobileMenuOpen && 'is-menu-open')}
+        className="terracota-mobile-bottom-nav"
         aria-label="Navegação principal"
         style={{ gridTemplateColumns: `repeat(${mobileNavItems.length + 1}, minmax(0, 1fr))` }}
       >
@@ -1190,7 +1195,10 @@ export default function Layout({
             <button
               key={item.id}
               type="button"
-              onClick={() => onTabChange(item.id)}
+              onClick={() => {
+                setIsMobileMoreOpen(false);
+                onTabChange(item.id);
+              }}
               className={cx('terracota-mobile-bottom-nav-item', isActive && 'is-active')}
               aria-current={isActive ? 'page' : undefined}
             >
@@ -1201,16 +1209,52 @@ export default function Layout({
         })}
         <button
           type="button"
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="terracota-mobile-bottom-nav-item"
+          onClick={() => setIsMobileMoreOpen((current) => !current)}
+          className={cx('terracota-mobile-bottom-nav-item', isMobileMoreOpen && 'is-active')}
           aria-label="Abrir mais opções"
-          aria-expanded={isMobileMenuOpen}
-          aria-controls="painel-navigation"
+          aria-expanded={isMobileMoreOpen}
+          aria-controls="mobile-more-menu"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
           <span>Mais</span>
         </button>
       </nav>
+
+      {isMobileMoreOpen && (
+        <>
+          <button
+            type="button"
+            className="terracota-mobile-more-backdrop"
+            onClick={() => setIsMobileMoreOpen(false)}
+            aria-label="Fechar mais opções"
+          />
+          <div id="mobile-more-menu" className="terracota-mobile-more-menu" role="menu" aria-label="Mais opções">
+            {mobileMoreItems.map((item) => {
+              const ItemIcon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileMoreOpen(false);
+                    onTabChange(item.id);
+                  }}
+                  className={cx('terracota-mobile-more-item', isActive && 'is-active')}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <ItemIcon className="h-4 w-4" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="terracota-mobile-more-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {activeCollapsedParentTab?.children && collapsedDropdownPosition && (
         <div

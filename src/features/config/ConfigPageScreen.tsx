@@ -37,7 +37,7 @@ export default function ConfigPageScreen() {
     ? activeTab
     : allowedTabs[0].id;
   return (
-    <div className="panel-page-shell w-full space-y-6">
+    <div className="kds-config-screen panel-page-shell w-full space-y-6">
       <PageHeader
         eyebrow="Administracao"
         title="Configurações"
@@ -55,6 +55,7 @@ export default function ConfigPageScreen() {
           onChange={setActiveTab}
           variant="rail"
           listClassName="flex-nowrap overflow-x-auto"
+          triggerClassName="shrink-0 whitespace-nowrap"
         />
       </PageHeader>
 

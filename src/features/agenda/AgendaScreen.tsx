@@ -181,7 +181,6 @@ export default function AgendaScreen() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>("nao-lidos");
   const [timeFilter, setTimeFilter] = useState<AgendaTimeFilter>("todos");
   const [searchQuery, setSearchQuery] = useState("");
@@ -281,7 +280,6 @@ export default function AgendaScreen() {
       }
 
       setReminders(remindersData);
-      setLastUpdated(new Date());
       setError(null);
       setContractsMap(nextContractsMap);
       setLeadsMap(nextLeadsMap);
@@ -1112,13 +1110,6 @@ export default function AgendaScreen() {
   const pendingFilteredCount = statusAgnosticFilteredReminders.filter((item) => !item.lido).length;
   const completedFilteredCount = statusAgnosticFilteredReminders.filter((item) => item.lido).length;
   const overdueFilteredCount = statusAgnosticFilteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
-  const lastUpdatedLabel = lastUpdated
-    ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} as ${lastUpdated.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    : "Aguardando atualizacao...";
-
   const hasActiveFilters = [statusFilter !== "todos", typeFilter !== "all", priorityFilter !== "all", searchQuery.trim() !== ""].filter(Boolean).length;
 
   const getCalendarCellClass = ({
@@ -1609,7 +1600,8 @@ export default function AgendaScreen() {
               value={statusFilter}
               onChange={setStatusFilter}
               variant="pill"
-              listClassName="flex-nowrap overflow-x-auto"
+              listClassName="flex-nowrap overflow-x-auto pb-1"
+              triggerClassName="min-w-[7.5rem] shrink-0 whitespace-nowrap"
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={goToToday} variant="secondary" size="md">Hoje</Button>
@@ -1659,7 +1651,6 @@ export default function AgendaScreen() {
             <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
               <span className="inline-flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-[var(--brand-primary)] text-[var(--brand-primary)]" /> Pendentes</span>
               <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[var(--success)]" /> Concluídos</span>
-              <span className="sm:ml-auto">{lastUpdatedLabel}</span>
             </div>
           </Surface>
 

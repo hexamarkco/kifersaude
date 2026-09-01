@@ -1,7 +1,7 @@
-import { Clock, Filter, RefreshCw, Target, Users } from 'lucide-react';
+import { Filter, Target, Users } from 'lucide-react';
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import { Button, Input, OperationalMetricChip, PageHeader } from '../../../design-system';
+import { Input, PageHeader } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
 
@@ -22,14 +22,11 @@ type DashboardHeaderProps = {
   dashboardOwnerFilter: string;
   visibleLeadOrigins: OriginOption[];
   responsavelOptions: OwnerOption[];
-  lastUpdatedLabel: string;
-  loading: boolean;
   onPeriodFilterChange: (value: DashboardPeriodFilter) => void;
   onStartDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onEndDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOriginFilterChange: (value: string) => void;
   onOwnerFilterChange: (value: string) => void;
-  onRefresh: () => void;
   isCustomStartInvalid: boolean;
   isCustomEndInvalid: boolean;
 };
@@ -42,14 +39,11 @@ export function DashboardHeader({
   dashboardOwnerFilter,
   visibleLeadOrigins,
   responsavelOptions,
-  lastUpdatedLabel,
-  loading,
   onPeriodFilterChange,
   onStartDateChange,
   onEndDateChange,
   onOriginFilterChange,
   onOwnerFilterChange,
-  onRefresh,
   isCustomStartInvalid,
   isCustomEndInvalid,
 }: DashboardHeaderProps) {
@@ -135,17 +129,6 @@ export function DashboardHeader({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <OperationalMetricChip
-            icon={<Clock className="h-3.5 w-3.5" />}
-            value={lastUpdatedLabel || 'Aguardando atualizacao...'}
-          />
-
-          <Button type="button" onClick={onRefresh} disabled={loading} size="md" className="w-full sm:w-auto">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Atualizar agora</span>
-          </Button>
-        </div>
       </div>
     </PageHeader>
   );

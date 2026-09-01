@@ -11,9 +11,6 @@ import {
   Trash2,
   Users,
   Calendar,
-  Clock3,
-  Layers,
-  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
@@ -80,7 +77,6 @@ export default function ContractsManager({
     Record<string, ContractDependentSearch[]>
   >({});
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
@@ -259,7 +255,6 @@ export default function ContractsManager({
       setContracts(contractsData || []);
       setHolders(holdersMap);
       setDependentsByContract(dependentsMap);
-      setLastUpdated(new Date());
       return contractsData || [];
     } catch (error) {
       console.error("Erro ao carregar contratos:", error);
@@ -364,25 +359,6 @@ export default function ContractsManager({
 
   const getContractDisplayName = (contract: Contract) =>
     resolveContractDisplayName(contract, holders);
-
-  const lastUpdatedLabel = lastUpdated
-    ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} às ${lastUpdated.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
-    : "Aguardando atualização...";
-
-  const activeFilterCount = [
-    searchTerm.trim() !== "",
-    filterStatus !== "todos",
-    filterResponsavel !== "todos",
-    filterOperadora !== "todas",
-    dateProximityFilter !== "todos",
-  ].filter(Boolean).length;
-
-  const upcomingImportantCount = filteredContracts.filter((contract) =>
-    hasUpcomingImportantDate(contract),
-  ).length;
 
   const handleDeleteContract = async (contract: Contract) => {
     const confirmed = await requestConfirmation({
@@ -578,48 +554,9 @@ export default function ContractsManager({
           title="Gestão de Contratos"
           description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
           data-panel-animate
-          actions={(
-            <>
-              <OperationalMetricChip className="kds-mobile-compact-metric" value={filteredContracts.length} label="contratos no recorte" />
-              <OperationalMetricChip
-                className="kds-mobile-compact-metric"
-                icon={<AlertCircle className="h-3.5 w-3.5" />}
-                value={upcomingImportantCount}
-                label="com data sensivel"
-                tone={upcomingImportantCount > 0 ? "warning" : "neutral"}
-                active={upcomingImportantCount > 0}
-              />
-              <OperationalMetricChip
-                className="kds-mobile-compact-metric"
-                icon={<Layers className="h-3.5 w-3.5" />}
-                value={activeFilterCount}
-                label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
-                tone={activeFilterCount > 0 ? "accent" : "neutral"}
-                active={activeFilterCount > 0}
-              />
-            </>
-          )}
         >
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <OperationalMetricChip
-              className="kds-mobile-compact-metric"
-              icon={<Clock3 className="h-3.5 w-3.5" />}
-              value={lastUpdatedLabel}
-            />
-
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                onClick={() => void loadContracts()}
-                disabled={loading}
-                variant="secondary"
-                size="icon"
-                className="kds-header-refresh"
-                aria-label="Atualizar contratos"
-                title="Atualizar contratos"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              </Button>
-
               {canEditContracts && (
                 <Button
                   onClick={() => {
@@ -660,7 +597,11 @@ export default function ContractsManager({
                 <Filter className="h-4 w-4" />
                 <span className="kds-mobile-icon-action-label">Limpar</span>
               </Button>
-              <OperationalMetricChip value={filteredContracts.length} label="contratos" />
+              <OperationalMetricChip
+                value={filteredContracts.length}
+                label="contratos"
+                className="kds-toolbar-inline-metric"
+              />
             </ToolbarActions>
           </Toolbar>
 

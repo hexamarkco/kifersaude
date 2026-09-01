@@ -39,7 +39,6 @@ import {
 } from "./shared/dashboardConstants";
 import {
   aggregateDashboardMonthlyTotals,
-  formatDashboardLastUpdated,
   formatDashboardDateInput,
   parseDashboardDateString,
   parseDashboardDateValue,
@@ -145,7 +144,6 @@ export default function DashboardScreen({
 
     return "";
   });
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">(
     "month",
   );
@@ -495,7 +493,6 @@ export default function DashboardScreen({
       setContracts(contractsData || []);
       setHolders(holdersData || []);
       setDependents(dependentsData || []);
-      setLastUpdated(new Date());
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       const message =
@@ -930,10 +927,6 @@ export default function DashboardScreen({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   };
-
-  const lastUpdatedLabel = lastUpdated
-    ? `Atualizado em ${formatDashboardLastUpdated(lastUpdated)}`
-    : "";
 
   const isCustomPeriodValid =
     periodFilter !== "personalizado" ||
@@ -2105,14 +2098,11 @@ export default function DashboardScreen({
           dashboardOwnerFilter={dashboardOwnerFilter}
           visibleLeadOrigins={visibleLeadOrigins}
           responsavelOptions={responsavelOptions}
-          lastUpdatedLabel={lastUpdatedLabel}
-          loading={loading}
           onPeriodFilterChange={handleDashboardPeriodFilterChange}
           onStartDateChange={handleStartDateChange}
           onEndDateChange={handleEndDateChange}
           onOriginFilterChange={setDashboardOriginFilter}
           onOwnerFilterChange={setDashboardOwnerFilter}
-          onRefresh={loadData}
           isCustomStartInvalid={isCustomStartInvalid}
           isCustomEndInvalid={isCustomEndInvalid}
         />

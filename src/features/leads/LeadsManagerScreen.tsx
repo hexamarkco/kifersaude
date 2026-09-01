@@ -106,7 +106,6 @@ export default function LeadsManager({
     Map<string, string>
   >(new Map());
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? "");
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [filterStatus, setFilterStatus] = useState<string[]>(
@@ -426,7 +425,6 @@ export default function LeadsManager({
         });
         setNextReminderByLeadId(nextMap);
       }
-      setLastUpdated(new Date());
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
     } finally {
@@ -753,36 +751,6 @@ export default function LeadsManager({
     [paginatedLeadIds, selectedLeadIdsSet],
   );
   const canSelectLeads = canEditLeads && viewMode === "list";
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-
-    if (searchTerm.trim()) count += 1;
-    if (filterStatus.length > 0) count += 1;
-    if (filterResponsavel.length > 0) count += 1;
-    if (filterOrigem.length > 0) count += 1;
-    if (filterTipoContratacao.length > 0) count += 1;
-    if (filterTags.length > 0) count += 1;
-    if (filterCanais.length > 0) count += 1;
-    if (filterCreatedFrom || filterCreatedTo) count += 1;
-    if (filterUltimoContatoFrom || filterUltimoContatoTo) count += 1;
-    if (filterProximoRetornoFrom || filterProximoRetornoTo) count += 1;
-
-    return count;
-  }, [
-    searchTerm,
-    filterStatus,
-    filterResponsavel,
-    filterOrigem,
-    filterTipoContratacao,
-    filterTags,
-    filterCanais,
-    filterCreatedFrom,
-    filterCreatedTo,
-    filterUltimoContatoFrom,
-    filterUltimoContatoTo,
-    filterProximoRetornoFrom,
-    filterProximoRetornoTo,
-  ]);
   const advancedFilterCount = useMemo(() => {
     let count = 0;
 
@@ -803,17 +771,6 @@ export default function LeadsManager({
     filterProximoRetornoFrom,
     filterProximoRetornoTo,
   ]);
-  const lastUpdatedLabel = useMemo(() => {
-    if (!lastUpdated) return "";
-
-    const date = lastUpdated.toLocaleDateString("pt-BR");
-    const time = lastUpdated.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    return `${date} as ${time}`;
-  }, [lastUpdated]);
   const contentSectionTitle =
     viewMode === "kanban"
       ? "Pipeline comercial"
@@ -1370,10 +1327,6 @@ export default function LeadsManager({
     setShowForm(true);
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    void loadLeads();
-  }, [loadLeads]);
-
   useEffect(() => {
     loadLeads();
 
@@ -1503,13 +1456,8 @@ export default function LeadsManager({
         <ObserverBanner />
         <LeadsHeader
           viewMode={viewMode}
-          loading={loading}
-          lastUpdatedLabel={lastUpdatedLabel}
-          filteredLeadCount={filteredLeads.length}
-          activeFilterCount={activeFilterCount}
           canEditLeads={canEditLeads}
           onViewModeChange={setViewMode}
-          onRefresh={handleRefresh}
           onCreateLead={handleCreateLead}
         />
         <Surface className="space-y-5" data-panel-animate>
@@ -1548,7 +1496,11 @@ export default function LeadsManager({
                   <button type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</button>
                 </PopoverContent>
               </Popover>
-              <OperationalMetricChip value={filteredLeads.length} label="leads" />
+              <OperationalMetricChip
+                value={filteredLeads.length}
+                label="leads"
+                className="kds-toolbar-inline-metric"
+              />
             </ToolbarActions>
           </Toolbar>
 
@@ -1728,18 +1680,29 @@ export default function LeadsManager({
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <OperationalMetricChip value={filteredLeads.length} label="resultados" />
-                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="paginas" />
+              <div className="kds-leads-list-summary flex flex-wrap gap-2">
+                <OperationalMetricChip
+                  value={filteredLeads.length}
+                  label="resultados"
+                  className="kds-leads-list-summary-metric"
+                  title={`${filteredLeads.length} resultados`}
+                />
+                <OperationalMetricChip
+                  value={`${currentPage}/${totalPages}`}
+                  label="paginas"
+                  className="kds-leads-list-summary-metric"
+                  title={`Página ${currentPage} de ${totalPages}`}
+                />
                 {canSelectLeads && paginatedLeads.length > 0 && (
                   <label
-                    className="kds-op-chip cursor-pointer"
+                    className="kds-op-chip kds-leads-select-page cursor-pointer"
                   >
                     <Checkbox
                       checked={areAllPageLeadsSelected}
                       onChange={toggleSelectAllCurrentPage}
+                      aria-label={areAllPageLeadsSelected ? "Desselecionar página" : "Selecionar página"}
                     />
-                    <span>
+                    <span className="kds-leads-select-page-label">
                       {areAllPageLeadsSelected
                         ? "Pagina selecionada"
                         : "Selecionar pagina"}
@@ -1956,10 +1919,8 @@ export default function LeadsManager({
                   padding="sm"
                   className="kds-op-lead-card transition-colors sm:p-4"
                 >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex-1 min-w-0">
+                  <div className="min-w-0">
+                    <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             {canSelectLeads && (
                               <Checkbox
@@ -1997,8 +1958,8 @@ export default function LeadsManager({
                               </OperationalStatusBadge>
                             )}
                           </div>
-                          <div className="kds-op-lead-meta grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            <div className="flex items-center gap-2 break-words">
+                          <div className="kds-op-lead-meta grid grid-cols-2 gap-x-3 gap-y-2.5">
+                            <div className="col-span-2 min-[480px]:col-span-1 flex items-center gap-2 break-words">
                               {lead.telefone && (
                                 <a
                                   href={
@@ -2015,7 +1976,7 @@ export default function LeadsManager({
                               <span>{lead.telefone}</span>
                             </div>
                             {lead.email && (
-                              <div className="flex min-w-0 items-center gap-2">
+                              <div className="col-span-2 min-[480px]:col-span-1 flex min-w-0 items-center gap-2">
                                 <Button
                                   type="button"
                                   onClick={() => handleEmailContact(lead)}
@@ -2038,15 +1999,27 @@ export default function LeadsManager({
                               <span className="font-medium">Tipo:</span>{" "}
                               {lead.tipo_contratacao}
                             </div>
+                            <div>
+                              <span className="font-medium">Responsável:</span>{" "}
+                              <span className="kds-op-lead-strong">
+                                {lead.responsavel}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Criado:</span>{" "}
+                              {new Date(lead.data_criacao).toLocaleDateString(
+                                "pt-BR",
+                              )}
+                            </div>
                           </div>
                           {lead.cidade && (
-                            <div className="kds-op-lead-meta mt-2">
+                            <div className="kds-op-lead-meta mt-2.5">
                               <span className="font-medium">Cidade:</span>{" "}
                               {lead.cidade}
                             </div>
                           )}
                           {nextReminderByLeadId.get(lead.id) && (
-                            <div className="kds-op-lead-accent mt-2 flex items-center space-x-2 text-sm">
+                            <div className="kds-op-lead-accent mt-2.5 flex items-center space-x-2 text-sm">
                               <Calendar className="h-4 w-4" />
                               <span className="kds-op-lead-accent font-medium">
                                 Retorno:{" "}
@@ -2056,30 +2029,18 @@ export default function LeadsManager({
                               </span>
                             </div>
                           )}
-                        </div>
-                        <div className="kds-op-lead-side text-sm lg:text-right">
-                          <div>
-                            Responsável:{" "}
-                            <span className="kds-op-lead-strong">
-                              {lead.responsavel}
-                            </span>
-                          </div>
-                          <div className="mt-1">
-                            Criado:{" "}
-                            {new Date(lead.data_criacao).toLocaleDateString(
-                              "pt-BR",
-                            )}
-                          </div>
-                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="kds-op-lead-actions mt-3 flex flex-wrap items-center gap-1.5 pt-3">
+                  <div
+                    className={`kds-op-lead-actions mt-3 grid items-center gap-1.5 pt-3 ${
+                      canEditLeads ? "grid-cols-4" : "grid-cols-1"
+                    }`}
+                  >
                     <Button
                       onClick={() => setSelectedLead(lead)}
                       variant="secondary"
                       size="sm"
-                      className="kds-op-inline-action space-x-0 sm:space-x-1.5"
+                      className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                       aria-label={
                         canEditLeads
                           ? "Ver e editar lead"
@@ -2097,7 +2058,7 @@ export default function LeadsManager({
                           onClick={() => handleConvertToContract(lead)}
                           variant="soft"
                           size="sm"
-                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                           aria-label="Converter em contrato"
                         >
                           <FileText className="h-4 w-4" />
@@ -2107,7 +2068,7 @@ export default function LeadsManager({
                           onClick={() => openReminderScheduler(lead)}
                           variant="soft"
                           size="sm"
-                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                           aria-label="Agendar lembrete"
                           type="button"
                         >
@@ -2120,7 +2081,7 @@ export default function LeadsManager({
                           onClick={() => handleDeleteLead(lead)}
                           variant="danger"
                           size="sm"
-                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                           aria-label="Excluir lead"
                           type="button"
                         >

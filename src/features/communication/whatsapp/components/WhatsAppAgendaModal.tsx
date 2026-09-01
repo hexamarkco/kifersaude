@@ -11,13 +11,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   Copy,
   ExternalLink,
   Loader2,
   MessageCircle,
   Plus,
-  RefreshCw,
   Search,
   Sparkles,
   Tag,
@@ -186,7 +184,6 @@ export default function WhatsAppAgendaModal({
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(getDefaultSelectedDate);
@@ -224,7 +221,6 @@ export default function WhatsAppAgendaModal({
 
   const applyAgendaSnapshot = useCallback((snapshot: WhatsAppAgendaCacheSnapshot) => {
     setReminders(snapshot.reminders);
-    setLastUpdated(new Date(snapshot.updatedAt));
     setError(null);
 
     const nextContractsMap = new Map<string, Contract>();
@@ -378,7 +374,6 @@ export default function WhatsAppAgendaModal({
     setIsDuplicatesModalOpen(false);
     setDuplicateKeepSelection({});
     setError(null);
-    setLastUpdated(null);
     setReminders([]);
     setLeadsMap(new Map());
     setContractsMap(new Map());
@@ -1202,13 +1197,6 @@ export default function WhatsAppAgendaModal({
   }, [overdueReminders, pendingSelectedReminders]);
   const hasActiveFilters = [typeFilter !== 'all', searchQuery.trim() !== '', onlyCurrentLead].filter(Boolean).length;
 
-  const lastUpdatedLabel = lastUpdated
-    ? `Atualizado em ${lastUpdated.toLocaleDateString('pt-BR')} às ${lastUpdated.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`
-    : 'Ainda nao atualizado';
-
   const selectedDateLabel = selectedDate.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',
@@ -1627,15 +1615,9 @@ export default function WhatsAppAgendaModal({
                       ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
                       : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Badge tone="neutral" icon={Clock3}>{lastUpdatedLabel}</Badge>
-                  </div>
                 </div>
 
                 <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:w-auto">
-                  <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
                       <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">

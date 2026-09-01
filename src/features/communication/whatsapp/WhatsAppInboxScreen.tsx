@@ -3454,6 +3454,7 @@ export default function WhatsAppInboxScreen() {
   const pendingScrollHeightRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
+  const suppressAutoChatSelectionRef = useRef(false);
   const historyRecoveryCursorByChatIdRef = useRef<Map<string, { nextOffset: number; timeTo: number }>>(new Map());
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
@@ -5646,6 +5647,9 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
+    if (selectedChatId) {
+      suppressAutoChatSelectionRef.current = false;
+    }
   }, [selectedChatId]);
 
   const resetFollowUpComposer = useCallback(() => {
@@ -5995,6 +5999,12 @@ export default function WhatsAppInboxScreen() {
         setSelectedChatId((current) => {
           if (requestedChat) {
             return requestedChat.id;
+          }
+
+          // No mobile, voltar para a lista é uma escolha explícita. Não deixe
+          // um refetch/realtime reabrir o primeiro chat enquanto ela estiver ativa.
+          if (suppressAutoChatSelectionRef.current) {
+            return null;
           }
 
           if (requestedChatId && current === requestedChatId) {
@@ -9716,30 +9726,30 @@ export default function WhatsAppInboxScreen() {
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <Button
                     size="icon"
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
+                    className="relative shrink-0"
                     onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     aria-label="Chats arquivados"
                     title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
                   >
-                    <span className="relative inline-flex">
-                      <Archive className="h-4 w-4" />
-                      {archivedChatsCountValue > 0 ? (
-                        <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
-                          borderColor: 'var(--brand-primary-border)',
-                          background: 'var(--brand-primary)',
-                          color: 'var(--text-on-brand)',
-                        }}>
-                          {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
-                        </span>
-                      ) : null}
-                    </span>
+                    <Archive className="h-4 w-4" />
+                    {archivedChatsCountValue > 0 ? (
+                      <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[1.75rem] items-center justify-center whitespace-nowrap rounded-full border px-1.5 text-[10px] font-semibold leading-none" style={{
+                        borderColor: 'var(--brand-primary-border)',
+                        background: 'var(--brand-primary)',
+                        color: 'var(--text-on-brand)',
+                      }}>
+                        {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
+                      </span>
+                    ) : null}
                   </Button>
                   <Button
                     size="icon"
                     variant="secondary"
+                    className="shrink-0"
                     onClick={() => setWhatsAppAgendaOpen(true)}
                     aria-label="Agenda do WhatsApp"
                     title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissao para acessar a agenda'}
@@ -9750,6 +9760,7 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     variant="secondary"
+                    className="shrink-0"
                     onClick={() => setWhatsAppDashboardOpen(true)}
                     aria-label="Painel WhatsApp"
                     title="Painel WhatsApp"
@@ -9758,6 +9769,7 @@ export default function WhatsAppInboxScreen() {
                   </Button>
                   <Button
                     size="icon"
+                    className="shrink-0"
                     onClick={() => setStartChatModalOpen(true)}
                     aria-label="Novo chat"
                     title="Novo chat"
@@ -9983,7 +9995,12 @@ export default function WhatsAppInboxScreen() {
                 <div className="flex min-w-0 items-start gap-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedChatId(null)}
+                    onClick={() => {
+                      suppressAutoChatSelectionRef.current = true;
+                      selectedChatIdRef.current = null;
+                      chatIdFromUrlRef.current = null;
+                      setSelectedChatId(null);
+                    }}
                     className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] lg:hidden"
                     aria-label="Voltar para a lista de conversas"
                   >

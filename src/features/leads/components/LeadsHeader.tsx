@@ -1,30 +1,20 @@
-import { BookOpen, Clock3, Filter, LayoutList, Plus, RefreshCw, Users } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 
-import { Button, OperationalMetricChip, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
+import { Button, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
 type LeadsHeaderProps = {
   viewMode: LeadsViewMode;
-  loading: boolean;
-  lastUpdatedLabel: string;
-  filteredLeadCount: number;
-  activeFilterCount: number;
   canEditLeads: boolean;
   onViewModeChange: (value: LeadsViewMode) => void;
-  onRefresh: () => void;
   onCreateLead: () => void;
 };
 
 export function LeadsHeader({
   viewMode,
-  loading,
-  lastUpdatedLabel,
-  filteredLeadCount,
-  activeFilterCount,
   canEditLeads,
   onViewModeChange,
-  onRefresh,
   onCreateLead,
 }: LeadsHeaderProps) {
   return (
@@ -33,47 +23,19 @@ export function LeadsHeader({
       title="Gestao de Leads"
       description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
       data-panel-animate
-      actions={(
-        <>
-          <OperationalMetricChip
-            className="kds-mobile-compact-metric"
-            icon={<Users className="h-3.5 w-3.5" />}
-            value={filteredLeadCount}
-            label="leads no recorte"
-          />
-          <OperationalMetricChip
-            className="kds-mobile-compact-metric"
-            icon={<Filter className="h-3.5 w-3.5" />}
-            value={activeFilterCount}
-            label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
-            active={activeFilterCount > 0}
-          />
-          <OperationalMetricChip
-            className="kds-mobile-compact-metric"
-            icon={<LayoutList className="h-3.5 w-3.5" />}
-            value={viewMode === "kanban" ? "Kanban" : "Lista"}
-            label="modo atual"
-          />
-        </>
-      )}
     >
       <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <Tabs
             items={VIEW_MODE_TABS}
             value={viewMode}
             onChange={onViewModeChange}
             variant="pill"
             size="sm"
-            listClassName="w-full flex-nowrap sm:w-auto"
-            triggerClassName="flex-1 sm:flex-initial"
+            listClassName="w-full flex-nowrap md:w-auto"
+            triggerClassName="min-w-0 flex-1 whitespace-nowrap md:flex-initial"
           />
 
-          <OperationalMetricChip
-            className="kds-mobile-compact-metric"
-            icon={<Clock3 className="h-3.5 w-3.5" />}
-            value={lastUpdatedLabel || "Aguardando atualizacao..."}
-          />
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -91,19 +53,6 @@ export function LeadsHeader({
             <BookOpen className="h-4 w-4" />
             <span>API Docs</span>
           </a>
-
-          <Button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            variant="secondary"
-            size="icon"
-            className="kds-header-refresh"
-            aria-label="Atualizar dados"
-            title="Atualizar dados"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
 
           <Button
             type="button"

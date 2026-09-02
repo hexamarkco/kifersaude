@@ -3237,8 +3237,9 @@
 
 .kds-op-page-button {
   display: inline-flex;
-  min-width: 2.5rem;
+  width: 2.5rem;
   height: 2.5rem;
+  aspect-ratio: 1;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-default);
@@ -3264,6 +3265,7 @@
   display: inline-flex;
   width: 2.5rem;
   height: 2.5rem;
+  aspect-ratio: 1;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);

@@ -1567,12 +1567,11 @@ Deno.serve(async (req: Request) => {
     // V3: CALL 1 — Commercial Analysis + Strategy
     // =====================================================================
     const analysisUserPrompt = buildAnalysisUserPrompt({
-      baseContextPrompt,
-      leadContext,
-      temporalFactsText,
-      recentFollowUpsText,
-      reminderContextText,
-      customInstructions,
+      transcript: transcriptLines.join('\n'),
+      temporalFacts: temporalFactsText,
+      leadContext: baseContextPrompt,
+      previousState: null,
+      recentAudits: recentFollowUpsText,
     });
 
     console.log('[FollowUpAI][v3] CALL 1 — analysis', { task: 'follow_up_analysis' });
@@ -1741,10 +1740,11 @@ Deno.serve(async (req: Request) => {
     const copyUserPrompt = buildCopyUserPrompt({
       analysis,
       strategy,
-      baseContextPrompt,
-      leadContext,
-      temporalFactsText,
-      customInstructions,
+      relevantTranscript: transcriptLines.join('\n'),
+      styleProfile: styleProfileText,
+      temporalFacts: temporalFactsText,
+      leadContext: baseContextPrompt,
+      validationFeedback: null,
     });
 
     const maxTokens = shouldGenerateVariations

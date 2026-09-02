@@ -23,6 +23,15 @@ import {
 // ---- Constants ----
 
 const CONCURRENCY = 3;
+const GENERATION_TIMEOUT_MS = 90_000;
+
+const withTimeout = <Result,>(promise: Promise<Result>, ms: number): Promise<Result> =>
+  Promise.race([
+    promise,
+    new Promise<Result>((_, reject) =>
+      setTimeout(() => reject(new Error(`Geração expirou após ${Math.round(ms / 1000)} segundos. Tente novamente.`)), ms),
+    ),
+  ]);
 
 const STATUS_DOT_COLOR: Record<string, string> = {
   pending: 'var(--text-muted)',
@@ -228,13 +237,16 @@ export default function WhatsAppBatchFollowUpModal({
     setItems((prev) => updateItemInList(prev, index, { status: 'generating', error: null }));
 
     try {
-      const result = await commWhatsAppService.generateFollowUp(item.chatId, {
-        customInstructions: item.customInstructions,
-        variantCount: options?.variantCount,
-        sourceReminderId: item.reminderId,
-        batchId: batchId ?? undefined,
-        triggerSource: 'batch',
-      });
+      const result = await withTimeout(
+        commWhatsAppService.generateFollowUp(item.chatId, {
+          customInstructions: item.customInstructions,
+          variantCount: options?.variantCount,
+          sourceReminderId: item.reminderId,
+          batchId: batchId ?? undefined,
+          triggerSource: 'batch',
+        }),
+        GENERATION_TIMEOUT_MS,
+      );
 
       setItems((prev) =>
         updateItemInList(prev, index, {
@@ -342,12 +354,15 @@ export default function WhatsAppBatchFollowUpModal({
 
       const results = await Promise.allSettled(
         batch.map((idx) =>
-          commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
-            customInstructions: updatedItems[idx].customInstructions,
-            sourceReminderId: updatedItems[idx].reminderId,
-            batchId: batchId ?? undefined,
-            triggerSource: 'batch',
-          }),
+          withTimeout(
+            commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
+              customInstructions: updatedItems[idx].customInstructions,
+              sourceReminderId: updatedItems[idx].reminderId,
+              batchId: batchId ?? undefined,
+              triggerSource: 'batch',
+            }),
+            GENERATION_TIMEOUT_MS,
+          ),
         ),
       );
 

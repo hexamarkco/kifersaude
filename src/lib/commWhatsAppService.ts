@@ -367,6 +367,13 @@ export type CommWhatsAppFollowUpNextAction = {
   giveUpRecommendation: string;
 };
 
+export type CommWhatsAppFollowUpV3Meta = {
+  analysisModel?: string | null;
+  copyModel?: string | null;
+  validation?: { valid: boolean; issues: string[] } | null;
+  regenerationCount?: number;
+};
+
 export type CommWhatsAppFollowUpSuggestion = {
   text: string | null;
   variations?: CommWhatsAppFollowUpVariation[];
@@ -381,6 +388,7 @@ export type CommWhatsAppFollowUpSuggestion = {
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
+  v3?: CommWhatsAppFollowUpV3Meta;
 };
 
 export type FollowUpAgendaOrganizerMode = 'balanced' | 'urgency' | 'minimal_changes';
@@ -1770,6 +1778,7 @@ export const commWhatsAppService = {
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
+      v3: payload.v3 ?? undefined,
     };
   },
 

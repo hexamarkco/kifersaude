@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+﻿import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
 import {
@@ -1467,6 +1467,7 @@ Deno.serve(async (req: Request) => {
     }).join('\n');
     const reminderContextText = reminders.map((reminder) => `- ${reminder.lido === true ? 'concluido' : 'aberto'} | ${toTrimmedString(reminder.data_lembrete)} | ${toTrimmedString(reminder.titulo)}${toTrimmedString(reminder.descricao) ? ` | ${toTrimmedString(reminder.descricao)}` : ''}`).join('\n') || 'Nenhum lembrete relevante.';
 
+    // ---- Shared context block (used by both V3 and refinement) ----
     const baseContextPrompt = [
       'Contexto do chat:',
       `- Nome do contato: ${leadContext.nome}`,
@@ -1489,257 +1490,433 @@ Deno.serve(async (req: Request) => {
       transcriptLines.join('\n'),
     ].join('\n');
 
-    // Identidade/produto: bloco fixo e minimo, sempre presente. O prompt
-    // customizado da operacao (abaixo) NUNCA substitui isso nem as regras
-    // nucleares — ele so complementa personalidade/atendimento/linguagem.
-    const baseIdentityBlock = [
-      `Voce gera follow-ups de WhatsApp para a operacao ${companyName}.`,
-      'Cada mensagem deve ser contextualizada no historico real do chat: recupere o ultimo fio comercial ainda nao resolvido quando ele for mais relevante que o ultimo assunto cronologico, use os detalhes especificos da conversa e evite frases que sirvam para qualquer lead.',
-      'A mensagem precisa soar como uma continuacao natural do ultimo contato, nao como um template pre-definido.',
-    ].join('\n');
+    // =====================================================================
+    // REFINEMENT MODE: keep the existing single-call path for editing
+    // =====================================================================
+    if (refinementMode) {
+      const baseIdentityBlock = [
+        `Voce gera follow-ups de WhatsApp para a operacao ${companyName}.`,
+        'Cada mensagem deve ser contextualizada no historico real do chat.',
+        'A mensagem precisa soar como uma continuacao natural do ultimo contato.',
+      ].join('\n');
 
-    // Instrucao pontual desta geracao especifica (campo "Ajustes extras" no
-    // modal). Prioridade alta, mas nunca acima de fatos/seguranca/contexto
-    // humano/regras obrigatorias do sistema.
-    const userCustomInstructionsBlock = customInstructions
-      ? [
-          'INSTRUCAO ESPECIFICA DESTA GERACAO (prioridade alta, aplique de forma literal — exceto se conflitar com fatos reais, contexto humano ou as regras obrigatorias do sistema, que sempre prevalecem):',
-          customInstructions,
-          'Se esta instrucao mencionar uma data, prazo ou fato especifico (ex.: "hoje e dia X"), use exatamente esse dado na mensagem de forma clara e inequivoca — nao troque por uma referencia vaga nem deixe ambiguo se e hoje, uma data futura ou passada.',
-        ].join('\n')
-      : '';
+      const operationCustomPromptBlock = configuredInstructions
+        ? ['PERSONALIZACAO DA OPERACAO:', configuredInstructions].join('\n')
+        : '';
 
-    // Personalizacao da operacao (aba Integracoes): so complementa a
-    // identidade/regras acima, nunca as substitui. Nao e mais o "prompt
-    // base" inteiro — evita que uma operacao configure algo que
-    // acidentalmente desligue contexto humano, fatos temporais ou o
-    // formato de resposta exigido.
-    const operationCustomPromptBlock = configuredInstructions
-      ? [
-          'PERSONALIZACAO DA OPERACAO (complementa as regras acima — persona, forma de atendimento, peculiaridades do negocio, preferencias de linguagem; NUNCA substitui nem contradiz as regras obrigatorias do sistema; em caso de conflito, as regras obrigatorias prevalecem):',
-          configuredInstructions,
-        ].join('\n')
-      : '';
+      const refinementSystemPrompt = [
+        baseIdentityBlock,
+        operationCustomPromptBlock,
+        'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
+        MULTI_MESSAGE_MECHANISM_NOTE,
+        MESSAGE_SPLITTING_INSTRUCTION,
+        STYLE_RULE,
+        DEFAULT_CONDUCT_RULES,
+        ['REGRAS DE ESTILO (aprendidas do historico real):', styleProfileText].join('\n'),
+        COMMERCIAL_THREAD_RULE,
+        NO_REPEAT_STRATEGY_RULE,
+        NOT_A_COLLECTION_CALL_RULE,
+        OBJECTION_READING_RULE,
+        NO_INVENTED_URGENCY_RULE,
+        EMOTIONAL_CONTEXT_INSTRUCTION,
+        OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
+        'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
+        'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
+        'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
+      ].filter(Boolean).join('\n\n');
 
-    const stageCatalog = FOLLOW_UP_STAGES.join(', ');
-    const blockerCatalog = FOLLOW_UP_BLOCKERS.join(', ');
-    const goalCatalog = FOLLOW_UP_GOALS.join(', ');
+      const refinementUserPrompt = [
+        baseContextPrompt,
+        '',
+        'Mensagem atual a refinar:',
+        currentMessage,
+        '',
+        'Ajuste solicitado:',
+        adjustmentInstruction,
+        '',
+        'Tarefa: Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat. Retorne somente a mensagem final em texto puro.',
+      ].filter(Boolean).join('\n');
 
-    const jsonShape = shouldGenerateVariations
-      ? '{"currentAction":"send","currentActionReason":"...","stage":"...","blocker":"...","goal":"...","commercialFunction":"...","nextActionOwner":"client|seller|third_party|operator|date|none","pendingMicrodecision":"..."|null,"lastCommercialCommitment":"..."|null,"decisionMaker":"..."|null,"emotionalContext":{"detected":true|false,"guidance":"..."|null},"opportunityRecommendation":"continue|pause|mark_lost_recommended","scheduleRecommendation":{"action":"schedule|no_schedule","suggestedDate":"YYYY-MM-DD"|null,"suggestedDelayBusinessDays":number|null,"reason":"...","confidence":"high|medium|low"},"rationale":"...","variations":[{"label":"...","text":"..."}]}'
-      : '{"currentAction":"send|wait","currentActionReason":"...","stage":"...","blocker":"...","goal":"...","commercialFunction":"...|nenhuma","nextActionOwner":"client|seller|third_party|operator|date|none","pendingMicrodecision":"..."|null,"lastCommercialCommitment":"..."|null,"decisionMaker":"..."|null,"emotionalContext":{"detected":true|false,"guidance":"..."|null},"opportunityRecommendation":"continue|pause|mark_lost_recommended","scheduleRecommendation":{"action":"schedule|no_schedule","suggestedDate":"YYYY-MM-DD"|null,"suggestedDelayBusinessDays":number|null,"reason":"...","confidence":"high|medium|low"},"rationale":"...","text":"..."|null}';
+      const result = await generateTextWithRouting({
+        supabaseAdmin,
+        task: 'follow_up_generation',
+        systemPrompt: refinementSystemPrompt,
+        userPrompt: refinementUserPrompt,
+        temperature: hasCustomInstructions ? 0.5 : 0.7,
+        maxTokens: 320,
+      });
 
-    const responseFormatInstruction = [
-      `Retorne SOMENTE um JSON valido, sem markdown, no formato exato: ${jsonShape}`,
-      `"stage": estagio atual da venda — use exatamente um destes ids: ${stageCatalog}.`,
-      `"blocker": principal bloqueio percebido agora — use exatamente um destes ids: ${blockerCatalog}. Nao afirme um bloqueio como certo sem evidencia clara no historico — nesse caso use "nao_identificado".`,
-      `"goal": a funcao comercial que esta mensagem precisa cumprir — use exatamente um destes ids: ${goalCatalog}.`,
-      '"emotionalContext": preencha conforme a regra de CONTEXTO HUMANO E EMPATIA acima.',
-      '"currentAction": decida primeiro se e apropriado enviar agora. Use "wait" quando o cliente acabou de receber uma proposta/alternativa, existe combinado pendente, terceiro decisor precisa agir, cliente respondeu e espera acao da corretora, ou contexto emocional pede pausa. Quando for wait, text DEVE ser null e commercialFunction deve ser "nenhuma".',
-      `"commercialFunction": use exatamente um destes ids: ${COMMERCIAL_FUNCTIONS.join(', ')}. Nunca repita a ultima funcao sem resposta listada acima; se ela falhou, mude de funcao comercial.`,
-      '"nextActionOwner": identifique quem precisa agir agora. Em terceiro decisor, nao cobre imediatamente o intermediario.',
-      '"scheduleRecommendation.reason" e obrigatoria, inclusive em no_schedule; deve ser especifica e sustentada pelo historico. A IA recomenda, a corretora aprova.',
-      'Quando a conversa ja reduziu a decisao a um trade-off concreto, use esse trade-off como base da microdecisao e nao reabra opcoes genericas.',
-      '"rationale": resumo curto e legivel (1-3 frases) do seu raciocinio — inclua o estagio, o bloqueio, o objetivo da mensagem e qualquer contexto temporal ou emocional relevante. Isso e mostrado para quem esta usando o sistema.',
-      shouldGenerateVariations
-        ? `"variations": gere exatamente ${variantCount} variacoes com labels curtos e distintos (ex.: "Direta", "Consultiva", "Leve"); todas cumprem a MESMA funcao comercial ("goal") e seguem a regra de divisao em multiplas mensagens — elas variam a forma de dizer, nunca a estrategia.`
-        : '"text": o follow-up final pronto para envio, cumprindo a funcao comercial definida em "goal" e seguindo a regra de divisao em multiplas mensagens.',
-    ].join('\n');
+      const responseText = normalizeGreetingForTemporalFacts(
+        sanitizeGeneratedText(result.text.trim()),
+        temporalFacts,
+      );
 
-    const systemPrompt = refinementMode
-      ? [
-          baseIdentityBlock,
-          operationCustomPromptBlock,
-          'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
-          MULTI_MESSAGE_MECHANISM_NOTE,
-          MESSAGE_SPLITTING_INSTRUCTION,
-          STYLE_RULE,
-          DEFAULT_CONDUCT_RULES,
-          ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao — use apenas o padrao de tom e estrutura; se algum exemplo real usar abreviacoes como "pra"/"pro" ou contrariar as regras de estilo obrigatorias acima, ignore esse detalhe e mantenha as regras obrigatorias):', styleProfileText].join('\n'),
-          COMMERCIAL_THREAD_RULE,
-          NO_REPEAT_STRATEGY_RULE,
-          NOT_A_COLLECTION_CALL_RULE,
-          OBJECTION_READING_RULE,
-          NO_INVENTED_URGENCY_RULE,
-          EMOTIONAL_CONTEXT_INSTRUCTION,
-          OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
-          'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
-          'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-          'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
-        ].filter(Boolean).join('\n\n')
-      : [
-          baseIdentityBlock,
-          CORE_STRATEGY_RULES,
-          userCustomInstructionsBlock,
-          operationCustomPromptBlock,
-          'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
-          MULTI_MESSAGE_MECHANISM_NOTE,
-          MESSAGE_SPLITTING_INSTRUCTION,
-          STYLE_RULE,
-          DEFAULT_CONDUCT_RULES,
-          ['REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao — use apenas o padrao de tom e estrutura; se algum exemplo real usar abreviacoes como "pra"/"pro" ou contrariar as regras de estilo obrigatorias acima, ignore esse detalhe e mantenha as regras obrigatorias):', styleProfileText].join('\n'),
-          COMMERCIAL_THREAD_RULE,
-          NO_REPEAT_STRATEGY_RULE,
-          STAGE_AWARENESS_RULE,
-          NOT_A_COLLECTION_CALL_RULE,
-          MICRODECISION_RULE,
-          OBJECTION_READING_RULE,
-          NO_INVENTED_URGENCY_RULE,
-          EMOTIONAL_CONTEXT_INSTRUCTION,
-          OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
-          GUIDELINE_FRAMING_INSTRUCTION,
-          'Leia todo o historico antes de responder e respeite a cronologia do transcript. Considere os fatos temporais acima como referencia principal.',
-          'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-          'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa, como se fosse o corretor continuando a conversa real de onde parou. A mensagem final deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
-          responseFormatInstruction,
-        ].filter(Boolean).join('\n\n');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          text: responseText,
+          provider: result.provider,
+          model: result.model,
+          fallback_used: result.fallbackUsed,
+        }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
 
-    const baseUserPrompt = [
+    // =====================================================================
+    // V3: CALL 1 — Commercial Analysis + Strategy
+    // =====================================================================
+    const analysisUserPrompt = buildAnalysisUserPrompt({
       baseContextPrompt,
+      leadContext,
+      temporalFactsText,
+      recentFollowUpsText,
+      reminderContextText,
+      customInstructions,
+    });
+
+    console.log('[FollowUpAI][v3] CALL 1 — analysis', { task: 'follow_up_analysis' });
+
+    const analysisResult = await generateTextWithRouting({
+      supabaseAdmin,
+      task: 'follow_up_analysis',
+      systemPrompt: ANALYSIS_SYSTEM_PROMPT,
+      userPrompt: analysisUserPrompt,
+      temperature: 0.3,
+      maxTokens: 900,
+    });
+
+    let analysisAndStrategy: AnalysisAndStrategyResult;
+    try {
+      analysisAndStrategy = JSON.parse(analysisResult.text.trim()) as AnalysisAndStrategyResult;
+    } catch {
+      console.error('[FollowUpAI][v3] CALL 1 returned invalid JSON, falling back to single-call');
+      const fallbackResult = await generateTextWithRouting({
+        supabaseAdmin,
+        task: 'follow_up_generation',
+        systemPrompt: 'Gere um follow-up de WhatsApp simples e direto para este chat.',
+        userPrompt: baseContextPrompt,
+        temperature: 0.7,
+        maxTokens: 520,
+      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          text: sanitizeGeneratedText(fallbackResult.text.trim()),
+          provider: fallbackResult.provider,
+          model: fallbackResult.model,
+          fallback_used: true,
+        }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
+
+    const { analysis, strategy } = analysisAndStrategy;
+
+    // If shouldSend is false, return early with a wait response
+    if (strategy.shouldSend === false) {
+      console.log('[FollowUpAI][v3] shouldSend=false', {
+        stage: analysis.stage,
+        blocker: analysis.blocker,
+      });
+
+      // Persist commercial state for next analysis
+      try {
+        await supabaseAdmin.rpc('upsert_commercial_state', {
+          p_chat_id: chat.id,
+          p_lead_id: chat.lead_id || null,
+          p_stage: analysis.stage || 'outro',
+          p_lead_temperature: analysis.leadTemperature || 'nao_identificado',
+          p_contact_role: analysis.contactRole || 'nao_identificado',
+          p_decision_maker: analysis.decisionMaker || null,
+          p_stakeholders: JSON.stringify(analysis.stakeholders || []),
+          p_blocker: analysis.blocker || 'nao_identificado',
+          p_buying_signals: JSON.stringify(analysis.buyingSignals || []),
+          p_objections: JSON.stringify(analysis.objections || []),
+          p_known_facts: JSON.stringify(analysis.knownFacts || []),
+          p_last_commercial_event: analysis.lastCommercialEvent || null,
+          p_last_customer_position: analysis.lastCustomerPosition || null,
+          p_last_commitment: analysis.lastCommitment ? JSON.stringify(analysis.lastCommitment) : null,
+          p_previous_microdecision: analysis.previousMicrodecision || null,
+          p_pending_microdecision: analysis.pendingMicrodecision || null,
+          p_next_action_owner: analysis.nextActionOwner || 'nao_identificado',
+          p_main_commercial_question: analysis.mainCommercialQuestion || null,
+          p_last_commercial_function: strategy.commercialFunction || null,
+          p_last_strategy_summary: strategy.rationale || null,
+          p_analysis_confidence: analysis.confidence || 0.5,
+          p_source_last_message_id: null,
+          p_source_last_message_at: null,
+        });
+      } catch (stateErr) {
+        console.error('[FollowUpAI][v3] failed to persist commercial state', stateErr);
+      }
+
+      // Audit log (V3 wait)
+      let generationId: string | null = null;
+      if (chat.lead_id) {
+        const { data: auditRow } = await supabaseAdmin.from('comm_follow_up_audit_log').insert({
+          lead_id: chat.lead_id,
+          chat_id: chat.id,
+          source_reminder_id: toTrimmedString(body.sourceReminderId) || null,
+          batch_id: toTrimmedString(body.batchId) || null,
+          trigger_source: toTrimmedString(body.triggerSource) || 'individual',
+          generated_by: authResult.user.profileId,
+          provider: analysisResult.provider,
+          model: analysisResult.model,
+          current_action: 'wait',
+          current_action_reason: strategy.waitReason || 'Analise comercial indica que nao e adequado enviar follow-up agora.',
+          stage: analysis.stage,
+          blocker: analysis.blocker,
+          goal: analysis.goal,
+          commercial_function: strategy.commercialFunction,
+          next_action_owner: analysis.nextActionOwner,
+          pending_microdecision: analysis.pendingMicrodecision,
+          last_commercial_commitment: analysis.lastCommitment,
+          decision_maker: analysis.decisionMaker,
+          opportunity_recommendation: 'pause',
+          schedule_action: strategy.scheduleRecommendation?.action || 'no_schedule',
+          schedule_suggested_date: strategy.scheduleRecommendation?.suggestedDate || null,
+          schedule_reason: strategy.scheduleRecommendation?.reason || null,
+          schedule_confidence: strategy.scheduleRecommendation?.confidence || 'medium',
+          rationale: strategy.rationale,
+          generated_text: null,
+          text_content: '[WAIT — sem mensagem gerada]',
+          v3_analysis: analysis,
+          v3_strategy: strategy,
+          v3_analysis_model: analysisResult.model,
+          v3_regeneration_count: 0,
+        }).select('id').maybeSingle();
+        generationId = toTrimmedString(auditRow?.id) || null;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          text: null,
+          aiContext: {
+            stage: analysis.stage,
+            blocker: analysis.blocker,
+            goal: analysis.goal,
+            emotionalContext: analysis.emotionalContext,
+            rationale: strategy.rationale,
+            commercialFunction: strategy.commercialFunction,
+            nextActionOwner: analysis.nextActionOwner,
+            pendingMicrodecision: analysis.pendingMicrodecision,
+            lastCommercialCommitment: analysis.lastCommitment,
+            decisionMaker: analysis.decisionMaker,
+          },
+          currentAction: 'wait',
+          currentActionReason: strategy.waitReason || 'Analise comercial indica que nao e adequado enviar follow-up agora.',
+          opportunityRecommendation: 'pause',
+          scheduleRecommendation: strategy.scheduleRecommendation || null,
+          generationId,
+          provider: analysisResult.provider,
+          model: analysisResult.model,
+          fallback_used: false,
+        }),
+        { status: 200, headers: jsonHeaders },
+      );
+    }
+
+    // =====================================================================
+    // V3: CALL 2 — Copy Generation
+    // =====================================================================
+    const copySystemPrompt = [
+      COPY_SYSTEM_PROMPT,
       '',
-      '',
-      shouldGenerateVariations
-        ? `Interprete a conversa acima e gere ${variantCount} variacoes do proximo follow-up mais adequado para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
-        : 'Interprete a conversa acima e gere o proximo follow-up mais adequado para enviar agora neste chat. Deve soar humano, comercialmente coerente e pronto para copiar e enviar no WhatsApp.',
-    ].filter(Boolean).join('\n');
+      STYLE_RULE,
+      DEFAULT_CONDUCT_RULES,
+      ['REGRAS DE ESTILO (aprendidas do historico real — use apenas o padrao de tom e estrutura):', styleProfileText].join('\n'),
+      COMMERCIAL_THREAD_RULE,
+      NO_REPEAT_STRATEGY_RULE,
+      NOT_A_COLLECTION_CALL_RULE,
+      OBJECTION_READING_RULE,
+      NO_INVENTED_URGENCY_RULE,
+      EMOTIONAL_CONTEXT_INSTRUCTION,
+      OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
+      MULTI_MESSAGE_MECHANISM_NOTE,
+      MESSAGE_SPLITTING_INSTRUCTION,
+    ].filter(Boolean).join('\n\n');
 
-    const userPrompt = refinementMode
-      ? [
-          baseUserPrompt,
-          '',
-          'Mensagem atual a refinar:',
-          currentMessage,
-          '',
-          'Ajuste solicitado:',
-          adjustmentInstruction,
-          '',
-          'Tarefa:',
-          'Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat (incluindo os fatos temporais e o contexto humano acima). Se o ajuste pedir mudanca de estrategia comercial (ex.: investigar bloqueio, avancar fechamento, ser mais firme, contornar objecao), releia o historico e ajuste a funcao comercial da mensagem de acordo, respeitando a regra de nao repetir a mesma estrategia de tentativas anteriores. Retorne somente a mensagem final em texto puro, sem JSON, sem explicações.',
-        ].join('\n')
-      : baseUserPrompt;
+    const copyUserPrompt = buildCopyUserPrompt({
+      analysis,
+      strategy,
+      baseContextPrompt,
+      leadContext,
+      temporalFactsText,
+      customInstructions,
+    });
 
-    const temperature = hasCustomInstructions ? 0.5 : 0.7;
-    const maxTokens = refinementMode
-      ? 320
-      : shouldGenerateVariations
-        ? Math.min(1400, 340 * variantCount)
-        : 520;
+    const maxTokens = shouldGenerateVariations
+      ? Math.min(1400, 340 * variantCount)
+      : 520;
 
-    console.log('[FollowUpAI][edge] final generation prompt', {
-      systemPrompt,
-      userPrompt,
-      temperature,
+    console.log('[FollowUpAI][v3] CALL 2 — copy generation', {
+      commercialFunction: strategy.commercialFunction,
+      goal: analysis.goal,
       maxTokens,
     });
 
-    let result = await generateTextWithRouting({
+    let copyResult = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_generation',
-      systemPrompt,
-      userPrompt,
-      temperature,
+      systemPrompt: copySystemPrompt,
+      userPrompt: copyUserPrompt,
+      temperature: hasCustomInstructions ? 0.5 : 0.7,
       maxTokens,
     });
 
-    let aiContext: AiContextRecommendation | null = null;
-    let variations: FollowUpVariation[] = [];
-    let responseText: string;
+    let parsed = parseFollowUpGenerationResult(copyResult.text, shouldGenerateVariations);
 
-    if (refinementMode) {
-      responseText = sanitizeGeneratedText(result.text.trim());
-    } else {
-      let parsed = parseFollowUpGenerationResult(result.text, shouldGenerateVariations);
-
-      // Validacao + uma unica tentativa de correcao antes de cair pro
-      // fallback textual — evita loops/custo extra desnecessario, mas
-      // recupera a maioria dos casos em que o provider ignora o formato.
-      if (!isValidFollowUpGenerationResult(parsed, shouldGenerateVariations)) {
-        console.warn('[FollowUpAI][edge] resposta da IA nao seguiu o schema esperado, tentando 1 vez com instrucao corretiva');
-        try {
-          const retryResult = await generateTextWithRouting({
-            supabaseAdmin,
-            task: 'follow_up_generation',
-            systemPrompt: `${systemPrompt}\n\nATENCAO: sua resposta anterior nao seguiu exatamente o formato JSON exigido. Retorne SOMENTE o JSON valido no formato especificado, sem nenhum texto fora do JSON e sem markdown.`,
-            userPrompt,
-            temperature,
-            maxTokens,
-          });
-          const retryParsed = parseFollowUpGenerationResult(retryResult.text, shouldGenerateVariations);
-          if (isValidFollowUpGenerationResult(retryParsed, shouldGenerateVariations)) {
-            parsed = retryParsed;
-            result = retryResult;
-          }
-        } catch (retryError) {
-          console.error('[FollowUpAI][edge] retry de geracao falhou', retryError);
-        }
-      }
-
-      const lastUnansweredCommercialFunction = getLastUnansweredCommercialFunction(recentAudits, messages);
-      if (
-        lastUnansweredCommercialFunction
-        && parsed.aiContext?.currentAction === 'send'
-        && parsed.aiContext.commercialFunction === lastUnansweredCommercialFunction
-      ) {
-        console.warn('[FollowUpAI][edge] funcao comercial repetida sem resposta; solicitando uma unica alternativa', {
-          commercialFunction: lastUnansweredCommercialFunction,
+    // JSON schema retry (same as V2)
+    if (!isValidFollowUpGenerationResult(parsed, shouldGenerateVariations)) {
+      console.warn('[FollowUpAI][v3] copy response did not follow schema, retrying once');
+      try {
+        const retryResult = await generateTextWithRouting({
+          supabaseAdmin,
+          task: 'follow_up_generation',
+          systemPrompt: `${copySystemPrompt}\n\nATENCAO: sua resposta anterior nao seguiu exatamente o formato JSON exigido. Retorne SOMENTE o JSON valido no formato especificado, sem nenhum texto fora do JSON e sem markdown.`,
+          userPrompt: copyUserPrompt,
+          temperature: hasCustomInstructions ? 0.5 : 0.7,
+          maxTokens,
         });
-        try {
-          const semanticRetryResult = await generateTextWithRouting({
-            supabaseAdmin,
-            task: 'follow_up_generation',
-            systemPrompt: `${systemPrompt}\n\nATENCAO: a funcao comercial "${lastUnansweredCommercialFunction}" ja foi usada no ultimo follow-up sem resposta. Nao a repita com sinonimos. Escolha outra funcao comercial coerente com o historico ou retorne currentAction="wait" se nao houver movimento adequado.`,
-            userPrompt,
-            temperature,
-            maxTokens,
-          });
-          const semanticRetryParsed = parseFollowUpGenerationResult(semanticRetryResult.text, shouldGenerateVariations);
-          const repeatedAgain = semanticRetryParsed.aiContext?.currentAction === 'send'
-            && semanticRetryParsed.aiContext.commercialFunction === lastUnansweredCommercialFunction;
-          if (isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations) && !repeatedAgain) {
-            parsed = semanticRetryParsed;
-            result = semanticRetryResult;
-          } else {
-            console.warn('[FollowUpAI][edge] retry semantico nao resolveu repeticao; usando mensagem original', {
-              repeatedAgain,
-              retryValid: isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations),
-            });
-          }
-        } catch (semanticRetryError) {
-          console.error('[FollowUpAI][edge] retry semantico falhou; usando mensagem original', semanticRetryError);
+        const retryParsed = parseFollowUpGenerationResult(retryResult.text, shouldGenerateVariations);
+        if (isValidFollowUpGenerationResult(retryParsed, shouldGenerateVariations)) {
+          parsed = retryParsed;
+          copyResult = retryResult;
         }
-      }
-
-      aiContext = parsed.aiContext;
-
-      if (hasRecentOutboundWithoutInbound(messages, now) && !customInstructions) {
-        aiContext = {
-          ...(aiContext ?? parseAiContextFromRecord({})),
-          currentAction: 'wait',
-          currentActionReason: 'Há uma mensagem outbound útil enviada há menos de 12 horas sem resposta; aguarde tempo razoável de análise.',
-          commercialFunction: 'nenhuma',
-          scheduleAction: aiContext?.scheduleAction ?? 'schedule',
-          scheduleReason: aiContext?.scheduleReason ?? 'Dar tempo para avaliação antes de nova retomada.',
-          scheduleConfidence: aiContext?.scheduleConfidence ?? 'high',
-        };
-      }
-
-      if (aiContext?.currentAction === 'wait') {
-        variations = [];
-        responseText = '';
-      } else if (shouldGenerateVariations) {
-        variations = parsed.variations;
-        responseText = variations[0]?.text ? sanitizeGeneratedText(variations[0].text) : '';
-      } else {
-        responseText = parsed.text ? sanitizeGeneratedText(parsed.text) : '';
-      }
-
-      // Se o modelo nao seguiu o formato JSON pedido mesmo apos a
-      // correcao (raro, mas providers podem falhar nisso), cai pro texto
-      // bruto em vez de retornar vazio.
-      if (!responseText && aiContext?.currentAction !== 'wait') {
-        responseText = sanitizeGeneratedText(result.text.trim());
+      } catch (retryError) {
+        console.error('[FollowUpAI][v3] copy retry failed', retryError);
       }
     }
+
+    // =====================================================================
+    // V3: VALIDATION + REGENERATION LOOP (max 2 retries)
+    // =====================================================================
+    const maxRetries = 2;
+    let regenerationCount = 0;
+    let validation: ValidationResult = { valid: true, issues: [] };
+    let validatedText = '';
+    let aiContext: AiContextRecommendation | null = null;
+
+    const extractResponseText = (p: ReturnType<typeof parseFollowUpGenerationResult>): string => {
+      if (p.variations?.length > 0 && p.variations[0]?.text) {
+        return sanitizeGeneratedText(p.variations[0].text);
+      }
+      return p.text ? sanitizeGeneratedText(p.text) : '';
+    };
+
+    if (shouldGenerateVariations) {
+      validatedText = extractResponseText(parsed);
+      aiContext = parsed.aiContext;
+    } else {
+      // Validate the copy
+      const candidateText = extractResponseText(parsed);
+      validation = validateCommercialMessage(candidateText, {
+        analysis,
+        strategy,
+        transcriptLines,
+        recentAudits,
+        messages,
+      });
+
+      if (!validation.valid && regenerationCount < maxRetries) {
+        console.warn('[FollowUpAI][v3] validation failed, regenerating', {
+          issues: validation.issues,
+        });
+
+        const feedback = formatValidationFeedback(validation);
+
+        for (let attempt = 0; attempt < maxRetries && !validation.valid; attempt++) {
+          regenerationCount++;
+
+          const retryCopyPrompt = [
+            copyUserPrompt,
+            '',
+            'CORRECAO NECESSARIA — a mensagem anterior falhou na validacao:',
+            feedback,
+            '',
+            'Gere uma nova mensagem corrigindo todos os problemas acima. Respeite a estrategia definida mas ajuste o texto.',
+          ].join('\n');
+
+          try {
+            const retryResult = await generateTextWithRouting({
+              supabaseAdmin,
+              task: 'follow_up_generation',
+              systemPrompt: copySystemPrompt,
+              userPrompt: retryCopyPrompt,
+              temperature: hasCustomInstructions ? 0.5 : 0.7,
+              maxTokens,
+            });
+
+            const retryParsed = parseFollowUpGenerationResult(retryResult.text, false);
+            if (isValidFollowUpGenerationResult(retryParsed, false)) {
+              const retryText = extractResponseText(retryParsed);
+              const retryValidation = validateCommercialMessage(retryText, {
+                analysis,
+                strategy,
+                transcriptLines,
+                recentAudits,
+                messages,
+              });
+
+              if (retryValidation.valid || attempt === maxRetries - 1) {
+                validation = retryValidation;
+                validatedText = retryText;
+                parsed = retryParsed;
+                copyResult = retryResult;
+                aiContext = retryParsed.aiContext;
+                break;
+              }
+            }
+          } catch (retryErr) {
+            console.error('[FollowUpAI][v3] regeneration attempt failed', retryErr);
+            break;
+          }
+        }
+      }
+
+      if (!validatedText) {
+        validatedText = extractResponseText(parsed);
+        aiContext = parsed.aiContext;
+      }
+    }
+
+    // =====================================================================
+    // POST-COPY: outbound guard, state persistence, audit, response
+    // =====================================================================
+
+    // Merge analysis-derived fields into aiContext for downstream compat
+    if (aiContext) {
+      aiContext = {
+        ...aiContext,
+        stage: aiContext.stage || analysis.stage,
+        blocker: aiContext.blocker || analysis.blocker,
+        goal: aiContext.goal || analysis.goal,
+        commercialFunction: aiContext.commercialFunction || strategy.commercialFunction,
+        nextActionOwner: aiContext.nextActionOwner || analysis.nextActionOwner,
+        pendingMicrodecision: aiContext.pendingMicrodecision || analysis.pendingMicrodecision,
+        lastCommercialCommitment: aiContext.lastCommercialCommitment || analysis.lastCommitment,
+        decisionMaker: aiContext.decisionMaker || analysis.decisionMaker,
+        emotionalContext: aiContext.emotionalContext || analysis.emotionalContext,
+      };
+    }
+
+    // Outbound guard: suppress if a recent outbound was sent without reply
+    if (hasRecentOutboundWithoutInbound(messages, now) && !customInstructions && !validation.valid) {
+      aiContext = {
+        ...(aiContext ?? parseAiContextFromRecord({})),
+        currentAction: 'wait',
+        currentActionReason: 'Há uma mensagem outbound útil enviada há menos de 12 horas sem resposta; aguarde tempo razoável de análise.',
+        commercialFunction: 'nenhuma',
+        scheduleAction: aiContext?.scheduleAction ?? 'schedule',
+        scheduleReason: aiContext?.scheduleReason ?? 'Dar tempo para avaliação antes de nova retomada.',
+        scheduleConfidence: aiContext?.scheduleConfidence ?? 'high',
+      };
+      validatedText = '';
+    }
+
+    let responseText = validatedText;
 
     if (!responseText && aiContext?.currentAction !== 'wait') {
       throw new Error('A IA nao retornou um follow-up valido.');
@@ -1749,7 +1926,38 @@ Deno.serve(async (req: Request) => {
       responseText = normalizeGreetingForTemporalFacts(responseText, temporalFacts);
     }
 
-    const nextAction = refinementMode ? null : await buildFollowUpNextAction({
+    // Persist commercial state
+    try {
+      await supabaseAdmin.rpc('upsert_commercial_state', {
+        p_chat_id: chat.id,
+        p_lead_id: chat.lead_id || null,
+        p_stage: analysis.stage || 'outro',
+        p_lead_temperature: analysis.leadTemperature || 'nao_identificado',
+        p_contact_role: analysis.contactRole || 'nao_identificado',
+        p_decision_maker: analysis.decisionMaker || null,
+        p_stakeholders: JSON.stringify(analysis.stakeholders || []),
+        p_blocker: analysis.blocker || 'nao_identificado',
+        p_buying_signals: JSON.stringify(analysis.buyingSignals || []),
+        p_objections: JSON.stringify(analysis.objections || []),
+        p_known_facts: JSON.stringify(analysis.knownFacts || []),
+        p_last_commercial_event: analysis.lastCommercialEvent || null,
+        p_last_customer_position: analysis.lastCustomerPosition || null,
+        p_last_commitment: analysis.lastCommitment ? JSON.stringify(analysis.lastCommitment) : null,
+        p_previous_microdecision: analysis.previousMicrodecision || null,
+        p_pending_microdecision: analysis.pendingMicrodecision || null,
+        p_next_action_owner: analysis.nextActionOwner || 'nao_identificado',
+        p_main_commercial_question: analysis.mainCommercialQuestion || null,
+        p_last_commercial_function: strategy.commercialFunction || null,
+        p_last_strategy_summary: strategy.rationale || null,
+        p_analysis_confidence: analysis.confidence || 0.5,
+        p_source_last_message_id: null,
+        p_source_last_message_at: null,
+      });
+    } catch (stateErr) {
+      console.error('[FollowUpAI][v3] failed to persist commercial state', stateErr);
+    }
+
+    const nextAction = await buildFollowUpNextAction({
       supabaseAdmin,
       messages,
       lead,
@@ -1758,25 +1966,25 @@ Deno.serve(async (req: Request) => {
       now,
     });
 
-    console.log('[FollowUpAI][edge] final generation response', {
-      result,
-      aiContext,
-      variations,
-      responseText,
-      nextAction,
+    console.log('[FollowUpAI][v3] final response', {
+      commercialFunction: strategy.commercialFunction,
+      stage: analysis.stage,
+      blocker: analysis.blocker,
+      regenerationCount,
+      validationValid: validation.valid,
+      responseTextLength: responseText?.length || 0,
     });
 
-    const scheduleRecommendation = !refinementMode
-      ? {
-          action: aiContext?.scheduleAction ?? (nextAction?.suggestedDateTime ? 'schedule' : 'no_schedule'),
-          suggestedDate: aiContext?.scheduleAction === 'no_schedule' ? null : nextAction?.suggestedDateTime ?? null,
-          reason: aiContext?.scheduleReason ?? nextAction?.reason ?? 'Recomendação de agenda indisponível.',
-          confidence: aiContext?.scheduleConfidence ?? 'medium',
-        }
-      : null;
+    const scheduleRecommendation = {
+      action: aiContext?.scheduleAction ?? (nextAction?.suggestedDateTime ? 'schedule' : 'no_schedule'),
+      suggestedDate: aiContext?.scheduleAction === 'no_schedule' ? null : nextAction?.suggestedDateTime ?? null,
+      reason: aiContext?.scheduleReason ?? nextAction?.reason ?? 'Recomendação de agenda indisponível.',
+      confidence: aiContext?.scheduleConfidence ?? 'medium',
+    };
 
+    // Audit log
     let generationId: string | null = null;
-    if (!refinementMode && chat.lead_id) {
+    if (chat.lead_id) {
       const { data: auditRow, error: auditError } = await supabaseAdmin.from('comm_follow_up_audit_log').insert({
         lead_id: chat.lead_id,
         chat_id: chat.id,
@@ -1784,8 +1992,8 @@ Deno.serve(async (req: Request) => {
         batch_id: toTrimmedString(body.batchId) || null,
         trigger_source: toTrimmedString(body.triggerSource) || 'individual',
         generated_by: authResult.user.profileId,
-        provider: result.provider,
-        model: result.model,
+        provider: copyResult.provider,
+        model: copyResult.model,
         current_action: aiContext?.currentAction,
         current_action_reason: aiContext?.currentActionReason,
         stage: aiContext?.stage,
@@ -1797,15 +2005,21 @@ Deno.serve(async (req: Request) => {
         last_commercial_commitment: aiContext?.lastCommercialCommitment,
         decision_maker: aiContext?.decisionMaker,
         opportunity_recommendation: aiContext?.opportunityRecommendation,
-        schedule_action: scheduleRecommendation?.action,
-        schedule_suggested_date: scheduleRecommendation?.suggestedDate,
-        schedule_reason: scheduleRecommendation?.reason,
-        schedule_confidence: scheduleRecommendation?.confidence,
+        schedule_action: scheduleRecommendation.action,
+        schedule_suggested_date: scheduleRecommendation.suggestedDate,
+        schedule_reason: scheduleRecommendation.reason,
+        schedule_confidence: scheduleRecommendation.confidence,
         rationale: aiContext?.rationale,
         generated_text: responseText || null,
         text_content: responseText || '[WAIT — sem mensagem gerada]',
+        v3_analysis: analysis,
+        v3_strategy: strategy,
+        v3_validation: validation,
+        v3_regeneration_count: regenerationCount,
+        v3_analysis_model: analysisResult.model,
+        v3_copy_model: copyResult.model,
       }).select('id').maybeSingle();
-      if (auditError) console.error('[FollowUpAI][edge] erro ao registrar geracao', auditError);
+      if (auditError) console.error('[FollowUpAI][v3] audit log error', auditError);
       generationId = toTrimmedString(auditRow?.id) || null;
     }
 
@@ -1813,7 +2027,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         text: responseText || null,
-        variations: variations.length > 0 ? variations : undefined,
+        variations: shouldGenerateVariations && parsed.variations?.length > 0 ? parsed.variations : undefined,
         aiContext: {
           stage: aiContext?.stage ?? null,
           blocker: aiContext?.blocker ?? null,
@@ -1826,22 +2040,23 @@ Deno.serve(async (req: Request) => {
           lastCommercialCommitment: aiContext?.lastCommercialCommitment ?? null,
           decisionMaker: aiContext?.decisionMaker ?? null,
         },
-        currentAction: refinementMode ? null : aiContext?.currentAction ?? 'send',
-        currentActionReason: refinementMode ? null : aiContext?.currentActionReason ?? null,
-        opportunityRecommendation: refinementMode ? null : aiContext?.opportunityRecommendation ?? 'continue',
+        currentAction: aiContext?.currentAction ?? 'send',
+        currentActionReason: aiContext?.currentActionReason ?? null,
+        opportunityRecommendation: aiContext?.opportunityRecommendation ?? 'continue',
         scheduleRecommendation,
-        // Compatibilidade temporaria para o modal individual legado durante a
-        // transicao da UI para currentAction/scheduleRecommendation.
         nextAction,
         generationId,
-        provider: result.provider,
-        model: result.model,
-        fallback_used: result.fallbackUsed,
+        provider: copyResult.provider,
+        model: copyResult.model,
+        fallback_used: copyResult.fallbackUsed,
+        v3: {
+          analysisModel: analysisResult.model,
+          copyModel: copyResult.model,
+          validation,
+          regenerationCount,
+        },
       }),
-      {
-        status: 200,
-        headers: jsonHeaders,
-      },
+      { status: 200, headers: jsonHeaders },
     );
   } catch (error) {
     console.error('[comm-whatsapp-generate-follow-up] erro inesperado', error);

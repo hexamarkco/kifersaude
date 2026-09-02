@@ -16,9 +16,9 @@ const migrationSource = readFileSync(
   'utf8',
 );
 
-test('V2 aceita wait sem texto e não cria variações', () => {
+test('V3 aceita wait sem texto e usa shouldSend para branching', () => {
   assert.match(edgeSource, /currentAction === 'wait' \|\| Boolean\(result\.text\)/);
-  assert.match(edgeSource, /if \(aiContext\?\.currentAction === 'wait'\) \{\s+variations = \[\];\s+responseText = '';/s);
+  assert.match(edgeSource, /strategy\.shouldSend === false/);
   assert.match(batchModalSource, /it\.currentAction === 'send'/);
 });
 
@@ -29,9 +29,10 @@ test('V2 protege outbound recente e não reintroduz exemplos literais de estilo'
   assert.doesNotMatch(edgeSource, /EXEMPLOS REAIS DO SEU ESTILO/);
 });
 
-test('V2 faz retry único quando repete função comercial sem inbound', () => {
+test('V3 valida copy e evita repetição via validator + retry loop', () => {
   assert.match(edgeSource, /getLastUnansweredCommercialFunction/);
-  assert.match(edgeSource, /funcao comercial repetida sem resposta/);
+  assert.match(edgeSource, /validateCommercialMessage/);
+  assert.match(edgeSource, /regenerationCount/);
   assert.match(edgeSource, /FollowUpValidationError/);
 });
 

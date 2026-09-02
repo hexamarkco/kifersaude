@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
 import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
@@ -204,6 +204,8 @@ export default function WhatsAppBatchFollowUpModal({
 
   const pendingCount = items.filter((i) => i.status === 'pending' && i.selected).length;
   const readyCount = items.filter((i) => i.status === 'ready' && i.selected).length;
+  const sendableCount = items.filter((i) => i.status === 'ready' && i.selected && (i.generatedText.trim() || (i.currentAction === 'send'))).length;
+  const waitCount = items.filter((i) => i.status === 'ready' && i.selected && i.currentAction === 'wait' && !i.generatedText.trim()).length;
   const failedGenCount = items.filter((i) => i.status === 'failed' && i.selected).length;
   const currentSendingItem = items.find((i) => i.sendStatus === 'sending') ?? null;
   const totalCount = items.length;
@@ -701,7 +703,9 @@ export default function WhatsAppBatchFollowUpModal({
             {pendingCount > 0 ? <Pill tone="accent">{pendingCount} pendente(s)</Pill> : null}
             {readyCount > 0 ? (
               <span className="rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--success-text)]">
-                {readyCount} pronto(s)
+                {sendableCount > 0 ? `${sendableCount} pronto(s)` : ''}
+                {sendableCount > 0 && waitCount > 0 ? ' + ' : ''}
+                {waitCount > 0 ? `${waitCount} aguardando` : sendableCount === 0 ? `${readyCount} aguardando` : ''}
               </span>
             ) : null}
             {failedGenCount > 0 ? (
@@ -878,14 +882,24 @@ export default function WhatsAppBatchFollowUpModal({
                       ) : null}
                     </div>
                   </div>
-                  <Textarea
-                    value={activeItem.generatedText}
-                    onChange={(e) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: e.target.value }))}
-                    rows={6}
-                    className="min-h-[160px] text-sm leading-6"
-                    placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
-                    disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                  />
+                  {activeItem.currentAction === 'wait' && !activeItem.generatedText.trim() ? (
+                    <div className="flex min-h-[160px] flex-col items-center justify-center rounded-xl border border-dashed border-[var(--warning-border)] bg-[var(--warning-soft)] px-6 py-8 text-center">
+                      <Clock className="mb-2 h-6 w-6 text-[var(--warning-text)]" />
+                      <p className="text-sm font-semibold text-[var(--warning-text)]">A IA recomenda aguardar</p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                        {activeItem.currentActionReason || 'A análise comercial indica que não é o momento ideal para enviar um follow-up.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={activeItem.generatedText}
+                      onChange={(e) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: e.target.value }))}
+                      rows={6}
+                      className="min-h-[160px] text-sm leading-6"
+                      placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
+                      disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                    />
+                  )}
 
                   {/* Refinement toolbar */}
                   {activeItem.generatedText.trim() ? (

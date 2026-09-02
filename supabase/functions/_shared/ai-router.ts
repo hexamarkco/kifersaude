@@ -7,7 +7,7 @@ declare const Deno: {
   };
 };
 
-export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique' | 'autonomous_attendance';
+export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'follow_up_analysis' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique' | 'autonomous_attendance';
 
 type ProviderSettings = {
   enabled: boolean;
@@ -106,7 +106,7 @@ const GEMINI_DEFAULT_TRANSCRIPTION_MODEL = GEMINI_DEFAULT_TEXT_MODEL;
 const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
 const CLAUDE_DEFAULT_TRANSCRIPTION_MODEL = CLAUDE_DEFAULT_TEXT_MODEL;
 
-const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance'];
+const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'follow_up_analysis', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -286,6 +286,7 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
   const routing: Record<AiTask, TaskRouting> = {
     rewrite_message: normalizeTaskRouting('rewrite_message', rawTasks.rewrite_message, providers, fallbackEnabled),
     follow_up_generation: normalizeTaskRouting('follow_up_generation', rawTasks.follow_up_generation, providers, fallbackEnabled),
+    follow_up_analysis: normalizeTaskRouting('follow_up_analysis', rawTasks.follow_up_analysis, providers, fallbackEnabled),
     follow_up_agenda_organization: normalizeTaskRouting(
       'follow_up_agenda_organization',
       rawTasks.follow_up_agenda_organization,
@@ -361,7 +362,7 @@ const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTo
 // direto para uma resposta plausivel na superficie sem executar o raciocinio
 // que o prompt pede. Tarefas mais mecanicas (reescrever um texto dado,
 // organizar agenda) continuam com esforco minimo por velocidade/custo.
-const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'attendance_critique', 'autonomous_attendance']);
+const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'follow_up_analysis', 'attendance_critique', 'autonomous_attendance']);
 
 const getPreferredOpenAiReasoningEffort = (model: string, task: AiTask): OpenAiReasoningEffort | undefined => {
   const normalized = model.trim().toLowerCase();

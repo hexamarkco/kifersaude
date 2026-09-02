@@ -13,6 +13,22 @@ import {
   STYLE_SAMPLE_LIMIT,
 } from '../_shared/comm-whatsapp-transcript.ts';
 import { COMMERCIAL_THREAD_RULE } from '../_shared/comm-whatsapp-follow-up-commercial-thread.ts';
+import type {
+  CommercialAnalysis,
+  FollowUpStrategy,
+  AnalysisAndStrategyResult,
+} from '../_shared/comm-whatsapp-follow-up-v3-types.ts';
+import {
+  ANALYSIS_SYSTEM_PROMPT,
+  buildAnalysisUserPrompt,
+  COPY_SYSTEM_PROMPT,
+  buildCopyUserPrompt,
+} from '../_shared/comm-whatsapp-follow-up-v3-prompts.ts';
+import {
+  validateCommercialMessage,
+  formatValidationFeedback,
+  type ValidationResult,
+} from '../_shared/comm-whatsapp-follow-up-v3-validator.ts';
 
 declare const Deno: {
   env: {

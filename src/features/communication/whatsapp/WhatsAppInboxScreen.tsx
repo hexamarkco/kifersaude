@@ -7531,6 +7531,8 @@ export default function WhatsAppInboxScreen() {
       return { segment, optimisticMessage, clientRequestId };
     });
 
+    const wasArchived = Boolean(chat.is_archived);
+
     enqueueChatSend(chat.id, async () => {
       let hadSuccessfulSend = false;
 
@@ -7574,15 +7576,18 @@ export default function WhatsAppInboxScreen() {
         void Promise.resolve(onSent?.()).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar auditoria do follow-up enviado', error);
         });
+        if (wasArchived) {
+          setArchivedSectionOpen(false);
+        }
         // BUG FIX (BUG #13): erro de pós-envio agora avisa o usuário
         // de forma discreta (warning), em vez de falhar silenciosamente.
-        void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
+        void Promise.all([loadMessages(chat, 'send'), loadChats({ sections: wasArchived ? ['active'] : undefined })]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
           toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
         });
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, setArchivedSectionOpen, updateOptimisticChatPreviewStatus]);
 
   const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
     if (!selectedChat || message.direction !== 'inbound') return;
@@ -7677,6 +7682,7 @@ export default function WhatsAppInboxScreen() {
         });
 
         enqueueChatSend(selectedChat.id, async () => {
+          const wasArchived = Boolean(selectedChat.is_archived);
           let shouldStopQueue = false;
           let hadSuccessfulSend = false;
           let firstErrorMessage = '';
@@ -7773,8 +7779,11 @@ export default function WhatsAppInboxScreen() {
           }
 
           if (hadSuccessfulSend || hadAmbiguousSend) {
+            if (wasArchived) {
+              setArchivedSectionOpen(false);
+            }
             void (async () => {
-              await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
+              await Promise.all([loadMessages(selectedChat, 'send'), loadChats({ sections: wasArchived ? ['active'] : undefined })]);
             })().catch((error) => {
               console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de midia', error);
             });

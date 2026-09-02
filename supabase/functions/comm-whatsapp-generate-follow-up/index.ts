@@ -1683,22 +1683,30 @@ Deno.serve(async (req: Request) => {
         console.warn('[FollowUpAI][edge] funcao comercial repetida sem resposta; solicitando uma unica alternativa', {
           commercialFunction: lastUnansweredCommercialFunction,
         });
-        const semanticRetryResult = await generateTextWithRouting({
-          supabaseAdmin,
-          task: 'follow_up_generation',
-          systemPrompt: `${systemPrompt}\n\nATENCAO: a funcao comercial "${lastUnansweredCommercialFunction}" ja foi usada no ultimo follow-up sem resposta. Nao a repita com sinonimos. Escolha outra funcao comercial coerente com o historico ou retorne currentAction="wait" se nao houver movimento adequado.`,
-          userPrompt,
-          temperature,
-          maxTokens,
-        });
-        const semanticRetryParsed = parseFollowUpGenerationResult(semanticRetryResult.text, shouldGenerateVariations);
-        const repeatedAgain = semanticRetryParsed.aiContext?.currentAction === 'send'
-          && semanticRetryParsed.aiContext.commercialFunction === lastUnansweredCommercialFunction;
-        if (!isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations) || repeatedAgain) {
-          throw new FollowUpValidationError('A IA repetiu uma estratégia comercial já tentada sem resposta. Revise o caso ou gere novamente com uma orientação explícita.');
+        try {
+          const semanticRetryResult = await generateTextWithRouting({
+            supabaseAdmin,
+            task: 'follow_up_generation',
+            systemPrompt: `${systemPrompt}\n\nATENCAO: a funcao comercial "${lastUnansweredCommercialFunction}" ja foi usada no ultimo follow-up sem resposta. Nao a repita com sinonimos. Escolha outra funcao comercial coerente com o historico ou retorne currentAction="wait" se nao houver movimento adequado.`,
+            userPrompt,
+            temperature,
+            maxTokens,
+          });
+          const semanticRetryParsed = parseFollowUpGenerationResult(semanticRetryResult.text, shouldGenerateVariations);
+          const repeatedAgain = semanticRetryParsed.aiContext?.currentAction === 'send'
+            && semanticRetryParsed.aiContext.commercialFunction === lastUnansweredCommercialFunction;
+          if (isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations) && !repeatedAgain) {
+            parsed = semanticRetryParsed;
+            result = semanticRetryResult;
+          } else {
+            console.warn('[FollowUpAI][edge] retry semantico nao resolveu repeticao; usando mensagem original', {
+              repeatedAgain,
+              retryValid: isValidFollowUpGenerationResult(semanticRetryParsed, shouldGenerateVariations),
+            });
+          }
+        } catch (semanticRetryError) {
+          console.error('[FollowUpAI][edge] retry semantico falhou; usando mensagem original', semanticRetryError);
         }
-        parsed = semanticRetryParsed;
-        result = semanticRetryResult;
       }
 
       aiContext = parsed.aiContext;

@@ -1261,7 +1261,8 @@ const STYLE_RULE = [
 
 const DEFAULT_CONDUCT_RULES = [
   'REGRAS DE CONDUTA:',
-  '- Cada mensagem individual deve ser curta e direta, como uma mensagem real de WhatsApp: normalmente 1 a 2 frases curtas. Nao escreva paragrafos longos.',
+  '- Cada mensagem individual deve ser curta e direta: 1 a 2 frases curtas no maximo. NUNCA escreva paragrafos longos.',
+  '- SEMPRE use "---" para quebrar em 2-3 mensagens quando tiver mais de uma frase. A unica excecao e uma unica frase curta.',
   '- NUNCA use listas, bullets ou numeracao. Markdown so e permitido na forma do separador "---" descrito acima.',
   '- Dentro de cada mensagem, uma unica pergunta ou proximo passo por vez — nao empilhe varias perguntas na mesma mensagem.',
   '- Use o nome do lead se fizer sentido. Nao force.',
@@ -1282,7 +1283,7 @@ const OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION = [
 
 const MULTI_MESSAGE_MECHANISM_NOTE = 'MECANISMO DO SISTEMA: uma linha contendo APENAS "---" (nada mais nela, nem antes nem depois na mesma linha) e reconhecida como separador entre mensagens distintas do WhatsApp — cada trecho entre separadores vira uma mensagem enviada em sequencia. Isso e diferente dos cabecalhos como "--- CONTEXTO ---" usados neste prompt como organizacao visual: so conta como separador real quando a linha tiver somente os tres tracos, sem texto colado.';
 
-const MESSAGE_SPLITTING_INSTRUCTION = 'DIVISAO EM MENSAGENS: sempre que o follow-up tiver mais de uma ideia (por exemplo: retomar o assunto + fazer uma pergunta; ou reconhecer algo + propor o proximo passo), quebre em 2 a 3 mensagens curtas em sequencia usando o separador "---", como uma pessoa real digitando mensagens separadas em vez de um unico bloco longo. So use uma unica mensagem sem separador quando o conteudo for realmente uma unica ideia curta. Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta. Ainda faz sentido pra você?';
+const MESSAGE_SPLITTING_INSTRUCTION = 'DIVISAO EM MENSAGENS (REGRAS OBRIGATORIAS): SEMPRE quebre o follow-up em 2 a 3 mensagens curtas usando o separador "---" (linha com APENAS 3 traços, sem nada antes ou depois). Cada mensagem: 1 a 2 frases curtas no maximo. NUNCA escreva blocos longos. Formato: primeira mensagem cumprimenta ou retoma contexto; segunda desenvolve; terceira faz pergunta ou pede acao. A UNICA excecao para NAO usar "---" e quando o conteudo for EXATAMENTE uma unica frase curta (tipo "Oi, tudo bem?"). Se tiver mais de 2 frases, OBRIGATORIAMENTE use "---" para quebrar. Como uma pessoa real digitando mensagens separadas no WhatsApp em vez de um unico textao. Exemplo de formato dividido (nao copie o conteudo, so o formato):\nOi Fernanda, tudo bem?\n---\nVi que ficou de dar uma olhada na proposta.\n---\nAinda faz sentido pra voce?';
 
 const GUIDELINE_FRAMING_INSTRUCTION = 'COMO DECIDIR (nesta ordem): 1) interprete o que realmente aconteceu na conversa e o historico completo; 2) reconstrua o ultimo fio comercial ainda nao resolvido, sem confundi-lo com a ultima mensagem cronologica; 3) entenda o momento (fatos temporais acima); 4) entenda a pessoa (contexto humano/emocional acima); 5) identifique o estagio, o bloqueio e a ultima microdecisao pedida; 6) defina qual funcao comercial esta mensagem precisa cumprir agora; 7) so entao escreva a mensagem mais adequada para cumprir essa funcao.';
 

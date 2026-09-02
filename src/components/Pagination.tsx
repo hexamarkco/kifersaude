@@ -91,11 +91,11 @@ export default function Pagination({
 
         <div className="kds-op-pagination-pages" aria-label="Páginas disponíveis">
           {getPageNumbers().map((page, index) => (
-            <div key={index}>
-              {page === '...' ? (
-                <span className="kds-op-page-ellipsis" aria-hidden="true"><MoreHorizontal className="h-4 w-4" /></span>
+              page === '...' ? (
+                <span key={`e-${index}`} className="kds-op-page-ellipsis" aria-hidden="true"><MoreHorizontal className="h-4 w-4" /></span>
               ) : (
                 <button
+                  key={page}
                   type="button"
                   onClick={() => onPageChange(page as number)}
                   className={cx('kds-op-page-button', currentPage === page && 'is-active')}
@@ -104,8 +104,7 @@ export default function Pagination({
                 >
                   {page}
                 </button>
-              )}
-            </div>
+              )
           ))}
         </div>
 

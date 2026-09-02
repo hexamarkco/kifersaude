@@ -2090,9 +2090,9 @@ html,
     align-items: center;
   }
 
-  .kds-op-pagination-summary { justify-content: center; gap: 0.375rem; }
-  .kds-op-pagination-controls { justify-content: center; gap: 0.25rem; }
-  .kds-op-pagination-pages { gap: 0.125rem; }
+  .kds-op-pagination-summary { justify-content: center; gap: 0.25rem; }
+  .kds-op-pagination-controls { justify-content: center; gap: 0.375rem; }
+  .kds-op-pagination-pages { gap: 0.25rem; }
   .kds-op-page-button { min-width: 2.5rem; height: 2.5rem; }
   .kds-op-page-ellipsis { display: inline-flex; width: 1.5rem; justify-content: center; }
 

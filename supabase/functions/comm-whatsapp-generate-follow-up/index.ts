@@ -1,6 +1,8 @@
 ﻿import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -1495,6 +1497,8 @@ Deno.serve(async (req: Request) => {
     // REFINEMENT MODE: keep the existing single-call path for editing
     // =====================================================================
     if (refinementMode) {
+      const refineConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.FOLLOWUP_REFINE);
+
       const baseIdentityBlock = [
         `Voce gera follow-ups de WhatsApp para a operacao ${companyName}.`,
         'Cada mensagem deve ser contextualizada no historico real do chat.',
@@ -1506,7 +1510,7 @@ Deno.serve(async (req: Request) => {
         : '';
 
       const refinementSystemPrompt = [
-        baseIdentityBlock,
+        refineConfig.featurePrompt || baseIdentityBlock,
         operationCustomPromptBlock,
         'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
         MULTI_MESSAGE_MECHANISM_NOTE,
@@ -1523,7 +1527,7 @@ Deno.serve(async (req: Request) => {
         OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
         'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
         'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-        'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
+        refineConfig.outputInstructions || 'Retorne apenas o texto final sugerido, em texto puro (sem JSON), sem aspas, sem explicacoes extras e sem listar alternativas, usando o separador "---" entre mensagens quando dividido.',
       ].filter(Boolean).join('\n\n');
 
       const refinementUserPrompt = [
@@ -1543,8 +1547,8 @@ Deno.serve(async (req: Request) => {
         task: 'follow_up_generation',
         systemPrompt: refinementSystemPrompt,
         userPrompt: refinementUserPrompt,
-        temperature: hasCustomInstructions ? 0.5 : 0.7,
-        maxTokens: 320,
+        temperature: hasCustomInstructions ? 0.5 : (refineConfig.temperature || 0.7),
+        maxTokens: refineConfig.maxOutputTokens || 320,
       });
 
       const responseText = normalizeGreetingForTemporalFacts(
@@ -1577,13 +1581,15 @@ Deno.serve(async (req: Request) => {
 
     console.log('[FollowUpAI][v3] CALL 1 — analysis', { task: 'follow_up_analysis' });
 
+    const analysisConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.FOLLOWUP_ANALYSIS);
+
     const analysisResult = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_analysis',
-      systemPrompt: ANALYSIS_SYSTEM_PROMPT,
+      systemPrompt: analysisConfig.featurePrompt || ANALYSIS_SYSTEM_PROMPT,
       userPrompt: analysisUserPrompt,
-      temperature: 0.3,
-      maxTokens: 900,
+      temperature: analysisConfig.temperature || 0.3,
+      maxTokens: analysisConfig.maxOutputTokens || 900,
     });
 
     let analysisAndStrategy: AnalysisAndStrategyResult;
@@ -1721,8 +1727,10 @@ Deno.serve(async (req: Request) => {
     // =====================================================================
     // V3: CALL 2 — Copy Generation
     // =====================================================================
+    const copyConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.FOLLOWUP_GENERATE);
+
     const copySystemPrompt = [
-      COPY_SYSTEM_PROMPT,
+      copyConfig.featurePrompt || COPY_SYSTEM_PROMPT,
       '',
       STYLE_RULE,
       DEFAULT_CONDUCT_RULES,
@@ -1763,7 +1771,7 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt: copySystemPrompt,
       userPrompt: copyUserPrompt,
-      temperature: hasCustomInstructions ? 0.5 : 0.7,
+      temperature: hasCustomInstructions ? 0.5 : (copyConfig.temperature || 0.7),
       maxTokens,
     });
 
@@ -1778,7 +1786,7 @@ Deno.serve(async (req: Request) => {
           task: 'follow_up_generation',
           systemPrompt: `${copySystemPrompt}\n\nATENCAO: sua resposta anterior nao seguiu exatamente o formato JSON exigido. Retorne SOMENTE o JSON valido no formato especificado, sem nenhum texto fora do JSON e sem markdown.`,
           userPrompt: copyUserPrompt,
-          temperature: hasCustomInstructions ? 0.5 : 0.7,
+          temperature: hasCustomInstructions ? 0.5 : (copyConfig.temperature || 0.7),
           maxTokens,
         });
         const retryParsed = parseFollowUpGenerationResult(retryResult.text, shouldGenerateVariations);

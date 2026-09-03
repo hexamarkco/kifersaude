@@ -20,6 +20,7 @@ export const ACCESS_MODULES: AccessModuleDefinition[] = [
   { id: 'config-users', label: 'Configurações - Usuários', description: 'Criação, edição e exclusão de usuários do sistema.', group: 'config' },
   { id: 'config-automation', label: 'Configurações - Automações', description: 'Gestão dos fluxos de automação do sistema.', group: 'config' },
   { id: 'config-integrations', label: 'Configurações - Integrações', description: 'Parâmetros e credenciais de integrações.', group: 'config' },
+  { id: 'config-ai', label: 'Configurações - IA', description: 'Configuração de prompts, parâmetros e versões de features de inteligência artificial.', group: 'config' },
   { id: 'config-links', label: 'Configurações - Links', description: 'Gestão da página pública de links (/links).', group: 'config' },
 ];
 

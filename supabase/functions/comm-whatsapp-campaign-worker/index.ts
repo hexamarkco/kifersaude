@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   buildWhapiDirectChatId,
   checkWhapiContactStatus,
@@ -516,11 +518,12 @@ async function classifyInboundCampaignIntent(params: {
 
   if (existingSuggestion) return null;
 
+  const aiConfig = await loadFeatureConfig(params.supabaseAdmin, AI_FEATURES.CAMPAIGN_INTENT);
+
   const systemPrompt = [
-    'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
-    'A tarefa e decidir se o contato pediu para parar disparos, apenas recusou a oferta, esta irritado, informou numero errado, quer seguir conversa ou esta ambiguo.',
+    aiConfig.featurePrompt || 'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
     'Nao bloqueie por simples falta de interesse no produto. Use opt_out apenas quando houver pedido claro para nao receber mais contato, remover numero/lista, parar insistencia, ou equivalente semantico.',
-    'Retorne somente JSON valido, sem markdown.',
+    aiConfig.outputInstructions || 'Retorne somente JSON valido, sem markdown.',
   ].join('\n');
 
   const userPrompt = [
@@ -543,8 +546,8 @@ async function classifyInboundCampaignIntent(params: {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: 0.1,
-      maxTokens: 280,
+      temperature: aiConfig.temperature || 0.1,
+      maxTokens: aiConfig.maxOutputTokens || 280,
       preferDefaultModel: true,
     });
     const classification = normalizeClassification(extractJsonObject(result.text));

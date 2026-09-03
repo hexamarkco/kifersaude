@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -218,22 +220,26 @@ Deno.serve(async (req: Request) => {
 
     // ---- Build prompt ----
 
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.ATTENDANCE_CRITIQUE);
+
     const systemPrompt = [
-      `Voce e um supervisor de qualidade (QA) que avalia atendimentos de vendas de plano de saude pelo WhatsApp na operacao ${companyName}.`,
+      aiConfig.featurePrompt || `Voce e um supervisor de qualidade (QA) que avalia atendimentos de vendas de plano de saude pelo WhatsApp na operacao ${companyName}.`,
       'Sua tarefa e avaliar APENAS o atendente humano, identificado como "VOCE" no historico. Nunca avalie o cliente.',
       'Baseie-se estritamente no historico fornecido. Nunca invente fatos, valores, prazos, documentos ou combinados que nao estejam no historico.',
       'Seja especifico: cite o que realmente foi dito, evite generalidades vagas.',
       'Responda somente em portugues do Brasil.',
       '',
-      'Retorne SOMENTE um objeto JSON valido, sem markdown, sem crases, sem comentarios, no formato exato:',
-      '{',
-      '  "resumo": string (2 a 4 frases sobre o que aconteceu neste atendimento),',
-      '  "avaliacao_geral": "excelente" | "boa" | "regular" | "precisa_melhorar",',
-      '  "pontos_fortes": string[] (o que o atendente fez bem; lista vazia se nao houver nada a destacar),',
-      '  "pontos_de_atencao": string[] (observacoes de melhoria, tom mais construtivo),',
-      '  "erros": string[] (erros concretos: informacao errada, demora, pergunta ignorada, oportunidade perdida, tom inadequado; lista vazia se nao houver erros)',
-      '}',
-      'Cada item das listas deve ser uma frase curta e objetiva.',
+      aiConfig.outputInstructions || [
+        'Retorne SOMENTE um objeto JSON valido, sem markdown, sem crases, sem comentarios, no formato exato:',
+        '{',
+        '  "resumo": string (2 a 4 frases sobre o que aconteceu neste atendimento),',
+        '  "avaliacao_geral": "excelente" | "boa" | "regular" | "precisa_melhorar",',
+        '  "pontos_fortes": string[] (o que o atendente fez bem; lista vazia se nao houver nada a destacar),',
+        '  "pontos_de_atencao": string[] (observacoes de melhoria, tom mais construtivo),',
+        '  "erros": string[] (erros concretos: informacao errada, demora, pergunta ignorada, oportunidade perdida, tom inadequado; lista vazia se nao houver erros)',
+        '}',
+        'Cada item das listas deve ser uma frase curta e objetiva.',
+      ].join('\n'),
     ].join('\n');
 
     const userPrompt = [
@@ -261,8 +267,8 @@ Deno.serve(async (req: Request) => {
       task: 'attendance_critique',
       systemPrompt,
       userPrompt,
-      temperature: 0.3,
-      maxTokens: 1100,
+      temperature: aiConfig.temperature || 0.3,
+      maxTokens: aiConfig.maxOutputTokens || 1100,
     });
 
     const critiquePayload = parseCritiquePayload(result.text);

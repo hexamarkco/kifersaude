@@ -2,6 +2,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { transcribeAudioWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { cacheCommWhatsAppMedia, COMM_WHATSAPP_MODULE, corsHeaders, ensureCommWhatsAppSettings, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -167,12 +169,13 @@ Deno.serve(async (req: Request) => {
         fallbackMimeType: targetMessage.media_mime_type,
       });
 
+      const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUDIO_TRANSCRIBE);
       const transcription = await transcribeAudioWithRouting({
         supabaseAdmin,
         audioBlob: media.blob,
         fileName: media.fileName,
         mimeType: media.mimeType,
-        prompt: 'Transcreva o audio do WhatsApp em portugues do Brasil, preservando nomes, numeros e contexto comercial.',
+        prompt: aiConfig.featurePrompt || 'Transcreva o audio do WhatsApp em portugues do Brasil, preservando nomes, numeros e contexto comercial.',
       });
 
       await updateTranscriptionState(supabaseAdmin, messageId, {

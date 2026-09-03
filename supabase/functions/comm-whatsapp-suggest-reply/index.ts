@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -236,7 +238,9 @@ Deno.serve(async (req: Request) => {
 
     const promptIntegration = promptIntegrationResult.data as { settings?: Record<string, unknown> } | null;
     const promptSettings = (promptIntegration?.settings ?? {}) as Record<string, unknown>;
-    const configuredInstructions = toTrimmedString(promptSettings.instructions);
+    const legacyConfiguredInstructions = toTrimmedString(promptSettings.instructions);
+
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_SUGGEST);
 
     // ---- Build chat transcript ----
 
@@ -269,20 +273,22 @@ Deno.serve(async (req: Request) => {
     // ---- Build prompt ----
 
     const systemPrompt = [
-      `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
+      aiConfig.featurePrompt || `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
       'A resposta deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
       '',
       'REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):',
       styleProfileText,
       '',
       'REGRAS DE CONDUTA:',
-      '- MENSAGEM UNICA: retorne UMA unica mensagem pronta para enviar. Sem versoes, sem alternativas, sem marcacao.',
-      '- NUNCA use listas, bullets ou checklists para coletar dados. Uma unica pergunta por vez.',
-      '- Seja curta e objetiva. Nao antecipe etapas nem faca roteiro completo.',
-      '- Use o nome do lead se fizer sentido. Nao force.',
-      '- Nao invente valores, coberturas, prazos, documentos ou combinados que nao estejam no historico.',
-      '- Se faltar informacao para avancar, faca UMA pergunta objetiva — a mais importante agora.',
-      '- Retorne SOMENTE o texto final. Sem markdown, sem aspas, sem titulo, sem explicacao.',
+      aiConfig.outputInstructions || [
+        '- MENSAGEM UNICA: retorne UMA unica mensagem pronta para enviar. Sem versoes, sem alternativas, sem marcacao.',
+        '- NUNCA use listas, bullets ou checklists para coletar dados. Uma unica pergunta por vez.',
+        '- Seja curta e objetiva. Nao antecipe etapas nem faca roteiro completo.',
+        '- Use o nome do lead se fizer sentido. Nao force.',
+        '- Nao invente valores, coberturas, prazos, documentos ou combinados que nao estejam no historico.',
+        '- Se faltar informacao para avancar, faca UMA pergunta objetiva — a mais importante agora.',
+        '- Retorne SOMENTE o texto final. Sem markdown, sem aspas, sem titulo, sem explicacao.',
+      ].join('\n'),
       mode === 'complete_draft'
         ? '- MODE: complete_draft — o usuario ja comecou a digitar. Complete ou refine o rascunho mantendo a intencao original.'
         : '- MODE: suggest_reply — sugira a melhor proxima resposta. Se a ultima for sua, gere acompanhamento natural. Senao, responda ao cliente.',
@@ -307,8 +313,8 @@ Deno.serve(async (req: Request) => {
         ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')
         : null,
       '',
-      configuredInstructions
-        ? '--- INSTRUCOES PERSONALIZADAS DA OPERACAO ---\n' + configuredInstructions
+      legacyConfiguredInstructions
+        ? '--- INSTRUCOES PERSONALIZADAS DA OPERACAO ---\n' + legacyConfiguredInstructions
         : null,
       '',
       composerDraft
@@ -326,8 +332,8 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: composerDraft ? 0.4 : 0.65,
-      maxTokens: 420,
+      temperature: composerDraft ? (aiConfig.temperature || 0.4) : 0.65,
+      maxTokens: aiConfig.maxOutputTokens || 420,
     });
 
     const text = sanitizeGeneratedText(result.text);

@@ -1,13 +1,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   buildOpeningUserPrompt,
   buildReferencePrompt,
   buildReplyUserPrompt,
-  buildSystemPrompt,
+  buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
   splitGeneratedReply,
@@ -121,7 +123,13 @@ Deno.serve(async (req: Request) => {
     const similarSituations = isOpeningMode ? [] : await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
     const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
 
-    const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages, referenceBlock);
+    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+    const systemPrompt = [
+      autonomousConfig.featurePrompt,
+      '',
+      buildStylePrompt(styleMessagesResult.error ? [] : styleMessages),
+      referenceBlock ? `\n${referenceBlock}` : '',
+    ].filter(Boolean).join('\n');
     const userPrompt = isOpeningMode ? buildOpeningUserPrompt(leadName) : buildReplyUserPrompt(history);
 
     const result = await generateTextWithRouting({
@@ -129,8 +137,8 @@ Deno.serve(async (req: Request) => {
       task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
-      temperature: 0.6,
-      maxTokens: isOpeningMode ? 450 : 350,
+      temperature: autonomousConfig.temperature || 0.6,
+      maxTokens: isOpeningMode ? (autonomousConfig.maxOutputTokens || 450) : (autonomousConfig.maxOutputTokens || 350),
     });
 
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);

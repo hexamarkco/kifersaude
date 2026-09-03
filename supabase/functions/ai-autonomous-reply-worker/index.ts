@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   cacheCommWhatsAppMedia,
   corsHeaders,
@@ -23,7 +25,7 @@ import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-tra
 import {
   buildReferencePrompt,
   buildReplyUserPrompt,
-  buildSystemPrompt,
+  buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
   getReliableLeadFirstName,
@@ -499,7 +501,14 @@ Deno.serve(async (req: Request) => {
         });
         const similarSituations = await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
         const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
-        const systemPrompt = buildSystemPrompt(styleMessagesResult.error ? [] : styleMessages, referenceBlock);
+        const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+        const styleMessagesForPrompt = styleMessagesResult.error ? [] : styleMessages;
+        const systemPrompt = [
+          autonomousConfig.featurePrompt,
+          '',
+          buildStylePrompt(styleMessagesForPrompt),
+          referenceBlock ? `\n${referenceBlock}` : '',
+        ].filter(Boolean).join('\n');
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
         const userPrompt = buildReplyUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
@@ -511,8 +520,8 @@ Deno.serve(async (req: Request) => {
           task: 'autonomous_attendance',
           systemPrompt,
           userPrompt,
-          temperature: 0.6,
-          maxTokens: 350,
+          temperature: autonomousConfig.temperature || 0.6,
+          maxTokens: autonomousConfig.maxOutputTokens || 350,
         });
 
         const { messages, handoffCode } = splitGeneratedReply(result.text, false);

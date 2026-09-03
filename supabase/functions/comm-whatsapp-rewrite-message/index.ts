@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -162,15 +164,15 @@ Deno.serve(async (req: Request) => {
 
     const conversationContext = tone === 'adapt_context' ? await loadConversationContext(supabaseAdmin, chatId) : '';
 
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_REWRITE);
+
+    const toneInstruction = getToneInstruction(tone);
     const systemPrompt = [
-      'Voce reescreve mensagens para envio no WhatsApp.',
-      'Retorne apenas a mensagem final pronta para enviar, sem aspas, sem markdown, sem titulos e sem explicacoes.',
-      'Preserve a intencao, fatos, datas, numeros, valores, nomes, links, emojis relevantes, placeholders {{variavel}} e quebras de linha uteis.',
-      'Nao invente informacoes novas, nao mude combinados e nao remova contexto importante sem necessidade.',
-      'Mantenha o idioma original da mensagem, salvo se as instrucoes pedirem o contrario.',
-      getToneInstruction(tone),
+      aiConfig.featurePrompt || 'Voce reescreve mensagens para envio no WhatsApp.',
+      toneInstruction,
       conversationContext ? `Contexto recente da conversa para adaptar a mensagem:\n${conversationContext}` : '',
       customInstructions ? `Instrucoes extras desta reescrita:\n${customInstructions}` : '',
+      aiConfig.outputInstructions || 'Retorne apenas a mensagem final pronta para enviar, sem aspas, sem markdown, sem titulos e sem explicacoes.',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -190,8 +192,8 @@ Deno.serve(async (req: Request) => {
       task: 'rewrite_message',
       systemPrompt,
       userPrompt,
-      temperature: tone === 'grammar' || tone === 'adapt_context' ? 0.2 : 0.45,
-      maxTokens: 420,
+      temperature: tone === 'grammar' || tone === 'adapt_context' ? 0.2 : (aiConfig.temperature || 0.45),
+      maxTokens: aiConfig.maxOutputTokens || 420,
     });
 
     const rewrittenText = sanitizeGeneratedText(result.text);

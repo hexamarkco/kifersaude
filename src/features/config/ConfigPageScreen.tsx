@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
 import { Alert, Badge, PageHeader, Tabs, type TabItem } from "../../design-system";
+import AiConfigScreen from "./ai/AiConfigScreen";
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
 import FormsScreen from "./forms/FormsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
@@ -64,6 +65,7 @@ export default function ConfigPageScreen() {
           {activeAllowedTab === "users" && <UsersScreen />}
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
+          {activeAllowedTab === "ai" && <AiConfigScreen />}
           {activeAllowedTab === "links" && <LinksScreen />}
           {activeAllowedTab === "forms" && <FormsScreen />}
       </main>

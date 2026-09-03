@@ -1,4 +1,5 @@
 import {
+  Brain,
   FileText,
   GitBranch,
   Link2,
@@ -8,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type ConfigTabType = "system" | "users" | "integrations" | "automation" | "links" | "forms";
+export type ConfigTabType = "system" | "users" | "integrations" | "automation" | "links" | "forms" | "ai";
 
 type ConfigTabDefinition = {
   id: ConfigTabType;
@@ -31,6 +32,12 @@ export const CONFIG_TAB_DEFINITIONS: ConfigTabDefinition[] = [
     label: "Integrações",
     icon: Plug,
     moduleId: "config-integrations",
+  },
+  {
+    id: "ai",
+    label: "IA",
+    icon: Brain,
+    moduleId: "config-ai",
   },
   {
     id: "links",

@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 
-import { Badge, Button, Card } from "../../../../design-system";
+import { Badge, Button, Card, ConfirmDialog } from "../../../../design-system";
 import type { AiFeatureWithConfig, AiFeatureCategory } from "../aiConfigTypes";
 import { AI_FEATURE_LABELS } from "../aiConfigTypes";
 
@@ -12,7 +13,10 @@ type Props = {
 };
 
 export default function FeatureListCard({ category, onEdit, onDeactivate, onActivate }: Props) {
+  const [confirmTarget, setConfirmTarget] = useState<{ configId: string; action: "deactivate" | "activate" } | null>(null);
+
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="border-b border-[var(--border-subtle)] px-4 py-2.5">
         <h3 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -75,9 +79,10 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     variant="ghost"
                     size="sm"
                     onClick={() =>
-                      feature.active_config!.is_active
-                        ? onDeactivate(feature.active_config!.id)
-                        : onActivate(feature.active_config!.id)
+                      setConfirmTarget({
+                        configId: feature.active_config!.id,
+                        action: feature.active_config!.is_active ? "deactivate" : "activate",
+                      })
                     }
                     title={feature.active_config!.is_active ? "Desativar" : "Ativar"}
                   >
@@ -94,5 +99,29 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
         })}
       </div>
     </Card>
+
+    <ConfirmDialog
+      open={!!confirmTarget}
+      onOpenChange={() => setConfirmTarget(null)}
+      onConfirm={() => {
+        if (!confirmTarget) return;
+        if (confirmTarget.action === "deactivate") {
+          onDeactivate(confirmTarget.configId);
+        } else {
+          onActivate(confirmTarget.configId);
+        }
+        setConfirmTarget(null);
+      }}
+      title={confirmTarget?.action === "deactivate" ? "Desativar configuração?" : "Ativar configuração?"}
+      description={
+        confirmTarget?.action === "deactivate"
+          ? "A feature voltará a usar os valores padrão do sistema enquanto nenhuma versão estiver ativa."
+          : "Esta versão será ativada e passará a ser usada pela feature."
+      }
+      confirmLabel={confirmTarget?.action === "deactivate" ? "Desativar" : "Ativar"}
+      destructive={confirmTarget?.action === "deactivate"}
+      closeOnConfirm
+    />
+    </>
   );
 }

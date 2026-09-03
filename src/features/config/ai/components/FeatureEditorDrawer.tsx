@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Save, X } from "lucide-react";
+import { RotateCcw, Save, X } from "lucide-react";
 
 import {
   Button,
@@ -60,6 +60,14 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     toast.success("Nova versão criada e ativada");
     onSaved();
   }, [feature.id, prompt, outputInstructions, temperature, maxTokens, onSaved]);
+
+  const handleResetToDefaults = useCallback(() => {
+    setPrompt(feature.default_feature_prompt);
+    setOutputInstructions(feature.default_output_instructions);
+    setTemperature(feature.default_temperature);
+    setMaxTokens(feature.default_max_output_tokens);
+    toast.info("Valores restaurados para os padrões do sistema");
+  }, [feature]);
 
   const label = AI_FEATURE_LABELS[feature.key] ?? feature.name;
 
@@ -191,14 +199,20 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-3">
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
+        <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-5 py-3">
+          <Button variant="ghost" size="sm" onClick={handleResetToDefaults}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            Restaurar Padrão
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {!saving && <Save className="h-4 w-4" />}
-            {saving ? "Salvando..." : "Criar Versão e Ativar"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {!saving && <Save className="h-4 w-4" />}
+              {saving ? "Salvando..." : "Criar Versão e Ativar"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

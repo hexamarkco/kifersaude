@@ -113,7 +113,7 @@ const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000, 120000, 300000];
-const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent']);
+const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
 const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
 const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 

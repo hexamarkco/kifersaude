@@ -2828,6 +2828,35 @@ export async function fetchWhapiMessage(params: {
   return message ?? null;
 }
 
+export async function fetchWhapiMessageStatuses(params: {
+  token: string;
+  messageId: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const messageId = toTrimmedString(params.messageId);
+  if (!messageId) {
+    return [];
+  }
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/statuses/${encodeURIComponent(messageId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    return [];
+  }
+
+  if (isRecord(payload) && Array.isArray(payload.statuses)) {
+    return payload.statuses.filter(isRecord);
+  }
+
+  return [];
+}
+
 export async function fetchWhapiChatsPage(params: {
   token: string;
   count?: number;

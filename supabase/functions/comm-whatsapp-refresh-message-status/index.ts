@@ -9,6 +9,7 @@ import {
   extractWhapiMessageStatus,
   fetchWhapiChatMessages,
   fetchWhapiMessage,
+  fetchWhapiMessageStatuses,
   getNowIso,
   isDirectWhapiChatId,
   isRecord,
@@ -56,7 +57,7 @@ type RefreshedStatus = {
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-const REFRESHABLE_STATUSES = ['pending', 'queued', 'sending', 'sent'];
+const REFRESHABLE_STATUSES = ['pending', 'queued', 'sending', 'sent', 'delivered'];
 const normalizeStatus = (value: unknown) => toTrimmedString(value).toLowerCase();
 
 const createAdminClient = () => {
@@ -283,17 +284,29 @@ Deno.serve(async (req: Request) => {
         }) ?? null;
       }
 
-      if (!whapiMessage || !isRecord(whapiMessage)) continue;
+      let deliveryStatus = whapiMessage && isRecord(whapiMessage) ? extractWhapiMessageStatus(whapiMessage) : '';
 
-      const deliveryStatus = extractWhapiMessageStatus(whapiMessage);
+      if (!deliveryStatus) {
+        const statuses = await fetchWhapiMessageStatuses({ token, messageId: externalMessageId }).catch(() => []);
+        const highestStatus = statuses.reduce((best, s) => {
+          const sStatus = toTrimmedString(s.status);
+          if (!sStatus) return best;
+          if (!best) return sStatus;
+          return normalizeStatus(sStatus) > normalizeStatus(best) ? sStatus : best;
+        }, '');
+        if (highestStatus) {
+          deliveryStatus = highestStatus;
+        }
+      }
+
       if (!deliveryStatus) continue;
 
       await updateCommWhatsAppMessageStatus(supabaseAdmin, {
         channelId: channel.id,
         externalMessageId,
         deliveryStatus,
-        statusUpdatedAt: getStatusTimestamp(whapiMessage),
-        errorMessage: toTrimmedString(whapiMessage.error) || toTrimmedString(whapiMessage.details) || null,
+        statusUpdatedAt: whapiMessage && isRecord(whapiMessage) ? getStatusTimestamp(whapiMessage) : getNowIso(),
+        errorMessage: whapiMessage && isRecord(whapiMessage) ? (toTrimmedString(whapiMessage.error) || toTrimmedString(whapiMessage.details) || null) : null,
       });
 
       const persistedStatus = await loadMessageStatusById(supabaseAdmin, row.id) || deliveryStatus;

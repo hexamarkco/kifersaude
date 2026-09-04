@@ -27,3 +27,19 @@ verify_jwt = false
 # token como uma sessao Supabase.
 [functions.chatgpt-mcp]
 verify_jwt = false
+
+# Worker chamado via net.http_post pelo webhook (service role key), nao tem JWT
+# de sessao do usuario.
+[functions.ai-autonomous-reply-worker]
+verify_jwt = false
+
+# Scenario roda no sandbox do usuario logado e faz sua propria auth interna.
+[functions.ai-sandbox-run-scenario]
+verify_jwt = false
+
+# Endpoints publicos — qualquer visitante pode acessar.
+[functions.public-home-metrics]
+verify_jwt = false
+
+[functions.public-form-submit]
+verify_jwt = false

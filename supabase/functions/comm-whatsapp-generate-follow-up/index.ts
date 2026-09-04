@@ -1777,6 +1777,14 @@ Deno.serve(async (req: Request) => {
 
     let parsed = parseFollowUpGenerationResult(copyResult.text, shouldGenerateVariations);
 
+    console.log('[FollowUpAI][v3] CALL 2 result', {
+      hasText: Boolean(parsed.text),
+      textLength: parsed.text?.length ?? 0,
+      hasVariations: parsed.variations.length > 0,
+      hasAiContext: Boolean(parsed.aiContext),
+      currentAction: parsed.aiContext?.currentAction,
+    });
+
     // JSON schema retry (same as V2)
     if (!isValidFollowUpGenerationResult(parsed, shouldGenerateVariations)) {
       console.warn('[FollowUpAI][v3] copy response did not follow schema, retrying once');
@@ -1922,6 +1930,26 @@ Deno.serve(async (req: Request) => {
     }
 
     let responseText = validatedText;
+
+    if (!responseText && aiContext?.currentAction !== 'wait') {
+      console.warn('[FollowUpAI][v3] no valid text, trying fallback single-call');
+      try {
+        const fallbackResult = await generateTextWithRouting({
+          supabaseAdmin,
+          task: 'follow_up_generation',
+          systemPrompt: 'Voce e uma corretora de saude escrevendo uma mensagem de follow-up no WhatsApp. Gere APENAS o texto da mensagem, sem JSON, sem explicacoes, direto ao ponto.',
+          userPrompt: baseContextPrompt,
+          temperature: 0.7,
+          maxTokens: 520,
+        });
+        const fallbackText = sanitizeGeneratedText(fallbackResult.text.trim());
+        if (fallbackText) {
+          responseText = fallbackText;
+        }
+      } catch (fallbackErr) {
+        console.error('[FollowUpAI][v3] fallback also failed', fallbackErr);
+      }
+    }
 
     if (!responseText && aiContext?.currentAction !== 'wait') {
       throw new Error('A IA nao retornou um follow-up valido.');

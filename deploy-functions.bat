@@ -155,14 +155,18 @@ rem false) - a mesma fonte que scripts/deploy-supabase-functions.sh usa.
 rem Nao adicione nomes aqui: edite supabase\config.toml.
 set "NO_VERIFY_JWT_FUNCTIONS="
 if exist "supabase\config.toml" (
-  for /f "usebackq delims=" %%N in (`powershell -NoProfile -Command "$lines = Get-Content -LiteralPath 'supabase\config.toml'; $current = $null; $names = foreach ($line in $lines) { if ($line -match '^\[functions\.(?<name>[^\]]+)\]$') { $current = $Matches['name'] } elseif ($current -and $line -match '^verify_jwt\s*=\s*false\s*$') { $current; $current = $null } elseif ($line -match '^\[') { $current = $null } }; ($names -join ' ')"`) do (
-    set "NO_VERIFY_JWT_FUNCTIONS=%%N"
+  for /f "usebackq delims=" %%N in (`powershell -NoProfile -Command "$lines = Get-Content -LiteralPath 'supabase\config.toml'; $current = $null; $names = foreach ($line in $lines) { if ($line -match '^\[functions\.(?<name>[^\]]+)\]$') { $current = $Matches['name'] } elseif ($current -and $line -match '^verify_jwt\s*=\s*false\s*$') { $current; $current = $null } elseif ($line -match '^\[') { $current = $null } }; $names -join [char]10"`) do (
+    set "NO_VERIFY_JWT_FUNCTIONS=!NO_VERIFY_JWT_FUNCTIONS! %%N"
   )
+  set "NO_VERIFY_JWT_FUNCTIONS=!NO_VERIFY_JWT_FUNCTIONS:~1!"
 ) else (
   echo [AVISO] supabase\config.toml nao encontrado; nenhuma function sera deployada com --no-verify-jwt.
 )
 
 set "SHARED_HASH="
+if defined NO_VERIFY_JWT_FUNCTIONS (
+  echo Functions com verify_jwt=false: %NO_VERIFY_JWT_FUNCTIONS%
+)
 if exist "supabase\functions\_shared" (
   call :compute_hash "supabase\functions\_shared" SHARED_HASH
   if errorlevel 1 (

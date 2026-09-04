@@ -1821,12 +1821,10 @@ Deno.serve(async (req: Request) => {
     } else {
       // Validate the copy
       const candidateText = extractResponseText(parsed);
-      validation = validateCommercialMessage(candidateText, {
+      validation = validateCommercialMessage({
+        text: candidateText,
         analysis,
         strategy,
-        transcriptLines,
-        recentAudits,
-        messages,
       });
 
       if (!validation.valid && regenerationCount < maxRetries) {
@@ -1861,12 +1859,10 @@ Deno.serve(async (req: Request) => {
             const retryParsed = parseFollowUpGenerationResult(retryResult.text, false);
             if (isValidFollowUpGenerationResult(retryParsed, false)) {
               const retryText = extractResponseText(retryParsed);
-              const retryValidation = validateCommercialMessage(retryText, {
+              const retryValidation = validateCommercialMessage({
+                text: retryText,
                 analysis,
                 strategy,
-                transcriptLines,
-                recentAudits,
-                messages,
               });
 
               if (retryValidation.valid || attempt === maxRetries - 1) {

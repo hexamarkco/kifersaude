@@ -1,45 +1,56 @@
 project_id = "eaxvvhamkmovkoqssahj"
 
-# Functions abaixo fazem sua propria autenticacao internamente
+# Functions abaixo fazem sua propria autenticacao interna
 # (authorizeDashboardUser, token de bootstrap, etc.) e nao devem
 # passar pelo gate de JWT da plataforma. Esta secao e a fonte unica
 # de verdade: os scripts de deploy (deploy-functions.bat e
 # scripts/deploy-supabase-functions.sh) leem esta lista em vez de
 # hardcodar os nomes.
 
+# --- Webhook (proprio secret) ---
 [functions.comm-whatsapp-webhook]
 verify_jwt = false
 
+# --- Publicos (qualquer visitante) ---
 [functions.public-lead-submit]
 verify_jwt = false
 
-[functions.create-initial-admin]
-verify_jwt = false
-
-[functions.comm-whatsapp-media]
-verify_jwt = false
-
-[functions.comm-whatsapp-transcribe]
-verify_jwt = false
-
-# O endpoint MCP faz sua propria autenticacao por um token de acesso exclusivo
-# configurado como secret. O JWT padrao da plataforma nao deve interpretar esse
-# token como uma sessao Supabase.
-[functions.chatgpt-mcp]
-verify_jwt = false
-
-# Worker chamado via net.http_post pelo webhook (service role key), nao tem JWT
-# de sessao do usuario.
-[functions.ai-autonomous-reply-worker]
-verify_jwt = false
-
-# Scenario roda no sandbox do usuario logado e faz sua propria auth interna.
-[functions.ai-sandbox-run-scenario]
-verify_jwt = false
-
-# Endpoints publicos — qualquer visitante pode acessar.
 [functions.public-home-metrics]
 verify_jwt = false
 
 [functions.public-form-submit]
+verify_jwt = false
+
+# --- Bootstrap token ---
+[functions.create-initial-admin]
+verify_jwt = false
+
+# --- MCP (token proprio) ---
+[functions.chatgpt-mcp]
+verify_jwt = false
+
+# --- Workers chamados por service role (webhook, cron, net.http_post) ---
+[functions.ai-autonomous-reply-worker]
+verify_jwt = false
+
+[functions.comm-whatsapp-resolve-lids]
+verify_jwt = false
+
+[functions.comm-whatsapp-enrichment-worker]
+verify_jwt = false
+
+[functions.comm-whatsapp-campaign-worker]
+verify_jwt = false
+
+[functions.comm-whatsapp-sync-all-chats]
+verify_jwt = false
+
+# --- Dual auth (authorizeDashboardUser + isServiceRoleRequest) ---
+[functions.ai-sandbox-run-scenario]
+verify_jwt = false
+
+[functions.leads-api]
+verify_jwt = false
+
+[functions.comm-whatsapp-sync-chat]
 verify_jwt = false

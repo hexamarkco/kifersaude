@@ -29,6 +29,7 @@ import {
   Tabs,
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
+import { useConfigParam } from "../shared/useConfigTab";
 
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
@@ -418,7 +419,11 @@ const normalizeFollowUpInstructions = (
 };
 
 export default function IntegrationsScreen() {
-  const [activeSection, setActiveSection] = useState<"ai" | "whatsapp" | "tracking">("ai");
+  const [activeSection, setActiveSection] = useConfigParam(
+    "section",
+    ["ai", "whatsapp", "tracking"] as const,
+    "ai",
+  );
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<
     Record<AiProvider, IntegrationSetting | null>
   >({

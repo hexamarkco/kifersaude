@@ -28,14 +28,17 @@ import { AI_FEATURE_CATEGORIES } from "./aiConfigTypes";
 import FeatureEditorDrawer from "./components/FeatureEditorDrawer";
 import FeatureListCard from "./components/FeatureListCard";
 import GlobalConfigSection from "./components/GlobalConfigSection";
-
-type Section = "features" | "global";
+import { useConfigParam } from "../shared/useConfigTab";
 
 export default function AiConfigScreen() {
   const [features, setFeatures] = useState<AiFeatureWithConfig[]>([]);
   const [globalConfigs, setGlobalConfigs] = useState<AiGlobalConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState<Section>("features");
+  const [section, setSection] = useConfigParam(
+    "section",
+    ["features", "global"] as const,
+    "features",
+  );
   const [editingFeature, setEditingFeature] = useState<AiFeatureWithConfig | null>(null);
   const [search, setSearch] = useState("");
   const [importConfirm, setImportConfirm] = useState<{ data: string; count: number } | null>(null);

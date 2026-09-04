@@ -33,6 +33,7 @@ import {
   SECTION_OVERVIEW,
   type SectionId,
 } from "./shared/systemSettingsConfig";
+import { useConfigParam } from "../shared/useConfigTab";
 
 export default function SystemSettingsScreen() {
   const { role } = useAuth();
@@ -43,9 +44,21 @@ export default function SystemSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeSection, setActiveSection] = useState<SectionId>("general");
-  const [activeLeadConfiguration, setActiveLeadConfiguration] = useState("status");
-  const [activeContractConfiguration, setActiveContractConfiguration] = useState("");
+  const [activeSection, setActiveSection] = useConfigParam(
+    "section",
+    ["general", "access", "leads", "contracts"] as const,
+    "general",
+  );
+  const [activeLeadConfiguration, setActiveLeadConfiguration] = useConfigParam(
+    "leadTab",
+    ["status", "origins", "manager:lead_tipo_contratacao", "manager:lead_responsavel"] as const,
+    "status",
+  );
+  const [activeContractConfiguration, setActiveContractConfiguration] = useConfigParam(
+    "contractTab",
+    ["contract_status", "contract_modalidade", "contract_abrangencia", "contract_acomodacao", "contract_carencia"] as const,
+    "contract_status",
+  );
   const { loading: configLoading, getRoleModulePermission } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
   const timezoneOptions = useMemo(

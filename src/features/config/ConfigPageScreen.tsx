@@ -1,5 +1,4 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
@@ -10,13 +9,16 @@ import FormsScreen from "./forms/FormsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
 import IntegrationsScreen from "./integrations/IntegrationsScreen";
 import LinksScreen from "./links/LinksScreen";
-import { getAllowedConfigTabs, type ConfigTabType } from "./shared/configTabs";
+import { CONFIG_TAB_DEFINITIONS, getAllowedConfigTabs, type ConfigTabType } from "./shared/configTabs";
+import { useConfigParam } from "./shared/useConfigTab";
 import UsersScreen from "./users/UsersScreen";
+
+const ALL_TAB_IDS = CONFIG_TAB_DEFINITIONS.map((t) => t.id);
 
 export default function ConfigPageScreen() {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
-  const [activeTab, setActiveTab] = useState<ConfigTabType>("system");
+  const [activeTab, setActiveTab] = useConfigParam("tab", ALL_TAB_IDS, "system");
 
   const allowedTabs = getAllowedConfigTabs(
     role,

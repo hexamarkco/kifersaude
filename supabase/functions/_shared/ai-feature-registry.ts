@@ -318,9 +318,11 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
       conversationHistory: true,
     },
     availableVariables: [
-      { key: 'inbound_message', label: 'Mensagem recebida', description: 'Mensagem inbound do lead.' },
+      { key: 'message_text', label: 'Texto da mensagem', description: 'Texto da mensagem sendo classificada.' },
+      { key: 'company_name', label: 'Nome da empresa', description: 'Nome da empresa (Kifer Saúde).' },
+      { key: 'transcript', label: 'Histórico da conversa', description: 'Últimas ~8 mensagens visíveis da conversa, com direção (Cliente/Kifer).' },
+      { key: 'inbound_message', label: 'Mensagem recebida', description: 'Mensagem inbound do lead (renderizada no user prompt).' },
       { key: 'campaign_context', label: 'Contexto da campanha', description: 'Etapa e configuração da campanha.' },
-      { key: 'transcript', label: 'Histórico', description: 'Trecho da conversa.' },
     ],
   },
 

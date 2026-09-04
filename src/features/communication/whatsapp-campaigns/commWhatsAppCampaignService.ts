@@ -183,6 +183,8 @@ export type CommWhatsAppAiIntentSuggestion = {
   lead_id: string | null;
   phone_digits: string | null;
   intent: 'opt_out' | 'negative_interest' | 'angry_or_complaint' | 'wrong_number' | 'continue_conversation' | 'unclear';
+  contact_permission: 'OPT_OUT_EXPLICITO' | 'NUMERO_ERRADO' | 'DESTINATARIO_INCORRETO' | 'RECLAMACAO_CONTATO' | 'AMBIGUO' | 'NENHUM_SINAL' | null;
+  commercial_intent: 'JA_POSSUI_PLANO' | 'INTERESSADO' | 'SEM_INTERESSE' | 'QUER_SABER_MAIS' | 'ADIAR_CONTATO' | 'OUTRO' | null;
   confidence: number;
   recommended_action: 'suggest_block_whatsapp_campaigns' | 'keep_active' | 'review';
   reason: string | null;

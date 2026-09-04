@@ -27,6 +27,7 @@ import {
 } from '../_shared/comm-whatsapp.ts';
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
+import { composePrompt } from '../_shared/prompt-composer.ts';
 
 declare const Deno: {
   env: {
@@ -130,7 +131,8 @@ type InboundMessageRow = {
 };
 
 type IntentClassification = {
-  intent: 'opt_out' | 'negative_interest' | 'angry_or_complaint' | 'wrong_number' | 'continue_conversation' | 'unclear';
+  contact_permission: 'OPT_OUT_EXPLICITO' | 'NUMERO_ERRADO' | 'DESTINATARIO_INCORRETO' | 'RECLAMACAO_CONTATO' | 'AMBIGUO' | 'NENHUM_SINAL';
+  commercial_intent: 'JA_POSSUI_PLANO' | 'INTERESSADO' | 'SEM_INTERESSE' | 'QUER_SABER_MAIS' | 'ADIAR_CONTATO' | 'OUTRO';
   confidence: number;
   recommended_action: 'suggest_block_whatsapp_campaigns' | 'keep_active' | 'review';
   reason: string;
@@ -337,8 +339,36 @@ const getNextRetryAt = (attempts: number) => {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 };
 
-const INTENTS = new Set(['opt_out', 'negative_interest', 'angry_or_complaint', 'wrong_number', 'continue_conversation', 'unclear']);
+const CONTACT_PERMISSIONS = new Set(['OPT_OUT_EXPLICITO', 'NUMERO_ERRADO', 'DESTINATARIO_INCORRETO', 'RECLAMACAO_CONTATO', 'AMBIGUO', 'NENHUM_SINAL']);
+const COMMERCIAL_INTENTS = new Set(['JA_POSSUI_PLANO', 'INTERESSADO', 'SEM_INTERESSE', 'QUER_SABER_MAIS', 'ADIAR_CONTATO', 'OUTRO']);
 const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
+
+function deriveRecommendedAction(cp: IntentClassification['contact_permission']): IntentClassification['recommended_action'] {
+  switch (cp) {
+    case 'OPT_OUT_EXPLICITO':
+    case 'NUMERO_ERRADO':
+    case 'DESTINATARIO_INCORRETO':
+    case 'RECLAMACAO_CONTATO':
+      return 'suggest_block_whatsapp_campaigns';
+    case 'AMBIGUO':
+      return 'review';
+    case 'NENHUM_SINAL':
+    default:
+      return 'keep_active';
+  }
+}
+
+function mapContactPermissionToLegacyIntent(
+  cp: IntentClassification['contact_permission'],
+  ci: IntentClassification['commercial_intent'],
+): string {
+  if (cp === 'OPT_OUT_EXPLICITO') return 'opt_out';
+  if (cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO') return 'wrong_number';
+  if (cp === 'RECLAMACAO_CONTATO') return 'angry_or_complaint';
+  if (cp === 'AMBIGUO') return 'unclear';
+  if (ci === 'SEM_INTERESSE') return 'negative_interest';
+  return 'continue_conversation';
+}
 
 const getDelayMs = (step: CampaignStepRow) => {
   const amount = Math.max(Number(step.delay_amount) || 0, 0);
@@ -405,14 +435,25 @@ const extractJsonObject = (value: string): Record<string, unknown> => {
 };
 
 const normalizeClassification = (value: Record<string, unknown>): IntentClassification => {
-  const rawIntent = toTrimmedString(value.intent);
-  const rawAction = toTrimmedString(value.recommended_action);
-  const numericConfidence = Number(value.confidence);
+  const rawContactPermission = toTrimmedString(value.contact_permission);
+  const rawCommercialIntent = toTrimmedString(value.commercial_intent);
+
+  const contact_permission = CONTACT_PERMISSIONS.has(rawContactPermission)
+    ? rawContactPermission as IntentClassification['contact_permission']
+    : 'NENHUM_SINAL';
+
+  const commercial_intent = COMMERCIAL_INTENTS.has(rawCommercialIntent)
+    ? rawCommercialIntent as IntentClassification['commercial_intent']
+    : 'OUTRO';
 
   return {
-    intent: (INTENTS.has(rawIntent) ? rawIntent : 'unclear') as IntentClassification['intent'],
-    confidence: Number.isFinite(numericConfidence) ? Math.min(Math.max(numericConfidence, 0), 1) : 0,
-    recommended_action: (RECOMMENDED_ACTIONS.has(rawAction) ? rawAction : 'review') as IntentClassification['recommended_action'],
+    contact_permission,
+    commercial_intent,
+    confidence: (() => {
+      const n = Number(value.confidence);
+      return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : 0;
+    })(),
+    recommended_action: deriveRecommendedAction(contact_permission),
     reason: toTrimmedString(value.reason).slice(0, 900),
     evidence: toTrimmedString(value.evidence).slice(0, 500),
   };
@@ -493,6 +534,34 @@ const getInboundMessagePreviewText = (message: InboundMessageRow) => {
 
 const getInboundMessageText = (message: InboundMessageRow) => getInboundMessagePreviewText(message);
 
+async function loadCampaignTranscript(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  chatId: string,
+  beforeMessageAt: string,
+): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('direction,text_content,media_caption,transcription_text,message_type,message_at')
+    .eq('chat_id', chatId)
+    .in('direction', ['inbound', 'outbound'])
+    .lt('message_at', beforeMessageAt)
+    .order('message_at', { ascending: false })
+    .limit(8);
+
+  if (error || !data?.length) return '';
+
+  return data
+    .reverse()
+    .map((m) => {
+      const text = getInboundMessagePreviewText(m as InboundMessageRow);
+      if (!text || text === '[mensagem sem texto]') return null;
+      const label = m.direction === 'inbound' ? 'Cliente' : 'Kifer';
+      return `${label}: ${text}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 async function classifyInboundCampaignIntent(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   campaignId: string;
@@ -518,27 +587,21 @@ async function classifyInboundCampaignIntent(params: {
 
   if (existingSuggestion) return null;
 
-  const aiConfig = await loadFeatureConfig(params.supabaseAdmin, AI_FEATURES.CAMPAIGN_INTENT).catch(() => null);
+  const transcript = await loadCampaignTranscript(
+    params.supabaseAdmin,
+    params.chatId,
+    params.message.message_at,
+  );
 
-  const systemPrompt = [
-    aiConfig?.featurePrompt || 'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
-    'Nao bloqueie por simples falta de interesse no produto. Use opt_out apenas quando houver pedido claro para nao receber mais contato, remover numero/lista, parar insistencia, ou equivalente semantico.',
-    aiConfig?.outputInstructions || 'Retorne somente JSON valido, sem markdown.',
-  ].join('\n');
-
-  const userPrompt = [
-    'Mensagem recebida do cliente:',
-    messageText,
-    '',
-    'Classifique com este schema JSON:',
-    '{',
-    '  "intent": "opt_out | negative_interest | angry_or_complaint | wrong_number | continue_conversation | unclear",',
-    '  "confidence": 0.0,',
-    '  "recommended_action": "suggest_block_whatsapp_campaigns | keep_active | review",',
-    '  "reason": "motivo curto em portugues",',
-    '  "evidence": "trecho que sustenta a classificacao"',
-    '}',
-  ].join('\n');
+  const { systemPrompt, userPrompt } = await composePrompt(params.supabaseAdmin, {
+    featureKey: AI_FEATURES.CAMPAIGN_INTENT,
+    context: {
+      message_text: messageText,
+      company_name: 'Kifer Saúde',
+      transcript,
+      inboundMessage: messageText,
+    },
+  });
 
   try {
     const result = await generateTextWithRouting({
@@ -546,16 +609,17 @@ async function classifyInboundCampaignIntent(params: {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: aiConfig?.temperature || 0.1,
-      maxTokens: aiConfig?.maxOutputTokens || 280,
+      temperature: 0.1,
+      maxTokens: 280,
       preferDefaultModel: true,
     });
     const classification = normalizeClassification(extractJsonObject(result.text));
 
-    const shouldSuggest = classification.recommended_action === 'suggest_block_whatsapp_campaigns'
-      || classification.intent === 'opt_out'
-      || classification.intent === 'wrong_number'
-      || classification.intent === 'angry_or_complaint';
+    const shouldSuggest = classification.contact_permission === 'OPT_OUT_EXPLICITO'
+      || classification.contact_permission === 'NUMERO_ERRADO'
+      || classification.contact_permission === 'DESTINATARIO_INCORRETO'
+      || classification.contact_permission === 'RECLAMACAO_CONTATO'
+      || (classification.contact_permission === 'AMBIGUO' && classification.confidence >= 0.75);
 
     if (!shouldSuggest && classification.confidence < 0.75) return classification;
 
@@ -567,7 +631,9 @@ async function classifyInboundCampaignIntent(params: {
         campaign_id: params.campaignId,
         lead_id: params.leadId ?? null,
         phone_digits: params.phoneDigits ?? null,
-        intent: classification.intent,
+        intent: mapContactPermissionToLegacyIntent(classification.contact_permission, classification.commercial_intent),
+        contact_permission: classification.contact_permission,
+        commercial_intent: classification.commercial_intent,
         confidence: classification.confidence,
         recommended_action: classification.recommended_action,
         reason: classification.reason,

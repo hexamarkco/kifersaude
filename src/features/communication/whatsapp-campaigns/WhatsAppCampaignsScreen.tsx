@@ -968,49 +968,60 @@ export default function WhatsAppCampaignsScreen() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</h2>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Respostas de campanhas que podem indicar opt-out, numero errado ou reclamacao. A IA apenas sinaliza; o bloqueio depende da sua confirmacao.</p>
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Respostas que podem indicar opt-out, número errado, destinatário incorreto ou reclamação. A IA apenas sinaliza; o bloqueio depende da sua confirmação.</p>
             </div>
             <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
           </div>
           <div className="grid gap-3 xl:grid-cols-2">
-            {aiSuggestions.map((suggestion) => (
-              <Surface key={suggestion.id} variant="muted" padding="sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                        suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number'
-                          ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]'
-                          : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'
-                      }`}
-                    >
-                      <Bot className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
-                      <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+            {aiSuggestions.map((suggestion) => {
+              const cp = suggestion.contact_permission;
+              const isHighRisk = cp === 'OPT_OUT_EXPLICITO' || cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO' || cp === 'RECLAMACAO_CONTATO';
+              return (
+                <Surface key={suggestion.id} variant="muted" padding="sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                          isHighRisk
+                            ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]'
+                            : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'
+                        }`}
+                      >
+                        <Bot className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
+                        <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge tone={isHighRisk ? 'danger' : 'warning'} size="sm" className="shrink-0">
+                        {formatContactPermissionLabel(cp)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
+                      </Badge>
+                      {suggestion.commercial_intent && suggestion.commercial_intent !== 'OUTRO' && (
+                        <Badge tone="info" size="sm" className="shrink-0">
+                          {formatCommercialIntentLabel(suggestion.commercial_intent)}
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <Badge tone={suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number' ? 'danger' : 'warning'} size="sm" className="shrink-0">
-                    {formatIntentLabel(suggestion.intent)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
-                  </Badge>
-                </div>
-                <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</p>
-                {suggestion.evidence && (
-                  <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
-                    {suggestion.evidence}
-                  </blockquote>
-                )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
-                    Bloquear disparos
-                  </Button>
-                  <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
-                    Dispensar
-                  </Button>
-                </div>
-              </Surface>
-            ))}
+                  <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</p>
+                  {suggestion.evidence && (
+                    <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
+                      {suggestion.evidence}
+                    </blockquote>
+                  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
+                      Bloquear disparos
+                    </Button>
+                    <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
+                      Dispensar
+                    </Button>
+                  </div>
+                </Surface>
+              );
+            })}
           </div>
         </Card>
       )}
@@ -1737,15 +1748,26 @@ function PreviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatIntentLabel(intent: CommWhatsAppAiIntentSuggestion['intent']) {
-  const labels: Record<CommWhatsAppAiIntentSuggestion['intent'], string> = {
-    opt_out: 'Pedir parar',
-    negative_interest: 'Sem interesse',
-    angry_or_complaint: 'Reclamacao',
-    wrong_number: 'Numero errado',
-    continue_conversation: 'Continuar',
-    unclear: 'Ambiguo',
+function formatContactPermissionLabel(cp: string | null) {
+  const labels: Record<string, string> = {
+    OPT_OUT_EXPLICITO: 'Opt-out explícito',
+    NUMERO_ERRADO: 'Número errado',
+    DESTINATARIO_INCORRETO: 'Destinatário incorreto',
+    RECLAMACAO_CONTATO: 'Reclamação',
+    AMBIGUO: 'Ambíguo',
+    NENHUM_SINAL: 'Sem sinal',
   };
+  return labels[cp ?? ''] ?? 'Revisar';
+}
 
-  return labels[intent] ?? 'Revisar';
+function formatCommercialIntentLabel(ci: string | null) {
+  const labels: Record<string, string> = {
+    JA_POSSUI_PLANO: 'Já possui plano',
+    INTERESSADO: 'Interessado',
+    SEM_INTERESSE: 'Sem interesse',
+    QUER_SABER_MAIS: 'Quer saber mais',
+    ADIAR_CONTATO: 'Adiar contato',
+    OUTRO: 'Outro',
+  };
+  return labels[ci ?? ''] ?? '';
 }

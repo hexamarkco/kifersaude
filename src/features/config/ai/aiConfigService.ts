@@ -24,7 +24,8 @@ export const aiConfigService = {
     const { data: configs, error: cfgErr } = await supabase
       .from(TABLE_CONFIGS)
       .select("*")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .order("version", { ascending: false });
 
     if (cfgErr) return { data: null, error: cfgErr.message };
 
@@ -77,6 +78,13 @@ export const aiConfigService = {
     if (fetchErr) return { data: null, error: fetchErr.message };
 
     const nextVersion = (existing?.[0]?.version ?? 0) + 1;
+
+    // Desativar todas as versões ativas anteriores desta feature
+    await supabase
+      .from(TABLE_CONFIGS)
+      .update({ is_active: false, deactivated_at: new Date().toISOString() })
+      .eq("feature_id", featureId)
+      .eq("is_active", true);
 
     const { data, error } = await supabase
       .from(TABLE_CONFIGS)

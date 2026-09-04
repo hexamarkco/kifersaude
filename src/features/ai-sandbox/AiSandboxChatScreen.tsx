@@ -8,7 +8,7 @@ import {
   type AiSandboxMessage,
 } from '../../lib/aiSandboxChatService';
 
-const REPLY_DEBOUNCE_SECONDS = 30;
+const REPLY_DEBOUNCE_SECONDS = 8;
 
 export default function AiSandboxChatScreen() {
   const { user, signOut } = useAuth();

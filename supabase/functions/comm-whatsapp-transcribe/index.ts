@@ -169,13 +169,13 @@ Deno.serve(async (req: Request) => {
         fallbackMimeType: targetMessage.media_mime_type,
       });
 
-      const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUDIO_TRANSCRIBE);
+      const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUDIO_TRANSCRIBE).catch(() => null);
       const transcription = await transcribeAudioWithRouting({
         supabaseAdmin,
         audioBlob: media.blob,
         fileName: media.fileName,
         mimeType: media.mimeType,
-        prompt: aiConfig.featurePrompt || 'Transcreva o audio do WhatsApp em portugues do Brasil, preservando nomes, numeros e contexto comercial.',
+        prompt: aiConfig?.featurePrompt || 'Transcreva o audio do WhatsApp em portugues do Brasil, preservando nomes, numeros e contexto comercial.',
       });
 
       await updateTranscriptionState(supabaseAdmin, messageId, {

@@ -240,7 +240,7 @@ Deno.serve(async (req: Request) => {
     const promptSettings = (promptIntegration?.settings ?? {}) as Record<string, unknown>;
     const legacyConfiguredInstructions = toTrimmedString(promptSettings.instructions);
 
-    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_SUGGEST);
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_SUGGEST).catch(() => null);
 
     // ---- Build chat transcript ----
 
@@ -273,14 +273,14 @@ Deno.serve(async (req: Request) => {
     // ---- Build prompt ----
 
     const systemPrompt = [
-      aiConfig.featurePrompt || `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
+      aiConfig?.featurePrompt || `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
       'A resposta deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
       '',
       'REGRAS DE ESTILO (aprendidas do historico real de mensagens da operacao):',
       styleProfileText,
       '',
       'REGRAS DE CONDUTA:',
-      aiConfig.outputInstructions || [
+      aiConfig?.outputInstructions || [
         '- MENSAGEM UNICA: retorne UMA unica mensagem pronta para enviar. Sem versoes, sem alternativas, sem marcacao.',
         '- NUNCA use listas, bullets ou checklists para coletar dados. Uma unica pergunta por vez.',
         '- Seja curta e objetiva. Nao antecipe etapas nem faca roteiro completo.',
@@ -332,8 +332,8 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: composerDraft ? (aiConfig.temperature || 0.4) : 0.65,
-      maxTokens: aiConfig.maxOutputTokens || 420,
+      temperature: composerDraft ? (aiConfig?.temperature || 0.4) : 0.65,
+      maxTokens: aiConfig?.maxOutputTokens || 420,
     });
 
     const text = sanitizeGeneratedText(result.text);

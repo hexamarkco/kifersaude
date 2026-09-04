@@ -518,12 +518,12 @@ async function classifyInboundCampaignIntent(params: {
 
   if (existingSuggestion) return null;
 
-  const aiConfig = await loadFeatureConfig(params.supabaseAdmin, AI_FEATURES.CAMPAIGN_INTENT);
+  const aiConfig = await loadFeatureConfig(params.supabaseAdmin, AI_FEATURES.CAMPAIGN_INTENT).catch(() => null);
 
   const systemPrompt = [
-    aiConfig.featurePrompt || 'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
+    aiConfig?.featurePrompt || 'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
     'Nao bloqueie por simples falta de interesse no produto. Use opt_out apenas quando houver pedido claro para nao receber mais contato, remover numero/lista, parar insistencia, ou equivalente semantico.',
-    aiConfig.outputInstructions || 'Retorne somente JSON valido, sem markdown.',
+    aiConfig?.outputInstructions || 'Retorne somente JSON valido, sem markdown.',
   ].join('\n');
 
   const userPrompt = [
@@ -546,8 +546,8 @@ async function classifyInboundCampaignIntent(params: {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: aiConfig.temperature || 0.1,
-      maxTokens: aiConfig.maxOutputTokens || 280,
+      temperature: aiConfig?.temperature || 0.1,
+      maxTokens: aiConfig?.maxOutputTokens || 280,
       preferDefaultModel: true,
     });
     const classification = normalizeClassification(extractJsonObject(result.text));

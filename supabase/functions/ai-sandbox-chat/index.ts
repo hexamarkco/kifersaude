@@ -123,9 +123,9 @@ Deno.serve(async (req: Request) => {
     const similarSituations = isOpeningMode ? [] : await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
     const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
 
-    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY).catch(() => null);
     const systemPrompt = [
-      autonomousConfig.featurePrompt,
+      autonomousConfig?.featurePrompt,
       '',
       buildStylePrompt(styleMessagesResult.error ? [] : styleMessages),
       referenceBlock ? `\n${referenceBlock}` : '',
@@ -137,8 +137,8 @@ Deno.serve(async (req: Request) => {
       task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
-      temperature: autonomousConfig.temperature || 0.6,
-      maxTokens: isOpeningMode ? (autonomousConfig.maxOutputTokens || 450) : (autonomousConfig.maxOutputTokens || 350),
+      temperature: autonomousConfig?.temperature || 0.6,
+      maxTokens: isOpeningMode ? (autonomousConfig?.maxOutputTokens || 450) : (autonomousConfig?.maxOutputTokens || 350),
     });
 
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);

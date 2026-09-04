@@ -439,12 +439,12 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
   }));
 
   try {
-    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AGENDA_ORGANIZE);
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AGENDA_ORGANIZE).catch(() => null);
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_agenda_organization',
-      systemPrompt: aiConfig.featurePrompt || [
+      systemPrompt: aiConfig?.featurePrompt || [
         'Voce prioriza uma fila diaria de follow-ups comerciais de planos de saude usando principalmente o contexto real de mensagens de cada chat.',
         'A conversa e a fonte principal. Data do lembrete, status e score deterministico sao apenas apoio quando o historico estiver ambiguo.',
         'De score 0-100 para urgencia de follow-up agora: 90-100 cliente quente/solicitou retorno/esta esperando proposta; 70-89 oportunidade clara ou resposta recente; 40-69 acompanhamento normal; 0-39 baixa prioridade, sem gancho claro ou deve aguardar.',
@@ -452,8 +452,8 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
         'Retorne apenas JSON valido no formato {"items":[{"id":"...","score":0,"reason":"motivo curto baseado na conversa"}]}.',
       ].join('\n'),
       userPrompt: JSON.stringify({ options, candidates: compact }),
-      temperature: aiConfig.temperature || 0.15,
-      maxTokens: aiConfig.maxOutputTokens || 1800,
+      temperature: aiConfig?.temperature || 0.15,
+      maxTokens: aiConfig?.maxOutputTokens || 1800,
       preferDefaultModel: true,
     });
     const parsed = JSON.parse(result.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim());

@@ -164,15 +164,15 @@ Deno.serve(async (req: Request) => {
 
     const conversationContext = tone === 'adapt_context' ? await loadConversationContext(supabaseAdmin, chatId) : '';
 
-    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_REWRITE);
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_REWRITE).catch(() => null);
 
     const toneInstruction = getToneInstruction(tone);
     const systemPrompt = [
-      aiConfig.featurePrompt || 'Voce reescreve mensagens para envio no WhatsApp.',
+      aiConfig?.featurePrompt || 'Voce reescreve mensagens para envio no WhatsApp.',
       toneInstruction,
       conversationContext ? `Contexto recente da conversa para adaptar a mensagem:\n${conversationContext}` : '',
       customInstructions ? `Instrucoes extras desta reescrita:\n${customInstructions}` : '',
-      aiConfig.outputInstructions || 'Retorne apenas a mensagem final pronta para enviar, sem aspas, sem markdown, sem titulos e sem explicacoes.',
+      aiConfig?.outputInstructions || 'Retorne apenas a mensagem final pronta para enviar, sem aspas, sem markdown, sem titulos e sem explicacoes.',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -192,8 +192,8 @@ Deno.serve(async (req: Request) => {
       task: 'rewrite_message',
       systemPrompt,
       userPrompt,
-      temperature: tone === 'grammar' || tone === 'adapt_context' ? 0.2 : (aiConfig.temperature || 0.45),
-      maxTokens: aiConfig.maxOutputTokens || 420,
+      temperature: tone === 'grammar' || tone === 'adapt_context' ? 0.2 : (aiConfig?.temperature || 0.45),
+      maxTokens: aiConfig?.maxOutputTokens || 420,
     });
 
     const rewrittenText = sanitizeGeneratedText(result.text);

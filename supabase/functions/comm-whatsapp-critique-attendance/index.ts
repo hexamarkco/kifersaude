@@ -220,16 +220,16 @@ Deno.serve(async (req: Request) => {
 
     // ---- Build prompt ----
 
-    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.ATTENDANCE_CRITIQUE);
+    const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.ATTENDANCE_CRITIQUE).catch(() => null);
 
     const systemPrompt = [
-      aiConfig.featurePrompt || `Voce e um supervisor de qualidade (QA) que avalia atendimentos de vendas de plano de saude pelo WhatsApp na operacao ${companyName}.`,
+      aiConfig?.featurePrompt || `Voce e um supervisor de qualidade (QA) que avalia atendimentos de vendas de plano de saude pelo WhatsApp na operacao ${companyName}.`,
       'Sua tarefa e avaliar APENAS o atendente humano, identificado como "VOCE" no historico. Nunca avalie o cliente.',
       'Baseie-se estritamente no historico fornecido. Nunca invente fatos, valores, prazos, documentos ou combinados que nao estejam no historico.',
       'Seja especifico: cite o que realmente foi dito, evite generalidades vagas.',
       'Responda somente em portugues do Brasil.',
       '',
-      aiConfig.outputInstructions || [
+      aiConfig?.outputInstructions || [
         'Retorne SOMENTE um objeto JSON valido, sem markdown, sem crases, sem comentarios, no formato exato:',
         '{',
         '  "resumo": string (2 a 4 frases sobre o que aconteceu neste atendimento),',
@@ -267,8 +267,8 @@ Deno.serve(async (req: Request) => {
       task: 'attendance_critique',
       systemPrompt,
       userPrompt,
-      temperature: aiConfig.temperature || 0.3,
-      maxTokens: aiConfig.maxOutputTokens || 1100,
+      temperature: aiConfig?.temperature || 0.3,
+      maxTokens: aiConfig?.maxOutputTokens || 1100,
     });
 
     const critiquePayload = parseCritiquePayload(result.text);

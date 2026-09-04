@@ -26,6 +26,12 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Array<{ version: number; is_active: boolean; created_at: string }>>([]);
 
+  const loadHistory = useCallback(() => {
+    aiConfigService.fetchConfigHistory(feature.id).then(({ data }) => {
+      setHistory(data ?? []);
+    });
+  }, [feature.id]);
+
   useEffect(() => {
     if (feature.active_config) {
       setPrompt(feature.active_config.feature_prompt);
@@ -39,9 +45,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       setMaxTokens(feature.default_max_output_tokens);
     }
 
-    aiConfigService.fetchConfigHistory(feature.id).then(({ data }) => {
-      setHistory(data ?? []);
-    });
+    loadHistory();
   }, [feature]);
 
   const handleSave = useCallback(async () => {
@@ -58,8 +62,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
     if (error) return toast.error(error);
     toast.success("Nova versão criada e ativada");
+    loadHistory();
     onSaved();
-  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, onSaved]);
+  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, onSaved, loadHistory]);
 
   const handleResetToDefaults = useCallback(() => {
     setPrompt(feature.default_feature_prompt);

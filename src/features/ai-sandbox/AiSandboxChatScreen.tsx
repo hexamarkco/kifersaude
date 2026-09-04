@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Clock, MessageCirclePlus, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
+import { AlertTriangle, Clock, Download, MessageCirclePlus, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
 import { Badge, Button, EmptyState, Input, LoadingState } from '../../design-system';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -8,7 +8,7 @@ import {
   type AiSandboxMessage,
 } from '../../lib/aiSandboxChatService';
 
-const REPLY_DEBOUNCE_SECONDS = 60;
+const REPLY_DEBOUNCE_SECONDS = 30;
 
 export default function AiSandboxChatScreen() {
   const { user, signOut } = useAuth();
@@ -100,6 +100,35 @@ export default function AiSandboxChatScreen() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, secondsUntilReply, generatingReply]);
+
+  const handleExportChat = useCallback(() => {
+    if (!activeConversation || messages.length === 0) return;
+
+    const lines: string[] = [];
+    lines.push(` Conversa: ${activeConversation.title}`);
+    lines.push(` Data: ${new Date().toLocaleString('pt-BR')}`);
+    lines.push(`${'─'.repeat(50)}`);
+    lines.push('');
+
+    for (const msg of messages) {
+      const role = msg.role === 'lead' ? 'LEAD' : 'IA';
+      const time = new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      lines.push(`[${time}] ${role}:`);
+      lines.push(msg.content);
+      if (msg.handoff_code) {
+        lines.push(`  >> HANDOFF: ${msg.handoff_code}${msg.handoff_reason ? ` — ${msg.handoff_reason}` : ''}`);
+      }
+      lines.push('');
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sandbox-chat-${activeConversation.title.replace(/[^a-zA-Z0-9]/g, '_')}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [activeConversation, messages]);
 
   const handleNewConversation = () => {
     clearPendingTimer();
@@ -347,8 +376,13 @@ export default function AiSandboxChatScreen() {
 
       <main className="flex min-w-0 flex-1 flex-col">
         {activeConversation && (
-          <div className="border-b border-[var(--border-subtle)] px-6 py-3">
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-3">
             <p className="truncate text-sm font-medium">{activeConversation.title}</p>
+            {messages.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={handleExportChat} title="Exportar conversa">
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         )}
         {!activeConversationId && messages.length === 0 ? (

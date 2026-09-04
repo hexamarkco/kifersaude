@@ -80,11 +80,15 @@ export const aiConfigService = {
     const nextVersion = (existing?.[0]?.version ?? 0) + 1;
 
     // Desativar todas as versões ativas anteriores desta feature
-    await supabase
+    const { error: deactivateError } = await supabase
       .from(TABLE_CONFIGS)
-      .update({ is_active: false, deactivated_at: new Date().toISOString() })
+      .update({ is_active: false })
       .eq("feature_id", featureId)
       .eq("is_active", true);
+
+    if (deactivateError) {
+      console.error('[AIConfig] Failed to deactivate old versions:', deactivateError.message);
+    }
 
     const { data, error } = await supabase
       .from(TABLE_CONFIGS)

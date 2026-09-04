@@ -2068,10 +2068,11 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: jsonHeaders },
     );
   } catch (error) {
-    console.error('[comm-whatsapp-generate-follow-up] erro inesperado', error);
-    const detail = error instanceof Error ? `${error.message}${error.stack ? '\n' + error.stack : ''}` : String(error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : '';
+    console.error('[comm-whatsapp-generate-follow-up] erro inesperado', msg, stack);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao gerar follow-up.', detail }),
+      JSON.stringify({ error: `[follow-up] ${msg}${stack ? ' | ' + stack : ''}` }),
       {
         status: error instanceof FollowUpValidationError ? 422 : 500,
         headers: jsonHeaders,

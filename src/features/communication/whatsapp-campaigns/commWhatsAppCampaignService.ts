@@ -353,7 +353,7 @@ async function upsertCsvTargetsInBatches(
     }
 
     if (lastError) {
-      throw new Error(getSupabaseErrorMessage(
+      throw new Error(await getSupabaseErrorMessage(
         lastError,
         `O disparo foi criado, mas falhou ao salvar os contatos do CSV apos ${saved} de ${targets.length} importados. Edite o disparo para tentar novamente.`,
       ));
@@ -378,7 +378,7 @@ const getCount = async (table: string, filters: CountFilter[] = []) => {
 
   const { count, error } = await query;
   if (error) {
-    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os indicadores dos disparos.'));
+    throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os indicadores dos disparos.'));
   }
 
   return count ?? 0;
@@ -393,7 +393,7 @@ const getPendingAiSuggestionCount = async () => {
     .is('chat.merged_into_chat_id', null);
 
   if (error) {
-    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes pendentes.'));
+    throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes pendentes.'));
   }
 
   return count ?? 0;
@@ -540,7 +540,7 @@ export const commWhatsAppCampaignService = {
       .limit(80);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os disparos do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os disparos do WhatsApp.'));
     }
 
     return (data ?? []) as CommWhatsAppCampaign[];
@@ -554,7 +554,7 @@ export const commWhatsAppCampaignService = {
       .single();
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar este disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar este disparo.'));
     }
 
     return data as CommWhatsAppCampaign;
@@ -596,7 +596,7 @@ export const commWhatsAppCampaignService = {
       .range(from, to);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
     }
 
     return { targets: (data ?? []) as CommWhatsAppCampaignTarget[], total: count ?? 0 };
@@ -606,7 +606,7 @@ export const commWhatsAppCampaignService = {
     const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_failure_reasons', { p_campaign_id: campaignId });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os motivos de falha.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os motivos de falha.'));
     }
 
     return ((data ?? []) as Array<{ error_message: string; total_count: number | string }>)
@@ -617,7 +617,7 @@ export const commWhatsAppCampaignService = {
     const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contadores deste disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contadores deste disparo.'));
     }
 
     return ((data ?? []) as Array<{ status: string; ab_variant: string | null; total_count: number | string; responded_count: number | string }>)
@@ -656,7 +656,7 @@ export const commWhatsAppCampaignService = {
       .limit(12);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a saude do worker de disparos.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a saude do worker de disparos.'));
     }
 
     const recentRuns = (data ?? []) as CommWhatsAppCampaignWorkerRun[];
@@ -679,7 +679,7 @@ export const commWhatsAppCampaignService = {
       .limit(20);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes de IA.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes de IA.'));
     }
 
     return (data ?? []) as CommWhatsAppAiIntentSuggestion[];
@@ -693,7 +693,7 @@ export const commWhatsAppCampaignService = {
       .order('step_index', { ascending: true });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a sequencia do disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a sequencia do disparo.'));
     }
 
     return (data ?? []) as CommWhatsAppCampaignStep[];
@@ -728,7 +728,7 @@ export const commWhatsAppCampaignService = {
       .eq('campaign_id', campaignId);
 
     if (targetCountError) {
-      throw new Error(getSupabaseErrorMessage(targetCountError, 'Nao foi possivel estimar os contatos do disparo.'));
+      throw new Error(await getSupabaseErrorMessage(targetCountError, 'Nao foi possivel estimar os contatos do disparo.'));
     }
 
     let estimatedTargets = materializedTargetsCount ?? 0;
@@ -765,8 +765,8 @@ export const commWhatsAppCampaignService = {
       }
 
       const [{ count, error: countError }, { data: sampleRows, error: sampleError }] = await Promise.all([countQuery, sampleQuery]);
-      if (countError) throw new Error(getSupabaseErrorMessage(countError, 'Nao foi possivel estimar o publico do CRM.'));
-      if (sampleError) throw new Error(getSupabaseErrorMessage(sampleError, 'Nao foi possivel carregar amostra do CRM.'));
+      if (countError) throw new Error(await getSupabaseErrorMessage(countError, 'Nao foi possivel estimar o publico do CRM.'));
+      if (sampleError) throw new Error(await getSupabaseErrorMessage(sampleError, 'Nao foi possivel carregar amostra do CRM.'));
 
       estimatedTargets = count ?? 0;
       sample = (sampleRows ?? []).map((lead) => {
@@ -787,7 +787,7 @@ export const commWhatsAppCampaignService = {
         .limit(5);
 
       if (targetRowsError) {
-        throw new Error(getSupabaseErrorMessage(targetRowsError, 'Nao foi possivel carregar amostra dos contatos.'));
+        throw new Error(await getSupabaseErrorMessage(targetRowsError, 'Nao foi possivel carregar amostra dos contatos.'));
       }
 
       sample = (targetRows ?? []).map((target) => {
@@ -853,7 +853,7 @@ export const commWhatsAppCampaignService = {
       .single();
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel criar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel criar o disparo.'));
     }
 
     const createdCampaign = campaign as CommWhatsAppCampaign;
@@ -893,7 +893,7 @@ export const commWhatsAppCampaignService = {
         .eq('id', createdCampaign.id);
 
       if (updateError) {
-        throw new Error(getSupabaseErrorMessage(updateError, 'Os contatos foram salvos, mas os contadores nao foram atualizados.'));
+        throw new Error(await getSupabaseErrorMessage(updateError, 'Os contatos foram salvos, mas os contadores nao foram atualizados.'));
       }
     }
 
@@ -905,7 +905,7 @@ export const commWhatsAppCampaignService = {
         .insert(steps);
 
       if (stepsError) {
-        throw new Error(getSupabaseErrorMessage(stepsError, 'O disparo foi criado, mas a sequencia de mensagens nao foi salva.'));
+        throw new Error(await getSupabaseErrorMessage(stepsError, 'O disparo foi criado, mas a sequencia de mensagens nao foi salva.'));
       }
     }
 
@@ -939,7 +939,7 @@ export const commWhatsAppCampaignService = {
       .eq('id', campaignId);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o disparo.'));
     }
 
     const { error: deleteStepsError } = await supabase
@@ -948,7 +948,7 @@ export const commWhatsAppCampaignService = {
       .eq('campaign_id', campaignId);
 
     if (deleteStepsError) {
-      throw new Error(getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
+      throw new Error(await getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
     }
 
     const steps = buildStepRows(campaignId, input.stages, input.abTestEnabled);
@@ -959,7 +959,7 @@ export const commWhatsAppCampaignService = {
         .insert(steps);
 
       if (stepsError) {
-        throw new Error(getSupabaseErrorMessage(stepsError, 'O disparo foi atualizado, mas a nova sequencia nao foi salva.'));
+        throw new Error(await getSupabaseErrorMessage(stepsError, 'O disparo foi atualizado, mas a nova sequencia nao foi salva.'));
       }
     }
   },
@@ -973,7 +973,7 @@ export const commWhatsAppCampaignService = {
       .eq('id', campaignId);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel excluir o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel excluir o disparo.'));
     }
   },
 
@@ -986,7 +986,7 @@ export const commWhatsAppCampaignService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel ativar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel ativar o disparo.'));
     }
 
     const payload = (data ?? {}) as CampaignWorkerResult;
@@ -1007,7 +1007,7 @@ export const commWhatsAppCampaignService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel processar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel processar o disparo.'));
     }
 
     const payload = (data ?? {}) as CampaignWorkerResult;
@@ -1026,7 +1026,7 @@ export const commWhatsAppCampaignService = {
       .in('status', ['queued', 'running', 'scheduled']);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel pausar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel pausar o disparo.'));
     }
 
     await supabase
@@ -1045,7 +1045,7 @@ export const commWhatsAppCampaignService = {
       .eq('status', 'paused');
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel retomar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel retomar o disparo.'));
     }
   },
 
@@ -1057,7 +1057,7 @@ export const commWhatsAppCampaignService = {
       .in('status', ['draft', 'scheduled', 'queued', 'running', 'paused']);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel cancelar o disparo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel cancelar o disparo.'));
     }
 
     const { error: targetsError } = await supabase
@@ -1067,7 +1067,7 @@ export const commWhatsAppCampaignService = {
       .in('status', ['pending', 'scheduled', 'sending']);
 
     if (targetsError) {
-      throw new Error(getSupabaseErrorMessage(targetsError, 'Disparo cancelado, mas nao foi possivel cancelar todos os contatos pendentes.'));
+      throw new Error(await getSupabaseErrorMessage(targetsError, 'Disparo cancelado, mas nao foi possivel cancelar todos os contatos pendentes.'));
     }
   },
 
@@ -1093,7 +1093,7 @@ export const commWhatsAppCampaignService = {
       }, { onConflict: 'phone_digits' });
 
     if (upsertError) {
-      throw new Error(getSupabaseErrorMessage(upsertError, 'Nao foi possivel bloquear este telefone para disparos.'));
+      throw new Error(await getSupabaseErrorMessage(upsertError, 'Nao foi possivel bloquear este telefone para disparos.'));
     }
 
     const { error: updateError } = await supabase
@@ -1102,7 +1102,7 @@ export const commWhatsAppCampaignService = {
       .eq('id', suggestion.id);
 
     if (updateError) {
-      throw new Error(getSupabaseErrorMessage(updateError, 'Bloqueio criado, mas nao foi possivel atualizar a sugestao.'));
+      throw new Error(await getSupabaseErrorMessage(updateError, 'Bloqueio criado, mas nao foi possivel atualizar a sugestao.'));
     }
   },
 
@@ -1113,7 +1113,7 @@ export const commWhatsAppCampaignService = {
       .eq('id', suggestionId);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel dispensar a sugestao.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel dispensar a sugestao.'));
     }
   },
 
@@ -1132,7 +1132,7 @@ export const commWhatsAppCampaignService = {
       .upload(path, file, { contentType: file.type || undefined, upsert: false });
 
     if (uploadError) {
-      throw new Error(getSupabaseErrorMessage(uploadError, 'Nao foi possivel enviar o arquivo de midia.'));
+      throw new Error(await getSupabaseErrorMessage(uploadError, 'Nao foi possivel enviar o arquivo de midia.'));
     }
 
     const { data } = supabase.storage.from('whatsapp-campaign-media').getPublicUrl(path);
@@ -1145,7 +1145,7 @@ export const commWhatsAppCampaignService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem de teste.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem de teste.'));
     }
 
     const payload = (data ?? {}) as { error?: string; phoneDigits?: string };
@@ -1164,7 +1164,7 @@ export const commWhatsAppCampaignService = {
       .limit(50);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os modelos salvos.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os modelos salvos.'));
     }
 
     return (data ?? []).map((row) => ({ ...row, stages: row.steps })) as CommWhatsAppCampaignTemplate[];
@@ -1181,7 +1181,7 @@ export const commWhatsAppCampaignService = {
       .single();
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o modelo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel salvar o modelo.'));
     }
 
     return { ...data, stages: data.steps } as CommWhatsAppCampaignTemplate;
@@ -1194,7 +1194,7 @@ export const commWhatsAppCampaignService = {
       .eq('id', templateId);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel remover o modelo.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel remover o modelo.'));
     }
   },
 };

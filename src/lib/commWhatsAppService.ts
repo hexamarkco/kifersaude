@@ -511,7 +511,7 @@ const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: st
     }
   }
 
-  return getSupabaseErrorMessage(error, fallbackMessage);
+  return await getSupabaseErrorMessage(error, fallbackMessage);
 };
 
 // Igual a getFunctionInvokeErrorMessage, mas também repassa a flag `ambiguous` que
@@ -685,7 +685,7 @@ const resolveCanonicalCommWhatsAppChatUuid = async (chatId: string): Promise<str
     p_chat_id: chatId,
   } as never);
   if (error) {
-    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel resolver a conversa canonica.'));
+    throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel resolver a conversa canonica.'));
   }
 
   const resolvedChatId = readString(data);
@@ -705,7 +705,7 @@ const invokeFollowUpAgendaOrganizer = async (body: Record<string, unknown>) => {
   } = await supabase.auth.getSession();
 
   if (sessionError) {
-    throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a organizacao da agenda.'));
+    throw new Error(await getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a organizacao da agenda.'));
   }
 
   if (!session?.access_token) {
@@ -764,7 +764,7 @@ export const commWhatsAppService = {
     const { count, error } = await query;
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas nao lidas do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas nao lidas do WhatsApp.'));
     }
 
     return count ?? 0;
@@ -781,7 +781,7 @@ export const commWhatsAppService = {
       .eq('is_archived', true);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas arquivadas do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas arquivadas do WhatsApp.'));
     }
 
     return count ?? 0;
@@ -803,7 +803,7 @@ export const commWhatsAppService = {
     const { data, error } = await supabase.rpc('comm_whatsapp_get_operational_state');
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o status operacional do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar o status operacional do WhatsApp.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -844,7 +844,7 @@ export const commWhatsAppService = {
     const { data, error } = await supabase.rpc('comm_whatsapp_get_dashboard_metrics' as never);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as metricas do Painel WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as metricas do Painel WhatsApp.'));
     }
 
     const payload = toRecord(data);
@@ -882,7 +882,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
     }
 
     return (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
@@ -958,7 +958,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o estado desta conversa.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o estado desta conversa.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -982,7 +982,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o atendimento autonomo desta conversa.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o atendimento autonomo desta conversa.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -1000,7 +1000,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel excluir esta conversa.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel excluir esta conversa.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -1032,7 +1032,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel buscar mensagens do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel buscar mensagens do WhatsApp.'));
     }
 
     return (Array.isArray(data) ? data : []).flatMap((row) => {
@@ -1056,7 +1056,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel buscar leads do CRM.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel buscar leads do CRM.'));
     }
 
     return (Array.isArray(data) ? data : []) as CommWhatsAppLeadSearchResult[];
@@ -1068,7 +1068,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o lead vinculado ao chat.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar o lead vinculado ao chat.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -1085,7 +1085,7 @@ export const commWhatsAppService = {
     } as never);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a conversa do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a conversa do WhatsApp.'));
     }
 
     const payload = toRecord(data);
@@ -1113,7 +1113,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contratos do lead.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contratos do lead.'));
     }
 
     return (Array.isArray(data) ? data : []) as CommWhatsAppLeadContractSummary[];
@@ -1126,7 +1126,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel vincular o lead ao chat.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel vincular o lead ao chat.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -1144,7 +1144,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel desvincular o lead do chat.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel desvincular o lead do chat.'));
     }
 
     const rows = Array.isArray(data) ? data : [];
@@ -1163,7 +1163,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status do lead.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status do lead.'));
     }
   },
 
@@ -1174,7 +1174,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o responsavel do lead.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o responsavel do lead.'));
     }
   },
 
@@ -1190,7 +1190,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos salvos do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos salvos do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[]; total?: number; hasMore?: boolean };
@@ -1222,7 +1222,7 @@ export const commWhatsAppService = {
           // response body may already be consumed or not parseable
         }
       }
-      throw new Error(actualError || getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
+      throw new Error(actualError || await getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };
@@ -1241,7 +1241,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel iniciar a conversa no WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel iniciar a conversa no WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { chat?: CommWhatsAppChat };
@@ -1262,7 +1262,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o contato do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel salvar o contato do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { contact?: CommWhatsAppSavedContactResult };
@@ -1283,7 +1283,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel renomear o contato do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel renomear o contato do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { contact?: CommWhatsAppSavedContactResult };
@@ -1311,7 +1311,7 @@ export const commWhatsAppService = {
         .maybeSingle();
 
       if (error) {
-        throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste lead.'));
+        throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste lead.'));
       }
 
       if (data) {
@@ -1334,7 +1334,7 @@ export const commWhatsAppService = {
       .limit(1);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste numero.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste numero.'));
     }
 
     return ((data ?? [])[0] as CommWhatsAppChat | undefined) ?? null;
@@ -1352,7 +1352,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens do WhatsApp.'));
     }
 
     const rows = (data ?? []) as CommWhatsAppMessage[];
@@ -1378,7 +1378,7 @@ export const commWhatsAppService = {
     } as never);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os arquivos do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os arquivos do WhatsApp.'));
     }
 
     const rows = (data ?? []) as CommWhatsAppMessage[];
@@ -1397,7 +1397,7 @@ export const commWhatsAppService = {
     } as never);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o contexto da mensagem.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar o contexto da mensagem.'));
     }
 
     return (Array.isArray(data) ? data : []) as CommWhatsAppMessage[];
@@ -1453,7 +1453,7 @@ export const commWhatsAppService = {
         }
       }
 
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
     }
 
     const payload = (data ?? {}) as {
@@ -1493,7 +1493,7 @@ export const commWhatsAppService = {
         }
       }
 
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar todas as conversas.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar todas as conversas.'));
     }
 
     const payload = (data ?? {}) as {
@@ -1583,7 +1583,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status das mensagens.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status das mensagens.'));
     }
 
     const payload = (data ?? {}) as Partial<CommWhatsAppRefreshMessageStatusResult>;
@@ -1616,7 +1616,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel marcar a conversa como lida.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel marcar a conversa como lida.'));
     }
 
     const row = Array.isArray(data) ? data[0] : data;
@@ -1718,7 +1718,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel transcrever o audio do WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel transcrever o audio do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as CommWhatsAppTranscriptionResult;
@@ -1747,7 +1747,7 @@ export const commWhatsAppService = {
     console.debug('[FollowUpAI][service] invoke response', { data, error });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar o follow-up com IA.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel gerar o follow-up com IA.'));
     }
 
     const payload = (data ?? {}) as CommWhatsAppFollowUpSuggestion;
@@ -1785,7 +1785,7 @@ export const commWhatsAppService = {
   async getPendingFollowUpChats(): Promise<CommWhatsAppPendingFollowUpChat[]> {
     const { data, error } = await supabase.rpc('comm_whatsapp_pending_follow_up_chats');
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os follow-ups pendentes.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os follow-ups pendentes.'));
     }
     return (Array.isArray(data) ? data : []) as CommWhatsAppPendingFollowUpChat[];
   },
@@ -1804,7 +1804,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel refinar o follow-up com IA.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel refinar o follow-up com IA.'));
     }
 
     const payload = (data ?? {}) as CommWhatsAppFollowUpRefinementSuggestion;
@@ -1860,7 +1860,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel reescrever a mensagem com IA.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel reescrever a mensagem com IA.'));
     }
 
     const payload = (data ?? {}) as CommWhatsAppRewriteSuggestion;
@@ -1890,7 +1890,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sugerir uma resposta com IA.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel sugerir uma resposta com IA.'));
     }
 
     const payload = (data ?? {}) as CommWhatsAppReplySuggestion;
@@ -1913,7 +1913,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar a analise do atendimento.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel gerar a analise do atendimento.'));
     }
 
     const payload = (data ?? {}) as { critique?: CommWhatsAppAttendanceCritique };
@@ -1933,7 +1933,7 @@ export const commWhatsAppService = {
       .limit(limit);
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as analises deste atendimento.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as analises deste atendimento.'));
     }
 
     return (data ?? []).map((row: Record<string, unknown>) => {
@@ -1994,7 +1994,7 @@ export const commWhatsAppService = {
     } = await supabase.auth.getSession();
 
     if (sessionError) {
-      throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar o envio de midia.'));
+      throw new Error(await getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar o envio de midia.'));
     }
 
     if (!session?.access_token) {
@@ -2152,7 +2152,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Não foi possível reagir à mensagem no WhatsApp.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível reagir à mensagem no WhatsApp.'));
     }
   },
 
@@ -2275,7 +2275,7 @@ export const commWhatsAppService = {
           } = await supabase.auth.getSession();
 
           if (sessionError) {
-            throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a midia do WhatsApp.'));
+            throw new Error(await getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a midia do WhatsApp.'));
           }
 
           if (!session?.access_token) {

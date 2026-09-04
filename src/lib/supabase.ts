@@ -113,7 +113,7 @@ export const isSupabaseConnectivityError = (error: unknown): boolean => {
   return message.includes('falha de rede ao conectar com o supabase');
 };
 
-export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string): string => {
+export const getSupabaseErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
   if (isSupabaseConnectivityError(error)) {
     return (error as Error).message;
   }
@@ -123,6 +123,20 @@ export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string)
 
     // FunctionsHttpError (v2) — context is the raw Response, body not yet consumed
     if (typeof Response !== 'undefined' && ctx instanceof Response) {
+      try {
+        const cloned = ctx.clone();
+        const body = await cloned.json() as Record<string, unknown> | null;
+        if (body && typeof body === 'object') {
+          if (typeof body.error === 'string' && body.error.trim()) {
+            return body.error.trim();
+          }
+          if (typeof body.message === 'string' && body.message.trim()) {
+            return body.message.trim();
+          }
+        }
+      } catch {
+        // body might not be JSON
+      }
       return `Edge Function retornou status ${ctx.status}`;
     }
 
@@ -181,7 +195,7 @@ export async function waitForSupabaseSession(options: {
   }
 
   if (lastError) {
-    throw new Error(getSupabaseErrorMessage(lastError, options.errorMessage ?? 'Não foi possível validar sua sessão.'));
+    throw new Error(await getSupabaseErrorMessage(lastError, options.errorMessage ?? 'Não foi possível validar sua sessão.'));
   }
 
   throw new Error(options.errorMessage ?? 'Sua sessão ainda não está pronta. Atualize a página ou entre novamente.');

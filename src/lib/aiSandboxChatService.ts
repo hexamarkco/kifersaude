@@ -52,7 +52,7 @@ export const aiSandboxChatService = {
       .eq('is_automated', automatedOnly)
       .order('updated_at', { ascending: false });
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as simulacoes.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as simulacoes.'));
     return (data ?? []) as AiSandboxConversation[];
   },
 
@@ -63,7 +63,7 @@ export const aiSandboxChatService = {
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens.'));
     return (data ?? []) as AiSandboxMessage[];
   },
 
@@ -73,7 +73,7 @@ export const aiSandboxChatService = {
       .update({ title: title.trim() || 'Nova simulação' })
       .eq('id', conversationId);
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel renomear a simulacao.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel renomear a simulacao.'));
   },
 
   async deleteConversation(conversationId: string): Promise<void> {
@@ -82,7 +82,7 @@ export const aiSandboxChatService = {
       .delete()
       .eq('id', conversationId);
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel apagar a simulacao.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel apagar a simulacao.'));
   },
 
   async createConversation(firstMessage: string, createdBy: string): Promise<AiSandboxConversation> {
@@ -92,7 +92,7 @@ export const aiSandboxChatService = {
       .select('*')
       .single();
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel criar a simulacao.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel criar a simulacao.'));
     return data as AiSandboxConversation;
   },
 
@@ -103,7 +103,7 @@ export const aiSandboxChatService = {
       .select('*')
       .single();
 
-    if (error) throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem.'));
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem.'));
     return data as AiSandboxMessage;
   },
 
@@ -141,7 +141,7 @@ async function callGenerate(body: { conversationId: string; leadName?: string })
   const { data, error } = await supabase.functions.invoke('ai-sandbox-chat', { body });
 
   if (error) {
-    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel obter resposta da IA.'));
+    throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel obter resposta da IA.'));
   }
 
   const payload = (data ?? {}) as {

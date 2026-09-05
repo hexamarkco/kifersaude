@@ -29,11 +29,52 @@ CREATE INDEX IF NOT EXISTS idx_acfj_active_enrollment
   WHERE status IN ('pending', 'processing') AND enrollment_id IS NOT NULL;
 
 -- 5. Register cutover timestamp (set to now on deploy)
--- system_configurations uses (category, label) as unique key, value is text
-INSERT INTO public.system_configurations (category, label, value, description)
-VALUES ('automation', 'inactivity_enrollment_cutover_at', now()::text,
-        'Cutover timestamp for enrollment-based inactivity architecture. Outbounds before this date are not auto-enrolled.')
-ON CONFLICT (category, label) DO NOTHING;
+DO $$
+DECLARE
+  has_normalized boolean;
+  has_legacy boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'system_configurations'
+      AND column_name = 'category'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'system_configurations'
+      AND column_name = 'label'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'system_configurations'
+      AND column_name = 'value'
+  ) INTO has_normalized;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'system_configurations'
+      AND column_name = 'config_key'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'system_configurations'
+      AND column_name = 'config_value'
+  ) INTO has_legacy;
+
+  IF has_normalized THEN
+    INSERT INTO public.system_configurations (category, label, value, description)
+    VALUES ('automation', 'inactivity_enrollment_cutover_at', now()::text,
+            'Cutover timestamp for enrollment-based inactivity architecture. Outbounds before this date are not auto-enrolled.')
+    ON CONFLICT (category, label) DO NOTHING;
+  ELSIF has_legacy THEN
+    INSERT INTO public.system_configurations (category, config_key, config_value, description)
+    VALUES ('automation', 'inactivity_enrollment_cutover_at', to_jsonb(now()::text),
+            'Cutover timestamp for enrollment-based inactivity architecture. Outbounds before this date are not auto-enrolled.')
+    ON CONFLICT (config_key) DO NOTHING;
+  END IF;
+END $$;
 
 -- 6. Existing jobs keep enrollment_id = NULL (legacy, not affected by new logic)
 -- No backfill needed.

@@ -11,6 +11,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
+  fetchWhapiChatMessages,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
   getNowIso,
@@ -1524,8 +1525,649 @@ async function reconcileAcceptedCampaignPersistences(params: {
       });
     }
   }
-
   return recovered;
+}
+
+// ── Stage burst helpers ──────────────────────────────────────────────
+
+type StageDispatchReservation = {
+  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost';
+  retry_at: string | null;
+  reason: string | null;
+};
+
+async function reserveStageDispatch(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    campaignId: string;
+    targetId: string;
+    lockToken: string;
+    stageIndex: number;
+    expectedMessageCount: number;
+    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null }>;
+  },
+): Promise<StageDispatchReservation> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_comm_whatsapp_campaign_stage_dispatch', {
+    p_campaign_id: params.campaignId,
+    p_target_id: params.targetId,
+    p_lock_token: params.lockToken,
+    p_stage_index: params.stageIndex,
+    p_expected_message_count: params.expectedMessageCount,
+    p_steps: params.steps,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao reservar stage da campanha: ${error.message}`);
+  }
+
+  const reservation = (Array.isArray(data) ? data[0] : data) as StageDispatchReservation | null;
+  if (!reservation) {
+    throw new Error('A reserva de stage da campanha nao retornou resultado.');
+  }
+
+  return reservation;
+}
+
+async function advanceStepDispatch(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    dispatchKey: string;
+    newStatus: 'sending' | 'sent' | 'failed' | 'uncertain' | 'cancelled' | 'skipped';
+    externalMessageId?: string;
+    deliveryStatus?: string;
+    errorMessage?: string;
+    nextRetryAt?: string;
+    resolution?: string;
+  },
+): Promise<{ dispatchId: string | null; oldStatus: string | null; newStatus: string | null }> {
+  const { data, error } = await supabaseAdmin.rpc('advance_step_dispatch', {
+    p_dispatch_key: params.dispatchKey,
+    p_new_status: params.newStatus,
+    p_external_message_id: params.externalMessageId ?? null,
+    p_delivery_status: params.deliveryStatus ?? null,
+    p_error_message: params.errorMessage ?? null,
+    p_next_retry_at: params.nextRetryAt ?? null,
+    p_resolution: params.resolution ?? null,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao avancar dispatch do step: ${error.message}`);
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as { dispatch_id: string; old_status: string; new_status: string } | null;
+  return { dispatchId: row?.dispatch_id ?? null, oldStatus: row?.old_status ?? null, newStatus: row?.new_status ?? null };
+}
+
+async function releasePendingStageDispatches(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  targetId: string,
+  lockToken: string,
+): Promise<number> {
+  const { data, error } = await supabaseAdmin.rpc('release_pending_stage_dispatches', {
+    p_target_id: targetId,
+    p_lock_token: lockToken,
+  });
+
+  if (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao liberar dispatches pendentes', error);
+    return 0;
+  }
+
+  return Number(data) || 0;
+}
+
+/**
+ * Detecta se o step atual pertence a um stage com multiplos mensagens
+ * consecutivas do tipo 'message'. Retorna os steps do stage em ordem,
+ * ou null se o stage so tem 1 mensagem (modo single).
+ */
+function findStageCompanions(
+  steps: CampaignStepRow[],
+  currentStepIndex: number,
+): CampaignStepRow[] | null {
+  const currentIndex = steps.findIndex((s) => s.step_index === currentStepIndex);
+  if (currentIndex < 0) return null;
+
+  const current = steps[currentIndex];
+  if (current.step_kind !== 'message') return null;
+
+  const stageIndex = current.stage_index;
+
+  // Coletar steps consecutivos com mesmo stage_index e step_kind='message'
+  const companions: CampaignStepRow[] = [];
+  for (let i = currentIndex; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.stage_index !== stageIndex || s.step_kind !== 'message') break;
+    companions.push(s);
+  }
+
+  // So entra em burst se houver mais de 1 mensagem no stage
+  return companions.length > 1 ? companions : null;
+}
+
+const BURST_INTER_MESSAGE_DELAY_MS = 3000;
+
+/**
+ * Executa o burst de mensagens de um stage.
+ * Retorna o resultado do burst (todas enviadas, ou falha parcial).
+ */
+async function executeStageBurst(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  campaign: CampaignRow;
+  target: TargetRow;
+  token: string;
+  channelId: string;
+  senderPhone: string | null;
+  senderName: string | null;
+  companions: CampaignStepRow[];
+  allSteps: CampaignStepRow[];
+  lead: LeadRow | null;
+  nowIso: string;
+}): Promise<{ status: string; nextStepIndex: number; error?: string }> {
+  const { supabaseAdmin, campaign, target, companions, allSteps, lead, nowIso } = params;
+
+  const stageIndex = companions[0].stage_index;
+  const lockToken = target.lock_token!;
+  let phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
+  const fallbackChatId = buildWhapiDirectChatId(phoneDigits);
+
+  // ── Resolve chat route (once for the burst) ──
+  let chatRoute = target.chat_id
+    ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
+    : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+        channelId: params.channelId,
+        externalChatId: fallbackChatId,
+      });
+  let chatId = chatRoute?.externalChatId || fallbackChatId;
+
+  if (chatRoute?.identityConflict) {
+    return { status: 'failed', nextStepIndex: companions[0].step_index, error: 'Identidade WhatsApp conflitante.' };
+  }
+  phoneDigits = chatRoute?.phoneNumber || phoneDigits;
+
+  // ── Check opt-out once ──
+  const { data: optOut } = await supabaseAdmin
+    .from('comm_whatsapp_opt_outs')
+    .select('id')
+    .eq('phone_digits', phoneDigits)
+    .eq('status', 'blocked')
+    .maybeSingle();
+
+  if (optOut) {
+    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: 'Opt-out detectado.' };
+  }
+
+  // ── Reserve stage atomically ──
+  const reservation = await reserveStageDispatch(supabaseAdmin, {
+    campaignId: campaign.id,
+    targetId: target.id,
+    lockToken,
+    stageIndex,
+    expectedMessageCount: companions.length,
+    steps: companions.map((s) => ({
+      step_index: s.step_index,
+      stage_index: s.stage_index,
+      step_kind: s.step_kind,
+      message_text: s.message_text,
+      media_url: s.media_url,
+    })),
+  });
+
+  if (reservation.result === 'lease_lost') {
+    throw new CampaignTargetLeaseLostError();
+  }
+
+  if (reservation.result !== 'reserved') {
+    await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+      target,
+      retryAt: reservation.retry_at || new Date(Date.now() + 60_000).toISOString(),
+      reason: reservation.reason || 'Stage reserva nao permitida.',
+    });
+    return { status: 'deferred', nextStepIndex: companions[0].step_index };
+  }
+
+  // ── Send each message sequentially ──
+  const firstStepAfterBurst = (() => {
+    const lastCompanionIndex = allSteps.findIndex((s) => s.step_index === companions[companions.length - 1].step_index);
+    return lastCompanionIndex >= 0 ? allSteps[lastCompanionIndex + 1] ?? null : null;
+  })();
+
+  let lastSuccessfullySentStepIndex = companions[0].step_index - 1;
+  const whapi = createWhapiClient(params.token);
+
+  for (let i = 0; i < companions.length; i++) {
+    const step = companions[i];
+    const dispatchKey = `${campaign.id}:${target.id}:${step.step_index}`;
+
+    // ── stop_on_reply check (delay_amount=0 for same-stage = continues) ──
+    if (campaign.stop_on_reply && target.sent_at) {
+      const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
+      if (reply && shouldStopSequenceBeforeStep(step)) {
+        // Cancel remaining dispatches in this stage
+        for (let j = i; j < companions.length; j++) {
+          await advanceStepDispatch(supabaseAdmin, {
+            dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+            newStatus: 'cancelled',
+            resolution: 'stop_on_reply',
+          });
+        }
+        return { status: 'responded', nextStepIndex: step.step_index };
+      }
+      // If reply detected but delay_amount=0 → burst continues (record only)
+      if (reply && !target.responded_at) {
+        await updateClaimedTarget(supabaseAdmin, target, {
+          responded_at: reply.respondedAt || nowIso,
+          chat_id: reply.chat.id,
+        });
+        target.responded_at = reply.respondedAt || nowIso;
+        target.chat_id = reply.chat.id;
+      }
+    }
+
+    // ── Transition: pending → sending ──
+    const sendingTransition = await advanceStepDispatch(supabaseAdmin, {
+      dispatchKey,
+      newStatus: 'sending',
+    });
+
+    if (sendingTransition.oldStatus !== 'pending') {
+      // Already processed (sent/failed/cancelled) — skip
+      if (sendingTransition.oldStatus === 'sent') {
+        lastSuccessfullySentStepIndex = step.step_index;
+        continue;
+      }
+      // Failed or uncertain — stop burst
+      if (sendingTransition.oldStatus === 'failed' || sendingTransition.oldStatus === 'uncertain') {
+        return { status: 'failed', nextStepIndex: step.step_index, error: 'Step anterior falhou.' };
+      }
+      continue;
+    }
+
+    // ── Resolve message text ──
+    const text = resolveMessageText(step.message_text, { lead, target }).trim();
+    if (!text && !step.media_url) {
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'failed',
+        errorMessage: 'Mensagem vazia apos aplicar variaveis.',
+      });
+      return { status: 'failed', nextStepIndex: step.step_index, error: 'Mensagem vazia.' };
+    }
+
+    // ── Send via Whapi ──
+    let response: Response;
+    let payload: unknown;
+    try {
+      response = step.media_url
+        ? await sendCampaignMedia(params.token, chatId, step, text)
+        : await whapi.sendText(chatId, text);
+      payload = await readResponsePayload(response);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'failed',
+        errorMessage,
+      });
+      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+    }
+
+    if (!response.ok) {
+      const errorMessage = parseWhapiError(payload) || 'Falha ao enviar mensagem na Whapi.';
+      const providerRejected = response.status >= 400 && response.status < 500 && response.status !== 408;
+      if (providerRejected) {
+        // Definitive failure — cancel remaining
+        for (let j = i; j < companions.length; j++) {
+          await advanceStepDispatch(supabaseAdmin, {
+            dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+            newStatus: 'cancelled',
+            resolution: 'provider_rejectedearlier',
+          });
+        }
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey,
+          newStatus: 'failed',
+          errorMessage,
+        });
+        return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+      }
+      // Retryable failure (429, 5xx, 408) — stop burst, retry later
+      const nextRetryAt = getNextRetryAt(Math.max(Number(target.attempts) || 0, 0));
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'failed',
+        errorMessage,
+        nextRetryAt,
+      });
+      return { status: 'retry_scheduled', nextStepIndex: step.step_index, error: errorMessage };
+    }
+
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload as Record<string, unknown>).sent === false) {
+      const errorMessage = parseWhapiError(payload) || 'A Whapi nao confirmou o envio da mensagem.';
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'failed',
+        errorMessage,
+      });
+      // Cancel remaining — definitive
+      for (let j = i + 1; j < companions.length; j++) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+          newStatus: 'cancelled',
+          resolution: 'provider_not_sent_earlier',
+        });
+      }
+      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+    }
+
+    const externalMessageId = extractWhapiMessageId(payload);
+    if (!externalMessageId) {
+      const errorMessage = 'Whapi respondeu sem identificador da mensagem.';
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'uncertain',
+        errorMessage,
+      });
+      return { status: 'uncertain', nextStepIndex: step.step_index, error: errorMessage };
+    }
+
+    const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
+    const displayName = chatRoute?.displayName || lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
+
+    // ── Persist message ──
+    try {
+      await persistCommWhatsAppMessage(supabaseAdmin, {
+        channelId: params.channelId,
+        externalChatId: chatId,
+        phoneNumber: phoneDigits,
+        displayName,
+        pushName: null,
+        lastMessageText: text,
+        lastMessageDirection: 'outbound',
+        lastMessageAt: nowIso,
+        incrementUnread: false,
+        externalMessageId,
+        direction: 'outbound',
+        messageType: 'text',
+        deliveryStatus,
+        textContent: text,
+        createdBy: campaign.created_by,
+        source: 'campaign',
+        senderPhone: params.senderPhone,
+        senderName: params.senderName,
+        statusUpdatedAt: nowIso,
+        errorMessage: null,
+        mediaId: null,
+        mediaUrl: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+        mediaSizeBytes: null,
+        mediaDurationSeconds: null,
+        mediaCaption: null,
+        metadata: {
+          provider: 'whapi',
+          campaign_id: campaign.id,
+          campaign_target_id: target.id,
+          campaign_step_index: step.step_index,
+        },
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao persistir mensagem aceita pela Whapi.';
+      await advanceStepDispatch(supabaseAdmin, {
+        dispatchKey,
+        newStatus: 'uncertain',
+        externalMessageId,
+        errorMessage,
+      });
+      return { status: 'uncertain', nextStepIndex: step.step_index, error: errorMessage };
+    }
+
+    // ── Mark step as sent ──
+    await advanceStepDispatch(supabaseAdmin, {
+      dispatchKey,
+      newStatus: 'sent',
+      externalMessageId,
+      deliveryStatus,
+    });
+
+    lastSuccessfullySentStepIndex = step.step_index;
+
+    // ── Inter-message delay (except after last message) ──
+    if (i < companions.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, BURST_INTER_MESSAGE_DELAY_MS));
+    }
+  }
+
+  // ── All messages sent — advance target ──
+  const nextSendAt = firstStepAfterBurst
+    ? new Date(Date.now() + getDelayMs(firstStepAfterBurst)).toISOString()
+    : null;
+  const targetStatus = firstStepAfterBurst ? 'scheduled' : 'sent';
+
+  await updateClaimedTarget(supabaseAdmin, target, {
+    status: targetStatus,
+    sent_at: target.sent_at || nowIso,
+    chat_id: chatId || target.chat_id,
+    current_step_index: firstStepAfterBurst ? firstStepAfterBurst.step_index : companions[companions.length - 1].step_index,
+    next_send_at: nextSendAt,
+    next_retry_at: null,
+    error_message: null,
+    last_attempt_at: nowIso,
+    locked_at: null,
+    lock_token: null,
+  });
+
+  await insertEvent(supabaseAdmin, {
+    campaignId: campaign.id,
+    targetId: target.id,
+    eventType: firstStepAfterBurst ? 'target_step_sent' : 'target_sent',
+    payload: {
+      stageIndex,
+      stepsSent: companions.map((s) => s.step_index),
+      nextStepIndex: firstStepAfterBurst?.step_index ?? null,
+      nextSendAt,
+    },
+  });
+
+  return { status: targetStatus, nextStepIndex: firstStepAfterBurst?.step_index ?? companions[companions.length - 1].step_index };
+}
+
+const STEP_DISPATCH_SENDING_RECONCILIATION_AGE_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Reconcile step_dispatches stuck in 'sending' without external_message_id.
+ * These represent cases where the worker crashed after starting the provider
+ * call but before recording the result.
+ *
+ * Strategy:
+ * 1. Query Whapi for recent messages to the chat
+ * 2. If exactly one match by recipient + direction + time window → persist, mark sent
+ * 3. If 0 or multiple matches → mark UNCERTAIN for manual review
+ * 4. If pending dispatches exist for a target whose lease expired → release them
+ */
+async function reconcileOrphanedStepDispatches(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  senderPhone: string | null;
+  senderName: string | null;
+  token: string;
+}): Promise<{ reconciled: number; uncertain: number; released: number }> {
+  const { supabaseAdmin, channelId, senderPhone, senderName, token } = params;
+  const cutoff = new Date(Date.now() - STEP_DISPATCH_SENDING_RECONCILIATION_AGE_MS).toISOString();
+
+  // ── 1. Find dispatches stuck in 'sending' without external_message_id ──
+  const { data: orphaned, error: orphanedError } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_step_dispatches')
+    .select('id,campaign_id,target_id,step_index,stage_index,dispatch_key,created_at,error_message')
+    .eq('status', 'sending')
+    .is('external_message_id', null)
+    .lt('created_at', cutoff)
+    .order('created_at', { ascending: true })
+    .limit(50);
+
+  if (orphanedError) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao buscar dispatches orfaos', orphanedError);
+    return { reconciled: 0, uncertain: 0, released: 0 };
+  }
+
+  let reconciled = 0;
+  let uncertain = 0;
+
+  for (const dispatch of orphaned ?? []) {
+    try {
+      // Load target to get chat_id / phone_digits
+      const { data: target } = await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .select('id,phone_digits,chat_id')
+        .eq('id', dispatch.target_id)
+        .maybeSingle();
+
+      if (!target) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: dispatch.dispatch_key,
+          newStatus: 'uncertain',
+          errorMessage: 'Target nao encontrado durante reconciliacao.',
+        });
+        uncertain++;
+        continue;
+      }
+
+      // Load the step definition for message matching
+      const { data: stepDef } = await supabaseAdmin
+        .from('comm_whatsapp_campaign_steps')
+        .select('message_text,media_url')
+        .eq('campaign_id', dispatch.campaign_id)
+        .eq('step_index', dispatch.step_index)
+        .maybeSingle();
+
+      // Try to find the message via Whapi
+      let found = false;
+      const chatId = target.chat_id
+        ? (await supabaseAdmin.from('comm_whatsapp_chats').select('external_chat_id').eq('id', target.chat_id).maybeSingle())?.data?.external_chat_id
+        : null;
+
+      if (chatId) {
+        try {
+          const chatMessages = await fetchWhapiChatMessages({ token, chatId });
+
+          const phoneKeys = getCommWhatsAppPhoneLookupKeys(target.phone_digits);
+          const candidates = chatMessages.filter((msg) => {
+            if (msg.from_me !== true && msg.from_me !== 'true') return false;
+            const msgTo = String(msg.to || msg.chat_id || '');
+            if (!phoneKeys.some((key) => msgTo.includes(key))) return false;
+            // Time window: within 30s of dispatch creation
+            const msgTime = new Date(String(msg.timestamp || msg.time || 0)).getTime();
+            const dispatchTime = new Date(dispatch.created_at).getTime();
+            if (Math.abs(msgTime - dispatchTime) > 30_000) return false;
+            // Text match (if available)
+            const msgText = String(msg.text || msg.body || '');
+            const expectedText = stepDef?.message_text || '';
+            if (expectedText && msgText && msgText.trim() !== expectedText.trim()) return false;
+            return true;
+          });
+
+          if (candidates.length === 1) {
+            // Exactly one match — persist with dedup
+            const match = candidates[0];
+            const externalMessageId = String(match.id || match.message_id || '');
+            const deliveryStatus = String(match.status || 'sent');
+
+            if (externalMessageId) {
+              const displayName = target.phone_digits;
+              await persistCommWhatsAppMessage(supabaseAdmin, {
+                channelId,
+                externalChatId: chatId,
+                phoneNumber: target.phone_digits,
+                displayName,
+                pushName: null,
+                lastMessageText: stepDef?.message_text || '',
+                lastMessageDirection: 'outbound',
+                lastMessageAt: dispatch.created_at,
+                incrementUnread: false,
+                externalMessageId,
+                direction: 'outbound',
+                messageType: 'text',
+                deliveryStatus,
+                textContent: stepDef?.message_text || '',
+                createdBy: null,
+                source: 'campaign',
+                senderPhone,
+                senderName,
+                statusUpdatedAt: dispatch.created_at,
+                errorMessage: null,
+                mediaId: null,
+                mediaUrl: null,
+                mediaMimeType: null,
+                mediaFileName: null,
+                mediaSizeBytes: null,
+                mediaDurationSeconds: null,
+                mediaCaption: null,
+                metadata: {
+                  provider: 'whapi',
+                  campaign_id: dispatch.campaign_id,
+                  campaign_target_id: dispatch.target_id,
+                  campaign_step_index: dispatch.step_index,
+                  reconciled_after_crash: true,
+                },
+              });
+
+              await advanceStepDispatch(supabaseAdmin, {
+                dispatchKey: dispatch.dispatch_key,
+                newStatus: 'sent',
+                externalMessageId,
+                deliveryStatus,
+                resolution: 'reconciled_via_whapi',
+              });
+              reconciled++;
+              found = true;
+            }
+          }
+          // 0 or multiple candidates → UNCERTAIN
+        } catch (whapiError) {
+          console.error('[comm-whatsapp-campaign-worker] erro ao consultar Whapi para reconciliacao', whapiError);
+        }
+      }
+
+      if (!found) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: dispatch.dispatch_key,
+          newStatus: 'uncertain',
+          errorMessage: 'Provider pode ter aceito a mensagem mas nao foi possivel confirmar localmente.',
+        });
+        uncertain++;
+      }
+    } catch (error) {
+      console.error('[comm-whatsapp-campaign-worker] erro ao reconciliar dispatch orfao', { dispatchId: dispatch.id, error });
+    }
+  }
+
+  // ── 2. Release pending dispatches for targets with expired leases ──
+  const { data: stuckPending } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_step_dispatches')
+    .select('id,target_id')
+    .eq('status', 'pending')
+    .lt('created_at', cutoff)
+    .limit(50);
+
+  let released = 0;
+  for (const pending of stuckPending ?? []) {
+    const { data: target } = await supabaseAdmin
+      .from('comm_whatsapp_campaign_targets')
+      .select('id,lock_token,locked_at')
+      .eq('id', pending.target_id)
+      .maybeSingle();
+
+    if (!target) continue;
+
+    // If lease expired (locked_at > 15min ago) or no lock → release
+    const lockAge = target.locked_at ? Date.now() - new Date(target.locked_at).getTime() : Infinity;
+    if (lockAge > 15 * 60 * 1000 || !target.lock_token) {
+      await releasePendingStageDispatches(supabaseAdmin, pending.target_id, target.lock_token || '');
+      released++;
+    }
+  }
+
+  return { reconciled, uncertain, released };
 }
 
 async function listTargetsForProcessing(
@@ -2143,6 +2785,24 @@ async function sendTarget(params: {
   const stepPosition = Math.max(steps.findIndex((item) => item.step_index === step.step_index), 0);
   const nextStep = steps[stepPosition + 1] ?? null;
 
+  // ── Burst detection: multiple consecutive messages in the same stage ──
+  const stageCompanions = findStageCompanions(steps, step.step_index);
+  if (stageCompanions) {
+    return executeStageBurst({
+      supabaseAdmin,
+      campaign,
+      target,
+      token: params.token,
+      channelId: params.channelId,
+      senderPhone: params.senderPhone,
+      senderName: params.senderName,
+      companions: stageCompanions,
+      allSteps: steps,
+      lead,
+      nowIso,
+    });
+  }
+
   if (campaign.stop_on_reply && target.sent_at) {
     const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
     const respondedAt = target.responded_at || reply?.respondedAt || null;
@@ -2629,6 +3289,15 @@ async function processCampaigns(
     channelId: channel.id,
     senderPhone: channel.phone_number,
     senderName: channel.connected_user_name,
+  });
+  await reconcileOrphanedStepDispatches({
+    supabaseAdmin,
+    channelId: channel.id,
+    senderPhone: channel.phone_number,
+    senderName: channel.connected_user_name,
+    token,
+  }).catch((err) => {
+    console.error('[comm-whatsapp-campaign-worker] reconciliacao de step_dispatches orfaos falhou', err);
   });
   await reconcileResponses(supabaseAdmin, params.campaignId);
   await reactivateRecurringCampaigns(supabaseAdmin);

@@ -23,7 +23,7 @@ SET is_active = false, deactivated_at = now()
 WHERE feature_id = (SELECT id FROM ai_features WHERE key = 'campaign.intent')
   AND is_active = true;
 
--- 3. Insert v2 as the only active config
+-- 3. Insert v2 as the only active config (skip if v2 already exists)
 INSERT INTO ai_feature_configs (
   feature_id, version, is_active,
   provider, model, temperature, max_output_tokens, reasoning_effort,
@@ -76,4 +76,5 @@ Sem markdown. Não inclua recommended_action — o código deriva isso automatic
 
   '{"inboundMessage": true, "campaignContext": true, "conversationHistory": true}'::jsonb,
   now()
-);
+)
+ON CONFLICT (feature_id, version) DO NOTHING;

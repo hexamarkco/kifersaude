@@ -1235,6 +1235,22 @@ const shouldStopSequenceBeforeStep = (
   return Math.max(Number(step.delay_amount) || 0, 0) > 0;
 };
 
+const OPT_OUT_KEYWORDS = [
+  'sair', 'parar', 'cancelar', 'nao quero', 'não quero', 'pare', 'stop',
+  'remover', 'descadastrar', 'nao ontvang', 'não receiving', 'bloquear',
+  'nao molesta', 'não molesta', 'chato', 'incomodo', 'inconveniente',
+];
+
+function isExplicitOptOut(messageText: string | null | undefined): boolean {
+  if (!messageText) return false;
+  const normalised = messageText
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+  return OPT_OUT_KEYWORDS.some((kw) => normalised.includes(kw));
+}
+
 async function getCachedCampaignSteps(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaign: CampaignRow,
@@ -1793,28 +1809,76 @@ async function executeStageBurst(params: {
     const step = companions[i];
     const dispatchKey = `${campaign.id}:${target.id}:${step.step_index}`;
 
-    // ── stop_on_reply check (delay_amount=0 for same-stage = continues) ──
+    // ── stop_on_reply check ──
     if (campaign.stop_on_reply && target.sent_at) {
+      // Normal reply detection (short-circuits once responded_at is set)
       const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
-      if (reply && shouldStopSequenceBeforeStep(step)) {
-        // Cancel remaining dispatches in this stage
-        for (let j = i; j < companions.length; j++) {
-          await advanceStepDispatch(supabaseAdmin, {
-            dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
-            newStatus: 'cancelled',
-            resolution: 'stop_on_reply',
-          });
+      if (reply) {
+        // Opt-out always stops — even with delay_amount=0 (same-stage burst)
+        const isOptOut = isExplicitOptOut(
+          getInboundMessagePreviewText(reply.message as InboundMessageRow)
+            || (reply.message as InboundMessageRow)?.text_content,
+        );
+        if (isOptOut || shouldStopSequenceBeforeStep(step)) {
+          for (let j = i; j < companions.length; j++) {
+            await advanceStepDispatch(supabaseAdmin, {
+              dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+              newStatus: 'cancelled',
+              resolution: isOptOut ? 'opt_out_during_burst' : 'stop_on_reply',
+            });
+          }
+          return {
+            status: isOptOut ? 'stopped' : 'responded',
+            nextStepIndex: step.step_index,
+            error: isOptOut ? 'Opt-out detectado durante burst.' : undefined,
+          };
         }
-        return { status: 'responded', nextStepIndex: step.step_index };
+        // Normal reply with delay_amount=0 → record only, burst continues
+        if (!target.responded_at) {
+          await updateClaimedTarget(supabaseAdmin, target, {
+            responded_at: reply.respondedAt || nowIso,
+            chat_id: reply.chat.id,
+          });
+          target.responded_at = reply.respondedAt || nowIso;
+          target.chat_id = reply.chat.id;
+        }
       }
-      // If reply detected but delay_amount=0 → burst continues (record only)
-      if (reply && !target.responded_at) {
-        await updateClaimedTarget(supabaseAdmin, target, {
-          responded_at: reply.respondedAt || nowIso,
-          chat_id: reply.chat.id,
-        });
-        target.responded_at = reply.respondedAt || nowIso;
-        target.chat_id = reply.chat.id;
+
+      // ── Opt-out re-check: even after responded_at is set, check latest
+      //    inbound for explicit opt-out keywords. A normal reply may have been
+      //    recorded, but an opt-out arriving later must still stop the burst. ──
+      if (target.responded_at) {
+        const chat = await findInboundCampaignChat(supabaseAdmin, target);
+        if (chat) {
+          const { data: latestInbound } = await supabaseAdmin
+            .from('comm_whatsapp_messages')
+            .select('text_content,media_caption,message_type')
+            .eq('chat_id', chat.id)
+            .eq('direction', 'inbound')
+            .order('message_at', { ascending: false })
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestInbound) {
+            const preview = getInboundMessagePreviewText(latestInbound as InboundMessageRow)
+              || (latestInbound as InboundMessageRow)?.text_content;
+            if (isExplicitOptOut(preview)) {
+              for (let j = i; j < companions.length; j++) {
+                await advanceStepDispatch(supabaseAdmin, {
+                  dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+                  newStatus: 'cancelled',
+                  resolution: 'opt_out_during_burst',
+                });
+              }
+              return {
+                status: 'stopped',
+                nextStepIndex: step.step_index,
+                error: 'Opt-out detectado durante burst.',
+              };
+            }
+          }
+        }
       }
     }
 

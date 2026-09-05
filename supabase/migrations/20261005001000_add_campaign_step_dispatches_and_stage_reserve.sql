@@ -432,22 +432,8 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Pacing: use the LAST stage reservation (original or retry)
-  v_min_interval := make_interval(secs => 60.0 / GREATEST(v_campaign.pacing_per_minute, 1));
-
-  SELECT MAX(ev.created_at)
-  INTO v_last_pacing_at
-  FROM public.comm_whatsapp_campaign_events AS ev
-  WHERE ev.campaign_id = p_campaign_id
-    AND ev.event_type IN ('stage_dispatch_reserved', 'target_provider_send_started')
-    AND COALESCE(ev.payload->>'dispatch_permit_state', 'reserved') <> 'released';
-
-  IF v_last_pacing_at IS NOT NULL AND v_last_pacing_at + v_min_interval > v_now THEN
-    RETURN QUERY SELECT 'rate_limited'::text,
-      v_last_pacing_at + v_min_interval,
-      'A campanha ainda nao atingiu o intervalo minimo entre envios.'::text;
-    RETURN;
-  END IF;
+  -- NOTE: Pacing check SKIPPED for retries — retry is a continuation
+  -- of the same burst, not a new pacing event.
 
   -- NOTE: Daily limit check SKIPPED for retries — slots were already
   -- consumed by the original stage_dispatch_reserved event.

@@ -116,7 +116,7 @@ export async function loadFeatureConfig(
 
   const resolved = mergeWithDefaults(featureKey, config);
 
-  // Validate model override against ai_models catalog (fail-open: warn but don't block)
+  // Validate model override against ai_models catalog (fail-closed: block invalid overrides)
   if (resolved.modelOverrideEnabled && resolved.provider && resolved.model) {
     try {
       const { data: modelRow } = await supabaseAdmin
@@ -126,15 +126,15 @@ export async function loadFeatureConfig(
         .eq('model', resolved.model)
         .maybeSingle();
 
-      if (modelRow && !modelRow.active) {
-        console.warn(`[AIConfig] Feature ${featureKey} has inactive override model "${resolved.model}" — config loaded but model may fail at runtime`);
-      } else if (modelRow?.deprecated_at) {
-        console.warn(`[AIConfig] Feature ${featureKey} has deprecated override model "${resolved.model}" — consider updating`);
-      } else if (!modelRow) {
-        console.warn(`[AIConfig] Feature ${featureKey} override model "${resolved.model}" not found in ai_models catalog`);
+      if (!modelRow) {
+        console.error(`[AIConfig] Feature ${featureKey} override model "${resolved.model}" not found in catalog — override will be blocked at runtime`);
+      } else if (!modelRow.active) {
+        console.error(`[AIConfig] Feature ${featureKey} override model "${resolved.model}" is inactive — override will be blocked at runtime`);
+      } else if (modelRow.deprecated_at) {
+        console.error(`[AIConfig] Feature ${featureKey} override model "${resolved.model}" is deprecated — override will be blocked at runtime`);
       }
     } catch {
-      // ai_models lookup failed — fail-open, config is still valid
+      // ai_models lookup failed — override will be validated again at resolveModelForFeature time
     }
   }
 

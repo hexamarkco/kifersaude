@@ -185,6 +185,23 @@ const isOpenAiTextModel = (model: string): boolean => {
   return Boolean(normalized) && !isOpenAiTranscriptionModel(normalized);
 };
 
+/** Returns required capabilities for a given AI task */
+const getRequiredCapabilitiesForTask = (task: AiTask): string[] => {
+  switch (task) {
+    case 'whatsapp_audio_transcription':
+      return ['transcription'];
+    case 'follow_up_generation':
+    case 'rewrite_message':
+    case 'follow_up_analysis':
+    case 'attendance_critique':
+    case 'autonomous_attendance':
+    case 'follow_up_agenda_organization':
+      return ['text'];
+    default:
+      return ['text'];
+  }
+};
+
 const toBoolean = (value: unknown, fallback = false): boolean => {
   if (typeof value === 'boolean') {
     return value;
@@ -912,29 +929,44 @@ export const resolveModelForFeature = async (
       if (config?.model_override_enabled && config.provider && config.model) {
         const provider = isAiProvider(config.provider) ? config.provider : 'openai';
 
-        // Validate against ai_models catalog (fail-open: log warning but don't block)
+        // Validate against ai_models catalog (fail-closed: block invalid overrides)
         try {
           const { data: modelRow } = await supabaseAdmin
             .from('ai_models')
-            .select('active, deprecated_at')
+            .select('active, deprecated_at, capabilities')
             .eq('provider', provider)
             .eq('model', config.model)
             .maybeSingle();
 
-          if (modelRow && !modelRow.active) {
-            console.warn(`[AIConfig] Feature ${featureKey} override model ${config.model} is inactive — falling through to ai_routing`);
-          } else if (modelRow?.deprecated_at) {
-            console.warn(`[AIConfig] Feature ${featureKey} override model ${config.model} is deprecated — continuing but consider updating`);
+          if (!modelRow) {
+            console.error(`[AIConfig] Feature ${featureKey} override model "${config.model}" not found in catalog — falling through to ai_routing`);
+          } else if (!modelRow.active) {
+            console.error(`[AIConfig] Feature ${featureKey} override model "${config.model}" is inactive — falling through to ai_routing`);
+          } else if (modelRow.deprecated_at) {
+            console.error(`[AIConfig] Feature ${featureKey} override model "${config.model}" is deprecated — falling through to ai_routing`);
+          } else {
+            // Model exists and is active — check capability compatibility
+            const requiredCaps = getRequiredCapabilitiesForTask(task);
+            const modelCaps = (modelRow.capabilities ?? []) as string[];
+            const missing = requiredCaps.filter((c) => !modelCaps.includes(c));
+
+            if (missing.length > 0) {
+              console.error(`[AIConfig] Feature ${featureKey} override model "${config.model}" missing capabilities [${missing.join(', ')}] for task ${task} — falling through to ai_routing`);
+            } else {
+              // All validations passed — use the override
+              return {
+                provider,
+                model: config.model,
+                source: 'feature',
+              };
+            }
           }
         } catch {
-          // ai_models lookup failed — continue with the override (fail-open)
+          // ai_models lookup failed — block override for safety (fail-closed)
+          console.error(`[AIConfig] Failed to validate override for ${featureKey} — falling through to ai_routing`);
         }
 
-        return {
-          provider,
-          model: config.model,
-          source: 'feature',
-        };
+        // If we reach here, override was invalid — fall through to ai_routing
       }
     }
   } catch {

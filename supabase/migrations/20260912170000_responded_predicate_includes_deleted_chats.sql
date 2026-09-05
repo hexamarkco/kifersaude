@@ -1,8 +1,9 @@
--- O predicado sticky de resposta passa a considerar chats soft-deleted:
--- `comm_whatsapp_chats.deleted_at` e apenas organizacao do inbox (os dados
--- permanecem). Se o cliente respondeu em um chat que foi excluido depois, a
--- resposta continua valendo: fluxo cancelado e lead inelegivel para novas
--- execucoes (regra "uma vez que respondeu").
+-- Enrollment-based architecture for inactivity flows.
+-- Replaces sticky predicate with:
+--   - last visible message must be outbound
+--   - no active enrollment for this lead+flow
+--   - cutover protection: only enroll outbounds after inactivity_enrollment_cutover_at
+--   - trigger_message_id sent to leads-api for dedup
 
 CREATE OR REPLACE FUNCTION public.check_auto_contact_inactivity_triggers()
 RETURNS void
@@ -21,6 +22,7 @@ DECLARE
   v_lead_count integer;
   v_flow_count integer := 0;
   v_total_leads integer := 0;
+  v_cutover_at timestamptz;
 BEGIN
   BEGIN
     BEGIN
@@ -55,6 +57,12 @@ BEGIN
 
     v_function_url := rtrim(v_supabase_url, '/') || '/functions/v1/leads-api?action=check-inactivity-duration';
 
+    -- Cutover: only enroll outbounds after this timestamp
+    SELECT value::timestamptz INTO v_cutover_at
+    FROM public.system_configurations
+    WHERE category = 'automation' AND label = 'inactivity_enrollment_cutover_at'
+    LIMIT 1;
+
     FOR v_flow IN
       SELECT flow.value
       FROM public.integration_settings settings
@@ -80,88 +88,62 @@ BEGIN
       v_duration_hours := GREATEST(1, COALESCE(NULLIF(v_flow->>'triggerDurationHours', '')::integer, 24));
       v_lead_count := 0;
 
-      -- Cancela (promptamente, em ate 5 min) jobs pending de leads que ja
-      -- responderam alguma vez, inclusive em chats soft-deleted.
-      WITH outbound_activity AS (
-        SELECT c.lead_id, MIN(m.message_at) AS first_outbound_at
-        FROM public.comm_whatsapp_chats c
-        JOIN public.comm_whatsapp_messages m ON m.chat_id = c.id
-        WHERE c.lead_id IS NOT NULL
-          AND m.direction = 'outbound'
-        GROUP BY c.lead_id
-      )
-      UPDATE public.auto_contact_flow_jobs j
-      SET status = 'skipped',
-          last_error = 'Cliente respondeu - fluxo de inatividade cancelado',
-          updated_at = now()
-      FROM public.leads l
-      LEFT JOIN public.lead_status_config status_config ON status_config.id = l.status_id
-      LEFT JOIN outbound_activity o ON o.lead_id = l.id
-      WHERE j.flow_id = v_flow->>'id'
-        AND j.status = 'pending'
-        AND j.lead_id = l.id
-        AND NOT COALESCE(l.skip_automation, false)
-        AND COALESCE(status_config.nome, l.status) = ANY(
-          ARRAY(SELECT jsonb_array_elements_text(COALESCE(v_flow->'triggerStatuses', '[]'::jsonb)))
-        )
-        AND EXISTS (
-          SELECT 1
-          FROM public.comm_whatsapp_chats sc
-          JOIN public.comm_whatsapp_messages m ON m.chat_id = sc.id
-          WHERE sc.lead_id = l.id
-            AND m.direction = 'inbound'
-            AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
-            AND m.message_at > COALESCE(o.first_outbound_at, 'infinity'::timestamptz)
-        );
-
+      -- Enrollment-based eligibility:
+      -- 1. Last visible message is outbound
+      -- 2. That outbound is >= triggerDurationHours old
+      -- 3. No active enrollment (pending/processing) for this lead+flow
+      -- 4. Cutoff: outbound must be after cutover timestamp
+      -- 5. Dedup: no existing job with same trigger_message_at
       FOR v_lead IN
-        WITH chat_activity AS (
-          SELECT c.lead_id, MAX(c.last_message_at) AS last_activity_at
-          FROM public.comm_whatsapp_chats c
-          WHERE c.lead_id IS NOT NULL
-            AND c.deleted_at IS NULL
-          GROUP BY c.lead_id
-        ), outbound_activity AS (
-          SELECT c.lead_id, MIN(m.message_at) AS first_outbound_at
+        WITH last_visible_message AS (
+          SELECT
+            c.lead_id,
+            m.direction AS last_direction,
+            m.message_at AS last_message_at,
+            m.id AS last_message_id
           FROM public.comm_whatsapp_chats c
           JOIN public.comm_whatsapp_messages m ON m.chat_id = c.id
           WHERE c.lead_id IS NOT NULL
-            AND m.direction = 'outbound'
-          GROUP BY c.lead_id
-        ), status_entries AS (
-          SELECT lead_id, MAX(created_at) AS status_entered_at
-          FROM public.lead_status_history
-          GROUP BY lead_id
-        ), trigger_statuses AS (
-          SELECT ARRAY(
-            SELECT jsonb_array_elements_text(COALESCE(v_flow->'triggerStatuses', '[]'::jsonb))
-          ) AS values
+            AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
+          ORDER BY m.message_at DESC
+          -- LIMIT per lead is done via DISTINCT ON
+        ),
+        last_outbound AS (
+          SELECT DISTINCT ON (lvm.lead_id)
+            lvm.lead_id,
+            lvm.last_message_at AS outbound_at,
+            lvm.last_message_id AS outbound_msg_id
+          FROM last_visible_message lvm
+          WHERE lvm.last_direction = 'outbound'
+          ORDER BY lvm.lead_id, lvm.last_message_at DESC
+        ),
+        last_direction_check AS (
+          SELECT DISTINCT ON (lvm.lead_id)
+            lvm.lead_id,
+            lvm.last_direction,
+            lvm.last_message_at
+          FROM last_visible_message lvm
+          ORDER BY lvm.lead_id, lvm.last_message_at DESC
         )
         SELECT
           l.id,
-          COALESCE(a.last_activity_at, h.status_entered_at, l.updated_at, l.created_at) AS inactivity_started_at
+          lo.outbound_at AS inactivity_started_at,
+          lo.outbound_msg_id
         FROM public.leads l
         LEFT JOIN public.lead_status_config status_config ON status_config.id = l.status_id
-        LEFT JOIN chat_activity a ON a.lead_id = l.id
-        LEFT JOIN outbound_activity o ON o.lead_id = l.id
-        LEFT JOIN status_entries h ON h.lead_id = l.id
-        CROSS JOIN trigger_statuses ts
+        LEFT JOIN last_outbound lo ON lo.lead_id = l.id
+        LEFT JOIN last_direction_check ldc ON ldc.lead_id = l.id
+        CROSS JOIN (SELECT ARRAY(SELECT jsonb_array_elements_text(COALESCE(v_flow->'triggerStatuses', '[]'::jsonb))) AS values) ts
         WHERE cardinality(ts.values) > 0
           AND NOT COALESCE(l.skip_automation, false)
           AND COALESCE(status_config.nome, l.status) = ANY(ts.values)
-          AND NOT EXISTS (
-            SELECT 1
-            FROM public.comm_whatsapp_chats sc
-            JOIN public.comm_whatsapp_messages m ON m.chat_id = sc.id
-            WHERE sc.lead_id = l.id
-              AND m.direction = 'inbound'
-              AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
-              AND m.message_at > COALESCE(o.first_outbound_at, 'infinity'::timestamptz)
-          )
-          AND GREATEST(
-            COALESCE(a.last_activity_at, h.status_entered_at, l.updated_at, l.created_at),
-            v_activated_at
-          ) <= now() - make_interval(hours => v_duration_hours)
+          -- Last visible message must be outbound
+          AND ldc.last_direction = 'outbound'
+          -- Outbound must exist
+          AND lo.outbound_at IS NOT NULL
+          -- Inactivity threshold: last outbound + duration <= now
+          AND lo.outbound_at <= now() - make_interval(hours => v_duration_hours)
+          -- No active enrollment for this lead+flow
           AND NOT EXISTS (
             SELECT 1
             FROM public.auto_contact_flow_jobs j
@@ -169,6 +151,7 @@ BEGIN
               AND j.flow_id = v_flow->>'id'
               AND j.status IN ('pending', 'processing')
           )
+          -- No recent invalid_number skip (30-day cooldown)
           AND NOT EXISTS (
             SELECT 1
             FROM public.auto_contact_flow_jobs j2
@@ -177,6 +160,8 @@ BEGIN
               AND j2.last_error LIKE 'invalid_number%'
               AND j2.updated_at > now() - interval '30 days'
           )
+          -- CUTOVER: only enroll outbounds after the cutover timestamp
+          AND (v_cutover_at IS NULL OR lo.outbound_at >= v_cutover_at)
         ORDER BY l.created_at DESC
       LOOP
         v_lead_count := v_lead_count + 1;
@@ -194,7 +179,8 @@ BEGIN
           body := jsonb_build_object(
             'lead_id', v_lead.id,
             'flow_id', v_flow->>'id',
-            'inactivity_started_at', v_lead.inactivity_started_at
+            'inactivity_started_at', v_lead.inactivity_started_at,
+            'trigger_message_id', v_lead.outbound_msg_id
           ),
           timeout_milliseconds := 10000
         );
@@ -268,30 +254,37 @@ BEGIN
 
   SELECT count(*) INTO v_elegible
   FROM (
-    WITH chat_activity AS (
-      SELECT c.lead_id, MAX(c.last_message_at) AS last_activity_at
-      FROM public.comm_whatsapp_chats c
-      WHERE c.lead_id IS NOT NULL
-        AND c.deleted_at IS NULL
-      GROUP BY c.lead_id
-    ), outbound_activity AS (
-      SELECT c.lead_id, MIN(m.message_at) AS first_outbound_at
+    WITH last_visible_message AS (
+      SELECT
+        c.lead_id,
+        m.direction AS last_direction,
+        m.message_at AS last_message_at
       FROM public.comm_whatsapp_chats c
       JOIN public.comm_whatsapp_messages m ON m.chat_id = c.id
       WHERE c.lead_id IS NOT NULL
-        AND m.direction = 'outbound'
-      GROUP BY c.lead_id
-    ), status_entries AS (
-      SELECT lead_id, MAX(created_at) AS status_entered_at
-      FROM public.lead_status_history
-      GROUP BY lead_id
+        AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
+      ORDER BY m.message_at DESC
+    ),
+    last_outbound AS (
+      SELECT DISTINCT ON (lvm.lead_id)
+        lvm.lead_id,
+        lvm.last_message_at AS outbound_at
+      FROM last_visible_message lvm
+      WHERE lvm.last_direction = 'outbound'
+      ORDER BY lvm.lead_id, lvm.last_message_at DESC
+    ),
+    last_direction_check AS (
+      SELECT DISTINCT ON (lvm.lead_id)
+        lvm.lead_id,
+        lvm.last_direction
+      FROM last_visible_message lvm
+      ORDER BY lvm.lead_id, lvm.last_message_at DESC
     )
     SELECT DISTINCT l.id
     FROM public.leads l
     LEFT JOIN public.lead_status_config status_config ON status_config.id = l.status_id
-    LEFT JOIN chat_activity a ON a.lead_id = l.id
-    LEFT JOIN outbound_activity o ON o.lead_id = l.id
-    LEFT JOIN status_entries h ON h.lead_id = l.id
+    LEFT JOIN last_outbound lo ON lo.lead_id = l.id
+    LEFT JOIN last_direction_check ldc ON ldc.lead_id = l.id
     CROSS JOIN LATERAL (
       SELECT flow.value AS f
       FROM public.integration_settings settings
@@ -303,29 +296,15 @@ BEGIN
         AND COALESCE(flow.value->>'ativo', 'true') != 'false'
     ) flows
     WHERE NOT COALESCE(l.skip_automation, false)
-      AND NOT EXISTS (
-        SELECT 1
-        FROM public.comm_whatsapp_chats sc
-        JOIN public.comm_whatsapp_messages m ON m.chat_id = sc.id
-        WHERE sc.lead_id = l.id
-          AND m.direction = 'inbound'
-          AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
-          AND m.message_at > COALESCE(o.first_outbound_at, 'infinity'::timestamptz)
-      )
+      AND ldc.last_direction = 'outbound'
+      AND lo.outbound_at IS NOT NULL
       AND COALESCE(status_config.nome, l.status) = ANY(
         ARRAY(SELECT jsonb_array_elements_text(COALESCE(flows.f->'triggerStatuses', '[]'::jsonb)))
       )
-      AND GREATEST(
-        COALESCE(a.last_activity_at, h.status_entered_at, l.updated_at, l.created_at),
-        COALESCE(NULLIF(flows.f->>'triggerActivatedAt', '')::timestamptz, now())
-      ) <= now() - make_interval(hours => GREATEST(1, COALESCE(NULLIF(flows.f->>'triggerDurationHours', '')::integer, 24)))
+      AND lo.outbound_at <= now() - make_interval(hours => GREATEST(1, COALESCE(NULLIF(flows.f->>'triggerDurationHours', '')::integer, 24)))
       AND NOT EXISTS (
         SELECT 1 FROM public.auto_contact_flow_jobs j
         WHERE j.lead_id = l.id AND j.flow_id = flows.f->>'id' AND j.status IN ('pending', 'processing')
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM public.auto_contact_flow_jobs j3
-        WHERE j3.lead_id = l.id AND j3.flow_id = flows.f->>'id' AND j3.status = 'completed'
       )
       AND NOT EXISTS (
         SELECT 1 FROM public.auto_contact_flow_jobs j2

@@ -274,13 +274,28 @@ const getMessageSummaryMarker = (messageType: string) => {
   if (normalized === 'image') return '[Imagem]';
   if (VIDEO_LIKE_MESSAGE_TYPES.has(normalized)) return '[Video]';
   if (normalized === 'audio' || normalized === 'voice') return '[Audio]';
-  if (normalized === 'document') return '[Documento]';
+  if (normalized === 'document' || normalized === 'documentwithcaption') return '[Documento]';
   if (normalized === 'link_preview') return '[Link]';
   if (normalized === 'location' || normalized === 'live_location') return '[Localizacao]';
   if (normalized === 'sticker') return '[Sticker]';
   if (normalized === 'contact' || normalized === 'contact_list') return '[Contato]';
   if (normalized === 'poll') return '[Enquete]';
+  if (normalized === 'quiz') return '[Quiz]';
+  if (normalized === 'question') return '[Pergunta]';
+  if (normalized === 'event') return '[Evento]';
+  if (normalized === 'product') return '[Produto]';
+  if (normalized === 'catalog') return '[Catalogo]';
+  if (normalized === 'group_invite') return '[Convite]';
+  if (normalized === 'newsletter_invite') return '[Newsletter]';
+  if (normalized === 'admin_invite') return '[Convite admin]';
+  if (normalized === 'system') return '[Sistema]';
+  if (normalized === 'call') return '[Chamada]';
+  if (normalized === 'pin') return '[Fixada]';
+  if (normalized === 'story') return '[Status]';
+  if (normalized === 'album') return '[Album]';
   if (normalized === 'reply') return '[Resposta]';
+  if (normalized === 'list') return '[Lista]';
+  if (normalized === 'buttons') return '[Botoes]';
   if (normalized === 'interactive' || normalized === 'hsm' || normalized === 'carousel') return '[Mensagem interativa]';
   return getUnknownMessageMarker(normalized);
 };
@@ -302,7 +317,22 @@ const VISIBLE_SUMMARY_MARKERS = new Set([
   '[sticker]',
   '[contato]',
   '[enquete]',
+  '[quiz]',
+  '[pergunta]',
+  '[evento]',
+  '[produto]',
+  '[catalogo]',
+  '[convite]',
+  '[newsletter]',
+  '[convite admin]',
+  '[sistema]',
+  '[chamada]',
+  '[fixada]',
+  '[status]',
+  '[album]',
   '[resposta]',
+  '[lista]',
+  '[botoes]',
   '[mensagem interativa]',
 ]);
 
@@ -409,7 +439,7 @@ const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWh
   };
 };
 
-type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive';
+type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive' | 'list' | 'event' | 'product' | 'system';
 
 const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIconType | null => {
   const normalized = normalizeTechnicalMarker(value);
@@ -423,7 +453,22 @@ const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIc
   if (normalized === '[sticker]' || normalized.startsWith('[sticker] ')) return 'sticker';
   if (normalized === '[contato]' || normalized.startsWith('[contato] ')) return 'contact';
   if (normalized === '[enquete]' || normalized.startsWith('[enquete] ')) return 'poll';
+  if (normalized === '[quiz]' || normalized.startsWith('[quiz] ')) return 'poll';
+  if (normalized === '[pergunta]' || normalized.startsWith('[pergunta] ')) return 'interactive';
+  if (normalized === '[evento]' || normalized.startsWith('[evento] ')) return 'event';
+  if (normalized === '[produto]' || normalized.startsWith('[produto] ')) return 'product';
+  if (normalized === '[catalogo]' || normalized.startsWith('[catalogo] ')) return 'product';
+  if (normalized === '[convite]' || normalized.startsWith('[convite] ')) return 'link';
+  if (normalized === '[newsletter]' || normalized.startsWith('[newsletter] ')) return 'link';
+  if (normalized === '[convite admin]' || normalized.startsWith('[convite admin] ')) return 'link';
+  if (normalized === '[sistema]' || normalized.startsWith('[sistema] ')) return 'system';
+  if (normalized === '[chamada]' || normalized.startsWith('[chamada] ')) return 'system';
+  if (normalized === '[fixada]' || normalized.startsWith('[fixada] ')) return 'interactive';
+  if (normalized === '[status]' || normalized.startsWith('[status] ')) return 'interactive';
+  if (normalized === '[album]' || normalized.startsWith('[album] ')) return 'image';
   if (normalized === '[resposta]' || normalized.startsWith('[resposta] ')) return 'interactive';
+  if (normalized === '[lista]' || normalized.startsWith('[lista] ')) return 'list';
+  if (normalized === '[botoes]' || normalized.startsWith('[botoes] ')) return 'interactive';
   if (normalized === '[mensagem interativa]' || normalized.startsWith('[mensagem interativa] ')) return 'interactive';
   return null;
 };
@@ -438,6 +483,10 @@ const CHAT_PREVIEW_ICON_CONFIG: Record<ChatPreviewIconType, { label: string; Ico
   sticker: { label: 'figurinha', Icon: Sticker },
   contact: { label: 'contato', Icon: UserRound },
   poll: { label: 'enquete', Icon: Vote },
+  list: { label: 'lista', Icon: MessageCircle },
+  event: { label: 'evento', Icon: CalendarDays },
+  product: { label: 'produto', Icon: FileImage },
+  system: { label: 'sistema', Icon: Info },
   interactive: { label: 'mensagem', Icon: MessageCircle },
 };
 

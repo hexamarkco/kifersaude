@@ -2405,7 +2405,10 @@ const HIDDEN_PREVIEW_TEXTS = new Set([
 
 const VISIBLE_MEDIA_MARKERS = new Set([
   '[imagem]', '[video]', '[documento]', '[audio]', '[link]',
-  '[localizacao]', '[sticker]', '[contato]', '[enquete]', '[resposta]', '[mensagem interativa]',
+  '[localizacao]', '[sticker]', '[contato]', '[enquete]', '[quiz]', '[pergunta]',
+  '[evento]', '[produto]', '[catalogo]', '[convite]', '[newsletter]', '[convite admin]',
+  '[sistema]', '[chamada]', '[fixada]', '[status]', '[album]',
+  '[resposta]', '[lista]', '[botoes]', '[mensagem interativa]',
 ]);
 
 const isHiddenPreviewText = (text: string | null | undefined, messageType?: string | null): boolean => {
@@ -2426,7 +2429,22 @@ const isHiddenPreviewText = (text: string | null | undefined, messageType?: stri
       : messageTypeKey === 'sticker' ? '[sticker]'
       : messageTypeKey === 'contact' || messageTypeKey === 'contact_list' ? '[contato]'
       : messageTypeKey === 'poll' ? '[enquete]'
+      : messageTypeKey === 'quiz' ? '[quiz]'
+      : messageTypeKey === 'question' ? '[pergunta]'
+      : messageTypeKey === 'event' ? '[evento]'
+      : messageTypeKey === 'product' ? '[produto]'
+      : messageTypeKey === 'catalog' ? '[catalogo]'
+      : messageTypeKey === 'group_invite' ? '[convite]'
+      : messageTypeKey === 'newsletter_invite' ? '[newsletter]'
+      : messageTypeKey === 'admin_invite' ? '[convite admin]'
+      : messageTypeKey === 'system' ? '[sistema]'
+      : messageTypeKey === 'call' ? '[chamada]'
+      : messageTypeKey === 'pin' ? '[fixada]'
+      : messageTypeKey === 'story' ? '[status]'
+      : messageTypeKey === 'album' ? '[album]'
       : messageTypeKey === 'reply' ? '[resposta]'
+      : messageTypeKey === 'list' ? '[lista]'
+      : messageTypeKey === 'buttons' ? '[botoes]'
       : messageTypeKey === 'interactive' || messageTypeKey === 'hsm' || messageTypeKey === 'carousel' ? '[mensagem interativa]'
       : '[' + messageTypeKey + ']')
     : null;
@@ -2522,6 +2540,9 @@ async function scheduleFlowJobs({
   scheduling,
   runtimeContext,
   anchorAt,
+  enrollmentId,
+  triggerMessageId,
+  triggerMessageAt,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
@@ -2530,6 +2551,9 @@ async function scheduleFlowJobs({
   scheduling: AutoContactSchedulingSettings;
   runtimeContext?: Record<string, string> | null;
   anchorAt?: Date;
+  enrollmentId?: string;
+  triggerMessageId?: string;
+  triggerMessageAt?: Date;
 }): Promise<void> {
   const now = new Date();
   const effectiveScheduling: AutoContactSchedulingSettings = {
@@ -2595,6 +2619,9 @@ async function scheduleFlowJobs({
       action_payload: finalActionPayload,
       scheduled_at: scheduledAt.toISOString(),
       status: 'pending',
+      enrollment_id: enrollmentId ?? null,
+      trigger_message_id: triggerMessageId ?? null,
+      trigger_message_at: triggerMessageAt?.toISOString() ?? null,
     };
   };
 
@@ -2619,12 +2646,25 @@ async function scheduleFlowJobs({
         : getSpreadSendAt(now, leadId, effectiveScheduling);
   }
 
-  await supabase
-    .from('auto_contact_flow_jobs')
-    .delete()
-    .eq('lead_id', leadId)
-    .eq('flow_id', flow.id)
-    .eq('status', 'pending');
+  // For enrollment-based flows: only delete pending jobs for the SAME enrollment
+  // (or legacy jobs without enrollment_id). Never delete a different enrollment's jobs.
+  if (enrollmentId) {
+    await supabase
+      .from('auto_contact_flow_jobs')
+      .delete()
+      .eq('lead_id', leadId)
+      .eq('flow_id', flow.id)
+      .eq('status', 'pending')
+      .or(`enrollment_id.is.null,enrollment_id.eq.${enrollmentId}`);
+  } else {
+    // Legacy path (lead_created, status_duration): delete all pending for lead+flow
+    await supabase
+      .from('auto_contact_flow_jobs')
+      .delete()
+      .eq('lead_id', leadId)
+      .eq('flow_id', flow.id)
+      .eq('status', 'pending');
+  }
 
   await supabase.from('auto_contact_flow_jobs').insert(buildJobRow(firstStep, 0, firstScheduledAt));
 }
@@ -2782,6 +2822,9 @@ async function scheduleNextFlowStep({
     action_payload: finalActionPayload,
     scheduled_at: scheduledAt.toISOString(),
     status: 'pending',
+    enrollment_id: completedJob.enrollment_id ?? null,
+    trigger_message_id: completedJob.trigger_message_id ?? null,
+    trigger_message_at: completedJob.trigger_message_at ?? null,
   });
 
   return scheduledAt;
@@ -2796,11 +2839,13 @@ async function cancelFlowJobs({
   supabase,
   leadId,
   flowId,
+  enrollmentId,
   reason,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
   flowId?: string | null;
+  enrollmentId?: string | null;
   reason?: string;
 }): Promise<void> {
   let query = supabase
@@ -2811,6 +2856,11 @@ async function cancelFlowJobs({
 
   if (flowId) {
     query = query.eq('flow_id', flowId);
+  }
+
+  // Enrollment-scoped: only cancel jobs belonging to this enrollment
+  if (enrollmentId) {
+    query = query.eq('enrollment_id', enrollmentId);
   }
 
   await query;
@@ -2994,13 +3044,38 @@ async function processFlowJobs({
         direction: 'outbound',
         visibleOnly: true,
       });
-      if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
+
+      // Enrollment-based guard: if inbound arrived AFTER the trigger message,
+      // this enrollment is stale — cancel only this enrollment's jobs.
+      const triggerAt = job.trigger_message_at ?? inactivityStartedAt;
+      if (latestInboundAt && isAfter(latestInboundAt, triggerAt)) {
         const reason = 'Cliente respondeu após a última mensagem enviada';
         await supabase
           .from('auto_contact_flow_jobs')
           .update({ status: 'skipped', last_error: reason })
           .eq('id', job.id);
-        await cancelFlowJobs({ supabase, leadId: lead.id, flowId: flow.id, reason });
+        // Cancel only jobs in the same enrollment (not all jobs for the lead)
+        if (job.enrollment_id) {
+          await cancelFlowJobs({ supabase, leadId: lead.id, flowId: flow.id, enrollmentId: job.enrollment_id, reason });
+        }
+        continue;
+      }
+
+      // Also skip if a newer outbound exists (operator sent a new message)
+      // and it's different from the trigger — the enrollment is stale
+      if (
+        job.trigger_message_at
+        && latestOutboundAt
+        && isAfter(latestOutboundAt, job.trigger_message_at)
+      ) {
+        const reason = 'Nova mensagem enviada após abertura desta janela';
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'skipped', last_error: reason })
+          .eq('id', job.id);
+        if (job.enrollment_id) {
+          await cancelFlowJobs({ supabase, leadId: lead.id, flowId: flow.id, enrollmentId: job.enrollment_id, reason });
+        }
         continue;
       }
     }
@@ -4320,6 +4395,9 @@ Deno.serve(async (req: Request) => {
         typeof payload?.inactivity_started_at === 'string' && !Number.isNaN(new Date(payload.inactivity_started_at).getTime())
           ? payload.inactivity_started_at
           : null;
+      const triggerMessageId = typeof payload?.trigger_message_id === 'string'
+        ? payload.trigger_message_id
+        : null;
 
       const lookups = await getLookups();
       const settings = await loadAutoContactFlowSettings(supabase);
@@ -4400,38 +4478,54 @@ Deno.serve(async (req: Request) => {
             });
           }
 
+          // Enrollment-based: check that the last visible message is outbound
+          // and no inbound has arrived after the trigger message.
           const latestInboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'inbound', visibleOnly: true });
           const latestOutboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'outbound', visibleOnly: true });
-          if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
-            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'new_chat_activity' }), {
+
+          // If no outbound exists, or inbound is newer than outbound, skip
+          if (!latestOutboundAt || (latestInboundAt && isAfter(latestInboundAt, latestOutboundAt))) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'last_message_not_outbound' }), {
               status: 200,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
 
-          const { data: activeJobs } = await supabase
+          // The trigger timestamp must be the last outbound (not an old one)
+          // If inactivityStartedAt (from cron) is older than latestOutboundAt,
+          // the cron used a stale reference — use the fresher one
+          const effectiveTriggerAt = isAfter(latestOutboundAt, inactivityStartedAt)
+            ? latestOutboundAt
+            : inactivityStartedAt;
+
+          // Dedup: check if an active enrollment already exists for this trigger
+          const { data: existingEnrollment } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('id')
+            .eq('lead_id', leadId)
+            .eq('flow_id', targetFlow.id)
+            .eq('trigger_message_at', effectiveTriggerAt)
+            .in('status', ['pending', 'processing'])
+            .limit(1)
+            .maybeSingle();
+          if (existingEnrollment) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'enrollment_already_exists' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          // Also check general active enrollment (any trigger) to prevent duplicates
+          const { data: anyActiveJob } = await supabase
             .from('auto_contact_flow_jobs')
             .select('id')
             .eq('lead_id', leadId)
             .eq('flow_id', targetFlow.id)
             .in('status', ['pending', 'processing'])
-            .limit(1);
-          if (activeJobs?.length) {
-            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'active_inactivity_flow' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          const { data: completedJobs } = await supabase
-            .from('auto_contact_flow_jobs')
-            .select('id')
-            .eq('lead_id', leadId)
-            .eq('flow_id', targetFlow.id)
-            .eq('status', 'completed')
-            .limit(1);
-          if (completedJobs?.length) {
-            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'flow_already_completed' }), {
+            .limit(1)
+            .maybeSingle();
+          if (anyActiveJob) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'active_enrollment_exists' }), {
               status: 200,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
@@ -4464,6 +4558,17 @@ Deno.serve(async (req: Request) => {
             )
           : new Date();
 
+        // Generate enrollment for inactivity flows
+        const enrollmentId = targetFlow.triggerType === 'inactivity_duration'
+          ? crypto.randomUUID()
+          : undefined;
+        const enrollmentTriggerMsgId = targetFlow.triggerType === 'inactivity_duration'
+          ? (triggerMessageId ?? undefined)
+          : undefined;
+        const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration' && inactivityStartedAt
+          ? new Date(inactivityStartedAt)
+          : undefined;
+
         await scheduleFlowJobs({
           supabase,
           leadId,
@@ -4472,6 +4577,9 @@ Deno.serve(async (req: Request) => {
           scheduling: settings.scheduling,
           runtimeContext,
           anchorAt,
+          enrollmentId,
+          triggerMessageId: enrollmentTriggerMsgId,
+          triggerMessageAt,
         });
 
         return new Response(JSON.stringify({ success: true, leadId, flowId: targetFlow.id }), {

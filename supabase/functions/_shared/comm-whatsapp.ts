@@ -896,6 +896,34 @@ const collectButtonLikeTexts = (value: unknown): string[] => {
   return collected;
 };
 
+const collectListSectionTexts = (value: unknown): string[] => {
+  if (!isRecord(value)) return [];
+
+  const fragments: string[] = [];
+
+  const label = toTrimmedString(value.label);
+  if (label) fragments.push(label);
+
+  const sections = value.sections;
+  if (Array.isArray(sections)) {
+    for (const section of sections) {
+      if (!isRecord(section)) continue;
+      const sectionTitle = toTrimmedString(section.title);
+      if (sectionTitle) fragments.push(sectionTitle);
+      const rows = section.rows;
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (!isRecord(row)) continue;
+          const rowTitle = toTrimmedString(row.title);
+          if (rowTitle) fragments.push(rowTitle);
+        }
+      }
+    }
+  }
+
+  return fragments;
+};
+
 const collectTextFragments = (value: unknown): string[] => {
   if (!value) return [];
 
@@ -935,7 +963,10 @@ const collectTextFragments = (value: unknown): string[] => {
   if (isRecord(value.action)) {
     fragments.push(...collectTextFragments(value.action));
     fragments.push(...collectButtonLikeTexts(value.action.buttons));
+    fragments.push(...collectListSectionTexts(value.action.list));
   }
+
+  fragments.push(...collectListSectionTexts(value.list));
 
   return fragments.filter(Boolean);
 };
@@ -993,6 +1024,11 @@ const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): stri
     ...collectTextFragments(message.hsm),
     ...collectTextFragments(message.carousel),
     ...collectTextFragments(message.reply),
+    ...collectTextFragments(message.list),
+    ...collectTextFragments(message.buttons),
+    ...collectTextFragments(message.event),
+    ...collectTextFragments(message.quiz),
+    ...collectTextFragments(message.question),
   ].filter(Boolean);
 
   const bestDirectCandidate = pickBestSummary(directCandidates);
@@ -1003,16 +1039,24 @@ const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): stri
   const interactive = isRecord(message.interactive) ? message.interactive : null;
   const hsm = isRecord(message.hsm) ? message.hsm : null;
   const carousel = isRecord(message.carousel) ? message.carousel : null;
+  const listMsg = isRecord(message.list) ? message.list : null;
 
   const buttonTexts = [
     ...collectButtonLikeTexts(interactive?.buttons),
     ...collectButtonLikeTexts((interactive?.action as Record<string, unknown> | undefined)?.buttons),
     ...collectButtonLikeTexts(hsm?.buttons),
     ...collectButtonLikeTexts(carousel?.cards),
+    ...collectButtonLikeTexts((message.buttons as Record<string, unknown> | undefined)?.buttons),
   ];
 
-  if (buttonTexts.length > 0) {
-    return buttonTexts.slice(0, 3).join(' • ');
+  const listItemTexts = [
+    ...collectListSectionTexts(interactive?.action ? (interactive.action as Record<string, unknown>).list : null),
+    ...collectListSectionTexts(listMsg),
+  ];
+
+  const combined = [...buttonTexts, ...listItemTexts];
+  if (combined.length > 0) {
+    return combined.slice(0, 3).join(' • ');
   }
 
   const quotedContent = isRecord(message.context) && isRecord(message.context.quoted_content)
@@ -1028,6 +1072,11 @@ const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): stri
   const quotedButtons = collectButtonLikeTexts(quotedContent?.buttons);
   if (quotedButtons.length > 0) {
     return quotedButtons.slice(0, 3).join(' • ');
+  }
+
+  if (interactive) {
+    const interactiveType = toTrimmedString(interactive.type).toLowerCase();
+    if (interactiveType === 'product') return '[Produto]';
   }
 
   return '';
@@ -1152,7 +1201,8 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     if (replyTitle) return replyTitle;
   }
 
-  if (type === 'interactive' || type === 'hsm' || type === 'carousel' || type === 'reply') {
+  const interactiveLikeTypes = ['interactive', 'hsm', 'carousel', 'reply', 'list', 'buttons', 'quiz', 'question', 'event'];
+  if (interactiveLikeTypes.includes(type)) {
     const interactiveSummary = summarizeInteractiveLikeMessage(message);
     if (interactiveSummary) return interactiveSummary;
   }
@@ -1168,6 +1218,7 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     case 'voice':
       return '[Audio]';
     case 'document':
+    case 'documentWithCaption':
       return '[Documento]';
     case 'location':
     case 'live_location':
@@ -1179,8 +1230,38 @@ export const summarizeWhapiMessage = (message: unknown): string => {
       return '[Contato]';
     case 'poll':
       return '[Enquete]';
+    case 'quiz':
+      return '[Quiz]';
+    case 'question':
+      return '[Pergunta]';
+    case 'event':
+      return '[Evento]';
+    case 'product':
+      return '[Produto]';
+    case 'catalog':
+      return '[Catalogo]';
+    case 'group_invite':
+      return '[Convite]';
+    case 'newsletter_invite':
+      return '[Newsletter]';
+    case 'admin_invite':
+      return '[Convite admin]';
+    case 'system':
+      return '[Sistema]';
+    case 'call':
+      return '[Chamada]';
+    case 'pin':
+      return '[Fixada]';
+    case 'story':
+      return '[Status]';
+    case 'album':
+      return '[Album]';
     case 'order':
       return '[Pedido]';
+    case 'list':
+      return '[Lista]';
+    case 'buttons':
+      return '[Botoes]';
     case 'reply':
       return '[Resposta interativa]';
     case 'interactive':

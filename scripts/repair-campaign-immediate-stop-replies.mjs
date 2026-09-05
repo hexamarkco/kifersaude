@@ -50,7 +50,22 @@ const visibleMarkers = new Set([
   '[sticker]',
   '[contato]',
   '[enquete]',
+  '[quiz]',
+  '[pergunta]',
+  '[evento]',
+  '[produto]',
+  '[catalogo]',
+  '[convite]',
+  '[newsletter]',
+  '[convite admin]',
+  '[sistema]',
+  '[chamada]',
+  '[fixada]',
+  '[status]',
+  '[album]',
   '[resposta]',
+  '[lista]',
+  '[botoes]',
   '[mensagem interativa]',
 ]);
 
@@ -103,7 +118,22 @@ function messagePreview(message) {
   if (messageType === 'sticker') return '[Sticker]';
   if (['contact', 'contact_list'].includes(messageType)) return '[Contato]';
   if (messageType === 'poll') return '[Enquete]';
+  if (messageType === 'quiz') return '[Quiz]';
+  if (messageType === 'question') return '[Pergunta]';
+  if (messageType === 'event') return '[Evento]';
+  if (messageType === 'product') return '[Produto]';
+  if (messageType === 'catalog') return '[Catalogo]';
+  if (messageType === 'group_invite') return '[Convite]';
+  if (messageType === 'newsletter_invite') return '[Newsletter]';
+  if (messageType === 'admin_invite') return '[Convite admin]';
+  if (messageType === 'system') return '[Sistema]';
+  if (messageType === 'call') return '[Chamada]';
+  if (messageType === 'pin') return '[Fixada]';
+  if (messageType === 'story') return '[Status]';
+  if (messageType === 'album') return '[Album]';
   if (messageType === 'reply') return '[Resposta]';
+  if (messageType === 'list') return '[Lista]';
+  if (messageType === 'buttons') return '[Botoes]';
   if (['interactive', 'hsm', 'carousel'].includes(messageType)) return '[Mensagem interativa]';
   return '';
 }

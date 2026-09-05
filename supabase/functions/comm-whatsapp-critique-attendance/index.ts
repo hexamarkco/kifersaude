@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -262,13 +262,15 @@ Deno.serve(async (req: Request) => {
       'Avalie como o atendente (VOCE) conduziu este atendimento especifico e retorne o JSON no formato pedido.',
     ].filter((line) => line !== null && line !== '').join('\n');
 
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'attendance.critique',
       task: 'attendance_critique',
       systemPrompt,
       userPrompt,
       temperature: aiConfig?.temperature || 0.3,
       maxTokens: aiConfig?.maxOutputTokens || 1100,
+      edgeFunction: 'comm-whatsapp-critique-attendance',
     });
 
     const critiquePayload = parseCritiquePayload(result.text);

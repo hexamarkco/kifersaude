@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
@@ -132,13 +132,15 @@ Deno.serve(async (req: Request) => {
     ].filter(Boolean).join('\n');
     const userPrompt = isOpeningMode ? buildOpeningUserPrompt(leadName) : buildReplyUserPrompt(history);
 
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'autonomous.reply',
       task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
       temperature: autonomousConfig?.temperature || 0.6,
       maxTokens: isOpeningMode ? (autonomousConfig?.maxOutputTokens || 450) : (autonomousConfig?.maxOutputTokens || 350),
+      edgeFunction: 'ai-sandbox-chat',
     });
 
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);

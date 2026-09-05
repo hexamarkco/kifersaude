@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -515,13 +515,15 @@ Deno.serve(async (req: Request) => {
           leadFirstName: leadFirstName ?? undefined,
         });
 
-        const result = await generateTextWithRouting({
+        const result = await generateTextForFeature({
           supabaseAdmin,
+          featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
           task: 'autonomous_attendance',
           systemPrompt,
           userPrompt,
           temperature: autonomousConfig?.temperature || 0.6,
           maxTokens: autonomousConfig?.maxOutputTokens || 350,
+          edgeFunction: 'ai-autonomous-reply-worker',
         });
 
         const { messages, handoffCode } = splitGeneratedReply(result.text, false);

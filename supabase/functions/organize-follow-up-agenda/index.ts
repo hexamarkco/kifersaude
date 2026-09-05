@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { corsHeaders, isRecord, toTrimmedString } from '../_shared/comm-whatsapp.ts';
@@ -441,8 +441,9 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
   try {
     const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AGENDA_ORGANIZE).catch(() => null);
 
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'agenda.organize',
       task: 'follow_up_agenda_organization',
       systemPrompt: aiConfig?.featurePrompt || [
         'Voce prioriza uma fila diaria de follow-ups comerciais de planos de saude usando principalmente o contexto real de mensagens de cada chat.',
@@ -454,7 +455,7 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
       userPrompt: JSON.stringify({ options, candidates: compact }),
       temperature: aiConfig?.temperature || 0.15,
       maxTokens: aiConfig?.maxOutputTokens || 1800,
-      preferDefaultModel: true,
+      edgeFunction: 'organize-follow-up-agenda',
     });
     const parsed = JSON.parse(result.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim());
     const items = Array.isArray(parsed?.items) ? parsed.items.flatMap((item: unknown) => {

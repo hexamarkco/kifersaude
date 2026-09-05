@@ -93,6 +93,66 @@ export type TranscribeAudioWithRoutingResult = {
   fallbackUsed: boolean;
 };
 
+// ============================================================
+// Telemetry types
+// ============================================================
+
+export type ProviderUsage = {
+  inputTokens: number | null;
+  cachedInputTokens: number | null;
+  outputTokens: number | null;
+  reasoningTokens: number | null;
+  totalTokens: number | null;
+};
+
+export type ProviderCallResult = {
+  text: string;
+  usage: ProviderUsage;
+};
+
+export type ModelResolutionSource = 'feature' | 'ai_routing' | 'provider_default' | 'fallback';
+
+export type ResolvedModel = {
+  provider: AiProvider;
+  model: string;
+  source: ModelResolutionSource;
+};
+
+export type AiCallLogContext = {
+  featureKey: string;
+  aiTask: AiTask;
+  edgeFunction?: string;
+  leadId?: string;
+  chatId?: string;
+  messageId?: string;
+};
+
+export type GenerateTextForFeatureOptions = {
+  supabaseAdmin: any;
+  featureKey: string;
+  task: AiTask;
+  systemPrompt: string;
+  userPrompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  edgeFunction?: string;
+  leadId?: string;
+  chatId?: string;
+  messageId?: string;
+};
+
+export type GenerateTextForFeatureResult = {
+  text: string;
+  provider: AiProvider;
+  model: string;
+  source: ModelResolutionSource;
+  fallbackUsed: boolean;
+  usage: ProviderUsage;
+  durationMs: number;
+  estimatedCostUsd: number | null;
+  callLogId: string | null;
+};
+
 const LEGACY_GPT_SLUG = 'gpt_transcription';
 const OPENAI_SLUG = 'ai_provider_openai';
 const GEMINI_SLUG = 'ai_provider_gemini';
@@ -465,7 +525,7 @@ const extractGeminiText = (payload: any): string => {
   return '';
 };
 
-const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams): Promise<string> => {
+const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
   const endpointBase = settings.baseUrl.replace(/\/+$/, '');
   const endpoint = `${endpointBase}/chat/completions`;
 
@@ -496,7 +556,17 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
         throw new Error('OpenAI retornou resposta vazia.');
       }
 
-      return text;
+      const usage = payload?.usage;
+      return {
+        text,
+        usage: {
+          inputTokens: usage?.prompt_tokens ?? null,
+          cachedInputTokens: usage?.cached_tokens ?? null,
+          outputTokens: usage?.completion_tokens ?? null,
+          reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens ?? null,
+          totalTokens: usage?.total_tokens ?? null,
+        },
+      };
     }
 
     const errorText = await response.text();
@@ -613,7 +683,7 @@ const callOpenAiTranscription = async (
   return text;
 };
 
-const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<string> => {
+const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -641,10 +711,20 @@ const callClaude = async (settings: ProviderSettings, params: ProviderCallParams
     throw new Error('Claude retornou resposta vazia.');
   }
 
-  return text;
+  const usage = payload?.usage;
+  return {
+    text,
+    usage: {
+      inputTokens: usage?.input_tokens ?? null,
+      cachedInputTokens: usage?.cache_read_input_tokens ?? null,
+      outputTokens: usage?.output_tokens ?? null,
+      reasoningTokens: null,
+      totalTokens: (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0),
+    },
+  };
 };
 
-const callGemini = async (settings: ProviderSettings, params: ProviderCallParams): Promise<string> => {
+const callGemini = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
   const normalizedModel = params.model.startsWith('models/') ? params.model : `models/${params.model}`;
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/${normalizedModel}:generateContent?key=${encodeURIComponent(
     settings.apiKey,
@@ -685,14 +765,24 @@ const callGemini = async (settings: ProviderSettings, params: ProviderCallParams
     throw new Error('Gemini retornou resposta vazia.');
   }
 
-  return text;
+  const usage = payload?.usageMetadata;
+  return {
+    text,
+    usage: {
+      inputTokens: usage?.promptTokenCount ?? null,
+      cachedInputTokens: null,
+      outputTokens: usage?.candidatesTokenCount ?? null,
+      reasoningTokens: null,
+      totalTokens: usage?.totalTokenCount ?? null,
+    },
+  };
 };
 
 const callProvider = async (
   provider: AiProvider,
   settings: ProviderSettings,
   params: ProviderCallParams,
-): Promise<string> => {
+): Promise<ProviderCallResult> => {
   if (provider === 'openai') {
     return callOpenAi(settings, params);
   }
@@ -715,6 +805,236 @@ const callProviderTranscription = async (
 
   throw new Error(`Transcricao de audio nao suportada pelo provedor ${provider}.`);
 };
+
+// ============================================================
+// Pricing cache + cost calculation
+// ============================================================
+
+type ModelPricingRow = {
+  model: string;
+  provider: string;
+  input_per_million: number;
+  cached_input_per_million: number | null;
+  output_per_million: number;
+  is_transcription: boolean;
+  transcription_per_minute: number | null;
+};
+
+const PRICING_CACHE_TTL_MS = 300_000; // 5 minutes
+let pricingCache: Map<string, ModelPricingRow> = new Map();
+let pricingCacheExpiresAt = 0;
+
+const loadPricingCache = async (supabaseAdmin: any): Promise<Map<string, ModelPricingRow>> => {
+  if (pricingCache.size > 0 && Date.now() < pricingCacheExpiresAt) {
+    return pricingCache;
+  }
+
+  try {
+    const { data } = await supabaseAdmin
+      .from('ai_model_pricing')
+      .select('model, provider, input_per_million, cached_input_per_million, output_per_million, is_transcription, transcription_per_minute')
+      .eq('active', true);
+
+    const newCache = new Map<string, ModelPricingRow>();
+    for (const row of (data ?? []) as ModelPricingRow[]) {
+      const key = `${row.provider}/${row.model}`;
+      newCache.set(key, row);
+    }
+    pricingCache = newCache;
+    pricingCacheExpiresAt = Date.now() + PRICING_CACHE_TTL_MS;
+  } catch {
+    // Pricing query failed — continue without cost calculation
+  }
+
+  return pricingCache;
+};
+
+export const calculateCost = (
+  provider: AiProvider,
+  model: string,
+  usage: ProviderUsage,
+  pricing: Map<string, ModelPricingRow>,
+): number | null => {
+  const key = `${provider}/${model}`;
+  const p = pricing.get(key);
+  if (!p) return null;
+
+  if (p.is_transcription) {
+    // For transcription, we don't have duration in token-based usage.
+    // Return null — caller should track duration separately if needed.
+    return null;
+  }
+
+  const inputTokens = usage.inputTokens ?? 0;
+  const cachedTokens = usage.cachedInputTokens ?? 0;
+  const nonCachedInput = Math.max(0, inputTokens - cachedTokens);
+  const outputTokens = usage.outputTokens ?? 0;
+
+  const inputCost = (nonCachedInput / 1_000_000) * Number(p.input_per_million);
+  const cachedCost = cachedTokens > 0 && p.cached_input_per_million
+    ? (cachedTokens / 1_000_000) * Number(p.cached_input_per_million)
+    : 0;
+  const outputCost = (outputTokens / 1_000_000) * Number(p.output_per_million);
+
+  return inputCost + cachedCost + outputCost;
+};
+
+// ============================================================
+// Model resolution for features
+// ============================================================
+
+export const resolveModelForFeature = async (
+  supabaseAdmin: any,
+  featureKey: string,
+  task: AiTask,
+): Promise<ResolvedModel> => {
+  const runtime = await loadAiRuntimeConfig(supabaseAdmin);
+  const taskRoute = runtime.routing[task];
+
+  // 1. Check feature override
+  try {
+    const { data: feature } = await supabaseAdmin
+      .from('ai_features')
+      .select('id')
+      .eq('key', featureKey)
+      .maybeSingle();
+
+    if (feature) {
+      const { data: config } = await supabaseAdmin
+        .from('ai_feature_configs')
+        .select('provider, model, model_override_enabled')
+        .eq('feature_id', feature.id)
+        .eq('is_active', true)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (config?.model_override_enabled && config.provider && config.model) {
+        const provider = isAiProvider(config.provider) ? config.provider : 'openai';
+        return {
+          provider,
+          model: config.model,
+          source: 'feature',
+        };
+      }
+    }
+  } catch {
+    // Feature config lookup failed — fall through to ai_routing
+  }
+
+  // 2. ai_routing
+  const provider = taskRoute.provider;
+  const providerSettings = runtime.providers[provider];
+
+  if (taskRoute.model) {
+    return {
+      provider,
+      model: getCompatibleTaskModel(task, provider, providerSettings, taskRoute.model),
+      source: 'ai_routing',
+    };
+  }
+
+  // 3. Provider default
+  return {
+    provider,
+    model: getTaskDefaultModel(task, provider, providerSettings),
+    source: 'provider_default',
+  };
+};
+
+// ============================================================
+// Telemetry persistence
+// ============================================================
+
+const logAiCallAttempt = async (
+  supabaseAdmin: any,
+  callId: string,
+  attemptNumber: number,
+  provider: AiProvider,
+  model: string,
+  source: ModelResolutionSource,
+  usage: ProviderUsage,
+  durationMs: number,
+  success: boolean,
+  costUsd: number | null,
+  error?: { code?: string; message?: string },
+): Promise<void> => {
+  try {
+    await supabaseAdmin.from('ai_call_attempts').insert({
+      call_id: callId,
+      attempt_number: attemptNumber,
+      provider,
+      model,
+      resolution_source: source,
+      input_tokens: usage.inputTokens,
+      cached_input_tokens: usage.cachedInputTokens,
+      output_tokens: usage.outputTokens,
+      reasoning_tokens: usage.reasoningTokens,
+      total_tokens: usage.totalTokens,
+      duration_ms: durationMs,
+      success,
+      estimated_cost_usd: costUsd,
+      error_code: error?.code ?? null,
+      error_message: error?.message ?? null,
+    });
+  } catch {
+    // Telemetry failure must not break the call
+  }
+};
+
+const logAiCall = async (
+  supabaseAdmin: any,
+  ctx: AiCallLogContext,
+  result: {
+    success: boolean;
+    finalProvider?: AiProvider;
+    finalModel?: string;
+    fallbackUsed: boolean;
+    attemptsCount: number;
+    totalInputTokens?: number;
+    totalCachedTokens?: number;
+    totalOutputTokens?: number;
+    totalReasoningTokens?: number;
+    totalTokens?: number;
+    totalDurationMs?: number;
+    totalCostUsd?: number | null;
+  },
+): Promise<string | null> => {
+  try {
+    const { data } = await supabaseAdmin
+      .from('ai_call_logs')
+      .insert({
+        feature_key: ctx.featureKey,
+        ai_task: ctx.aiTask,
+        edge_function: ctx.edgeFunction ?? null,
+        success: result.success,
+        final_provider: result.finalProvider ?? null,
+        final_model: result.finalModel ?? null,
+        fallback_used: result.fallbackUsed,
+        attempts_count: result.attemptsCount,
+        total_input_tokens: result.totalInputTokens ?? null,
+        total_cached_tokens: result.totalCachedTokens ?? null,
+        total_output_tokens: result.totalOutputTokens ?? null,
+        total_reasoning_tokens: result.totalReasoningTokens ?? null,
+        total_tokens: result.totalTokens ?? null,
+        total_duration_ms: result.totalDurationMs ?? null,
+        total_estimated_cost_usd: result.totalCostUsd ?? null,
+        lead_id: ctx.leadId ?? null,
+        chat_id: ctx.chatId ?? null,
+        message_id: ctx.messageId ?? null,
+      })
+      .select('id')
+      .maybeSingle();
+
+    return data?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+// ============================================================
+// Provider calls with usage extraction
+// ============================================================
 
 const canUseProvider = (provider: ProviderSettings): { ok: boolean; reason: string } => {
   if (!provider.enabled) {
@@ -787,7 +1107,7 @@ export const generateTextWithRouting = async (
     }
 
     try {
-      const text = await callProvider(attempt.provider, providerSettings, {
+      const result = await callProvider(attempt.provider, providerSettings, {
         model: attempt.model,
         systemPrompt: options.systemPrompt,
         userPrompt: options.userPrompt,
@@ -796,8 +1116,12 @@ export const generateTextWithRouting = async (
         task: options.task,
       });
 
+      if (!result.text) {
+        throw new Error('Resposta vazia do provider.');
+      }
+
       return {
-        text,
+        text: result.text,
         provider: attempt.provider,
         model: attempt.model,
         fallbackUsed: index > 0,
@@ -814,6 +1138,7 @@ export const generateTextWithRouting = async (
 export const transcribeAudioWithRouting = async (
   options: TranscribeAudioWithRoutingOptions,
 ): Promise<TranscribeAudioWithRoutingResult> => {
+  const startTime = Date.now();
   const runtime = await loadAiRuntimeConfig(options.supabaseAdmin);
   const taskRoute = runtime.routing.whatsapp_audio_transcription;
 
@@ -827,8 +1152,8 @@ export const transcribeAudioWithRouting = async (
   );
   const preferredDefaultModel = getTaskDefaultModel('whatsapp_audio_transcription', preferredProvider, preferredProviderSettings);
 
-  const attempts: Array<{ provider: AiProvider; model: string }> = [
-    { provider: preferredProvider, model: preferredModel },
+  const attempts: Array<{ provider: AiProvider; model: string; source: ModelResolutionSource }> = [
+    { provider: preferredProvider, model: preferredModel, source: 'ai_routing' },
   ];
 
   if (
@@ -836,7 +1161,7 @@ export const transcribeAudioWithRouting = async (
     preferredModel !== preferredDefaultModel &&
     isOpenAiTranscriptionModel(preferredDefaultModel)
   ) {
-    attempts.push({ provider: preferredProvider, model: preferredDefaultModel });
+    attempts.push({ provider: preferredProvider, model: preferredDefaultModel, source: 'provider_default' });
   }
 
   if (taskRoute.fallbackToOpenAi && runtime.fallbackProvider !== preferredProvider) {
@@ -851,10 +1176,24 @@ export const transcribeAudioWithRouting = async (
     attempts.push({
       provider: fallbackProvider,
       model: fallbackModel,
+      source: 'fallback',
     });
   }
 
   const failures: string[] = [];
+  const emptyUsage: ProviderUsage = { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null };
+
+  // Create call log (fire-and-forget)
+  const callLogId = await logAiCall(options.supabaseAdmin, {
+    featureKey: 'audio.transcribe',
+    aiTask: 'whatsapp_audio_transcription',
+    edgeFunction: null,
+  }, {
+    success: false,
+    fallbackUsed: false,
+    attemptsCount: 0,
+    totalDurationMs: 0,
+  }).catch(() => null);
 
   for (let index = 0; index < attempts.length; index += 1) {
     const attempt = attempts[index];
@@ -866,6 +1205,7 @@ export const transcribeAudioWithRouting = async (
       continue;
     }
 
+    const attemptStart = Date.now();
     try {
       const text = await callProviderTranscription(attempt.provider, providerSettings, {
         model: attempt.model,
@@ -874,6 +1214,31 @@ export const transcribeAudioWithRouting = async (
         mimeType: options.mimeType,
         prompt: options.prompt,
       });
+
+      const attemptDuration = Date.now() - attemptStart;
+      const totalDuration = Date.now() - startTime;
+
+      // Persist attempt (fire-and-forget)
+      logAiCallAttempt(
+        options.supabaseAdmin, callLogId!, index + 1,
+        attempt.provider, attempt.model, attempt.source,
+        emptyUsage, attemptDuration, true, null,
+      ).catch(() => {});
+
+      // Update call log with success (fire-and-forget)
+      logAiCall(options.supabaseAdmin, {
+        featureKey: 'audio.transcribe',
+        aiTask: 'whatsapp_audio_transcription',
+        edgeFunction: null,
+      }, {
+        success: true,
+        finalProvider: attempt.provider,
+        finalModel: attempt.model,
+        fallbackUsed: index > 0,
+        attemptsCount: index + 1,
+        totalDurationMs: totalDuration,
+        totalCostUsd: null,
+      }).catch(() => {});
 
       return {
         text,
@@ -884,10 +1249,231 @@ export const transcribeAudioWithRouting = async (
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push(`${attempt.provider}: ${message}`);
+
+      const attemptDuration = Date.now() - attemptStart;
+
+      // Persist failed attempt (fire-and-forget)
+      logAiCallAttempt(
+        options.supabaseAdmin, callLogId!, index + 1,
+        attempt.provider, attempt.model, attempt.source,
+        emptyUsage, attemptDuration, false, null,
+        { message },
+      ).catch(() => {});
     }
   }
 
   throw new Error(`Nao foi possivel transcrever audio por IA. Tentativas: ${failures.join(' | ')}`);
+};
+
+// ============================================================
+// generateTextForFeature — central entry point for all AI features
+// ============================================================
+
+/**
+ * Central entry point for all AI feature calls.
+ *
+ * Resolves model via: feature override > ai_routing > provider default > fallback.
+ * Executes up to 3 attempts (preferred, default model, fallback provider).
+ * Logs every attempt and the summary call to ai_call_attempts / ai_call_logs.
+ *
+ * Uses preferDefaultModel only when explicitly passed (for legacy non-feature paths
+ * like campaign.intent and agenda.organize that still need it).
+ */
+export const generateTextForFeature = async (
+  options: GenerateTextForFeatureOptions,
+): Promise<GenerateTextForFeatureResult> => {
+  const startTime = Date.now();
+  const runtime = await loadAiRuntimeConfig(options.supabaseAdmin);
+
+  // Resolve model with precedence: feature > ai_routing > provider default
+  const resolved = await resolveModelForFeature(options.supabaseAdmin, options.featureKey, options.task);
+  const taskRoute = runtime.routing[options.task];
+
+  // Build attempt list following the same fallback chain as generateTextWithRouting
+  const preferredProvider = resolved.provider;
+  const preferredProviderSettings = runtime.providers[preferredProvider];
+  const preferredDefaultModel = getTaskDefaultModel(options.task, preferredProvider, preferredProviderSettings);
+
+  const attempts: Array<{ provider: AiProvider; model: string; source: ModelResolutionSource }> = [
+    { provider: preferredProvider, model: resolved.model, source: resolved.source },
+  ];
+
+  if (
+    preferredProvider === 'openai' &&
+    resolved.model !== preferredDefaultModel &&
+    isOpenAiTextModel(preferredDefaultModel)
+  ) {
+    attempts.push({ provider: preferredProvider, model: preferredDefaultModel, source: 'provider_default' });
+  }
+
+  const allowFallback = taskRoute.fallbackToOpenAi;
+  const fallbackProvider = runtime.fallbackProvider;
+  if (allowFallback && fallbackProvider !== preferredProvider) {
+    const fallbackSettings = runtime.providers[fallbackProvider];
+    const fallbackModel = getCompatibleTaskModel(
+      options.task,
+      fallbackProvider,
+      fallbackSettings,
+      getTaskDefaultModel(options.task, fallbackProvider, fallbackSettings),
+    );
+    attempts.push({ provider: fallbackProvider, model: fallbackModel, source: 'fallback' });
+  }
+
+  // Load pricing for cost calculation
+  const pricing = await loadPricingCache(options.supabaseAdmin);
+
+  // Create the call log entry
+  const callLogId = await logAiCall(options.supabaseAdmin, {
+    featureKey: options.featureKey,
+    aiTask: options.task,
+    edgeFunction: options.edgeFunction,
+    leadId: options.leadId,
+    chatId: options.chatId,
+    messageId: options.messageId,
+  }, {
+    success: false,
+    finalProvider: undefined,
+    finalModel: undefined,
+    fallbackUsed: false,
+    attemptsCount: 0,
+  });
+
+  const failures: string[] = [];
+  let totalCostUsd = 0;
+  let totalInput = 0;
+  let totalCached = 0;
+  let totalOutput = 0;
+  let totalReasoning = 0;
+  let totalTokensSum = 0;
+
+  for (let index = 0; index < attempts.length; index += 1) {
+    const attempt = attempts[index];
+    const providerSettings = runtime.providers[attempt.provider];
+    const providerStatus = canUseProvider(providerSettings);
+
+    if (!providerStatus.ok) {
+      failures.push(`${attempt.provider}: ${providerStatus.reason}`);
+
+      // Log failed attempt (no usage)
+      await logAiCallAttempt(
+        options.supabaseAdmin, callLogId!, index + 1,
+        attempt.provider, attempt.model, attempt.source,
+        { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
+        0, false, null,
+        { message: providerStatus.reason },
+      );
+      continue;
+    }
+
+    const attemptStart = Date.now();
+    try {
+      const result = await callProvider(attempt.provider, providerSettings, {
+        model: attempt.model,
+        systemPrompt: options.systemPrompt,
+        userPrompt: options.userPrompt,
+        temperature: options.temperature ?? 0.4,
+        maxTokens: options.maxTokens ?? 900,
+        task: options.task,
+      });
+
+      const attemptDuration = Date.now() - attemptStart;
+
+      if (!result.text) {
+        throw new Error('Resposta vazia do provider.');
+      }
+
+      // Calculate cost for this attempt
+      const cost = calculateCost(attempt.provider, attempt.model, result.usage, pricing);
+
+      // Persist attempt telemetry (fire-and-forget)
+      logAiCallAttempt(
+        options.supabaseAdmin, callLogId!, index + 1,
+        attempt.provider, attempt.model, attempt.source,
+        result.usage, attemptDuration, true, cost,
+      ).catch(() => {});
+
+      // Accumulate totals
+      if (cost !== null) totalCostUsd += cost;
+      if (result.usage.inputTokens !== null) totalInput += result.usage.inputTokens;
+      if (result.usage.cachedInputTokens !== null) totalCached += result.usage.cachedInputTokens;
+      if (result.usage.outputTokens !== null) totalOutput += result.usage.outputTokens;
+      if (result.usage.reasoningTokens !== null) totalReasoning += result.usage.reasoningTokens;
+      if (result.usage.totalTokens !== null) totalTokensSum += result.usage.totalTokens;
+
+      // Update call log with success
+      logAiCall(options.supabaseAdmin, {
+        featureKey: options.featureKey,
+        aiTask: options.task,
+        edgeFunction: options.edgeFunction,
+        leadId: options.leadId,
+        chatId: options.chatId,
+        messageId: options.messageId,
+      }, {
+        success: true,
+        finalProvider: attempt.provider,
+        finalModel: attempt.model,
+        fallbackUsed: index > 0,
+        attemptsCount: index + 1,
+        totalInputTokens: totalInput,
+        totalCachedTokens: totalCached,
+        totalOutputTokens: totalOutput,
+        totalReasoningTokens: totalReasoning,
+        totalTokens: totalTokensSum,
+        totalDurationMs: Date.now() - startTime,
+        totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
+      }).catch(() => {});
+
+      return {
+        text: result.text,
+        provider: attempt.provider,
+        model: attempt.model,
+        source: attempt.source,
+        fallbackUsed: index > 0,
+        usage: result.usage,
+        durationMs: Date.now() - startTime,
+        estimatedCostUsd: cost,
+        callLogId,
+      };
+    } catch (error) {
+      const attemptDuration = Date.now() - attemptStart;
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${attempt.provider}: ${message}`);
+
+      // Log failed attempt
+      logAiCallAttempt(
+        options.supabaseAdmin, callLogId!, index + 1,
+        attempt.provider, attempt.model, attempt.source,
+        { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
+        attemptDuration, false, null,
+        { message },
+      ).catch(() => {});
+    }
+  }
+
+  // All attempts failed — update call log
+  logAiCall(options.supabaseAdmin, {
+    featureKey: options.featureKey,
+    aiTask: options.task,
+    edgeFunction: options.edgeFunction,
+    leadId: options.leadId,
+    chatId: options.chatId,
+    messageId: options.messageId,
+  }, {
+    success: false,
+    finalProvider: attempts[attempts.length - 1]?.provider,
+    finalModel: attempts[attempts.length - 1]?.model,
+    fallbackUsed: attempts.length > 1,
+    attemptsCount: attempts.length,
+    totalInputTokens: totalInput,
+    totalCachedTokens: totalCached,
+    totalOutputTokens: totalOutput,
+    totalReasoningTokens: totalReasoning,
+    totalTokens: totalTokensSum,
+    totalDurationMs: Date.now() - startTime,
+    totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
+  }).catch(() => {});
+
+  throw new Error(`Nao foi possivel gerar resposta por IA. Tentativas: ${failures.join(' | ')}`);
 };
 
 export const aiProviderSlugByProvider: Record<AiProvider, string> = {

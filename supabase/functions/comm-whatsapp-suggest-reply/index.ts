@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -327,13 +327,15 @@ Deno.serve(async (req: Request) => {
         : 'Gere a melhor proxima resposta para este lead. Use os detalhes CONCRETOS do historico. A resposta deve fazer sentido UNICAMENTE para esta conversa.',
     ].filter((line) => line !== null && line !== '').join('\n');
 
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'message.suggest',
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
       temperature: composerDraft ? (aiConfig?.temperature || 0.4) : 0.65,
       maxTokens: aiConfig?.maxOutputTokens || 420,
+      edgeFunction: 'comm-whatsapp-suggest-reply',
     });
 
     const text = sanitizeGeneratedText(result.text);

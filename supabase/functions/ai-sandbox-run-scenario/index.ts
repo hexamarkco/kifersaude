@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
@@ -210,13 +210,15 @@ Deno.serve(async (req: Request) => {
     // ---- Abertura ----
 
     if (startMode === 'ai_opens') {
-      const result = await generateTextWithRouting({
+      const result = await generateTextForFeature({
         supabaseAdmin,
+        featureKey: 'sandbox.chat',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildOpeningUserPrompt(leadName),
         temperature: 0.6,
         maxTokens: 450,
+        edgeFunction: 'ai-sandbox-run-scenario',
       });
       const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, true);
       lastProvider = result.provider;
@@ -245,13 +247,15 @@ Deno.serve(async (req: Request) => {
     while (turn < maxTurns && !handoffTriggered) {
       // Turno do lead simulado (pula se acabamos de inserir a 1a mensagem dele manualmente neste turno 0)
       if (!(turn === 0 && startMode === 'lead_opens' && firstLeadMessage)) {
-        const leadResult = await generateTextWithRouting({
+        const leadResult = await generateTextForFeature({
           supabaseAdmin,
+          featureKey: 'sandbox.scenario',
           task: 'autonomous_attendance',
           systemPrompt: leadSystemPrompt,
           userPrompt: buildLeadUserPrompt(history),
           temperature: 0.85,
           maxTokens: 180,
+          edgeFunction: 'ai-sandbox-run-scenario',
         });
         const leadText = leadResult.text.trim();
         if (!leadText) break;
@@ -259,13 +263,15 @@ Deno.serve(async (req: Request) => {
       }
 
       // Turno do atendente
-      const result = await generateTextWithRouting({
+      const result = await generateTextForFeature({
         supabaseAdmin,
+        featureKey: 'sandbox.chat',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildReplyUserPrompt(history),
         temperature: 0.6,
         maxTokens: 350,
+        edgeFunction: 'ai-sandbox-run-scenario',
       });
       lastProvider = result.provider;
       lastModel = result.model;
@@ -295,13 +301,15 @@ Deno.serve(async (req: Request) => {
     // ---- Avaliacao (juiz) ----
 
     const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(history, handoffTriggered, finalHandoffCode);
-    const judgeResult = await generateTextWithRouting({
+    const judgeResult = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'sandbox.scenario',
       task: 'attendance_critique',
       systemPrompt: judgeSystemPrompt,
       userPrompt: judgeUserPrompt,
       temperature: 0.2,
       maxTokens: 600,
+      edgeFunction: 'ai-sandbox-run-scenario',
     });
     const verdict = parseVerdict(judgeResult.text);
 

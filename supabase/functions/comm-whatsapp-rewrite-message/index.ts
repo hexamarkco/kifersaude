@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -187,13 +187,15 @@ Deno.serve(async (req: Request) => {
         : 'Reescreva a mensagem acima seguindo as instrucoes do sistema e mantendo o texto pronto para colar no composer do WhatsApp.',
     ].join('\n');
 
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'message.rewrite',
       task: 'rewrite_message',
       systemPrompt,
       userPrompt,
       temperature: tone === 'grammar' || tone === 'adapt_context' ? 0.2 : (aiConfig?.temperature || 0.45),
       maxTokens: aiConfig?.maxOutputTokens || 420,
+      edgeFunction: 'comm-whatsapp-rewrite-message',
     });
 
     const rewrittenText = sanitizeGeneratedText(result.text);

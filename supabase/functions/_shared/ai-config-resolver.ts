@@ -28,6 +28,7 @@ export type ResolvedAIFeatureConfig = {
   provider: AiProvider;
   model: string;
   fallbackModel: string | null;
+  modelOverrideEnabled: boolean;
   temperature: number;
   maxOutputTokens: number;
   reasoningEffort: 'none' | 'minimal' | null;
@@ -204,6 +205,7 @@ function buildDefaultConfig(featureKey: AIFeatureKey): ResolvedAIFeatureConfig {
     provider: meta.defaultProvider,
     model: meta.defaultModel,
     fallbackModel: null,
+    modelOverrideEnabled: false,
     temperature: meta.defaultTemperature,
     maxOutputTokens: meta.defaultMaxTokens,
     reasoningEffort: meta.defaultReasoningEffort,
@@ -232,6 +234,7 @@ function mergeWithDefaults(
     provider: (config.provider as AiProvider) || meta.defaultProvider,
     model: config.model || meta.defaultModel,
     fallbackModel: config.fallback_model ?? null,
+    modelOverrideEnabled: Boolean(config.model_override_enabled),
     temperature: config.temperature ?? meta.defaultTemperature,
     maxOutputTokens: config.max_output_tokens ?? meta.defaultMaxTokens,
     reasoningEffort: config.reasoning_effort ?? meta.defaultReasoningEffort,

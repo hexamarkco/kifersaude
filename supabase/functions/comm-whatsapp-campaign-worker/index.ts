@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -635,14 +635,15 @@ async function classifyInboundCampaignIntent(params: {
   });
 
   try {
-    const result = await generateTextWithRouting({
+    const result = await generateTextForFeature({
       supabaseAdmin: params.supabaseAdmin,
+      featureKey: AI_FEATURES.CAMPAIGN_INTENT,
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
       temperature: 0.1,
       maxTokens: 280,
-      preferDefaultModel: true,
+      edgeFunction: 'comm-whatsapp-campaign-worker',
     });
     const classification = normalizeClassification(extractJsonObject(result.text));
 

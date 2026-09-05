@@ -3,7 +3,9 @@ import type {
   AiFeatureWithConfig,
   AiFeatureConfigRow,
   AiGlobalConfigRow,
+  AiProviderSlug,
 } from "./aiConfigTypes";
+import { AI_MODEL_LABELS } from "./aiConfigTypes";
 
 type ServiceResult<T> = { data: T | null; error: string | null };
 
@@ -66,6 +68,9 @@ export const aiConfigService = {
       output_instructions: string;
       temperature: number;
       max_output_tokens: number;
+      provider?: AiProviderSlug;
+      model?: string;
+      model_override_enabled?: boolean;
     },
   ): Promise<ServiceResult<AiFeatureConfigRow>> {
     const { data: existing, error: fetchErr } = await supabase
@@ -90,18 +95,25 @@ export const aiConfigService = {
       console.error('[AIConfig] Failed to deactivate old versions:', deactivateError.message);
     }
 
+    const insertPayload: Record<string, unknown> = {
+      feature_id: featureId,
+      version: nextVersion,
+      feature_prompt: payload.feature_prompt,
+      output_instructions: payload.output_instructions,
+      temperature: payload.temperature,
+      max_output_tokens: payload.max_output_tokens,
+      is_active: true,
+    };
+
+    if (payload.provider !== undefined) insertPayload.provider = payload.provider;
+    if (payload.model !== undefined) insertPayload.model = payload.model;
+    if (payload.model_override_enabled !== undefined) {
+      insertPayload.model_override_enabled = payload.model_override_enabled;
+    }
+
     const { data, error } = await supabase
       .from(TABLE_CONFIGS)
-      .insert({
-        feature_id: featureId,
-        version: nextVersion,
-        feature_prompt: payload.feature_prompt,
-        output_instructions: payload.output_instructions,
-        temperature: payload.temperature,
-        max_output_tokens: payload.max_output_tokens,
-        is_active: true,
-        activated_at: new Date().toISOString(),
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -111,10 +123,7 @@ export const aiConfigService = {
   async deactivateConfig(configId: string): Promise<ServiceResult<boolean>> {
     const { error } = await supabase
       .from(TABLE_CONFIGS)
-      .update({
-        is_active: false,
-        deactivated_at: new Date().toISOString(),
-      })
+      .update({ is_active: false })
       .eq("id", configId);
 
     return { data: error ? null : true, error: error?.message ?? null };
@@ -125,8 +134,6 @@ export const aiConfigService = {
       .from(TABLE_CONFIGS)
       .update({
         is_active: true,
-        activated_at: new Date().toISOString(),
-        deactivated_at: null,
       })
       .eq("id", configId);
 
@@ -162,5 +169,36 @@ export const aiConfigService = {
       .eq("id", configId);
 
     return { data: error ? null : true, error: error?.message ?? null };
+  },
+
+  async fetchAvailableModels(): Promise<ServiceResult<Array<{ provider: string; model: string; label: string }>>> {
+    const { data, error } = await supabase
+      .from("ai_model_pricing")
+      .select("provider, model")
+      .eq("active", true)
+      .order("provider")
+      .order("model");
+
+    if (error) return { data: null, error: error.message };
+
+    const models = (data ?? []).map((row: { provider: string; model: string }) => ({
+      provider: row.provider,
+      model: row.model,
+      label: AI_MODEL_LABELS[row.model] ?? row.model,
+    }));
+
+    return { data: models, error: null };
+  },
+
+  async fetchEffectiveModel(
+    featureKey: string,
+    aiTask: string,
+  ): Promise<ServiceResult<{ provider: string; model: string; source: string; sourceLabel: string }>> {
+    const { data, error } = await supabase.functions.invoke("resolve-ai-model", {
+      body: { featureKey, aiTask },
+    });
+
+    if (error) return { data: null, error: error.message };
+    return { data, error: null };
   },
 };

@@ -1,6 +1,6 @@
 ﻿import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
@@ -1542,13 +1542,15 @@ Deno.serve(async (req: Request) => {
         'Tarefa: Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat. Retorne somente a mensagem final em texto puro.',
       ].filter(Boolean).join('\n');
 
-      const result = await generateTextWithRouting({
+      const result = await generateTextForFeature({
         supabaseAdmin,
+        featureKey: 'followup.refine',
         task: 'follow_up_generation',
         systemPrompt: refinementSystemPrompt,
         userPrompt: refinementUserPrompt,
         temperature: hasCustomInstructions ? 0.5 : (refineConfig?.temperature || 0.7),
         maxTokens: refineConfig?.maxOutputTokens || 320,
+        edgeFunction: 'comm-whatsapp-generate-follow-up',
       });
 
       const responseText = normalizeGreetingForTemporalFacts(
@@ -1583,13 +1585,15 @@ Deno.serve(async (req: Request) => {
 
     const analysisConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.FOLLOWUP_ANALYSIS).catch(() => null);
 
-    const analysisResult = await generateTextWithRouting({
+    const analysisResult = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'followup.analysis',
       task: 'follow_up_analysis',
       systemPrompt: analysisConfig?.featurePrompt || ANALYSIS_SYSTEM_PROMPT,
       userPrompt: analysisUserPrompt,
       temperature: analysisConfig?.temperature || 0.3,
       maxTokens: analysisConfig?.maxOutputTokens || 900,
+      edgeFunction: 'comm-whatsapp-generate-follow-up',
     });
 
     let analysisAndStrategy: AnalysisAndStrategyResult;
@@ -1597,13 +1601,15 @@ Deno.serve(async (req: Request) => {
       analysisAndStrategy = JSON.parse(analysisResult.text.trim()) as AnalysisAndStrategyResult;
     } catch {
       console.error('[FollowUpAI][v3] CALL 1 returned invalid JSON, falling back to single-call');
-      const fallbackResult = await generateTextWithRouting({
+      const fallbackResult = await generateTextForFeature({
         supabaseAdmin,
+        featureKey: 'followup.analysis',
         task: 'follow_up_generation',
         systemPrompt: 'Gere um follow-up de WhatsApp simples e direto para este chat.',
         userPrompt: baseContextPrompt,
         temperature: 0.7,
         maxTokens: 520,
+        edgeFunction: 'comm-whatsapp-generate-follow-up',
       });
       return new Response(
         JSON.stringify({
@@ -1766,13 +1772,15 @@ Deno.serve(async (req: Request) => {
       maxTokens,
     });
 
-    let copyResult = await generateTextWithRouting({
+    let copyResult = await generateTextForFeature({
       supabaseAdmin,
+      featureKey: 'followup.generate',
       task: 'follow_up_generation',
       systemPrompt: copySystemPrompt,
       userPrompt: copyUserPrompt,
       temperature: hasCustomInstructions ? 0.5 : (copyConfig?.temperature || 0.7),
       maxTokens,
+      edgeFunction: 'comm-whatsapp-generate-follow-up',
     });
 
     let parsed = parseFollowUpGenerationResult(copyResult.text, shouldGenerateVariations);
@@ -1789,13 +1797,15 @@ Deno.serve(async (req: Request) => {
     if (!isValidFollowUpGenerationResult(parsed, shouldGenerateVariations)) {
       console.warn('[FollowUpAI][v3] copy response did not follow schema, retrying once');
       try {
-        const retryResult = await generateTextWithRouting({
+        const retryResult = await generateTextForFeature({
           supabaseAdmin,
+          featureKey: 'followup.generate',
           task: 'follow_up_generation',
           systemPrompt: `${copySystemPrompt}\n\nATENCAO: sua resposta anterior nao seguiu exatamente o formato JSON exigido. Retorne SOMENTE o JSON valido no formato especificado, sem nenhum texto fora do JSON e sem markdown.`,
           userPrompt: copyUserPrompt,
           temperature: hasCustomInstructions ? 0.5 : (copyConfig?.temperature || 0.7),
           maxTokens,
+          edgeFunction: 'comm-whatsapp-generate-follow-up',
         });
         const retryParsed = parseFollowUpGenerationResult(retryResult.text, shouldGenerateVariations);
         if (isValidFollowUpGenerationResult(retryParsed, shouldGenerateVariations)) {
@@ -1855,13 +1865,15 @@ Deno.serve(async (req: Request) => {
           ].join('\n');
 
           try {
-            const retryResult = await generateTextWithRouting({
+            const retryResult = await generateTextForFeature({
               supabaseAdmin,
+              featureKey: 'followup.generate',
               task: 'follow_up_generation',
               systemPrompt: copySystemPrompt,
               userPrompt: retryCopyPrompt,
               temperature: hasCustomInstructions ? 0.5 : 0.7,
               maxTokens,
+              edgeFunction: 'comm-whatsapp-generate-follow-up',
             });
 
             const retryParsed = parseFollowUpGenerationResult(retryResult.text, false);
@@ -1934,13 +1946,15 @@ Deno.serve(async (req: Request) => {
     if (!responseText && aiContext?.currentAction !== 'wait') {
       console.warn('[FollowUpAI][v3] no valid text, trying fallback single-call');
       try {
-        const fallbackResult = await generateTextWithRouting({
+        const fallbackResult = await generateTextForFeature({
           supabaseAdmin,
+          featureKey: 'followup.generate',
           task: 'follow_up_generation',
           systemPrompt: 'Voce e uma corretora de saude escrevendo uma mensagem de follow-up no WhatsApp. Gere APENAS o texto da mensagem, sem JSON, sem explicacoes, direto ao ponto.',
           userPrompt: baseContextPrompt,
           temperature: 0.7,
           maxTokens: 520,
+          edgeFunction: 'comm-whatsapp-generate-follow-up',
         });
         const fallbackText = sanitizeGeneratedText(fallbackResult.text.trim());
         if (fallbackText) {

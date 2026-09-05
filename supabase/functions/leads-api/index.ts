@@ -4565,8 +4565,9 @@ Deno.serve(async (req: Request) => {
         const enrollmentTriggerMsgId = targetFlow.triggerType === 'inactivity_duration'
           ? (triggerMessageId ?? undefined)
           : undefined;
-        const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration' && inactivityStartedAt
-          ? new Date(inactivityStartedAt)
+        // Use effectiveTriggerAt (not raw inactivityStartedAt) so dedup matches what's stored
+        const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration'
+          ? effectiveTriggerAt
           : undefined;
 
         await scheduleFlowJobs({

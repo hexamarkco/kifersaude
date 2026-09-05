@@ -1,15 +1,14 @@
 /*
-  # Adapt claim query to also block on non-terminal step_dispatches
+  # Adapt claim query to support burst retry
 
-  The existing NOT EXISTS on target_provider_send_started /
-  target_provider_accepted_persistence_pending events continues to work for
-  the single-message path. This migration adds an additional guard: a target
-  with any step_dispatch in ('sending') state cannot be re-claimed, since a
-  burst is actively in progress.
+  Guard 2 is refined: a target with pending/sending dispatches is normally
+  blocked, UNLESS there is a failed dispatch with next_retry_at <= now()
+  (meaning a retry is due). This prevents the deadlock where:
+    - msg4 fails retryable → msg5 stays pending → target blocked forever.
 
-  Dispatches in 'pending' state DO block re-claim too (the stage was
-  reserved but the burst hasn't started — the lease holder should be the
-  one to execute or abandon them).
+  When the burst fails and cancels future pending dispatches, the target
+  has no pending/sending rows → claim succeeds. On retry re-entry, the
+  burst loop detects the failed step and re-reserves future steps.
 */
 
 BEGIN;
@@ -50,12 +49,24 @@ BEGIN
           AND NOT (pending_event.payload ? 'recovered_at')
           AND NOT (pending_event.payload ? 'resolved_at')
       )
-      -- Guard 2: no non-terminal step_dispatches (burst in progress or reserved)
-      AND NOT EXISTS (
-        SELECT 1
-        FROM public.comm_whatsapp_campaign_step_dispatches AS sd
-        WHERE sd.target_id = target.id
-          AND sd.status IN ('pending', 'sending')
+      -- Guard 2: no non-terminal step_dispatches, EXCEPT when a failed
+      -- step has next_retry_at <= now (retry is due). This allows the
+      -- target to be re-claimed for retry without deadlock.
+      AND (
+        NOT EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_campaign_step_dispatches AS sd
+          WHERE sd.target_id = target.id
+            AND sd.status IN ('pending', 'sending')
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_campaign_step_dispatches AS sd_retry
+          WHERE sd_retry.target_id = target.id
+            AND sd_retry.status = 'failed'
+            AND sd_retry.next_retry_at IS NOT NULL
+            AND sd_retry.next_retry_at <= now()
+        )
       )
     ORDER BY
       CASE WHEN COALESCE(target.current_step_index, 0) > 0 THEN 0 ELSE 1 END,

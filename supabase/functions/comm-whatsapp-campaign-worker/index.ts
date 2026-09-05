@@ -1616,6 +1616,60 @@ async function releasePendingStageDispatches(
   return Number(data) || 0;
 }
 
+async function cancelFuturePendingDispatches(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  targetId: string,
+  afterStepIndex: number,
+): Promise<number> {
+  const { data, error } = await supabaseAdmin.rpc('cancel_future_pending_dispatches', {
+    p_target_id: targetId,
+    p_after_step_index: afterStepIndex,
+  });
+
+  if (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao cancelar dispatches futuros', error);
+    return 0;
+  }
+
+  return Number(data) || 0;
+}
+
+type StageDispatchRetryReservation = {
+  result: 'reserved' | 'rate_limited' | 'lease_lost';
+  retry_at: string | null;
+  reason: string | null;
+};
+
+async function reserveStageDispatchRetry(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    campaignId: string;
+    targetId: string;
+    lockToken: string;
+    stageIndex: number;
+    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null }>;
+  },
+): Promise<StageDispatchRetryReservation> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_comm_whatsapp_campaign_stage_dispatch_retry', {
+    p_campaign_id: params.campaignId,
+    p_target_id: params.targetId,
+    p_lock_token: params.lockToken,
+    p_stage_index: params.stageIndex,
+    p_steps: params.steps,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao re-reservar stage da campanha: ${error.message}`);
+  }
+
+  const reservation = (Array.isArray(data) ? data[0] : data) as StageDispatchRetryReservation | null;
+  if (!reservation) {
+    throw new Error('A re-reserva de stage da campanha nao retornou resultado.');
+  }
+
+  return reservation;
+}
+
 /**
  * Detecta se o step atual pertence a um stage com multiplos mensagens
  * consecutivas do tipo 'message'. Retorna os steps do stage em ordem,
@@ -1765,6 +1819,45 @@ async function executeStageBurst(params: {
     }
 
     // ── Transition: pending → sending ──
+    // Before transitioning, check if this is a retry (failed dispatch with past retry_at)
+    const { data: existingDispatch } = await supabaseAdmin
+      .from('comm_whatsapp_campaign_step_dispatches')
+      .select('status,next_retry_at')
+      .eq('dispatch_key', dispatchKey)
+      .maybeSingle();
+
+    if (existingDispatch?.status === 'failed' && existingDispatch.next_retry_at) {
+      const retryTime = new Date(existingDispatch.next_retry_at).getTime();
+      if (retryTime <= Date.now()) {
+        // This is a retry — re-reserve future steps that were cancelled
+        const futureSteps = companions.slice(i + 1);
+        if (futureSteps.length > 0) {
+          const retryReservation = await reserveStageDispatchRetry(supabaseAdmin, {
+            campaignId: campaign.id,
+            targetId: target.id,
+            lockToken: lockToken!,
+            stageIndex,
+            steps: futureSteps.map((s) => ({
+              step_index: s.step_index,
+              stage_index: s.stage_index,
+              step_kind: s.step_kind,
+              message_text: s.message_text,
+              media_url: s.media_url,
+            })),
+          });
+
+          if (retryReservation.result !== 'reserved') {
+            await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+              target,
+              retryAt: retryReservation.retry_at || new Date(Date.now() + 60_000).toISOString(),
+              reason: retryReservation.reason || 'Re-reserva de retry nao permitida.',
+            });
+            return { status: 'deferred', nextStepIndex: step.step_index };
+          }
+        }
+      }
+    }
+
     const sendingTransition = await advanceStepDispatch(supabaseAdmin, {
       dispatchKey,
       newStatus: 'sending',
@@ -1831,7 +1924,7 @@ async function executeStageBurst(params: {
         });
         return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
       }
-      // Retryable failure (429, 5xx, 408) — stop burst, retry later
+      // Retryable failure (429, 5xx, 408) — stop burst, cancel future pending, retry later
       const nextRetryAt = getNextRetryAt(Math.max(Number(target.attempts) || 0, 0));
       await advanceStepDispatch(supabaseAdmin, {
         dispatchKey,
@@ -1839,6 +1932,8 @@ async function executeStageBurst(params: {
         errorMessage,
         nextRetryAt,
       });
+      // Cancel pending dispatches after this step to prevent deadlock
+      await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
       return { status: 'retry_scheduled', nextStepIndex: step.step_index, error: errorMessage };
     }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RotateCcw, Save, X } from "lucide-react";
+import { AlertTriangle, RotateCcw, Save, X } from "lucide-react";
 
 import {
   Button,
@@ -13,12 +13,14 @@ import type {
   AiFeatureWithConfig,
   AiProviderSlug,
   AiModelResolutionSource,
+  AiModelCatalogCapability,
+  AiModelCatalogWithPricing,
 } from "../aiConfigTypes";
 import {
   AI_FEATURE_LABELS,
   AI_PROVIDER_OPTIONS,
-  AI_MODEL_LABELS,
   AI_MODEL_RESOLUTION_SOURCE_LABELS,
+  TASK_TYPE_REQUIRED_CAPABILITIES,
 } from "../aiConfigTypes";
 
 type Props = {
@@ -41,6 +43,45 @@ const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
   fallback: "bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
 };
 
+/** Maps feature key to the ai-feature-registry taskType */
+const FEATURE_TASK_TYPE: Record<string, string> = {
+  "followup.generate": "structured_output",
+  "followup.analysis": "structured_output",
+  "followup.refine": "text",
+  "message.rewrite": "text",
+  "message.suggest": "text",
+  "attendance.critique": "structured_output",
+  "audio.transcribe": "transcription",
+  "autonomous.reply": "text",
+  "sandbox.chat": "text",
+  "sandbox.scenario": "structured_output",
+  "campaign.intent": "structured_output",
+  "agenda.organize": "structured_output",
+};
+
+/** Maps feature key to aiTask for effective model resolution */
+const FEATURE_AI_TASK: Record<string, string> = {
+  "followup.generate": "follow_up_generation",
+  "followup.analysis": "follow_up_analysis",
+  "followup.refine": "follow_up_generation",
+  "message.rewrite": "rewrite_message",
+  "message.suggest": "follow_up_generation",
+  "attendance.critique": "attendance_critique",
+  "audio.transcribe": "whatsapp_audio_transcription",
+  "autonomous.reply": "autonomous_attendance",
+  "sandbox.chat": "autonomous_attendance",
+  "sandbox.scenario": "autonomous_attendance",
+  "campaign.intent": "follow_up_generation",
+  "agenda.organize": "follow_up_agenda_organization",
+};
+
+function hasAllCapabilities(
+  modelCaps: AiModelCatalogCapability[],
+  required: AiModelCatalogCapability[],
+): boolean {
+  return required.every((c) => modelCaps.includes(c));
+}
+
 export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props) {
   const [prompt, setPrompt] = useState("");
   const [outputInstructions, setOutputInstructions] = useState("");
@@ -52,7 +93,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [effectiveModel, setEffectiveModel] = useState<EffectiveModel | null>(null);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Array<{ version: number; is_active: boolean; created_at: string }>>([]);
-  const [availableModels, setAvailableModels] = useState<Array<{ provider: string; model: string; label: string }>>([]);
+  const [allCatalogModels, setAllCatalogModels] = useState<AiModelCatalogWithPricing[]>([]);
+
+  const taskType = FEATURE_TASK_TYPE[feature.key] ?? "text";
+  const requiredCapabilities = useMemo(
+    () => TASK_TYPE_REQUIRED_CAPABILITIES[taskType] ?? ["text"],
+    [taskType],
+  );
 
   const loadHistory = useCallback(() => {
     aiConfigService.fetchConfigHistory(feature.id).then(({ data }) => {
@@ -61,21 +108,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, [feature.id]);
 
   const loadEffectiveModel = useCallback(async () => {
-    const aiTaskMap: Record<string, string> = {
-      "followup.generate": "follow_up_generation",
-      "followup.analysis": "follow_up_analysis",
-      "followup.refine": "follow_up_generation",
-      "message.rewrite": "rewrite_message",
-      "message.suggest": "follow_up_generation",
-      "attendance.critique": "attendance_critique",
-      "audio.transcribe": "whatsapp_audio_transcription",
-      "autonomous.reply": "autonomous_attendance",
-      "sandbox.chat": "autonomous_attendance",
-      "sandbox.scenario": "autonomous_attendance",
-      "campaign.intent": "follow_up_generation",
-      "agenda.organize": "follow_up_agenda_organization",
-    };
-    const task = aiTaskMap[feature.key];
+    const task = FEATURE_AI_TASK[feature.key];
     if (!task) return;
 
     const { data } = await aiConfigService.fetchEffectiveModel(feature.key, task);
@@ -110,25 +143,49 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     loadEffectiveModel();
 
     aiConfigService.fetchAvailableModels().then(({ data }) => {
-      if (data) setAvailableModels(data);
+      if (data) setAllCatalogModels(data);
     });
   }, [feature, loadHistory, loadEffectiveModel]);
 
-  const modelsForProvider = useMemo(
-    () => availableModels.filter((m) => m.provider === provider),
-    [availableModels, provider],
-  );
+  /** Models filtered by provider AND compatible with this feature's taskType */
+  const compatibleModels = useMemo(() => {
+    return allCatalogModels.filter(
+      (m) => m.provider === provider && hasAllCapabilities(m.capabilities, requiredCapabilities),
+    );
+  }, [allCatalogModels, provider, requiredCapabilities]);
 
-  const handleProviderChange = useCallback((newProvider: AiProviderSlug) => {
-    setProvider(newProvider);
-    const models = availableModels.filter((m) => m.provider === newProvider);
-    if (models.length > 0) {
-      setModel(models[0].model);
-    }
-  }, [availableModels]);
+  /** Check if currently selected model is compatible */
+  const selectedModelData = useMemo(() => {
+    return allCatalogModels.find((m) => m.provider === provider && m.model === model) ?? null;
+  }, [allCatalogModels, provider, model]);
+
+  const isSelectedModelDeprecated = selectedModelData?.deprecated_at != null;
+  const isSelectedModelWithoutPricing = selectedModelData != null && !selectedModelData.has_pricing;
+
+  const handleProviderChange = useCallback(
+    (newProvider: AiProviderSlug) => {
+      setProvider(newProvider);
+      const compatible = allCatalogModels.filter(
+        (m) => m.provider === newProvider && hasAllCapabilities(m.capabilities, requiredCapabilities),
+      );
+      if (compatible.length > 0) {
+        setModel(compatible[0].model);
+      } else {
+        setModel("");
+      }
+    },
+    [allCatalogModels, requiredCapabilities],
+  );
 
   const handleSave = useCallback(async () => {
     if (!prompt.trim()) return toast.error("O prompt não pode estar vazio");
+
+    if (modelOverrideEnabled) {
+      const validation = await aiConfigService.validateModelOverride(provider, model, taskType);
+      if (!validation.valid) {
+        return toast.error(validation.error ?? "Modelo inválido");
+      }
+    }
 
     setSaving(true);
     const { error } = await aiConfigService.createConfig(feature.id, {
@@ -147,7 +204,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     loadHistory();
     loadEffectiveModel();
     onSaved();
-  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, modelOverrideEnabled, provider, model, onSaved, loadHistory, loadEffectiveModel]);
+  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, modelOverrideEnabled, provider, model, taskType, onSaved, loadHistory, loadEffectiveModel]);
 
   const handleResetToDefaults = useCallback(() => {
     setPrompt(feature.default_feature_prompt);
@@ -206,7 +263,12 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
           {/* Model Configuration */}
           <div className="rounded-lg border border-[var(--border-subtle)] p-4 space-y-3">
-            <p className="text-sm font-medium text-[var(--text-primary)]">Modelo</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-[var(--text-primary)]">Modelo</p>
+              <span className="text-xs text-[var(--text-muted)]">
+                Tipo: {taskType}
+              </span>
+            </div>
 
             <div className="space-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -254,13 +316,32 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setModel(e.target.value)}
                     className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
                   >
-                    {modelsForProvider.map((opt) => (
-                      <option key={opt.model} value={opt.model}>
-                        {opt.label}
+                    {compatibleModels.length === 0 && (
+                      <option value="" disabled>Nenhum modelo compatível</option>
+                    )}
+                    {compatibleModels.map((m) => (
+                      <option key={m.model} value={m.model}>
+                        {m.display_name}
+                        {!m.has_pricing ? " (sem preço)" : ""}
+                        {m.deprecated_at ? " (descontinuado)" : ""}
                       </option>
                     ))}
                   </select>
                 </Field>
+              </div>
+            )}
+
+            {/* Warnings for deprecated / no-pricing models */}
+            {modelOverrideEnabled && isSelectedModelDeprecated && (
+              <div className="flex items-start gap-2 rounded-md bg-[var(--color-warning)]/10 p-2.5 text-xs text-[var(--color-warning)]">
+                <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
+                <p>Este modelo foi descontinuado pelo provider. Considere trocar para uma versão mais recente.</p>
+              </div>
+            )}
+            {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
+              <div className="flex items-start gap-2 rounded-md bg-[var(--color-info)]/10 p-2.5 text-xs text-[var(--color-info)]">
+                <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
+                <p>Preço não cadastrado para este modelo. A telemetria registrará tokens, mas o custo estimado ficará indeterminado até o preço ser configurado.</p>
               </div>
             )}
 
@@ -270,7 +351,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--text-muted)]">Modelo efetivo:</span>
                   <span className="font-medium text-[var(--text-primary)]">
-                    {AI_MODEL_LABELS[effectiveModel.model] ?? effectiveModel.model}
+                    {effectiveModel.model}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

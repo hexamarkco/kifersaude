@@ -911,6 +911,25 @@ export const resolveModelForFeature = async (
 
       if (config?.model_override_enabled && config.provider && config.model) {
         const provider = isAiProvider(config.provider) ? config.provider : 'openai';
+
+        // Validate against ai_models catalog (fail-open: log warning but don't block)
+        try {
+          const { data: modelRow } = await supabaseAdmin
+            .from('ai_models')
+            .select('active, deprecated_at')
+            .eq('provider', provider)
+            .eq('model', config.model)
+            .maybeSingle();
+
+          if (modelRow && !modelRow.active) {
+            console.warn(`[AIConfig] Feature ${featureKey} override model ${config.model} is inactive — falling through to ai_routing`);
+          } else if (modelRow?.deprecated_at) {
+            console.warn(`[AIConfig] Feature ${featureKey} override model ${config.model} is deprecated — continuing but consider updating`);
+          }
+        } catch {
+          // ai_models lookup failed — continue with the override (fail-open)
+        }
+
         return {
           provider,
           model: config.model,

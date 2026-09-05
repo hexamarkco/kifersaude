@@ -4,8 +4,10 @@ import type {
   AiFeatureConfigRow,
   AiGlobalConfigRow,
   AiProviderSlug,
+  AiModelCatalogCapability,
+  AiModelCatalogWithPricing,
 } from "./aiConfigTypes";
-import { AI_MODEL_LABELS } from "./aiConfigTypes";
+import { TASK_TYPE_REQUIRED_CAPABILITIES } from "./aiConfigTypes";
 
 type ServiceResult<T> = { data: T | null; error: string | null };
 
@@ -171,23 +173,77 @@ export const aiConfigService = {
     return { data: error ? null : true, error: error?.message ?? null };
   },
 
-  async fetchAvailableModels(): Promise<ServiceResult<Array<{ provider: string; model: string; label: string }>>> {
+  async fetchAvailableModels(): Promise<ServiceResult<AiModelCatalogWithPricing[]>> {
     const { data, error } = await supabase
-      .from("ai_model_pricing")
-      .select("provider, model")
+      .from("ai_models")
+      .select(`
+        id, provider, model, display_name, capabilities, active, deprecated_at, created_at, updated_at,
+        ai_model_pricing!left(input_per_million, output_per_million)
+      `)
       .eq("active", true)
       .order("provider")
-      .order("model");
+      .order("display_name");
 
     if (error) return { data: null, error: error.message };
 
-    const models = (data ?? []).map((row: { provider: string; model: string }) => ({
-      provider: row.provider,
-      model: row.model,
-      label: AI_MODEL_LABELS[row.model] ?? row.model,
-    }));
+    const models: AiModelCatalogWithPricing[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const pricing = Array.isArray(row.ai_model_pricing) ? row.ai_model_pricing[0] : row.ai_model_pricing;
+      return {
+        id: row.id as string,
+        provider: row.provider as AiProviderSlug,
+        model: row.model as string,
+        display_name: row.display_name as string,
+        capabilities: (row.capabilities ?? []) as AiModelCatalogCapability[],
+        active: row.active as boolean,
+        deprecated_at: row.deprecated_at as string | null,
+        created_at: row.created_at as string,
+        updated_at: row.updated_at as string,
+        has_pricing: pricing != null,
+        input_per_million: pricing?.input_per_million ?? null,
+        output_per_million: pricing?.output_per_million ?? null,
+      };
+    });
 
     return { data: models, error: null };
+  },
+
+  async validateModelOverride(
+    provider: AiProviderSlug,
+    model: string,
+    taskType: string,
+  ): Promise<{ valid: boolean; error?: string }> {
+    const requiredCaps = TASK_TYPE_REQUIRED_CAPABILITIES[taskType];
+    if (!requiredCaps) return { valid: true };
+
+    const { data, error } = await supabase
+      .from("ai_models")
+      .select("capabilities, active, deprecated_at")
+      .eq("provider", provider)
+      .eq("model", model)
+      .single();
+
+    if (error || !data) {
+      return { valid: false, error: `Modelo "${model}" não encontrado no catálogo.` };
+    }
+
+    if (!data.active) {
+      return { valid: false, error: `Modelo "${model}" está desativado.` };
+    }
+
+    if (data.deprecated_at) {
+      return { valid: false, error: `Modelo "${model}" foi descontinuado pelo provider.` };
+    }
+
+    const caps = (data.capabilities ?? []) as AiModelCatalogCapability[];
+    const missing = requiredCaps.filter((c) => !caps.includes(c));
+    if (missing.length > 0) {
+      return {
+        valid: false,
+        error: `Modelo "${model}" não suporta: ${missing.join(", ")}. Capacidades necessárias para esta feature: ${requiredCaps.join(", ")}.`,
+      };
+    }
+
+    return { valid: true };
   },
 
   async fetchEffectiveModel(

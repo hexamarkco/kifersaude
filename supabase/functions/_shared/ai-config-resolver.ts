@@ -116,6 +116,28 @@ export async function loadFeatureConfig(
 
   const resolved = mergeWithDefaults(featureKey, config);
 
+  // Validate model override against ai_models catalog (fail-open: warn but don't block)
+  if (resolved.modelOverrideEnabled && resolved.provider && resolved.model) {
+    try {
+      const { data: modelRow } = await supabaseAdmin
+        .from('ai_models')
+        .select('active, deprecated_at')
+        .eq('provider', resolved.provider)
+        .eq('model', resolved.model)
+        .maybeSingle();
+
+      if (modelRow && !modelRow.active) {
+        console.warn(`[AIConfig] Feature ${featureKey} has inactive override model "${resolved.model}" — config loaded but model may fail at runtime`);
+      } else if (modelRow?.deprecated_at) {
+        console.warn(`[AIConfig] Feature ${featureKey} has deprecated override model "${resolved.model}" — consider updating`);
+      } else if (!modelRow) {
+        console.warn(`[AIConfig] Feature ${featureKey} override model "${resolved.model}" not found in ai_models catalog`);
+      }
+    } catch {
+      // ai_models lookup failed — fail-open, config is still valid
+    }
+  }
+
   // Cache
   featureConfigCache.set(cacheKey, {
     value: resolved,

@@ -36,6 +36,8 @@ type EffectiveModel = {
   sourceLabel: string;
 };
 
+type ProviderModelOption = { value: string; label: string };
+
 const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
   feature: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
   ai_routing: "bg-[var(--color-info)]/10 text-[var(--color-info)]",
@@ -75,10 +77,35 @@ const FEATURE_AI_TASK: Record<string, string> = {
   "agenda.organize": "follow_up_agenda_organization",
 };
 
-function hasAllCapabilities(
-  modelCaps: AiModelCatalogCapability[],
-  required: AiModelCatalogCapability[],
-): boolean {
+/**
+ * Infers capability from model ID when ai_models doesn't have metadata.
+ * Mirrors the logic in sync-ai-models for consistency.
+ */
+function inferCapabilityFromModelId(modelId: string): AiModelCatalogCapability[] {
+  const lower = modelId.toLowerCase();
+  if (lower.includes("transcribe") || lower.includes("whisper")) return ["transcription"];
+  if (lower.startsWith("gpt-") || lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) {
+    const caps: AiModelCatalogCapability[] = ["text"];
+    if (lower.includes("mini") || lower.includes("nano")) return caps;
+    caps.push("structured_output");
+    if (lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) caps.push("reasoning");
+    if (!lower.includes("mini")) caps.push("multimodal");
+    return caps;
+  }
+  if (lower.startsWith("gemini")) {
+    const caps: AiModelCatalogCapability[] = ["text", "structured_output", "multimodal"];
+    if (lower.includes("thinking") || lower.includes("pro")) caps.push("reasoning");
+    return caps;
+  }
+  if (lower.startsWith("claude-")) {
+    const caps: AiModelCatalogCapability[] = ["text", "structured_output", "multimodal"];
+    if (lower.includes("opus") || lower.includes("sonnet")) caps.push("reasoning");
+    return caps;
+  }
+  return ["text"];
+}
+
+function hasAllCapabilities(modelCaps: AiModelCatalogCapability[], required: AiModelCatalogCapability[]): boolean {
   return required.every((c) => modelCaps.includes(c));
 }
 
@@ -93,7 +120,12 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [effectiveModel, setEffectiveModel] = useState<EffectiveModel | null>(null);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Array<{ version: number; is_active: boolean; created_at: string }>>([]);
-  const [allCatalogModels, setAllCatalogModels] = useState<AiModelCatalogWithPricing[]>([]);
+
+  const [providerModels, setProviderModels] = useState<ProviderModelOption[]>([]);
+  const [providerLoading, setProviderLoading] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
+
+  const [catalogMeta, setCatalogMeta] = useState<Map<string, AiModelCatalogWithPricing>>(new Map());
 
   const taskType = FEATURE_TASK_TYPE[feature.key] ?? "text";
   const requiredCapabilities = useMemo(
@@ -110,15 +142,24 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const loadEffectiveModel = useCallback(async () => {
     const task = FEATURE_AI_TASK[feature.key];
     if (!task) return;
-
     const { data } = await aiConfigService.fetchEffectiveModel(feature.key, task);
     if (data) {
-      setEffectiveModel({
-        ...data,
-        source: data.source as AiModelResolutionSource,
-      });
+      setEffectiveModel({ ...data, source: data.source as AiModelResolutionSource });
     }
   }, [feature.key]);
+
+  const loadProviderModels = useCallback(async (providerSlug: AiProviderSlug) => {
+    setProviderLoading(true);
+    setProviderError(null);
+    const { data, error } = await aiConfigService.fetchProviderModels(providerSlug);
+    setProviderLoading(false);
+    if (error) {
+      setProviderError(error);
+      setProviderModels([]);
+    } else {
+      setProviderModels(data ?? []);
+    }
+  }, []);
 
   useEffect(() => {
     if (feature.active_config) {
@@ -143,39 +184,49 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     loadEffectiveModel();
 
     aiConfigService.fetchAvailableModels().then(({ data }) => {
-      if (data) setAllCatalogModels(data);
+      if (data) {
+        const map = new Map<string, AiModelCatalogWithPricing>();
+        for (const m of data) map.set(`${m.provider}:${m.model}`, m);
+        setCatalogMeta(map);
+      }
     });
   }, [feature, loadHistory, loadEffectiveModel]);
 
-  /** Models filtered by provider AND compatible with this feature's taskType */
-  const compatibleModels = useMemo(() => {
-    return allCatalogModels.filter(
-      (m) => m.provider === provider && hasAllCapabilities(m.capabilities, requiredCapabilities),
-    );
-  }, [allCatalogModels, provider, requiredCapabilities]);
+  useEffect(() => {
+    if (modelOverrideEnabled) {
+      loadProviderModels(provider);
+    }
+  }, [modelOverrideEnabled, provider, loadProviderModels]);
 
-  /** Check if currently selected model is compatible */
+  /** Models from provider API, enriched with catalog metadata, filtered by taskType */
+  const compatibleModels = useMemo(() => {
+    return providerModels
+      .map((pm) => {
+        const meta = catalogMeta.get(`${provider}:${pm.value}`);
+        const capabilities = meta?.capabilities ?? inferCapabilityFromModelId(pm.value);
+        const compatible = hasAllCapabilities(capabilities, requiredCapabilities);
+        return { ...pm, meta, capabilities, compatible };
+      })
+      .filter((m) => m.compatible)
+      .map((m) => ({
+        value: m.value,
+        label: m.meta?.display_name ?? m.label,
+        hasPricing: m.meta?.has_pricing ?? false,
+        deprecated: m.meta?.deprecated_at != null,
+      }));
+  }, [providerModels, catalogMeta, provider, requiredCapabilities]);
+
   const selectedModelData = useMemo(() => {
-    return allCatalogModels.find((m) => m.provider === provider && m.model === model) ?? null;
-  }, [allCatalogModels, provider, model]);
+    return catalogMeta.get(`${provider}:${model}`) ?? null;
+  }, [catalogMeta, provider, model]);
 
   const isSelectedModelDeprecated = selectedModelData?.deprecated_at != null;
   const isSelectedModelWithoutPricing = selectedModelData != null && !selectedModelData.has_pricing;
 
-  const handleProviderChange = useCallback(
-    (newProvider: AiProviderSlug) => {
-      setProvider(newProvider);
-      const compatible = allCatalogModels.filter(
-        (m) => m.provider === newProvider && hasAllCapabilities(m.capabilities, requiredCapabilities),
-      );
-      if (compatible.length > 0) {
-        setModel(compatible[0].model);
-      } else {
-        setModel("");
-      }
-    },
-    [allCatalogModels, requiredCapabilities],
-  );
+  const handleProviderChange = useCallback((newProvider: AiProviderSlug) => {
+    setProvider(newProvider);
+    setModel("");
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!prompt.trim()) return toast.error("O prompt não pode estar vazio");
@@ -311,22 +362,33 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   </select>
                 </Field>
                 <Field label="Modelo">
-                  <select
-                    value={model}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setModel(e.target.value)}
-                    className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                  >
-                    {compatibleModels.length === 0 && (
-                      <option value="" disabled>Nenhum modelo compatível</option>
-                    )}
-                    {compatibleModels.map((m) => (
-                      <option key={m.model} value={m.model}>
-                        {m.display_name}
-                        {!m.has_pricing ? " (sem preço)" : ""}
-                        {m.deprecated_at ? " (descontinuado)" : ""}
+                  {providerLoading ? (
+                    <div className="flex items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
+                      Carregando modelos...
+                    </div>
+                  ) : providerError ? (
+                    <div className="rounded-md border border-[var(--color-error)]/30 bg-[var(--color-error)]/5 px-3 py-2 text-xs text-[var(--color-error)]">
+                      {providerError}
+                    </div>
+                  ) : (
+                    <select
+                      value={model}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setModel(e.target.value)}
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    >
+                      <option value="" disabled>
+                        {compatibleModels.length === 0 ? "Nenhum modelo compatível" : "Selecione..."}
                       </option>
-                    ))}
-                  </select>
+                      {compatibleModels.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                          {!m.hasPricing ? " (sem preço)" : ""}
+                          {m.deprecated ? " (descontinuado)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Field>
               </div>
             )}

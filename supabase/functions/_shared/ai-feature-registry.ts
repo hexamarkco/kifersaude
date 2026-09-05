@@ -57,6 +57,8 @@ export type AIFeatureMeta = {
   defaultContextConfig: Record<string, boolean>;
   /** Template variables available for prompt interpolation */
   availableVariables: Array<{ key: string; label: string; description: string }>;
+  /** If true, feature is hidden from admin UI and should not be used for new configs */
+  deprecated?: boolean;
 };
 
 export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
@@ -258,7 +260,7 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
   [AI_FEATURES.SANDBOX_CHAT]: {
     key: AI_FEATURES.SANDBOX_CHAT,
     name: 'Chat Sandbox',
-    description: 'Simulação interativa do atendimento autônomo para testes.',
+    description: 'DEPRECATED: Usar autonomous.reply diretamente. Esta feature existe apenas para compatibilidade.',
     taskType: 'text',
     aiTask: 'autonomous_attendance',
     defaultProvider: 'openai',
@@ -276,6 +278,7 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
       { key: 'lead_context', label: 'Contexto do lead', description: 'Dados do lead simulado.' },
       { key: 'style_profile', label: 'Perfil de estilo', description: 'Configurações de estilo.' },
     ],
+    deprecated: true,
   },
 
   [AI_FEATURES.SANDBOX_SCENARIO]: {

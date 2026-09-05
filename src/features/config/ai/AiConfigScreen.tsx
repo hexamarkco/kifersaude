@@ -22,9 +22,10 @@ import { aiConfigService } from "./aiConfigService";
 import type {
   AiFeatureWithConfig,
   AiFeatureCategory,
+  AiFeatureKey,
   AiGlobalConfigRow,
 } from "./aiConfigTypes";
-import { AI_FEATURE_CATEGORIES } from "./aiConfigTypes";
+import { AI_FEATURE_CATEGORIES, AI_FEATURE_DEPRECATED_KEYS } from "./aiConfigTypes";
 import FeatureEditorDrawer from "./components/FeatureEditorDrawer";
 import FeatureListCard from "./components/FeatureListCard";
 import GlobalConfigSection from "./components/GlobalConfigSection";
@@ -62,14 +63,17 @@ export default function AiConfigScreen() {
   useEffect(() => { load(); }, [load]);
 
   const filteredFeatures = useMemo(() => {
-    if (!search.trim()) return features;
-    const q = search.toLowerCase();
-    return features.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.key.toLowerCase().includes(q) ||
-        (f.description ?? "").toLowerCase().includes(q),
-    );
+    let result = features.filter((f) => !AI_FEATURE_DEPRECATED_KEYS.has(f.key as AiFeatureKey));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          f.key.toLowerCase().includes(q) ||
+          (f.description ?? "").toLowerCase().includes(q),
+      );
+    }
+    return result;
   }, [features, search]);
 
   const categories = useMemo(() => {

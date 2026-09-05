@@ -3,14 +3,15 @@ import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboa
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
+import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
+import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import {
   buildOpeningUserPrompt,
   buildReferencePrompt,
   buildReplyUserPrompt,
-  buildSystemPrompt,
+  buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
-  SYSTEM_PLAYBOOK,
   splitGeneratedReply,
   type HandoffCode,
   type SandboxMessageRow,
@@ -171,6 +172,9 @@ Deno.serve(async (req: Request) => {
     const quickReplies = await fetchQuickReplies(supabaseAdmin);
     const leadSystemPrompt = buildLeadSystemPrompt(leadPersonaPrompt);
 
+    // Load autonomous.reply config — the single source of truth for the attendant agent
+    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+
     const { data: conversation, error: createError } = await supabaseAdmin
       .from('ai_sandbox_conversations')
       .insert({
@@ -204,7 +208,10 @@ Deno.serve(async (req: Request) => {
       const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
       const similarSituations = lastLeadMessage ? await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4) : [];
       const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
-      return buildSystemPrompt(styleMessages, referenceBlock);
+      const styleBlock = buildStylePrompt(styleMessages);
+      // Use autonomous.reply featurePrompt (from DB) as the system prompt,
+      // same as production. This ensures /chat and scenario test exactly what runs live.
+      return [autonomousConfig.featurePrompt, styleBlock, referenceBlock].filter(Boolean).join('\n\n');
     };
 
     // ---- Abertura ----
@@ -212,12 +219,12 @@ Deno.serve(async (req: Request) => {
     if (startMode === 'ai_opens') {
       const result = await generateTextForFeature({
         supabaseAdmin,
-        featureKey: 'sandbox.chat',
+        featureKey: 'autonomous.reply',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildOpeningUserPrompt(leadName),
-        temperature: 0.6,
-        maxTokens: 450,
+        temperature: autonomousConfig.temperature,
+        maxTokens: autonomousConfig.maxOutputTokens,
         edgeFunction: 'ai-sandbox-run-scenario',
       });
       const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, true);
@@ -265,12 +272,12 @@ Deno.serve(async (req: Request) => {
       // Turno do atendente
       const result = await generateTextForFeature({
         supabaseAdmin,
-        featureKey: 'sandbox.chat',
+        featureKey: 'autonomous.reply',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
         userPrompt: buildReplyUserPrompt(history),
-        temperature: 0.6,
-        maxTokens: 350,
+        temperature: autonomousConfig.temperature,
+        maxTokens: autonomousConfig.maxOutputTokens,
         edgeFunction: 'ai-sandbox-run-scenario',
       });
       lastProvider = result.provider;

@@ -160,3 +160,8 @@ export const AI_MODEL_RESOLUTION_SOURCE_LABELS: Record<AiModelResolutionSource, 
   provider_default: "Default do provider",
   fallback: "Fallback",
 };
+
+/** Features deprecated from the admin UI — kept for backward compat but hidden */
+export const AI_FEATURE_DEPRECATED_KEYS = new Set<AiFeatureKey>([
+  "sandbox_chat",
+]);

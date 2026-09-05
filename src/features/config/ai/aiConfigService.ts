@@ -257,4 +257,13 @@ export const aiConfigService = {
     if (error) return { data: null, error: error.message };
     return { data, error: null };
   },
+
+  async fetchProviderModels(provider: AiProviderSlug): Promise<ServiceResult<{ value: string; label: string }[]>> {
+    const { data, error } = await supabase.functions.invoke("list-ai-models", {
+      body: { provider },
+    });
+
+    if (error) return { data: null, error: error.message };
+    return { data: data?.models ?? [], error: null };
+  },
 };

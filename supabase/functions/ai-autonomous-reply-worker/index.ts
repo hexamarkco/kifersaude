@@ -31,8 +31,8 @@ import {
   getReliableLeadFirstName,
   splitGeneratedReply,
   type HandoffCode,
-  type SandboxMessageRow,
-} from '../_shared/ai-sandbox-playbook.ts';
+  type AutonomousMessageRow,
+} from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
   env: {

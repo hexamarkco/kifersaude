@@ -135,6 +135,22 @@ export const aiSandboxChatService = {
 
     return result;
   },
+
+  async runScenario(scenarioKey: string, scenarioLabel: string, leadPersonaPrompt: string): Promise<{ conversationId: string; passed: boolean; violations: string[]; notes: string }> {
+    const { data, error } = await supabase.functions.invoke('ai-sandbox-run-scenario', {
+      body: { scenarioKey, scenarioLabel, leadPersonaPrompt },
+    });
+
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Erro ao rodar cenário de teste.'));
+    const payload = (data ?? {}) as { conversationId?: string; passed?: boolean; violations?: string[]; notes?: string; error?: string };
+    if (payload.error) throw new Error(payload.error);
+    return {
+      conversationId: payload.conversationId ?? '',
+      passed: payload.passed ?? false,
+      violations: payload.violations ?? [],
+      notes: payload.notes ?? '',
+    };
+  },
 };
 
 async function callGenerate(body: { conversationId: string; leadName?: string }): Promise<GenerateOpeningResult> {

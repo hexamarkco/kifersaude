@@ -22,10 +22,9 @@ import { aiConfigService } from "./aiConfigService";
 import type {
   AiFeatureWithConfig,
   AiFeatureCategory,
-  AiFeatureKey,
   AiGlobalConfigRow,
 } from "./aiConfigTypes";
-import { AI_FEATURE_CATEGORIES, AI_FEATURE_DEPRECATED_KEYS } from "./aiConfigTypes";
+import { AI_FEATURE_CATEGORIES } from "./aiConfigTypes";
 import FeatureEditorDrawer from "./components/FeatureEditorDrawer";
 import FeatureListCard from "./components/FeatureListCard";
 import GlobalConfigSection from "./components/GlobalConfigSection";
@@ -63,7 +62,7 @@ export default function AiConfigScreen() {
   useEffect(() => { load(); }, [load]);
 
   const filteredFeatures = useMemo(() => {
-    let result = features.filter((f) => !AI_FEATURE_DEPRECATED_KEYS.has(f.key as AiFeatureKey));
+    let result = features;
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(

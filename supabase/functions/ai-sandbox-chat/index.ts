@@ -13,8 +13,8 @@ import {
   fetchQuickReplies,
   fetchSimilarSituations,
   splitGeneratedReply,
-  type SandboxMessageRow,
-} from '../_shared/ai-sandbox-playbook.ts';
+  type AutonomousMessageRow,
+} from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
   env: {
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
 
     if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
-    const history = (historyResult.data ?? []) as (SandboxMessageRow & { handoff_reason: string | null; handoff_code: string | null })[];
+    const history = (historyResult.data ?? []) as (AutonomousMessageRow & { handoff_reason: string | null; handoff_code: string | null })[];
     const isOpeningMode = history.length === 0;
 
     // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa —

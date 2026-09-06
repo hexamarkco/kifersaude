@@ -14,8 +14,8 @@ import {
   fetchSimilarSituations,
   splitGeneratedReply,
   type HandoffCode,
-  type SandboxMessageRow,
-} from '../_shared/ai-sandbox-playbook.ts';
+  type AutonomousMessageRow,
+} from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
   env: {
@@ -53,7 +53,7 @@ const buildLeadSystemPrompt = (personaPrompt: string): string => [
   personaPrompt,
 ].join('\n');
 
-const buildLeadUserPrompt = (history: SandboxMessageRow[]): string => {
+const buildLeadUserPrompt = (history: AutonomousMessageRow[]): string => {
   const transcriptLines = history.map((row) => `${row.role === 'lead' ? 'VOCE (lead)' : 'ATENDENTE'}: ${row.content}`);
   return [
     '--- CONVERSA ATE AGORA ---',
@@ -67,7 +67,8 @@ const buildLeadUserPrompt = (history: SandboxMessageRow[]): string => {
 };
 
 const buildJudgePrompt = (
-  history: SandboxMessageRow[],
+  playbookText: string,
+  history: AutonomousMessageRow[],
   handoffTriggered: boolean,
   handoffCode: HandoffCode | null,
 ): { systemPrompt: string; userPrompt: string } => {
@@ -77,7 +78,7 @@ const buildJudgePrompt = (
     'Abaixo esta o playbook que o ATENDENTE (uma IA) deveria seguir, seguido de uma conversa real gerada por ela. Avalie se as regras foram seguidas.',
     '',
     '--- PLAYBOOK ---',
-    SYSTEM_PLAYBOOK,
+    playbookText,
   ].join('\n');
 
   const userPrompt = [
@@ -187,7 +188,7 @@ Deno.serve(async (req: Request) => {
     if (createError) throw new Error(`Erro ao criar conversa: ${createError.message}`);
     const conversationId = conversation.id as string;
 
-    const history: SandboxMessageRow[] = [];
+    const history: AutonomousMessageRow[] = [];
     let handoffTriggered = false;
     let finalHandoffCode: HandoffCode | null = null;
     let lastProvider: string | null = null;
@@ -307,7 +308,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- Avaliacao (juiz) ----
 
-    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(history, handoffTriggered, finalHandoffCode);
+    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(autonomousConfig.featurePrompt, history, handoffTriggered, finalHandoffCode);
     const judgeResult = await generateTextForFeature({
       supabaseAdmin,
       featureKey: 'sandbox.scenario',

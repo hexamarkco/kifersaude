@@ -10,9 +10,9 @@ import {
 } from '../ai-feature-registry.ts';
 
 describe('AI Feature Registry', () => {
-  it('contains all 12 expected features', () => {
+  it('contains all 11 expected features', () => {
     const keys = getAllFeatureKeys();
-    expect(keys).toHaveLength(12);
+    expect(keys).toHaveLength(11);
   });
 
   it('has metadata for every feature key', () => {

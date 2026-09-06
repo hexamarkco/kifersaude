@@ -28,7 +28,6 @@ export const AI_FEATURES = {
   ATTENDANCE_CRITIQUE: 'attendance.critique',
   AUDIO_TRANSCRIBE: 'audio.transcribe',
   AUTONOMOUS_REPLY: 'autonomous.reply',
-  SANDBOX_CHAT: 'sandbox.chat',
   SANDBOX_SCENARIO: 'sandbox.scenario',
   CAMPAIGN_INTENT: 'campaign.intent',
   AGENDA_ORGANIZE: 'agenda.organize',
@@ -255,30 +254,6 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
       { key: 'quick_replies', label: 'Respostas rápidas', description: 'Respostas rápidas disponíveis.' },
       { key: 'similar_situations', label: 'Situações similares', description: 'Conversas parecidas anteriores.' },
     ],
-  },
-
-  [AI_FEATURES.SANDBOX_CHAT]: {
-    key: AI_FEATURES.SANDBOX_CHAT,
-    name: 'Chat Sandbox',
-    description: 'DEPRECATED: Usar autonomous.reply diretamente. Esta feature existe apenas para compatibilidade.',
-    taskType: 'text',
-    aiTask: 'autonomous_attendance',
-    defaultProvider: 'openai',
-    defaultModel: 'gpt-4o-mini',
-    defaultTemperature: 0.6,
-    defaultMaxTokens: 350,
-    defaultReasoningEffort: null,
-    defaultContextConfig: {
-      transcript: true,
-      leadContext: true,
-      styleProfile: true,
-    },
-    availableVariables: [
-      { key: 'transcript', label: 'Histórico da simulação', description: 'Conversa simulada até o momento.' },
-      { key: 'lead_context', label: 'Contexto do lead', description: 'Dados do lead simulado.' },
-      { key: 'style_profile', label: 'Perfil de estilo', description: 'Configurações de estilo.' },
-    ],
-    deprecated: true,
   },
 
   [AI_FEATURES.SANDBOX_SCENARIO]: {

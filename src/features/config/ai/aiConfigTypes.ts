@@ -9,7 +9,6 @@ export type AiFeatureKey =
   | "followup_generate"
   | "followup_refine"
   | "autonomous_reply"
-  | "sandbox_chat"
   | "sandbox_scenario";
 
 export type AiProviderSlug = "openai" | "gemini" | "claude";
@@ -140,7 +139,6 @@ export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
   followup_generate: "Geração de Follow-up",
   followup_refine: "Refinamento de Follow-up",
   autonomous_reply: "Resposta Autônoma",
-  sandbox_chat: "Chat Sandbox",
   sandbox_scenario: "Cenário Sandbox",
 };
 
@@ -160,8 +158,3 @@ export const AI_MODEL_RESOLUTION_SOURCE_LABELS: Record<AiModelResolutionSource, 
   provider_default: "Default do provider",
   fallback: "Fallback",
 };
-
-/** Features deprecated from the admin UI — kept for backward compat but hidden */
-export const AI_FEATURE_DEPRECATED_KEYS = new Set<AiFeatureKey>([
-  "sandbox_chat",
-]);

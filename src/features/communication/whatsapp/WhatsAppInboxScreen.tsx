@@ -9110,7 +9110,6 @@ export default function WhatsAppInboxScreen() {
 
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
-    options: { variantCount?: number } = {},
   ) => {
     if (!selectedChat) {
       return;
@@ -9125,7 +9124,6 @@ export default function WhatsAppInboxScreen() {
     console.debug('[FollowUpAI][inbox] request', {
       chatId: selectedChat.id,
       customInstructions,
-      variantCount: options.variantCount,
       selectedChat,
     });
     setGeneratingFollowUp(true);
@@ -9133,7 +9131,6 @@ export default function WhatsAppInboxScreen() {
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
-        variantCount: options.variantCount,
         triggerSource: 'individual',
       });
       console.debug('[FollowUpAI][inbox] response', {
@@ -9558,8 +9555,8 @@ export default function WhatsAppInboxScreen() {
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);
 
-  const handleRegenerateFollowUp = useCallback((options: { variantCount?: number; customInstructions?: string } = {}) => {
-    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions, options);
+  const handleRegenerateFollowUp = useCallback((options: { customInstructions?: string } = {}) => {
+    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions);
   }, [followUpCustomInstructions, handleGenerateFollowUp]);
 
   const handleScheduleFollowUpNextAction = useCallback(async () => {

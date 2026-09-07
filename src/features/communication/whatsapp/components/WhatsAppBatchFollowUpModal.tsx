@@ -23,15 +23,6 @@ import {
 // ---- Constants ----
 
 const CONCURRENCY = 3;
-const GENERATION_TIMEOUT_MS = 90_000;
-
-const withTimeout = <Result,>(promise: Promise<Result>, ms: number): Promise<Result> =>
-  Promise.race([
-    promise,
-    new Promise<Result>((_, reject) =>
-      setTimeout(() => reject(new Error(`Geração expirou após ${Math.round(ms / 1000)} segundos. Tente novamente.`)), ms),
-    ),
-  ]);
 
 const STATUS_DOT_COLOR: Record<string, string> = {
   pending: 'var(--text-muted)',
@@ -230,23 +221,19 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Generate single item ----
 
-  const handleGenerateItem = async (index: number, options?: { variantCount?: number }) => {
+  const handleGenerateItem = async (index: number) => {
     const item = items[index];
     if (!item) return;
 
     setItems((prev) => updateItemInList(prev, index, { status: 'generating', error: null }));
 
     try {
-      const result = await withTimeout(
-        commWhatsAppService.generateFollowUp(item.chatId, {
-          customInstructions: item.customInstructions,
-          variantCount: options?.variantCount,
-          sourceReminderId: item.reminderId,
-          batchId: batchId ?? undefined,
-          triggerSource: 'batch',
-        }),
-        GENERATION_TIMEOUT_MS,
-      );
+      const result = await commWhatsAppService.generateFollowUp(item.chatId, {
+        customInstructions: item.customInstructions,
+        sourceReminderId: item.reminderId,
+        batchId: batchId ?? undefined,
+        triggerSource: 'batch',
+      });
 
       setItems((prev) =>
         updateItemInList(prev, index, {
@@ -354,15 +341,12 @@ export default function WhatsAppBatchFollowUpModal({
 
       const results = await Promise.allSettled(
         batch.map((idx) =>
-          withTimeout(
-            commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
-              customInstructions: updatedItems[idx].customInstructions,
-              sourceReminderId: updatedItems[idx].reminderId,
-              batchId: batchId ?? undefined,
-              triggerSource: 'batch',
-            }),
-            GENERATION_TIMEOUT_MS,
-          ),
+          commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
+            customInstructions: updatedItems[idx].customInstructions,
+            sourceReminderId: updatedItems[idx].reminderId,
+            batchId: batchId ?? undefined,
+            triggerSource: 'batch',
+          }),
         ),
       );
 
@@ -849,15 +833,6 @@ export default function WhatsAppBatchFollowUpModal({
                       >
                         {activeItem.status !== 'generating' && <Sparkles className="h-3.5 w-3.5" />}
                         {activeItem.generatedText.trim() ? 'Regenerar' : 'Gerar'}
-                      </Button>
-                      <Button
-                        variant="soft" size="sm"
-                        loading={activeItem.status === 'generating'}
-                        disabled={activeItem.status === 'generating' || phase === 'sending'}
-                        onClick={() => void handleGenerateItem(activeItemIndex!, { variantCount: 3 })}
-                      >
-                        {activeItem.status !== 'generating' && <Sparkles className="h-3.5 w-3.5" />}
-                        3 opções
                       </Button>
                     </div>
                   </div>

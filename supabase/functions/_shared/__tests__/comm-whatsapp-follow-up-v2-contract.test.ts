@@ -16,24 +16,26 @@ const migrationSource = readFileSync(
   'utf8',
 );
 
-test('V3 aceita wait sem texto e usa shouldSend para branching', () => {
-  assert.match(edgeSource, /currentAction === 'wait' \|\| Boolean\(result\.text\)/);
-  assert.match(edgeSource, /strategy\.shouldSend === false/);
-  assert.match(batchModalSource, /it\.currentAction === 'send'/);
+test('pipeline normal usa uma única Feature e não chama analysis', () => {
+  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP'));
+  assert.equal((normalPipeline.match(/generateTextForFeature\(\{/g) ?? []).length, 1);
+  assert.match(normalPipeline, /featureKey: AI_FEATURES\.FOLLOWUP_GENERATE/);
+  assert.doesNotMatch(normalPipeline, /FOLLOWUP_ANALYSIS|followup\.analysis|buildAnalysisUserPrompt/);
 });
 
-test('V2 protege outbound recente e não reintroduz exemplos literais de estilo', () => {
-  assert.match(edgeSource, /RECENT_OUTBOUND_WAIT_MS = 12 \* 60 \* 60 \* 1000/);
-  assert.match(edgeSource, /hasRecentOutboundWithoutInbound\(messages, now\) && !customInstructions/);
-  assert.doesNotMatch(edgeSource, /buildStyleExamples/);
-  assert.doesNotMatch(edgeSource, /EXEMPLOS REAIS DO SEU ESTILO/);
+test('pipeline limita o provider a uma chamada normal e um retry técnico', () => {
+  assert.match(edgeSource, /maxAttempts: 2/);
+  assert.match(edgeSource, /maxProviderRequestsPerAttempt: 1/);
+  assert.match(edgeSource, /validateOutput: validateFollowUpTechnicalOutput/);
 });
 
-test('V3 valida copy e evita repetição via validator + retry loop', () => {
-  assert.match(edgeSource, /getLastUnansweredCommercialFunction/);
-  assert.match(edgeSource, /validateCommercialMessage/);
-  assert.match(edgeSource, /regenerationCount/);
-  assert.match(edgeSource, /FollowUpValidationError/);
+test('não há validator por IA, regeneration por qualidade ou JSON comercial no caminho normal', () => {
+  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP'));
+  assert.doesNotMatch(normalPipeline, /validateCommercialMessage|formatValidationFeedback/);
+  assert.doesNotMatch(normalPipeline, /parseFollowUpGenerationResult|validationFeedback/);
+  assert.doesNotMatch(normalPipeline, /upsert_commercial_state/);
+  assert.match(normalPipeline, /v3_analysis: null/);
+  assert.match(normalPipeline, /v3_strategy: null/);
 });
 
 test('V2 persiste proveniência, textos e aprovação de reminder', () => {
@@ -50,4 +52,19 @@ test('V2 persiste proveniência, textos e aprovação de reminder', () => {
   }
   assert.match(migrationSource, /schedule_follow_up_reminder_v2/);
   assert.match(batchModalSource, /approvedScheduleAction/);
+});
+
+test('UI não oferece geração automática de múltiplas versões', () => {
+  assert.doesNotMatch(batchModalSource, /variantCount|3 opções/);
+});
+
+test('followup.refine continua manual e em uma única chamada própria', () => {
+  const refinementStart = edgeSource.indexOf('// REFINEMENT MODE');
+  const normalStart = edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP');
+  const refinementPipeline = edgeSource.slice(refinementStart, normalStart);
+
+  assert.equal((refinementPipeline.match(/generateTextForFeature\(\{/g) ?? []).length, 1);
+  assert.match(refinementPipeline, /featureKey: 'followup\.refine'/);
+  assert.match(refinementPipeline, /Mensagem atual a refinar/);
+  assert.match(refinementPipeline, /Ajuste solicitado/);
 });

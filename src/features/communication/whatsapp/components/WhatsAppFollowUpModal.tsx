@@ -61,7 +61,7 @@ type WhatsAppFollowUpModalProps = {
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
-  onGenerate: (options?: { variantCount?: number; customInstructions?: string }) => void;
+  onGenerate: (options?: { customInstructions?: string }) => void;
   onScheduleNextAction: () => void;
   onSend: () => void;
 };
@@ -126,9 +126,9 @@ export default function WhatsAppFollowUpModal({
     }
   };
 
-  const handleGenerateClick = (options: { variantCount?: number } = {}) => {
+  const handleGenerateClick = () => {
     commitCustomInstructions();
-    onGenerate({ ...options, customInstructions: localCustomInstructions });
+    onGenerate({ customInstructions: localCustomInstructions });
   };
 
   const handleManualSendOverride = () => {
@@ -275,10 +275,6 @@ export default function WhatsAppFollowUpModal({
             <Button variant={value.trim() ? 'secondary' : 'primary'} onClick={() => handleGenerateClick()} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
-            </Button>
-            <Button variant="secondary" onClick={() => handleGenerateClick({ variantCount: 3 })} loading={generating} disabled={submitting}>
-              {!generating && <Sparkles className="h-4 w-4" />}
-              <span>{hasVariations ? 'Novas opções' : 'Gerar 3 opções'}</span>
             </Button>
             {currentAction === 'wait' ? (
               <Button variant="secondary" onClick={handleManualSendOverride} loading={generating} disabled={submitting}>

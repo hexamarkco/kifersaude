@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, FunctionsFetchError } from '@supabase/supabase-js';
 import type { Session, User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -14,13 +14,14 @@ const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 10000;
 const DEFAULT_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 60000;
 const LONG_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 180000;
 const LONG_RUNNING_FUNCTION_PATHS = new Set([
+  '/functions/v1/comm-whatsapp-generate-follow-up',
   '/functions/v1/comm-whatsapp-sync-chat',
 ]);
 
 const isSupabaseRequestUrl = (value: string): boolean =>
   value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
 
-const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
+export const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
   if (requestUrl.includes('/auth/v1/')) {
     return AUTH_SUPABASE_REQUEST_TIMEOUT_MS;
   }
@@ -113,6 +114,10 @@ export const isSupabaseConnectivityError = (error: unknown): boolean => {
   return message.includes('falha de rede ao conectar com o supabase');
 };
 
+export const isSupabaseFunctionFetchError = (error: unknown): boolean =>
+  error instanceof FunctionsFetchError
+  || Boolean(error && typeof error === 'object' && 'name' in error && error.name === 'FunctionsFetchError');
+
 export const getSupabaseErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
   if (isSupabaseConnectivityError(error)) {
     return (error as Error).message;
@@ -140,6 +145,13 @@ export const getSupabaseErrorMessage = async (error: unknown, fallbackMessage: s
       return `Edge Function retornou status ${ctx.status}`;
     }
 
+    // FunctionsFetchError wraps the original fetch exception in `context`.
+    // Prefer that cause so timeouts and real network failures do not collapse
+    // into "Failed to send a request to the Edge Function".
+    if (ctx instanceof Error && ctx.message.trim()) {
+      return ctx.message.trim();
+    }
+
     // legacy (v1) — context.data.error carries the edge function JSON body
     if (
       ctx
@@ -152,6 +164,13 @@ export const getSupabaseErrorMessage = async (error: unknown, fallbackMessage: s
         if (typeof msg === 'string' && msg.trim()) {
           return msg.trim();
         }
+      }
+    }
+
+    if (ctx && typeof ctx === 'object' && 'message' in ctx) {
+      const contextMessage = String((ctx as { message?: unknown }).message ?? '').trim();
+      if (contextMessage) {
+        return contextMessage;
       }
     }
   }

@@ -72,8 +72,9 @@ describe('AI Feature Registry', () => {
     const meta = AI_FEATURE_META[AI_FEATURES.FOLLOWUP_GENERATE];
     expect(meta.defaultProvider).toBe('openai');
     expect(meta.defaultModel).toBe('gpt-4o-mini');
-    expect(meta.defaultTemperature).toBe(0.5);
+    expect(meta.defaultTemperature).toBe(0.7);
     expect(meta.defaultMaxTokens).toBe(520);
+    expect(meta.taskType).toBe('text');
   });
 
   it('FOLLOWUP_ANALYSIS defaults match current production values', () => {

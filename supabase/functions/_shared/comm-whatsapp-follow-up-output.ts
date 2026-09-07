@@ -1,0 +1,96 @@
+export type FollowUpTechnicalStopReason =
+  | 'empty_response'
+  | 'invalid_output';
+
+export type FollowUpTechnicalValidation = {
+  valid: boolean;
+  stopReason?: FollowUpTechnicalStopReason;
+  message?: string;
+};
+
+const MAX_FOLLOW_UP_LENGTH = 1_500;
+const INTERNAL_LEAK_PATTERNS = [
+  /\bcommercial_analysis\b/i,
+  /\bvalidation_feedback\b/i,
+  /\bsystem prompt\b/i,
+  /\binstru(?:ç|c)(?:ão|oes|ões) interna/i,
+  /\bcomo (?:uma? )?(?:ia|inteligência artificial|modelo de linguagem)\b/i,
+  /\bmeu racioc[ií]nio\b/i,
+];
+
+const looksLikeJson = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false;
+
+  try {
+    JSON.parse(trimmed);
+    return true;
+  } catch {
+    return /^\s*[[{]/.test(trimmed) && /[}\]]\s*$/.test(trimmed);
+  }
+};
+
+export const validateFollowUpTechnicalOutput = (rawValue: string): FollowUpTechnicalValidation => {
+  const value = rawValue.trim();
+
+  if (!value) {
+    return { valid: false, stopReason: 'empty_response', message: 'Resposta vazia do provider.' };
+  }
+
+  if (value.length > MAX_FOLLOW_UP_LENGTH) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta excede o limite técnico de 1500 caracteres.' };
+  }
+
+  if (value.includes('\0') || value.includes('\uFFFD')) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta contém caracteres corrompidos.' };
+  }
+
+  if (looksLikeJson(value)) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta JSON inesperada para uma Feature de texto.' };
+  }
+
+  if (
+    (value.startsWith('"') && value.endsWith('"'))
+    || (value.startsWith("'") && value.endsWith("'"))
+    || (value.startsWith('“') && value.endsWith('”'))
+  ) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta veio envolvida em aspas.' };
+  }
+
+  if (
+    /```|^\s{0,3}#{1,6}\s/m.test(value)
+    || /^\s*(?:[-+*]|\d+\.)\s+/m.test(value)
+    || /^\s*>\s+/m.test(value)
+    || /\[[^\]]+\]\([^)]+\)/.test(value)
+    || /\*\*[^*]+\*\*/.test(value)
+  ) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta contém markdown indevido.' };
+  }
+
+  if (INTERNAL_LEAK_PATTERNS.some((pattern) => pattern.test(value))) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta expõe instrução ou raciocínio interno.' };
+  }
+
+  const lines = value.split(/\r?\n/);
+  const separatorIndexes = lines
+    .map((line, index) => line.trim() === '---' ? index : -1)
+    .filter((index) => index >= 0);
+
+  if (lines.some((line) => line.trim() === '---' && line !== '---')) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Separador deve ocupar sozinho a linha, sem espaços.' };
+  }
+
+  if (lines.some((line) => line.includes('---') && line.trim() !== '---')) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Separador de blocos malformado.' };
+  }
+
+  if (separatorIndexes.some((index) => index === 0 || index === lines.length - 1)) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Separador não pode ficar no início ou no final.' };
+  }
+
+  if (separatorIndexes.some((index) => lines[index - 1]?.trim() === '---' || lines[index + 1]?.trim() === '---')) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Separadores consecutivos não são permitidos.' };
+  }
+
+  return { valid: true };
+};

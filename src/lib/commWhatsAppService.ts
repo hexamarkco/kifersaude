@@ -1,5 +1,6 @@
 import {
   getSupabaseErrorMessage,
+  isSupabaseFunctionFetchError,
   supabase,
   supabaseFunctionsUrl,
   waitForSupabaseSession,
@@ -9,6 +10,7 @@ import {
   type CommWhatsAppPhoneContact,
   type Contract,
 } from './supabase';
+import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
 export type CommWhatsAppOperationalState = {
   channel: CommWhatsAppChannel | null;
@@ -390,6 +392,162 @@ export type CommWhatsAppFollowUpSuggestion = {
   fallback_used?: boolean;
   v3?: CommWhatsAppFollowUpV3Meta;
 };
+
+type CommWhatsAppFollowUpAuditRecoveryRow = {
+  id: string;
+  generated_text: string | null;
+  text_content: string | null;
+  current_action: string | null;
+  current_action_reason: string | null;
+  opportunity_recommendation: string | null;
+  schedule_action: string | null;
+  schedule_suggested_date: string | null;
+  schedule_reason: string | null;
+  schedule_confidence: string | null;
+  stage: string | null;
+  blocker: string | null;
+  goal: string | null;
+  rationale: string | null;
+  commercial_function: string | null;
+  next_action_owner: string | null;
+  pending_microdecision: string | null;
+  last_commercial_commitment: string | null;
+  decision_maker: string | null;
+  provider: string | null;
+  model: string | null;
+  v3_analysis: Record<string, unknown> | null;
+  v3_validation: Record<string, unknown> | null;
+  v3_regeneration_count: number | null;
+  v3_analysis_model: string | null;
+  v3_copy_model: string | null;
+};
+
+const toNullableRecoveryString = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const toRecoveryStringList = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
+    : [];
+
+const mapFollowUpAuditRecovery = (
+  row: CommWhatsAppFollowUpAuditRecoveryRow,
+): CommWhatsAppFollowUpSuggestion => {
+  const analysis = row.v3_analysis && typeof row.v3_analysis === 'object' ? row.v3_analysis : {};
+  const validation = row.v3_validation && typeof row.v3_validation === 'object' ? row.v3_validation : {};
+  const emotionalContextRaw = analysis.emotionalContext;
+  const emotionalContext = emotionalContextRaw && typeof emotionalContextRaw === 'object'
+    ? emotionalContextRaw as Record<string, unknown>
+    : null;
+  const currentAction = row.current_action === 'wait' ? 'wait' : 'send';
+  const generatedText = toNullableRecoveryString(row.generated_text)
+    ?? (currentAction === 'send' ? toNullableRecoveryString(row.text_content) : null);
+  const scheduleAction = row.schedule_action === 'schedule' ? 'schedule' : 'no_schedule';
+  const opportunityRecommendation = row.opportunity_recommendation === 'pause'
+    || row.opportunity_recommendation === 'mark_lost_recommended'
+    ? row.opportunity_recommendation
+    : 'continue';
+  const recordedIssues = toRecoveryStringList(validation.issues);
+  const validationIssues = recordedIssues.length > 0
+    ? recordedIssues
+    : toRecoveryStringList(validation.failedCriteria);
+
+  return {
+    text: generatedText,
+    aiContext: {
+      stage: toNullableRecoveryString(row.stage) as CommWhatsAppFollowUpStage | null,
+      blocker: toNullableRecoveryString(row.blocker) as CommWhatsAppFollowUpBlocker | null,
+      goal: toNullableRecoveryString(row.goal) as CommWhatsAppFollowUpGoal | null,
+      emotionalContext: emotionalContext
+        ? {
+            detected: emotionalContext.detected === true,
+            guidance: toNullableRecoveryString(emotionalContext.guidance),
+          }
+        : null,
+      rationale: toNullableRecoveryString(row.rationale),
+      commercialFunction: toNullableRecoveryString(row.commercial_function) as CommWhatsAppCommercialFunction | null,
+      nextActionOwner: toNullableRecoveryString(row.next_action_owner) as CommWhatsAppNextActionOwner | null,
+      pendingMicrodecision: toNullableRecoveryString(row.pending_microdecision),
+      lastCommercialCommitment: toNullableRecoveryString(row.last_commercial_commitment),
+      decisionMaker: toNullableRecoveryString(row.decision_maker),
+    },
+    currentAction,
+    currentActionReason: toNullableRecoveryString(row.current_action_reason),
+    opportunityRecommendation,
+    scheduleRecommendation: {
+      action: scheduleAction,
+      suggestedDate: toNullableRecoveryString(row.schedule_suggested_date),
+      reason: toNullableRecoveryString(row.schedule_reason) ?? 'Recomendação recuperada após a conclusão da geração.',
+      confidence: row.schedule_confidence === 'high' || row.schedule_confidence === 'low'
+        ? row.schedule_confidence
+        : 'medium',
+    },
+    generationId: row.id,
+    nextAction: null,
+    provider: toNullableRecoveryString(row.provider),
+    model: toNullableRecoveryString(row.model),
+    fallback_used: false,
+    v3: {
+      analysisModel: toNullableRecoveryString(row.v3_analysis_model),
+      copyModel: toNullableRecoveryString(row.v3_copy_model),
+      validation: {
+        valid: validation.valid === true || validation.passed === true,
+        issues: validationIssues,
+      },
+      regenerationCount: typeof row.v3_regeneration_count === 'number' ? row.v3_regeneration_count : 0,
+    },
+  };
+};
+
+const recoverCompletedFollowUpGeneration = async (
+  chatId: string,
+  batchId: string,
+  invocationStartedAt: string,
+): Promise<CommWhatsAppFollowUpSuggestion | null> =>
+  pollForCompletedFollowUp(async () => {
+    const { data, error } = await supabase
+      .from('comm_follow_up_audit_log')
+      .select([
+        'id',
+        'generated_text',
+        'text_content',
+        'current_action',
+        'current_action_reason',
+        'opportunity_recommendation',
+        'schedule_action',
+        'schedule_suggested_date',
+        'schedule_reason',
+        'schedule_confidence',
+        'stage',
+        'blocker',
+        'goal',
+        'rationale',
+        'commercial_function',
+        'next_action_owner',
+        'pending_microdecision',
+        'last_commercial_commitment',
+        'decision_maker',
+        'provider',
+        'model',
+        'v3_analysis',
+        'v3_validation',
+        'v3_regeneration_count',
+        'v3_analysis_model',
+        'v3_copy_model',
+      ].join(', '))
+      .eq('chat_id', chatId)
+      .eq('batch_id', batchId)
+      .gte('sent_at', invocationStartedAt)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return mapFollowUpAuditRecovery(data as unknown as CommWhatsAppFollowUpAuditRecoveryRow);
+  });
 
 export type FollowUpAgendaOrganizerMode = 'balanced' | 'urgency' | 'minimal_changes';
 
@@ -1729,11 +1887,11 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string; variantCount?: number; sourceReminderId?: string; batchId?: string; triggerSource?: 'individual' | 'batch' | 'refine' | 'other' } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; sourceReminderId?: string; batchId?: string; triggerSource?: 'individual' | 'batch' | 'refine' | 'other' } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+    const invocationStartedAt = new Date().toISOString();
     const requestBody = {
       chatId,
       customInstructions: options.customInstructions?.trim() || '',
-      variantCount: options.variantCount,
       sourceReminderId: options.sourceReminderId,
       batchId: options.batchId,
       triggerSource: options.triggerSource,
@@ -1747,6 +1905,18 @@ export const commWhatsAppService = {
     console.debug('[FollowUpAI][service] invoke response', { data, error });
 
     if (error) {
+      if (options.batchId && isSupabaseFunctionFetchError(error)) {
+        const recovered = await recoverCompletedFollowUpGeneration(chatId, options.batchId, invocationStartedAt);
+        if (recovered) {
+          console.info('[FollowUpAI][service] recovered completed generation after invoke failure', {
+            chatId,
+            batchId: options.batchId,
+            generationId: recovered.generationId,
+          });
+          return recovered;
+        }
+      }
+
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel gerar o follow-up com IA.'));
     }
 

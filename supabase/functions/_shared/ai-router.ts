@@ -37,6 +37,8 @@ type ProviderCallParams = {
   temperature: number;
   maxTokens: number;
   task: AiTask;
+  signal?: AbortSignal;
+  maxHttpAttempts?: number;
 };
 
 type OpenAiMessage = {
@@ -108,6 +110,8 @@ export type ProviderUsage = {
 export type ProviderCallResult = {
   text: string;
   usage: ProviderUsage;
+  /** Provider-native finish/stop reason when available. */
+  stopReason: string | null;
 };
 
 export type ModelResolutionSource = 'feature' | 'ai_routing' | 'provider_default' | 'fallback';
@@ -127,6 +131,21 @@ export type AiCallLogContext = {
   messageId?: string;
 };
 
+export type AiCallStopReason =
+  | 'completed'
+  | 'completed_after_retry'
+  | 'provider_error'
+  | 'timeout'
+  | 'empty_response'
+  | 'invalid_output'
+  | (string & {});
+
+export type AiOutputValidationResult = {
+  valid: boolean;
+  stopReason?: 'empty_response' | 'invalid_output';
+  message?: string;
+};
+
 export type GenerateTextForFeatureOptions = {
   supabaseAdmin: any;
   featureKey: string;
@@ -139,6 +158,14 @@ export type GenerateTextForFeatureOptions = {
   leadId?: string;
   chatId?: string;
   messageId?: string;
+  /** Maximum provider requests for this logical AI call. */
+  maxAttempts?: number;
+  /** Timeout applied independently to each provider request. */
+  attemptTimeoutMs?: number;
+  /** Caps OpenAI parameter-negotiation requests inside one routed attempt. */
+  maxProviderRequestsPerAttempt?: number;
+  /** Deterministic validation. A rejection consumes the optional technical retry. */
+  validateOutput?: (text: string) => AiOutputValidationResult;
 };
 
 export type GenerateTextForFeatureResult = {
@@ -151,7 +178,22 @@ export type GenerateTextForFeatureResult = {
   durationMs: number;
   estimatedCostUsd: number | null;
   callLogId: string | null;
+  retryCount: number;
+  stopReason: AiCallStopReason;
 };
+
+class AiAttemptError extends Error {
+  readonly stopReason: Exclude<AiCallStopReason, 'completed' | 'completed_after_retry'>;
+
+  constructor(
+    stopReason: Exclude<AiCallStopReason, 'completed' | 'completed_after_retry'>,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'AiAttemptError';
+    this.stopReason = stopReason;
+  }
+}
 
 const LEGACY_GPT_SLUG = 'gpt_transcription';
 const OPENAI_SLUG = 'ai_provider_openai';
@@ -556,7 +598,9 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   let includeTemperature = true;
   let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model, params.task);
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  const maxHttpAttempts = Math.max(1, Math.min(3, params.maxHttpAttempts ?? 3));
+
+  for (let attempt = 0; attempt < maxHttpAttempts; attempt += 1) {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -564,6 +608,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
         Authorization: `Bearer ${settings.apiKey}`,
       },
       body: JSON.stringify(buildOpenAiChatRequestBody(params, messages, tokenParameter, includeTemperature, reasoningEffort)),
+      signal: params.signal,
     });
 
     if (response.ok) {
@@ -576,6 +621,9 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
       const usage = payload?.usage;
       return {
         text,
+        stopReason: typeof payload?.choices?.[0]?.finish_reason === 'string'
+          ? payload.choices[0].finish_reason
+          : null,
         usage: {
           inputTokens: usage?.prompt_tokens ?? null,
           cachedInputTokens: usage?.cached_tokens ?? null,
@@ -715,6 +763,7 @@ const callClaude = async (settings: ProviderSettings, params: ProviderCallParams
       system: params.systemPrompt,
       messages: [{ role: 'user', content: params.userPrompt }],
     }),
+    signal: params.signal,
   });
 
   if (!response.ok) {
@@ -731,6 +780,7 @@ const callClaude = async (settings: ProviderSettings, params: ProviderCallParams
   const usage = payload?.usage;
   return {
     text,
+    stopReason: typeof payload?.stop_reason === 'string' ? payload.stop_reason : null,
     usage: {
       inputTokens: usage?.input_tokens ?? null,
       cachedInputTokens: usage?.cache_read_input_tokens ?? null,
@@ -769,6 +819,7 @@ const callGemini = async (settings: ProviderSettings, params: ProviderCallParams
         maxOutputTokens: params.maxTokens,
       },
     }),
+    signal: params.signal,
   });
 
   if (!response.ok) {
@@ -785,6 +836,9 @@ const callGemini = async (settings: ProviderSettings, params: ProviderCallParams
   const usage = payload?.usageMetadata;
   return {
     text,
+    stopReason: typeof payload?.candidates?.[0]?.finishReason === 'string'
+      ? payload.candidates[0].finishReason
+      : null,
     usage: {
       inputTokens: usage?.promptTokenCount ?? null,
       cachedInputTokens: null,
@@ -1033,7 +1087,7 @@ const logAiCallAttempt = async (
   }
 };
 
-const logAiCall = async (
+export const logAiCall = async (
   supabaseAdmin: any,
   ctx: AiCallLogContext,
   result: {
@@ -1049,31 +1103,47 @@ const logAiCall = async (
     totalTokens?: number;
     totalDurationMs?: number;
     totalCostUsd?: number | null;
+    retryCount?: number;
+    stopReason?: AiCallStopReason | null;
   },
+  callId?: string | null,
 ): Promise<string | null> => {
   try {
+    const payload = {
+      feature_key: ctx.featureKey,
+      ai_task: ctx.aiTask,
+      edge_function: ctx.edgeFunction ?? null,
+      success: result.success,
+      final_provider: result.finalProvider ?? null,
+      final_model: result.finalModel ?? null,
+      fallback_used: result.fallbackUsed,
+      attempts_count: result.attemptsCount,
+      retry_count: result.retryCount ?? Math.max(0, result.attemptsCount - 1),
+      stop_reason: result.stopReason ?? null,
+      total_input_tokens: result.totalInputTokens ?? null,
+      total_cached_tokens: result.totalCachedTokens ?? null,
+      total_output_tokens: result.totalOutputTokens ?? null,
+      total_reasoning_tokens: result.totalReasoningTokens ?? null,
+      total_tokens: result.totalTokens ?? null,
+      total_duration_ms: result.totalDurationMs ?? null,
+      total_estimated_cost_usd: result.totalCostUsd ?? null,
+      lead_id: ctx.leadId ?? null,
+      chat_id: ctx.chatId ?? null,
+      message_id: ctx.messageId ?? null,
+    };
+
+    if (callId) {
+      const { error } = await supabaseAdmin
+        .from('ai_call_logs')
+        .update(payload)
+        .eq('id', callId);
+
+      return error ? null : callId;
+    }
+
     const { data } = await supabaseAdmin
       .from('ai_call_logs')
-      .insert({
-        feature_key: ctx.featureKey,
-        ai_task: ctx.aiTask,
-        edge_function: ctx.edgeFunction ?? null,
-        success: result.success,
-        final_provider: result.finalProvider ?? null,
-        final_model: result.finalModel ?? null,
-        fallback_used: result.fallbackUsed,
-        attempts_count: result.attemptsCount,
-        total_input_tokens: result.totalInputTokens ?? null,
-        total_cached_tokens: result.totalCachedTokens ?? null,
-        total_output_tokens: result.totalOutputTokens ?? null,
-        total_reasoning_tokens: result.totalReasoningTokens ?? null,
-        total_tokens: result.totalTokens ?? null,
-        total_duration_ms: result.totalDurationMs ?? null,
-        total_estimated_cost_usd: result.totalCostUsd ?? null,
-        lead_id: ctx.leadId ?? null,
-        chat_id: ctx.chatId ?? null,
-        message_id: ctx.messageId ?? null,
-      })
+      .insert(payload)
       .select('id')
       .maybeSingle();
 
@@ -1234,7 +1304,7 @@ export const transcribeAudioWithRouting = async (
   const failures: string[] = [];
   const emptyUsage: ProviderUsage = { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null };
 
-  // Create call log (fire-and-forget)
+  // Create one logical call row; attempts and the final summary keep this id.
   const callLogId = await logAiCall(options.supabaseAdmin, {
     featureKey: 'audio.transcribe',
     aiTask: 'whatsapp_audio_transcription',
@@ -1269,27 +1339,28 @@ export const transcribeAudioWithRouting = async (
       const attemptDuration = Date.now() - attemptStart;
       const totalDuration = Date.now() - startTime;
 
-      // Persist attempt (fire-and-forget)
-      logAiCallAttempt(
-        options.supabaseAdmin, callLogId!, index + 1,
-        attempt.provider, attempt.model, attempt.source,
-        emptyUsage, attemptDuration, true, null,
-      ).catch(() => {});
-
-      // Update call log with success (fire-and-forget)
-      logAiCall(options.supabaseAdmin, {
-        featureKey: 'audio.transcribe',
-        aiTask: 'whatsapp_audio_transcription',
-        edgeFunction: null,
-      }, {
-        success: true,
-        finalProvider: attempt.provider,
-        finalModel: attempt.model,
-        fallbackUsed: index > 0,
-        attemptsCount: index + 1,
-        totalDurationMs: totalDuration,
-        totalCostUsd: null,
-      }).catch(() => {});
+      await Promise.all([
+        callLogId
+          ? logAiCallAttempt(
+              options.supabaseAdmin, callLogId, index + 1,
+              attempt.provider, attempt.model, attempt.source,
+              emptyUsage, attemptDuration, true, null,
+            )
+          : Promise.resolve(),
+        logAiCall(options.supabaseAdmin, {
+          featureKey: 'audio.transcribe',
+          aiTask: 'whatsapp_audio_transcription',
+          edgeFunction: null,
+        }, {
+          success: true,
+          finalProvider: attempt.provider,
+          finalModel: attempt.model,
+          fallbackUsed: index > 0,
+          attemptsCount: index + 1,
+          totalDurationMs: totalDuration,
+          totalCostUsd: null,
+        }, callLogId),
+      ]);
 
       return {
         text,
@@ -1303,15 +1374,30 @@ export const transcribeAudioWithRouting = async (
 
       const attemptDuration = Date.now() - attemptStart;
 
-      // Persist failed attempt (fire-and-forget)
-      logAiCallAttempt(
-        options.supabaseAdmin, callLogId!, index + 1,
-        attempt.provider, attempt.model, attempt.source,
-        emptyUsage, attemptDuration, false, null,
-        { message },
-      ).catch(() => {});
+      if (callLogId) {
+        await logAiCallAttempt(
+          options.supabaseAdmin, callLogId, index + 1,
+          attempt.provider, attempt.model, attempt.source,
+          emptyUsage, attemptDuration, false, null,
+          { message },
+        );
+      }
     }
   }
+
+  await logAiCall(options.supabaseAdmin, {
+    featureKey: 'audio.transcribe',
+    aiTask: 'whatsapp_audio_transcription',
+    edgeFunction: null,
+  }, {
+    success: false,
+    finalProvider: attempts[attempts.length - 1]?.provider,
+    finalModel: attempts[attempts.length - 1]?.model,
+    fallbackUsed: attempts.length > 1,
+    attemptsCount: attempts.length,
+    totalDurationMs: Date.now() - startTime,
+    totalCostUsd: null,
+  }, callLogId);
 
   throw new Error(`Nao foi possivel transcrever audio por IA. Tentativas: ${failures.join(' | ')}`);
 };
@@ -1324,8 +1410,9 @@ export const transcribeAudioWithRouting = async (
  * Central entry point for all AI feature calls.
  *
  * Resolves model via: feature override > ai_routing > provider default > fallback.
- * Executes up to 3 attempts (preferred, default model, fallback provider).
- * Logs every attempt and the summary call to ai_call_attempts / ai_call_logs.
+ * Executes the routed attempts. Callers can cap the list and attach a
+ * deterministic output validator so a technical retry remains inside one
+ * logical call and one ai_call_logs row.
  *
  * Uses preferDefaultModel only when explicitly passed (for legacy non-feature paths
  * like campaign.intent and agenda.organize that still need it).
@@ -1370,6 +1457,12 @@ export const generateTextForFeature = async (
     attempts.push({ provider: fallbackProvider, model: fallbackModel, source: 'fallback' });
   }
 
+  const maxAttempts = Math.max(1, Math.min(3, options.maxAttempts ?? attempts.length));
+  while (attempts.length < maxAttempts) {
+    attempts.push({ ...attempts[0] });
+  }
+  const boundedAttempts = attempts.slice(0, maxAttempts);
+
   // Load pricing for cost calculation
   const pricing = await loadPricingCache(options.supabaseAdmin);
 
@@ -1387,6 +1480,8 @@ export const generateTextForFeature = async (
     finalModel: undefined,
     fallbackUsed: false,
     attemptsCount: 0,
+    retryCount: 0,
+    stopReason: null,
   });
 
   const failures: string[] = [];
@@ -1396,9 +1491,12 @@ export const generateTextForFeature = async (
   let totalOutput = 0;
   let totalReasoning = 0;
   let totalTokensSum = 0;
+  let attemptsTried = 0;
+  let lastStopReason: Exclude<AiCallStopReason, 'completed' | 'completed_after_retry'> = 'provider_error';
 
-  for (let index = 0; index < attempts.length; index += 1) {
-    const attempt = attempts[index];
+  for (let index = 0; index < boundedAttempts.length; index += 1) {
+    const attempt = boundedAttempts[index];
+    attemptsTried = index + 1;
     const providerSettings = runtime.providers[attempt.provider];
     const providerStatus = canUseProvider(providerSettings);
 
@@ -1406,103 +1504,144 @@ export const generateTextForFeature = async (
       failures.push(`${attempt.provider}: ${providerStatus.reason}`);
 
       // Log failed attempt (no usage)
-      await logAiCallAttempt(
-        options.supabaseAdmin, callLogId!, index + 1,
-        attempt.provider, attempt.model, attempt.source,
-        { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
-        0, false, null,
-        { message: providerStatus.reason },
-      );
+      if (callLogId) {
+        await logAiCallAttempt(
+          options.supabaseAdmin, callLogId, index + 1,
+          attempt.provider, attempt.model, attempt.source,
+          { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
+          0, false, null,
+          { code: 'provider_error', message: providerStatus.reason },
+        );
+      }
+      lastStopReason = 'provider_error';
       continue;
     }
 
     const attemptStart = Date.now();
+    let providerResult: ProviderCallResult | null = null;
+    let attemptCost: number | null = null;
+    const timeoutController = options.attemptTimeoutMs ? new AbortController() : null;
+    const timeoutHandle = timeoutController
+      ? setTimeout(() => timeoutController.abort(), Math.max(1, options.attemptTimeoutMs!))
+      : null;
+
     try {
-      const result = await callProvider(attempt.provider, providerSettings, {
+      providerResult = await callProvider(attempt.provider, providerSettings, {
         model: attempt.model,
         systemPrompt: options.systemPrompt,
         userPrompt: options.userPrompt,
         temperature: options.temperature ?? 0.4,
         maxTokens: options.maxTokens ?? 900,
         task: options.task,
+        signal: timeoutController?.signal,
+        maxHttpAttempts: options.maxProviderRequestsPerAttempt,
       });
 
       const attemptDuration = Date.now() - attemptStart;
 
-      if (!result.text) {
-        throw new Error('Resposta vazia do provider.');
+      if (!providerResult.text.trim()) {
+        throw new AiAttemptError('empty_response', 'Resposta vazia do provider.');
       }
 
       // Calculate cost for this attempt
-      const cost = calculateCost(attempt.provider, attempt.model, result.usage, pricing);
-
-      // Persist attempt telemetry (fire-and-forget)
-      logAiCallAttempt(
-        options.supabaseAdmin, callLogId!, index + 1,
-        attempt.provider, attempt.model, attempt.source,
-        result.usage, attemptDuration, true, cost,
-      ).catch(() => {});
+      attemptCost = calculateCost(attempt.provider, attempt.model, providerResult.usage, pricing);
 
       // Accumulate totals
-      if (cost !== null) totalCostUsd += cost;
-      if (result.usage.inputTokens !== null) totalInput += result.usage.inputTokens;
-      if (result.usage.cachedInputTokens !== null) totalCached += result.usage.cachedInputTokens;
-      if (result.usage.outputTokens !== null) totalOutput += result.usage.outputTokens;
-      if (result.usage.reasoningTokens !== null) totalReasoning += result.usage.reasoningTokens;
-      if (result.usage.totalTokens !== null) totalTokensSum += result.usage.totalTokens;
+      if (attemptCost !== null) totalCostUsd += attemptCost;
+      if (providerResult.usage.inputTokens !== null) totalInput += providerResult.usage.inputTokens;
+      if (providerResult.usage.cachedInputTokens !== null) totalCached += providerResult.usage.cachedInputTokens;
+      if (providerResult.usage.outputTokens !== null) totalOutput += providerResult.usage.outputTokens;
+      if (providerResult.usage.reasoningTokens !== null) totalReasoning += providerResult.usage.reasoningTokens;
+      if (providerResult.usage.totalTokens !== null) totalTokensSum += providerResult.usage.totalTokens;
 
-      // Update call log with success
-      logAiCall(options.supabaseAdmin, {
-        featureKey: options.featureKey,
-        aiTask: options.task,
-        edgeFunction: options.edgeFunction,
-        leadId: options.leadId,
-        chatId: options.chatId,
-        messageId: options.messageId,
-      }, {
-        success: true,
-        finalProvider: attempt.provider,
-        finalModel: attempt.model,
-        fallbackUsed: index > 0,
-        attemptsCount: index + 1,
-        totalInputTokens: totalInput,
-        totalCachedTokens: totalCached,
-        totalOutputTokens: totalOutput,
-        totalReasoningTokens: totalReasoning,
-        totalTokens: totalTokensSum,
-        totalDurationMs: Date.now() - startTime,
-        totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
-      }).catch(() => {});
+      const outputValidation = options.validateOutput?.(providerResult.text);
+      if (outputValidation && !outputValidation.valid) {
+        throw new AiAttemptError(
+          outputValidation.stopReason ?? 'invalid_output',
+          outputValidation.message ?? 'Saída tecnicamente inválida.',
+        );
+      }
+
+      const stopReason: AiCallStopReason = providerResult.stopReason
+        || (index === 0 ? 'completed' : 'completed_after_retry');
+
+      await Promise.all([
+        callLogId
+          ? logAiCallAttempt(
+              options.supabaseAdmin, callLogId, index + 1,
+              attempt.provider, attempt.model, attempt.source,
+              providerResult.usage, attemptDuration, true, attemptCost,
+            )
+          : Promise.resolve(),
+        logAiCall(options.supabaseAdmin, {
+          featureKey: options.featureKey,
+          aiTask: options.task,
+          edgeFunction: options.edgeFunction,
+          leadId: options.leadId,
+          chatId: options.chatId,
+          messageId: options.messageId,
+        }, {
+          success: true,
+          finalProvider: attempt.provider,
+          finalModel: attempt.model,
+          fallbackUsed: index > 0,
+          attemptsCount: index + 1,
+          retryCount: index,
+          stopReason,
+          totalInputTokens: totalInput,
+          totalCachedTokens: totalCached,
+          totalOutputTokens: totalOutput,
+          totalReasoningTokens: totalReasoning,
+          totalTokens: totalTokensSum,
+          totalDurationMs: Date.now() - startTime,
+          totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
+        }, callLogId),
+      ]);
 
       return {
-        text: result.text,
+        text: providerResult.text,
         provider: attempt.provider,
         model: attempt.model,
         source: attempt.source,
         fallbackUsed: index > 0,
-        usage: result.usage,
+        usage: providerResult.usage,
         durationMs: Date.now() - startTime,
-        estimatedCostUsd: cost,
+        estimatedCostUsd: attemptCost,
         callLogId,
+        retryCount: index,
+        stopReason,
       };
     } catch (error) {
       const attemptDuration = Date.now() - attemptStart;
-      const message = error instanceof Error ? error.message : String(error);
+      const timedOut = Boolean(timeoutController?.signal.aborted);
+      lastStopReason = timedOut
+        ? 'timeout'
+        : error instanceof AiAttemptError
+          ? error.stopReason
+          : /resposta vazia/i.test(error instanceof Error ? error.message : String(error))
+            ? 'empty_response'
+            : 'provider_error';
+      const message = timedOut
+        ? `Tempo limite do provider excedido após ${options.attemptTimeoutMs}ms.`
+        : error instanceof Error ? error.message : String(error);
       failures.push(`${attempt.provider}: ${message}`);
 
-      // Log failed attempt
-      logAiCallAttempt(
-        options.supabaseAdmin, callLogId!, index + 1,
-        attempt.provider, attempt.model, attempt.source,
-        { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
-        attemptDuration, false, null,
-        { message },
-      ).catch(() => {});
+      if (callLogId) {
+        await logAiCallAttempt(
+          options.supabaseAdmin, callLogId, index + 1,
+          attempt.provider, attempt.model, attempt.source,
+          providerResult?.usage ?? { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
+          attemptDuration, false, attemptCost,
+          { code: lastStopReason, message },
+        );
+      }
+    } finally {
+      if (timeoutHandle !== null) clearTimeout(timeoutHandle);
     }
   }
 
   // All attempts failed — update call log
-  logAiCall(options.supabaseAdmin, {
+  await logAiCall(options.supabaseAdmin, {
     featureKey: options.featureKey,
     aiTask: options.task,
     edgeFunction: options.edgeFunction,
@@ -1511,10 +1650,12 @@ export const generateTextForFeature = async (
     messageId: options.messageId,
   }, {
     success: false,
-    finalProvider: attempts[attempts.length - 1]?.provider,
-    finalModel: attempts[attempts.length - 1]?.model,
-    fallbackUsed: attempts.length > 1,
-    attemptsCount: attempts.length,
+    finalProvider: boundedAttempts[boundedAttempts.length - 1]?.provider,
+    finalModel: boundedAttempts[boundedAttempts.length - 1]?.model,
+    fallbackUsed: boundedAttempts.length > 1,
+    attemptsCount: attemptsTried,
+    retryCount: Math.max(0, attemptsTried - 1),
+    stopReason: lastStopReason,
     totalInputTokens: totalInput,
     totalCachedTokens: totalCached,
     totalOutputTokens: totalOutput,
@@ -1522,7 +1663,7 @@ export const generateTextForFeature = async (
     totalTokens: totalTokensSum,
     totalDurationMs: Date.now() - startTime,
     totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
-  }).catch(() => {});
+  }, callLogId);
 
   throw new Error(`Nao foi possivel gerar resposta por IA. Tentativas: ${failures.join(' | ')}`);
 };

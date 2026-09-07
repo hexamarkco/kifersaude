@@ -65,6 +65,7 @@ Ao implementar ou corrigir:
 
 ## Project memory
 
+- 2026-09-07: O pipeline normal de follow-up passa a usar somente `followup.generate` (`task_type='text'`) para raciocinar internamente e retornar a mensagem final. `followup.analysis` permanece como legado desativado; a validacao de output e deterministica/local, com no maximo 1 retry tecnico e sem validator/regeneracao por qualidade. `followup.refine` continua manual e a recuperacao tardia por `comm_follow_up_audit_log` evita nova chamada apos timeout do cliente.
 - 2026-03-10: Este repositorio passou a adotar como referencia permanente os frameworks `claude-mem`, `get-shit-done`, `superpowers` e `awesome-claude-code` para comportamento, planejamento e execucao.
 - 2026-03-11: A paleta institucional padrao do front passa a priorizar marrom, laranja, preto e branco, com cinzas apenas como apoio neutro. Cores semanticas como verde, vermelho e azul devem ficar restritas a feedback funcional e status.
 - 2026-03-11: Superficies de comunicacao/WhatsApp devem priorizar classes semanticas compartilhadas `.comm-*` e o comando `npm run audit:visual` passa a ser a referencia para rastrear hardcodes visuais remanescentes no `src`.
@@ -103,6 +104,5 @@ Ao implementar ou corrigir:
 - 2026-10-02: **Bug crítico corrigido**: as migrations 20261002003000 e 20261002005000 substituíram `comm_whatsapp_persist_message_internal` mas REMOVERAM o `INSERT ... ON CONFLICT DO NOTHING` do path com `external_message_id`, substituindo por SELECT+UPDATE condicional. Resultado: webhook e send atualizavam `last_message_text` no chat mas NUNCA criavam a mensagem em `comm_whatsapp_messages` — thread vazia, status travado em "Enviando". Corrigido na migration 20261002010000 restaurando o INSERT original. **Lição**: ao reescrever PL/pgSQL complexa, preservar TODOS os caminhos de INSERT/UPDATE, não apenas os visíveis no diff.
 - 2026-10-02: Status de entrega WhatsApp (sent→delivered→read) agora usa fallback via `GET /statuses/{MessageID}` do Whapi quando o webhook de read não chega. `REFRESHABLE_OUTBOUND_STATUSES` e `REFRESHABLE_STATUSES` incluem "delivered" para continuar pollando até detectar "read". Frontend continua agendando refresh para mensagens delivered.
 - 2026-10-02: Script de recuperação `scripts/recover-whatsapp-messages.mjs` (`npm run recover:messages` se configurado) recupera mensagens perdidas via `GET /messages/list/{ChatID}` do Whapi. Usa `comm_whatsapp_persist_message` para re-inserir com dedup por `external_message_id`. Execução: `node scripts/recover-whatsapp-messages.mjs --token=XXX [--chat=UUID] [--limit=N] [--apply]`.
-
 
 

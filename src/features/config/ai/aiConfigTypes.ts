@@ -1,15 +1,15 @@
 export type AiFeatureKey =
-  | "audio_transcribe"
-  | "message_rewrite"
-  | "suggest_reply"
-  | "attendance_critique"
-  | "campaign_intent"
-  | "agenda_organize"
-  | "followup_analysis"
-  | "followup_generate"
-  | "followup_refine"
-  | "autonomous_reply"
-  | "sandbox_scenario";
+  | "audio.transcribe"
+  | "message.rewrite"
+  | "message.suggest"
+  | "attendance.critique"
+  | "campaign.intent"
+  | "agenda.organize"
+  | "followup.analysis"
+  | "followup.generate"
+  | "followup.refine"
+  | "autonomous.reply"
+  | "sandbox.scenario";
 
 export type AiProviderSlug = "openai" | "gemini" | "claude";
 
@@ -21,6 +21,8 @@ export type AiFeatureRow = {
   name: string;
   description: string | null;
   category: string;
+  enabled: boolean;
+  task_type: "text" | "structured_output" | "transcription";
   available_variables: string[];
   default_feature_prompt: string;
   default_output_instructions: string;
@@ -66,6 +68,7 @@ export type AiConfigVersionRow = {
 
 export type AiFeatureWithConfig = AiFeatureRow & {
   active_config: AiFeatureConfigRow | null;
+  latest_config: AiFeatureConfigRow | null;
   config_count: number;
 };
 
@@ -129,17 +132,17 @@ export const AI_PROVIDER_OPTIONS: Array<{ value: AiProviderSlug; label: string }
 ];
 
 export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
-  audio_transcribe: "Transcrição de Áudio",
-  message_rewrite: "Reescrita de Mensagem",
-  suggest_reply: "Sugestão de Resposta",
-  attendance_critique: "Crítica de Atendimento",
-  campaign_intent: "Classificação de Intenção",
-  agenda_organize: "Organização de Agenda",
-  followup_analysis: "Análise de Follow-up",
-  followup_generate: "Geração de Follow-up",
-  followup_refine: "Refinamento de Follow-up",
-  autonomous_reply: "Resposta Autônoma",
-  sandbox_scenario: "Cenário Sandbox",
+  "audio.transcribe": "Transcrição de Áudio",
+  "message.rewrite": "Reescrita de Mensagem",
+  "message.suggest": "Sugestão de Resposta",
+  "attendance.critique": "Crítica de Atendimento",
+  "campaign.intent": "Classificação de Intenção",
+  "agenda.organize": "Organização de Agenda",
+  "followup.analysis": "Análise Comercial",
+  "followup.generate": "Gerar Follow-up",
+  "followup.refine": "Refinar Follow-up",
+  "autonomous.reply": "Resposta Autônoma",
+  "sandbox.scenario": "Cenário Sandbox",
 };
 
 export const AI_FEATURE_CATEGORIES: Record<string, string> = {

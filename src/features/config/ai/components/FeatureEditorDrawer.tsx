@@ -47,7 +47,7 @@ const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
 
 /** Maps feature key to the ai-feature-registry taskType */
 const FEATURE_TASK_TYPE: Record<string, string> = {
-  "followup.generate": "structured_output",
+  "followup.generate": "text",
   "followup.analysis": "structured_output",
   "followup.refine": "text",
   "message.rewrite": "text",
@@ -160,14 +160,15 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, []);
 
   useEffect(() => {
-    if (feature.active_config) {
-      setPrompt(feature.active_config.feature_prompt);
-      setOutputInstructions(feature.active_config.output_instructions);
-      setTemperature(feature.active_config.temperature);
-      setMaxTokens(feature.active_config.max_output_tokens);
-      setModelOverrideEnabled(feature.active_config.model_override_enabled);
-      setProvider(feature.active_config.provider ?? "openai");
-      setModel(feature.active_config.model ?? "gpt-4o-mini");
+    const currentConfig = feature.active_config ?? feature.latest_config;
+    if (currentConfig) {
+      setPrompt(currentConfig.feature_prompt);
+      setOutputInstructions(currentConfig.output_instructions);
+      setTemperature(currentConfig.temperature);
+      setMaxTokens(currentConfig.max_output_tokens);
+      setModelOverrideEnabled(currentConfig.model_override_enabled);
+      setProvider(currentConfig.provider ?? "openai");
+      setModel(currentConfig.model ?? "gpt-4o-mini");
     } else {
       setPrompt(feature.default_feature_prompt);
       setOutputInstructions(feature.default_output_instructions);
@@ -281,7 +282,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             </h2>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">
               {feature.key}
-              {feature.active_config && ` · v${feature.active_config.version}`}
+              {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>

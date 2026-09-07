@@ -25,6 +25,11 @@ import type {
   AiGlobalConfigRow,
 } from "./aiConfigTypes";
 import { AI_FEATURE_CATEGORIES } from "./aiConfigTypes";
+import {
+  buildAiFeatureCategories,
+  countActiveAiFeatures,
+  countOperationalAiFeatures,
+} from "./aiFeatureState";
 import FeatureEditorDrawer from "./components/FeatureEditorDrawer";
 import FeatureListCard from "./components/FeatureListCard";
 import GlobalConfigSection from "./components/GlobalConfigSection";
@@ -76,21 +81,11 @@ export default function AiConfigScreen() {
   }, [features, search]);
 
   const categories = useMemo(() => {
-    const map = new Map<string, AiFeatureWithConfig[]>();
-    for (const f of filteredFeatures) {
-      const cat = f.category ?? "outros";
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(f);
-    }
-    const result: AiFeatureCategory[] = [];
-    for (const [cat, items] of map) {
-      result.push({ label: AI_FEATURE_CATEGORIES[cat] ?? cat, features: items });
-    }
-    return result;
+    return buildAiFeatureCategories(filteredFeatures, AI_FEATURE_CATEGORIES);
   }, [filteredFeatures]);
 
-  const activeCount = features.filter((f) => f.active_config).length;
-  const totalCount = features.length;
+  const activeCount = countActiveAiFeatures(features);
+  const totalCount = countOperationalAiFeatures(features);
 
   const handleDeactivate = useCallback(async (configId: string) => {
     const { error } = await aiConfigService.deactivateConfig(configId);

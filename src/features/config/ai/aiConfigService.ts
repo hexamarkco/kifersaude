@@ -28,16 +28,19 @@ export const aiConfigService = {
     const { data: configs, error: cfgErr } = await supabase
       .from(TABLE_CONFIGS)
       .select("*")
-      .eq("is_active", true)
       .order("version", { ascending: false });
 
     if (cfgErr) return { data: null, error: cfgErr.message };
 
     const activeByFeature = new Map<string, AiFeatureConfigRow>();
+    const latestByFeature = new Map<string, AiFeatureConfigRow>();
     const countByFeature = new Map<string, number>();
 
     for (const cfg of configs ?? []) {
-      if (!activeByFeature.has(cfg.feature_id)) {
+      if (!latestByFeature.has(cfg.feature_id)) {
+        latestByFeature.set(cfg.feature_id, cfg);
+      }
+      if (cfg.is_active && !activeByFeature.has(cfg.feature_id)) {
         activeByFeature.set(cfg.feature_id, cfg);
       }
       const prev = countByFeature.get(cfg.feature_id) ?? 0;
@@ -47,6 +50,7 @@ export const aiConfigService = {
     const result: AiFeatureWithConfig[] = (features ?? []).map((f: Record<string, unknown>) => ({
       ...(f as AiFeatureWithConfig),
       active_config: activeByFeature.get(f.id as string) ?? null,
+      latest_config: latestByFeature.get(f.id as string) ?? null,
       config_count: countByFeature.get(f.id as string) ?? 0,
     }));
 

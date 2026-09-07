@@ -7,20 +7,20 @@ export type TemplateVariableSuggestion = {
 export const AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS: TemplateVariableSuggestion[] = [
   { key: 'nome', label: 'Nome completo', description: 'Nome completo do lead.' },
   { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead.' },
-  { key: 'saudacao', label: 'Saudacao', description: 'Saudacao atual em minusculo, como "bom dia".' },
+  { key: 'saudacao', label: 'Saudação', description: 'Saudação atual em minúsculo, como "bom dia".' },
   {
     key: 'saudacao_titulo',
-    label: 'Saudacao em titulo',
-    description: 'Saudacao atual capitalizada, como "Bom dia".',
+    label: 'Saudação em título',
+    description: 'Saudação atual capitalizada, como "Bom dia".',
   },
   {
     key: 'saudacao_capitalizada',
-    label: 'Saudacao capitalizada',
-    description: 'Alias de saudacao capitalizada, como "Bom dia".',
+    label: 'Saudação capitalizada',
+    description: 'Alias de saudação capitalizada, como "Bom dia".',
   },
   { key: 'origem', label: 'Origem', description: 'Origem cadastrada do lead.' },
   { key: 'cidade', label: 'Cidade', description: 'Cidade cadastrada do lead.' },
-  { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
+  { key: 'responsavel', label: 'Responsável', description: 'Responsável atual pelo lead.' },
 ];
 
 export const WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS: TemplateVariableSuggestion[] = [

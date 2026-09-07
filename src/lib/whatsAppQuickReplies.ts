@@ -1,6 +1,6 @@
 export const WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG = 'whatsapp_quick_replies';
-export const WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME = 'Mensagens rapidas do WhatsApp';
-export const WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION = 'Atalhos das mensagens rapidas usadas no inbox do WhatsApp.';
+export const WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME = 'Mensagens rápidas do WhatsApp';
+export const WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION = 'Atalhos das mensagens rápidas usadas no inbox do WhatsApp.';
 
 export type WhatsAppQuickReply = {
   id: string;
@@ -43,7 +43,7 @@ const normalizeQuickReplyRecord = (value: unknown, index: number): WhatsAppQuick
   }
 
   const record = value as Record<string, unknown>;
-  const name = toTrimmedString(record.name) || toTrimmedString(record.title) || `Mensagem rapida ${index + 1}`;
+  const name = toTrimmedString(record.name) || toTrimmedString(record.title) || `Mensagem rápida ${index + 1}`;
   const text = normalizeMultilineText(record.text);
 
   if (!text) {

@@ -49,34 +49,34 @@ export function DashboardTrendSection({
 
   const insightCards = [
     {
-      label: 'Ultimo mes',
+      label: 'Último mês',
       icon: TrendingUp,
       iconColor: 'var(--brand-primary)',
       value: latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados',
       caption:
         latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
           ? `${latestMonthlyPoint.variation > 0 ? '+' : ''}${latestMonthlyPoint.variation.toFixed(1)}% ${
-              previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'vs mes anterior'
+              previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'vs. mês anterior'
             }`
-          : 'Primeiro mes exibido no recorte',
+          : 'Primeiro mês exibido no recorte',
       captionClassName: monthlyVariationTone,
       meta: latestMonthlyPoint?.label || 'Sem dados',
     },
     {
-      label: 'Media do periodo',
+      label: 'Média do período',
       icon: BadgePercent,
       iconColor: 'var(--accent-gold)',
       value: displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : 'Sem dados',
-      caption: `Baseado nos ultimos ${displayedMonthlySeries.length} meses exibidos`,
+      caption: `Baseado nos últimos ${displayedMonthlySeries.length} meses exibidos`,
       captionClassName: 'text-[var(--text-muted)]',
-      meta: 'Media',
+      meta: 'Média',
     },
     {
-      label: 'Pico do periodo',
+      label: 'Pico do período',
       icon: Calendar,
       iconColor: 'var(--accent-copper)',
       value: highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : 'Sem dados',
-      caption: highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes` : 'Aguardando historico suficiente',
+      caption: highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mês` : 'Aguardando histórico suficiente',
       captionClassName: 'text-[var(--text-muted)]',
       meta: highestMonthlyPoint?.label || 'Sem dados',
     },
@@ -86,8 +86,8 @@ export function DashboardTrendSection({
     <Surface padding="sm" className="flex h-full flex-col">
       <SectionHeader
         eyebrow="Analytics"
-        title="Evolucao mensal"
-        description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
+        title="Evolução mensal"
+        description="Tendência por mês considerando o período selecionado e os filtros atuais."
       />
 
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -95,7 +95,7 @@ export function DashboardTrendSection({
           icon={Filter}
           value={periodFilter}
           onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-          placeholder="Mes atual"
+          placeholder="Mês atual"
           includePlaceholderOption={false}
           options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
             value: option.value,
@@ -107,7 +107,7 @@ export function DashboardTrendSection({
           icon={Clock}
           value={String(chartRangeInMonths)}
           onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}
-          placeholder="Ultimos 6 meses"
+          placeholder="Últimos 6 meses"
           includePlaceholderOption={false}
           options={DASHBOARD_CHART_RANGE_OPTIONS.map((option) => ({
             value: option.value,

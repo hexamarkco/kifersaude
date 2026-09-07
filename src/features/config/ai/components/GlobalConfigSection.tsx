@@ -18,12 +18,12 @@ type Props = {
 
 const GLOBAL_CONFIG_META: Record<string, { label: string; description: string; type: "text" | "textarea" }> = {
   global_instructions: {
-    label: "Instruções Globais",
-    description: "Diretrizes gerais que se aplicam a TODAS as features de IA.",
+    label: "Instruções globais",
+    description: "Diretrizes gerais que se aplicam a todas as funcionalidades de IA.",
     type: "textarea",
   },
   global_style: {
-    label: "Estilo Global",
+    label: "Estilo global",
     description: "Tom, formatação e estilo padrão para todas as respostas.",
     type: "textarea",
   },
@@ -43,7 +43,7 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
     setSaving(false);
 
     if (error) return toast.error(error);
-    toast.success("Salvo com sucesso");
+    toast.success("Salvo com sucesso.");
     onReload();
   }, [values, onReload]);
 

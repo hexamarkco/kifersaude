@@ -108,7 +108,7 @@ export function DashboardDistributionSection({
   };
 
   const leadsCard = renderDistributionCard({
-        title: 'Distribuicao de Leads por Status',
+        title: 'Distribuição de leads por status',
         description: 'Mapa de concentração por etapa do funil ativo.',
         emptyLabel: 'Nenhum lead ativo',
         data: donutChartData,
@@ -116,7 +116,7 @@ export function DashboardDistributionSection({
         onSegmentClick: onLeadStatusSegmentClick,
       });
   const operadorasCard = renderDistributionCard({
-        title: 'Contratos por Operadora',
+        title: 'Contratos por operadora',
         description: 'Participação das operadoras na carteira vigente.',
         emptyLabel: 'Nenhum contrato ativo',
         data: operadoraChartData,

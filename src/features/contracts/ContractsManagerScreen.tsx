@@ -688,7 +688,7 @@ export default function ContractsManager({
             action={(
               <div className="flex flex-wrap gap-2">
                 <OperationalMetricChip value={filteredContracts.length} label="resultados" />
-                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="paginas" />
+                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="páginas" />
               </div>
             )}
           />

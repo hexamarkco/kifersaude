@@ -78,7 +78,7 @@ export default function FormsScreen() {
 
     if (error || !form) {
       toast.error(
-        error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Erro ao criar o formulário.",
+        error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível criar o formulário.",
       );
       setCreating(false);
       return;
@@ -93,7 +93,7 @@ export default function FormsScreen() {
       options: [],
     });
     if (stepError) {
-      toast.error("Formulário criado, mas houve um erro ao preparar a etapa de contato.");
+      toast.error("Formulário criado, mas não foi possível preparar a etapa de contato.");
     }
 
     setCreating(false);
@@ -110,7 +110,7 @@ export default function FormsScreen() {
     setBusyId(form.id);
     const { error } = await formsService.updateForm(form.id, { is_published: !form.is_published });
     if (error) {
-      toast.error("Erro ao atualizar o formulário.");
+      toast.error("Não foi possível atualizar o formulário.");
     } else {
       await loadForms();
     }
@@ -140,7 +140,7 @@ export default function FormsScreen() {
     setBusyId(form.id);
     const { error } = await formsService.deleteForm(form.id);
     if (error) {
-      toast.error("Erro ao excluir o formulário.");
+      toast.error("Não foi possível excluir o formulário.");
     } else {
       await loadForms();
       toast.success("Formulário excluído.");

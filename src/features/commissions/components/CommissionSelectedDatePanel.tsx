@@ -17,7 +17,7 @@ export default function CommissionSelectedDatePanel({
   if (!selectedDate) {
     return (
       <div className="flex h-full min-h-64 items-center justify-center rounded-2xl bg-[var(--bg-hover)] px-6 text-center text-sm text-[var(--text-muted)]">
-        Escolha um dia no calendario para visualizar os detalhes.
+        Escolha um dia no calendário para visualizar os detalhes.
       </div>
     );
   }
@@ -25,7 +25,7 @@ export default function CommissionSelectedDatePanel({
   if (selectedDateEvents.length === 0) {
     return (
       <div className="flex h-full min-h-64 items-center justify-center rounded-2xl bg-[var(--bg-hover)] px-6 text-center text-sm text-[var(--text-muted)]">
-        Nenhum lancamento previsto para este dia.
+        Nenhum lançamento previsto para este dia.
       </div>
     );
   }
@@ -46,13 +46,13 @@ export default function CommissionSelectedDatePanel({
                     : "text-[var(--text-primary)]",
                 )}>
                   {isCommission
-                    ? "Recebimento de comissao"
-                    : "Pagamento de bonificacao"}
+                    ? "Recebimento de comissão"
+                    : "Pagamento de bonificação"}
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
                   Contrato{" "}
-                  {event.contract.codigo_contrato || "Sem codigo"} -{" "}
-                  {event.contract.operadora || "Operadora nao informada"}
+                  {event.contract.codigo_contrato || "Sem código"} -{" "}
+                  {event.contract.operadora || "Operadora não informada"}
                 </p>
                 {event.installmentCount && event.installmentIndex && (
                   <p className="mt-1 text-[11px] text-[var(--text-muted)]">

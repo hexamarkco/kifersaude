@@ -42,7 +42,7 @@ export function DashboardAlerts({
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 flex-shrink-0 text-[var(--accent-gold-hover)]" />
             <p className="text-sm text-[var(--accent-gold-hover)]">
-              Por favor, preencha as datas de inicio e fim no formato DD/MM/AAAA para visualizar o periodo personalizado.
+              Por favor, preencha as datas de início e fim no formato DD/MM/AAAA para visualizar o período personalizado.
             </p>
           </div>
         </Alert>

@@ -168,7 +168,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
       onUpdate();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
-      toast.error('Erro ao adicionar interação.');
+      toast.error('Não foi possível adicionar a interação.');
     }
   };
 
@@ -187,7 +187,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
             />
             {lead.nome_completo}
           </DialogTitle>
-          <DialogDescription>Historico de interacoes, status e lembretes.</DialogDescription>
+          <DialogDescription>Histórico de interações, status e lembretes.</DialogDescription>
         </div>
       </DialogHeader>
       <DialogBody>
@@ -201,7 +201,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               size="sm"
             >
               <Pencil className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Editar Lead</span>
+              <span className="hidden sm:inline">Editar lead</span>
             </Button>
           )}
           {canEditLead && onDelete && (
@@ -313,7 +313,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              <span>Nova Interação</span>
+              <span>Nova interação</span>
             </Button>
           ) : undefined}
         />
@@ -322,7 +322,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
           <Surface variant="warning" padding="sm" className="mb-6">
             <form onSubmit={handleAddInteraction}>
               <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Tipo de Interação">
+                <Field label="Tipo de interação">
                   <FilterSingleSelect
                     icon={Clock}
                     value={formData.tipo}

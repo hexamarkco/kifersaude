@@ -1358,7 +1358,7 @@ export default function AutoContactFlowSettingsScreen() {
     }
     if (scheduling.startHour === scheduling.endHour) {
       issues.push(
-        "A janela diaria esta com inicio e fim iguais; revise o horario.",
+        "A janela diária está com início e fim iguais; revise o horário.",
       );
     }
     simulationFlow.steps.forEach((step, index) => {
@@ -1371,7 +1371,7 @@ export default function AutoContactFlowSettingsScreen() {
         );
         if (!templateExists) {
           issues.push(
-            `Etapa ${index + 1}: selecione um template valido para a mensagem.`,
+            `Etapa ${index + 1}: selecione um template válido para a mensagem.`,
           );
         }
       }
@@ -1380,7 +1380,7 @@ export default function AutoContactFlowSettingsScreen() {
         step.messageSource === "custom" &&
         !step.customMessage?.text?.trim()
       ) {
-        issues.push(`Etapa ${index + 1}: a mensagem personalizada esta vazia.`);
+        issues.push(`Etapa ${index + 1}: a mensagem personalizada está vazia.`);
       }
       if (step.actionType === "update_status" && !step.statusToSet?.trim()) {
         issues.push(`Etapa ${index + 1}: informe o status de destino.`);
@@ -1911,8 +1911,8 @@ export default function AutoContactFlowSettingsScreen() {
               <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>
-                  O canal do WhatsApp esta desativado. Ao ligar "Ativar
-                  automacao", o envio volta a ser habilitado para os fluxos.
+                  O canal do WhatsApp está desativado. Ao ligar "Ativar
+                  automação", o envio volta a ser habilitado para os fluxos.
                 </span>
               </Alert>
             )}
@@ -2948,8 +2948,8 @@ export default function AutoContactFlowSettingsScreen() {
                                     }
                                   />
                                   <p className="text-[11px] text-[var(--text-subtle)] mt-1">
-                                    Use variaveis como {"{{primeiro_nome}}"} ou{" "}
-                                    {"{{= ... }}"} para formulas.
+Use variáveis como {"{{primeiro_nome}}"} ou{" "}
+                                     {"{{= ... }}"} para fórmulas.
                                   </p>
                                 </div>
                               </div>
@@ -2976,7 +2976,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Metodo
+                                     Método
                                   </label>
                                   <FilterSingleSelect
                                     icon={Activity}
@@ -3154,13 +3154,13 @@ export default function AutoContactFlowSettingsScreen() {
                                   value={simulationInputValue}
                                   onChange={setSimulationStart}
                                   triggerClassName="border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)]"
-                                  placeholder="Selecionar inicio"
+                                  placeholder="Selecionar início"
                                 />
                               </div>
                               <div className="grid gap-2 text-xs text-[var(--text-primary)]">
                                 <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
                                   <span className="font-semibold">Janela:</span>{" "}
-                                  {activeFlowScheduling.startHour} ate{" "}
+                                  {activeFlowScheduling.startHour} até{" "}
                                   {activeFlowScheduling.endHour}
                                 </div>
                                 <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
@@ -3194,7 +3194,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 {simulationSummary?.totalSteps ?? 0}
                               </div>
                               <div className="text-xs text-[var(--text-muted)]">
-                                Acoes previstas no fluxo atual.
+                                Ações previstas no fluxo atual.
                               </div>
                             </div>
                             <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
@@ -3227,7 +3227,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   </span>
                                 </div>
                                 <div>
-                                  Ultima execucao:{" "}
+                                  Última execução:{" "}
                                   <span className="font-medium text-[var(--text-primary)]">
                                     {simulationSummary?.lastAt
                                       ? formatSimulationDateTime(
@@ -3378,7 +3378,7 @@ export default function AutoContactFlowSettingsScreen() {
                                             item.delayValue,
                                             item.delayUnit,
                                           )}{" "}
-                                          apos o marco anterior
+                                          após o marco anterior
                                         </div>
                                       </div>
                                       <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-right text-xs text-[var(--text-primary)]">
@@ -3451,8 +3451,8 @@ export default function AutoContactFlowSettingsScreen() {
                               </div>
                               <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
                                 <p>
-                                  Os horarios ja consideram a janela do fluxo,
-                                  os dias permitidos e pulos automaticos da
+Os horários já consideram a janela do fluxo,
+                                   os dias permitidos e pulos automáticos da
                                   agenda.
                                 </p>
                                 <p>

@@ -44,16 +44,16 @@ export const DEFAULT_GENERAL_PREFERENCES = {
 export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
   {
     category: "lead_tipo_contratacao",
-    title: "Tipos de Contratacao",
-    description: "Defina as opcoes disponiveis ao cadastrar leads e contratos.",
-    placeholder: "Ex: Pessoa Fisica",
+    title: "Tipos de contratação",
+    description: "Defina as opções disponíveis ao cadastrar leads e contratos.",
+    placeholder: "Ex: Pessoa Física",
     searchTerms: ["lead", "tipos", "contratacao", "cadastro"],
   },
   {
     category: "lead_responsavel",
-    title: "Responsaveis pelos Leads",
+    title: "Responsáveis pelos leads",
     description:
-      "Configure a lista de responsaveis disponiveis para atribuicao.",
+      "Configure a lista de responsáveis disponíveis para atribuição.",
     placeholder: "Ex: Maria",
     searchTerms: ["lead", "responsavel", "atendimento", "time"],
   },
@@ -76,23 +76,23 @@ export const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
   },
   {
     category: "contract_abrangencia",
-    title: "Abrangencias",
-    description: "Lista de coberturas disponiveis para os contratos.",
+    title: "Abrangências",
+    description: "Lista de coberturas disponíveis para os contratos.",
     placeholder: "Ex: Nacional",
     searchTerms: ["contrato", "abrangencia", "cobertura"],
   },
   {
     category: "contract_acomodacao",
-    title: "Tipos de Acomodacao",
-    description: "Defina as opcoes de acomodacao para os planos.",
+    title: "Tipos de acomodação",
+    description: "Defina as opções de acomodação para os planos.",
     placeholder: "Ex: Enfermaria",
     searchTerms: ["contrato", "acomodacao", "plano"],
   },
   {
     category: "contract_carencia",
-    title: "Tipos de Carencia",
-    description: "Configure as opcoes de carencia disponiveis.",
-    placeholder: "Ex: Padrao",
+    title: "Tipos de carência",
+    description: "Configure as opções de carência disponíveis.",
+    placeholder: "Ex: Padrão",
     searchTerms: ["contrato", "carencia", "prazo"],
   },
 ];
@@ -100,8 +100,8 @@ export const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
 export const SECTION_OVERVIEW: SectionOverview[] = [
   {
     id: "general",
-    title: "Preferencias do sistema",
-    description: "Sessao, formato de data e notificacoes.",
+    title: "Preferências do sistema",
+    description: "Sessão, formato de data e notificações.",
     icon: Settings,
     iconTone: "gold",
     searchTerms: ["preferencias", "sistema", "notificacao", "sessao", "data", "fuso", "timezone"],
@@ -109,7 +109,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
   {
     id: "access",
     title: "Perfis e acessos",
-    description: "Permissoes por tipo de usuario.",
+    description: "Permissões por tipo de usuário.",
     icon: ShieldCheck,
     iconTone: "terracotta",
     searchTerms: ["acesso", "perfil", "permissoes", "admin", "observer"],

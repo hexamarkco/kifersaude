@@ -272,10 +272,10 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   if (configLoading && !lead) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
-        <DialogHeader showCloseButton={false}><DialogTitle>Carregando configuracoes</DialogTitle></DialogHeader>
+        <DialogHeader showCloseButton={false}><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
         <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
-          <div className="kds-loading-spinner" role="status" aria-label="Carregando configuracoes" />
-          <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configuracoes...</p>
+          <div className="kds-loading-spinner" role="status" aria-label="Carregando configurações" />
+          <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configurações...</p>
         </DialogBody>
       </Dialog>
     );
@@ -285,7 +285,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
     const targetCep = cepValue ?? formData.cep;
 
     if (!targetCep || targetCep.replace(/\D/g, '').length !== 8) {
-      toast.warning('Por favor, informe um CEP válido.');
+      toast.warning('Informe um CEP válido.');
       return;
     }
 
@@ -304,7 +304,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         lastFetchedCepRef.current = targetCep.replace(/\D/g, '');
       }
     } catch {
-      toast.error('Erro ao consultar CEP. Verifique o CEP informado.');
+      toast.error('Não foi possível consultar o CEP. Verifique o número informado.');
     } finally {
       setLoadingCep(false);
     }
@@ -345,9 +345,9 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         { value: formData.nome_completo.trim(), label: 'nome completo' },
         { value: formData.telefone.trim(), label: 'telefone' },
         { value: formData.origem.trim(), label: 'origem do lead' },
-        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratacao' },
+        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratação' },
         { value: formData.status.trim(), label: 'status' },
-        { value: formData.responsavel.trim(), label: 'responsavel' },
+        { value: formData.responsavel.trim(), label: 'responsável' },
       ];
 
       const missingRequired = requiredValues.find((item) => !item.value);
@@ -514,7 +514,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
       }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
-      toast.error('Erro ao salvar lead.');
+      toast.error('Não foi possível salvar o lead. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -523,9 +523,9 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()} size="lg" className="sm:max-w-3xl">
       <DialogHeader onClose={onClose}>
-        <DialogTitle>{lead ? 'Editar Lead' : 'Novo Lead'}</DialogTitle>
+        <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
         <DialogDescription>
-          {lead ? 'Atualize os dados comerciais e o proximo retorno.' : 'Registre o contato e defina o primeiro acompanhamento.'}
+          {lead ? 'Atualize os dados comerciais e o próximo retorno.' : 'Registre o contato e defina o primeiro acompanhamento.'}
         </DialogDescription>
       </DialogHeader>
       <DialogBody className="p-0">
@@ -535,7 +535,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         className="px-4 py-4 sm:px-5 sm:py-5"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Nome Completo *" htmlFor="lead-nome" className="md:col-span-2">
+          <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">
             <Input
               id="lead-nome"
               type="text"
@@ -599,7 +599,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               />
           </Field>
 
-          <Field label="Endereco" htmlFor="lead-endereco">
+          <Field label="Endereço" htmlFor="lead-endereco">
             <Input
               id="lead-endereco"
               type="text"
@@ -647,7 +647,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Origem do Lead *">
+          <Field label="Origem do lead *">
             {activeOrigins.length > 0 ? (
               <FilterSingleSelect
                 icon={Compass}
@@ -680,7 +680,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             )}
           </Field>
 
-          <Field label="Tipo de Contratacao *">
+          <Field label="Tipo de contratação *">
             {tipoContratacaoOptions.length > 0 ? (
               <FilterSingleSelect
                 icon={Briefcase}
@@ -691,7 +691,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                     tipo_contratacao: value,
                   }))
                 }
-                placeholder="Tipo de contratacao"
+                placeholder="Tipo de contratação"
                 includePlaceholderOption={false}
                 options={[
                   ...(!tipoContratacaoOptions.some(
@@ -722,12 +722,12 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                     tipo_contratacao: e.target.value,
                   }))
                 }
-                placeholder="Informe o tipo de contratacao"
+                placeholder="Informe o tipo de contratação"
               />
             )}
           </Field>
 
-          <Field label="Operadora Atual" htmlFor="lead-operadora">
+          <Field label="Operadora atual" htmlFor="lead-operadora">
             <Input
               id="lead-operadora"
               type="text"
@@ -784,13 +784,13 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                   className="mt-1"
                 />
                 <span>
-                  Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).
+                  Não disparar automações ao criar este lead (ex.: já abordado manualmente).
                 </span>
               </label>
             </Surface>
           )}
 
-          <Field label="Responsavel *">
+          <Field label="Responsável *">
             {responsavelOptions.length > 0 ? (
               <FilterSingleSelect
                 icon={UserCircle}
@@ -801,7 +801,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                     responsavel: value,
                   }))
                 }
-                placeholder="Responsavel"
+                placeholder="Responsável"
                 includePlaceholderOption={false}
                 options={[
                   ...(!responsavelOptions.some(
@@ -827,12 +827,12 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                     responsavel: e.target.value,
                   }))
                 }
-                placeholder="Informe o responsavel"
+                placeholder="Informe o responsável"
               />
             )}
           </Field>
 
-          <Field label="Data de Criacao">
+          <Field label="Data de criação">
             <DateTimePicker
               type="date"
               value={formData.data_criacao}
@@ -843,7 +843,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Proximo Retorno">
+          <Field label="Próximo retorno">
             <DateTimePicker
               type="datetime-local"
               value={formData.proximo_retorno}
@@ -858,9 +858,9 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
 
           <Field
-            label="Limite Diario de Envios"
+            label="Limite diário de envios"
             htmlFor="lead-daily-send-limit"
-            description="Defina um limite especifico para este lead ou deixe vazio para usar o limite do tenant."
+            description="Defina um limite específico para este lead ou deixe vazio para usar o limite padrão."
           >
             <Input
               id="lead-daily-send-limit"
@@ -878,7 +878,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Observacoes" className="md:col-span-2">
+          <Field label="Observações" className="md:col-span-2">
             <Textarea
               value={formData.observacoes}
               onChange={(e) =>

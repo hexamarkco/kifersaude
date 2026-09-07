@@ -126,7 +126,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     });
 
     if (error || !data) {
-      toast.error(error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Erro ao salvar as configurações.");
+      toast.error(error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível salvar as configurações.");
     } else {
       onFormUpdated(data);
       toast.success("Configurações salvas.");
@@ -142,7 +142,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       description: description.trim() || null,
     });
     if (error) {
-      toast.error("Erro ao salvar a etapa de contato.");
+      toast.error("Não foi possível salvar a etapa de contato.");
     } else {
       await loadSteps();
     }
@@ -174,7 +174,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     if (stepDialog?.step) {
       const { error } = await formsService.updateStep(stepDialog.step.id, payload);
       if (error) {
-        toast.error("Erro ao salvar a pergunta.");
+        toast.error("Não foi possível salvar a pergunta.");
       } else {
         await loadSteps();
         setStepDialog(null);
@@ -187,7 +187,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
         ...payload,
       });
       if (error || !created) {
-        toast.error("Erro ao adicionar a pergunta.");
+        toast.error("Não foi possível adicionar a pergunta.");
       } else {
         await persistOrder([...questionSteps.map((step) => step.id), created.id]);
         await loadSteps();
@@ -212,7 +212,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     setBusyStepId(step.id);
     const { error } = await formsService.deleteStep(step.id);
     if (error) {
-      toast.error("Erro ao excluir a pergunta.");
+      toast.error("Não foi possível excluir a pergunta.");
     } else {
       await persistOrder(questionSteps.filter((item) => item.id !== step.id).map((item) => item.id));
       await loadSteps();

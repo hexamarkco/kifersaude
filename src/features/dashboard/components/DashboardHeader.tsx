@@ -49,9 +49,9 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <PageHeader
-      eyebrow="Operacao comercial"
+      eyebrow="Operação comercial"
       title="Dashboard"
-      description="Acompanhe o ritmo do pipeline, da carteira e das conversoes."
+      description="Acompanhe o ritmo do pipeline, da carteira e das conversões."
       data-panel-animate
       className="border-b border-[var(--border-subtle)] pb-5"
     >
@@ -62,7 +62,7 @@ export function DashboardHeader({
               icon={Filter}
               value={periodFilter}
               onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-              placeholder="Periodo"
+              placeholder="Período"
               includePlaceholderOption={false}
               neutralValues={['todo-periodo']}
               options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
@@ -84,10 +84,10 @@ export function DashboardHeader({
                 invalid={isCustomStartInvalid}
               />
               <span className="text-center text-xs text-[var(--text-muted)] sm:hidden">
-                ate
+                até
               </span>
               <span className="hidden text-sm text-[var(--text-muted)] sm:inline">
-                ate
+                até
               </span>
               <Input
                 type="text"
@@ -120,7 +120,7 @@ export function DashboardHeader({
               icon={Users}
               value={dashboardOwnerFilter}
               onChange={onOwnerFilterChange}
-              placeholder="Todos os responsaveis"
+              placeholder="Todos os responsáveis"
               options={responsavelOptions.map((option) => ({
                 value: option.value,
                 label: option.label,

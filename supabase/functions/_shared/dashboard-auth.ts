@@ -65,7 +65,7 @@ export async function authorizeDashboardUser({
     return {
       authorized: false,
       status: 401,
-      body: { error: 'Nao autenticado' },
+      body: { error: 'Não autenticado' },
     };
   }
 
@@ -86,7 +86,7 @@ export async function authorizeDashboardUser({
     return {
       authorized: false,
       status: 401,
-      body: { error: 'Token de autenticacao invalido' },
+      body: { error: 'Token de autenticação inválido' },
     };
   }
 
@@ -95,7 +95,7 @@ export async function authorizeDashboardUser({
     return {
       authorized: false,
       status: 403,
-      body: { error: 'Perfil do usuario nao encontrado' },
+      body: { error: 'Perfil do usuário não encontrado' },
     };
   }
 
@@ -109,7 +109,7 @@ export async function authorizeDashboardUser({
     return {
       authorized: false,
       status: 500,
-      body: { error: 'Erro ao validar perfil do usuario' },
+      body: { error: 'Não foi possível validar o perfil do usuário' },
     };
   }
 
@@ -118,7 +118,7 @@ export async function authorizeDashboardUser({
     return {
       authorized: false,
       status: 403,
-      body: { error: 'Perfil do usuario nao encontrado' },
+      body: { error: 'Perfil do usuário não encontrado' },
     };
   }
 
@@ -137,7 +137,7 @@ export async function authorizeDashboardUser({
       return {
         authorized: false,
         status: 500,
-        body: { error: 'Erro ao validar permissao de usuario' },
+        body: { error: 'Não foi possível validar a permissão do usuário' },
       };
     }
 
@@ -148,7 +148,7 @@ export async function authorizeDashboardUser({
       return {
         authorized: false,
         status: 403,
-        body: { error: 'Permissao insuficiente' },
+        body: { error: 'Permissão insuficiente' },
       };
     }
 
@@ -156,7 +156,7 @@ export async function authorizeDashboardUser({
       return {
         authorized: false,
         status: 403,
-        body: { error: 'Permissao insuficiente' },
+        body: { error: 'Permissão insuficiente' },
       };
     }
   }

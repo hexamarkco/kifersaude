@@ -56,9 +56,9 @@ export default function BlogEditor({
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
-        eyebrow="Conteudo publico"
+        eyebrow="Conteúdo público"
         title={editingPost ? "Editar post" : "Novo post"}
-        description="Estruture o artigo, a capa e os metadados para publicacao."
+        description="Estruture o artigo, a capa e os metadados para publicação."
         actions={(
           <Button
             type="button"
@@ -73,12 +73,12 @@ export default function BlogEditor({
       />
 
       <Surface className="space-y-6">
-        <Field label="Titulo *">
+        <Field label="Título *">
           <Input
             type="text"
             value={formData.title}
             onChange={(event) => onTitleChange(event.target.value)}
-            placeholder="Digite o titulo do post"
+            placeholder="Digite o título do post"
           />
         </Field>
 
@@ -132,7 +132,7 @@ export default function BlogEditor({
                       cover_image_url: event.target.value,
                     })
                   }
-                  placeholder="https://exemplo.com/imagem.jpg ou faca upload"
+                  placeholder="https://exemplo.com/imagem.jpg ou faça upload"
                 />
               </div>
               {formData.cover_image_url && (
@@ -190,7 +190,7 @@ export default function BlogEditor({
           </div>
         </Field>
 
-        <Field label="Resumo (descricao curta) *" description={`${formData.excerpt.length}/160 caracteres (ideal para SEO)`}>
+        <Field label="Resumo (descrição curta) *" description={`${formData.excerpt.length}/160 caracteres (ideal para SEO)`}>
           <Textarea
             value={formData.excerpt}
             onChange={(event) =>
@@ -201,12 +201,12 @@ export default function BlogEditor({
               })
             }
             rows={3}
-            placeholder="Breve descricao do post (aparece na listagem e no Google)"
+            placeholder="Breve descrição do post (aparece na listagem e no Google)"
             maxLength={160}
           />
         </Field>
 
-        <Field label="Conteudo do artigo *">
+        <Field label="Conteúdo do artigo *">
           <div className="mb-3">
             <label className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors">
               <input
@@ -227,14 +227,14 @@ export default function BlogEditor({
                 <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <Upload className="h-4 w-4" />
                   <span className="text-sm font-semibold">
-                    Adicionar imagem ao conteudo
+                    Adicionar imagem ao conteúdo
                   </span>
                 </div>
               )}
             </label>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
-              Faca upload de imagens que serao inseridas no final do editor.
-              Voce pode move-las depois.
+              Faça upload de imagens que serão inseridas no final do editor.
+              Você pode movê-las depois.
             </p>
           </div>
 
@@ -245,23 +245,23 @@ export default function BlogEditor({
               onChange={onContentChange}
               modules={modules}
               formats={BLOG_EDITOR_FORMATS}
-              placeholder="Escreva o conteudo do artigo aqui..."
+              placeholder="Escreva o conteúdo do artigo aqui..."
               style={{ height: "400px", marginBottom: "50px" }}
             />
           </Surface>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Use o editor para formatar o texto. Adicione titulos (H2, H3),
+            Use o editor para formatar o texto. Adicione títulos (H2, H3),
             listas, links e imagens.
           </p>
         </Field>
 
         <Surface variant="muted" className="pt-6">
           <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
-            SEO (otimizacao para Google)
+            SEO (otimização para Google)
           </h3>
 
           <div className="space-y-4">
-            <Field label="Meta titulo (Google)" description={`${formData.meta_title.length}/60 caracteres`}>
+            <Field label="Meta título (Google)" description={`${formData.meta_title.length}/60 caracteres`}>
               <Input
                 type="text"
                 value={formData.meta_title}
@@ -271,12 +271,12 @@ export default function BlogEditor({
                     meta_title: event.target.value,
                   })
                 }
-                placeholder="Titulo que aparece no Google"
+                placeholder="Título que aparece no Google"
                 maxLength={60}
               />
             </Field>
 
-            <Field label="Meta descricao (Google)" description={`${formData.meta_description.length}/160 caracteres`}>
+            <Field label="Meta descrição (Google)" description={`${formData.meta_description.length}/160 caracteres`}>
               <Textarea
                 value={formData.meta_description}
                 onChange={(event) =>
@@ -286,7 +286,7 @@ export default function BlogEditor({
                   })
                 }
                 rows={2}
-                placeholder="Descricao que aparece no Google"
+                placeholder="Descrição que aparece no Google"
                 maxLength={160}
               />
             </Field>
@@ -305,7 +305,7 @@ export default function BlogEditor({
             htmlFor="published"
             className="text-sm font-medium text-[var(--text-secondary)]"
           >
-            Publicar imediatamente (visivel no site e Google)
+            Publicar imediatamente (visível no site e no Google)
           </label>
         </div>
 

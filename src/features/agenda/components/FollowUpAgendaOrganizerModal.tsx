@@ -54,7 +54,7 @@ const defaultOptions = (): FollowUpAgendaOrganizerOptions => ({
 const modeLabels: Record<FollowUpAgendaOrganizerMode, string> = {
   balanced: 'Equilibrado',
   urgency: 'Urgencia',
-  minimal_changes: 'Menos mudancas',
+  minimal_changes: 'Menos mudanças',
 };
 
 const groupChangesByDate = (changes: FollowUpAgendaOrganizerChange[]) => changes.reduce<Record<string, FollowUpAgendaOrganizerChange[]>>((groups, change) => {
@@ -91,11 +91,11 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
       if (result.totalCandidates === 0) {
         toast.info('Nenhum follow-up pendente encontrado para reorganizar.');
       } else {
-        toast.success('Previa da reorganizacao gerada.');
+        toast.success('Prévia da reorganização gerada.');
       }
     } catch (error) {
       console.error('[FollowUpAgendaOrganizerModal] erro ao gerar previa', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar a previa.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar a prévia.');
     } finally {
       setLoadingPreview(false);
     }
@@ -103,14 +103,14 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
 
   const handleApply = async () => {
     if (!preview || changedItems.length === 0) {
-      toast.info('Nao ha mudancas para aplicar.');
+      toast.info('Não há mudanças para aplicar.');
       return;
     }
 
     const confirmed = await requestConfirmation({
-      title: 'Aplicar reorganizacao',
-      description: `Aplicar a reorganizacao em ${changedItems.length} follow-up(s)?`,
-      confirmLabel: 'Aplicar reorganizacao',
+      title: 'Aplicar reorganização',
+      description: `Aplicar a reorganização em ${changedItems.length} follow-up(s)?`,
+      confirmLabel: 'Aplicar reorganização',
       cancelLabel: 'Cancelar',
     });
     if (!confirmed) return;
@@ -124,7 +124,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
       onClose();
     } catch (error) {
       console.error('[FollowUpAgendaOrganizerModal] erro ao aplicar reorganizacao', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel aplicar a reorganizacao.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível aplicar a reorganização.');
     } finally {
       setApplying(false);
     }
@@ -142,7 +142,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
         <DialogHeader onClose={onClose}>
           <DialogTitle>Organizar follow-ups</DialogTitle>
           <DialogDescription>
-            Monte uma fila diaria: ate o limite definido por dia, todos no mesmo horario, em ordem de prioridade.
+            Monte uma fila diária: até o limite definido por dia, todos no mesmo horário, em ordem de prioridade.
           </DialogDescription>
         </DialogHeader>
 
@@ -150,11 +150,11 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
           <Surface variant="muted" padding="sm" className="space-y-4">
             <SectionHeader
               as="h3"
-              title="Configuracao da fila"
-              description="Defina capacidade, inicio e criterio de priorizacao."
+              title="Configuração da fila"
+              description="Defina capacidade, início e critério de priorização."
             />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <Field label="Limite diario" htmlFor="agenda-organizer-limit">
+              <Field label="Limite diário" htmlFor="agenda-organizer-limit">
                 <Input
                   id="agenda-organizer-limit"
                   type="number"
@@ -164,7 +164,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                   onChange={handleDailyLimitChange}
                 />
               </Field>
-              <Field label="Horario unico da fila" htmlFor="agenda-organizer-time">
+              <Field label="Horário único da fila" htmlFor="agenda-organizer-time">
                 <DateTimePicker
                   id="agenda-organizer-time"
                   type="time"
@@ -191,7 +191,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
               {[
-                ['weekdaysOnly', 'Somente dias uteis'],
+                ['weekdaysOnly', 'Somente dias úteis'],
                 ['includeOverdue', 'Incluir atrasados'],
                 ['preserveToday', 'Preservar follow-ups de hoje'],
               ].map(([key, label]) => (
@@ -213,8 +213,8 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
             {!preview && !loadingPreview ? (
               <EmptyState
                 icon={<CalendarClock className="h-8 w-8" />}
-                title="Aguardando configuracao"
-                description="Configure a fila e gere uma previa. Nada sera alterado antes da confirmacao."
+                title="Aguardando configuração"
+                description="Configure a fila e gere uma prévia. Nada será alterado antes da confirmação."
               />
             ) : null}
 
@@ -229,9 +229,9 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
               <div className="space-y-4">
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <OperationalMetricChip value={preview.totalCandidates} label="analisados" />
-                  <OperationalMetricChip value={preview.totalChanges} label="mudancas" tone="accent" />
+                  <OperationalMetricChip value={preview.totalChanges} label="mudanças" tone="accent" />
                   <OperationalMetricChip value={Object.keys(preview.groupedDays).length} label="dias usados" />
-                  <OperationalMetricChip value={preview.options.queueTime} label="horario unico" tone="gold" />
+                  <OperationalMetricChip value={preview.options.queueTime} label="horário único" tone="gold" />
                 </div>
 
                 <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
@@ -257,7 +257,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                               <Badge tone={change.changed ? 'accent' : 'neutral'} className="max-w-full whitespace-normal text-right">
                                 {change.changed
                                   ? `${formatDateTimeFullBR(change.currentDateTime)} -> ${formatDateTimeFullBR(change.newDateTime)}`
-                                  : 'mantem horario'}
+                                  : 'mantém horário'}
                               </Badge>
                             </div>
                             <p className="mt-2 text-xs text-[var(--text-muted)]">{change.reasons.join(' ')}</p>
@@ -276,7 +276,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
           <Button variant="secondary" onClick={onClose} disabled={loadingPreview || applying}>Fechar</Button>
           <Button variant="primary" onClick={() => void handleGeneratePreview()} loading={loadingPreview} disabled={applying}>
             {!loadingPreview && <Sparkles className="h-4 w-4" />}
-            Gerar previa
+            Gerar prévia
           </Button>
           <Button variant="success" onClick={() => void handleApply()} loading={applying} disabled={!preview || changedItems.length === 0 || loadingPreview}>
             {!applying && <CheckCircle2 className="h-4 w-4" />}

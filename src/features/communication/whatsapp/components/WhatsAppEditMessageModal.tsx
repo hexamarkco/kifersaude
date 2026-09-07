@@ -35,7 +35,7 @@ export default function WhatsAppEditMessageModal({
             Cancelar
           </Button>
           <Button onClick={onSubmit} loading={loading} disabled={!value.trim()}>
-            Salvar alteracoes
+            Salvar alterações
           </Button>
         </div>
       )}
@@ -45,7 +45,7 @@ export default function WhatsAppEditMessageModal({
         onChange={(event) => onChange(event.target.value)}
         rows={8}
         className="text-sm leading-6"
-        placeholder="Digite a nova versao da mensagem"
+        placeholder="Digite a nova versão da mensagem"
         disabled={loading}
         autoFocus
       />

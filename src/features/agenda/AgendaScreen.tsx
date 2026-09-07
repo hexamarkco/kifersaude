@@ -289,7 +289,7 @@ export default function AgendaScreen() {
       }
 
       console.error("Erro ao carregar agenda:", loadError);
-      setError("Nao foi possivel carregar a agenda agora.");
+      setError("Não foi possível carregar a agenda agora.");
     } finally {
       if (requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);
@@ -412,7 +412,7 @@ export default function AgendaScreen() {
     const leadData = await fetchLeadInfo(leadId);
 
     if (!leadData) {
-      toast.error("Nao foi possivel localizar os dados deste lead.");
+      toast.error("Não foi possível localizar os dados deste lead.");
       return;
     }
 
@@ -447,7 +447,7 @@ export default function AgendaScreen() {
     const leadId = getLeadIdForReminder(reminder);
 
     if (!leadId) {
-      toast.error("Nao foi possivel identificar o lead deste lembrete.");
+      toast.error("Não foi possível identificar o lead deste lembrete.");
       return;
     }
 
@@ -533,7 +533,7 @@ export default function AgendaScreen() {
       setReminders((current) => current.filter((item) => getLeadIdForReminder(item) !== leadId));
     } catch (markError) {
       console.error("Erro ao marcar lead como perdido:", markError);
-      toast.error("Nao foi possivel marcar o lead como perdido.");
+      toast.error("Não foi possível marcar o lead como perdido.");
     } finally {
       setMarkingLostLeadId(null);
     }
@@ -630,7 +630,7 @@ export default function AgendaScreen() {
 
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
-      toast.error("Nao foi possivel identificar o lead deste lembrete.");
+      toast.error("Não foi possível identificar o lead deste lembrete.");
       return;
     }
 
@@ -684,8 +684,8 @@ export default function AgendaScreen() {
         );
       }
     } catch (scheduleError) {
-      console.error("Erro ao agendar lembrete rapido:", scheduleError);
-      toast.error("Nao foi possivel criar o novo lembrete rapido.");
+      console.error("Erro ao agendar lembrete rápido:", scheduleError);
+      toast.error("Não foi possível criar o novo lembrete rápido.");
     } finally {
       setQuickSchedulingAction(null);
     }
@@ -771,7 +771,7 @@ export default function AgendaScreen() {
       );
     } catch (rescheduleError) {
       console.error("Erro ao reagendar lembrete:", rescheduleError);
-      toast.error("Nao foi possivel reagendar o item.");
+      toast.error("Não foi possível reagendar o item.");
     }
   };
 
@@ -822,7 +822,7 @@ export default function AgendaScreen() {
       setIsAddTaskModalOpen(false);
     } catch (insertError) {
       console.error("Erro ao criar tarefa:", insertError);
-      setError("Nao foi possivel criar a tarefa.");
+      setError("Não foi possível criar a tarefa.");
     } finally {
       setSavingTask(false);
     }
@@ -1416,8 +1416,8 @@ export default function AgendaScreen() {
                   variant="soft"
                   size="icon"
                   className="h-10 w-10"
-                  title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
-                  aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
+                  title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
+                  aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Button>
@@ -1425,7 +1425,7 @@ export default function AgendaScreen() {
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
+                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido">
                           {isQuickSchedulingCurrentReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                             <span className="relative inline-flex">
                               <CalendarPlus className="h-4 w-4" />
@@ -1463,8 +1463,8 @@ export default function AgendaScreen() {
                   variant={reminder.lido ? "secondary" : "soft"}
                   size="icon"
                   className="h-10 w-10"
-                  title={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
-                  aria-label={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
+                  title={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
+                  aria-label={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
                 >
                   <Check className="h-4 w-4" />
                 </Button>
@@ -1711,12 +1711,12 @@ export default function AgendaScreen() {
                       </Button>
                     )}
                   >
-                    <span>Selecione um dia no calendario para reagendar o item.</span>
+                    <span>Selecione um dia no calendário para reagendar o item.</span>
                   </Alert>
                 )}
 
                 {error && (
-                  <Alert className="mt-3" tone="danger" title="Nao foi possivel concluir a operacao">
+                  <Alert className="mt-3" tone="danger" title="Não foi possível concluir a operação">
                     {error}
                   </Alert>
                 )}
@@ -1743,7 +1743,7 @@ export default function AgendaScreen() {
                   <EmptyState
                     icon={<Calendar className="h-8 w-8" />}
                     title="Nenhum item neste dia"
-                    description="Os filtros atuais nao retornaram tarefas ou lembretes para a data selecionada."
+                    description="Os filtros atuais não retornaram tarefas ou lembretes para a data selecionada."
                   />
                 )}
             </div>
@@ -1775,13 +1775,13 @@ export default function AgendaScreen() {
           >
             <DialogHeader onClose={() => setReminderPendingDeletion(null)}>
               <DialogTitle>Remover item</DialogTitle>
-              <DialogDescription>Esta acao nao pode ser desfeita.</DialogDescription>
+              <DialogDescription>Esta ação não pode ser desfeita.</DialogDescription>
             </DialogHeader>
             <DialogBody>
               <Alert tone="danger" title={`Remover "${reminderPendingDeletion.titulo}"?`}>
                 {reminderPendingDeletion.descricao
                   ? <span className="break-words">{reminderPendingDeletion.descricao}</span>
-                  : "O item sera removido permanentemente da agenda."}
+                  : "O item será removido permanentemente da agenda."}
               </Alert>
             </DialogBody>
             <DialogFooter>

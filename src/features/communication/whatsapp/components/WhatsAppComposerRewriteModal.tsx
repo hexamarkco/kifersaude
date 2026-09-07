@@ -11,7 +11,7 @@ const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; descr
   {
     value: 'grammar',
     label: 'Corrigir',
-    description: 'Corrige gramatica, ortografia e clareza sem mudar o sentido.',
+    description: 'Corrige gramática, ortografia e clareza sem mudar o sentido.',
   },
   {
     value: 'professional',
@@ -20,8 +20,8 @@ const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; descr
   },
   {
     value: 'friendly',
-    label: 'Amigavel',
-    description: 'Deixa mais calorosa e proxima do cliente.',
+    label: 'Amigável',
+    description: 'Deixa mais calorosa e próxima do cliente.',
   },
   {
     value: 'shorter',
@@ -93,7 +93,7 @@ export default function WhatsAppComposerRewriteModal({
           <Surface variant="muted" padding="sm">
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Objetivo da reescrita</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Escolha o ajuste principal. A IA preserva a intencao da mensagem e dados confirmados.
+              Escolha o ajuste principal. A IA preserva a intenção da mensagem e dados confirmados.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
               {TONE_OPTIONS.map((option) => {
@@ -116,16 +116,16 @@ export default function WhatsAppComposerRewriteModal({
           </Surface>
 
           <Surface padding="sm">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Instrucoes extras</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Instruções extras</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Opcional. Ex.: nao use emoji, termine com pergunta objetiva, mantenha linguagem simples.
+              Opcional. Ex.: não use emoji, termine com pergunta objetiva, mantenha linguagem simples.
             </p>
             <Textarea
               value={customInstructions}
               onChange={(event) => onChangeCustomInstructions(event.target.value)}
               rows={4}
               className="mt-3 text-sm leading-6"
-              placeholder="Adicione instrucoes extras so para esta reescrita."
+              placeholder="Adicione instruções extras só para esta reescrita."
               disabled={generating}
             />
           </Surface>
@@ -133,14 +133,14 @@ export default function WhatsAppComposerRewriteModal({
           <Surface padding="sm">
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Texto base</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Voce pode ajustar o texto aqui antes de pedir uma nova reescrita.
+              Você pode ajustar o texto aqui antes de pedir uma nova reescrita.
             </p>
             <Textarea
               value={sourceValue}
               onChange={(event) => onChangeSourceValue(event.target.value)}
               rows={8}
               className="mt-3 text-sm leading-6"
-              placeholder="Digite a mensagem que voce quer reescrever."
+              placeholder="Digite a mensagem que você quer reescrever."
               disabled={generating}
             />
           </Surface>
@@ -150,7 +150,7 @@ export default function WhatsAppComposerRewriteModal({
           <Surface padding="sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sugestao da IA</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sugestão da IA</h3>
                 <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                   Revise e edite livremente antes de aplicar no composer.
                 </p>

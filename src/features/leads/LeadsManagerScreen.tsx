@@ -778,7 +778,7 @@ export default function LeadsManager({
   const contentSectionDescription =
     viewMode === "kanban"
       ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
-      : "Analise cada lead com contexto, proximos retornos e acoes rapidas no mesmo fluxo.";
+      : "Analise cada lead com contexto, próximos retornos e ações rápidas no mesmo fluxo.";
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -961,7 +961,7 @@ export default function LeadsManager({
     } catch (error) {
       console.error("Erro ao aplicar dados em massa:", error);
       toast.error(
-        "Erro ao aplicar dados aos leads selecionados. Tente novamente.",
+        "Não foi possível aplicar os dados. Tente novamente.",
       );
       loadLeads();
     } finally {
@@ -1018,7 +1018,7 @@ export default function LeadsManager({
       loadLeads();
     } catch (error) {
       console.error("Erro ao excluir lead:", error);
-      toast.error("Erro ao excluir lead.");
+      toast.error("Não foi possível excluir o lead.");
     }
   };
 
@@ -1306,7 +1306,7 @@ export default function LeadsManager({
       }
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
-      toast.error("Erro ao atualizar status do lead.");
+      toast.error("Não foi possível atualizar o status do lead.");
 
       setLeads((current) =>
         current.map((l) => (l.id === leadId ? { ...l, status: oldStatus } : l)),
@@ -1466,7 +1466,7 @@ export default function LeadsManager({
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por nome, telefone, e-mail ou use status:origem:responsavel:tag:canal..."
+                placeholder="Buscar por nome, telefone, e-mail ou use status:origem:responsável:tag:canal..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1689,7 +1689,7 @@ export default function LeadsManager({
                 />
                 <OperationalMetricChip
                   value={`${currentPage}/${totalPages}`}
-                  label="paginas"
+                  label="páginas"
                   className="kds-leads-list-summary-metric"
                   title={`Página ${currentPage} de ${totalPages}`}
                 />
@@ -1704,8 +1704,8 @@ export default function LeadsManager({
                     />
                     <span className="kds-leads-select-page-label">
                       {areAllPageLeadsSelected
-                        ? "Pagina selecionada"
-                        : "Selecionar pagina"}
+                        ? "Página selecionada"
+                        : "Selecionar página"}
                     </span>
                   </label>
                 )}
@@ -1992,21 +1992,21 @@ export default function LeadsManager({
                               </div>
                             )}
                             <div>
-                              <span className="font-medium">Origem:</span>{" "}
+                              <span className="font-medium">Origem</span>{" "}
                               {lead.origem}
                             </div>
                             <div>
-                              <span className="font-medium">Tipo:</span>{" "}
+                              <span className="font-medium">Tipo</span>{" "}
                               {lead.tipo_contratacao}
                             </div>
                             <div>
-                              <span className="font-medium">Responsável:</span>{" "}
+                              <span className="font-medium">Responsável</span>{" "}
                               <span className="kds-op-lead-strong">
                                 {lead.responsavel}
                               </span>
                             </div>
                             <div>
-                              <span className="font-medium">Criado:</span>{" "}
+                              <span className="font-medium">Criado</span>{" "}
                               {new Date(lead.data_criacao).toLocaleDateString(
                                 "pt-BR",
                               )}
@@ -2014,7 +2014,7 @@ export default function LeadsManager({
                           </div>
                           {lead.cidade && (
                             <div className="kds-op-lead-meta mt-2.5">
-                              <span className="font-medium">Cidade:</span>{" "}
+                              <span className="font-medium">Cidade</span>{" "}
                               {lead.cidade}
                             </div>
                           )}
@@ -2022,7 +2022,7 @@ export default function LeadsManager({
                             <div className="kds-op-lead-accent mt-2.5 flex items-center space-x-2 text-sm">
                               <Calendar className="h-4 w-4" />
                               <span className="kds-op-lead-accent font-medium">
-                                Retorno:{" "}
+                                Retorno{" "}
                                 {formatDateTimeFullBR(
                                   nextReminderByLeadId.get(lead.id) ?? "",
                                 )}
@@ -2074,7 +2074,7 @@ export default function LeadsManager({
                         >
                           <Bell className="h-4 w-4" />
                           <span className="hidden sm:inline">
-                            Agendar Lembrete
+                            Agendar lembrete
                           </span>
                         </Button>
                         <Button

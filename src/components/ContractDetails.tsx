@@ -514,7 +514,7 @@ export default function ContractDetails({
     if (startDate) {
       events.push({
         id: "start",
-        label: "Inicio de vigencia",
+        label: "Início de vigência",
         date: startDate,
       });
     }
@@ -532,7 +532,7 @@ export default function ContractDetails({
     if (adjustmentDate) {
       events.push({
         id: "adjustment",
-        label: "Proximo reajuste anual",
+        label: "Próximo reajuste anual",
         date: adjustmentDate,
       });
     }
@@ -541,7 +541,7 @@ export default function ContractDetails({
     if (commissionDate) {
       events.push({
         id: "commission",
-        label: "Recebimento comissao",
+        label: "Recebimento de comissão",
         date: commissionDate,
       });
     }
@@ -550,7 +550,7 @@ export default function ContractDetails({
     if (bonusDate) {
       events.push({
         id: "bonus",
-        label: "Pagamento bonificacao",
+        label: "Pagamento de bonificação",
         date: bonusDate,
       });
     }
@@ -590,7 +590,7 @@ export default function ContractDetails({
     interactions.forEach((interaction) => {
       events.push({
         id: `audit-interaction-${interaction.id}`,
-        label: `Interacao: ${interaction.tipo}`,
+        label: `Interação: ${interaction.tipo}`,
         date: interaction.data_interacao,
         description: interaction.descricao,
       });
@@ -644,7 +644,7 @@ export default function ContractDetails({
     const confirmed = await requestConfirmation({
       title: "Remover dependente",
       description:
-        "Deseja remover este dependente? Esta acao nao pode ser desfeita.",
+        "Deseja remover este dependente? Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       tone: "danger",
@@ -657,7 +657,7 @@ export default function ContractDetails({
       loadData();
     } catch (error) {
       console.error("Erro ao remover dependente:", error);
-      toast.error("Erro ao remover dependente.");
+      toast.error("Não foi possível remover o dependente.");
     }
   };
 
@@ -665,7 +665,7 @@ export default function ContractDetails({
     const confirmed = await requestConfirmation({
       title: "Remover titular",
       description:
-        "Deseja remover este titular? Dependentes e documentos vinculados tambem serao removidos. Esta acao nao pode ser desfeita.",
+        "Deseja remover este titular? Dependentes e documentos vinculados também serão removidos. Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       tone: "danger",
@@ -702,7 +702,7 @@ export default function ContractDetails({
       loadData();
     } catch (error) {
       console.error("Erro ao remover titular:", error);
-      toast.error("Erro ao remover titular.");
+      toast.error("Não foi possível remover o titular.");
     }
   };
 
@@ -750,9 +750,9 @@ export default function ContractDetails({
 
   const handleDeleteInteraction = async (interactionId: string) => {
     const confirmed = await requestConfirmation({
-      title: "Remover interacao",
+      title: "Remover interação",
       description:
-        "Deseja remover esta interacao? Esta acao nao pode ser desfeita.",
+        "Deseja remover esta interação? Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
       cancelLabel: "Cancelar",
       tone: "danger",
@@ -821,26 +821,26 @@ export default function ContractDetails({
         <div className={`mb-6 ${detailPanelMutedClass} p-4`}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
-              <span className={detailLabelTextClass}>Status:</span>
+              <span className={detailLabelTextClass}>Status</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
                 {contract.status}
               </span>
             </div>
             <div>
-              <span className={detailLabelTextClass}>Modalidade:</span>
+              <span className={detailLabelTextClass}>Modalidade</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
                 {contract.modalidade}
               </span>
             </div>
             <div>
-              <span className={detailLabelTextClass}>Responsavel:</span>
+              <span className={detailLabelTextClass}>Responsável</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
                 {contract.responsavel}
               </span>
             </div>
             {contract.mensalidade_total && (
               <div>
-                <span className={detailLabelTextClass}>Mensalidade:</span>
+                <span className={detailLabelTextClass}>Mensalidade</span>
                 <span className={`ml-2 ${detailHeadingTextClass}`}>
                   R${" "}
                   {contract.mensalidade_total.toLocaleString("pt-BR", {
@@ -853,15 +853,15 @@ export default function ContractDetails({
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className={`${detailPanelClass} p-3`}>
-              <p className={detailMutedTextClass}>Comissao prevista</p>
+              <p className={detailMutedTextClass}>Comissão prevista</p>
               <p className={detailTitleClass}>
                 {contract.comissao_prevista
                   ? `R$ ${contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                  : "Nao informado"}
+                  : "Não informado"}
               </p>
               {contract.previsao_recebimento_comissao && (
                 <p className={detailMutedTextClass}>
-                  Previsto:{" "}
+                  Previsto{" "}
                   {new Date(
                     contract.previsao_recebimento_comissao,
                   ).toLocaleDateString("pt-BR")}
@@ -869,15 +869,15 @@ export default function ContractDetails({
               )}
             </div>
             <div className={`${detailPanelClass} p-3`}>
-              <p className={detailMutedTextClass}>Bonus total</p>
+              <p className={detailMutedTextClass}>Bônus total</p>
               <p className={detailTitleClass}>
                 {bonusTotal
                   ? `R$ ${bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                  : "Nao aplicado"}
+                  : "Não aplicado"}
               </p>
               {contract.previsao_pagamento_bonificacao && (
                 <p className={detailMutedTextClass}>
-                  Previsto:{" "}
+                  Previsto{" "}
                   {new Date(
                     contract.previsao_pagamento_bonificacao,
                   ).toLocaleDateString("pt-BR")}
@@ -891,10 +891,10 @@ export default function ContractDetails({
                   ? getNextAdjustmentDate(
                       contract.mes_reajuste,
                     )?.toLocaleDateString("pt-BR")
-                  : "Nao definido"}
+                  : "Não definido"}
               </p>
               <p className={detailMutedTextClass}>
-                Mes de reajuste:{" "}
+                Mês de reajuste{" "}
                 {contract.mes_reajuste
                   ? String(contract.mes_reajuste).padStart(2, "0")
                   : "--"}
@@ -913,15 +913,15 @@ export default function ContractDetails({
                   getFidelityEndDate(contract.data_renovacao),
                 )}
                 {buildDatePill(
-                  "Proximo reajuste anual",
+                  "Próximo reajuste anual",
                   getNextAdjustmentDate(contract.mes_reajuste),
                 )}
                 {buildDatePill(
-                  "Prev. comissao",
+                  "Prev. comissão",
                   parseDate(contract.previsao_recebimento_comissao),
                 )}
                 {buildDatePill(
-                  "Prev. bonificacao",
+                  "Prev. bonificação",
                   parseDate(contract.previsao_pagamento_bonificacao),
                 )}
               </div>
@@ -954,7 +954,7 @@ export default function ContractDetails({
             <div className={detailDividerClass}>
               <div className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)]">
                 <AlertCircle className="h-4 w-4" />
-                <span>Gestao de reajuste por idade</span>
+                <span>Gestão de reajuste por idade</span>
               </div>
               {upcomingAgeAdjustments.length > 0 ? (
                 <div className="mt-3 space-y-2">
@@ -976,7 +976,7 @@ export default function ContractDetails({
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                  Nenhum reajuste por idade previsto nos proximos 120 dias.
+                  Nenhum reajuste por idade previsto nos próximos 120 dias.
                 </p>
               )}
               <p className="mt-2 text-xs text-[var(--text-secondary)]">
@@ -989,7 +989,7 @@ export default function ContractDetails({
           {adjustments.length > 0 && contract.mensalidade_total && (
             <div className={detailDividerClass}>
               <div className={`${detailBodyStrongClass} mb-2`}>
-                Ajustes de valor:
+                Ajustes de valor
               </div>
               <div className="space-y-2">
                 {adjustments.map((adj) => {
@@ -1023,7 +1023,7 @@ export default function ContractDetails({
                 })}
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-                <span className={detailLabelTextClass}>Mensalidade final:</span>
+                <span className={detailLabelTextClass}>Mensalidade final</span>
                 <span className={detailMetricValueClass}>
                   R${" "}
                   {calculateAdjustedValue(
@@ -1040,12 +1040,12 @@ export default function ContractDetails({
                 <Surface variant="warning" padding="sm" className="flex flex-wrap items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-[var(--warning-text)]" />
                   <span className={detailBodyStrongClass}>
-                    Multiplicador de comissao:
+                    Multiplicador de comissão
                   </span>
                   <span className={detailMetricValueClass}>
                     {contract.comissao_multiplicador}x
                   </span>
-                  <span className={detailMutedTextClass}>(padrao: 2.8x)</span>
+                  <span className={detailMutedTextClass}>(padrão: 2.8x)</span>
                 </Surface>
               </div>
             )}
@@ -1054,7 +1054,7 @@ export default function ContractDetails({
             <div className={detailDividerClass}>
               <div className="flex items-center justify-between">
                 <span className={detailBodyStrongClass}>
-                  Comissao prevista:
+                  Comissão prevista
                 </span>
                 <span className={detailMetricValueClass}>
                   R${" "}
@@ -1093,7 +1093,7 @@ export default function ContractDetails({
                           <div className="flex items-center gap-2">
                             {parcel.data_pagamento && (
                               <span>
-                                Pagamento:{" "}
+                                Pagamento{" "}
                                 {formatDateOnly(parcel.data_pagamento)}
                               </span>
                             )}
@@ -1116,14 +1116,14 @@ export default function ContractDetails({
                   ) : (
                     <p className={detailMutedTextClass}>
                       Defina os percentuais e datas para acompanhar o
-                      recebimento parcelado desta comissao.
+                      recebimento parcelado desta comissão.
                     </p>
                   )}
                 </div>
               ) : contract.comissao_recebimento_adiantado ? (
                 <Surface variant="success" padding="sm" className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                   <TrendingUp className="h-4 w-4 text-[var(--success-text)]" />
-                  <span>Recebimento adiantado previsto (pagamento unico).</span>
+                  <span>Recebimento adiantado previsto (pagamento único).</span>
                 </Surface>
               ) : null}
             </div>
@@ -1133,7 +1133,7 @@ export default function ContractDetails({
             <div className={detailDividerClass}>
               <Surface variant="warning" padding="sm">
                 <div className="flex items-center justify-between">
-                  <span className={detailBodyStrongClass}>Taxa de adesao:</span>
+                  <span className={detailBodyStrongClass}>Taxa de adesão</span>
                   <span className={detailMetricValueClass}>
                     R${" "}
                     {signupFeeValue.toLocaleString("pt-BR", {
@@ -1176,7 +1176,7 @@ export default function ContractDetails({
                 ) : (
                   <div className="mb-2 flex items-center justify-between">
                     <span className={detailBodyStrongClass}>
-                      Bonus por vida:
+                      Bônus por vida
                     </span>
                     <span className={detailMetricValueClass}>
                       R${" "}
@@ -1187,7 +1187,7 @@ export default function ContractDetails({
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className={detailBodyTextClass}>Vidas elegiveis:</span>
+                  <span className={detailBodyTextClass}>Vidas elegíveis</span>
                   <span className={detailHeadingTextClass}>
                     {bonusEligibleLives}
                   </span>
@@ -1201,7 +1201,7 @@ export default function ContractDetails({
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
-                  <span className={detailBodyStrongClass}>Total do bonus:</span>
+                  <span className={detailBodyStrongClass}>Total do bônus</span>
                   <span className={detailMetricValueClass}>
                     R${" "}
                     {(bonusTotal || 0).toLocaleString("pt-BR", {
@@ -1212,7 +1212,7 @@ export default function ContractDetails({
                 {contract.previsao_pagamento_bonificacao && (
                   <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
                     <span className={detailBodyStrongClass}>
-                      Pagamento previsto:
+                      Pagamento previsto
                     </span>
                     <span className={detailHeadingTextClass}>
                       {new Date(
@@ -1224,7 +1224,7 @@ export default function ContractDetails({
               </Surface>
               <p className="mt-2 text-xs text-[var(--text-secondary)]">
                 Pagamento por vida do contrato, previsto conforme a data de
-                bonificacao.
+                bonificação.
               </p>
             </div>
           )}
@@ -1263,25 +1263,25 @@ export default function ContractDetails({
                         className={`grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
                       >
                         <div>
-                          <span className={detailLabelTextClass}>CPF:</span>{" "}
+                           <span className={detailLabelTextClass}>CPF</span>{" "}
                           {holderItem.cpf}
                         </div>
                         <div>
-                          <span className={detailLabelTextClass}>
-                            Data nasc.:
-                          </span>{" "}
-                          {formatDateOnly(holderItem.data_nascimento)}
+                           <span className={detailLabelTextClass}>
+                             Data nasc.
+                           </span>{" "}
+                           {formatDateOnly(holderItem.data_nascimento)}
                         </div>
                         <div>
-                          <span className={detailLabelTextClass}>
-                            Telefone:
-                          </span>{" "}
+                             <span className={detailLabelTextClass}>
+                             Telefone
+                           </span>{" "}
                           {holderItem.telefone}
                         </div>
                         {holderItem.email && (
                           <div>
                             <span className={detailLabelTextClass}>
-                              E-mail:
+                              E-mail
                             </span>{" "}
                             {holderItem.email}
                           </div>
@@ -1289,14 +1289,14 @@ export default function ContractDetails({
                         {holderItem.cidade && (
                           <div>
                             <span className={detailLabelTextClass}>
-                              Cidade:
+                              Cidade
                             </span>{" "}
                             {holderItem.cidade}/{holderItem.estado}
                           </div>
                         )}
                         {holderItem.cnpj && (
                           <div>
-                            <span className={detailLabelTextClass}>CNPJ:</span>{" "}
+                            <span className={detailLabelTextClass}>CNPJ</span>{" "}
                             {holderItem.cnpj}
                           </div>
                         )}
@@ -1423,20 +1423,20 @@ export default function ContractDetails({
                               >
                                 <div>
                                   <span className={detailLabelTextClass}>
-                                    Relacao:
+                                     Relação
                                   </span>{" "}
                                   {dependent.relacao}
                                 </div>
                                 <div>
                                   <span className={detailLabelTextClass}>
-                                    Data nasc.:
+                                    Data nasc.
                                   </span>{" "}
                                   {formatDateOnly(dependent.data_nascimento)}
                                 </div>
                                 {dependent.cpf && (
                                   <div>
                                     <span className={detailLabelTextClass}>
-                                      CPF:
+                                       CPF
                                     </span>{" "}
                                     {dependent.cpf}
                                   </div>
@@ -1444,7 +1444,7 @@ export default function ContractDetails({
                                 {dependent.valor_individual && (
                                   <div>
                                     <span className={detailLabelTextClass}>
-                                      Valor:
+                                       Valor
                                     </span>{" "}
                                     R${" "}
                                     {dependent.valor_individual.toLocaleString(
@@ -1535,7 +1535,7 @@ export default function ContractDetails({
             ))}
             {holders.length === 0 && dependents.length === 0 && (
               <div className={detailEmptyCompactClass}>
-                Cadastre um titular para comecar a anexar documentos.
+                Cadastre um titular para começar a anexar documentos.
               </div>
             )}
           </div>
@@ -1552,7 +1552,7 @@ export default function ContractDetails({
             <div
               className={`${detailPanelSoftClass} p-6 text-sm text-[var(--text-muted)]`}
             >
-              Nenhum evento de auditoria disponivel.
+              Nenhum evento de auditoria disponível.
             </div>
           ) : (
             <div className="space-y-2">
@@ -1579,7 +1579,7 @@ export default function ContractDetails({
         </div>
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailTitleClass}>Historico de interacoes</h4>
+            <h4 className={detailTitleClass}>Histórico de interações</h4>
             {canEditContracts && (
               <Button
                 onClick={() => {
@@ -1590,7 +1590,7 @@ export default function ContractDetails({
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
-                <span>Nova interacao</span>
+                <span>Nova interação</span>
               </Button>
             )}
           </div>
@@ -1601,25 +1601,25 @@ export default function ContractDetails({
               className={`mb-6 ${detailPanelSoftClass} p-4`}
             >
               <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Tipo de interacao">
+                <Field label="Tipo de interação">
                   <FilterSingleSelect
                     icon={MessageCircle}
                     value={interactionData.tipo}
                     onChange={(value) =>
                       setInteractionData({ ...interactionData, tipo: value })
                     }
-                    placeholder="Tipo de interacao"
+                    placeholder="Tipo de interação"
                     includePlaceholderOption={false}
                     options={[
-                      { value: "Ligacao", label: "Ligacao" },
+                      { value: "Ligacao", label: "Ligação" },
                       { value: "Mensagem", label: "Mensagem" },
                       { value: "E-mail", label: "E-mail" },
-                      { value: "Reuniao", label: "Reuniao" },
-                      { value: "Observacao", label: "Observacao" },
+                      { value: "Reuniao", label: "Reunião" },
+                      { value: "Observacao", label: "Observação" },
                     ]}
                   />
                 </Field>
-                <Field label="Responsavel">
+                <Field label="Responsável">
                   <FilterSingleSelect
                     icon={User}
                     value={interactionData.responsavel}
@@ -1629,7 +1629,7 @@ export default function ContractDetails({
                         responsavel: value,
                       })
                     }
-                    placeholder="Responsavel"
+                    placeholder="Responsável"
                     includePlaceholderOption={false}
                     options={[
                       { value: "Luiza", label: "Luiza" },
@@ -1638,7 +1638,7 @@ export default function ContractDetails({
                   />
                 </Field>
               </div>
-              <Field label="Descricao *" className="mb-4">
+              <Field label="Descrição *" className="mb-4">
                 <Textarea
                   required
                   value={interactionData.descricao}
@@ -1665,7 +1665,7 @@ export default function ContractDetails({
                   Cancelar
                 </Button>
                 <Button type="submit">
-                  {editingInteraction ? "Salvar alteracoes" : "Adicionar"}
+                  {editingInteraction ? "Salvar alterações" : "Adicionar"}
                 </Button>
               </div>
             </form>
@@ -1675,7 +1675,7 @@ export default function ContractDetails({
             <div className={detailEmptyStateClass}>
               <MessageCircle className={detailEmptyIconClass} />
               <p className={detailBodyTextClass}>
-                Nenhuma interacao registrada
+                Nenhuma interação registrada
               </p>
             </div>
           ) : (
@@ -1715,7 +1715,7 @@ export default function ContractDetails({
                             onClick={() => handleEditInteraction(interaction)}
                           variant="secondary"
                             size="icon"
-                            aria-label={`Editar interacao de ${interaction.responsavel}`}
+                            aria-label={`Editar interação de ${interaction.responsavel}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1725,7 +1725,7 @@ export default function ContractDetails({
                             }
                             variant="danger"
                             size="icon"
-                            aria-label={`Remover interacao de ${interaction.responsavel}`}
+                            aria-label={`Remover interação de ${interaction.responsavel}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

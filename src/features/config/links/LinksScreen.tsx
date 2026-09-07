@@ -119,7 +119,7 @@ export default function LinksScreen() {
     const result = await uploadLinkPageImage(file);
 
     if (!result.success || !result.url) {
-      toast.error(result.error ?? "Erro ao fazer upload da imagem.");
+      toast.error(result.error ?? "Não foi possível fazer upload da imagem.");
     } else {
       setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
     }
@@ -146,7 +146,7 @@ export default function LinksScreen() {
     );
 
     if (error) {
-      toast.error("Erro ao salvar as configurações da página.");
+      toast.error("Não foi possível salvar as configurações da página.");
     } else {
       setPageSettings(data ?? pageSettings);
       toast.success("Página de links atualizada com sucesso.");
@@ -170,7 +170,7 @@ export default function LinksScreen() {
     });
 
     if (error) {
-      toast.error("Erro ao adicionar o link.");
+      toast.error("Não foi possível adicionar o link.");
     } else {
       setIsCreateModalOpen(false);
       setCreateForm(EMPTY_LINK_FORM);
@@ -206,7 +206,7 @@ export default function LinksScreen() {
     });
 
     if (error) {
-      toast.error("Erro ao atualizar o link.");
+      toast.error("Não foi possível atualizar o link.");
     } else {
       await loadData();
       cancelEditing();
@@ -219,7 +219,7 @@ export default function LinksScreen() {
     setBusyId(link.id);
     const { error } = await linksService.updateLinkItem(link.id, { is_active: !link.is_active });
     if (error) {
-      toast.error("Erro ao atualizar o link.");
+      toast.error("Não foi possível atualizar o link.");
     } else {
       await loadData();
     }
@@ -239,7 +239,7 @@ export default function LinksScreen() {
     setBusyId(link.id);
     const { error } = await linksService.deleteLinkItem(link.id);
     if (error) {
-      toast.error("Erro ao remover o link.");
+      toast.error("Não foi possível remover o link.");
     } else {
       await loadData();
       toast.success("Link removido com sucesso.");
@@ -259,7 +259,7 @@ export default function LinksScreen() {
     setBusyId(moved.id);
     const { error } = await linksService.reorderLinkItems(reordered.map((item) => item.id));
     if (error) {
-      toast.error("Erro ao reordenar os links.");
+      toast.error("Não foi possível reordenar os links.");
       await loadData();
     }
     setBusyId(null);

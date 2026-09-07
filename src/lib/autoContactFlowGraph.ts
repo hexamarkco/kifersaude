@@ -429,7 +429,7 @@ export const expandFlowGraphToFlows = (flow: AutoContactFlow): AutoContactFlow[]
   const noFlow: AutoContactFlow = {
     ...flow,
     id: `${flow.id}-nao`,
-    name: flow.name ? `${flow.name} (Nao)` : 'Fluxo (Nao)',
+    name: flow.name ? `${flow.name} (Não)` : 'Fluxo (Não)',
     steps: noSteps.length ? noSteps : flow.steps,
     conditions: noConditions.length ? noConditions : flow.conditions ?? [],
     conditionLogic: noConditions.length ? noConditionLogic : flow.conditionLogic ?? 'all',

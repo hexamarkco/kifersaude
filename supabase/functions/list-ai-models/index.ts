@@ -134,8 +134,8 @@ const parseClaudeModels = (payload: unknown): ModelOption[] => {
   return uniqueOptions(options);
 };
 
-const getProviderErrorMessage = (response: Response, provider: AiProvider): string =>
-  `${provider} retornou erro HTTP ${response.status}.`;
+const getProviderErrorMessage = (response: Response, _provider: AiProvider): string =>
+  `O provedor retornou erro HTTP ${response.status}.`;
 
 const listOpenAiModels = async (apiKey: string): Promise<ModelOption[]> => {
   const response = await fetch('https://api.openai.com/v1/models', {
@@ -201,7 +201,7 @@ const createAdminClient = () => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Credenciais do Supabase nao configuradas.');
+    throw new Error('Credenciais do Supabase não configuradas.');
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
+    return new Response(JSON.stringify({ error: 'Método não permitido' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     const providerCandidate = toTrimmedString(payload.provider).toLowerCase();
 
     if (!isAiProvider(providerCandidate)) {
-      return new Response(JSON.stringify({ error: 'Provedor invalido.' }), {
+      return new Response(JSON.stringify({ error: 'Provedor inválido.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
 
     const apiKey = getAiProviderApiKey(providerCandidate);
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'Credencial do provedor nao configurada.' }), {
+      return new Response(JSON.stringify({ error: 'Credencial do provedor não configurada.' }), {
         status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[list-ai-models] erro inesperado', error);
 
-    return new Response(JSON.stringify({ error: 'Erro interno ao listar modelos.' }), {
+    return new Response(JSON.stringify({ error: 'Não foi possível listar os modelos.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

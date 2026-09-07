@@ -64,7 +64,7 @@ export default function LeadKanbanBoard({
   );
 
   const getResponsavelLabel = (lead: Lead): string =>
-    lead.responsavel || "Nao definido";
+    lead.responsavel || "Não definido";
 
   const isOriginVisibleToObserver = useCallback(
     (origem: string | null | undefined) => {
@@ -234,7 +234,7 @@ export default function LeadKanbanBoard({
       ]);
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
-      toast.error("Erro ao atualizar status do lead.");
+      toast.error("Não foi possível atualizar o status do lead.");
       setLocalLeads((current) =>
         current.map((lead) =>
           lead.id === draggedLead.id ? { ...lead, status: oldStatusName } : lead,
@@ -257,7 +257,7 @@ export default function LeadKanbanBoard({
   if (loading) {
     return (
       <Surface className="py-12">
-        <LoadingState label="Carregando kanban" />
+        <LoadingState label="Carregando Kanban" />
       </Surface>
     );
   }
@@ -268,7 +268,7 @@ export default function LeadKanbanBoard({
         <EmptyState
           icon={<Users className="h-8 w-8" />}
           title="Configure os status do funil"
-          description="Adicione status ativos para visualizar o Kanban e distribuir a operacao por etapa."
+          description="Adicione status ativos para visualizar o Kanban e distribuir a operação por etapa."
           className="mx-auto max-w-xl"
         />
       </Surface>
@@ -287,13 +287,13 @@ export default function LeadKanbanBoard({
           </h3>
           <p className="kds-op-lead-muted mt-1 text-sm">
             Arraste cards entre colunas para atualizar o status sem sair da
-            visao do funil.
+            visão do funil.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <OperationalMetricChip value={statusColumns.length} label="etapas ativas" />
-          <OperationalMetricChip value={localLeads.length} label="leads visiveis" />
+          <OperationalMetricChip value={localLeads.length} label="leads visíveis" />
         </div>
       </div>
 
@@ -418,7 +418,7 @@ export default function LeadKanbanBoard({
                               className="kds-op-lead-actions kds-op-lead-muted mt-4 flex items-center justify-between gap-3 pt-3 text-xs"
                             >
                               <span>
-                                Responsavel:{" "}
+                                <span className="mr-1">Responsável:</span>
                                 <strong
                                   className="kds-op-lead-strong"
                                 >

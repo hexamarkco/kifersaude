@@ -124,7 +124,7 @@ const DEFAULT_SIGNUP_FEE_TYPE: SignupFeeType = "nao_cobrar";
 
 const SIGNUP_FEE_TYPE_OPTIONS: Array<{ value: SignupFeeType; label: string }> =
   [
-    { value: "nao_cobrar", label: "Nao cobrar" },
+    { value: "nao_cobrar", label: "Não cobrar" },
     { value: "percentual_mensalidade", label: "% da mensalidade" },
     { value: "valor_fixo", label: "Valor fixo" },
   ];

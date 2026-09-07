@@ -23,7 +23,7 @@ const campaignStatusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   queued: 'Na fila',
   running: 'Rodando',
   paused: 'Pausado',
-  completed: 'Concluido',
+  completed: 'Concluído',
   cancelled: 'Cancelado',
 };
 
@@ -35,7 +35,7 @@ const targetStatusLabels: Record<CommWhatsAppCampaignTargetStatus, string> = {
   responded: 'Respondeu',
   stopped: 'Bloqueado',
   failed: 'Falhou',
-  invalid: 'Invalido',
+  invalid: 'Inválido',
   cancelled: 'Cancelado',
 };
 
@@ -137,7 +137,7 @@ export default function WhatsAppCampaignDetailScreen() {
       setFailureReasons(nextFailureReasons);
       setPendingWhatsAppValidation(nextPendingValidation);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar o detalhe do disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar o detalhe do disparo.');
     } finally {
       setLoading(false);
       loadDetailInFlightRef.current = false;
@@ -164,7 +164,7 @@ export default function WhatsAppCampaignDetailScreen() {
       setTargetsPage(page);
       targetsPageRef.current = page - 1;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar esta pagina de contatos.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar esta página de contatos.');
     } finally {
       setLoadingTargetsPage(false);
     }
@@ -366,21 +366,21 @@ export default function WhatsAppCampaignDetailScreen() {
       }
       await loadDetail();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel executar a acao.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível executar a ação.');
     } finally {
       setActionLoading(null);
     }
   };
 
   if (!campaignId) {
-    return <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell text-sm text-[var(--text-secondary)]">Disparo nao informado.</div>;
+    return <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell text-sm text-[var(--text-secondary)]">Disparo não informado.</div>;
   }
 
   return (
     <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
       <PageHeader
         title={campaign?.name ?? 'Detalhe do disparo'}
-        description="Acompanhe contatos, status da fila, proximos envios e acoes operacionais da campanha."
+        description="Acompanhe contatos, status da fila, próximos envios e ações operacionais da campanha."
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             {campaign && (
@@ -459,7 +459,7 @@ export default function WhatsAppCampaignDetailScreen() {
             <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
               <Badge tone="info">Validando</Badge>
               <p className="text-sm text-[color:var(--panel-text-soft)]">
-                {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmacao de que o numero tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; numeros sem WhatsApp sao marcados como invalidos automaticamente.
+                {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmação de que o número tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; números sem WhatsApp são marcados como inválidos automaticamente.
               </p>
             </Card>
           )}
@@ -467,8 +467,8 @@ export default function WhatsAppCampaignDetailScreen() {
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Relatorio</h2>
-                <p className="text-sm text-[color:var(--panel-text-soft)]">Taxas e principais motivos de falha entre os contatos ja processados.</p>
+                <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Relatório</h2>
+                <p className="text-sm text-[color:var(--panel-text-soft)]">Taxas e principais motivos de falha entre os contatos já processados.</p>
               </div>
               <BarChart3 className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
@@ -556,8 +556,8 @@ export default function WhatsAppCampaignDetailScreen() {
                   </div>
                   <div className="grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
                     <Info label="Etapa" value={String(target.current_step_index + 1)} />
-                    <Info label="Proximo envio" value={formatDateTime(target.next_send_at)} />
-                    <Info label="Ultima tentativa" value={formatDateTime(target.last_attempt_at)} />
+                    <Info label="Próximo envio" value={formatDateTime(target.next_send_at)} />
+                    <Info label="Última tentativa" value={formatDateTime(target.last_attempt_at)} />
                     <Info label="Erro" value={target.error_message || '-'} />
                   </div>
                 </Card>
@@ -571,8 +571,8 @@ export default function WhatsAppCampaignDetailScreen() {
                     <TableHead>Contato</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Etapa</TableHead>
-                    <TableHead>Proximo envio</TableHead>
-                    <TableHead>Ultima tentativa</TableHead>
+                    <TableHead>Próximo envio</TableHead>
+                    <TableHead>Última tentativa</TableHead>
                     <TableHead>Erro</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -611,7 +611,7 @@ export default function WhatsAppCampaignDetailScreen() {
           </Card>
         </>
       ) : (
-        <Card className="p-6 text-sm text-[color:var(--panel-text-soft)]">Disparo nao encontrado.</Card>
+        <Card className="p-6 text-sm text-[color:var(--panel-text-soft)]">Disparo não encontrado.</Card>
       )}
     </div>
   );

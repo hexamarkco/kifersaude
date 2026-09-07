@@ -210,9 +210,9 @@ Deno.serve(async (req: Request) => {
       const similarSituations = lastLeadMessage ? await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4) : [];
       const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
       const styleBlock = buildStylePrompt(styleMessages);
-      // Use autonomous.reply featurePrompt (from DB) as the system prompt,
+      // Use autonomous.reply featurePrompt + outputInstructions (from DB) as the system prompt,
       // same as production. This ensures /chat and scenario test exactly what runs live.
-      return [autonomousConfig.featurePrompt, styleBlock, referenceBlock].filter(Boolean).join('\n\n');
+      return [autonomousConfig.featurePrompt, autonomousConfig.outputInstructions, styleBlock, referenceBlock].filter(Boolean).join('\n\n');
     };
 
     // ---- Abertura ----

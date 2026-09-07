@@ -195,7 +195,7 @@ export function Toast({
           type="button"
           onClick={onDismiss}
           className="kds-toast-close"
-          aria-label="Fechar notificacao"
+          aria-label="Fechar notificação"
         >
           <X className="h-4 w-4" />
         </button>

@@ -19,8 +19,8 @@ export function LeadsHeader({
 }: LeadsHeaderProps) {
   return (
     <PageHeader
-      eyebrow="Operacao comercial"
-      title="Gestao de Leads"
+      eyebrow="Operação comercial"
+      title="Gestão de leads"
       description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
       actions={(
         <a
@@ -64,12 +64,12 @@ export function LeadsHeader({
             className="w-full sm:w-auto"
             title={
               !canEditLeads
-                ? "Voce nao tem permissao para criar leads"
+                ? "Você não tem permissão para criar leads"
                 : "Criar novo lead"
             }
           >
             <Plus className="h-4 w-4" />
-            <span>Novo Lead</span>
+            <span>Novo lead</span>
           </Button>
         </div>
       </div>

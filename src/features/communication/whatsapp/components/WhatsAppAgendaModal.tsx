@@ -351,7 +351,7 @@ export default function WhatsAppAgendaModal({
       }
 
       console.error('[WhatsAppAgendaModal] erro ao carregar agenda', loadError);
-      setError('Nao foi possivel carregar a agenda agora.');
+      setError('Não foi possível carregar a agenda agora.');
     } finally {
       if (showLoading && requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);
@@ -525,7 +525,7 @@ export default function WhatsAppAgendaModal({
     const leadId = getLeadIdForReminder(reminder);
 
     if (!leadId) {
-      toast.error('Nao foi possivel identificar o lead deste lembrete.');
+      toast.error('Não foi possível identificar o lead deste lembrete.');
       return;
     }
 
@@ -612,7 +612,7 @@ export default function WhatsAppAgendaModal({
       toast.success('Lead marcado como perdido.');
     } catch (markError) {
       console.error('[WhatsAppAgendaModal] erro ao marcar lead como perdido:', markError);
-      toast.error('Nao foi possivel marcar o lead como perdido.');
+      toast.error('Não foi possível marcar o lead como perdido.');
     } finally {
       setMarkingLostLeadId(null);
     }
@@ -662,7 +662,7 @@ export default function WhatsAppAgendaModal({
             ...current,
             {
               lead: leadInfo,
-              promptMessage: 'Deseja marcar um proximo lembrete para este lead?',
+              promptMessage: 'Deseja marcar um próximo lembrete para este lead?',
               defaultTitle: reminder.titulo,
               defaultDescription: reminder.descricao ?? undefined,
               defaultType: 'Follow-up',
@@ -687,7 +687,7 @@ export default function WhatsAppAgendaModal({
       return true;
     } catch (updateError) {
       console.error('[WhatsAppAgendaModal] erro ao atualizar lembrete:', updateError);
-      toast.error('Nao foi possivel atualizar este item.');
+      toast.error('Não foi possível atualizar este item.');
       return false;
     }
   }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, reminders, updateLeadNextReturnDate]);
@@ -699,7 +699,7 @@ export default function WhatsAppAgendaModal({
 
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
-      toast.error('Nao foi possivel identificar o lead deste lembrete.');
+      toast.error('Não foi possível identificar o lead deste lembrete.');
       return;
     }
 
@@ -751,7 +751,7 @@ export default function WhatsAppAgendaModal({
       toast.success(`Novo lembrete criado para +${daysAhead} dia(s) util(eis).`);
     } catch (scheduleError) {
       console.error('[WhatsAppAgendaModal] erro ao criar lembrete rapido:', scheduleError);
-      toast.error('Nao foi possivel criar o novo lembrete rapido.');
+      toast.error('Não foi possível criar o novo lembrete rápido.');
     } finally {
       setQuickSchedulingAction(null);
     }
@@ -760,7 +760,7 @@ export default function WhatsAppAgendaModal({
   const handleDeleteReminder = useCallback(async (reminder: Reminder) => {
     const confirmed = await requestConfirmation({
       title: 'Remover item',
-      description: `Deseja remover "${reminder.titulo}"? Esta acao nao pode ser desfeita.`,
+      description: `Deseja remover "${reminder.titulo}"? Esta ação não pode ser desfeita.`,
       confirmLabel: 'Remover',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -788,7 +788,7 @@ export default function WhatsAppAgendaModal({
       toast.success('Item removido da agenda.');
     } catch (deleteError) {
       console.error('[WhatsAppAgendaModal] erro ao remover lembrete:', deleteError);
-      toast.error('Nao foi possivel remover este item.');
+      toast.error('Não foi possível remover este item.');
     }
   }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate]);
 
@@ -799,14 +799,14 @@ export default function WhatsAppAgendaModal({
 
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
-      toast.error('Este item nao tem lead vinculado para abrir o chat.');
+      toast.error('Este item não tem lead vinculado para abrir o chat.');
       return;
     }
 
     const cachedLead = leadsMap.get(leadId);
     const leadInfo = cachedLead ?? (await fetchLeadInfo(leadId));
     if (!leadInfo) {
-      toast.error('Nao foi possivel localizar os dados do lead deste item.');
+      toast.error('Não foi possível localizar os dados do lead deste item.');
       return;
     }
 
@@ -821,7 +821,7 @@ export default function WhatsAppAgendaModal({
       });
     } catch (openError) {
       console.error('[WhatsAppAgendaModal] erro ao abrir chat do lead:', openError);
-      toast.error('Nao foi possivel abrir o chat deste lead.');
+      toast.error('Não foi possível abrir o chat deste lead.');
     } finally {
       setOpeningLeadChatId(null);
     }
@@ -830,14 +830,14 @@ export default function WhatsAppAgendaModal({
   const handleOpenScheduler = useCallback(async (reminder: Reminder) => {
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
-      toast.error('Este item nao possui lead para receber um novo lembrete.');
+      toast.error('Este item não possui lead para receber um novo lembrete.');
       return;
     }
 
     const cachedLead = leadsMap.get(leadId);
     const leadInfo = cachedLead ?? (await fetchLeadInfo(leadId));
     if (!leadInfo) {
-      toast.error('Nao foi possivel carregar o lead deste item.');
+      toast.error('Não foi possível carregar o lead deste item.');
       return;
     }
 
@@ -848,7 +848,7 @@ export default function WhatsAppAgendaModal({
         telefone: leadInfo.telefone,
         responsavel: leadInfo.responsavel,
       },
-      promptMessage: 'Agende o proximo lembrete deste lead sem sair do inbox.',
+      promptMessage: 'Agende o próximo lembrete deste lead sem sair do inbox.',
       defaultTitle: reminder.titulo,
       defaultDescription: reminder.descricao ?? undefined,
       defaultType: 'Follow-up',
@@ -904,8 +904,8 @@ export default function WhatsAppAgendaModal({
       toast.success('Tarefa adicionada na agenda.');
     } catch (insertError) {
       console.error('[WhatsAppAgendaModal] erro ao criar tarefa:', insertError);
-      setError('Nao foi possivel criar a tarefa.');
-      toast.error('Nao foi possivel criar a tarefa.');
+      setError('Não foi possível criar a tarefa.');
+      toast.error('Não foi possível criar a tarefa.');
     } finally {
       setSavingTask(false);
     }
@@ -1062,7 +1062,7 @@ export default function WhatsAppAgendaModal({
 
     const confirmed = await requestConfirmation({
       title: 'Remover duplicados',
-      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) de ${group.leadName} (${group.tipo}, ${group.dateLabel})? O lembrete marcado como "Manter" sera preservado.`,
+      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) de ${group.leadName} (${group.tipo}, ${group.dateLabel})? O lembrete marcado como "Manter" será preservado.`,
       confirmLabel: 'Remover duplicados',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -1092,7 +1092,7 @@ export default function WhatsAppAgendaModal({
       toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
     } catch (dedupError) {
       console.error('[WhatsAppAgendaModal] erro ao remover duplicados:', dedupError);
-      toast.error('Nao foi possivel remover os duplicados deste grupo.');
+      toast.error('Não foi possível remover os duplicados deste grupo.');
     } finally {
       setDedupingGroupKey(null);
     }
@@ -1110,7 +1110,7 @@ export default function WhatsAppAgendaModal({
 
     const confirmed = await requestConfirmation({
       title: 'Deduplicar agenda',
-      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) em ${duplicateReminderGroupList.length} grupo(s)? Os itens marcados como "Manter" serao preservados.`,
+      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) em ${duplicateReminderGroupList.length} grupo(s)? Os itens marcados como "Manter" serão preservados.`,
       confirmLabel: 'Deduplicar tudo',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -1142,7 +1142,7 @@ export default function WhatsAppAgendaModal({
       setIsDuplicatesModalOpen(false);
     } catch (dedupError) {
       console.error('[WhatsAppAgendaModal] erro ao deduplicar agenda:', dedupError);
-      toast.error('Nao foi possivel concluir a deduplicacao.');
+      toast.error('Não foi possível concluir a deduplicação.');
     } finally {
       setIsDedupingAll(false);
     }
@@ -1347,7 +1347,7 @@ export default function WhatsAppAgendaModal({
                       <Badge tone="accent">Chat atual</Badge>
                     ) : null}
                     {reminder.lido ? (
-                      <Badge tone="success">Concluido</Badge>
+                      <Badge tone="success">Concluído</Badge>
                     ) : null}
                   </div>
 
@@ -1437,8 +1437,8 @@ export default function WhatsAppAgendaModal({
                     variant="primary"
                     size="icon"
                     className="h-11 min-h-11 w-11 min-w-11 shrink-0"
-                    title="Agendar dias uteis e marcar atual como lido"
-                    aria-label="Agendar dias uteis e marcar atual como lido"
+                    title="Agendar dias úteis e marcar atual como lido"
+                    aria-label="Agendar dias úteis e marcar atual como lido"
                   >
                     {isQuickSchedulingCurrentReminder ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1488,8 +1488,8 @@ export default function WhatsAppAgendaModal({
                 variant={reminder.lido ? 'secondary' : 'soft'}
                 size="icon"
                 className="h-11 min-h-11 w-11 min-w-11 shrink-0"
-                title={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
-                aria-label={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
+                title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
+                aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -1578,7 +1578,7 @@ export default function WhatsAppAgendaModal({
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
-        description="Mesma base da Agenda unificada, agora acessivel dentro do inbox. Tudo o que voce fizer aqui reflete em /painel/agenda."
+        description="Mesma base da Agenda unificada, agora acessível dentro do inbox. Tudo o que você fizer aqui reflete em /painel/agenda."
         size="xl"
         panelClassName="max-w-6xl"
         footer={
@@ -1611,8 +1611,8 @@ export default function WhatsAppAgendaModal({
                   </h3>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
                     {visiblePendingReminders.length > 0
-                      ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
-                      : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
+                      ? `${visiblePendingReminders.length} pendência(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
+                      : `Sem pendências abertas para ${selectedDateLabel.toLowerCase()}.`}
                   </p>
                 </div>
 
@@ -1654,7 +1654,7 @@ export default function WhatsAppAgendaModal({
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="Buscar por titulo, descricao, lead ou contrato..."
+                    placeholder="Buscar por título, descrição, lead ou contrato..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     leftIcon={Search}
@@ -1684,7 +1684,7 @@ export default function WhatsAppAgendaModal({
 
                 {currentLead ? (
                   <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md" className="h-11">
-                    {onlyCurrentLead ? 'So chat atual' : 'Filtrar chat atual'}
+                    {onlyCurrentLead ? 'Só chat atual' : 'Filtrar chat atual'}
                   </Button>
                 ) : null}
 
@@ -1746,7 +1746,7 @@ export default function WhatsAppAgendaModal({
                           Atrasados
                         </p>
                         <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                          Pendencias de dias anteriores
+                          Pendências de dias anteriores
                         </h4>
                       </div>
                       <Badge tone="danger">{overdueReminders.length}</Badge>
@@ -1781,10 +1781,10 @@ export default function WhatsAppAgendaModal({
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                        Concluidos no dia
+                        Concluídos no dia
                       </p>
                       <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                        {completedSelectedReminders.length > 0 ? 'Historico do dia em foco' : 'Nada concluido ainda'}
+                        {completedSelectedReminders.length > 0 ? 'Histórico do dia em foco' : 'Nada concluído ainda'}
                       </h4>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1800,12 +1800,12 @@ export default function WhatsAppAgendaModal({
                       <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
                     ) : (
                       <Surface variant="muted" padding="sm" className="py-8 text-center text-sm text-[var(--text-secondary)]">
-                        Nenhum item concluido neste dia.
+                        Nenhum item concluído neste dia.
                       </Surface>
                     )
                   ) : (
                     <Surface variant="muted" padding="sm" className="py-5 text-center text-sm text-[var(--text-secondary)]">
-                      Expanda quando quiser revisar o que ja foi concluido neste dia.
+                      Expanda quando quiser revisar o que já foi concluído neste dia.
                     </Surface>
                   )}
                 </Surface>
@@ -1834,7 +1834,7 @@ export default function WhatsAppAgendaModal({
                 type="text"
                 value={newTaskTitle}
                 onChange={(event) => setNewTaskTitle(event.target.value)}
-                placeholder="Digite o titulo da tarefa"
+                placeholder="Digite o título da tarefa"
                 required
                 disabled={savingTask}
               />
@@ -1842,7 +1842,7 @@ export default function WhatsAppAgendaModal({
 
             <div className="space-y-1">
               <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium text-[var(--text-secondary)]">
-                Descricao (opcional)
+                Descrição (opcional)
               </label>
               <Textarea
                 id="whatsapp-agenda-task-description"

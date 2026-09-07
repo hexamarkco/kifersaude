@@ -76,7 +76,7 @@ const createAdminClient = () => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Credenciais do Supabase nao configuradas.');
+    throw new Error('Credenciais do Supabase não configuradas.');
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
@@ -337,7 +337,7 @@ const failMissingWhapiMessageId = async (
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   requestId: string | null | undefined,
 ) => {
-  const errorMessage = 'A Whapi confirmou a requisicao, mas nao retornou o ID da mensagem.';
+  const errorMessage = 'O WhatsApp confirmou a solicitação, mas não retornou o identificador da mensagem.';
   await failSendRequest(supabaseAdmin, requestId, errorMessage);
 
   // A Whapi confirmou a requisicao (HTTP ok) - a mensagem pode ja ter sido
@@ -505,7 +505,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
+    return new Response(JSON.stringify({ error: 'Método não permitido' }), {
       status: 405,
       headers: jsonHeaders,
     });
@@ -576,7 +576,7 @@ Deno.serve(async (req: Request) => {
       const uploaded = form.get('file');
 
       if (!(uploaded instanceof File)) {
-        return new Response(JSON.stringify({ error: 'Arquivo obrigatorio para envio de midia.' }), {
+        return new Response(JSON.stringify({ error: 'Arquivo obrigatório para envio de mídia.' }), {
           status: 400,
           headers: jsonHeaders,
         });
@@ -618,7 +618,7 @@ Deno.serve(async (req: Request) => {
       if (mediaKind) {
         const headerBytes = new Uint8Array(await mediaFile.slice(0, MEDIA_SIGNATURE_SAMPLE_BYTES).arrayBuffer());
         if (!isPlausibleMediaSignature(mediaKind, headerBytes)) {
-          return new Response(JSON.stringify({ error: 'O conteudo do arquivo nao corresponde ao tipo declarado.' }), {
+          return new Response(JSON.stringify({ error: 'O conteúdo do arquivo não corresponde ao tipo declarado.' }), {
             status: 400,
             headers: jsonHeaders,
           });
@@ -627,14 +627,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!chatId || !isDirectWhapiChatId(chatId)) {
-      return new Response(JSON.stringify({ error: 'Conversa invalida para envio.' }), {
+      return new Response(JSON.stringify({ error: 'Conversa inválida para envio.' }), {
         status: 400,
         headers: jsonHeaders,
       });
     }
 
     if (!mediaFile && !text) {
-      return new Response(JSON.stringify({ error: 'Mensagem obrigatoria.' }), {
+      return new Response(JSON.stringify({ error: 'Mensagem obrigatória.' }), {
         status: 400,
         headers: jsonHeaders,
       });
@@ -652,7 +652,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!token) {
-      return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
+      return new Response(JSON.stringify({ error: 'Token do WhatsApp não configurado.' }), {
         status: 400,
         headers: jsonHeaders,
       });
@@ -664,7 +664,7 @@ Deno.serve(async (req: Request) => {
       externalChatId: requestedChatId,
     });
     if (chatRoute.identityConflict) {
-      return new Response(JSON.stringify({ error: 'Identidade WhatsApp exige revisao manual antes do envio.' }), {
+      return new Response(JSON.stringify({ error: 'Identidade do WhatsApp exige revisão manual antes do envio.' }), {
         status: 409,
         headers: jsonHeaders,
       });
@@ -699,8 +699,8 @@ Deno.serve(async (req: Request) => {
         });
     if (!dispatchRoute || dispatchRoute.identityConflict) {
       const errorMessage = dispatchRoute
-        ? 'Identidade WhatsApp mudou durante a preparacao e exige revisao manual.'
-        : 'Conversa canonica nao encontrada antes do envio.';
+        ? 'Identidade do WhatsApp mudou durante a preparação e exige revisão manual.'
+        : 'Conversa canônica não encontrada antes do envio.';
       await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage);
       return new Response(JSON.stringify({ error: errorMessage }), {
         status: 409,
@@ -738,9 +738,9 @@ Deno.serve(async (req: Request) => {
 
         if (!whapiResponse.ok) {
           const errorMessage = parseWhapiError(whapiPayload);
-          await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage || 'Falha ao enviar mensagem na Whapi.');
+          await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage || 'Não foi possível enviar a mensagem no WhatsApp.');
 
-          return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
+          return new Response(JSON.stringify({ error: errorMessage || 'Não foi possível enviar a mensagem no WhatsApp.' }), {
             status: whapiResponse.status,
             headers: jsonHeaders,
           });
@@ -912,8 +912,8 @@ Deno.serve(async (req: Request) => {
     if (whapiPayload && typeof whapiPayload === 'object' && !Array.isArray(whapiPayload)) {
       const sent = (whapiPayload as Record<string, unknown>).sent;
       if (sent === false) {
-        await failSendRequest(supabaseAdmin, sendRequest.row?.id, 'A Whapi nao confirmou o envio da mensagem.');
-        return new Response(JSON.stringify({ error: 'A Whapi nao confirmou o envio da mensagem.' }), {
+        await failSendRequest(supabaseAdmin, sendRequest.row?.id, 'O WhatsApp não confirmou o envio da mensagem.');
+        return new Response(JSON.stringify({ error: 'O WhatsApp não confirmou o envio da mensagem.' }), {
           status: 400,
           headers: jsonHeaders,
         });
@@ -1024,7 +1024,7 @@ Deno.serve(async (req: Request) => {
         await failSendRequest(
           supabaseAdmin,
           sendRequestId,
-          error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.',
+          error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.',
         );
       } catch (cleanupError) {
         console.error('[comm-whatsapp-send] erro ao encerrar tentativa falha', cleanupError);
@@ -1035,7 +1035,7 @@ Deno.serve(async (req: Request) => {
     // nao chegou ao destinatario, entao sinalizamos como ambiguo.
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.',
+        error: error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.',
         ambiguous: Boolean(sendRequestId),
       }),
       {

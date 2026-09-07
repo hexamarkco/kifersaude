@@ -344,7 +344,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
             {modelOverrideEnabled && (
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <Field label="Provider">
+                <Field label="Provedor">
                   <select
                     value={provider}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -395,7 +395,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && isSelectedModelDeprecated && (
               <div className="flex items-start gap-2 rounded-md bg-[var(--color-warning)]/10 p-2.5 text-xs text-[var(--color-warning)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
-                <p>Este modelo foi descontinuado pelo provider. Considere trocar para uma versão mais recente.</p>
+                <p>Este modelo foi descontinuado pelo provedor. Considere trocar para uma versão mais recente.</p>
               </div>
             )}
             {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
@@ -409,20 +409,20 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {effectiveModel && (
               <div className="rounded bg-[var(--bg-subtle)] p-2.5 text-xs space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[var(--text-muted)]">Modelo efetivo:</span>
+                  <span className="text-[var(--text-muted)]">Modelo efetivo</span>
                   <span className="font-medium text-[var(--text-primary)]">
                     {effectiveModel.model}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[var(--text-muted)]">Origem:</span>
+                  <span className="text-[var(--text-muted)]">Origem</span>
                   <span className={`inline-block rounded px-1.5 py-0.5 font-medium ${SOURCE_BADGE_CLASSES[effectiveModel.source]}`}>
                     {AI_MODEL_RESOLUTION_SOURCE_LABELS[effectiveModel.source]}
                   </span>
                 </div>
                 {effectiveModel.source === "ai_routing" && (
                   <p className="text-[var(--text-muted)]">
-                    Task: {feature.key.replace(".", "_")}
+                    Funcionalidade: {feature.key.replace(".", "_")}
                   </p>
                 )}
               </div>
@@ -430,7 +430,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           </div>
 
           {/* Prompt */}
-          <Field label="Prompt da Feature" description="Instrução principal enviada para a IA.">
+          <Field label="Prompt da funcionalidade" description="Instrução principal enviada para a IA.">
             <Textarea
               value={prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
@@ -441,7 +441,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           </Field>
 
           {/* Output Instructions */}
-          <Field label="Instruções de Saída" description="Formato e regras de resposta.">
+          <Field label="Instruções de saída" description="Formato e regras de resposta.">
             <Textarea
               value={outputInstructions}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setOutputInstructions(e.target.value)}
@@ -453,7 +453,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
           {/* Temperature + Max Tokens */}
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Temperature" description={`Padrão: ${feature.default_temperature}`}>
+            <Field label="Temperatura" description={`Padrão: ${feature.default_temperature}`}>
               <Input
                 type="number"
                 min={0}
@@ -463,7 +463,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemperature(Number(e.target.value))}
               />
             </Field>
-            <Field label="Max Tokens" description={`Padrão: ${feature.default_max_output_tokens}`}>
+            <Field label="Máximo de tokens" description={`Padrão: ${feature.default_max_output_tokens}`}>
               <Input
                 type="number"
                 min={100}
@@ -505,11 +505,11 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           {/* Defaults reference */}
           <div className="rounded-lg border border-[var(--border-subtle)] p-3">
             <p className="text-xs font-medium text-[var(--text-secondary)] mb-1">
-              Valores padrão (system):
+              Valores padrão do sistema:
             </p>
             <div className="text-xs text-[var(--text-muted)] space-y-0.5">
-              <p>Temperature: {feature.default_temperature}</p>
-              <p>Max Tokens: {feature.default_max_output_tokens}</p>
+              <p>Temperatura: {feature.default_temperature}</p>
+              <p>Máximo de tokens: {feature.default_max_output_tokens}</p>
             </div>
           </div>
         </div>
@@ -518,7 +518,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-5 py-3">
           <Button variant="ghost" size="sm" onClick={handleResetToDefaults}>
             <RotateCcw className="h-3.5 w-3.5" />
-            Restaurar Padrão
+            Restaurar padrão
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose}>
@@ -526,7 +526,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {!saving && <Save className="h-4 w-4" />}
-              {saving ? "Salvando..." : "Criar Versão e Ativar"}
+              {saving ? "Salvando..." : "Criar versão e ativar"}
             </Button>
           </div>
         </div>

@@ -82,7 +82,7 @@ export default function Pagination({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="kds-pagination-button"
-        aria-label="Proxima pagina"
+        aria-label="Próxima página"
       >
         <ChevronRight className="h-4 w-4" />
       </button>

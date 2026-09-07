@@ -31,7 +31,6 @@ import {
   getReliableLeadFirstName,
   splitGeneratedReply,
   type HandoffCode,
-  type AutonomousMessageRow,
 } from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
@@ -505,6 +504,7 @@ Deno.serve(async (req: Request) => {
         const styleMessagesForPrompt = styleMessagesResult.error ? [] : styleMessages;
         const systemPrompt = [
           autonomousConfig?.featurePrompt,
+          autonomousConfig?.outputInstructions,
           '',
           buildStylePrompt(styleMessagesForPrompt),
           referenceBlock ? `\n${referenceBlock}` : '',
@@ -527,6 +527,65 @@ Deno.serve(async (req: Request) => {
         });
 
         const { messages, handoffCode } = splitGeneratedReply(result.text, false);
+
+        // Se o modelo retornou apenas a tag de handoff sem mensagem visível,
+        // regenera uma única vez pedindo explicitamente a mensagem final.
+        if (messages.length === 0 && handoffCode) {
+          console.warn('[ai-autonomous-reply-worker] resposta tag-only, regenerando com instrução explícita', {
+            jobId: job.id,
+            chatId: chat.id,
+            handoffCode,
+          });
+          const retryUserPrompt = [
+            userPrompt,
+            '\n--- INSTRUÇÃO IMPORTANTE ---',
+            'Você DEVE escrever a mensagem visível para o lead ANTES da tag de handoff.',
+            'NÃO envie apenas a tag. Escreva a mensagem de despedida/closure e inclua a tag ao final.',
+          ].join('\n');
+          const retryResult = await generateTextForFeature({
+            supabaseAdmin,
+            featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
+            task: 'autonomous_attendance',
+            systemPrompt,
+            userPrompt: retryUserPrompt,
+            temperature: autonomousConfig?.temperature || 0.6,
+            maxTokens: autonomousConfig?.maxOutputTokens || 350,
+            edgeFunction: 'ai-autonomous-reply-worker',
+          });
+          const retryParsed = splitGeneratedReply(retryResult.text, false);
+          if (retryParsed.messages.length > 0) {
+            messages.push(...retryParsed.messages);
+          } else {
+            // Retry falhou — registrar erro mas NÃO deixar conversa presa em active
+            console.error('[ai-autonomous-reply-worker] retry tag-only falhou, aplicando handoff seguro', {
+              jobId: job.id,
+              chatId: chat.id,
+            });
+            // Aplicar handoff mesmo sem mensagem visível para não deixar a conversa presa
+            await supabaseAdmin
+              .from('comm_whatsapp_chats')
+              .update({ autonomous_attendance_status: 'handed_off' })
+              .eq('id', chat.id);
+            const targetStatusName = HANDOFF_STATUS_TARGET[handoffCode];
+            if (targetStatusName) {
+              const { data: statuses } = await supabaseAdmin.from('lead_status_config').select('id, nome');
+              const normalizedTarget = normalizeText(targetStatusName);
+              const statusRow = (statuses ?? []).find(
+                (s: { id: string; nome: string }) => normalizeText(s.nome) === normalizedTarget,
+              );
+              if (statusRow) {
+                await supabaseAdmin.from('leads').update({ status_id: statusRow.id }).eq('id', leadId);
+              }
+            }
+            await supabaseAdmin
+              .from('ai_autonomous_reply_jobs')
+              .update({ status: 'completed', last_error: 'retry tag-only sem mensagem visível — handoff seguro aplicado' })
+              .eq('id', job.id);
+            processed += 1;
+            continue;
+          }
+        }
+
         if (messages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
         console.log('[ai-autonomous-reply-worker] resposta gerada', {
           jobId: job.id,

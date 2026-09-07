@@ -321,12 +321,12 @@ export default function DependentForm({
             </label>
           </Surface>
 
-          <Field label="Relacao com Titular *">
+          <Field label="Relação com titular *">
             <FilterSingleSelect
               icon={Users}
               value={formData.relacao}
               onChange={(value) => setFormData({ ...formData, relacao: value })}
-              placeholder="Relacao com titular"
+              placeholder="Relação com titular"
               includePlaceholderOption={false}
               options={relacaoOptions}
             />

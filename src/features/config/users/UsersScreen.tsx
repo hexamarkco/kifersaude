@@ -116,7 +116,7 @@ export default function UsersScreen() {
       setUsers(data || []);
     } catch (error) {
       console.error("Erro ao carregar usuários:", error);
-      showMessage("error", "Erro ao carregar usuários");
+      showMessage("error", "Não foi possível carregar os usuários.");
     } finally {
       setLoading(false);
     }
@@ -152,12 +152,12 @@ export default function UsersScreen() {
       const trimmedEmail = newUserEmail.trim();
 
       if (!trimmedUsername) {
-          showMessage("error", "Informe um nome de usuário");
+          showMessage("error", "Informe um nome de usuário.");
         return;
       }
 
       if (!trimmedEmail) {
-        showMessage("error", "Informe um e-mail válido");
+        showMessage("error", "Informe um e-mail válido.");
         return;
       }
 
@@ -177,21 +177,21 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao criar usuário");
+        throw new Error(error.message || "Não foi possível criar o usuário.");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuário criado com sucesso");
+      showMessage("success", "Usuário criado com sucesso.");
       resetCreateForm();
       await loadUsers();
     } catch (error: unknown) {
       console.error("Erro ao criar usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao criar usuário",
+        error instanceof Error ? error.message : "Não foi possível criar o usuário.",
       );
     } finally {
       setActionLoading(false);
@@ -215,12 +215,12 @@ export default function UsersScreen() {
     const trimmedEmail = editUserEmail.trim();
 
     if (!trimmedUsername) {
-      showMessage("error", "Informe um nome de usuário");
+      showMessage("error", "Informe um nome de usuário.");
       return;
     }
 
     if (!trimmedEmail) {
-      showMessage("error", "Informe um e-mail válido");
+      showMessage("error", "Informe um e-mail válido.");
       return;
     }
 
@@ -246,14 +246,14 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao atualizar usuário");
+        throw new Error(error.message || "Não foi possível atualizar o usuário.");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuário atualizado com sucesso");
+      showMessage("success", "Usuário atualizado com sucesso.");
       setEditingUser(null);
       setEditUserPassword("");
 
@@ -267,7 +267,7 @@ export default function UsersScreen() {
       console.error("Erro ao atualizar usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao atualizar usuário",
+        error instanceof Error ? error.message : "Não foi possível atualizar o usuário.",
       );
     } finally {
       setActionLoading(false);
@@ -296,20 +296,20 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao excluir usuário");
+        throw new Error(error.message || "Não foi possível excluir o usuário.");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuário excluído com sucesso");
+      showMessage("success", "Usuário excluído com sucesso.");
       await loadUsers();
     } catch (error: unknown) {
       console.error("Erro ao excluir usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao excluir usuário",
+        error instanceof Error ? error.message : "Não foi possível excluir o usuário.",
       );
     } finally {
       setActionLoading(false);
@@ -348,7 +348,7 @@ export default function UsersScreen() {
           action={
             <Button onClick={() => setShowAddUser(true)} variant="primary" className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              <span>Novo Usuário</span>
+              <span>Novo usuário</span>
             </Button>
           }
         />
@@ -500,7 +500,7 @@ export default function UsersScreen() {
 
         <Dialog open={showAddUser} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
           <DialogHeader onClose={resetCreateForm}>
-            <DialogTitle>Novo Usuário</DialogTitle>
+            <DialogTitle>Novo usuário</DialogTitle>
             <DialogDescription>Crie um novo usuário e associe a um perfil dinâmico de acesso.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateUser} className="flex min-h-0 flex-1 flex-col">
@@ -516,7 +516,7 @@ export default function UsersScreen() {
                   />
                 </Field>
 
-                <Field label="Email">
+                <Field label="E-mail">
                   <Input
                     type="email"
                     value={newUserEmail}
@@ -554,14 +554,14 @@ export default function UsersScreen() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={actionLoading} loading={actionLoading}>
-                {actionLoading ? "Criando..." : "Criar Usuário"}
+                {actionLoading ? "Criando..." : "Criar usuário"}
               </Button>
             </DialogFooter>
           </form>
         </Dialog>
         <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && resetEditForm()} size="lg">
           <DialogHeader onClose={resetEditForm}>
-            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogTitle>Editar usuário</DialogTitle>
             <DialogDescription>Atualize os dados e o perfil de acesso do usuário.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateUser} className="flex min-h-0 flex-1 flex-col">
@@ -577,7 +577,7 @@ export default function UsersScreen() {
                   />
                 </Field>
 
-                <Field label="Email">
+                <Field label="E-mail">
                   <Input
                     type="email"
                     value={editUserEmail}
@@ -617,7 +617,7 @@ export default function UsersScreen() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={actionLoading} variant="warning" loading={actionLoading}>
-                {actionLoading ? "Salvando..." : "Salvar Alterações"}
+                {actionLoading ? "Salvando..." : "Salvar alterações"}
               </Button>
             </DialogFooter>
           </form>

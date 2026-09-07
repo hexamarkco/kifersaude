@@ -233,7 +233,7 @@ export default function WhatsAppApiSettingsPanel() {
       toast.success("Saúde do canal atualizada.");
     } catch (error) {
       console.error("[WhatsAppApiSettings] Error refreshing health:", error);
-      toast.error("Nao foi possivel atualizar a saude do canal.");
+      toast.error("Não foi possível atualizar a saúde do canal.");
     } finally {
       setRefreshingHealth(false);
     }
@@ -272,7 +272,7 @@ export default function WhatsAppApiSettingsPanel() {
 
       toast.success("Webhook copiado para a area de transferencia.");
     } catch {
-      toast.error("Nao foi possivel copiar o webhook agora.");
+      toast.error("Não foi possível copiar o link do webhook agora.");
     }
   };
 

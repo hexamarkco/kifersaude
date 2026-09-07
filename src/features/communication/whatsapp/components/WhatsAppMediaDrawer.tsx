@@ -401,7 +401,7 @@ export default function WhatsAppMediaDrawer({
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error('Nao foi possivel consultar a biblioteca de GIFs e figurinhas.');
+          throw new Error('Não foi possível consultar a biblioteca de GIFs e figurinhas.');
         }
 
         const payload = (await response.json()) as { results?: Array<Record<string, unknown>> };
@@ -419,7 +419,7 @@ export default function WhatsAppMediaDrawer({
         }
 
         console.error('[WhatsAppMediaDrawer] erro ao carregar mídia', error);
-        setMediaError(error instanceof Error ? error.message : 'Nao foi possivel carregar a biblioteca agora.');
+        setMediaError(error instanceof Error ? error.message : 'Não foi possível carregar a biblioteca agora.');
         setMediaItems([]);
       })
       .finally(() => {

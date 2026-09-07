@@ -913,16 +913,16 @@ function validateLeadData(
   const errors: string[] = [];
 
   if (!data.nome_completo || typeof data.nome_completo !== 'string') {
-    errors.push('Campo "nome_completo" é obrigatório e deve ser uma string');
+    errors.push('O nome completo é obrigatório.');
   }
 
   if (!data.telefone || typeof data.telefone !== 'string') {
-    errors.push('Campo "telefone" é obrigatório e deve ser uma string');
+    errors.push('O telefone é obrigatório.');
   }
 
   const origemId = resolveForeignKey(data.origem_id, data.origem, lookups.originById, lookups.originByName);
   if (!origemId) {
-    errors.push('Campo "origem" é obrigatório e deve corresponder a uma origem válida');
+    errors.push('A origem é obrigatória e deve ser válida.');
   }
   const origemName = origemId ? lookups.originById.get(origemId) : null;
 
@@ -933,7 +933,7 @@ function validateLeadData(
     lookups.tipoByLabel,
   );
   if (!tipoContratacaoId) {
-    errors.push('Campo "tipo_contratacao" é obrigatório e deve corresponder a um tipo de contratação válido');
+    errors.push('O tipo de contratação é obrigatório e deve ser válido.');
   }
   const tipoContratacaoLabel = tipoContratacaoId ? lookups.tipoById.get(tipoContratacaoId) : null;
 
@@ -944,7 +944,7 @@ function validateLeadData(
     lookups.responsavelByLabel,
   );
   if (!responsavelId) {
-    errors.push('Campo "responsavel" é obrigatório e deve corresponder a um responsável válido');
+    errors.push('O responsável é obrigatório e deve ser válido.');
   }
   const responsavelLabel = responsavelId ? lookups.responsavelById.get(responsavelId) : null;
 
@@ -952,14 +952,14 @@ function validateLeadData(
     resolveForeignKey(data.status_id, data.status, lookups.statusById, lookups.statusByName) ||
     lookups.defaultStatusId;
   if (!statusId) {
-    errors.push('Campo "status" é obrigatório e deve corresponder a um status válido');
+    errors.push('O status é obrigatório e deve ser válido.');
   }
   const statusName = statusId ? lookups.statusById.get(statusId) : null;
 
   if (data.email && typeof data.email === 'string') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
-      errors.push('Campo "email" deve ser um endereço de e-mail válido');
+        errors.push('O e-mail deve ser válido.');
     }
   }
 
@@ -967,7 +967,7 @@ function validateLeadData(
   if (data.data_criacao !== undefined) {
     creationDateIso = parseDateInputToISOString(data.data_criacao);
     if (!creationDateIso) {
-      errors.push('Campo "data_criacao" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+      errors.push('A data de criação deve ser válida.');
     }
   }
 
@@ -975,7 +975,7 @@ function validateLeadData(
   if (data.proximo_retorno !== undefined) {
     const parsed = parseDateInputToISOString(data.proximo_retorno);
     if (data.proximo_retorno && !parsed) {
-      errors.push('Campo "proximo_retorno" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+      errors.push('O próximo retorno deve ter uma data válida.');
     } else {
       proximoRetorno = parsed;
     }
@@ -1022,7 +1022,7 @@ function validateLeadUpdate(
 
   if (data.nome_completo !== undefined) {
     if (typeof data.nome_completo !== 'string') {
-      errors.push('Campo "nome_completo" deve ser uma string');
+      errors.push('O nome completo deve ser um texto.');
     } else {
       updateData.nome_completo = data.nome_completo.trim();
     }
@@ -1030,7 +1030,7 @@ function validateLeadUpdate(
 
   if (data.telefone !== undefined) {
     if (typeof data.telefone !== 'string') {
-      errors.push('Campo "telefone" deve ser uma string');
+      errors.push('O telefone deve ser um texto.');
     } else {
       updateData.telefone = normalizeTelefone(data.telefone);
     }
@@ -1041,7 +1041,7 @@ function validateLeadUpdate(
     if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        errors.push('Campo "email" deve ser um endereço de e-mail válido');
+      errors.push('O e-mail deve ser válido.');
       }
     }
     updateData.email = email;
@@ -1056,7 +1056,7 @@ function validateLeadUpdate(
   if (data.proximo_retorno !== undefined) {
     const parsed = parseDateInputToISOString(data.proximo_retorno);
     if (data.proximo_retorno && !parsed) {
-      errors.push('Campo "proximo_retorno" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+      errors.push('O próximo retorno deve ter uma data válida.');
     } else {
       updateData.proximo_retorno = parsed;
     }
@@ -1066,7 +1066,7 @@ function validateLeadUpdate(
   if (data.origem_id !== undefined || data.origem !== undefined) {
     const origemId = resolveForeignKey(data.origem_id, data.origem, lookups.originById, lookups.originByName);
     if (!origemId) {
-      errors.push('Campo "origem" deve corresponder a uma origem válida');
+      errors.push('A origem deve ser válida.');
     } else {
       updateData.origem_id = origemId;
     }
@@ -1080,7 +1080,7 @@ function validateLeadUpdate(
       lookups.tipoByLabel,
     );
     if (!tipoId) {
-      errors.push('Campo "tipo_contratacao" deve corresponder a um tipo de contratação válido');
+      errors.push('O tipo de contratação deve ser válido.');
     } else {
       updateData.tipo_contratacao_id = tipoId;
     }
@@ -1094,7 +1094,7 @@ function validateLeadUpdate(
       lookups.responsavelByLabel,
     );
     if (!responsavelId) {
-      errors.push('Campo "responsavel" deve corresponder a um responsável válido');
+      errors.push('O responsável deve ser válido.');
     } else {
       updateData.responsavel_id = responsavelId;
     }
@@ -1103,7 +1103,7 @@ function validateLeadUpdate(
   if (data.status_id !== undefined || data.status !== undefined) {
     const statusId = resolveForeignKey(data.status_id, data.status, lookups.statusById, lookups.statusByName);
     if (!statusId) {
-      errors.push('Campo "status" deve corresponder a um status válido');
+      errors.push('O status deve ser válido.');
     } else {
       updateData.status_id = statusId;
     }
@@ -1112,7 +1112,7 @@ function validateLeadUpdate(
   if (data.data_criacao !== undefined) {
     const parsedDate = parseDateInputToISOString(data.data_criacao);
     if (!parsedDate) {
-      errors.push('Campo "data_criacao" deve ser uma data válida (ISO 8601 ou YYYY-MM-DD)');
+      errors.push('A data de criação deve ser válida.');
     } else {
       updateData.data_criacao = parsedDate;
     }
@@ -1310,7 +1310,7 @@ const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiCo
 
   const token = getWhapiToken();
   if (!token) {
-    throw new Error('WHAPI_TOKEN não configurado para validar WhatsApp.');
+    throw new Error('Canal do WhatsApp não configurado.');
   }
 
   const controller = new AbortController();
@@ -1333,9 +1333,9 @@ const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiCo
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new TemporaryWhapiError('Timeout ao validar numero na Whapi.');
+      throw new TemporaryWhapiError('Tempo esgotado ao validar o número.');
     }
-    throw new TemporaryWhapiError('Falha de conexao ao validar numero na Whapi.');
+    throw new TemporaryWhapiError('Falha de conexão ao validar o número.');
   } finally {
     clearTimeout(timeoutId);
   }
@@ -1348,14 +1348,14 @@ const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiCo
       return { exists: false, chatId: null };
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error('Falha de autenticacao ao validar WhatsApp na Whapi.');
+      throw new Error('Falha de autenticação ao validar o WhatsApp.');
     }
     if (isRetryableWhapiStatus(response.status)) {
       throw new TemporaryWhapiError(
-        `Whapi temporariamente indisponivel ao validar numero (${response.status}): ${errorText || 'sem detalhes'}`,
+        `WhatsApp temporariamente indisponível ao validar o número (${response.status}): ${errorText || 'sem detalhes'}`,
       );
     }
-    throw new Error(errorText || 'Falha ao validar numero na Whapi.');
+    throw new Error(errorText || 'Não foi possível validar o número no WhatsApp.');
   }
 
   if (!payload || typeof payload !== 'object') {
@@ -1504,7 +1504,7 @@ async function sendWhatsappMessages({
 }): Promise<void> {
   const token = getWhapiToken();
   if (!token) {
-    throw new Error('WHAPI_TOKEN não configurado para enviar mensagens.');
+    throw new Error('Canal do WhatsApp não configurado para envio.');
   }
 
   for (const content of messages) {
@@ -1523,7 +1523,7 @@ async function sendWhatsappMessages({
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || 'Falha ao enviar mensagem automática');
+      throw new Error(errorText || 'Não foi possível enviar a mensagem automática.');
     }
   }
 }
@@ -2889,7 +2889,7 @@ async function processFlowJobs({
   // reset to pending so the lead is not blocked forever.
   await supabase
     .from('auto_contact_flow_jobs')
-    .update({ status: 'pending', last_error: 'Job reiniciado (processamento interrompido)' })
+    .update({ status: 'pending', last_error: 'Processo reiniciado (interrompido)' })
     .eq('status', 'processing')
     .lt('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
@@ -3084,7 +3084,7 @@ async function processFlowJobs({
       let flowDailyUsageCacheKey: string | null = null;
       if (job.action_type === 'send_message') {
         if (!getWhapiToken()) {
-          const reason = 'WHAPI_TOKEN não configurado; envio de WhatsApp desativado.';
+          const reason = 'Canal do WhatsApp não configurado.';
           logWithContext(reason, { jobId: job.id, leadId: lead.id, flowId: flow.id });
           await supabase
             .from('auto_contact_flow_jobs')
@@ -3200,7 +3200,7 @@ async function processFlowJobs({
         const urlTemplate = typeof payload.url === 'string' ? payload.url : '';
         const url = applyTemplateVariables(urlTemplate, leadWithRelations, settings.scheduling?.timezone).trim();
         if (!url) {
-          throw new Error('Webhook sem URL configurada.');
+          throw new Error('Webhook sem endereço configurado.');
         }
         const method = typeof payload.method === 'string' ? payload.method : 'POST';
         const rawHeaders = payload.headers;
@@ -3234,7 +3234,7 @@ async function processFlowJobs({
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(errorText || 'Falha ao executar webhook.');
+          throw new Error(errorText || 'Não foi possível executar o webhook.');
         }
       }
 
@@ -3254,7 +3254,7 @@ async function processFlowJobs({
         const payload = job.action_payload ?? {};
         const title = applyTemplateVariables(String(payload.title ?? ''), leadWithRelations, settings.scheduling?.timezone).trim();
         if (!title) {
-          throw new Error('Tarefa sem título configurado.');
+          throw new Error('Tarefa sem título.');
         }
         const description = applyTemplateVariables(
           String(payload.description ?? ''),
@@ -3324,7 +3324,7 @@ async function processFlowJobs({
           .single();
 
         if (threadError || !thread) {
-          throw new Error('Erro ao criar thread de e-mail.');
+          throw new Error('Não foi possível criar o e-mail.');
         }
 
         await supabase.from('email_messages').insert({
@@ -3399,7 +3399,7 @@ async function processFlowJobs({
         (job.action_type === 'send_message' || job.action_type === 'activate_autonomous_service')
         && isInvalidNumberError(error)
       ) {
-        const reason = 'invalid_number: Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
+        const reason = 'Número inválido/sem WhatsApp. Fluxo encerrado automaticamente.';
         try {
           await applyInvalidNumberAction({
             supabase,
@@ -3523,12 +3523,12 @@ async function activateAutonomousServiceForLead({
 }): Promise<void> {
   const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
   if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
-    throw new Error('Telefone invalido para ativar atendimento autonomo.');
+    throw new Error('Telefone inválido para ativar o atendimento autônomo.');
   }
 
   const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
   if (!whatsappCheck.exists) {
-    throw new Error('Numero nao possui WhatsApp.');
+    throw new Error('Número não possui WhatsApp.');
   }
 
   const channel = await ensurePrimaryChannel(supabase);
@@ -3539,25 +3539,25 @@ async function activateAutonomousServiceForLead({
   });
 
   if (chatRoute.identityConflict) {
-    throw new Error('Identidade WhatsApp exige revisao manual antes de ativar o atendimento autonomo.');
+    throw new Error('Identidade do WhatsApp exige revisão manual antes de ativar o atendimento autônomo.');
   }
   if (chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
-    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+    throw new Error('A identidade do WhatsApp está vinculada a outro lead.');
   }
   const requestedPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(whapiPhone));
   if (
     chatRoute.phoneNumber
     && !getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
   ) {
-    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+    throw new Error('A identidade do WhatsApp resolvida pertence a outro telefone.');
   }
   if (!chatRoute.chatId) {
-    throw new Error('Conversa do WhatsApp ainda nao existe para este lead.');
+    throw new Error('Conversa do WhatsApp ainda não existe para este lead.');
   }
 
   const leadCreatedAt = typeof lead?.created_at === 'string' ? lead.created_at : null;
   if (!leadCreatedAt) {
-    throw new Error('autonomous_service_skipped: Atendimento autonomo nao ativado: lead sem data de criacao confiavel.');
+    throw new Error('Atendimento autônomo não ativado: lead sem data de criação confiável.');
   }
 
   const { data: previousMessages, error: previousMessagesError } = await supabase
@@ -3574,7 +3574,7 @@ async function activateAutonomousServiceForLead({
 
   const hasVisiblePreviousHistory = (previousMessages ?? []).some((message) => isMessageVisible(message));
   if (hasVisiblePreviousHistory) {
-    throw new Error('autonomous_service_skipped: Atendimento autonomo nao ativado: chat possui historico visivel anterior ao lead.');
+    throw new Error('Atendimento autônomo não ativado: chat possui histórico visível anterior ao lead.');
   }
 
   const { error: updateError } = await supabase
@@ -3620,12 +3620,12 @@ async function sendAutoContactMessage({
 
   const token = getWhapiToken();
   if (!token) {
-    throw new Error('WHAPI_TOKEN não configurado para envio automático.');
+    throw new Error('Canal do WhatsApp não configurado para envio automático.');
   }
 
   const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
   if (!whatsappCheck.exists) {
-    throw new Error('Numero nao possui WhatsApp.');
+    throw new Error('Número não possui WhatsApp.');
   }
 
   const channel = await ensurePrimaryChannel(supabase);
@@ -3636,16 +3636,16 @@ async function sendAutoContactMessage({
   });
   const requestedPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(whapiPhone));
   if (chatRoute.identityConflict) {
-    throw new Error('Identidade WhatsApp exige revisao manual antes de envios automaticos.');
+    throw new Error('Identidade do WhatsApp exige revisão manual antes de envios automáticos.');
   }
   if (lead?.id !== 'flow-test' && chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
-    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+    throw new Error('A identidade do WhatsApp está vinculada a outro lead.');
   }
   if (
-    chatRoute.phoneNumber
-    && !getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
+    dispatchRoute.phoneNumber
+    && !getCommWhatsAppPhoneLookupKeys(dispatchRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
   ) {
-    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+    throw new Error('A identidade do WhatsApp resolvida pertence a outro telefone.');
   }
 
   let chatId = chatRoute.externalChatId;
@@ -3670,16 +3670,16 @@ async function sendAutoContactMessage({
         externalChatId: chatId,
       });
   if (!dispatchRoute || dispatchRoute.identityConflict) {
-    throw new Error('Identidade WhatsApp mudou antes do envio automatico e exige revisao manual.');
+    throw new Error('Identidade do WhatsApp mudou antes do envio automático e exige revisão manual.');
   }
   if (lead?.id !== 'flow-test' && dispatchRoute.leadId && lead?.id && dispatchRoute.leadId !== lead.id) {
-    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+    throw new Error('A identidade do WhatsApp está vinculada a outro lead.');
   }
   if (
     dispatchRoute.phoneNumber
     && !getCommWhatsAppPhoneLookupKeys(dispatchRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
   ) {
-    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+    throw new Error('A identidade do WhatsApp resolvida pertence a outro telefone.');
   }
   chatRoute = dispatchRoute;
   chatId = dispatchRoute.externalChatId;
@@ -3702,9 +3702,9 @@ async function sendAutoContactMessage({
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new TemporaryWhapiError('Timeout ao enviar mensagem na Whapi.');
+      throw new TemporaryWhapiError('Tempo esgotado ao enviar mensagem no WhatsApp.');
     }
-    throw new TemporaryWhapiError('Falha de conexao ao enviar mensagem na Whapi.');
+    throw new TemporaryWhapiError('Falha de conexão ao enviar mensagem no WhatsApp.');
   } finally {
     clearTimeout(timeoutId);
   }
@@ -3715,16 +3715,16 @@ async function sendAutoContactMessage({
     const errorText = parseWhapiError(responsePayload);
     if (isRetryableWhapiStatus(response.status)) {
       throw new TemporaryWhapiError(
-        `Whapi temporariamente indisponivel ao enviar mensagem (${response.status}): ${errorText || 'sem detalhes'}`,
+        `WhatsApp temporariamente indisponível ao enviar mensagem (${response.status}): ${errorText || 'sem detalhes'}`,
       );
     }
-    throw new Error(errorText || 'Falha ao enviar mensagem automatica');
+    throw new Error(errorText || 'Não foi possível enviar a mensagem automática.');
   }
 
   if (responsePayload && typeof responsePayload === 'object' && !Array.isArray(responsePayload)) {
     const sent = (responsePayload as Record<string, unknown>).sent;
     if (sent === false) {
-      throw new Error('Whapi nao confirmou o envio da mensagem (sent=false).');
+      throw new Error('O WhatsApp não confirmou o envio da mensagem.');
     }
   }
 
@@ -4331,7 +4331,7 @@ Deno.serve(async (req: Request) => {
           error: automationError instanceof Error ? automationError.message : String(automationError),
         });
 
-        return new Response(JSON.stringify({ success: false, error: 'Erro ao executar automação automática.' }), {
+        return new Response(JSON.stringify({ success: false, error: 'Não foi possível executar a automação.' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -4437,7 +4437,7 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (!lead) {
-          return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
+          return new Response(JSON.stringify({ success: false, error: 'Lead não encontrado' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -4457,7 +4457,7 @@ Deno.serve(async (req: Request) => {
 
         const triggerStatuses = targetFlow.triggerStatuses ?? [];
         if (triggerStatuses.length > 0 && !triggerStatuses.includes(mappedLead.status ?? '')) {
-          return new Response(JSON.stringify({ success: false, error: 'Lead not in trigger status' }), {
+          return new Response(JSON.stringify({ success: false, error: 'Lead não está no status de gatilho' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -4465,14 +4465,14 @@ Deno.serve(async (req: Request) => {
 
         if (targetFlow.triggerType === 'inactivity_duration') {
           if (triggerStatuses.length === 0) {
-            return new Response(JSON.stringify({ success: false, error: 'Inactivity flows require at least one trigger status' }), {
+            return new Response(JSON.stringify({ success: false, error: 'Fluxos de inatividade requerem pelo menos um status de gatilho' }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
 
           if (!inactivityStartedAt) {
-            return new Response(JSON.stringify({ success: false, error: 'Missing inactivity reference timestamp' }), {
+            return new Response(JSON.stringify({ success: false, error: 'Referência de tempo de inatividade ausente' }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
@@ -4612,7 +4612,7 @@ Deno.serve(async (req: Request) => {
       const payload = await req.json().catch(() => null);
       const leadId = typeof payload?.lead_id === 'string' ? payload.lead_id : null;
       if (!leadId) {
-        return jsonResponse({ success: false, error: 'lead_id é obrigatório' }, 400);
+        return jsonResponse({ success: false, error: 'O identificador do lead é obrigatório' }, 400);
       }
 
       const lookups = await getLookups();
@@ -4629,7 +4629,7 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (leadError || !lead) {
-        return jsonResponse({ success: false, error: leadError?.message ?? 'Lead not found' }, 404);
+        return jsonResponse({ success: false, error: 'Lead não encontrado' }, 404);
       }
 
       if (lead.skip_automation === true) {
@@ -4669,7 +4669,7 @@ Deno.serve(async (req: Request) => {
           error: automationError instanceof Error ? automationError.message : String(automationError),
         });
 
-        return jsonResponse({ success: false, error: 'Erro ao reprocessar lead.' }, 500);
+        return jsonResponse({ success: false, error: 'Não foi possível reprocessar o lead.' }, 500);
       }
 
       return jsonResponse({ success: true, leadId }, 200);
@@ -4692,7 +4692,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!getWhapiToken()) {
-        return jsonResponse({ success: false, error: 'WHAPI_TOKEN não configurado para envio de teste.' }, 503);
+        return jsonResponse({ success: false, error: 'Canal do WhatsApp não configurado para envio de teste.' }, 503);
       }
 
       const settings = await loadAutoContactFlowSettings(supabase);
@@ -4782,7 +4782,7 @@ Deno.serve(async (req: Request) => {
 
       if (!getWhapiToken()) {
         logWithContext('Envio manual de WhatsApp bloqueado: WHAPI_TOKEN não configurado');
-        return new Response(JSON.stringify({ success: false, error: 'WHAPI_TOKEN não configurado para envio de mensagens' }), {
+        return new Response(JSON.stringify({ success: false, error: 'Canal do WhatsApp não configurado para envio de mensagens' }), {
           status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -4806,7 +4806,7 @@ Deno.serve(async (req: Request) => {
         });
       } catch (error) {
         console.error('Erro ao enviar automação manual', error);
-        const message = error instanceof Error ? error.message : 'Falha ao enviar automação manual';
+        const message = error instanceof Error ? error.message : 'Não foi possível enviar a automação manual.';
         return new Response(JSON.stringify({ success: false, error: message }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -4880,7 +4880,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Erro ao criar lead',
+            error: 'Não foi possível criar o lead.',
             details: error.message,
           }),
           {
@@ -4982,7 +4982,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Erro ao buscar leads',
+            error: 'Não foi possível buscar os leads.',
             details: error.message,
           }),
           {
@@ -5048,7 +5048,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Erro ao atualizar lead',
+            error: 'Não foi possível atualizar o lead.',
             details: error.message,
           }),
           {
@@ -5170,7 +5170,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'Endpoint não encontrado',
+        error: 'Rota não encontrada',
         message: 'Rotas disponíveis: POST /leads, GET /leads, PUT /leads/:id, POST /leads/batch, GET /health',
       }),
       {

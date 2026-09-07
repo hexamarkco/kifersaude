@@ -487,7 +487,7 @@ export default function HolderForm({
         <form id="holder-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
-              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informacoes Pessoais</h4>
+              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CPF *" error={cpfLookupError || undefined}>
                   <div className="relative">
@@ -604,7 +604,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <Field label="CNS (Cartao SUS)">
+                <Field label="CNS (Cartão SUS)">
                   <Input
                     type="text"
                     leftIcon={WalletCards}
@@ -617,7 +617,7 @@ export default function HolderForm({
             </Surface>
 
             <Surface variant="muted" padding="sm">
-              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereco</h4>
+              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereço</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CEP">
                   <div className="relative">
@@ -644,7 +644,7 @@ export default function HolderForm({
                   </div>
                 </Field>
 
-                <Field label="Endereco" className="md:col-span-2">
+                <Field label="Endereço" className="md:col-span-2">
                   <Input
                     type="text"
                     leftIcon={MapPinned}
@@ -653,7 +653,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <Field label="Numero">
+                <Field label="Número">
                   <Input
                     type="text"
                     leftIcon={MapPinned}
@@ -721,7 +721,7 @@ export default function HolderForm({
             {isCNPJModalidade && (
               <Surface variant="muted" padding="sm">
                 <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">
-                  Informacoes Empresariais
+                  Informações Empresariais
                 </h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="CNPJ" error={cnpjLookupError || undefined}>
@@ -755,7 +755,7 @@ export default function HolderForm({
                     />
                   </Field>
 
-                  <Field label="Razao Social">
+                  <Field label="Razão Social">
                     <Input
                       type="text"
                       leftIcon={Building2}
@@ -775,7 +775,7 @@ export default function HolderForm({
                     />
                   </Field>
 
-                  <Field label="Percentual Societario (%)" className="md:col-span-2">
+                  <Field label="Percentual Societário (%)" className="md:col-span-2">
                     <Input
                       type="number"
                       step="0.01"

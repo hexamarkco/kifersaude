@@ -32,7 +32,7 @@ type DashboardEventsCalendarProps = {
   onCreateReminder: DashboardReminderRequestHandler;
 };
 
-const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 const getCalendarDateLabel = (date: Date) =>
   date.toLocaleDateString('pt-BR', {
@@ -142,7 +142,7 @@ export function DashboardEventsCalendar({
     },
     {
       id: 'month',
-      label: 'Mes',
+      label: 'Mês',
       onClick: () => onCalendarViewChange('month'),
     },
   ];
@@ -150,18 +150,18 @@ export function DashboardEventsCalendar({
   return (
     <Surface padding="sm" data-panel-animate className="space-y-5">
       <SectionHeader
-        title="Calendario de eventos"
-        description="Reajustes e aniversarios organizados por mes, semana ou dia."
+        title="Calendário de eventos"
+        description="Reajustes e aniversários organizados por mês, semana ou dia."
         action={(
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral" size="sm">
-              <span className="text-[var(--text-primary)]">{calendarMonthEventCount}</span> no mes
+              <span className="text-[var(--text-primary)]">{calendarMonthEventCount}</span> no mês
             </Badge>
             <Badge tone="accent" size="sm" icon={<span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />}>
               {monthAdjustmentCount} reajustes
             </Badge>
             <Badge tone="neutral" size="sm" icon={<span className="h-2 w-2 rounded-full bg-[var(--accent-copper)]" />}>
-              {monthBirthdayCount} aniversarios
+              {monthBirthdayCount} aniversários
             </Badge>
           </div>
         )}
@@ -177,7 +177,7 @@ export function DashboardEventsCalendar({
               variant="icon"
               size="icon"
               className="h-8 w-8"
-              aria-label="Mes anterior"
+              aria-label="Mês anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -187,7 +187,7 @@ export function DashboardEventsCalendar({
                 <CalendarDays className="h-4 w-4 text-[var(--brand-primary)]" strokeWidth={1.75} />
                 {calendarMonthLabel}
               </h4>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visao operacional do mes</p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</p>
             </div>
 
             <Button
@@ -196,7 +196,7 @@ export function DashboardEventsCalendar({
               variant="icon"
               size="icon"
               className="h-8 w-8"
-              aria-label="Proximo mes"
+              aria-label="Próximo mês"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -244,7 +244,7 @@ export function DashboardEventsCalendar({
           </div>
 
           {calendarViewEvents.length === 0 ? (
-            <EmptyState title="Nenhum evento no periodo selecionado." className="flex-1" />
+            <EmptyState title="Nenhum evento no período selecionado." className="flex-1" />
           ) : (
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {calendarViewEvents.map((event) => (
@@ -295,10 +295,10 @@ function CalendarEventRow({
     const contractInfoParts = [
       holderName && `Titular: ${holderName}`,
       adjustment.contract?.modalidade && `Modalidade: ${adjustment.contract.modalidade}`,
-      adjustment.contract?.responsavel && `Responsavel: ${adjustment.contract.responsavel}`,
+      adjustment.contract?.responsavel && `Responsável: ${adjustment.contract.responsavel}`,
     ].filter(Boolean) as string[];
     const title = adjustment.tipo === 'idade'
-      ? `${adjustment.personName ?? 'Beneficiario'}${adjustment.age ? ` - ${adjustment.age} anos` : ''}`
+      ? `${adjustment.personName ?? 'Beneficiário'}${adjustment.age ? ` - ${adjustment.age} anos` : ''}`
       : 'Reajuste contratual';
 
     return (
@@ -346,7 +346,7 @@ function CalendarEventRow({
                 contractId: adjustment.contract?.id,
                 leadId: adjustment.contract?.lead_id,
                 title: adjustment.tipo === 'idade'
-                  ? `Reajuste por idade - ${adjustment.personName ?? 'beneficiario'}`
+                  ? `Reajuste por idade - ${adjustment.personName ?? 'beneficiário'}`
                   : `Reajuste anual - ${adjustment.contract?.operadora ?? ''}`,
                 description: `Data: ${adjustment.date.toLocaleDateString('pt-BR')}`,
               })
@@ -372,7 +372,7 @@ function CalendarEventRow({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral" size="xs" icon={Cake}>Aniversario</Badge>
+            <Badge tone="neutral" size="xs" icon={Cake}>Aniversário</Badge>
             <span className="text-xs font-semibold text-[var(--text-secondary)]">{birthday.tipo}</span>
           </div>
           <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{birthday.nome}</p>
@@ -409,7 +409,7 @@ function CalendarEventRow({
             onCreateReminder({
               contractId: birthday.contract?.id,
               leadId: birthday.contract?.lead_id,
-              title: `Aniversario de ${birthday.nome}`,
+              title: `Aniversário de ${birthday.nome}`,
               description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
             })
           }

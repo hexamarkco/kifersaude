@@ -1,0 +1,1239 @@
+{
+  "unique": [
+    {
+      "chat": "105059278938237@lid",
+      "chatId": "9e5f9000-e2ff-40b4-b9c4-7dc043a4523e",
+      "firstName": "Liliana",
+      "lead": {
+        "id": "34f2356e-645e-4ee1-8c95-746e63027f42",
+        "nome_completo": "Liliana",
+        "telefone": "22988051601"
+      }
+    },
+    {
+      "chat": "226065788211219@lid",
+      "chatId": "c7a60389-9abf-42bc-9d56-a0c7983a176f",
+      "firstName": "Paulohenrique",
+      "lead": {
+        "id": "16e30400-c45e-4f8d-aa9e-872ae0485492",
+        "nome_completo": "Paulohenrique de Souza Reis",
+        "telefone": "21983600338"
+      }
+    },
+    {
+      "chat": "226370865074297@lid",
+      "chatId": "6099c7ea-1d48-419a-bfbf-fb51afb022a0",
+      "firstName": "Anja",
+      "lead": {
+        "id": "bf2358ed-0bf9-405d-9185-0d9c45aa9ff0",
+        "nome_completo": "Anja Gabriela",
+        "telefone": "21969742648"
+      }
+    },
+    {
+      "chat": "64378019823647@lid",
+      "chatId": "6f3f2795-2c29-4eb7-a909-7b7da39583fc",
+      "firstName": "Paloma",
+      "lead": {
+        "id": "a048f17c-2fbd-4bfa-b5e0-1d5945dc65de",
+        "nome_completo": "Paloma Cabralconstancio",
+        "telefone": "22992455386"
+      }
+    },
+    {
+      "chat": "150560196055133@lid",
+      "chatId": "17f606ed-6ff8-4031-a302-9c8ead3967f5",
+      "firstName": "Ericka",
+      "lead": {
+        "id": "d3cffff0-c9a1-4f22-a6f3-945b7d017f89",
+        "nome_completo": "Ericka Soares",
+        "telefone": "21970579847"
+      }
+    },
+    {
+      "chat": "133831919190090@lid",
+      "chatId": "fe7a5a24-2d45-4774-a00d-4400592ad3e8",
+      "firstName": "Roosevelt",
+      "lead": {
+        "id": "5e1bbae0-ffec-4339-80b7-8a4219647289",
+        "nome_completo": "Roosevelt Brandt",
+        "telefone": "21970066823"
+      }
+    },
+    {
+      "chat": "134209339437104@lid",
+      "chatId": "3de42861-432e-409e-9a64-5a64f748915f",
+      "firstName": "Antogil",
+      "lead": {
+        "id": "bdf26f22-28dc-484d-8fbc-de6f6f78238c",
+        "nome_completo": "Antogil dos Santos Gomes",
+        "telefone": "24999636258"
+      }
+    },
+    {
+      "chat": "276501438152833@lid",
+      "chatId": "4a106f0a-cf5d-4e40-9ea6-74970f2a4934",
+      "firstName": "Delizete",
+      "lead": {
+        "id": "87d2cdfb-83c0-4b58-8292-4185be9602b4",
+        "nome_completo": "Delizete Ferreira",
+        "telefone": "21993591238"
+      }
+    },
+    {
+      "chat": "21049836089532@lid",
+      "chatId": "386cad1d-d281-4939-b76e-51d0f700baf2",
+      "firstName": "Fausto",
+      "lead": {
+        "id": "22ae1cf5-f559-49cc-a270-764d3e0a1b81",
+        "nome_completo": "Fausto Silva",
+        "telefone": "22992230521"
+      }
+    },
+    {
+      "chat": "277064280178732@lid",
+      "chatId": "efc3535f-898d-4fe4-9460-a8dac4dee5e9",
+      "firstName": "Kyara",
+      "lead": {
+        "id": "01adeea5-bc61-4421-ae01-dbaba8a77989",
+        "nome_completo": "Kyara Neves",
+        "telefone": "24978340424"
+      }
+    },
+    {
+      "chat": "163858018742348@lid",
+      "chatId": "bb2a0d06-a474-4ab0-af9f-c0dd1b81d69e",
+      "firstName": "Nielle",
+      "lead": {
+        "id": "773a8385-c4e7-49e2-a0bf-1f544c18be48",
+        "nome_completo": "Nielle",
+        "telefone": "21974921761"
+      }
+    },
+    {
+      "chat": "144358800142379@lid",
+      "chatId": "02810b2a-df0b-4499-8549-7125d7fcd89a",
+      "firstName": "Edenir",
+      "lead": {
+        "id": "8e258058-c39f-4679-b075-7c0ea6792aab",
+        "nome_completo": "Edenir Teixeira Silva Affonso",
+        "telefone": "21995941285"
+      }
+    },
+    {
+      "chat": "174513278959847@lid",
+      "chatId": "e99f532e-a042-415b-8119-772f0797d4ba",
+      "firstName": "Valtuir",
+      "lead": {
+        "id": "6dfa915a-714f-4e1d-b8a4-f0c7625e91cd",
+        "nome_completo": "Valtuir Quenol dos Santos",
+        "telefone": "41998686407"
+      }
+    },
+    {
+      "chat": "140660229275697@lid",
+      "chatId": "c62f2cdc-9588-4b28-8ed5-cd70a75dfb42",
+      "firstName": "Marussia",
+      "lead": {
+        "id": "70369f0b-c390-4acf-9d2f-bfff304f2511",
+        "nome_completo": "Marussia Braga",
+        "telefone": "21986863053"
+      }
+    },
+    {
+      "chat": "82244530110485@lid",
+      "chatId": "dc459be2-f964-420d-b67d-46abfe4aec8d",
+      "firstName": "Jocilene",
+      "lead": {
+        "id": "b6413d5d-4f7d-4702-9e68-218dc00a90ac",
+        "nome_completo": "Jocilene Oliveira dos Santos",
+        "telefone": "21969377592"
+      }
+    }
+  ],
+  "multiple": [
+    {
+      "chat": "227603352961184@lid",
+      "chatId": "16e69b8e-24a0-44b5-b3f7-959a6c8c9630",
+      "firstName": "Maria",
+      "leads": [
+        {
+          "id": "ecadda77-c13a-4814-bbc7-9288f254ff1d",
+          "nome_completo": "Regina Maria Fayad da Cunha",
+          "telefone": "21996221943"
+        },
+        {
+          "id": "91920c3c-99d6-4fa6-aff0-fe5707915db3",
+          "nome_completo": "Maria Madalena de Oliveira",
+          "telefone": "21976025235"
+        },
+        {
+          "id": "217aac7c-94dd-4230-97f2-a376d4507b8d",
+          "nome_completo": "Maria Nunes da Conceição",
+          "telefone": "22981229964"
+        },
+        {
+          "id": "a4d5d286-1121-4a2a-ac3e-1529ede7eba7",
+          "nome_completo": "Ana Maria Alves Costa",
+          "telefone": "96999129471"
+        },
+        {
+          "id": "87d0896d-8cf3-4cc0-84cc-a4402b2b99e8",
+          "nome_completo": "Maria Eduarda",
+          "telefone": "24999835218"
+        }
+      ]
+    },
+    {
+      "chat": "214345124417694@lid",
+      "chatId": "9c9ce76c-a1ea-40bd-8628-1a371143d19f",
+      "firstName": "Wilson",
+      "leads": [
+        {
+          "id": "58b2bdc3-bc45-40d2-9205-d7941f3dd087",
+          "nome_completo": "Wilson de Andrade Rodrigues",
+          "telefone": "21964934481"
+        },
+        {
+          "id": "007e892a-4556-4313-a24e-9ddc2563ee14",
+          "nome_completo": "Wilson Simoes",
+          "telefone": "21993572444"
+        },
+        {
+          "id": "5cdb7ffc-432b-492d-8ea3-287683851d40",
+          "nome_completo": "Wilson Ferreira Costa",
+          "telefone": "24992223600"
+        },
+        {
+          "id": "90b43a68-14f3-4ab0-afda-83f142849925",
+          "nome_completo": "Wilson Sant'anna",
+          "telefone": "21973599362"
+        }
+      ]
+    },
+    {
+      "chat": "48610557345865@lid",
+      "chatId": "181229e1-4501-4d6b-b029-fb9748a58265",
+      "firstName": "Sérgio",
+      "leads": [
+        {
+          "id": "62a40971-757a-4a30-afa5-b1706f31d520",
+          "nome_completo": "Sérgio Rocha",
+          "telefone": "21964650997"
+        },
+        {
+          "id": "d54587b9-2579-42af-bbbe-57b80db4f6ec",
+          "nome_completo": "Paulo Sérgio de Brito",
+          "telefone": "21977263113"
+        }
+      ]
+    },
+    {
+      "chat": "178194049187963@lid",
+      "chatId": "6250b31e-2708-4ffd-98a4-40f025186ea7",
+      "firstName": "Raquel",
+      "leads": [
+        {
+          "id": "005b802d-4f38-4c66-b6d4-ce86ebd582e2",
+          "nome_completo": "Raquel Fileto",
+          "telefone": "21999896619"
+        },
+        {
+          "id": "94eace58-a829-4286-aaa5-c6953dde2202",
+          "nome_completo": "Raquel Regina Santiago",
+          "telefone": "22998440820"
+        },
+        {
+          "id": "940f097d-046a-4c7c-ab07-6302e478e058",
+          "nome_completo": "Raquel Alves",
+          "telefone": "2196710688"
+        },
+        {
+          "id": "e283d91d-ce0c-4234-b909-483b5dcd8916",
+          "nome_completo": "Raquel Campos",
+          "telefone": "16982417841"
+        },
+        {
+          "id": "d06b3e5a-fb39-4296-8f7c-10e3094bacd0",
+          "nome_completo": "Raquel",
+          "telefone": "22999991405"
+        }
+      ]
+    },
+    {
+      "chat": "42249660416157@lid",
+      "chatId": "eff4eaec-e983-4883-b7d7-885becc6d213",
+      "firstName": "Dayana",
+      "leads": [
+        {
+          "id": "f0a809f3-ad6a-4167-ace4-887e3aa8c1df",
+          "nome_completo": "Dayana Fonseca",
+          "telefone": "22998838180"
+        },
+        {
+          "id": "06a368bc-cdfd-4852-8528-fbad430f3bc9",
+          "nome_completo": "Dayana /Neto",
+          "telefone": "21995285399"
+        },
+        {
+          "id": "aeb49b15-2e5f-43e4-8eb6-b7c3f9bdb53d",
+          "nome_completo": "Dayana Sterck",
+          "telefone": "22997672855"
+        },
+        {
+          "id": "26babcf5-e603-4c14-804b-218d68416528",
+          "nome_completo": "Dayana Rangel",
+          "telefone": "22996046237"
+        }
+      ]
+    },
+    {
+      "chat": "224081345552549@lid",
+      "chatId": "17283e40-9757-4bc1-aece-d0ddfffe179e",
+      "firstName": "Vitor",
+      "leads": [
+        {
+          "id": "9c3dd0b2-3087-4448-8cc0-c3348669a6d2",
+          "nome_completo": "Maria Margarida Vitor Dutra dos Santos",
+          "telefone": "24992596905"
+        },
+        {
+          "id": "82946e53-524f-448d-b900-6ab1418cb7c1",
+          "nome_completo": "Vitor Miranda Muniz Pavão",
+          "telefone": "24992346202"
+        },
+        {
+          "id": "50b4c06e-2600-4410-a94d-1ee90f02a530",
+          "nome_completo": "Vitor Honorato",
+          "telefone": "21995083944"
+        },
+        {
+          "id": "57c325e4-0a40-434a-8695-6d297cf7e197",
+          "nome_completo": "Nazaré Vitor",
+          "telefone": "21987769547"
+        },
+        {
+          "id": "5e794c4c-04a1-4bde-a2d0-bc957355070d",
+          "nome_completo": "Vitor",
+          "telefone": "21995083944"
+        }
+      ]
+    },
+    {
+      "chat": "228719943753818@lid",
+      "chatId": "6dd4040d-8a8f-4775-8e62-9f1db7721310",
+      "firstName": "Nata",
+      "leads": [
+        {
+          "id": "b109471b-3637-4b61-96c9-f2679e253956",
+          "nome_completo": "Natalia Luanedaconceicaoprundecioluane Luanedaconceicaoprundecioluane",
+          "telefone": "21994848270"
+        },
+        {
+          "id": "a166633c-3a10-4ba3-acb6-8a2b0e51c653",
+          "nome_completo": "Natalia Mendonça",
+          "telefone": "21987990855"
+        },
+        {
+          "id": "b5e3cd42-088e-4391-a35c-af321d966058",
+          "nome_completo": "Nata Filho Rozeira",
+          "telefone": "21971707372"
+        },
+        {
+          "id": "fb1a811e-fbd5-45cc-b7af-97c4296b867e",
+          "nome_completo": "Agnes Natasha Maciel de Sampaio",
+          "telefone": "24998328094"
+        },
+        {
+          "id": "7b5b98df-2a56-48e9-b70d-b4ac6deaf2d2",
+          "nome_completo": "Nataly Ferreira",
+          "telefone": "91988321250"
+        }
+      ]
+    },
+    {
+      "chat": "243606417866803@lid",
+      "chatId": "ae5050a4-00d6-4df4-a27a-f46464f70fd5",
+      "firstName": "Fabio",
+      "leads": [
+        {
+          "id": "0ce2d4d5-f02f-44a5-8385-a931f364af4d",
+          "nome_completo": "Fabio",
+          "telefone": "21964066825"
+        },
+        {
+          "id": "369fd04a-7d76-4744-a92a-8328848e8230",
+          "nome_completo": "Fabio Sousa",
+          "telefone": "21964496348"
+        },
+        {
+          "id": "88cb759d-6a3a-4b24-aaf8-4d3eab7c98ed",
+          "nome_completo": "Fabio Eduardo Pereira",
+          "telefone": "24999462454"
+        },
+        {
+          "id": "39a8dc7e-7e01-4879-a284-a3963815e9ff",
+          "nome_completo": "Fabio Teixeira Batista",
+          "telefone": "31975370841"
+        },
+        {
+          "id": "c5314435-606c-4049-9bf8-96a1e970611c",
+          "nome_completo": "Fabio Paula Maia Novaes",
+          "telefone": "24981647763"
+        }
+      ]
+    },
+    {
+      "chat": "233406189330594@lid",
+      "chatId": "ee1229ba-2f5e-44ea-9bd9-cb3a50e63031",
+      "firstName": "Sergio",
+      "leads": [
+        {
+          "id": "bf543042-0fbb-4cda-b978-e25d808fa5bd",
+          "nome_completo": "Sergio Rodrigues da Silva",
+          "telefone": "21964343623"
+        },
+        {
+          "id": "267e8609-7cfb-408f-bead-1951b502cc37",
+          "nome_completo": "Sergio Garcia",
+          "telefone": "21993127729"
+        },
+        {
+          "id": "887804d1-0239-4cb2-99fd-e11f82c8b082",
+          "nome_completo": "Sergio Barbosa",
+          "telefone": "24999998534"
+        },
+        {
+          "id": "391509d8-8c0e-4b6e-9849-c7812ec5e66a",
+          "nome_completo": "Sergio Ricardo Guida Enes",
+          "telefone": "21976713830"
+        },
+        {
+          "id": "c889b82b-e2fe-48bc-8f29-94090de0c2a6",
+          "nome_completo": "Sergio",
+          "telefone": "24992159675"
+        }
+      ]
+    },
+    {
+      "chat": "8989668601971@lid",
+      "chatId": "9efd919e-f3c5-4536-a295-19aa7a0e2991",
+      "firstName": "Yuri",
+      "leads": [
+        {
+          "id": "c9ff22bf-1f3e-4ea4-8a23-bdbcced789b1",
+          "nome_completo": "Yuri Arantes",
+          "telefone": "22992362438"
+        },
+        {
+          "id": "970e2b72-7f15-4025-ba72-9101a5e3bec5",
+          "nome_completo": "Yuri Asato",
+          "telefone": "21965443681"
+        }
+      ]
+    },
+    {
+      "chat": "18176335212682@lid",
+      "chatId": "a0ccc422-3303-4004-99d1-af824fbe703c",
+      "firstName": "Adilson",
+      "leads": [
+        {
+          "id": "a7b0da4b-5a2c-4f84-aa5d-d0c787781249",
+          "nome_completo": "Adilson Alves Bandeira",
+          "telefone": "21994681489"
+        },
+        {
+          "id": "c4ec3174-8b47-4cd5-983c-2d6bbf43b031",
+          "nome_completo": "Adilson",
+          "telefone": "21985810939"
+        }
+      ]
+    },
+    {
+      "chat": "258655932932119@lid",
+      "chatId": "7e559a0b-ef2c-4df0-93ac-95b1e702e8eb",
+      "firstName": "Luana",
+      "leads": [
+        {
+          "id": "b7693695-d9c6-47cd-8d29-a4eb1eabfe8b",
+          "nome_completo": "Luana Ramos de Almeida",
+          "telefone": "24992204398"
+        },
+        {
+          "id": "222c693c-e2a5-4f59-85ef-a98ede4b6c10",
+          "nome_completo": "Luana Rangel",
+          "telefone": "21993485454"
+        },
+        {
+          "id": "533595da-bfdb-4a35-a252-6a8d81935077",
+          "nome_completo": "Luana Carreiro Guedes",
+          "telefone": "22998904744"
+        },
+        {
+          "id": "706f68a5-a730-4d53-9db1-4d81e093922b",
+          "nome_completo": "Luana",
+          "telefone": "21980095195"
+        },
+        {
+          "id": "909fe5a5-cdea-44be-91d6-18ee6a0c4216",
+          "nome_completo": "Luana Izidio",
+          "telefone": "21989639577"
+        }
+      ]
+    },
+    {
+      "chat": "211479961813000@lid",
+      "chatId": "9b49128e-a149-4082-81be-6c31472c054e",
+      "firstName": "Amanda",
+      "leads": [
+        {
+          "id": "27414dfc-b440-4f81-b30f-cb22def6cb26",
+          "nome_completo": "Amanda Eleuterio Sampaio",
+          "telefone": "24998883241"
+        },
+        {
+          "id": "cd17b8e3-0fee-41e3-b221-ab46fd1ecec1",
+          "nome_completo": "Amanda Guerra",
+          "telefone": "24999993682"
+        },
+        {
+          "id": "7d2d5387-e7e3-4b45-b5b2-0c58643f92fa",
+          "nome_completo": "Amanda Dias",
+          "telefone": "22997681370"
+        },
+        {
+          "id": "b3e34ec2-6258-4505-a27c-b22cdcc64a08",
+          "nome_completo": "Amanda Queiroz",
+          "telefone": "21977145279"
+        },
+        {
+          "id": "1fd6f248-cb8a-4bee-b072-e7d160e7c986",
+          "nome_completo": "Amanda Caroline",
+          "telefone": "24998194154"
+        }
+      ]
+    },
+    {
+      "chat": "250607164227639@lid",
+      "chatId": "91281e3f-394f-451c-b43f-12c4302e34f2",
+      "firstName": "Tânia",
+      "leads": [
+        {
+          "id": "917c41ed-8a85-40cc-b3d4-28797229c761",
+          "nome_completo": "Tânia Miriam Cruz Fernandes Rocha",
+          "telefone": "21987638110"
+        },
+        {
+          "id": "6a18216d-1403-4a75-ae29-a681d970a777",
+          "nome_completo": "Tânia Olímpia Alves Lima",
+          "telefone": "21964928439"
+        },
+        {
+          "id": "69560317-cb8f-4bba-95ff-f3ea55c6fa44",
+          "nome_completo": "Tânia Alves",
+          "telefone": "21968851431"
+        },
+        {
+          "id": "3bcfa68f-65ac-4c6d-b251-171ad286b2e2",
+          "nome_completo": "Tânia",
+          "telefone": "21964479449"
+        },
+        {
+          "id": "4d70252d-8600-41a9-b8cd-f2a6eed7010c",
+          "nome_completo": "Tânia",
+          "telefone": "21964717682"
+        }
+      ]
+    },
+    {
+      "chat": "121556231524480@lid",
+      "chatId": "69b0b0cd-4569-43a6-b8d0-c576bbe88923",
+      "firstName": "Maria",
+      "leads": [
+        {
+          "id": "ecadda77-c13a-4814-bbc7-9288f254ff1d",
+          "nome_completo": "Regina Maria Fayad da Cunha",
+          "telefone": "21996221943"
+        },
+        {
+          "id": "91920c3c-99d6-4fa6-aff0-fe5707915db3",
+          "nome_completo": "Maria Madalena de Oliveira",
+          "telefone": "21976025235"
+        },
+        {
+          "id": "217aac7c-94dd-4230-97f2-a376d4507b8d",
+          "nome_completo": "Maria Nunes da Conceição",
+          "telefone": "22981229964"
+        },
+        {
+          "id": "a4d5d286-1121-4a2a-ac3e-1529ede7eba7",
+          "nome_completo": "Ana Maria Alves Costa",
+          "telefone": "96999129471"
+        },
+        {
+          "id": "87d0896d-8cf3-4cc0-84cc-a4402b2b99e8",
+          "nome_completo": "Maria Eduarda",
+          "telefone": "24999835218"
+        }
+      ]
+    },
+    {
+      "chat": "22862144512052@lid",
+      "chatId": "c377828c-b9d7-4fe4-a55d-670fcbcae087",
+      "firstName": "Cristiana",
+      "leads": [
+        {
+          "id": "0014ecc0-74a5-4c14-901d-bc57fede093a",
+          "nome_completo": "Cristiana Ramos de Carvalho",
+          "telefone": "22992463765"
+        },
+        {
+          "id": "fa45cd32-8d15-4fe5-9034-828b2b925b3b",
+          "nome_completo": "Cristiana Ferreira",
+          "telefone": "31996265756"
+        }
+      ]
+    },
+    {
+      "chat": "151930307391656@lid",
+      "chatId": "f0d10c70-5174-4717-b00e-aa8cf20c71ae",
+      "firstName": "Janette",
+      "leads": [
+        {
+          "id": "a292d7a4-b75c-4b25-bead-4aa43e77ab3a",
+          "nome_completo": "Janette Pratti",
+          "telefone": "24981564101"
+        },
+        {
+          "id": "3595c1f6-0c73-4c0f-8fa7-380fcbc3297b",
+          "nome_completo": "Janette Guimaraes",
+          "telefone": "21998066203"
+        }
+      ]
+    },
+    {
+      "chat": "232727114678439@lid",
+      "chatId": "72e3533b-1de8-4fc0-a91d-3baa9d1cab97",
+      "firstName": "Alexandra",
+      "leads": [
+        {
+          "id": "6a4b82de-fb6b-4b84-8a69-4fbf0567e708",
+          "nome_completo": "Alexandra Salvador",
+          "telefone": "24992072077"
+        },
+        {
+          "id": "8473d9bf-64cf-4eb4-b026-8abbde920600",
+          "nome_completo": "Alexandra Laurindo",
+          "telefone": "21966570780"
+        },
+        {
+          "id": "1b58fb5c-729b-4fd5-a0cb-44783a806e4e",
+          "nome_completo": "Alexandra Barbosa de Souza",
+          "telefone": "21964880390"
+        },
+        {
+          "id": "4e9e7e6f-5c1c-4f0d-a8c0-7a70561b6476",
+          "nome_completo": "Reinir Alexandra",
+          "telefone": "24999718151"
+        },
+        {
+          "id": "d63c11cf-6476-434f-87f1-a8e5caf5aef9",
+          "nome_completo": "Alexandra | Corredora",
+          "telefone": "21996186585"
+        }
+      ]
+    },
+    {
+      "chat": "201949697818779@lid",
+      "chatId": "ff52c7be-e7dd-458a-b56b-d8c1c2ccca51",
+      "firstName": "Simone",
+      "leads": [
+        {
+          "id": "8111652f-dada-4c09-8e7d-46162dc7c0c7",
+          "nome_completo": "Simone",
+          "telefone": "21964199749"
+        },
+        {
+          "id": "c97bb665-715c-4313-9a80-d902dd90966e",
+          "nome_completo": "Simone Fonseca ?",
+          "telefone": "6192147544"
+        },
+        {
+          "id": "f49352b1-b994-45cb-a290-4ec4ab106646",
+          "nome_completo": "Simone Domingos",
+          "telefone": "21981555891"
+        },
+        {
+          "id": "cfd7070b-93b4-4583-ab1f-3ca240fd4eae",
+          "nome_completo": "Simone Maria",
+          "telefone": "21969027125"
+        },
+        {
+          "id": "8a7b32d3-6a36-4660-9084-50e26838cc2d",
+          "nome_completo": "Simone Oliveira Vaz",
+          "telefone": "21981736850"
+        }
+      ]
+    },
+    {
+      "chat": "209087799251192@lid",
+      "chatId": "c9de2ba4-2850-4352-a4d9-a06cb7e66784",
+      "firstName": "Eliane",
+      "leads": [
+        {
+          "id": "e96111e9-fc50-45d9-a61f-391534a5acbe",
+          "nome_completo": "Eliane",
+          "telefone": "21974777171"
+        },
+        {
+          "id": "55568845-7f1a-42e8-a34e-c8370f3218ee",
+          "nome_completo": "Eliane Dutra",
+          "telefone": "21988606407"
+        },
+        {
+          "id": "c2870e7b-4401-401d-94c5-6caf182065c5",
+          "nome_completo": "Eliane",
+          "telefone": "21970364095"
+        },
+        {
+          "id": "b44b0264-c834-4ef9-9d14-45dd4930854a",
+          "nome_completo": "Eliane Louback",
+          "telefone": "22999914619"
+        },
+        {
+          "id": "9f3ade3f-3385-4633-89c8-13cf4e7b6963",
+          "nome_completo": "Eliane Rocha",
+          "telefone": "21969724943"
+        }
+      ]
+    },
+    {
+      "chat": "206231595663416@lid",
+      "chatId": "91db31d1-7401-41d8-be27-4e0f16b48768",
+      "firstName": "Marilene",
+      "leads": [
+        {
+          "id": "46c4576b-017c-417e-b28d-051a80afbf1b",
+          "nome_completo": "Marilene Seneida Fialho Gama",
+          "telefone": "22981244470"
+        },
+        {
+          "id": "be36badd-c938-40e2-848f-d074d70ae77e",
+          "nome_completo": "Marilene Gonçalves de Freitas",
+          "telefone": "22999921761"
+        },
+        {
+          "id": "c91ce72e-97c4-4c6f-82a6-5654401dbe53",
+          "nome_completo": "Marilene",
+          "telefone": "21992476827"
+        },
+        {
+          "id": "20192861-6455-4e13-835c-8299ffa09409",
+          "nome_completo": "Marilene a Paz",
+          "telefone": "21999411338"
+        },
+        {
+          "id": "12128a4a-30c7-4c41-8a89-485101168c60",
+          "nome_completo": "Marilene Gomes",
+          "telefone": "21980178737"
+        }
+      ]
+    },
+    {
+      "chat": "141283234422974@lid",
+      "chatId": "e2811cb6-5d20-4dd6-a9c6-4d4ef6eb9196",
+      "firstName": "Anderson",
+      "leads": [
+        {
+          "id": "73bf465f-db58-4c3d-83b9-557364f6617a",
+          "nome_completo": "Anderson Luiz",
+          "telefone": "21964593978"
+        },
+        {
+          "id": "3937ba93-5513-49d3-80c8-c8e50221ae83",
+          "nome_completo": "Anderson Silva de Macedo",
+          "telefone": "21995316623"
+        },
+        {
+          "id": "a6475e92-f683-4645-aea8-67327ab20a15",
+          "nome_completo": "Anderson Silva Dearaujo",
+          "telefone": "21981677317"
+        },
+        {
+          "id": "17682122-9035-423f-a4be-d75f2873d826",
+          "nome_completo": "Anderson Barbosa",
+          "telefone": "21993297179"
+        },
+        {
+          "id": "0234d1b6-71d6-47c5-89e9-6b77f4dee824",
+          "nome_completo": "Anderson Araujo",
+          "telefone": "21994321041"
+        }
+      ]
+    },
+    {
+      "chat": "152492897784063@lid",
+      "chatId": "c099b9ec-776d-4044-94c2-7e46a4538c89",
+      "firstName": "Silvia",
+      "leads": [
+        {
+          "id": "9d6198a2-d439-4ea3-8494-f86d248e8ee5",
+          "nome_completo": "Silvia Pacheco",
+          "telefone": "24998771343"
+        },
+        {
+          "id": "0af605b1-310d-4911-8154-419312853c2d",
+          "nome_completo": "Ida Silvia Pereira Carneiro",
+          "telefone": "22998949554"
+        },
+        {
+          "id": "0e3872b1-04ab-4ad1-a766-c5d625ecec7f",
+          "nome_completo": "Silvia Abreu",
+          "telefone": "24999827213"
+        },
+        {
+          "id": "a209c1d0-0806-40ac-8f77-b73a45cfb5a6",
+          "nome_completo": "Silvia Regina Muniz de Andrade",
+          "telefone": "24988690540"
+        },
+        {
+          "id": "52628ca6-5602-4fbd-ab5a-f7241a81ffaa",
+          "nome_completo": "Silvia Patrícia Munier",
+          "telefone": "22981494262"
+        }
+      ]
+    },
+    {
+      "chat": "267439057154119@lid",
+      "chatId": "24584ff3-cfc3-4660-9c29-3c510dd7a713",
+      "firstName": "Antônio",
+      "leads": [
+        {
+          "id": "4bbe063c-4ad5-466a-b65b-cd9106470f70",
+          "nome_completo": "Antônio Liberato de Moura",
+          "telefone": "21964897094"
+        },
+        {
+          "id": "4ce49c78-e630-478c-a0b7-7168fb0831fc",
+          "nome_completo": "Antônio Carlos Teixeira",
+          "telefone": "32999730193"
+        },
+        {
+          "id": "98197be5-2803-4961-8cd5-254b7fa12d2c",
+          "nome_completo": "Antônio Carlos",
+          "telefone": "21964993326"
+        },
+        {
+          "id": "40b659f5-31a8-4a78-8ddd-802bac8339b4",
+          "nome_completo": "Antônio Carlos",
+          "telefone": "28998865217"
+        },
+        {
+          "id": "6d77a667-0a3a-4fe7-b63c-872115cd1987",
+          "nome_completo": "William Antônio Hilário Reis",
+          "telefone": "21970094855"
+        }
+      ]
+    },
+    {
+      "chat": "141901609103595@lid",
+      "chatId": "c19acea0-24ea-4488-a6f6-410b6a47d1a3",
+      "firstName": "Luis",
+      "leads": [
+        {
+          "id": "3611ee95-ed75-47d8-a45b-e427a0be6130",
+          "nome_completo": "Luis Pereira",
+          "telefone": "24999618591"
+        },
+        {
+          "id": "d98a6531-4340-4aa7-ab12-ceba69affce2",
+          "nome_completo": "Luisa Luisa",
+          "telefone": "41995972007"
+        },
+        {
+          "id": "8e59c739-cddc-4450-8e2d-2186cb9a041a",
+          "nome_completo": "Carlos Luis Rosa Meireles",
+          "telefone": "22981625777"
+        },
+        {
+          "id": "c7bc5b3a-c47d-4221-a39e-e4efc4dd58b4",
+          "nome_completo": "Luis Carlos Ferreira",
+          "telefone": "21979678777"
+        },
+        {
+          "id": "3eec5d8e-65c1-456f-aee8-eef8371d2ce9",
+          "nome_completo": "Luis Neves",
+          "telefone": "21972428720"
+        }
+      ]
+    },
+    {
+      "chat": "36555020312648@lid",
+      "chatId": "952ee44d-0a36-49c0-aa72-cebf998e2591",
+      "firstName": "Luciana",
+      "leads": [
+        {
+          "id": "53399ca2-f036-47d4-abbc-7c82f35ab427",
+          "nome_completo": "Luciana Conceição Castro",
+          "telefone": "21975947701"
+        },
+        {
+          "id": "98e11264-78ac-473b-b7d8-35f1c3867cf5",
+          "nome_completo": "Luciana Monico Berardo da costa",
+          "telefone": "21967820047"
+        },
+        {
+          "id": "045076f6-d2ec-4f4b-a325-7118818dab47",
+          "nome_completo": "Luciana Oliveira",
+          "telefone": "24993174184"
+        },
+        {
+          "id": "3df8b5a8-e6c9-46d7-8580-267dab838292",
+          "nome_completo": "Luciana",
+          "telefone": "21993366308"
+        },
+        {
+          "id": "a64990e3-7ce5-4db0-901a-01f71a15d77d",
+          "nome_completo": "Luciana Rodrigues Demesquita",
+          "telefone": "22992649252"
+        }
+      ]
+    },
+    {
+      "chat": "14336667975848@lid",
+      "chatId": "c2976e38-152e-46d5-a878-ffcbe76265bb",
+      "firstName": "Ana",
+      "leads": [
+        {
+          "id": "35b82da5-3fe4-405b-b6d6-5a87ecfe0b15",
+          "nome_completo": "Ana Lucia Manhães Lima",
+          "telefone": "21997982762"
+        },
+        {
+          "id": "a4d5d286-1121-4a2a-ac3e-1529ede7eba7",
+          "nome_completo": "Ana Maria Alves Costa",
+          "telefone": "96999129471"
+        },
+        {
+          "id": "08e1decc-aaa1-4890-9f12-b6dcd3c1139e",
+          "nome_completo": "Ana Lucia dos Santos Souto",
+          "telefone": "21989291828"
+        },
+        {
+          "id": "fb68043f-60a1-4d36-b449-0652ca300de8",
+          "nome_completo": "Ana Maria Queiroz Barbosa",
+          "telefone": "22981187084"
+        },
+        {
+          "id": "3cb66d14-22f0-4ce2-893b-33efab6be9c0",
+          "nome_completo": "Ana Lúcia",
+          "telefone": "21997637876"
+        }
+      ]
+    },
+    {
+      "chat": "219627749658682@lid",
+      "chatId": "bd5b1da8-9b77-4859-a66a-9e58bfcce1f4",
+      "firstName": "Eliane",
+      "leads": [
+        {
+          "id": "e96111e9-fc50-45d9-a61f-391534a5acbe",
+          "nome_completo": "Eliane",
+          "telefone": "21974777171"
+        },
+        {
+          "id": "55568845-7f1a-42e8-a34e-c8370f3218ee",
+          "nome_completo": "Eliane Dutra",
+          "telefone": "21988606407"
+        },
+        {
+          "id": "c2870e7b-4401-401d-94c5-6caf182065c5",
+          "nome_completo": "Eliane",
+          "telefone": "21970364095"
+        },
+        {
+          "id": "b44b0264-c834-4ef9-9d14-45dd4930854a",
+          "nome_completo": "Eliane Louback",
+          "telefone": "22999914619"
+        },
+        {
+          "id": "9f3ade3f-3385-4633-89c8-13cf4e7b6963",
+          "nome_completo": "Eliane Rocha",
+          "telefone": "21969724943"
+        }
+      ]
+    },
+    {
+      "chat": "210363421335683@lid",
+      "chatId": "876f876f-1687-4282-a4c9-122e5705e360",
+      "firstName": "Viviane",
+      "leads": [
+        {
+          "id": "c23bcc14-ee52-4f5e-9c3d-d4bdfc710480",
+          "nome_completo": "Viviane Loureiro",
+          "telefone": "21964929626"
+        },
+        {
+          "id": "0c4e8af8-f033-4a11-8995-bfc120f1fea3",
+          "nome_completo": "Viviane Oliveira",
+          "telefone": "24981082351"
+        },
+        {
+          "id": "25c2967b-49c2-4183-9877-3963bb101bdc",
+          "nome_completo": "Viviane Gonçalves",
+          "telefone": "22999544301"
+        },
+        {
+          "id": "39e36efd-2423-458b-b9f7-eda99e12ba10",
+          "nome_completo": "Viviane Andrade",
+          "telefone": "21980196850"
+        },
+        {
+          "id": "3b6e232d-7143-4264-9bd8-1686992f1049",
+          "nome_completo": "Viviane Marques",
+          "telefone": "31987821112"
+        }
+      ]
+    },
+    {
+      "chat": "13898631610505@lid",
+      "chatId": "f8e162e5-0b2b-4252-8479-d7a780fc3a35",
+      "firstName": "Leandro",
+      "leads": [
+        {
+          "id": "e4b8ec95-bed4-4b26-a2df-37970e46fc4f",
+          "nome_completo": "Simea Leandro",
+          "telefone": "21985146174"
+        },
+        {
+          "id": "06d017fe-7d66-4813-80b6-8a15336275dd",
+          "nome_completo": "MAX LEANDRO DE FREITAS ROCHA",
+          "telefone": "21989927342"
+        },
+        {
+          "id": "9253530c-caab-4038-be64-1812be603be4",
+          "nome_completo": "Leandro Júnior",
+          "telefone": "19993272935"
+        },
+        {
+          "id": "3955cfa3-aa6a-4438-b6ba-ff0667a09353",
+          "nome_completo": "J Elmano Leandro",
+          "telefone": "2296147750"
+        },
+        {
+          "id": "976fb779-3f04-4761-b25d-db0574352cd5",
+          "nome_completo": "Leandro de Sousa",
+          "telefone": "22981354060"
+        }
+      ]
+    },
+    {
+      "chat": "116415289884680@lid",
+      "chatId": "4d1e3621-f4c3-4bad-b909-1ec6b3a021f1",
+      "firstName": "Rosemere",
+      "leads": [
+        {
+          "id": "30f6501d-f5f7-4b13-93d7-3e6fe02a3dec",
+          "nome_completo": "Rosemere de Souza",
+          "telefone": "24998314441"
+        },
+        {
+          "id": "bd3ceb2f-92cf-4d36-b545-56c8655b6552",
+          "nome_completo": "Rosemere",
+          "telefone": "22981029779"
+        },
+        {
+          "id": "c3951473-7a38-4772-bf3d-a7095728d0e6",
+          "nome_completo": "Rosemere Otavio",
+          "telefone": "21997546694"
+        }
+      ]
+    },
+    {
+      "chat": "39694289121511@lid",
+      "chatId": "964f83ce-d653-4b49-a0c0-10451f95223e",
+      "firstName": "Luiz",
+      "leads": [
+        {
+          "id": "08d31e34-3f4d-4b9a-b1e8-be00ab30d060",
+          "nome_completo": "Gabriel Luiz",
+          "telefone": "31989604278"
+        },
+        {
+          "id": "be365d21-f618-438e-b203-51d3f26bd074",
+          "nome_completo": "André Luiz Arruda Fabricio",
+          "telefone": "21982664233"
+        },
+        {
+          "id": "73bf465f-db58-4c3d-83b9-557364f6617a",
+          "nome_completo": "Anderson Luiz",
+          "telefone": "21964593978"
+        },
+        {
+          "id": "860c6808-c863-40c7-a13d-53e5304a7ecd",
+          "nome_completo": "Luiz Fernando",
+          "telefone": "21994106580"
+        },
+        {
+          "id": "207e9b6b-85fd-480e-b72d-f35942f8689d",
+          "nome_completo": "Luiz Pinto Teixeira",
+          "telefone": "22999865585"
+        }
+      ]
+    },
+    {
+      "chat": "90808644538590@lid",
+      "chatId": "95603112-aa34-44e4-aa65-de92addf41ed",
+      "firstName": "Igor",
+      "leads": [
+        {
+          "id": "9fb7d55a-4f49-4e50-b1ee-7b08dd9272b0",
+          "nome_completo": "Igor Vinícius",
+          "telefone": "24999879771"
+        },
+        {
+          "id": "6d2b8ca9-5ebe-4ea6-92aa-26426d6f1c6e",
+          "nome_completo": "Igor Rangel",
+          "telefone": "21960169454"
+        },
+        {
+          "id": "cb84d8cf-ea1a-48df-8eaa-9e155d55c463",
+          "nome_completo": "Igor Pereira",
+          "telefone": "21991254870"
+        }
+      ]
+    },
+    {
+      "chat": "165459471159311@lid",
+      "chatId": "dc9f3010-0250-4aae-a596-3ce19a2965c9",
+      "firstName": "José",
+      "leads": [
+        {
+          "id": "33df11df-3924-4d2f-ad21-0bb34d491302",
+          "nome_completo": "José Carlos de",
+          "telefone": "21983768812"
+        },
+        {
+          "id": "d92cd5cc-dba8-4345-acb6-5638bf7846a3",
+          "nome_completo": "José F. Magalhães",
+          "telefone": "21998638261"
+        },
+        {
+          "id": "e9272d37-42b4-4e18-89f4-72b96f0a6d6d",
+          "nome_completo": "José Alberto Sales",
+          "telefone": "21964340935"
+        },
+        {
+          "id": "50e50749-b6ff-4138-bf5c-c0d1f2b1cf7f",
+          "nome_completo": "Maria José Pinto Amaral",
+          "telefone": "21994146537"
+        },
+        {
+          "id": "5ba113cb-51e5-4ea0-a1dd-9be07a34e425",
+          "nome_completo": "Lázaro José da Silva",
+          "telefone": "21990568244"
+        }
+      ]
+    }
+  ],
+  "none": [
+    {
+      "chat": "222243149881391@lid",
+      "reason": "no name in: \"Oi, Aluizio, boa tarde! Tudo bem? 😊\""
+    },
+    {
+      "chat": "253347353387158@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "82772794319101@lid",
+      "reason": "no name in: \"Oi, Maria, boa tarde! Tudo bem? 😊\""
+    },
+    {
+      "chat": "172301320499306@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "238259703677063@lid",
+      "reason": "no name in: \"Oi, Oliveira, bom dia! Tudo bem? 😊\""
+    },
+    {
+      "chat": "53326934720723@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "92706936234219@lid",
+      "reason": "no name in: \"Oi, Laécio, bom dia! Tudo bem?\""
+    },
+    {
+      "chat": "167852053164203@lid",
+      "reason": "no name in: \"Amiga, carteirinha do plano com identidade.\""
+    },
+    {
+      "chat": "152699140108320@lid",
+      "reason": "no name in: \"Oi, Thais, boa tarde! Tudo bem? 😊\""
+    },
+    {
+      "chat": "197336684851356@lid",
+      "reason": "no name in: \"Oi, Pedro, boa noite! Tudo bem? 😊\""
+    },
+    {
+      "chat": "143537840611558@lid",
+      "reason": "no name in: \"oi\""
+    },
+    {
+      "chat": "67612063047710@lid",
+      "reason": "no name in: \"olá\""
+    },
+    {
+      "chat": "159562447495181@lid",
+      "reason": "no name in: \"Oi, Rezielle, bom dia! Tudo bem? 😊\""
+    },
+    {
+      "chat": "117484703219893@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "249155498836178@lid",
+      "reason": "no name in: \"Oi, Patrick, boa noite! Tudo bem? 😊\""
+    },
+    {
+      "chat": "65837687918701@lid",
+      "reason": "no name in: \"Oi, Miguel, bom dia! Tudo bem? 😊\""
+    },
+    {
+      "chat": "44654892441746@lid",
+      "reason": "no name in: \"Oi, Andrea, bom dia! Tudo bem? 😊\""
+    },
+    {
+      "chat": "195597692891190@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "111239669747864@lid",
+      "firstName": "minha",
+      "reason": "no leads found"
+    },
+    {
+      "chat": "1731022823629@lid",
+      "reason": "no name in: \"Boa tarde Carlos, tudo bem?\""
+    },
+    {
+      "chat": "66271882260533@lid",
+      "reason": "no name in: \"oi\""
+    },
+    {
+      "chat": "8508447715555@lid",
+      "reason": "no name in: \"oi\""
+    },
+    {
+      "chat": "100502972960916@lid",
+      "reason": "no outbound text"
+    },
+    {
+      "chat": "52828785664162@lid",
+      "reason": "no name in: \"Oi, Leticia, bom dia! Tudo bem? 😊\""
+    }
+  ],
+  "error": []
+}

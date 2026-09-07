@@ -308,10 +308,10 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       document.body.removeChild(anchor);
       URL.revokeObjectURL(objectUrl);
 
-      toast.success(`Exportacao concluida: ${payload.summary.chats} conversas e ${payload.summary.messages} mensagens.`);
+      toast.success(`Exportação concluída: ${payload.summary.chats} conversas e ${payload.summary.messages} mensagens.`);
     } catch (exportError) {
       console.error('[WhatsAppDashboardModal] erro ao exportar inbox', exportError);
-      toast.error(exportError instanceof Error ? exportError.message : 'Nao foi possivel exportar as conversas do inbox.');
+      toast.error(exportError instanceof Error ? exportError.message : 'Não foi possível exportar as conversas do inbox.');
     } finally {
       setExportingInbox(false);
       setExportProgress(null);

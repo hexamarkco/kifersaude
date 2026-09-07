@@ -63,7 +63,7 @@ export default function CommissionCalendarScreen() {
         );
       } catch (fetchContractsError) {
         console.error("Erro ao carregar comissoes:", fetchContractsError);
-        setError("Nao foi possivel carregar as informacoes financeiras.");
+        setError("Não foi possível carregar as informações financeiras.");
       } finally {
         setLoading(false);
       }
@@ -126,21 +126,21 @@ export default function CommissionCalendarScreen() {
     <div className="panel-page-shell space-y-6">
       <PageHeader
         eyebrow="Financeiro"
-        title="Agenda de comissoes e bonificacoes"
-        description="Visualize as previsoes de recebimento para o mes selecionado e organize o fluxo financeiro."
+        title="Agenda de comissões e bonificações"
+        description="Visualize as previsões de recebimento para o mês selecionado e organize o fluxo financeiro."
         actions={(
           <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-2 lg:flex lg:w-auto">
             <OperationalMetricChip
               tone="gold"
               icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
-              label="Comissao prevista"
+              label="Comissão prevista"
               value={formatCommissionCurrency(totals.commission)}
               className="min-w-0 justify-center"
             />
             <OperationalMetricChip
               tone="accent"
               icon={<Gift className="h-4 w-4" aria-hidden="true" />}
-              label="Bonificacao prevista"
+              label="Bonificação prevista"
               value={formatCommissionCurrency(totals.bonus)}
               className="min-w-0 justify-center"
             />
@@ -153,7 +153,7 @@ export default function CommissionCalendarScreen() {
         phase={loadingUi.phase}
         hasContent={hasContractsSnapshot}
         skeleton={<CommissionCalendarSkeleton />}
-        overlayLabel="Atualizando agenda de comissoes..."
+        overlayLabel="Atualizando agenda de comissões..."
         stageClassName="min-h-[560px]"
       >
         {error && (
@@ -182,7 +182,7 @@ export default function CommissionCalendarScreen() {
                   {monthLabel}
                 </h3>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {monthEvents.length} evento(s) no mes
+                  {monthEvents.length} evento(s) no mês
                 </p>
               </div>
 
@@ -205,10 +205,10 @@ export default function CommissionCalendarScreen() {
 
             <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
               <span className="inline-flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" /> Comissao
+                <DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" /> Comissão
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Gift className="h-3.5 w-3.5 text-[var(--brand-primary)]" /> Bonificacao
+                <Gift className="h-3.5 w-3.5 text-[var(--brand-primary)]" /> Bonificação
               </span>
             </div>
           </Surface>
@@ -220,22 +220,22 @@ export default function CommissionCalendarScreen() {
                 title={selectedDateLabel ? `Eventos de ${selectedDateLabel}` : "Selecione um dia"}
                 description={
                   selectedDate
-                    ? `${selectedDateEvents.length} lancamento(s) previsto(s) para esta data.`
-                    : "Escolha um dia no calendario para ver os detalhes."
+                    ? `${selectedDateEvents.length} lançamento(s) previsto(s) para esta data.`
+                    : "Escolha um dia no calendário para ver os detalhes."
                 }
               />
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <OperationalMetricChip
                   tone="gold"
                   icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
-                  label="comissao no mes"
+                  label="comissão no mês"
                   value={formatCommissionCurrency(totals.commission)}
                   className="justify-center"
                 />
                 <OperationalMetricChip
                   tone="accent"
                   icon={<Gift className="h-4 w-4" aria-hidden="true" />}
-                  label="bonificacao no mes"
+                  label="bonificação no mês"
                   value={formatCommissionCurrency(totals.bonus)}
                   className="justify-center"
                 />

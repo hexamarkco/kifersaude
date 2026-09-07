@@ -46,7 +46,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     </Badge>
                   ) : (
                     <Badge tone="neutral" size="sm">
-                      Sem config
+                      Sem configuração
                     </Badge>
                   )}
                 </div>
@@ -115,8 +115,8 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
       title={confirmTarget?.action === "deactivate" ? "Desativar configuração?" : "Ativar configuração?"}
       description={
         confirmTarget?.action === "deactivate"
-          ? "A feature voltará a usar os valores padrão do sistema enquanto nenhuma versão estiver ativa."
-          : "Esta versão será ativada e passará a ser usada pela feature."
+          ? "A funcionalidade voltará a usar os valores padrão do sistema enquanto nenhuma versão estiver ativa."
+          : "Esta versão será ativada e passará a ser usada pela funcionalidade."
       }
       confirmLabel={confirmTarget?.action === "deactivate" ? "Desativar" : "Ativar"}
       destructive={confirmTarget?.action === "deactivate"}

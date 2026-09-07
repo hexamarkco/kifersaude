@@ -16,7 +16,7 @@ const toPostgrestError = (error: unknown): PostgrestError => {
     return error as PostgrestError;
   }
 
-  const message = error instanceof Error ? error.message : 'Unknown error';
+  const message = error instanceof Error ? error.message : 'Erro desconhecido';
   return { message, details: '', hint: '', code: 'UNKNOWN', name: 'Error' };
 };
 

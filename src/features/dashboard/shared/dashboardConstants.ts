@@ -4,18 +4,18 @@ import type { DashboardChartDatum, DashboardMetric } from './dashboardTypes';
 export const DASHBOARD_METRIC_TABS: TabItem<DashboardMetric>[] = [
   { id: 'leads', label: 'Leads' },
   { id: 'contratos', label: 'Contratos' },
-  { id: 'comissoes', label: 'Comissoes' },
+  { id: 'comissoes', label: 'Comissões' },
 ];
 
 export const DASHBOARD_PERIOD_OPTIONS = [
-  { value: 'mes-atual', label: 'Mes atual' },
-  { value: 'todo-periodo', label: 'Todo periodo' },
+  { value: 'mes-atual', label: 'Mês atual' },
+  { value: 'todo-periodo', label: 'Todo o período' },
   { value: 'personalizado', label: 'Personalizado' },
 ] as const;
 
 export const DASHBOARD_CHART_RANGE_OPTIONS = [
-  { value: '6', label: 'Ultimos 6 meses' },
-  { value: '12', label: 'Ultimos 12 meses' },
+  { value: '6', label: 'Últimos 6 meses' },
+  { value: '12', label: 'Últimos 12 meses' },
 ] as const;
 
 export const DASHBOARD_CHART_PALETTE = [

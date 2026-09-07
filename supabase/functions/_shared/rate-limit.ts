@@ -1,7 +1,7 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export const RATE_LIMIT_RESPONSE_BODY = {
-  error: 'Muitas requisicoes em pouco tempo. Aguarde um instante e tente novamente.',
+  error: 'Muitas requisições em pouco tempo. Aguarde um instante e tente novamente.',
 };
 
 /**

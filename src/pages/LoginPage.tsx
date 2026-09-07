@@ -21,8 +21,8 @@ export default function LoginPage() {
     const { error } = await signIn(username, password);
 
     if (error) {
-      const message = await getSupabaseErrorMessage(error, 'Usuario ou senha invalidos');
-      setError(isSupabaseConnectivityError(error) ? message : 'Usuario ou senha invalidos');
+      const message = await getSupabaseErrorMessage(error, 'Usuário ou senha inválidos');
+      setError(isSupabaseConnectivityError(error) ? message : 'Usuário ou senha inválidos. Verifique suas credenciais e tente novamente.');
       setLoading(false);
     } else {
       navigate('/painel');

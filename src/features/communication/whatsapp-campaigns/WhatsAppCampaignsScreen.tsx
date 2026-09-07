@@ -30,7 +30,7 @@ import {
 } from './commWhatsAppCampaignService';
 
 const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
-  none: 'Nao repetir',
+  none: 'Não repetir',
   daily: 'Repetir diariamente',
   weekly: 'Repetir semanalmente',
   monthly: 'Repetir mensalmente',
@@ -39,7 +39,7 @@ const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> =
 const mediaTypeLabels: Record<CommWhatsAppCampaignMediaType, string> = {
   image: 'Imagem',
   document: 'Documento',
-  video: 'Video',
+  video: 'Vídeo',
 };
 
 const stepKindLabels: Record<CommWhatsAppCampaignStepKind, string> = {
@@ -73,7 +73,7 @@ function FieldLabel({ text, hint }: { text: string; hint: string }) {
 const campaignWizardSteps = [
   { label: 'Informacoes', description: 'Nome e objetivo' },
   { label: 'Publico', description: 'CRM ou CSV' },
-  { label: 'Mensagens', description: 'Sequencia e status' },
+  { label: 'Mensagens', description: 'Sequência e status' },
   { label: 'Agendamento', description: 'Quando e como enviar' },
 ];
 
@@ -102,9 +102,9 @@ const campaignVariableSuggestions = [
   { key: 'telefone', label: 'Telefone', description: 'Telefone normalizado do contato.' },
   { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
   { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
-  { key: 'saudacao', label: 'Saudacao', description: 'Saudacao atual em minusculo, como "bom dia".' },
-  { key: 'saudacao_titulo', label: 'Saudacao em titulo', description: 'Saudacao atual capitalizada, como "Bom dia".' },
-  { key: 'saudacao_capitalizada', label: 'Saudacao capitalizada', description: 'Alias de saudacao capitalizada, como "Bom dia".' },
+  { key: 'saudacao', label: 'Saudação', description: 'Saudação atual em minúsculo, como "bom dia".' },
+  { key: 'saudacao_titulo', label: 'Saudação em título', description: 'Saudação atual capitalizada, como "Bom dia".' },
+  { key: 'saudacao_capitalizada', label: 'Saudação capitalizada', description: 'Alias de saudação capitalizada, como "Bom dia".' },
 ];
 
 const formatEstimatedDuration = (minutes: number) => {
@@ -161,7 +161,7 @@ const statusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   queued: 'Na fila',
   running: 'Rodando',
   paused: 'Pausado',
-  completed: 'Concluido',
+  completed: 'Concluído',
   cancelled: 'Cancelado',
 };
 
@@ -352,7 +352,7 @@ export default function WhatsAppCampaignsScreen() {
       setWorkerHealth(nextWorkerHealth);
       setTemplates(nextTemplates);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os disparos.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar os disparos.');
     } finally {
       setLoading(false);
     }
@@ -526,7 +526,7 @@ export default function WhatsAppCampaignsScreen() {
       setWizardStep(0);
       setCampaignModalOpen(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar este disparo para edicao.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar este disparo para edição.');
     } finally {
       setLoadingCampaignEdit(false);
     }
@@ -540,7 +540,7 @@ export default function WhatsAppCampaignsScreen() {
     }
 
     if (!firstMessageText && !flatMessages.some((item) => item.mediaUrl)) {
-      toast.warning('Escreva pelo menos uma mensagem ou anexe uma midia no disparo.');
+      toast.warning('Escreva pelo menos uma mensagem ou anexe uma mídia no disparo.');
       return;
     }
 
@@ -551,7 +551,7 @@ export default function WhatsAppCampaignsScreen() {
     }
 
     if (!editingCampaign && audienceMode === 'csv' && csvValidTargets.length === 0) {
-      toast.warning('Cole ou importe um CSV com pelo menos um telefone valido.');
+      toast.warning('Cole ou importe um CSV com pelo menos um telefone válido.');
       return;
     }
 
@@ -643,7 +643,7 @@ export default function WhatsAppCampaignsScreen() {
       closeCampaignModal();
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o disparo.');
     } finally {
       setSaving(false);
       setCsvSaveProgress(null);
@@ -732,9 +732,9 @@ export default function WhatsAppCampaignsScreen() {
     try {
       const uploaded = await commWhatsAppCampaignService.uploadCampaignMedia(file);
       updateMessage(stageIndex, messageIndex, { mediaUrl: uploaded.url, mediaType: uploaded.type, mediaFilename: uploaded.filename });
-      toast.success('Midia anexada.');
+      toast.success('Mídia anexada.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a midia.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar a mídia.');
     } finally {
       setUploadingKey(null);
     }
@@ -753,7 +753,7 @@ export default function WhatsAppCampaignsScreen() {
       setTemplates((current) => [saved, ...current]);
       toast.success('Modelo salvo.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o modelo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o modelo.');
     }
   };
 
@@ -773,7 +773,7 @@ export default function WhatsAppCampaignsScreen() {
       setTemplates((current) => current.filter((item) => item.id !== templateId));
       toast.success('Modelo removido.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel remover o modelo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível remover o modelo.');
     }
   };
 
@@ -789,7 +789,7 @@ export default function WhatsAppCampaignsScreen() {
       await commWhatsAppCampaignService.sendTestMessage(editingCampaign.id, testPhoneNumber, 0, 'A');
       toast.success('Mensagem de teste enviada.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem de teste.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar a mensagem de teste.');
     } finally {
       setSendingTest(false);
     }
@@ -802,7 +802,7 @@ export default function WhatsAppCampaignsScreen() {
       const preview = await commWhatsAppCampaignService.getActivationPreview(campaign.id);
       setActivationPreview(preview);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel montar a revisao do disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível montar a revisão do disparo.');
     } finally {
       setCampaignActionId(null);
       setLoadingActivationPreview(false);
@@ -822,7 +822,7 @@ export default function WhatsAppCampaignsScreen() {
       closeActivationPreview();
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel ativar o disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível ativar o disparo.');
     } finally {
       setCampaignActionId(null);
     }
@@ -832,10 +832,10 @@ export default function WhatsAppCampaignsScreen() {
     setCampaignActionId(campaign.id);
     try {
       const result = await commWhatsAppCampaignService.processCampaign(campaign.id);
-      toast.success(`Processamento concluido: ${result.sent ?? 0} enviado(s), ${result.failed ?? 0} falha(s).`);
+      toast.success(`Processamento concluído: ${result.sent ?? 0} enviado(s), ${result.failed ?? 0} falha(s).`);
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel processar o disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível processar o disparo.');
     } finally {
       setCampaignActionId(null);
     }
@@ -846,11 +846,11 @@ export default function WhatsAppCampaignsScreen() {
     setDeletingCampaign(true);
     try {
       await commWhatsAppCampaignService.deleteCampaign(campaignPendingDelete.id);
-      toast.success('Disparo excluido.');
+      toast.success('Disparo excluído.');
       setCampaignPendingDelete(null);
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel excluir o disparo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível excluir o disparo.');
     } finally {
       setDeletingCampaign(false);
     }
@@ -860,10 +860,10 @@ export default function WhatsAppCampaignsScreen() {
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.acceptAiSuggestion(suggestion);
-      toast.success('Contato bloqueado para proximos disparos.');
+      toast.success('Contato bloqueado para próximos disparos.');
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel bloquear este contato.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível bloquear este contato.');
     } finally {
       setSuggestionActionId(null);
     }
@@ -873,10 +873,10 @@ export default function WhatsAppCampaignsScreen() {
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.dismissAiSuggestion(suggestion.id);
-      toast.success('Sugestao dispensada.');
+      toast.success('Sugestão dispensada.');
       await loadCampaigns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel dispensar a sugestao.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível dispensar a sugestão.');
     } finally {
       setSuggestionActionId(null);
     }
@@ -908,13 +908,13 @@ export default function WhatsAppCampaignsScreen() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Activity className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
-              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Saude do worker</h2>
+              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Saúde do worker</h2>
               <Badge tone={getWorkerRunTone(workerHealth.latestRun)}>
-                {workerHealth.latestRun ? workerHealth.latestRun.status : 'sem execucao'}
+                {workerHealth.latestRun ? workerHealth.latestRun.status : 'sem execução'}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">
-              Ultima execucao {formatRelativeRunTime(workerHealth.latestRun?.finished_at ?? workerHealth.latestRun?.started_at)}.
+              Última execução {formatRelativeRunTime(workerHealth.latestRun?.finished_at ?? workerHealth.latestRun?.started_at)}.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
@@ -943,7 +943,7 @@ export default function WhatsAppCampaignsScreen() {
         </div>
         {workerHealth.latestFailure && (
           <Surface variant="danger" padding="sm" className="text-sm">
-            Ultima falha {formatRelativeRunTime(workerHealth.latestFailure.finished_at ?? workerHealth.latestFailure.started_at)}: {workerHealth.latestFailure.error_message || 'Erro nao informado.'}
+            Última falha {formatRelativeRunTime(workerHealth.latestFailure.finished_at ?? workerHealth.latestFailure.started_at)}: {workerHealth.latestFailure.error_message || 'Erro não informado.'}
           </Surface>
         )}
         <div className="grid gap-2 lg:grid-cols-3">
@@ -1043,9 +1043,9 @@ export default function WhatsAppCampaignsScreen() {
           {wizardStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={<FieldLabel text="Nome da campanha" hint="Nome interno para voce identificar o disparo na lista. O lead nunca ve esse nome." />}>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativacao PME maio" />
+              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativação PME maio" />
             </Field>
-            <Field label={<FieldLabel text="Objetivo" hint="Anotacao livre sobre o proposito da campanha, so para referencia interna da equipe." />}>
+            <Field label={<FieldLabel text="Objetivo" hint="Anotação livre sobre o propósito da campanha, só para referência interna da equipe." />}>
               <Input value={objective} onChange={(event) => setObjective(event.target.value)} placeholder="Ex: retomar cotacoes paradas" />
             </Field>
           </div>
@@ -1060,10 +1060,10 @@ export default function WhatsAppCampaignsScreen() {
 
           {audienceMode === 'crm' ? (
             <Surface variant="muted" padding="sm" className="grid gap-4 md:grid-cols-2">
-              <Field label={<FieldLabel text="Status do lead" hint="Filtra o publico pelos status atuais no CRM. Deixe vazio para incluir todos os status." />}>
+              <Field label={<FieldLabel text="Status do lead" hint="Filtra o público pelos status atuais no CRM. Deixe vazio para incluir todos os status." />}>
                 <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
               </Field>
-              <Field label={<FieldLabel text="Responsavel" hint="Filtra o publico pelo responsavel atribuido ao lead no CRM." />}>
+              <Field label={<FieldLabel text="Responsável" hint="Filtra o público pelo responsável atribuído ao lead no CRM." />}>
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
               <label className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
@@ -1072,15 +1072,15 @@ export default function WhatsAppCampaignsScreen() {
               </label>
               {reactivationMode && (
                 <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
-                  <Field label={<FieldLabel text="Sem contato ha pelo menos (dias)" hint="So inclui leads cujo ultimo contato registrado foi ha pelo menos esse numero de dias." />}>
+                  <Field label={<FieldLabel text="Sem contato há pelo menos (dias)" hint="Só inclui leads cujo último contato registrado foi há pelo menos esse número de dias." />}>
                     <Input type="number" min={1} value={inactiveDays} onChange={(event) => setInactiveDays(Math.max(1, Number(event.target.value) || 1))} />
                   </Field>
-                  <Field label={<FieldLabel text="Suprimir campanha recente (dias)" hint="Exclui quem ja recebeu qualquer outra campanha dentro desse numero de dias, para nao repetir contato." />}>
+                  <Field label={<FieldLabel text="Suprimir campanha recente (dias)" hint="Exclui quem já recebeu qualquer outra campanha dentro desse número de dias, para não repetir contato." />}>
                     <Input type="number" min={0} value={recentCampaignDays} onChange={(event) => setRecentCampaignDays(Math.max(0, Number(event.target.value) || 0))} />
                   </Field>
                 </div>
               )}
-              <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O worker vai materializar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, numeros invalidos e opt-outs.</p>
+              <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O sistema vai processar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, números inválidos e opt-outs.</p>
             </Surface>
           ) : (
             <Surface variant="muted" padding="sm" className="space-y-4">
@@ -1098,15 +1098,15 @@ export default function WhatsAppCampaignsScreen() {
               <Textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder={'nome;telefone\nMaria Silva;(11) 99999-9999'} />
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
-                Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone ja existir no CRM sao vinculados ao lead existente em vez de duplicados.
+                Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone já existir no CRM são vinculados ao lead existente em vez de duplicados.
               </label>
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={validateWhatsappNumbers} onChange={(event) => setValidateWhatsappNumbers(event.target.checked)} />
-                Validar no WhatsApp antes de enviar: apos salvar, cada numero e checado em segundo plano (pode levar horas em listas grandes) e numeros sem WhatsApp sao excluidos do envio automaticamente, sem precisar revisar a lista manualmente.
+                Validar no WhatsApp antes de enviar: após salvar, cada número é checado em segundo plano (pode levar horas em listas grandes) e números sem WhatsApp são excluídos do envio automaticamente, sem precisar revisar a lista manualmente.
               </label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
-                <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) validos</Badge>
+                <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) válidos</Badge>
                 {csvDuplicatePhoneCount > 0 && (
                   <Badge tone="warning">{csvDuplicatePhoneCount} duplicado(s) removido(s)</Badge>
                 )}
@@ -1122,13 +1122,13 @@ export default function WhatsAppCampaignsScreen() {
           <Surface variant="muted" padding="sm" className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequencia do disparo</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Como no construtor de fluxo: cada estagio dispara sob o mesmo intervalo (ex: 3 mensagens imediatas, depois 2 mensagens 24h depois) e pode mudar o status do lead entre os envios.</p>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequência do disparo</span>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Cada etapa dispara sob o mesmo intervalo (ex: 3 mensagens imediatas, depois 2 mensagens 24h depois) e pode mudar o status do lead entre os envios.</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <Badge tone="neutral">{stages.length} estagio(s)</Badge>
+                  <Badge tone="neutral">{stages.length} etapa(s)</Badge>
                   <Badge tone="neutral">{flatMessages.length} mensagem(ns)</Badge>
                   {stages.some((stage) => stage.kind === 'status_change') && (
-                    <Badge tone="accent">{stages.filter((stage) => stage.kind === 'status_change').length} mudanca(s) de status</Badge>
+                    <Badge tone="accent">{stages.filter((stage) => stage.kind === 'status_change').length} mudança(s) de status</Badge>
                   )}
                 </div>
               </div>
@@ -1147,7 +1147,7 @@ export default function WhatsAppCampaignsScreen() {
                 </Button>
                 <Button variant="secondary" size="sm" onClick={addStage}>
                   <Plus className="h-3.5 w-3.5" />
-                  Adicionar estagio
+                  Adicionar etapa
                 </Button>
               </div>
             </div>
@@ -1179,11 +1179,11 @@ export default function WhatsAppCampaignsScreen() {
                   Teste A/B na mensagem inicial
                 </span>
                 <br />
-                Sorteia entre duas versoes da primeira mensagem (primeiro estagio) e permite comparar a taxa de resposta de cada uma.
+                Sorteia entre duas versões da primeira mensagem (primeira etapa) e permite comparar a taxa de resposta de cada uma.
               </span>
             </label>
             {abTestEnabled && (
-              <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versoes." />}>
+              <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versões." />}>
                 <Input
                   type="range"
                   min={1}
@@ -1203,8 +1203,8 @@ export default function WhatsAppCampaignsScreen() {
                       <div className="flex items-center gap-2">
                         <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{stageIndex + 1}</span>
                         <div>
-                          <p className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Estagio inicial' : `Estagio ${stageIndex + 1}`}</p>
-                          <p className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horario agendado.' : 'Dispara apos o intervalo abaixo, se nao houver resposta.'}</p>
+                          <p className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Etapa inicial' : `Etapa ${stageIndex + 1}`}</p>
+                          <p className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horário agendado.' : 'Dispara após o intervalo abaixo, se não houver resposta.'}</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1218,14 +1218,14 @@ export default function WhatsAppCampaignsScreen() {
                           ))}
                         </Select>
                         {stages.length > 1 && (
-                          <Button variant="ghost" size="sm" onClick={() => removeStage(stageIndex)}>Remover estagio</Button>
+                          <Button variant="ghost" size="sm" onClick={() => removeStage(stageIndex)}>Remover etapa</Button>
                         )}
                       </div>
                     </div>
 
                     {!isFirstStage && (
                       <div className="mb-3 grid gap-3 sm:grid-cols-2">
-                        <Field label={<FieldLabel text="Aguardar desde o estagio anterior" hint="Quanto tempo esperar depois que o estagio anterior terminar antes de disparar este." />}>
+                        <Field label={<FieldLabel text="Aguardar desde a etapa anterior" hint="Quanto tempo esperar depois que a etapa anterior terminar antes de disparar este." />}>
                           <Input type="number" min={0} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Number(event.target.value) || 0 })} />
                         </Field>
                         <Field label={<FieldLabel text="Unidade" hint="Unidade de tempo do intervalo de espera ao lado." />}>
@@ -1243,7 +1243,7 @@ export default function WhatsAppCampaignsScreen() {
                     )}
 
                     {stage.kind === 'status_change' ? (
-                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que sera aplicado ao lead quando este estagio rodar. Vale para contatos vindos do CRM e para contatos de CSV com 'Criar leads no CRM' habilitado." />}>
+                      <Field label={<FieldLabel text="Novo status do lead" hint="Status que será aplicado ao lead quando esta etapa rodar. Vale para contatos vindos do CRM e para contatos de CSV com 'Criar leads no CRM' habilitado." />}>
                         <Select
                           value={stage.statusToSet ?? ''}
                           onChange={(event) => updateStage(stageIndex, { statusToSet: event.target.value })}
@@ -1291,12 +1291,12 @@ export default function WhatsAppCampaignsScreen() {
                                   onClick={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
                                   onKeyUp={(event) => updateVariableAutocomplete(stageIndex, messageIndex, event.currentTarget.value, event.currentTarget.selectionStart)}
                                   onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
-                                  placeholder={isVeryFirstMessage ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                                  placeholder={isVeryFirstMessage ? 'Oi {{nome}}, tudo bem? Vi que sua cotação ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
                                 />
                                 {variableAutocomplete?.stageIndex === stageIndex && variableAutocomplete.messageIndex === messageIndex && visibleVariableSuggestions.length > 0 && (
                                   <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
                                     <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
-                                      Variaveis disponiveis
+                                      Variáveis disponíveis
                                     </div>
                                     <div className="max-h-56 overflow-y-auto py-1">
                                       {visibleVariableSuggestions.map((suggestion) => (
@@ -1335,7 +1335,7 @@ export default function WhatsAppCampaignsScreen() {
                                       </Badge>
                                       <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(stageIndex, messageIndex)}>
                                         <X className="h-3.5 w-3.5" />
-                                        Remover midia
+                                        Remover mídia
                                       </Button>
                                     </>
                                   ) : (
@@ -1346,19 +1346,19 @@ export default function WhatsAppCampaignsScreen() {
                                       onClick={() => mediaFileInputRefs.current[refKey]?.click()}
                                     >
                                       {uploadingKey !== refKey && <Upload className="h-3.5 w-3.5" />}
-                                      Anexar midia
+                                      Anexar mídia
                                     </Button>
                                   )}
                                 </div>
 
                                 {isVeryFirstMessage && abTestEnabled && (
                                   <div className="mt-3">
-                                    <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versao alternativa da mensagem inicial, sorteada para uma fracao dos contatos, para comparar qual converte mais." />}>
+                                    <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versão alternativa da mensagem inicial, sorteada para uma fração dos contatos, para comparar qual converte mais." />}>
                                       <Textarea
                                         size="compact"
                                         value={message.variantBMessageText ?? ''}
                                         onChange={(event) => updateMessage(stageIndex, messageIndex, { variantBMessageText: event.target.value })}
-                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotacao em aberto - posso te ajudar?"
+                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotação em aberto - posso te ajudar?"
                                       />
                                     </Field>
                                   </div>
@@ -1372,9 +1372,9 @@ export default function WhatsAppCampaignsScreen() {
                           className="flex items-center gap-1 text-xs text-[color:var(--panel-accent-strong)] hover:underline"
                           onClick={() => addMessageToStage(stageIndex)}
                         >
-                          <Plus className="h-3 w-3" /> Adicionar mensagem neste estagio
+                          <Plus className="h-3 w-3" /> Adicionar mensagem nesta etapa
                         </button>
-                        <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens deste estagio saem em sequencia, sem intervalo entre elas.</p>
+                        <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens desta etapa saem em sequência, sem intervalo entre elas.</p>
                       </div>
                     )}
                   </div>
@@ -1391,10 +1391,10 @@ export default function WhatsAppCampaignsScreen() {
             <Surface variant="muted" padding="sm" className="space-y-3">
               <div className="flex items-center gap-2">
                 <Repeat2 className="h-4 w-4 text-[color:var(--panel-accent-strong)]" />
-                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Recorrencia</span>
+                <span className="text-sm font-semibold text-[color:var(--panel-text)]">Recorrência</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label={<FieldLabel text="Repetir" hint="Define se e com que frequencia esta campanha volta a rodar automaticamente para o mesmo publico de CRM." />}>
+                <Field label={<FieldLabel text="Repetir" hint="Define se e com que frequência esta campanha volta a rodar automaticamente para o mesmo público de CRM." />}>
                   <Select value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as CommWhatsAppCampaignRecurrenceRule)}>
                     {(Object.keys(recurrenceRuleLabels) as CommWhatsAppCampaignRecurrenceRule[]).map((rule) => (
                       <option key={rule} value={rule}>{recurrenceRuleLabels[rule]}</option>
@@ -1403,10 +1403,10 @@ export default function WhatsAppCampaignsScreen() {
                 </Field>
                 {recurrenceRule !== 'none' && (
                   <>
-                    <Field label={<FieldLabel text="A cada" hint="Multiplo do intervalo escolhido acima. Ex: 'semanalmente' + '2' repete a cada 2 semanas." />}>
+                    <Field label={<FieldLabel text="A cada" hint="Múltiplo do intervalo escolhido acima. Ex: 'semanalmente' + '2' repete a cada 2 semanas." />}>
                       <Input type="number" min={1} max={90} value={recurrenceInterval} onChange={(event) => setRecurrenceInterval(Math.max(1, Number(event.target.value) || 1))} />
                     </Field>
-                    <Field label={<FieldLabel text="Repetir ate (opcional)" hint="Data limite para as repeticoes automaticas. Deixe vazio para repetir indefinidamente." />}>
+                    <Field label={<FieldLabel text="Repetir até (opcional)" hint="Data limite para as repetições automáticas. Deixe vazio para repetir indefinidamente." />}>
                       <DateTimePicker type="datetime-local" value={recurrenceEndAt} onChange={(event) => setRecurrenceEndAt(event.target.value)} />
                     </Field>
                   </>
@@ -1414,7 +1414,7 @@ export default function WhatsAppCampaignsScreen() {
               </div>
               {recurrenceRule !== 'none' && (
                 <p className="text-xs text-[color:var(--panel-text-muted)]">
-                  Quando esta campanha for concluida, o worker rematerializa o mesmo publico de CRM (respeitando opt-outs e o modo de reativacao segura) e ativa uma nova rodada automaticamente.
+                  Quando esta campanha for concluída, o sistema rematerializa o mesmo público de CRM (respeitando opt-outs e o modo de reativação segura) e ativa uma nova rodada automaticamente.
                 </p>
               )}
             </Surface>
@@ -1427,7 +1427,7 @@ export default function WhatsAppCampaignsScreen() {
                 <span className="text-sm font-semibold text-[color:var(--panel-text)]">Enviar teste</span>
               </div>
               <div className="flex flex-wrap items-end gap-2">
-                <Field label={<FieldLabel text="Telefone (com DDD)" hint="Numero que vai receber a mensagem de teste. Use o seu proprio WhatsApp." />} className="min-w-[12rem] flex-1">
+                <Field label={<FieldLabel text="Telefone (com DDD)" hint="Número que vai receber a mensagem de teste. Use o seu próprio WhatsApp." />} className="min-w-[12rem] flex-1">
                   <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
                 </Field>
                 <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
@@ -1435,28 +1435,28 @@ export default function WhatsAppCampaignsScreen() {
                   Enviar mensagem inicial de teste
                 </Button>
               </div>
-              <p className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variaveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</p>
+              <p className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variáveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</p>
             </Surface>
           )}
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo comecar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
+            <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo começar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
-            <Field label={<FieldLabel text="Intervalo entre contatos" hint="So informativo, nao da pra editar: e o resultado de 'novos contatos por dia' dividido pela janela de envio. Define de quanto em quanto tempo um contato novo e admitido - o resto da sequencia dele (resto do estagio 1 e os estagios seguintes) sai normalmente, sem esperar esse intervalo." />}>
+            <Field label={<FieldLabel text="Intervalo entre contatos" hint="Só informativo, não dá pra editar: é o resultado de 'novos contatos por dia' dividido pela janela de envio. Define de quanto em quanto tempo um contato novo é admitido - o resto da sequência dele (resto da etapa 1 e as etapas seguintes) sai normalmente, sem esperar esse intervalo." />}>
               <Input value={formatAdmissionInterval(admissionIntervalMinutes)} disabled readOnly />
             </Field>
-            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (so conta a primeira mensagem de cada um, ate 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para nao limitar (contatos entram sem espacamento minimo)." />}>
+            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (só conta a primeira mensagem de cada um, até 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para não limitar (contatos entram sem espaçamento mínimo)." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
-            <Field label={<FieldLabel text="Janela inicio" hint="Horario a partir do qual o disparo pode enviar mensagens." />}>
+            <Field label={<FieldLabel text="Janela início" hint="Horário a partir do qual o disparo pode enviar mensagens." />}>
               <DateTimePicker type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
             </Field>
-            <Field label={<FieldLabel text="Janela fim" hint="Horario limite para o envio. Fora da janela, o disparo fica pausado ate o proximo horario permitido." />}>
+            <Field label={<FieldLabel text="Janela fim" hint="Horário limite para o envio. Fora da janela, o disparo fica pausado até o próximo horário permitido." />}>
               <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
           </div>
-          <Field label={<FieldLabel text="Dias de envio" hint="Dias da semana em que o disparo pode enviar mensagens. Nos dias desmarcados, o disparo fica pausado (igual a fora da janela de horario) e retoma sozinho no proximo dia permitido." />}>
+          <Field label={<FieldLabel text="Dias de envio" hint="Dias da semana em que o disparo pode enviar mensagens. Nos dias desmarcados, o disparo fica pausado (igual a fora da janela de horário) e retoma sozinho no próximo dia permitido." />}>
             <div className="flex flex-wrap gap-1.5">
               {WEEKDAY_OPTIONS.map((day) => {
                 const isActive = activeWeekdays.includes(day.value);
@@ -1487,8 +1487,8 @@ export default function WhatsAppCampaignsScreen() {
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
               {csvSaveProgress
-                ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Nao feche esta janela.`
-                : 'Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.'}
+                ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Não feche esta janela.`
+                : 'Respostas interrompem novos envios para aquele contato; opt-outs bloqueados serão excluídos da fila.'}
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {wizardStep > 0 && (
@@ -1499,7 +1499,7 @@ export default function WhatsAppCampaignsScreen() {
               )}
               {wizardStep < campaignWizardSteps.length - 1 ? (
                 <Button className="w-full sm:w-auto" onClick={handleWizardNext}>
-                  Proximo
+                  Próximo
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
@@ -1518,32 +1518,32 @@ export default function WhatsAppCampaignsScreen() {
             <DialogHeader onClose={closeActivationPreview}>
               <div>
                 <DialogTitle>Revisar antes de ativar</DialogTitle>
-                <DialogDescription>Confirme publico, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
+                <DialogDescription>Confirme público, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
               </div>
             </DialogHeader>
 
             <DialogBody className="min-h-0 flex-1 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
-                <PreviewMetric label="Etapas da sequencia" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
+                <PreviewMetric label="Etapas da sequência" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
                 <PreviewMetric label="Intervalo entre contatos" value={formatAdmissionInterval(computeAdmissionIntervalMinutes(activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end))} />
-                <PreviewMetric label="Duracao estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
+                <PreviewMetric label="Duração estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Configuracao operacional</h3>
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Configuração operacional</h3>
                   <div className="space-y-2 text-sm text-[color:var(--panel-text-soft)]">
                     <PreviewRow label="Campanha" value={activationPreview.campaign.name} />
                     <PreviewRow label="Agendamento" value={formatDateTime(activationPreview.campaign.scheduled_at)} />
                     <PreviewRow label="Janela" value={formatSendWindow(activationPreview.campaign)} />
                     <PreviewRow label="Origem" value={activationPreview.campaign.audience_source.toUpperCase()} />
-                    <PreviewRow label="Targets materializados" value={String(activationPreview.materializedTargets)} />
+                    <PreviewRow label="Contatos processados" value={String(activationPreview.materializedTargets)} />
                   </div>
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Variaveis detectadas</h3>
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Variáveis detectadas</h3>
                   {activationPreview.variables.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {activationPreview.variables.map((variable) => (
@@ -1551,16 +1551,16 @@ export default function WhatsAppCampaignsScreen() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variavel foi usada nas mensagens.</p>
+                    <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variável foi usada nas mensagens.</p>
                   )}
                   {activationPreview.unknownVariables.length > 0 && (
-                    <p className="text-xs text-[color:var(--danger-text)]">Ha variaveis nao reconhecidas. Elas podem ser enviadas vazias ou sem substituicao.</p>
+                    <p className="text-xs text-[color:var(--danger-text)]">Há variáveis não reconhecidas. Elas podem ser enviadas vazias ou sem substituição.</p>
                   )}
                 </Card>
               </div>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia da campanha</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequência da campanha</h3>
                 <div className="space-y-2">
                   {activationPreview.steps.map((step, index) => (
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
@@ -1569,12 +1569,12 @@ export default function WhatsAppCampaignsScreen() {
                           {step.step_kind === 'status_change' ? 'Mudar status' : `Mensagem ${index + 1}`}
                         </Badge>
                         {step.variant_label !== 'ANY' && <Badge tone="warning" size="sm">Variante {step.variant_label}</Badge>}
-                        {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
+                        {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Após {step.delay_amount} {step.delay_unit}</span>}
                       </div>
                       {step.step_kind === 'status_change' ? (
                         <p className="text-sm text-[color:var(--panel-text-soft)]">Status do lead passa a ser: <strong>{step.status_to_set}</strong></p>
                       ) : (
-                        <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem so com midia)'}</p>
+                        <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem só com mídia)'}</p>
                       )}
                     </div>
                   ))}
@@ -1582,7 +1582,7 @@ export default function WhatsAppCampaignsScreen() {
               </Card>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico (com a mensagem ja resolvida por lead)</h3>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do público (com a mensagem já resolvida por lead)</h3>
                 {activationPreview.sample.length > 0 ? (
                   <div className="grid gap-2 md:grid-cols-2">
                     {activationPreview.sample.map((sample, index) => (
@@ -1597,18 +1597,18 @@ export default function WhatsAppCampaignsScreen() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuracao.</p>
+                  <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuração.</p>
                 )}
               </Card>
             </DialogBody>
 
             <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha sera materializada e processada pelo cron mesmo com o navegador fechado.</p>
+              <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha será processada automaticamente, mesmo com o navegador fechado.</p>
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
                 <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
                   {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="h-4 w-4" />}
-                  Confirmar ativacao
+                  Confirmar ativação
                 </Button>
               </div>
             </DialogFooter>
@@ -1619,7 +1619,7 @@ export default function WhatsAppCampaignsScreen() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</h2>
-              <p className="text-sm text-[color:var(--panel-text-soft)]">Base criada para ativacao por worker.</p>
+              <p className="text-sm text-[color:var(--panel-text-soft)]">Base criada para processamento automático.</p>
             </div>
             <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
           </div>
@@ -1631,7 +1631,7 @@ export default function WhatsAppCampaignsScreen() {
           ) : campaigns.length === 0 ? (
             <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
               <p className="text-sm font-medium text-[color:var(--panel-text)]">Nenhum disparo criado ainda.</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar publico e mensagem.</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar público e mensagem.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -1696,7 +1696,7 @@ export default function WhatsAppCampaignsScreen() {
         title="Excluir disparo?"
         description={
           campaignPendingDelete
-            ? `"${campaignPendingDelete.name}" sera excluido junto com todos os alvos, mensagens e eventos registrados. Essa acao nao pode ser desfeita.${['queued', 'running'].includes(campaignPendingDelete.status) ? ' Essa campanha esta ativa - excluir agora pode interromper envios em andamento.' : ''}`
+            ? `"${campaignPendingDelete.name}" será excluído junto com todos os alvos, mensagens e eventos registrados. Essa ação não pode ser desfeita.${['queued', 'running'].includes(campaignPendingDelete.status) ? ' Essa campanha está ativa - excluir agora pode interromper envios em andamento.' : ''}`
             : undefined
         }
         confirmLabel="Excluir"

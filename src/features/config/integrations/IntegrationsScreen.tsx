@@ -512,7 +512,7 @@ export default function IntegrationsScreen() {
       );
 
       if (error) {
-        throw new Error(error.message || "Erro ao consultar modelos");
+        throw new Error(error.message || "Não foi possível carregar os modelos.");
       }
 
       const payload = isRecord(data) ? data : {};
@@ -525,7 +525,7 @@ export default function IntegrationsScreen() {
           options,
           error:
             options.length === 0
-              ? "Nenhum modelo retornado pela API do provedor."
+              ? "Nenhum modelo retornado pelo provedor."
               : null,
         },
       }));
@@ -812,7 +812,7 @@ export default function IntegrationsScreen() {
       setAiFollowUpInstructions(settingsPayload.instructions);
       setAiMessage({
         type: "success",
-        text: "Instrucoes de follow-up atualizadas com sucesso.",
+        text: "Instruções de follow-up atualizadas com sucesso.",
       });
     }
 
@@ -1001,7 +1001,7 @@ export default function IntegrationsScreen() {
                     ? providerModelsState.error
                     : providerModelsState.options.length > 0
                       ? `${providerModelsState.options.length} modelos carregados da API do provedor.`
-                      : "Nenhum modelo retornado pela API do provedor.";
+                      : "Nenhum modelo retornado pelo provedor.";
 
               return (
                 <Card key={provider}>

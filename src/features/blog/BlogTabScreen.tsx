@@ -47,7 +47,7 @@ export default function BlogTabScreen() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error(`Erro ao carregar posts: ${error.message}`);
+      toast.error(`Não foi possível carregar os posts: ${error.message}`);
       setLoading(false);
       return;
     }
@@ -94,7 +94,7 @@ export default function BlogTabScreen() {
       !formData.excerpt ||
       !formData.content
     ) {
-      toast.warning("Preencha todos os campos obrigatorios.");
+      toast.warning("Preencha todos os campos obrigatórios.");
       return;
     }
 
@@ -110,14 +110,14 @@ export default function BlogTabScreen() {
         .eq("id", editingPost.id);
 
       if (error) {
-        toast.error(`Erro ao atualizar post: ${error.message}`);
+        toast.error(`Não foi possível atualizar o post: ${error.message}`);
         return;
       }
     } else {
       const { error } = await supabase.from("blog_posts").insert([postData]);
 
       if (error) {
-        toast.error(`Erro ao criar post: ${error.message}`);
+        toast.error(`Não foi possível criar o post: ${error.message}`);
         return;
       }
     }
@@ -137,7 +137,7 @@ export default function BlogTabScreen() {
       const confirmed = await requestConfirmation({
         title: "Excluir post",
         description:
-          "Tem certeza que deseja excluir este post? Esta acao nao pode ser desfeita.",
+          "Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.",
         confirmLabel: "Excluir post",
         cancelLabel: "Cancelar",
         tone: "danger",
@@ -150,7 +150,7 @@ export default function BlogTabScreen() {
       const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
       if (error) {
-        toast.error(`Erro ao excluir post: ${error.message}`);
+        toast.error(`Não foi possível excluir o post: ${error.message}`);
         return;
       }
 
@@ -170,7 +170,7 @@ export default function BlogTabScreen() {
         .eq("id", post.id);
 
       if (error) {
-        toast.error(`Erro ao atualizar status: ${error.message}`);
+        toast.error(`Não foi possível atualizar o status: ${error.message}`);
         return;
       }
 
@@ -199,7 +199,7 @@ export default function BlogTabScreen() {
         return;
       }
 
-      toast.error(result.error || "Erro ao fazer upload da imagem.");
+      toast.error(result.error || "Não foi possível fazer o upload da imagem.");
     },
     [],
   );
@@ -225,7 +225,7 @@ export default function BlogTabScreen() {
         return;
       }
 
-      toast.error(result.error || "Erro ao fazer upload da imagem.");
+      toast.error(result.error || "Não foi possível fazer o upload da imagem.");
     },
     [],
   );

@@ -2943,7 +2943,7 @@ function WhatsAppMessageBody({
             onClick={() => setShowOriginalText((current) => !current)}
             className="h-7 px-2.5 text-[11px] normal-case tracking-normal"
           >
-            {showOriginalText ? 'Ocultar alteracoes' : 'Ver antes e depois'}
+            {showOriginalText ? 'Ocultar alterações' : 'Ver antes e depois'}
           </Button>
         ) : null}
       </div>
@@ -5114,7 +5114,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (voiceRecordingState !== 'idle') {
-      return 'Finalize a gravacao de audio antes de reescrever a mensagem.';
+      return 'Finalize a gravação de áudio antes de reescrever a mensagem.';
     }
 
     if (rewritingComposer) {
@@ -7201,7 +7201,7 @@ export default function WhatsAppInboxScreen() {
         readKey,
         error,
       });
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel marcar a conversa como lida.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível marcar a conversa como lida.');
       void loadChats().catch((loadError) => {
         console.error('[WhatsAppInbox][mark-read] reload-after-error:error', loadError);
       });
@@ -7632,7 +7632,7 @@ export default function WhatsAppInboxScreen() {
         // de forma discreta (warning), em vez de falhar silenciosamente.
         void Promise.all([loadMessages(chat, 'send'), loadChats({ sections: wasArchived ? ['active'] : undefined })]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
-          toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
+          toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
         });
       }
     });
@@ -8100,7 +8100,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleOpenEditMessageModal = useCallback((message: CommWhatsAppMessage) => {
     if (!canEditOutboundMessage(message)) {
-      toast.error('Esta mensagem nao pode ser editada no momento.');
+      toast.error('Esta mensagem não pode ser editada no momento.');
       return;
     }
 
@@ -8117,7 +8117,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
     if (!canReplyOrForwardMessage(message)) {
-      toast.error('Esta mensagem nao pode ser respondida no momento.');
+      toast.error('Esta mensagem não pode ser respondida no momento.');
       return;
     }
 
@@ -8129,7 +8129,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleOpenForwardMessageModal = useCallback((message: CommWhatsAppMessage) => {
     if (!canReplyOrForwardMessage(message)) {
-      toast.error('Esta mensagem nao pode ser encaminhada no momento.');
+      toast.error('Esta mensagem não pode ser encaminhada no momento.');
       return;
     }
 
@@ -8189,7 +8189,7 @@ export default function WhatsAppInboxScreen() {
       handleCloseForwardMessageModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao encaminhar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel encaminhar a mensagem.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível encaminhar a mensagem.');
       setForwardingInProgress(false);
     }
   }, [forwardingInProgress, forwardingMessage, forwardingTargetIds, forwardTargetChats, handleCloseForwardMessageModal, loadChats, loadMessages]);
@@ -8258,7 +8258,7 @@ export default function WhatsAppInboxScreen() {
       handleCloseEditMessageModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao editar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel editar a mensagem no WhatsApp.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível editar a mensagem no WhatsApp.');
     } finally {
       setSavingMessageEdit(false);
     }
@@ -8266,7 +8266,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleDeleteMessage = useCallback(async (message: CommWhatsAppMessage) => {
     if (!canDeleteOutboundMessage(message)) {
-      toast.error('Esta mensagem nao pode ser apagada no momento.');
+      toast.error('Esta mensagem não pode ser apagada no momento.');
       return;
     }
 
@@ -8300,7 +8300,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Mensagem apagada no WhatsApp.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao apagar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel apagar a mensagem no WhatsApp.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível apagar a mensagem no WhatsApp.');
     } finally {
       setDeletingMessageId(null);
     }
@@ -8385,7 +8385,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Lead criado e vinculado a conversa.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao vincular lead criado no chat', error);
-      toast.error('Lead criado, mas nao foi possivel vincula-lo ao chat.');
+      toast.error('Lead criado, mas não foi possível vinculá-lo ao chat.');
     }
   }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, upsertChatLocally]);
 
@@ -8580,7 +8580,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (!lead.id && !lead.telefone?.trim()) {
-      toast.error('Nao foi possivel abrir uma conversa para este lead.');
+      toast.error('Não foi possível abrir uma conversa para este lead.');
       return;
     }
 
@@ -8765,7 +8765,7 @@ export default function WhatsAppInboxScreen() {
       void loadChats();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao salvar contato', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o contato.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato.');
     } finally {
       setSavingContact(false);
     }
@@ -8989,7 +8989,7 @@ export default function WhatsAppInboxScreen() {
       }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao reescrever mensagem do composer', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel reescrever a mensagem com IA.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem com IA.');
     } finally {
       setRewritingComposer(false);
     }
@@ -9066,7 +9066,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao sugerir resposta com IA', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel sugerir uma resposta com IA.';
+      const message = error instanceof Error ? error.message : 'Não foi possível sugerir uma resposta com IA.';
       setReplySuggestionError(message);
       setReplySuggestionText('');
       if (manual) {
@@ -9267,15 +9267,15 @@ export default function WhatsAppInboxScreen() {
       if (imported > 0) {
         toast.success(
           hasMore
-            ? `Historico sincronizado (${imported} mensagens). Ainda ha mais mensagens; execute a recuperacao novamente para continuar.`
-            : `Historico sincronizado (${imported} mensagens). Use "Carregar mais" para navegar nas mais antigas.`,
+            ? `Histórico sincronizado (${imported} mensagens). Ainda há mais mensagens; execute a recuperação novamente para continuar.`
+            : `Histórico sincronizado (${imported} mensagens). Use "Carregar mais" para navegar nas mais antigas.`,
         );
       } else {
-        toast.info('A Whapi nao retornou mensagens adicionais para esta conversa agora.');
+        toast.info('A Whapi não retornou mensagens adicionais para esta conversa agora.');
       }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao recuperar historico do chat', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel recuperar mais mensagens deste chat.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível recuperar mais mensagens deste chat.');
     } finally {
       setSyncingHistoryChatId((current) => (current === targetChat.id ? null : current));
     }
@@ -9351,14 +9351,14 @@ export default function WhatsAppInboxScreen() {
         if (archiveConfirmed) {
           toast.success(options.isArchived ? 'Conversa arquivada.' : 'Conversa removida dos arquivados.');
         } else {
-          toast.warning('Conversa atualizada, mas o servidor reverteu o arquivamento. Verifique se ha mensagens novas chegando.');
+          toast.warning('Conversa atualizada, mas o servidor reverteu o arquivamento. Verifique se há mensagens novas chegando.');
         }
       } else if (typeof options.isMuted === 'boolean') {
-        toast.success(options.isMuted ? 'Conversa silenciada.' : 'Conversa com notificacao restaurada.');
+        toast.success(options.isMuted ? 'Conversa silenciada.' : 'Conversa com notificação restaurada.');
       } else if (typeof options.isPinned === 'boolean') {
         toast.success(options.isPinned ? 'Conversa fixada.' : 'Conversa desafixada.');
       } else if (typeof options.markAsUnread === 'boolean') {
-        toast.success(options.markAsUnread ? 'Conversa marcada como nao lida.' : 'Conversa marcada como lida.');
+        toast.success(options.markAsUnread ? 'Conversa marcada como não lida.' : 'Conversa marcada como lida.');
       }
     } catch (error) {
       pendingChatInboxStateRef.current.delete(chat.id);
@@ -9369,7 +9369,7 @@ export default function WhatsAppInboxScreen() {
       if (options.markAsUnread === true && manualUnreadSkipReadChatIdRef.current === chat.id) {
         manualUnreadSkipReadChatIdRef.current = null;
       }
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel atualizar esta conversa.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar esta conversa.');
     } finally {
       setUpdatingChatStateId((current) => (current === chat.id ? null : current));
     }
@@ -9437,7 +9437,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa excluida da Inbox.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao excluir conversa', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel excluir esta conversa.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível excluir esta conversa.');
     } finally {
       setDeletingChatId((current) => (current === chat.id ? null : current));
     }
@@ -9671,7 +9671,7 @@ export default function WhatsAppInboxScreen() {
         || phoneChatId;
 
       if (chat?.identity_conflict) {
-        const errorMessage = 'Identidade WhatsApp pendente de revisao manual.';
+        const errorMessage = 'Identidade WhatsApp pendente de revisão manual.';
         failures.push(`Lead ${result.leadId}: ${errorMessage}`);
         options?.onProgress?.({
           reminderId: result.reminderId,
@@ -9722,7 +9722,7 @@ export default function WhatsAppInboxScreen() {
           });
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Nao foi possivel enviar o follow-up.';
+        const message = error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.';
         failures.push(`Lead ${result.leadId}: ${message}`);
         options?.onProgress?.({
           reminderId: result.reminderId,
@@ -9842,13 +9842,13 @@ export default function WhatsAppInboxScreen() {
         await supabase.from('comm_follow_up_audit_log').insert(legacyAuditEntries);
       } catch (auditError) {
         console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
-        warnings.push('Follow-ups enviados, mas nao foi possivel registrar a auditoria.');
+        warnings.push('Follow-ups enviados, mas não foi possível registrar a auditoria.');
       }
     }
 
     void Promise.all([loadChatsRef.current(), loadMessagesRef.current(null, 'send')]).catch((refreshError) => {
       console.error('[WhatsAppInbox] erro ao atualizar conversas apos envio batch', refreshError);
-      toast.warning('Follow-ups enviados, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
+      toast.warning('Follow-ups enviados, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
     });
 
     const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
@@ -10052,7 +10052,7 @@ export default function WhatsAppInboxScreen() {
                     className="shrink-0"
                     onClick={() => setWhatsAppAgendaOpen(true)}
                     aria-label="Agenda do WhatsApp"
-                    title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissao para acessar a agenda'}
+                    title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissão para acessar a agenda'}
                     disabled={!canViewAgenda}
                   >
                     <CalendarDays className="h-4 w-4" />
@@ -12194,7 +12194,7 @@ export default function WhatsAppInboxScreen() {
                 className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
-                <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como nao lida'}</span>
+                <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como não lida'}</span>
               </button>
               <button
                 type="button"

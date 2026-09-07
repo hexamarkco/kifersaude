@@ -34,14 +34,14 @@ const SANDBOX_HISTORY_LIMIT = 100;
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceRoleKey) throw new Error('Credenciais do Supabase nao configuradas.');
+  if (!supabaseUrl || !serviceRoleKey) throw new Error('Credenciais do Supabase não configuradas.');
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), { status: 405, headers: jsonHeaders });
+    return new Response(JSON.stringify({ error: 'Método não permitido' }), { status: 405, headers: jsonHeaders });
   }
 
   try {
@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
     const leadName = toTrimmedString(body.leadName).slice(0, 120);
 
     if (!conversationId) {
-      return new Response(JSON.stringify({ error: 'Conversa obrigatoria.' }), { status: 400, headers: jsonHeaders });
+      return new Response(JSON.stringify({ error: 'Conversa obrigatória.' }), { status: 400, headers: jsonHeaders });
     }
 
     const { data: existing, error: existingError } = await supabaseAdmin
@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (existingError) throw new Error(`Erro ao carregar conversa: ${existingError.message}`);
     if (!existing) {
-      return new Response(JSON.stringify({ error: 'Conversa nao encontrada.' }), { status: 404, headers: jsonHeaders });
+      return new Response(JSON.stringify({ error: 'Conversa não encontrada.' }), { status: 404, headers: jsonHeaders });
     }
 
     // ---- Load full sandbox history + real style examples in parallel ----
@@ -114,7 +114,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!isOpeningMode && history[history.length - 1].role !== 'lead') {
-      return new Response(JSON.stringify({ error: 'A ultima mensagem ja foi respondida.' }), { status: 400, headers: jsonHeaders });
+      return new Response(JSON.stringify({ error: 'A última mensagem já foi respondida.' }), { status: 400, headers: jsonHeaders });
     }
 
     const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
@@ -126,6 +126,7 @@ Deno.serve(async (req: Request) => {
     const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY).catch(() => null);
     const systemPrompt = [
       autonomousConfig?.featurePrompt,
+      autonomousConfig?.outputInstructions,
       '',
       buildStylePrompt(styleMessagesResult.error ? [] : styleMessages),
       referenceBlock ? `\n${referenceBlock}` : '',
@@ -144,7 +145,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);
-    if (finalMessages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
+    if (finalMessages.length === 0) throw new Error('A IA não retornou uma resposta válida.');
 
     const rowsToInsert = finalMessages.map((content, index) => ({
       conversation_id: conversationId,
@@ -179,7 +180,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('[ai-sandbox-chat] erro inesperado', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao gerar resposta.' }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Não foi possível gerar a resposta.' }),
       { status: 500, headers: jsonHeaders },
     );
   }

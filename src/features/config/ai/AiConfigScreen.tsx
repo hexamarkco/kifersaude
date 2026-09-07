@@ -51,8 +51,8 @@ export default function AiConfigScreen() {
       aiConfigService.fetchGlobalConfigs(),
     ]);
 
-    if (featResult.error) toast.error(`Erro ao carregar features: ${featResult.error}`);
-    if (globalResult.error) toast.error(`Erro ao carregar configs globais: ${globalResult.error}`);
+    if (featResult.error) toast.error("Não foi possível carregar as funcionalidades.");
+    if (globalResult.error) toast.error("Não foi possível carregar as configurações globais.");
 
     setFeatures(featResult.data ?? []);
     setGlobalConfigs(globalResult.data ?? []);
@@ -149,7 +149,7 @@ export default function AiConfigScreen() {
         const withConfig = data.features.filter((f: { active_config: unknown }) => f.active_config);
         setImportConfirm({ data: reader.result as string, count: withConfig.length });
       } catch {
-        toast.error("Erro ao ler o arquivo");
+        toast.error("Não foi possível ler o arquivo.");
       }
     };
     reader.readAsText(file);
@@ -185,7 +185,7 @@ export default function AiConfigScreen() {
       setImportConfirm(null);
       load();
     } catch {
-      toast.error("Erro ao importar configurações");
+      toast.error("Não foi possível importar as configurações.");
     }
   }, [importConfirm, features, load]);
 
@@ -194,7 +194,7 @@ export default function AiConfigScreen() {
       <SectionHeader
         eyebrow="Inteligência Artificial"
         title="Configurações de IA"
-        description="Gerencie prompts, parâmetros e versões das features de IA do sistema."
+        description="Gerencie prompts, parâmetros e versões das funcionalidades de IA do sistema."
         action={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading}>
@@ -221,8 +221,8 @@ export default function AiConfigScreen() {
 
       <Tabs
         items={[
-          { id: "features", label: "Features", icon: Sparkles },
-          { id: "global", label: "Configurações Globais", icon: Settings },
+          { id: "features", label: "Funcionalidades", icon: Sparkles },
+          { id: "global", label: "Configurações globais", icon: Settings },
         ]}
         value={section}
         onChange={setSection}
@@ -234,7 +234,7 @@ export default function AiConfigScreen() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Input
-              placeholder="Buscar feature..."
+              placeholder="Buscar funcionalidade..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-xs"
@@ -258,7 +258,7 @@ export default function AiConfigScreen() {
             <Card className="p-8 text-center">
               <Brain className="mx-auto mb-3 h-10 w-10 text-[var(--text-muted)]" />
               <p className="text-sm text-[var(--text-secondary)]">
-                Nenhuma feature encontrada.
+                Nenhuma funcionalidade encontrada.
               </p>
             </Card>
           )}

@@ -87,7 +87,7 @@ export default function AccessControlManagerScreen() {
       updates,
     );
     if (error) {
-      showMessage("error", "Erro ao atualizar permissão.");
+      showMessage("error", "Não foi possível atualizar a permissão.");
       setUpdatingKey(null);
       return;
     }
@@ -149,7 +149,7 @@ export default function AccessControlManagerScreen() {
     });
 
     if (error) {
-      showMessage("error", error.message || "Erro ao criar perfil.");
+      showMessage("error", error.message || "Não foi possível criar o perfil.");
       return;
     }
 
@@ -188,7 +188,7 @@ export default function AccessControlManagerScreen() {
     );
 
     if (error) {
-      showMessage("error", error.message || "Erro ao atualizar perfil.");
+      showMessage("error", error.message || "Não foi possível atualizar o perfil.");
       return;
     }
 
@@ -223,7 +223,7 @@ export default function AccessControlManagerScreen() {
 
     const { error } = await configService.deleteAccessProfile(profileId);
     if (error) {
-      showMessage("error", error.message || "Erro ao excluir perfil.");
+      showMessage("error", error.message || "Não foi possível excluir o perfil.");
       return;
     }
 

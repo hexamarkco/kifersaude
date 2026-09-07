@@ -42,7 +42,7 @@ export default function ConfigPageScreen() {
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
       <PageHeader
-        eyebrow="Administracao"
+        eyebrow="Administração"
         title="Configurações"
         description="Centralize a operação administrativa do CRM em áreas claras, seguras e orientadas à tarefa."
         actions={

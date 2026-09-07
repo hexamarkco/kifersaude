@@ -42,13 +42,13 @@ export default function BlogPostsList({
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
-        eyebrow="Conteudo publico"
+        eyebrow="Conteúdo público"
         title="Blog"
         description="Gerencie artigos publicados no site, rascunhos e metadados de busca."
         actions={(
           <Button type="button" onClick={onCreatePost}>
             <Plus className="h-4 w-4" />
-            Novo Post
+            Novo post
           </Button>
         )}
       />
@@ -59,7 +59,7 @@ export default function BlogPostsList({
               type="text"
               value={searchTerm}
               onChange={(event) => onSearchTermChange(event.target.value)}
-              placeholder="Buscar por titulo ou categoria..."
+              placeholder="Buscar por título ou categoria..."
               leftIcon={Search}
           />
         </Surface>
@@ -123,9 +123,9 @@ export default function BlogPostsList({
                           </p>
 
                           <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-                            <span>Visualizacoes: {post.views_count}</span>
+                            <span>Visualizações: {post.views_count}</span>
                             <span>
-                              Criado:{" "}
+                              Criado{" "}
                               {new Date(post.created_at).toLocaleDateString(
                                 "pt-BR",
                               )}

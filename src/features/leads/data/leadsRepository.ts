@@ -35,6 +35,20 @@ export async function listLeads(): Promise<Lead[]> {
   });
 }
 
+export async function listLeadsByStatuses(statuses: string[]): Promise<Lead[]> {
+  if (statuses.length === 0) return [];
+  return fetchAllPages<Lead>(async (from, to) => {
+    const result = await databaseClient
+      .from('leads')
+      .select('*')
+      .in('status', statuses)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+      .overrideTypes<Lead[], { merge: false }>();
+    return result;
+  });
+}
+
 export async function listContractLeadIds(leadIds: string[]): Promise<Set<string>> {
   if (leadIds.length === 0) {
     return new Set();
@@ -181,6 +195,33 @@ export async function persistLeadStatusChange(params: {
       responsavel: lead.responsavel,
     },
   ]);
+}
+
+export async function persistKanbanStatusChange(params: {
+  lead: Lead;
+  newStatus: string;
+  responsible: string;
+  timestamp: string;
+}): Promise<void> {
+  const { lead, newStatus, responsible, timestamp } = params;
+  const { error } = await databaseClient
+    .from('leads')
+    .update({ status: newStatus, ultimo_contato: timestamp })
+    .eq('id', lead.id);
+  if (error) throw error;
+
+  await databaseClient.from('interactions').insert({
+    lead_id: lead.id,
+    tipo: 'Observacao',
+    descricao: `Status alterado de "${lead.status}" para "${newStatus}" (via Kanban)`,
+    responsavel: responsible,
+  });
+  await databaseClient.from('lead_status_history').insert({
+    lead_id: lead.id,
+    status_anterior: lead.status as string,
+    status_novo: newStatus,
+    responsavel: responsible,
+  });
 }
 
 export async function clearLeadReminders(leadId: string): Promise<void> {

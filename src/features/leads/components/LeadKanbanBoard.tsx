@@ -6,8 +6,13 @@ import { useConfig } from "../../../contexts/ConfigContext";
 import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
 import { ActionSurface, Button, EmptyState, Input, LoadingState, OperationalMetricChip, OperationalStatusDot, Surface } from "../../../design-system";
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
-import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
+import type { Lead } from "../domain/types";
+import {
+  listLeadsByStatuses,
+  persistKanbanStatusChange,
+  subscribeToLeadChanges,
+} from "../data/leadsRepository";
 
 type LeadKanbanBoardProps = {
   onLeadClick?: (lead: Lead) => void;
@@ -92,20 +97,7 @@ export default function LeadKanbanBoard({
         return;
       }
 
-      const data = await fetchAllPages<Lead>((from, to) =>
-        supabase
-          .from("leads")
-          .select("*")
-          .in(
-            "status",
-            statusColumns.map((column) => column.nome),
-          )
-          .order("created_at", { ascending: false })
-          .range(from, to) as unknown as Promise<{
-          data: Lead[] | null;
-          error: unknown;
-        }>,
-      );
+      const data = await listLeadsByStatuses(statusColumns.map((column) => column.nome));
 
       let fetchedLeads: Lead[] = data || [];
 
@@ -130,24 +122,9 @@ export default function LeadKanbanBoard({
       return;
     }
 
-    const channel = supabase
-      .channel("kanban-leads-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "leads",
-        },
-        () => {
-          void loadLeads();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return subscribeToLeadChanges(() => {
+      void loadLeads();
+    });
   }, [leads, loadLeads]);
 
   useEffect(() => {
@@ -205,33 +182,12 @@ export default function LeadKanbanBoard({
     );
 
     try {
-      const { error: updateError } = await supabase
-        .from("leads")
-        .update({
-          status: newStatusName,
-          ultimo_contato: nowIso,
-        })
-        .eq("id", draggedLead.id);
-
-      if (updateError) throw updateError;
-
-      await supabase.from("interactions").insert([
-        {
-          lead_id: draggedLead.id,
-          tipo: "Observacao",
-          descricao: `Status alterado de "${oldStatusName}" para "${newStatusName}" (via Kanban)`,
-          responsavel: responsavelLabel,
-        },
-      ]);
-
-      await supabase.from("lead_status_history").insert([
-        {
-          lead_id: draggedLead.id,
-          status_anterior: oldStatusName,
-          status_novo: newStatusName,
-          responsavel: responsavelLabel,
-        },
-      ]);
+      await persistKanbanStatusChange({
+        lead: draggedLead,
+        newStatus: newStatusName,
+        responsible: responsavelLabel,
+        timestamp: nowIso,
+      });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Não foi possível atualizar o status do lead.");

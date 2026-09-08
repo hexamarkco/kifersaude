@@ -18,7 +18,8 @@ import {
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { CommissionCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
-import { type Contract, supabase } from "../../lib/supabase";
+import type { Contract } from "../contracts";
+import { listActiveCommissionContracts } from "./data/commissionRepository";
 import CommissionMonthGrid from "./components/CommissionMonthGrid";
 import CommissionSelectedDatePanel from "./components/CommissionSelectedDatePanel";
 import {
@@ -49,18 +50,7 @@ export default function CommissionCalendarScreen() {
       setError(null);
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from("contracts")
-          .select("*")
-          .order("previsao_recebimento_comissao", { ascending: true });
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        setContracts(
-          (data || []).filter((contract) => contract.status === "Ativo"),
-        );
+        setContracts(await listActiveCommissionContracts());
       } catch (fetchContractsError) {
         console.error("Erro ao carregar comissoes:", fetchContractsError);
         setError("Não foi possível carregar as informações financeiras.");

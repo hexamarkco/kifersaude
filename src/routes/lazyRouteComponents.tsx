@@ -18,7 +18,7 @@ export const WhatsAppCampaignsWrapper = lazy(() => import('../pages/routes/Whats
 export const WhatsAppCampaignDetailWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignDetailWrapper'));
 export const BlogTab = lazy(() => import('../features/blog/BlogTabScreen'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));
-export const FinanceiroComissoesTab = lazy(() => import('../features/commissions/FinanceiroComissoesScreen'));
+export const FinanceiroComissoesTab = lazy(() => import('../features/commissions'));
 export const FinanceiroAgendaTab = lazy(() => import('../features/agenda/AgendaScreen'));
 
 export function RouteLoading() {

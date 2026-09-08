@@ -1,4 +1,5 @@
-import type { Contract, Lead } from '../../../lib/supabase';
+import type { Contract } from '../../contracts';
+import type { Lead } from '../../leads';
 import type { TabNavigationOptions } from '../../../types/navigation';
 
 export type Holder = {

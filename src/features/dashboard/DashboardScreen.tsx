@@ -1,8 +1,8 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useSearchParams } from "react-router-dom";
-import { supabase, Lead, Contract, fetchAllPages } from "../../lib/supabase";
+import type { Contract } from "../contracts";
+import type { Lead } from "../leads";
 import {
   getDateKey,
   parseDateWithoutTimezone,
@@ -54,6 +54,15 @@ import type {
   Holder,
   ReminderRequest,
 } from "./shared/dashboardTypes";
+import {
+  insertDashboardReminders,
+  listDashboardReminderContractIds,
+  listDashboardRemindersInRange,
+  loadDashboardSnapshot,
+  subscribeToDashboardContracts,
+  subscribeToDashboardLeads,
+  upsertDashboardBirthdayReminders,
+} from "./data/dashboardRepository";
 
 export default function DashboardScreen({
   onNavigateToTab,
@@ -432,39 +441,12 @@ export default function DashboardScreen({
     setLoading(true);
     setError(null);
     try {
-      const [leadsData, contractsData, holdersData, dependentsData] =
-        await Promise.all([
-          fetchAllPages<Lead>(async (from, to) => {
-            const response = await supabase
-              .from("leads")
-              .select("*")
-              .order("created_at", { ascending: false })
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Contract>(async (from, to) => {
-            const response = await supabase
-              .from("contracts")
-              .select("*")
-              .order("created_at", { ascending: false })
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Holder>(async (from, to) => {
-            const response = await supabase
-              .from("contract_holders")
-              .select("*")
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Dependent>(async (from, to) => {
-            const response = await supabase
-              .from("dependents")
-              .select("*")
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-        ]);
+      const {
+        leads: leadsData,
+        contracts: contractsData,
+        holders: holdersData,
+        dependents: dependentsData,
+      } = await loadDashboardSnapshot();
 
       const mappedLeads = (leadsData || [])
         .map((lead) => mapLeadWithRelations(lead))
@@ -521,16 +503,7 @@ export default function DashboardScreen({
 
     loadData();
 
-    const leadsChannel = supabase
-      .channel("dashboard-leads-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "leads",
-        },
-        (payload: RealtimePostgresChangesPayload<Lead>) => {
+    const unsubscribeLeads = subscribeToDashboardLeads((payload) => {
           const { eventType } = payload;
           const newLead = mapLeadWithRelations(payload.new as Lead | null);
           const oldLead = payload.old as Lead | null;
@@ -606,24 +579,9 @@ export default function DashboardScreen({
 
             return hasChanged ? updatedHidden : currentHidden;
           });
-        },
-      )
-      .subscribe();
+        });
 
-    const contractsChannel = supabase
-      .channel("dashboard-contracts-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "contracts",
-        },
-        (
-          payload: RealtimePostgresChangesPayload<
-            Contract & { holders?: Holder[]; dependents?: Dependent[] }
-          >,
-        ) => {
+    const unsubscribeContracts = subscribeToDashboardContracts((payload) => {
           const { eventType } = payload;
           const newContract = payload.new as
             | (Contract & {
@@ -762,13 +720,11 @@ export default function DashboardScreen({
                 return currentDependents;
             }
           });
-        },
-      )
-      .subscribe();
+        });
 
     return () => {
-      supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(contractsChannel);
+      unsubscribeLeads();
+      unsubscribeContracts();
     };
   }, [
     configLoading,
@@ -1564,18 +1520,17 @@ export default function DashboardScreen({
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
 
-      const { data: existingReminders, error: remindersFetchError } =
-        await supabase
-          .from("reminders")
-          .select("id, contract_id, lead_id, titulo, tipo, data_lembrete")
-          .eq("tipo", "Aniversário")
-          .gte("data_lembrete", startOfToday.toISOString())
-          .lte("data_lembrete", endOfToday.toISOString());
-
-      if (remindersFetchError) {
+      let existingReminders;
+      try {
+        existingReminders = await listDashboardRemindersInRange(
+          "Aniversário",
+          startOfToday.toISOString(),
+          endOfToday.toISOString(),
+        );
+      } catch (error) {
         console.error(
           "Erro ao verificar lembretes de aniversário existentes:",
-          remindersFetchError,
+          error,
         );
         return false;
       }
@@ -1615,14 +1570,10 @@ export default function DashboardScreen({
         return true;
       }
 
-      const { error: insertError } = await supabase
-        .from("reminders")
-        .upsert(remindersToInsert, {
-          onConflict: "contract_id",
-          ignoreDuplicates: true,
-        });
-      if (insertError) {
-        console.error("Erro ao criar lembretes de aniversário:", insertError);
+      try {
+        await upsertDashboardBirthdayReminders(remindersToInsert);
+      } catch (error) {
+        console.error("Erro ao criar lembretes de aniversário:", error);
         return false;
       }
 
@@ -1673,23 +1624,16 @@ export default function DashboardScreen({
       new Set(remindersToSchedule.map((item) => item.contract.id)),
     );
 
-    const { data: existingReminders, error: fetchError } = await supabase
-      .from("reminders")
-      .select("id, contract_id, data_lembrete, tipo")
-      .eq("tipo", "Reajuste")
-      .in("contract_id", contractIds);
-
-    if (fetchError) {
+    let existingKeys: Set<string>;
+    try {
+      existingKeys = await listDashboardReminderContractIds("Reajuste", contractIds);
+    } catch (error) {
       console.error(
         "Erro ao verificar lembretes de reajuste existentes:",
-        fetchError,
+        error,
       );
       return false;
     }
-
-    const existingKeys = new Set(
-      (existingReminders || []).map((reminder) => reminder.contract_id ?? ""),
-    );
 
     const remindersToInsert = remindersToSchedule
       .filter((item) => !existingKeys.has(item.contract.id))
@@ -1706,11 +1650,10 @@ export default function DashboardScreen({
 
     if (remindersToInsert.length === 0) return true;
 
-    const { error: insertError } = await supabase
-      .from("reminders")
-      .insert(remindersToInsert);
-    if (insertError) {
-      console.error("Erro ao criar lembretes de reajuste:", insertError);
+    try {
+      await insertDashboardReminders(remindersToInsert);
+    } catch (error) {
+      console.error("Erro ao criar lembretes de reajuste:", error);
       return false;
     }
 
@@ -2055,8 +1998,9 @@ export default function DashboardScreen({
     const reminderDate = new Date();
     reminderDate.setSeconds(0, 0);
 
-    const { error } = await supabase.from("reminders").insert([
-      {
+    try {
+      await insertDashboardReminders([
+        {
         contract_id: options.contractId ?? null,
         lead_id: options.leadId ?? null,
         tipo,
@@ -2065,10 +2009,9 @@ export default function DashboardScreen({
         data_lembrete: reminderDate.toISOString(),
         lido: false,
         prioridade: "normal",
-      },
-    ]);
-
-    if (error) {
+        },
+      ]);
+    } catch (error) {
       console.error("Erro ao criar lembrete:", error);
       toast.error("Erro ao criar lembrete.");
       return;

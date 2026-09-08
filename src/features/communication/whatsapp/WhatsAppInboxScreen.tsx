@@ -27,6 +27,17 @@ import {
   whatsappFollowUpService,
   whatsappMediaRepository,
   whatsappMessagesRepository,
+  approveInboxFollowUpSchedule,
+  clearInboxLeadAgenda,
+  insertInboxLegacyFollowUpAudits,
+  listInboxAgendaReminders,
+  markInboxRemindersRead,
+  scheduleInboxFollowUp,
+  subscribeToInboxChats,
+  subscribeToInboxLead,
+  subscribeToInboxReminders,
+  updateInboxFollowUpSentAudit,
+  updateInboxFollowUpSentAudits,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -52,7 +63,7 @@ import {
   sanitizeWhatsAppQuickReplyShortcut,
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
-import { fetchAllPages, isSupabaseConnectivityError, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
+import { isSupabaseConnectivityError, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
@@ -4870,50 +4881,41 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const channel = supabase
-      .channel(`comm-whatsapp-selected-lead-${leadId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'leads',
-          filter: `id=eq.${leadId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Partial<Lead>>) => {
-          const updatedLead = payload.new as Partial<Lead> | null;
-          const statusName =
-            typeof updatedLead?.status === 'string' && updatedLead.status.trim()
-              ? updatedLead.status.trim()
-              : typeof updatedLead?.status_id === 'string'
-                ? leadStatuses.find((status) => status.id === updatedLead.status_id)?.nome ?? null
-                : null;
+    const unsubscribe = subscribeToInboxLead(
+      leadId,
+      (updatedLead) => {
+        const statusName =
+          typeof updatedLead?.status === 'string' && updatedLead.status.trim()
+            ? updatedLead.status.trim()
+            : typeof updatedLead?.status_id === 'string'
+              ? leadStatuses.find((status) => status.id === updatedLead.status_id)?.nome ?? null
+              : null;
 
-          const currentChat = latestChatsRef.current.find((chat) => chat.lead_id === leadId) ?? null;
-          if (!statusName) {
-            void loadLeadPanel(currentChat);
-            return;
-          }
+        const currentChat = latestChatsRef.current.find((chat) => chat.lead_id === leadId) ?? null;
+        if (!statusName) {
+          void loadLeadPanel(currentChat);
+          return;
+        }
 
-          setLeadPanel((current) => (
-            current?.id === leadId
-              ? { ...current, status_nome: statusName, status_value: statusName }
-              : current
-          ));
+        setLeadPanel((current) => (
+          current?.id === leadId
+            ? { ...current, status_nome: statusName, status_value: statusName }
+            : current
+        ));
 
-          if (currentChat) {
-            upsertChatLocally({ ...currentChat, lead_status: statusName });
-          }
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (currentChat) {
+          upsertChatLocally({ ...currentChat, lead_status: statusName });
+        }
+      },
+      (status) => {
+        if (status === 'unavailable') {
           console.warn('[WhatsAppInbox] realtime do lead selecionado indisponivel; polling permanece ativo.');
         }
-      });
+      },
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [leadStatuses, loadLeadPanel, selectedChat?.lead_id, upsertChatLocally]);
 
@@ -4935,33 +4937,8 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const [leadReminders, contractReminders] = await Promise.all([
-        fetchAllPages<Reminder>(
-          (from, to) =>
-            supabase
-              .from('reminders')
-              .select('*')
-              .eq('lead_id', leadId)
-              .order('data_lembrete', { ascending: true })
-              .order('id', { ascending: true })
-              .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
-        ),
-        contractIds.length > 0
-          ? fetchAllPages<Reminder>(
-              (from, to) =>
-                supabase
-                  .from('reminders')
-                  .select('*')
-                  .in('contract_id', contractIds)
-                  .order('data_lembrete', { ascending: true })
-                  .order('id', { ascending: true })
-                  .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
-            )
-          : Promise.resolve([] as Reminder[]),
-      ]);
-
-      const merged = Array.from(new Map([...leadReminders, ...contractReminders].map((reminder) => [reminder.id, reminder])).values());
-      const pendingReminders = merged
+      const reminders = await listInboxAgendaReminders(leadId, contractIds);
+      const pendingReminders = reminders
         .filter((reminder) => !reminder.lido)
         .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime());
 
@@ -5935,26 +5912,15 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const channel = supabase
-      .channel(`whatsapp-chat-agenda-summary-${leadPanel.id}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reminders',
-        },
-        () => {
-          void loadChatAgendaSummary(
-            leadPanel.id,
-            leadContracts.map((contract) => contract.id),
-          );
-        },
-      )
-      .subscribe();
+    const unsubscribe = subscribeToInboxReminders(() => {
+      void loadChatAgendaSummary(
+        leadPanel.id,
+        leadContracts.map((contract) => contract.id),
+      );
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
 
@@ -6767,26 +6733,18 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const channel = supabase
-      .channel(`comm-whatsapp-chats-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'comm_whatsapp_chats',
-          filter: `channel_id=eq.${channelState.id}`,
-        },
-        applyRealtimeChatChange,
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+    const unsubscribe = subscribeToInboxChats(
+      channelState.id,
+      applyRealtimeChatChange,
+      (status) => {
+        if (status === 'unavailable') {
           console.warn('[WhatsAppInbox] realtime de chats indisponivel; polling permanece ativo.');
         }
-      });
+      },
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [applyRealtimeChatChange, channelState?.id]);
 
@@ -8452,24 +8410,7 @@ export default function WhatsAppInboxScreen() {
         setStatusReminderLead(statusReminderLeadSnapshot);
         setStatusReminderPromptMessage('Deseja agendar o primeiro lembrete após a proposta enviada?');
       } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
-        const { error: deleteRemindersError } = await supabase
-          .from('reminders')
-          .delete()
-          .eq('lead_id', leadPanel.id);
-
-        if (deleteRemindersError) {
-          throw deleteRemindersError;
-        }
-
-        const { error: clearNextReturnError } = await supabase
-          .from('leads')
-          .update({ proximo_retorno: null })
-          .eq('id', leadPanel.id);
-
-        if (clearNextReturnError) {
-          throw clearNextReturnError;
-        }
-
+        await clearInboxLeadAgenda(leadPanel.id);
         setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
       }
 
@@ -9586,19 +9527,16 @@ export default function WhatsAppInboxScreen() {
         followUpNextAction.giveUpRecommendation,
       ].filter(Boolean).join('\n\n');
 
-      const { data, error } = await supabase.rpc('schedule_follow_up_reminder' as never, {
-        p_lead_id: leadId,
-        p_title: followUpNextAction.title || `Follow-up: ${getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null)}`,
-        p_description: description || null,
-        p_due_at: followUpNextAction.suggestedDateTime,
-        p_priority: followUpNextAction.priority,
-      } as never);
-
-      if (error) throw error;
+      const result = await scheduleInboxFollowUp({
+        leadId,
+        title: followUpNextAction.title || `Follow-up: ${getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null)}`,
+        description: description || null,
+        dueAt: followUpNextAction.suggestedDateTime,
+        priority: followUpNextAction.priority,
+      });
 
       await loadChatAgendaSummary(leadId, leadContracts.map((contract) => contract.id));
-      const result = Array.isArray(data) ? data[0] as { inserted?: boolean } | undefined : undefined;
-      toast.success(result?.inserted === false ? 'Este follow-up já estava agendado.' : 'Próximo follow-up agendado.');
+      toast.success(result.inserted === false ? 'Este follow-up já estava agendado.' : 'Próximo follow-up agendado.');
       setFollowUpNextAction(null);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao agendar proxima acao do follow-up', error);
@@ -9778,49 +9716,41 @@ export default function WhatsAppInboxScreen() {
     for (const schedule of approvedSchedules) {
       const title = 'Retomar follow-up de WhatsApp';
       const description = schedule.reason || 'Lembrete aprovado após revisão do follow-up gerado por IA.';
-      const { data: scheduledReminder, error: scheduleError } = schedule.generationId
-        ? await supabase.rpc('schedule_follow_up_reminder_v2' as never, {
-            p_lead_id: schedule.leadId,
-            p_title: title,
-            p_description: description,
-            p_due_at: schedule.dueAt,
-            p_priority: 'normal',
-            p_generation_id: schedule.generationId,
-            p_origin: 'follow_up_v2_batch',
-          } as never)
-        : await supabase.rpc('schedule_follow_up_reminder', {
-            p_lead_id: schedule.leadId,
-            p_title: title,
-            p_description: description,
-            p_due_at: schedule.dueAt,
-            p_priority: 'normal',
-          });
-      if (scheduleError) {
-        warnings.push(`Erro ao agendar proximo follow-up para lead ${schedule.leadId}: ${scheduleError.message}`);
-      } else {
+      try {
+        const scheduledReminder = await scheduleInboxFollowUp({
+          leadId: schedule.leadId,
+          title,
+          description,
+          dueAt: schedule.dueAt,
+          priority: 'normal',
+          generationId: schedule.generationId,
+          origin: 'follow_up_v2_batch',
+        });
         scheduledCount += 1;
         if (!resolvedReminderIds.includes(schedule.sourceReminderId)) resolvedReminderIds.push(schedule.sourceReminderId);
         if (schedule.generationId) {
-          const reminder = Array.isArray(scheduledReminder) ? scheduledReminder[0] : scheduledReminder;
-          const { error: auditUpdateError } = await supabase
-            .from('comm_follow_up_audit_log')
-            .update({
-              schedule_approved: true,
-              schedule_approved_at: new Date().toISOString(),
-              approved_schedule_date: schedule.dueAt,
-              created_reminder_id: reminder && typeof reminder === 'object' && 'reminder_id' in reminder ? String(reminder.reminder_id) : null,
-            })
-            .eq('id', schedule.generationId);
-          if (auditUpdateError) warnings.push(`Lembrete criado, mas a proveniência não foi atualizada: ${auditUpdateError.message}`);
+          try {
+            await approveInboxFollowUpSchedule({
+              generationId: schedule.generationId,
+              dueAt: schedule.dueAt,
+              reminderId: scheduledReminder.reminderId,
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'erro desconhecido';
+            warnings.push(`Lembrete criado, mas a proveniência não foi atualizada: ${message}`);
+          }
         }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'erro desconhecido';
+        warnings.push(`Erro ao agendar proximo follow-up para lead ${schedule.leadId}: ${message}`);
       }
     }
 
-    const { error: remindersError } = resolvedReminderIds.length > 0
-      ? await supabase.from('reminders').update({ lido: true }).in('id', resolvedReminderIds)
-      : { error: null };
-    if (remindersError) {
-      warnings.push(`Erro ao marcar lembretes como lidos: ${remindersError.message}`);
+    try {
+      await markInboxRemindersRead(resolvedReminderIds);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'erro desconhecido';
+      warnings.push(`Erro ao marcar lembretes como lidos: ${message}`);
     }
 
     const sentAtActual = new Date().toISOString();
@@ -9828,19 +9758,17 @@ export default function WhatsAppInboxScreen() {
       .filter((result) => sentIds.includes(result.reminderId) && result.generationId)
       .map((result) => ({ id: result.generationId as string, sentText: result.textSegments.join('\n\n') }));
     if (generatedAuditUpdates.length > 0) {
-      const auditUpdates = await Promise.all(generatedAuditUpdates.map(async (audit) =>
-        supabase
-          .from('comm_follow_up_audit_log')
-          .update({ sent_text: audit.sentText, sent_at_actual: sentAtActual })
-          .eq('id', audit.id),
-      ));
-      const sentAuditError = auditUpdates.find((result) => result.error)?.error;
-      if (sentAuditError) warnings.push(`Follow-ups enviados, mas a auditoria V2 não foi atualizada: ${sentAuditError.message}`);
+      try {
+        await updateInboxFollowUpSentAudits(generatedAuditUpdates, sentAtActual);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'erro desconhecido';
+        warnings.push(`Follow-ups enviados, mas a auditoria V2 não foi atualizada: ${message}`);
+      }
     }
 
     if (legacyAuditEntries.length > 0) {
       try {
-        await supabase.from('comm_follow_up_audit_log').insert(legacyAuditEntries);
+        await insertInboxLegacyFollowUpAudits(legacyAuditEntries);
       } catch (auditError) {
         console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
         warnings.push('Follow-ups enviados, mas não foi possível registrar a auditoria.');
@@ -9888,13 +9816,7 @@ export default function WhatsAppInboxScreen() {
       const sentText = textSegments.join('\n\n');
       const generationId = followUpGenerationId;
       sendTextSegments(selectedChat, textSegments, null, generationId
-        ? async () => {
-            const { error } = await supabase
-              .from('comm_follow_up_audit_log')
-              .update({ sent_text: sentText, sent_at_actual: new Date().toISOString() })
-              .eq('id', generationId);
-            if (error) throw error;
-          }
+        ? () => updateInboxFollowUpSentAudit(generationId, sentText)
         : undefined);
       resetFollowUpComposer();
       handleCloseFollowUpModal();

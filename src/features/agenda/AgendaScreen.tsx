@@ -34,7 +34,9 @@ import type { Lead } from "../leads";
 import {
   createReminder,
   deleteReminder,
+  getReminderWhatsappLink,
   getReminderLead,
+  isReminderPriority,
   listReminderContracts,
   listReminderLeads,
   listReminders,
@@ -43,6 +45,7 @@ import {
   updateReminder,
   updateReminders,
   type Reminder,
+  type ManualReminderPrompt,
 } from "../reminders";
 import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
 import {
@@ -81,11 +84,6 @@ import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
 import { LeadFavoriteBadge } from "../../components/LeadFavoriteStar";
 import { toast } from "../../lib/toast";
-import {
-  getReminderWhatsappLink,
-  isReminderPriority,
-} from "../reminders/shared/reminderHelpers";
-import type { ManualReminderPrompt } from "../reminders/shared/reminderTypes";
 import FollowUpAgendaOrganizerModal from "./components/FollowUpAgendaOrganizerModal";
 
 type AgendaStatusFilter = "todos" | "nao-lidos" | "lidos";

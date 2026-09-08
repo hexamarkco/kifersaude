@@ -31,7 +31,7 @@ import {
   type FollowUpAgendaOrganizerMode,
   type FollowUpAgendaOrganizerOptions,
   type FollowUpAgendaOrganizerPreview,
-} from '../../communication/whatsapp/data';
+} from '../../communication/whatsapp';
 
 type FollowUpAgendaOrganizerModalProps = {
   isOpen: boolean;

@@ -35,6 +35,7 @@ npm test
 npm run build
 npm run migrations:check
 npm run audit:visual
+npm run architecture:check
 npm run types:supabase:check
 ```
 

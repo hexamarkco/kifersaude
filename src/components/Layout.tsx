@@ -23,7 +23,12 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { supabase, Reminder, Contract } from '../lib/supabase';
+import type { Contract } from '../features/contracts';
+import {
+  loadNotificationSummarySource,
+  subscribeToReminderChanges,
+  type Reminder,
+} from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
 import { getCommissionInstallmentSummary } from '../lib/contractCommission';
@@ -231,37 +236,15 @@ export default function Layout({
       endOfDay.setHours(23, 59, 59, 999);
       const todayKey = getDateKey(startOfDay);
 
-      const [{ data: remindersData, error: remindersError }, { data: contractsData, error: contractsError }]
-        = await Promise.all([
-          supabase
-            .from('reminders')
-            .select('*')
-            .gte('data_lembrete', startOfDay.toISOString())
-            .lte('data_lembrete', endOfDay.toISOString())
-            .eq('lido', false)
-            .order('data_lembrete', { ascending: true }),
-          supabase
-            .from('contracts')
-            .select('*')
-            .eq('status', 'Ativo'),
-        ]);
-
-      if (remindersError) throw remindersError;
-      if (contractsError) throw contractsError;
-
-      const activeContracts = contractsData || [];
-
-      const { data: holdersData, error: holdersError } = await supabase
-        .from('contract_holders')
-        .select('id, contract_id, nome_completo, razao_social, nome_fantasia, data_nascimento');
-
-      if (holdersError) throw holdersError;
-
-      const { data: dependentsData, error: dependentsError } = await supabase
-        .from('dependents')
-        .select('id, contract_id, nome_completo, data_nascimento');
-
-      if (dependentsError) throw dependentsError;
+      const {
+        reminders: remindersData,
+        contracts: activeContracts,
+        holders: holdersData,
+        dependents: dependentsData,
+      } = await loadNotificationSummarySource(
+        startOfDay.toISOString(),
+        endOfDay.toISOString(),
+      );
 
       const activeContractIds = new Set(activeContracts.map((contract) => contract.id));
       const holders = (holdersData || []).filter((holder) => activeContractIds.has(holder.contract_id));
@@ -505,19 +488,12 @@ export default function Layout({
       return;
     }
 
-    const remindersChannel = supabase
-      .channel('notifications-reminders')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reminders' },
-        () => {
-          loadNotificationsSummary();
-        },
-      )
-      .subscribe();
+    const unsubscribe = subscribeToReminderChanges(() => {
+      loadNotificationsSummary();
+    });
 
     return () => {
-      supabase.removeChannel(remindersChannel);
+      unsubscribe();
     };
   }, [loadNotificationsSummary, showNotificationsDropdown]);
 

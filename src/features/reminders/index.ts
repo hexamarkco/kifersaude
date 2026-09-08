@@ -14,3 +14,9 @@ export {
   type ReminderCreateInput,
   type ReminderRealtimeChange,
 } from './data/remindersRepository';
+export {
+  loadNotificationSummarySource,
+  type NotificationDependent,
+  type NotificationHolder,
+  type NotificationSummarySource,
+} from './data/notificationSummaryRepository';

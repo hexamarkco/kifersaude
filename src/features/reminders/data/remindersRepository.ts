@@ -3,26 +3,16 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import {
   databaseClient,
   fetchAllPages,
-  supabase,
+  type Database,
 } from '../../../infrastructure/supabase';
 import type { Contract } from '../../contracts';
 import type { Lead } from '../../leads';
 import type { Reminder } from '../domain/types';
 
-type ReminderPatch = Partial<Pick<Reminder, 'lido' | 'data_lembrete'>> & {
-  concluido_em?: string | null;
-};
+type ReminderPatch = Database['public']['Tables']['reminders']['Update'];
 
-export type ReminderCreateInput = {
-  lead_id?: string | null;
-  contract_id?: string | null;
-  tipo: string;
-  titulo: string;
-  descricao?: string | null;
-  data_lembrete: string;
-  lido: boolean;
-  prioridade: string;
-};
+export type ReminderCreateInput =
+  Database['public']['Tables']['reminders']['Insert'];
 
 export type ReminderRealtimeChange = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -62,7 +52,7 @@ async function listByIds<T>(params: {
 
   const pages = await Promise.all(
     batchesOf(ids).map(async (batch) => {
-      const result = await supabase
+      const result = await databaseClient
         .from(params.table)
         .select('*')
         .in('id', batch);
@@ -82,7 +72,7 @@ export const listReminderLeads = (ids: string[]) =>
   listByIds<Lead>({ table: 'leads', ids });
 
 export async function getReminderLead(leadId: string): Promise<Lead | null> {
-  const { data, error } = await supabase
+  const { data, error } = await databaseClient
     .from('leads')
     .select('*')
     .eq('id', leadId)
@@ -97,7 +87,7 @@ export async function updateReminder(
   reminderId: string,
   patch: ReminderPatch,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await databaseClient
     .from('reminders')
     .update(patch)
     .eq('id', reminderId);
@@ -110,7 +100,7 @@ export async function updateReminders(
   reminderIds: string[],
   patch: ReminderPatch,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await databaseClient
     .from('reminders')
     .update(patch)
     .in('id', reminderIds);
@@ -122,9 +112,9 @@ export async function updateReminders(
 export async function createReminder(
   input: ReminderCreateInput,
 ): Promise<Reminder | null> {
-  const { data, error } = await supabase
+  const { data, error } = await databaseClient
     .from('reminders')
-    .insert([input])
+    .insert(input)
     .select('*')
     .maybeSingle();
   if (error) {
@@ -141,6 +131,15 @@ export async function deleteReminder(reminderId: string): Promise<void> {
   if (error) {
     throw error;
   }
+}
+
+export async function deleteReminders(reminderIds: string[]): Promise<void> {
+  if (reminderIds.length === 0) return;
+  const { error } = await databaseClient
+    .from('reminders')
+    .delete()
+    .in('id', reminderIds);
+  if (error) throw error;
 }
 
 export async function deleteRemindersForLead(leadId: string): Promise<void> {
@@ -160,7 +159,7 @@ export async function markLeadLostFromAgenda(params: {
   changedAt: string;
   logHistory: boolean;
 }): Promise<void> {
-  const { error } = await supabase
+  const { error } = await databaseClient
     .from('leads')
     .update({
       status: 'Perdido',
@@ -172,8 +171,8 @@ export async function markLeadLostFromAgenda(params: {
     throw error;
   }
 
-  if (params.logHistory) {
-    await supabase.from('interactions').insert([
+  if (params.logHistory && params.responsible) {
+    await databaseClient.from('interactions').insert([
       {
         lead_id: params.leadId,
         tipo: 'Observacao',
@@ -181,7 +180,7 @@ export async function markLeadLostFromAgenda(params: {
         responsavel: params.responsible,
       },
     ]);
-    await supabase.from('lead_status_history').insert([
+    await databaseClient.from('lead_status_history').insert([
       {
         lead_id: params.leadId,
         status_anterior: params.previousStatus,
@@ -197,8 +196,8 @@ export async function markLeadLostFromAgenda(params: {
 export function subscribeToReminderChanges(
   onChange: (change: ReminderRealtimeChange) => void,
 ): () => void {
-  const channel = supabase
-    .channel('agenda-reminders-changes')
+  const channel = databaseClient
+    .channel(`agenda-reminders-changes-${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'reminders' },
@@ -214,6 +213,6 @@ export function subscribeToReminderChanges(
     .subscribe();
 
   return () => {
-    void supabase.removeChannel(channel);
+    void databaseClient.removeChannel(channel);
   };
 }

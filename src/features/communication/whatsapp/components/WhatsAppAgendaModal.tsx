@@ -37,10 +37,25 @@ import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
 import { whatsappFollowUpService, formatCommWhatsAppPhoneLabel, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../data';
 import { addBusinessDaysSkippingWeekends, formatEstimatedTime } from '../../../../lib/reminderUtils';
-import { getReminderWhatsappLink, isReminderPriority } from '../../../reminders/shared/reminderHelpers';
-import type { ManualReminderPrompt } from '../../../reminders/shared/reminderTypes';
+import {
+  createReminder,
+  deleteReminder,
+  deleteReminders,
+  getReminderLead,
+  getReminderWhatsappLink,
+  isReminderPriority,
+  listReminderContracts,
+  listReminderLeads,
+  listReminders,
+  markLeadLostFromAgenda,
+  subscribeToReminderChanges,
+  updateReminder,
+  type ManualReminderPrompt,
+  type Reminder,
+} from '../../../reminders';
+import type { Contract } from '../../../contracts';
+import type { Lead } from '../../../leads';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
-import { supabase, type Contract, type Lead, type Reminder, fetchAllPages } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
 
@@ -78,72 +93,11 @@ type SchedulerDraft = {
   defaultPriority?: 'normal' | 'alta' | 'baixa';
 };
 
-const RELATED_ENTITY_BATCH_SIZE = 80;
-
 type WhatsAppAgendaCacheSnapshot = {
   reminders: Reminder[];
   contracts: Contract[];
   leads: Lead[];
   updatedAt: string;
-};
-
-const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
-  if (items.length === 0 || batchSize <= 0) {
-    return [];
-  }
-
-  const batches: T[][] = [];
-  for (let index = 0; index < items.length; index += batchSize) {
-    batches.push(items.slice(index, index + batchSize));
-  }
-
-  return batches;
-};
-
-const fetchContractsByIds = async (ids: Array<string | undefined>) => {
-  const uniqueIds = Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
-
-  if (uniqueIds.length === 0) {
-    return [] as Contract[];
-  }
-
-  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const { data, error } = await supabase.from('contracts').select('*').in('id', batch);
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as Contract[];
-    }),
-  );
-
-  return results.flat();
-};
-
-const fetchLeadsByIds = async (ids: Array<string | undefined>) => {
-  const uniqueIds = Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
-
-  if (uniqueIds.length === 0) {
-    return [] as Lead[];
-  }
-
-  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const { data, error } = await supabase.from('leads').select('*').in('id', batch);
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as Lead[];
-    }),
-  );
-
-  return results.flat();
 };
 
 const getDefaultSelectedDate = () => {
@@ -298,23 +252,12 @@ export default function WhatsAppAgendaModal({
     }
 
     try {
-      const remindersData = await fetchAllPages<Reminder>(
-        (from, to) =>
-          supabase
-            .from('reminders')
-            .select('*')
-            .order('data_lembrete', { ascending: true })
-            .order('id', { ascending: true })
-            .range(from, to) as unknown as Promise<{
-            data: Reminder[] | null;
-            error: unknown;
-          }>,
-      );
+      const remindersData = await listReminders();
 
       const contractIds = Array.from(
         new Set(remindersData.map((reminder) => reminder.contract_id).filter((id): id is string => Boolean(id))),
       );
-      const fetchedContracts = await fetchContractsByIds(contractIds);
+      const fetchedContracts = await listReminderContracts(contractIds);
 
       const leadIds = Array.from(
         new Set([
@@ -322,7 +265,7 @@ export default function WhatsAppAgendaModal({
           ...fetchedContracts.map((contract) => contract.lead_id).filter((id): id is string => Boolean(id)),
         ]),
       );
-      const fetchedLeads = await fetchLeadsByIds(leadIds);
+      const fetchedLeads = await listReminderLeads(leadIds);
       const snapshot: WhatsAppAgendaCacheSnapshot = {
         reminders: remindersData,
         contracts: fetchedContracts,
@@ -379,33 +322,16 @@ export default function WhatsAppAgendaModal({
     pendingRefreshIdsRef.current.clear();
     void loadReminders({ showLoading: true });
 
-    const channel = supabase
-      .channel(`whatsapp-agenda-reminders-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reminders',
-        },
-        (payload) => {
-          const newReminder = payload.new as Reminder | null;
-          const oldReminder = payload.old as Reminder | null;
-          const affectedId = newReminder?.id ?? oldReminder?.id;
+    return subscribeToReminderChanges(({ current, previous }) => {
+      const affectedId = current?.id ?? previous?.id;
 
-          if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
-            pendingRefreshIdsRef.current.delete(affectedId);
-            return;
-          }
+      if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
+        pendingRefreshIdsRef.current.delete(affectedId);
+        return;
+      }
 
-          void loadReminders();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      void loadReminders();
+    });
   }, [isOpen, loadReminders]);
 
   useEffect(() => {
@@ -428,21 +354,10 @@ export default function WhatsAppAgendaModal({
       }
 
       try {
-        const { data, error: leadError } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('id', leadId)
-          .maybeSingle();
-
-        if (leadError) {
-          throw leadError;
-        }
-
-        if (!data) {
+        const leadData = await getReminderLead(leadId);
+        if (!leadData) {
           return null;
         }
-
-        const leadData = data as Lead;
         setLeadsMap((current) => {
           const next = new Map(current);
           next.set(leadData.id, leadData);
@@ -550,47 +465,15 @@ export default function WhatsAppAgendaModal({
     try {
       const nowIso = new Date().toISOString();
 
-      const { error: updateLeadError } = await supabase
-        .from('leads')
-        .update({
-          status: 'Perdido',
-          proximo_retorno: null,
-          ultimo_contato: nowIso,
-        })
-        .eq('id', leadId);
-
-      if (updateLeadError) {
-        throw updateLeadError;
-      }
-
-      if (leadInfo) {
-        await supabase.from('interactions').insert([
-          {
-            lead_id: leadId,
-            tipo: 'Observacao',
-            descricao: `Status alterado de "${previousStatus}" para "Perdido"`,
-            responsavel: leadInfo.responsavel,
-          },
-        ]);
-
-        await supabase.from('lead_status_history').insert([
-          {
-            lead_id: leadId,
-            status_anterior: previousStatus,
-            status_novo: 'Perdido',
-            responsavel: leadInfo.responsavel,
-          },
-        ]);
-      }
-
       const remindersForLead = reminders.filter((item) => getLeadIdForReminder(item) === leadId);
       remindersForLead.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
-
-      const { error: deleteRemindersError } = await supabase.from('reminders').delete().eq('lead_id', leadId);
-
-      if (deleteRemindersError) {
-        throw deleteRemindersError;
-      }
+      await markLeadLostFromAgenda({
+        leadId,
+        previousStatus,
+        responsible: leadInfo?.responsavel,
+        changedAt: nowIso,
+        logHistory: Boolean(leadInfo),
+      });
 
       setLeadsMap((current) => {
         const next = new Map(current);
@@ -630,15 +513,12 @@ export default function WhatsAppAgendaModal({
       const leadId = getLeadIdForReminder(reminder);
       const completionDate = !currentStatus ? new Date().toISOString() : null;
 
-      const { error: updateError } = await supabase
-        .from('reminders')
-        .update({
+      try {
+        await updateReminder(reminderId, {
           lido: !currentStatus,
           concluido_em: completionDate,
-        })
-        .eq('id', reminderId);
-
-      if (updateError) {
+        });
+      } catch (updateError) {
         pendingRefreshIdsRef.current.delete(reminderId);
         throw updateError;
       }
@@ -717,33 +597,23 @@ export default function WhatsAppAgendaModal({
         return;
       }
 
-      const { data: createdReminder, error: createError } = await supabase
-        .from('reminders')
-        .insert([
-          {
-            lead_id: leadId,
-            contract_id: reminder.contract_id ?? undefined,
-            tipo: reminder.tipo,
-            titulo: reminder.titulo,
-            descricao: reminder.descricao ?? null,
-            data_lembrete: nextReminderDateIso,
-            lido: false,
-            prioridade: reminder.prioridade,
-            tags: reminder.tags ?? undefined,
-            tempo_estimado_minutos: reminder.tempo_estimado_minutos ?? undefined,
-          },
-        ])
-        .select('*')
-        .maybeSingle();
-
-      if (createError) {
-        throw createError;
-      }
+      const createdReminder = await createReminder({
+        lead_id: leadId,
+        contract_id: reminder.contract_id ?? null,
+        tipo: reminder.tipo,
+        titulo: reminder.titulo,
+        descricao: reminder.descricao ?? null,
+        data_lembrete: nextReminderDateIso,
+        lido: false,
+        prioridade: reminder.prioridade,
+        tags: reminder.tags ?? null,
+        tempo_estimado_minutos: reminder.tempo_estimado_minutos ?? null,
+      });
 
       if (createdReminder) {
         pendingRefreshIdsRef.current.add(createdReminder.id);
         setReminders((current) =>
-          [...current, createdReminder as Reminder].sort(compareRemindersByDueAtThenAlphabetical),
+          [...current, createdReminder].sort(compareRemindersByDueAtThenAlphabetical),
         );
       }
 
@@ -772,9 +642,9 @@ export default function WhatsAppAgendaModal({
 
     try {
       pendingRefreshIdsRef.current.add(reminder.id);
-      const { error: deleteError } = await supabase.from('reminders').delete().eq('id', reminder.id);
-
-      if (deleteError) {
+      try {
+        await deleteReminder(reminder.id);
+      } catch (deleteError) {
         pendingRefreshIdsRef.current.delete(reminder.id);
         throw deleteError;
       }
@@ -876,28 +746,18 @@ export default function WhatsAppAgendaModal({
     dueDate.setHours(12, 0, 0, 0);
 
     try {
-      const { data: createdTask, error: insertError } = await supabase
-        .from('reminders')
-        .insert([
-          {
-            tipo: 'Tarefa',
-            titulo: newTaskTitle.trim(),
-            descricao: newTaskDescription.trim() || null,
-            data_lembrete: dueDate.toISOString(),
-            lido: false,
-            prioridade: 'normal',
-          },
-        ])
-        .select('*')
-        .maybeSingle();
-
-      if (insertError) {
-        throw insertError;
-      }
+      const createdTask = await createReminder({
+        tipo: 'Tarefa',
+        titulo: newTaskTitle.trim(),
+        descricao: newTaskDescription.trim() || null,
+        data_lembrete: dueDate.toISOString(),
+        lido: false,
+        prioridade: 'normal',
+      });
 
       if (createdTask) {
         pendingRefreshIdsRef.current.add(createdTask.id);
-        setReminders((current) => [...current, createdTask as Reminder].sort(compareRemindersByDueAtThenAlphabetical));
+        setReminders((current) => [...current, createdTask].sort(compareRemindersByDueAtThenAlphabetical));
       }
 
       closeAddTaskModal();
@@ -1076,9 +936,9 @@ export default function WhatsAppAgendaModal({
 
     try {
       idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
-      const { error: deleteError } = await supabase.from('reminders').delete().in('id', idsToDelete);
-
-      if (deleteError) {
+      try {
+        await deleteReminders(idsToDelete);
+      } catch (deleteError) {
         idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
         throw deleteError;
       }
@@ -1124,9 +984,9 @@ export default function WhatsAppAgendaModal({
 
     try {
       idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
-      const { error: deleteError } = await supabase.from('reminders').delete().in('id', idsToDelete);
-
-      if (deleteError) {
+      try {
+        await deleteReminders(idsToDelete);
+      } catch (deleteError) {
         idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
         throw deleteError;
       }

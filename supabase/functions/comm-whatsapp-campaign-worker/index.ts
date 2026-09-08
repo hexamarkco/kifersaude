@@ -1743,13 +1743,13 @@ async function executeStageBurst(params: {
   const fallbackChatId = buildWhapiDirectChatId(phoneDigits);
 
   // ── Resolve chat route (once for the burst) ──
-  let chatRoute = target.chat_id
+  const chatRoute = target.chat_id
     ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
     : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
         channelId: params.channelId,
         externalChatId: fallbackChatId,
       });
-  let chatId = chatRoute?.externalChatId || fallbackChatId;
+  const chatId = chatRoute?.externalChatId || fallbackChatId;
 
   if (chatRoute?.identityConflict) {
     return { status: 'failed', nextStepIndex: companions[0].step_index, error: 'Identidade WhatsApp conflitante.' };

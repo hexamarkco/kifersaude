@@ -21,7 +21,7 @@ import LeadStatusManager from "../../../components/config/LeadStatusManager";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
-import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs, Tooltip } from "../../../design-system";
+import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs, Tooltip, type TabItem } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -32,6 +32,8 @@ import {
   normalizeConfigSearchText,
   SECTION_OVERVIEW,
   type SectionId,
+  type ContractConfigCategory,
+  type LeadConfigCategory,
 } from "./shared/systemSettingsConfig";
 import { useConfigParam } from "../shared/useConfigTab";
 
@@ -225,11 +227,15 @@ export default function SystemSettingsScreen() {
 
   const shouldExpandSection = (sectionId: SectionId) =>
     activeVisibleSection === sectionId;
-  const leadConfigurationTabs = [
-    ...(showLeadStatusManager ? [{ id: "status", label: "Funil" }] : []),
-    ...(showLeadOriginsManager ? [{ id: "origins", label: "Origens" }] : []),
+  type LeadConfigurationTabId =
+    | "status"
+    | "origins"
+    | `manager:${LeadConfigCategory}`;
+  const leadConfigurationTabs: TabItem<LeadConfigurationTabId>[] = [
+    ...(showLeadStatusManager ? [{ id: "status" as const, label: "Funil" }] : []),
+    ...(showLeadOriginsManager ? [{ id: "origins" as const, label: "Origens" }] : []),
     ...visibleLeadManagers.map((manager) => ({
-      id: `manager:${manager.category}`,
+      id: `manager:${manager.category}` as const,
       label: manager.title,
     })),
   ];
@@ -238,7 +244,7 @@ export default function SystemSettingsScreen() {
   )
     ? activeLeadConfiguration
     : leadConfigurationTabs[0]?.id ?? "status";
-  const contractConfigurationTabs = visibleContractManagers.map((manager) => ({
+  const contractConfigurationTabs: TabItem<ContractConfigCategory>[] = visibleContractManagers.map((manager) => ({
     id: manager.category,
     label: manager.title,
   }));
@@ -246,7 +252,7 @@ export default function SystemSettingsScreen() {
     (tab) => tab.id === activeContractConfiguration,
   )
     ? activeContractConfiguration
-    : contractConfigurationTabs[0]?.id ?? "";
+    : contractConfigurationTabs[0]?.id ?? activeContractConfiguration;
 
   if (loading && !settings) {
     return (

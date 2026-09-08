@@ -15,8 +15,22 @@ export type SectionId =
   | "leads"
   | "contracts";
 
-export type ConfigManagerDefinition = {
-  category: ConfigCategory;
+export type LeadConfigCategory = Extract<
+  ConfigCategory,
+  "lead_tipo_contratacao" | "lead_responsavel"
+>;
+
+export type ContractConfigCategory = Extract<
+  ConfigCategory,
+  | "contract_status"
+  | "contract_modalidade"
+  | "contract_abrangencia"
+  | "contract_acomodacao"
+  | "contract_carencia"
+>;
+
+export type ConfigManagerDefinition<TCategory extends ConfigCategory> = {
+  category: TCategory;
   title: string;
   description: string;
   placeholder: string;
@@ -41,7 +55,7 @@ export const DEFAULT_GENERAL_PREFERENCES = {
   session_timeout_minutes: 480,
 };
 
-export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
+export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition<LeadConfigCategory>[] = [
   {
     category: "lead_tipo_contratacao",
     title: "Tipos de contratação",
@@ -59,7 +73,7 @@ export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
   },
 ];
 
-export const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition[] = [
+export const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition<ContractConfigCategory>[] = [
   {
     category: "contract_status",
     title: "Status de Contratos",

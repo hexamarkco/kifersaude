@@ -1,3 +1,12 @@
+import {
+  clampTemperature,
+  resolveClaudeRequestProfile,
+  resolveGeminiRequestProfile,
+  resolveOpenAiRequestProfile,
+  type OpenAiReasoningEffort,
+  type OpenAiTokenParameter,
+} from './ai-provider-request-profile.ts';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type AiProvider = 'openai' | 'gemini' | 'claude';
 
@@ -45,9 +54,6 @@ type OpenAiMessage = {
   role: 'system' | 'user';
   content: string;
 };
-
-type OpenAiTokenParameter = 'max_tokens' | 'max_completion_tokens';
-type OpenAiReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 type OpenAiChatRequestBody = {
   model: string;
@@ -459,63 +465,8 @@ const extractOpenAiText = (payload: any): string => {
   return '';
 };
 
-const getPreferredOpenAiTokenParameter = (model: string): OpenAiTokenParameter => {
-  const normalized = model.trim().toLowerCase();
-
-  if (
-    normalized.startsWith('gpt-5') ||
-    normalized.startsWith('o1') ||
-    normalized.startsWith('o3') ||
-    normalized.startsWith('o4')
-  ) {
-    return 'max_completion_tokens';
-  }
-
-  return 'max_tokens';
-};
-
 const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTokenParameter =>
   value === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
-
-// Tarefas que precisam interpretar o contexto em varias etapas antes de
-// escrever (ler a conversa, entender o momento, a pessoa, so entao decidir
-// tom/abordagem) sofrem muito com reasoning_effort "none": o modelo pula
-// direto para uma resposta plausivel na superficie sem executar o raciocinio
-// que o prompt pede. Tarefas mais mecanicas (reescrever um texto dado,
-// organizar agenda) continuam com esforco minimo por velocidade/custo.
-const DEEP_REASONING_TASKS: ReadonlySet<AiTask> = new Set(['follow_up_generation', 'follow_up_analysis', 'attendance_critique', 'autonomous_attendance']);
-
-const getPreferredOpenAiReasoningEffort = (model: string, task: AiTask): OpenAiReasoningEffort | undefined => {
-  const normalized = model.trim().toLowerCase();
-  const needsDeepReasoning = DEEP_REASONING_TASKS.has(task);
-
-  if (
-    normalized.startsWith('gpt-5.6') ||
-    normalized.startsWith('gpt-5.5')
-  ) {
-    return needsDeepReasoning ? 'low' : 'none';
-  }
-
-  if (
-    normalized.startsWith('gpt-5.4') ||
-    normalized.startsWith('gpt-5.2') ||
-    normalized.startsWith('gpt-5.1')
-  ) {
-    return needsDeepReasoning ? 'minimal' : 'none';
-  }
-
-  if (
-    normalized === 'gpt-5' ||
-    normalized.startsWith('gpt-5-') ||
-    normalized.startsWith('o1') ||
-    normalized.startsWith('o3') ||
-    normalized.startsWith('o4')
-  ) {
-    return 'minimal';
-  }
-
-  return undefined;
-};
 
 const buildOpenAiChatRequestBody = (
   params: ProviderCallParams,
@@ -602,12 +553,10 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   }
   messages.push({ role: 'user', content: params.userPrompt });
 
-  let tokenParameter = getPreferredOpenAiTokenParameter(params.model);
-  let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model, params.task);
-  // Reasoning models reject sampling parameters whenever reasoning is active.
-  // Starting with the known-compatible body is essential when the caller caps
-  // provider requests to preserve a strict physical-call retry budget.
-  let includeTemperature = reasoningEffort === undefined || reasoningEffort === 'none';
+  const requestProfile = resolveOpenAiRequestProfile(params.model, params.task);
+  let tokenParameter = requestProfile.tokenParameter;
+  let reasoningEffort = requestProfile.reasoningEffort;
+  let includeTemperature = requestProfile.supportsTemperature;
 
   const maxHttpAttempts = Math.max(1, Math.min(3, params.maxHttpAttempts ?? 3));
 
@@ -760,6 +709,18 @@ const callOpenAiTranscription = async (
 };
 
 const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
+  const requestProfile = resolveClaudeRequestProfile(params.model);
+  const requestBody: Record<string, unknown> = {
+    model: params.model,
+    max_tokens: params.maxTokens,
+    system: params.systemPrompt,
+    messages: [{ role: 'user', content: params.userPrompt }],
+  };
+
+  if (requestProfile.supportsTemperature) {
+    requestBody.temperature = clampTemperature(params.temperature, 1);
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -767,13 +728,7 @@ const callClaude = async (settings: ProviderSettings, params: ProviderCallParams
       'x-api-key': settings.apiKey,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      temperature: params.temperature,
-      system: params.systemPrompt,
-      messages: [{ role: 'user', content: params.userPrompt }],
-    }),
+    body: JSON.stringify(requestBody),
     signal: params.signal,
   });
 
@@ -804,9 +759,17 @@ const callClaude = async (settings: ProviderSettings, params: ProviderCallParams
 
 const callGemini = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
   const normalizedModel = params.model.startsWith('models/') ? params.model : `models/${params.model}`;
+  const requestProfile = resolveGeminiRequestProfile(params.model);
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/${normalizedModel}:generateContent?key=${encodeURIComponent(
     settings.apiKey,
   )}`;
+
+  const generationConfig: Record<string, unknown> = {
+    maxOutputTokens: params.maxTokens,
+  };
+  if (requestProfile.supportsTemperature) {
+    generationConfig.temperature = clampTemperature(params.temperature, requestProfile.maxTemperature);
+  }
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -825,10 +788,7 @@ const callGemini = async (settings: ProviderSettings, params: ProviderCallParams
           parts: [{ text: params.userPrompt }],
         },
       ],
-      generationConfig: {
-        temperature: params.temperature,
-        maxOutputTokens: params.maxTokens,
-      },
+      generationConfig,
     }),
     signal: params.signal,
   });

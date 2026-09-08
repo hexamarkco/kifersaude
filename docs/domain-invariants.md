@@ -36,6 +36,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 ## Atendimento autônomo e IA
 
 - Export/import de IA usa schema v2. Overrides preservam `model_override_enabled`, `provider` e `model`; campos `effective_*` e snapshots são informativos. Import v1 segue suportado.
+- Payloads de geração são montados pelo perfil do provider e da família do modelo em `_shared/ai-provider-request-profile.ts`; parâmetros incompatíveis não podem ser enviados uniformemente a todos os modelos.
 - Features desativadas no catálogo são legadas e não podem ser reativadas por configuração residual.
 - `sandbox.chat` foi aposentada: chat interativo usa `autonomous.reply`; `sandbox.scenario` fica restrita a lead simulado e juiz.
 - Menor de 12 anos não é cotado sozinho: adulto é titular e criança dependente, com mensalidade para ambos.

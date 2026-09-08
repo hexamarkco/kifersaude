@@ -25,9 +25,10 @@ const makeQuery = (result: QueryResult) => {
 };
 
 const createSupabaseStub = ({
+  provider = 'openai',
   featureModel = 'gpt-test',
   defaultModel = 'gpt-test',
-}: { featureModel?: string; defaultModel?: string } = {}) => ({
+}: { provider?: 'openai' | 'gemini' | 'claude'; featureModel?: string; defaultModel?: string } = {}) => ({
   from: (table: string) => {
     if (table === 'integration_settings') {
       return makeQuery({
@@ -37,10 +38,18 @@ const createSupabaseStub = ({
             settings: { enabled: true, defaultModelText: defaultModel, baseUrl: 'https://provider.test/v1' },
           },
           {
+            slug: 'ai_provider_gemini',
+            settings: { enabled: true, defaultModelText: defaultModel },
+          },
+          {
+            slug: 'ai_provider_claude',
+            settings: { enabled: true, defaultModelText: defaultModel },
+          },
+          {
             slug: 'ai_routing',
             settings: {
               fallbackEnabled: false,
-              tasks: { follow_up_generation: { provider: 'openai', model: defaultModel, fallbackToOpenAi: false } },
+              tasks: { follow_up_generation: { provider, model: defaultModel, fallbackToOpenAi: false } },
             },
           },
         ],
@@ -52,7 +61,7 @@ const createSupabaseStub = ({
     }
     if (table === 'ai_feature_configs') {
       return makeQuery({
-        data: { provider: 'openai', model: featureModel, model_override_enabled: true },
+        data: { provider, model: featureModel, model_override_enabled: true },
         error: null,
       });
     }
@@ -73,7 +82,7 @@ const providerResponse = (text: string) => new Response(JSON.stringify({
 
 const runFollowUp = (
   attemptTimeoutMs = 5_000,
-  models: { featureModel?: string; defaultModel?: string } = {},
+  models: { provider?: 'openai' | 'gemini' | 'claude'; featureModel?: string; defaultModel?: string } = {},
 ) => generateTextForFeature({
   supabaseAdmin: createSupabaseStub(models),
   featureKey: 'followup.generate',
@@ -125,6 +134,48 @@ describe('AI router technical retry budget', () => {
     expect(body).not.toHaveProperty('max_tokens');
     expect(result.model).toBe('gpt-5.6-sol');
     expect(result.fallbackUsed).toBe(false);
+  });
+
+  it('omits deprecated sampling controls for new Claude models', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      content: [{ type: 'text', text: 'Mensagem válida.' }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 10, output_tokens: 5 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await runFollowUp(5_000, {
+      provider: 'claude',
+      featureModel: 'claude-opus-4-8',
+      defaultModel: 'claude-opus-4-8',
+    });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(request.body));
+    expect(body).toMatchObject({ model: 'claude-opus-4-8', max_tokens: 900 });
+    expect(body).not.toHaveProperty('temperature');
+    expect(result.provider).toBe('claude');
+  });
+
+  it('uses Gemini generationConfig names instead of OpenAI parameters', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: 'Mensagem válida.' }] }, finishReason: 'STOP' }],
+      usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await runFollowUp(5_000, {
+      provider: 'gemini',
+      featureModel: 'gemini-3.7-flash',
+      defaultModel: 'gemini-3.7-flash',
+    });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(request.body));
+    expect(body.generationConfig).toEqual({ temperature: 0.4, maxOutputTokens: 900 });
+    expect(body).not.toHaveProperty('max_tokens');
+    expect(body).not.toHaveProperty('max_completion_tokens');
+    expect(result.provider).toBe('gemini');
   });
 
   it('uses exactly three provider requests for a normal batch of three follow-ups', async () => {

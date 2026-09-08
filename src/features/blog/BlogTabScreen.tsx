@@ -9,7 +9,6 @@ import {
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { uploadBlogImage } from "../../lib/imageUploadService";
-import { supabase } from "../../lib/supabase";
 import { toast } from "../../lib/toast";
 import { useAuth } from "../../contexts/AuthContext";
 import BlogEditor from "./components/BlogEditor";
@@ -23,6 +22,12 @@ import {
   mapBlogPostToFormData,
 } from "./shared/blogUtils";
 import type { BlogPost } from "./shared/blogTypes";
+import {
+  deleteBlogPost,
+  listBlogPosts,
+  saveBlogPost,
+  setBlogPostPublished,
+} from "./data/blogRepository";
 import "react-quill/dist/quill.snow.css";
 
 export default function BlogTabScreen() {
@@ -41,18 +46,14 @@ export default function BlogTabScreen() {
   const loadPosts = useCallback(async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error(`Não foi possível carregar os posts: ${error.message}`);
+    try {
+      setPosts(await listBlogPosts());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`Não foi possível carregar os posts: ${message}`);
       setLoading(false);
       return;
     }
-
-    setPosts(data || []);
     setLoading(false);
   }, []);
 
@@ -103,23 +104,13 @@ export default function BlogTabScreen() {
       formData,
     });
 
-    if (editingPost) {
-      const { error } = await supabase
-        .from("blog_posts")
-        .update(postData)
-        .eq("id", editingPost.id);
-
-      if (error) {
-        toast.error(`Não foi possível atualizar o post: ${error.message}`);
-        return;
-      }
-    } else {
-      const { error } = await supabase.from("blog_posts").insert([postData]);
-
-      if (error) {
-        toast.error(`Não foi possível criar o post: ${error.message}`);
-        return;
-      }
+    try {
+      await saveBlogPost(postData, editingPost?.id);
+    } catch (error) {
+      const action = editingPost ? "atualizar" : "criar";
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`Não foi possível ${action} o post: ${message}`);
+      return;
     }
 
     closeEditor();
@@ -147,10 +138,11 @@ export default function BlogTabScreen() {
         return;
       }
 
-      const { error } = await supabase.from("blog_posts").delete().eq("id", id);
-
-      if (error) {
-        toast.error(`Não foi possível excluir o post: ${error.message}`);
+      try {
+        await deleteBlogPost(id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Não foi possível excluir o post: ${message}`);
         return;
       }
 
@@ -161,16 +153,11 @@ export default function BlogTabScreen() {
 
   const handleTogglePublish = useCallback(
     async (post: BlogPost) => {
-      const { error } = await supabase
-        .from("blog_posts")
-        .update({
-          published: !post.published,
-          published_at: !post.published ? new Date().toISOString() : null,
-        })
-        .eq("id", post.id);
-
-      if (error) {
-        toast.error(`Não foi possível atualizar o status: ${error.message}`);
+      try {
+        await setBlogPostPublished(post, !post.published);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Não foi possível atualizar o status: ${message}`);
         return;
       }
 

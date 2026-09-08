@@ -1,12 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  supabase,
   Contract,
   ContractHolder,
   Dependent,
-  Interaction,
   ContractValueAdjustment,
-} from "../lib/supabase";
+  deleteContractDependent,
+  deleteContractHolder,
+  deleteContractInteraction,
+  getContractDetailsSnapshot,
+  saveContractInteraction,
+  updateContractEligibleLives,
+  type ContractDocument,
+} from "../features/contracts";
+import type { Interaction } from "../features/activity";
 import {
   User,
   Users,
@@ -82,16 +88,6 @@ type ContractDetailsProps = {
   onClose: () => void;
   onUpdate: () => void;
   onDelete?: (contract: Contract) => void;
-};
-
-type ContractDocument = {
-  id: string;
-  entity_type: string;
-  entity_id: string;
-  tipo_documento: string;
-  nome_arquivo: string;
-  url_arquivo: string;
-  created_at: string;
 };
 
 export default function ContractDetails({
@@ -335,69 +331,33 @@ export default function ContractDetails({
     return results.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [dependents, holders, parseDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    loadData();
-  }, [contract.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [holdersRes, dependentsRes, interactionsRes, adjustmentsRes] =
-        await Promise.all([
-          supabase
-            .from("contract_holders")
-            .select("*")
-            .eq("contract_id", contract.id)
-            .order("created_at"),
-          supabase
-            .from("dependents")
-            .select("*")
-            .eq("contract_id", contract.id)
-            .order("created_at"),
-          supabase
-            .from("interactions")
-            .select("*")
-            .eq("contract_id", contract.id)
-            .order("data_interacao", { ascending: false }),
-          supabase
-            .from("contract_value_adjustments")
-            .select("*")
-            .eq("contract_id", contract.id)
-            .order("created_at"),
-        ]);
+      const snapshot = await getContractDetailsSnapshot(contract.id);
+      setHolders(snapshot.holders);
+      setSelectedHolderId(
+        (current) => current || snapshot.holders[0]?.id || null,
+      );
+      setDependents(snapshot.dependents);
+      setInteractions(snapshot.interactions);
+      setAdjustments(snapshot.adjustments);
 
-      const holdersData = holdersRes.data || [];
-      setHolders(holdersData);
-      setSelectedHolderId((current) => current || holdersData[0]?.id || null);
-      setDependents(dependentsRes.data || []);
-      setInteractions(interactionsRes.data || []);
-      setAdjustments(adjustmentsRes.data || []);
-
-      const entityIds = [
-        ...holdersData.map((holder) => holder.id),
-        ...(dependentsRes.data?.map((dependent) => dependent.id) || []),
-      ];
-
-      if (entityIds.length > 0) {
-        const { data: docsData, error: docsError } = await supabase
-          .from("documents")
-          .select("*")
-          .in("entity_id", entityIds);
-
-        if (docsError) {
-          console.error("Erro ao carregar documentos:", docsError);
-        } else {
-          setDocuments(docsData || []);
-        }
+      if (snapshot.documentsError) {
+        console.error("Erro ao carregar documentos:", snapshot.documentsError);
       } else {
-        setDocuments([]);
+        setDocuments(snapshot.documents);
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [contract.id]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const calculateAdjustedValue = (baseValue: number): number => {
     let total = baseValue;
@@ -613,15 +573,12 @@ export default function ContractDetails({
 
     const updateEligibleLives = async () => {
       try {
-        const { error } = await supabase
-          .from("contracts")
-          .update({
-            vidas_elegiveis_bonus: bonusSummary.hasConfigurations
-              ? bonusSummary.eligibleLives
-              : bonusEligibleLivesFromRecords,
-          })
-          .eq("id", contract.id);
-        if (error) throw error;
+        await updateContractEligibleLives(
+          contract.id,
+          bonusSummary.hasConfigurations
+            ? bonusSummary.eligibleLives
+            : bonusEligibleLivesFromRecords,
+        );
         onUpdate();
       } catch (error) {
         console.error("Erro ao atualizar vidas elegiveis para bonus:", error);
@@ -652,9 +609,8 @@ export default function ContractDetails({
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase.from("dependents").delete().eq("id", id);
-      if (error) throw error;
-      loadData();
+      await deleteContractDependent(id);
+      void loadData();
     } catch (error) {
       console.error("Erro ao remover dependente:", error);
       toast.error("Não foi possível remover o dependente.");
@@ -678,28 +634,14 @@ export default function ContractDetails({
     const relatedEntityIds = [holder.id, ...holderDependentIds];
 
     try {
-      if (relatedEntityIds.length > 0) {
-        const { error: documentsError } = await supabase
-          .from("documents")
-          .delete()
-          .in("entity_id", relatedEntityIds);
-
-        if (documentsError) throw documentsError;
-      }
-
-      const { error } = await supabase
-        .from("contract_holders")
-        .delete()
-        .eq("id", holder.id);
-
-      if (error) throw error;
+      await deleteContractHolder(holder.id, relatedEntityIds);
 
       setSelectedHolderId((current) =>
         current === holder.id
           ? holders.find((item) => item.id !== holder.id)?.id || null
           : current,
       );
-      loadData();
+      void loadData();
     } catch (error) {
       console.error("Erro ao remover titular:", error);
       toast.error("Não foi possível remover o titular.");
@@ -710,28 +652,16 @@ export default function ContractDetails({
     e.preventDefault();
 
     try {
-      const { error } = editingInteraction
-        ? await supabase
-            .from("interactions")
-            .update({
-              tipo: interactionData.tipo,
-              descricao: interactionData.descricao,
-              responsavel: interactionData.responsavel,
-            })
-            .eq("id", editingInteraction.id)
-        : await supabase.from("interactions").insert([
-            {
-              contract_id: contract.id,
-              ...interactionData,
-            },
-          ]);
-
-      if (error) throw error;
+      await saveContractInteraction(
+        contract.id,
+        interactionData,
+        editingInteraction?.id,
+      );
 
       setInteractionData(initialInteractionData);
       setShowInteractionForm(false);
       setEditingInteraction(null);
-      loadData();
+      void loadData();
     } catch (error) {
       console.error("Erro ao adicionar interacao:", error);
       toast.error("Erro ao adicionar interação.");
@@ -761,12 +691,8 @@ export default function ContractDetails({
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase
-        .from("interactions")
-        .delete()
-        .eq("id", interactionId);
-      if (error) throw error;
-      loadData();
+      await deleteContractInteraction(interactionId);
+      void loadData();
     } catch (error) {
       console.error("Erro ao remover interacao:", error);
       toast.error("Erro ao remover interação.");

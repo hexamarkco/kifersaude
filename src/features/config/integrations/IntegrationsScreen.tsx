@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { configService } from "../data/configService";
-import { supabase, type IntegrationSetting } from "../../../lib/supabase";
+import type { IntegrationSetting } from "../domain/types";
 import { toast } from "../../../lib/toast";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
@@ -31,6 +31,7 @@ import {
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
 import { normalizeModelOptions } from "./shared/integrationsSettings";
+import { loadAiProviderModels } from "./data/integrationsApi";
 
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
@@ -467,19 +468,7 @@ export default function IntegrationsScreen() {
     }));
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "list-ai-models",
-        {
-          body: {
-            provider,
-          },
-        },
-      );
-
-      if (error) {
-        throw new Error(error.message || "Não foi possível carregar os modelos.");
-      }
-
+      const data = await loadAiProviderModels(provider);
       const payload = isRecord(data) ? data : {};
       const options = normalizeModelOptions(payload.models);
 

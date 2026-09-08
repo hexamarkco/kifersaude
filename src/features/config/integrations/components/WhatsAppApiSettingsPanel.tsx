@@ -12,7 +12,7 @@ import {
   normalizeAutoContactSettings,
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
-import { supabase, type IntegrationSetting } from "../../../../lib/supabase";
+import type { IntegrationSetting } from "../../domain/types";
 import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../../components/ui/panelLoading";
@@ -25,34 +25,12 @@ import {
   Input,
   Switch,
 } from "../../../../design-system";
+import {
+  loadWhatsAppChannelState,
+  type ChannelAdminState,
+} from "../data/integrationsApi";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
-type WebhookDiagnosticStatus =
-  | "error"
-  | "message_event_missing"
-  | "receiving_messages"
-  | "waiting_first_event";
-type ChannelAdminState = {
-  channel: {
-    connection_status?: string | null;
-    phone_number?: string | null;
-    last_health_check_at?: string | null;
-  };
-  config: {
-    tokenConfigured?: boolean;
-    webhookUrl?: string;
-    webhookAuthentication?: "header" | "legacy_query";
-    webhookHeaderName?: string | null;
-    webhookDiagnostics?: {
-      status?: WebhookDiagnosticStatus;
-      lastWebhookAt?: string | null;
-      lastMessageWebhookAt?: string | null;
-      lastInboundMessageAt?: string | null;
-      lastError?: string | null;
-    };
-  };
-};
-
 const formatDiagnosticDate = (value: string) => new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "medium",
@@ -87,15 +65,7 @@ export default function WhatsAppApiSettingsPanel() {
   >({});
 
   const loadChannelState = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke("comm-whatsapp-admin", {
-      body: { action: "getConfig" },
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    const payload = (data ?? {}) as ChannelAdminState;
+    const payload = await loadWhatsAppChannelState("getConfig");
     setTokenConfigured(payload.config?.tokenConfigured === true);
     setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
     setWebhookAuthentication(
@@ -211,15 +181,7 @@ export default function WhatsAppApiSettingsPanel() {
     setRefreshingHealth(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("comm-whatsapp-admin", {
-        body: { action: "refreshHealth" },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      const payload = (data ?? {}) as ChannelAdminState;
+      const payload = await loadWhatsAppChannelState("refreshHealth");
       setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
       setWebhookAuthentication(
         payload.config?.webhookAuthentication === "header"

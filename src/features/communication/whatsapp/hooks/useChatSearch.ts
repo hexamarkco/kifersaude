@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  commWhatsAppService,
+  whatsappConversationsRepository,
+  whatsappMessagesRepository,
   type CommWhatsAppMessageSearchResult,
-} from '../../../../lib/commWhatsAppService';
+} from '../data';
 import type { CommWhatsAppChat } from '../../../../lib/supabase';
 import {
   applyPendingChatInboxState,
@@ -67,7 +68,7 @@ export const useChatSearch = ({
     const requestId = ++chatSearchRequestIdRef.current;
     setSearchingChats(true);
 
-    void commWhatsAppService.listChats({
+    void whatsappConversationsRepository.list({
       search,
       activityFilter,
       leadStatusFilters,
@@ -104,7 +105,7 @@ export const useChatSearch = ({
     const requestId = ++messageSearchRequestIdRef.current;
     setSearchingMessages(true);
 
-    void commWhatsAppService.searchMessages({
+    void whatsappMessagesRepository.search({
       search,
       archivedFilter: 'all',
       limit: 30,

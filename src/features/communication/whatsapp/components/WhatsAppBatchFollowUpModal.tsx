@@ -6,7 +6,7 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../../../../lib/commWhatsAppService';
+import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../data';
 import { supabase } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
@@ -149,7 +149,7 @@ export default function WhatsAppBatchFollowUpModal({
 
     void (async () => {
       try {
-        const pendingChats = await commWhatsAppService.getPendingFollowUpChats();
+        const pendingChats = await whatsappFollowUpService.listPendingChats();
         const seenReminderIds = new Set<string>();
         const mapped: BatchItemState[] = pendingChats.filter((chat) => {
           if (seenReminderIds.has(chat.reminder_id)) return false;
@@ -228,7 +228,7 @@ export default function WhatsAppBatchFollowUpModal({
     setItems((prev) => updateItemInList(prev, index, { status: 'generating', error: null }));
 
     try {
-      const result = await commWhatsAppService.generateFollowUp(item.chatId, {
+      const result = await whatsappFollowUpService.generate(item.chatId, {
         customInstructions: item.customInstructions,
         sourceReminderId: item.reminderId,
         batchId: batchId ?? undefined,
@@ -279,7 +279,7 @@ export default function WhatsAppBatchFollowUpModal({
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
     setRefiningActionId(tone);
     try {
-      const result = await commWhatsAppService.rewriteMessage({
+      const result = await whatsappFollowUpService.rewrite({
         message: activeItem.generatedText.trim(),
         tone,
       });
@@ -298,7 +298,7 @@ export default function WhatsAppBatchFollowUpModal({
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
     setRefiningActionId(action.id);
     try {
-      const result = await commWhatsAppService.refineFollowUp(activeItem.chatId, {
+      const result = await whatsappFollowUpService.refine(activeItem.chatId, {
         currentMessage: activeItem.generatedText.trim(),
         adjustmentInstruction: action.instruction,
       });
@@ -341,7 +341,7 @@ export default function WhatsAppBatchFollowUpModal({
 
       const results = await Promise.allSettled(
         batch.map((idx) =>
-          commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
+          whatsappFollowUpService.generate(updatedItems[idx].chatId, {
             customInstructions: updatedItems[idx].customInstructions,
             sourceReminderId: updatedItems[idx].reminderId,
             batchId: batchId ?? undefined,

@@ -21,8 +21,12 @@ import { cx } from '../../../lib/cx';
 import {
   CommWhatsAppAmbiguousSendError,
   CommWhatsAppMediaSendTimeoutError,
-  commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
+  whatsappContactsRepository,
+  whatsappConversationsRepository,
+  whatsappFollowUpService,
+  whatsappMediaRepository,
+  whatsappMessagesRepository,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -33,7 +37,7 @@ import {
   type CommWhatsAppFollowUpNextAction,
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
-} from '../../../lib/commWhatsAppService';
+} from './data';
 import { configService } from '../../config/data/configService';
 import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
@@ -1965,7 +1969,7 @@ function VoiceComposerTimeline({ progress = 0, recording = false }: { progress?:
 }
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
-  const [mediaUrl, setMediaUrl] = useState<string | null>(commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
+  const [mediaUrl, setMediaUrl] = useState<string | null>(whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -1973,7 +1977,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   useEffect(() => {
     let active = true;
 
-    const rememberedPreview = commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id);
+    const rememberedPreview = whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id);
     if (rememberedPreview) {
       setMediaUrl(rememberedPreview);
       setLoading(false);
@@ -2007,8 +2011,8 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     setLoading(true);
     setError(null);
 
-    void commWhatsAppService
-      .resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
+    void whatsappMediaRepository
+      .resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => {
         if (!active) return;
         setMediaUrl(resolved);
@@ -4288,7 +4292,7 @@ export default function WhatsAppInboxScreen() {
       updated_at: messageAt,
     });
 
-    void commWhatsAppService.markChatRead(chat.id, {
+    void whatsappConversationsRepository.markRead(chat.id, {
       messageAt,
     }).catch((error) => {
       console.error('[WhatsAppInbox] erro ao avancar leitura apos envio', error);
@@ -4558,7 +4562,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     requestKeys.forEach((key) => savedContactLookupInFlightKeysRef.current.add(key));
-    void commWhatsAppService.lookupSavedContactsByPhones({ phoneNumbers, forceSync }).then((contacts) => {
+    void whatsappContactsRepository.lookupSavedByPhones({ phoneNumbers, forceSync }).then((contacts) => {
       if (cancelled) return;
 
       const matchedKeys = new Set(contacts.flatMap((contact) => collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)));
@@ -4693,7 +4697,7 @@ export default function WhatsAppInboxScreen() {
           const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
           const incomingExternalMessageId = String(incomingMessage.external_message_id ?? '').trim();
           if (previewUrl && incomingExternalMessageId) {
-            commWhatsAppService.rememberLocalMediaPreview(incomingExternalMessageId, previewUrl);
+            whatsappMediaRepository.rememberLocalPreview(incomingExternalMessageId, previewUrl);
           }
           localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
           return false;
@@ -4780,7 +4784,7 @@ export default function WhatsAppInboxScreen() {
 
     setLeadContractsLoading(true);
     try {
-      const contracts = await commWhatsAppService.listLeadContracts(leadId);
+      const contracts = await whatsappContactsRepository.listLeadContracts(leadId);
       if (requestId !== leadContractsRequestIdRef.current) {
         return;
       }
@@ -4815,7 +4819,7 @@ export default function WhatsAppInboxScreen() {
 
     setLeadPanelLoading(true);
     try {
-      const lead = await commWhatsAppService.getChatLeadPanel(chat.id);
+      const lead = await whatsappContactsRepository.getLeadPanel(chat.id);
       if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
@@ -4989,7 +4993,7 @@ export default function WhatsAppInboxScreen() {
 
     setLeadSearchLoading(true);
     try {
-      const results = await commWhatsAppService.searchCrmLeads({
+      const results = await whatsappContactsRepository.searchLeads({
         query: normalizedQuery,
         phoneNumbers: normalizedPhone ? [normalizedPhone] : undefined,
         limit: 20,
@@ -5026,7 +5030,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const contactsPagePromise = commWhatsAppService.listSavedContacts({
+      const contactsPagePromise = whatsappContactsRepository.listSaved({
         query: normalizedQuery,
         page,
         pageSize: 50,
@@ -5034,7 +5038,7 @@ export default function WhatsAppInboxScreen() {
       });
       const leadsPromise = appendSavedContacts
         ? Promise.resolve(latestCrmStartResultsRef.current)
-        : commWhatsAppService.searchCrmLeads({ query: normalizedQuery, limit: 20 });
+        : whatsappContactsRepository.searchLeads({ query: normalizedQuery, limit: 20 });
 
       const [contactsPage, leads] = await Promise.all([contactsPagePromise, leadsPromise]);
 
@@ -5841,7 +5845,7 @@ export default function WhatsAppInboxScreen() {
     const requestId = ++operationalStateRequestIdRef.current;
 
     try {
-      const state = await commWhatsAppService.getOperationalState();
+      const state = await whatsappConversationsRepository.getOperationalState();
       if (requestId !== operationalStateRequestIdRef.current) {
         return;
       }
@@ -6033,7 +6037,7 @@ export default function WhatsAppInboxScreen() {
           while (pagesFetched < maxPages) {
             let page: CommWhatsAppChat[] = [];
             for (let attempt = 0; attempt <= EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
-              page = await commWhatsAppService.listChats({
+              page = await whatsappConversationsRepository.list({
                 activityFilter: chatActivityFilter,
                 leadStatusFilters,
                 leadResponsavelFilters,
@@ -6232,7 +6236,7 @@ export default function WhatsAppInboxScreen() {
 
   const refreshArchivedChatsCount = useCallback(async () => {
     try {
-      const count = await commWhatsAppService.getArchivedChatsCount();
+      const count = await whatsappConversationsRepository.getArchivedCount();
       setArchivedChatsCount(count);
     } catch (error) {
       if (!isSupabaseConnectivityError(error)) {
@@ -6250,7 +6254,7 @@ export default function WhatsAppInboxScreen() {
     const nextPageIndex = archivedChatsPage;
 
     try {
-      const page = await commWhatsAppService.listChats({
+      const page = await whatsappConversationsRepository.list({
         activityFilter: chatActivityFilter,
         leadStatusFilters,
         leadResponsavelFilters,
@@ -6375,7 +6379,7 @@ export default function WhatsAppInboxScreen() {
       let threadLead: CommWhatsAppLeadPanel | null = null;
 
       if (reason === 'initial') {
-        const thread = await commWhatsAppService.getChatThread(targetChatId, {
+        const thread = await whatsappConversationsRepository.getThread(targetChatId, {
           limit: MESSAGE_PAGE_SIZE,
         });
 
@@ -6391,7 +6395,7 @@ export default function WhatsAppInboxScreen() {
           });
         }
       } else {
-        const page = await commWhatsAppService.listMessagesPage(targetChatId, {
+        const page = await whatsappMessagesRepository.listPage(targetChatId, {
           limit: MESSAGE_PAGE_SIZE,
         });
 
@@ -6438,7 +6442,7 @@ export default function WhatsAppInboxScreen() {
             const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
             const syncedExternalMessageId = String(syncedServerMessage?.external_message_id ?? externalId).trim();
             if (previewUrl && syncedExternalMessageId) {
-              commWhatsAppService.rememberLocalMediaPreview(syncedExternalMessageId, previewUrl);
+              whatsappMediaRepository.rememberLocalPreview(syncedExternalMessageId, previewUrl);
             }
             localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
             continue;
@@ -6525,7 +6529,7 @@ export default function WhatsAppInboxScreen() {
 
     setLoadingMessages(true);
 
-    void commWhatsAppService.listMessageContext(targetChat.id, targetMessageId).then((contextMessages) => {
+    void whatsappMessagesRepository.listContext(targetChat.id, targetMessageId).then((contextMessages) => {
       if (requestId !== messageSearchSelectionRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
         return;
       }
@@ -6593,7 +6597,7 @@ export default function WhatsAppInboxScreen() {
     setSearchingChatMessages(true);
 
     const timeoutId = window.setTimeout(() => {
-      void commWhatsAppService.searchMessages({
+      void whatsappMessagesRepository.search({
         search: chatMessageSearch,
         chatIds: [selectedChat.id],
         archivedFilter: 'all',
@@ -6691,7 +6695,7 @@ export default function WhatsAppInboxScreen() {
 
         const idsToCheck = Array.from(remainingIds);
 
-        void commWhatsAppService.refreshMessageStatuses({
+        void whatsappMessagesRepository.refreshStatuses({
           chatId: params.chat.external_chat_id,
           externalMessageIds: idsToCheck,
           limit: idsToCheck.length,
@@ -7143,7 +7147,7 @@ export default function WhatsAppInboxScreen() {
       manualUnreadSkipReadChatIdRef.current = null;
     }
 
-    void commWhatsAppService.markChatRead(currentChat.id, {
+    void whatsappConversationsRepository.markRead(currentChat.id, {
       messageAt: readAt,
     }).then((result) => {
       const latestChat = latestChatsRef.current.find((chat) => chat.id === currentChat.id) ?? currentChat;
@@ -7287,7 +7291,7 @@ export default function WhatsAppInboxScreen() {
     setLoadingOlderMessages(true);
 
     try {
-      const page = await commWhatsAppService.listMessagesPage(selectedChat.id, {
+      const page = await whatsappMessagesRepository.listPage(selectedChat.id, {
         limit: MESSAGE_PAGE_SIZE,
         before: {
           messageAt: oldestMessage.message_at,
@@ -7587,7 +7591,7 @@ export default function WhatsAppInboxScreen() {
 
       for (const queued of queuedMessages) {
         try {
-          const sendResult = await commWhatsAppService.sendTextMessage(chat.external_chat_id, queued.segment, {
+          const sendResult = await whatsappMessagesRepository.sendText(chat.external_chat_id, queued.segment, {
             clientRequestId: queued.clientRequestId,
             ...(quotePayload && queued === queuedMessages[0] ? quotePayload : {}),
           });
@@ -7761,7 +7765,7 @@ export default function WhatsAppInboxScreen() {
               mediaUploadAbortControllerRef.current = new AbortController();
 
               try {
-                const sendResult = await commWhatsAppService.sendMediaMessage({
+                const sendResult = await whatsappMediaRepository.send({
                   chatId: selectedChat.external_chat_id,
                   kind: queued.attachment.kind,
                   file: queued.attachment.file,
@@ -7779,7 +7783,7 @@ export default function WhatsAppInboxScreen() {
                 });
 
                 if (queued.optimisticMessage.media_url && sendResult.messageId) {
-                  commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, queued.optimisticMessage.media_url);
+                  whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, queued.optimisticMessage.media_url);
                 }
 
                 hadSuccessfulSend = true;
@@ -7905,7 +7909,7 @@ export default function WhatsAppInboxScreen() {
         }
 
         if (localRetryPayload.kind === 'text') {
-          const sendResult = await commWhatsAppService.sendTextMessage(selectedChat?.external_chat_id || '', localRetryPayload.text, {
+          const sendResult = await whatsappMessagesRepository.sendText(selectedChat?.external_chat_id || '', localRetryPayload.text, {
             clientRequestId: retryClientRequestId,
           });
           patchLocalOutgoingMessage(message.id, {
@@ -7922,7 +7926,7 @@ export default function WhatsAppInboxScreen() {
           }
           keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
         } else if (localRetryPayload.kind === 'media') {
-          const sendResult = await commWhatsAppService.sendMediaMessage({
+          const sendResult = await whatsappMediaRepository.send({
             chatId: selectedChat?.external_chat_id || '',
             kind: localRetryPayload.mediaKind,
             file: localRetryPayload.file,
@@ -7932,7 +7936,7 @@ export default function WhatsAppInboxScreen() {
             clientRequestId: retryClientRequestId,
           });
           if (message.media_url && sendResult.messageId) {
-            commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, message.media_url);
+            whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, message.media_url);
           }
           patchLocalOutgoingMessage(message.id, {
             external_message_id: sendResult.messageId,
@@ -7948,7 +7952,7 @@ export default function WhatsAppInboxScreen() {
           }
           keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
         } else {
-          const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
+          const sendResult = await whatsappMediaRepository.sendRemote({
             chatId: selectedChat?.external_chat_id || '',
             kind: localRetryPayload.mediaKind,
             remoteUrl: localRetryPayload.remoteUrl,
@@ -7987,7 +7991,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      await commWhatsAppService.retryMediaMessage(message.id, {
+      await whatsappMediaRepository.retry(message.id, {
         clientRequestId: createClientRequestId(),
       });
       if (selectedChat) {
@@ -8050,7 +8054,7 @@ export default function WhatsAppInboxScreen() {
     patchMessageReactionLocally(message, nextEmoji);
 
     try {
-      await commWhatsAppService.reactToMessage({
+      await whatsappMessagesRepository.react({
         chatId,
         messageId: message.external_message_id,
         emoji: nextEmoji,
@@ -8084,7 +8088,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     try {
-      await commWhatsAppService.starMessage(message.id, nextStarred);
+      await whatsappMessagesRepository.star(message.id, nextStarred);
     } catch (error) {
       patchMessageLocally(message.id, {
         metadata: {
@@ -8167,7 +8171,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const targetChats = forwardTargetChats.filter((chat) => forwardingTargetIds.includes(chat.id));
-      const forwardedCount = await commWhatsAppService.forwardMessageToChats(
+      const forwardedCount = await whatsappMessagesRepository.forwardToChats(
         forwardingMessage.id,
         targetChats.map((chat) => chat.external_chat_id),
       );
@@ -8214,7 +8218,7 @@ export default function WhatsAppInboxScreen() {
     setSavingMessageEdit(true);
 
     try {
-      const result = await commWhatsAppService.editMessage(editingMessage.id, nextText);
+      const result = await whatsappMessagesRepository.edit(editingMessage.id, nextText);
       const editedText = result.editedText || nextText;
       const editedAt = result.editedAt || new Date().toISOString();
       const metadata = editingMessage.metadata && typeof editingMessage.metadata === 'object' && !Array.isArray(editingMessage.metadata)
@@ -8273,7 +8277,7 @@ export default function WhatsAppInboxScreen() {
     setDeletingMessageId(message.id);
 
     try {
-      const result = await commWhatsAppService.deleteMessage(message.id);
+      const result = await whatsappMessagesRepository.delete(message.id);
       const deletedAt = result.deletedAt || new Date().toISOString();
       const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
         ? message.metadata as Record<string, unknown>
@@ -8314,7 +8318,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     try {
-      const result = await commWhatsAppService.transcribeMessage(message.id, {
+      const result = await whatsappMessagesRepository.transcribe(message.id, {
         force: message.transcription_status === 'failed' || Boolean(message.transcription_text?.trim()),
       });
 
@@ -8378,7 +8382,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const updatedChat = await commWhatsAppService.linkChatLead(targetChatId, lead.id);
+      const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, lead.id);
       upsertChatLocally(updatedChat);
       setSelectedChatId(updatedChat.id);
       await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
@@ -8396,7 +8400,7 @@ export default function WhatsAppInboxScreen() {
 
     setLinkLoadingLeadId(leadId);
     try {
-      const updatedChat = await commWhatsAppService.linkChatLead(selectedChat.id, leadId);
+      const updatedChat = await whatsappContactsRepository.linkLead(selectedChat.id, leadId);
       upsertChatLocally(updatedChat);
       setSelectedChatId(updatedChat.id);
       await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
@@ -8415,7 +8419,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const updatedChat = await commWhatsAppService.unlinkChatLead(selectedChat.id);
+      const updatedChat = await whatsappContactsRepository.unlinkLead(selectedChat.id);
       upsertChatLocally(updatedChat);
       setLeadPanel(null);
       setLeadContracts([]);
@@ -8442,7 +8446,7 @@ export default function WhatsAppInboxScreen() {
     } satisfies Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
 
     try {
-      await commWhatsAppService.updateLinkedLeadStatus(selectedChat.id, newStatus);
+      await whatsappContactsRepository.updateLeadStatus(selectedChat.id, newStatus);
 
       if (shouldPromptFirstReminderAfterQuote(newStatus)) {
         setStatusReminderLead(statusReminderLeadSnapshot);
@@ -8486,7 +8490,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    await commWhatsAppService.updateLinkedLeadResponsavel(selectedChat.id, responsavelValue);
+    await whatsappContactsRepository.updateLeadResponsible(selectedChat.id, responsavelValue);
     await loadLeadPanel(selectedChat);
   };
 
@@ -8507,7 +8511,7 @@ export default function WhatsAppInboxScreen() {
     const actionKey = `saved:${contact.phone_digits}`;
     setStartingChatKey(actionKey);
     try {
-      const result = await commWhatsAppService.startChat({
+      const result = await whatsappContactsRepository.startChat({
         source: 'saved_contact',
         phoneNumber: contact.phone_number,
         displayName: contact.display_name,
@@ -8536,7 +8540,7 @@ export default function WhatsAppInboxScreen() {
     const actionKey = `crm:${lead.id}`;
     setStartingChatKey(actionKey);
     try {
-      const result = await commWhatsAppService.startChat({
+      const result = await whatsappContactsRepository.startChat({
         source: 'crm',
         leadId: lead.id,
       });
@@ -8588,7 +8592,7 @@ export default function WhatsAppInboxScreen() {
     setStartingChatKey(openingKey);
 
     try {
-      const persistedExistingChat = await commWhatsAppService.findExistingChat({
+      const persistedExistingChat = await whatsappContactsRepository.findExistingChat({
         leadId: lead.id,
         phoneDigits: phoneKeys,
       });
@@ -8600,11 +8604,11 @@ export default function WhatsAppInboxScreen() {
       }
 
       const result = lead.id
-        ? await commWhatsAppService.startChat({
+        ? await whatsappContactsRepository.startChat({
             source: 'crm',
             leadId: lead.id,
           })
-        : await commWhatsAppService.startChat({
+        : await whatsappContactsRepository.startChat({
             source: 'manual',
             phoneNumber: lead.telefone ?? '',
           });
@@ -8629,7 +8633,7 @@ export default function WhatsAppInboxScreen() {
     const actionKey = 'manual';
     setStartingChatKey(actionKey);
     try {
-      const result = await commWhatsAppService.startChat({
+      const result = await whatsappContactsRepository.startChat({
         source: 'manual',
         phoneNumber: manualStartPhone,
       });
@@ -8676,14 +8680,14 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const persistedExistingChat = await commWhatsAppService.findExistingChat({ phoneDigits: phoneKeys });
+      const persistedExistingChat = await whatsappContactsRepository.findExistingChat({ phoneDigits: phoneKeys });
       if (persistedExistingChat) {
         upsertChatLocally(persistedExistingChat);
         setSelectedChatId(persistedExistingChat.id);
         return;
       }
 
-      const result = await commWhatsAppService.startChat({
+      const result = await whatsappContactsRepository.startChat({
         source: 'manual',
         phoneNumber,
       });
@@ -8719,7 +8723,7 @@ export default function WhatsAppInboxScreen() {
     setSharedContactActionKey(actionKey);
 
     try {
-      await commWhatsAppService.saveContact({
+      await whatsappContactsRepository.save({
         phoneNumber,
         displayName,
       });
@@ -8748,13 +8752,13 @@ export default function WhatsAppInboxScreen() {
     setSavingContact(true);
     try {
       if (isRenaming) {
-        await commWhatsAppService.renameContact({
+        await whatsappContactsRepository.rename({
           phoneNumber: selectedChat.phone_number,
           displayName: name,
         });
         toast.success('Contato renomeado com sucesso.');
       } else {
-        await commWhatsAppService.saveContact({
+        await whatsappContactsRepository.save({
           phoneNumber: selectedChat.phone_number,
           displayName: name,
         });
@@ -8972,7 +8976,7 @@ export default function WhatsAppInboxScreen() {
     setRewritingComposer(true);
 
     try {
-      const result = await commWhatsAppService.rewriteMessage({
+      const result = await whatsappFollowUpService.rewrite({
         message: sourceText,
         chatId: selectedChat?.id ?? null,
         tone,
@@ -9049,7 +9053,7 @@ export default function WhatsAppInboxScreen() {
     setReplySuggestionError(null);
 
     try {
-      const result = await commWhatsAppService.suggestReply({
+      const result = await whatsappFollowUpService.suggestReply({
         chatId: selectedChatId,
         composerDraft: messageDraft,
         mode: messageDraft.trim() ? 'complete_draft' : 'suggest_reply',
@@ -9129,7 +9133,7 @@ export default function WhatsAppInboxScreen() {
     setGeneratingFollowUp(true);
 
     try {
-      const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
+      const result = await whatsappFollowUpService.generate(selectedChat.id, {
         customInstructions,
         triggerSource: 'individual',
       });
@@ -9195,7 +9199,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const [allMessages, systemSettings] = await Promise.all([
-        commWhatsAppService.listAllMessages(selectedChat.id),
+        whatsappMessagesRepository.listAll(selectedChat.id),
         configService.getSystemSettings(),
       ]);
 
@@ -9242,7 +9246,7 @@ export default function WhatsAppInboxScreen() {
       let hasMore = true;
 
       while (hasMore && pages < 10) {
-        const result = await commWhatsAppService.syncChatHistory(targetChat.external_chat_id, {
+        const result = await whatsappConversationsRepository.syncHistory(targetChat.external_chat_id, {
           offset,
           count: 100,
           timeTo,
@@ -9329,7 +9333,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const updatedChat = await commWhatsAppService.updateChatInboxState(chat.id, options);
+      const updatedChat = await whatsappConversationsRepository.updateInboxState(chat.id, options);
 
       // Sanidade: confirma que o servidor refletiu o que pedimos. Caso
       // contrario, mantemos o patch otimista vivo dentro da janela de
@@ -9379,7 +9383,7 @@ export default function WhatsAppInboxScreen() {
 
     setAssumingControlChatId(chat.id);
     try {
-      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'inactive');
+      const updatedChat = await whatsappConversationsRepository.setAutonomousAttendanceStatus(chat.id, 'inactive');
       upsertChatLocally(updatedChat);
       toast.success('Atendimento autônomo desativado nesta conversa.');
     } catch (error) {
@@ -9397,7 +9401,7 @@ export default function WhatsAppInboxScreen() {
 
     setAssumingControlChatId(chat.id);
     try {
-      const updatedChat = await commWhatsAppService.setAutonomousAttendanceStatus(chat.id, 'active');
+      const updatedChat = await whatsappConversationsRepository.setAutonomousAttendanceStatus(chat.id, 'active');
       upsertChatLocally(updatedChat);
       toast.success('Atendimento autônomo ativado nesta conversa.');
     } catch (error) {
@@ -9415,7 +9419,7 @@ export default function WhatsAppInboxScreen() {
 
     setDeletingChatId(chat.id);
     try {
-      await commWhatsAppService.deleteChat(chat.id);
+      await whatsappConversationsRepository.delete(chat.id);
 
       setChats((current) => {
         const next = current.filter((candidate) => candidate.id !== chat.id);
@@ -9448,7 +9452,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
     try {
-      const url = await commWhatsAppService.resolveMediaObjectUrl({
+      const url = await whatsappMediaRepository.resolveObjectUrl({
         mediaId: message.media_id,
         mediaUrl: message.media_url,
       });
@@ -9510,7 +9514,7 @@ export default function WhatsAppInboxScreen() {
       setSendingDrawerMedia(true);
 
       try {
-        const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
+        const sendResult = await whatsappMediaRepository.sendRemote({
           chatId: selectedChat.external_chat_id,
           kind: item.sendKind,
           remoteUrl: item.sendUrl,
@@ -9708,7 +9712,7 @@ export default function WhatsAppInboxScreen() {
 
       try {
         for (const [segmentIndex, segment] of result.textSegments.entries()) {
-          await commWhatsAppService.sendTextMessage(externalChatId, segment, {
+          await whatsappMessagesRepository.sendText(externalChatId, segment, {
             clientRequestId: `follow-up:${result.reminderId}:${segmentIndex}`,
           });
           options?.onProgress?.({

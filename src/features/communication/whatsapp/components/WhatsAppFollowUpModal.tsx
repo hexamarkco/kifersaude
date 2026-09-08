@@ -6,7 +6,7 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../data';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
 import {
@@ -183,7 +183,7 @@ export default function WhatsAppFollowUpModal({
 
     setRefiningActionId(refinementTone);
     try {
-      const result = await commWhatsAppService.rewriteMessage({
+      const result = await whatsappFollowUpService.rewrite({
         message: currentMessage,
         tone: refinementTone,
       });
@@ -208,7 +208,7 @@ export default function WhatsAppFollowUpModal({
         return;
       }
 
-      const result = await commWhatsAppService.refineFollowUp(chatId, {
+      const result = await whatsappFollowUpService.refine(chatId, {
         currentMessage,
         adjustmentInstruction: action.instruction,
       });
@@ -232,7 +232,7 @@ export default function WhatsAppFollowUpModal({
       if (transcript) {
         setIsCorrecting(true);
         try {
-          const corrected = await commWhatsAppService.rewriteMessage({
+          const corrected = await whatsappFollowUpService.rewrite({
             message: transcript,
             tone: 'grammar',
           });

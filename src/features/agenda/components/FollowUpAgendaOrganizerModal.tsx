@@ -26,12 +26,12 @@ import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { formatDateTimeFullBR } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import {
-  commWhatsAppService,
+  whatsappFollowUpService,
   type FollowUpAgendaOrganizerChange,
   type FollowUpAgendaOrganizerMode,
   type FollowUpAgendaOrganizerOptions,
   type FollowUpAgendaOrganizerPreview,
-} from '../../../lib/commWhatsAppService';
+} from '../../communication/whatsapp/data';
 
 type FollowUpAgendaOrganizerModalProps = {
   isOpen: boolean;
@@ -86,7 +86,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
   const handleGeneratePreview = async () => {
     setLoadingPreview(true);
     try {
-      const result = await commWhatsAppService.previewFollowUpAgendaOrganization(options);
+      const result = await whatsappFollowUpService.previewAgendaOrganization(options);
       setPreview(result);
       if (result.totalCandidates === 0) {
         toast.info('Nenhum follow-up pendente encontrado para reorganizar.');
@@ -117,7 +117,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
 
     setApplying(true);
     try {
-      const result = await commWhatsAppService.applyFollowUpAgendaOrganization(changedItems);
+      const result = await whatsappFollowUpService.applyAgendaOrganization(changedItems);
       toast.success(`Agenda reorganizada: ${result.applied} follow-up(s) atualizados.`);
       setPreview(null);
       await onApplied?.();

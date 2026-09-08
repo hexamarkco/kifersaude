@@ -1,5 +1,5 @@
 import { Button, Surface, Textarea } from '../../../../design-system';
-import type { CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import type { CommWhatsAppRewriteTone } from '../data';
 import WhatsAppDialog from './WhatsAppDialog';
 
 const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; description: string }> = [

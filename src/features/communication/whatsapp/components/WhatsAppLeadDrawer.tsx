@@ -15,7 +15,7 @@ import type {
   CommWhatsAppLeadContractSummary,
   CommWhatsAppLeadPanel,
   CommWhatsAppLeadSearchResult,
-} from '../../../../lib/commWhatsAppService';
+} from '../data';
 import type { ConfigOption, Contract, LeadStatusConfig } from '../../../../lib/supabase';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, FileAudio, FileText, Image, Loader2, Pause, Play, Video } from 'lucide-react';
 
 import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs } from '../../../../design-system';
-import { commWhatsAppService, type CommWhatsAppMediaType } from '../../../../lib/commWhatsAppService';
+import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import type { CommWhatsAppMessage } from '../../../../lib/supabase';
 
 type ChatFilesDrawerProps = {
@@ -33,7 +33,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
   useEffect(() => {
     let active = true;
     if (message.message_type !== 'image' && message.message_type !== 'video') return;
-    void commWhatsAppService.resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
+    void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => {
         if (active) setUrl(resolved);
       })
@@ -48,7 +48,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
     if (downloading) return;
     setDownloading(true);
     try {
-      const resolvedUrl = url ?? await commWhatsAppService.resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url });
+      const resolvedUrl = url ?? await whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url });
       if (!resolvedUrl) return;
       const link = document.createElement('a');
       link.href = resolvedUrl;
@@ -84,7 +84,7 @@ function AudioFileRow({ message }: { message: CommWhatsAppMessage }) {
 
   useEffect(() => {
     let active = true;
-    void commWhatsAppService.resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
+    void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => { if (active) setUrl(resolved); })
       .catch(() => { if (active) setUrl(null); });
     return () => { active = false; };
@@ -135,7 +135,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
     setError(null);
     try {
       const last = append ? messages[messages.length - 1] : null;
-      const page = await commWhatsAppService.listChatMediaPage(chatId, {
+      const page = await whatsappMediaRepository.listPage(chatId, {
         mediaType,
         limit: 40,
         before: last ? { messageAt: last.message_at, id: last.id } : null,

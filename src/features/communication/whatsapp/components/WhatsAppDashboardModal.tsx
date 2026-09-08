@@ -3,11 +3,12 @@ import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Down
 
 import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem } from '../../../../design-system';
 import {
-  commWhatsAppService,
+  whatsappConversationsRepository,
+  whatsappDashboardService,
   formatCommWhatsAppPhoneLabel,
   type CommWhatsAppDashboardMetrics,
   type CommWhatsAppDashboardRecentChat,
-} from '../../../../lib/commWhatsAppService';
+} from '../data';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
 
@@ -258,7 +259,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
     setError(null);
 
     try {
-      const data = await commWhatsAppService.getDashboardMetrics();
+      const data = await whatsappDashboardService.getMetrics();
       setMetrics(data);
     } catch (loadError) {
       console.error('[WhatsAppDashboardModal] erro ao carregar métricas', loadError);
@@ -286,7 +287,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
     setExportProgress('Preparando conversas...');
 
     try {
-      const payload = await commWhatsAppService.exportInboxConversations({
+      const payload = await whatsappDashboardService.exportConversations({
         onProgress: (progress) => {
           if (progress.chatsExported > 0 || progress.messagesExported > 0) {
             setExportProgress(`Exportando ${progress.chatsExported}/${progress.chatsLoaded} conversas (${progress.messagesExported} mensagens)`);
@@ -327,7 +328,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
     setSyncAllProgress('Preparando sincronização geral...');
 
     try {
-      const result = await commWhatsAppService.syncAllChats({
+      const result = await whatsappConversationsRepository.syncAll({
         onProgress: (progress) => {
           setSyncAllProgress(
             `${progress.chatsProcessed} conversa(s) verificadas · ${progress.importedMessages} mensagem(ns) recuperada(s)`

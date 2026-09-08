@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Sparkles, XCircle } from 'lucide-react';
 
 import { Alert, Badge, Button, Surface } from '../../../../design-system';
-import { commWhatsAppService, type CommWhatsAppAttendanceCritique } from '../../../../lib/commWhatsAppService';
+import { whatsappFollowUpService, type CommWhatsAppAttendanceCritique } from '../data';
 
 type WhatsAppAttendanceCritiquePanelProps = {
   chatId: string | null;
@@ -59,7 +59,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
     setListLoading(true);
     setListError(null);
 
-    commWhatsAppService
+    whatsappFollowUpService
       .listAttendanceCritiques(chatId)
       .then((result) => {
         if (cancelled) return;
@@ -85,7 +85,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
     setGenerateError(null);
 
     try {
-      const critique = await commWhatsAppService.critiqueAttendance({ chatId });
+      const critique = await whatsappFollowUpService.critiqueAttendance({ chatId });
       setCritiques((prev) => [critique, ...prev]);
       setSelectedId(critique.id);
       setShowHistory(false);

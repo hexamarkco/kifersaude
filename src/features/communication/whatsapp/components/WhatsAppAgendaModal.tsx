@@ -35,7 +35,7 @@ import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 import type { PanelTone } from '../../../../design-system';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
-import { commWhatsAppService, formatCommWhatsAppPhoneLabel, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../../../../lib/commWhatsAppService';
+import { whatsappFollowUpService, formatCommWhatsAppPhoneLabel, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../data';
 import { addBusinessDaysSkippingWeekends, formatEstimatedTime } from '../../../../lib/reminderUtils';
 import { getReminderWhatsappLink, isReminderPriority } from '../../../reminders/shared/reminderHelpers';
 import type { ManualReminderPrompt } from '../../../reminders/shared/reminderTypes';
@@ -336,7 +336,7 @@ export default function WhatsAppAgendaModal({
 
       applyAgendaSnapshot(snapshot);
       try {
-        const pendingChats = await commWhatsAppService.getPendingFollowUpChats();
+        const pendingChats = await whatsappFollowUpService.listPendingChats();
         if (requestId === loadRemindersRequestIdRef.current) {
           setPendingCount(pendingChats.length);
         }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { CommWhatsAppMediaSendKind } from '../../../../lib/commWhatsAppService';
+import type { CommWhatsAppMediaSendKind } from '../data';
 import { toast } from '../../../../lib/toast';
 
 export type VoiceRecordingState = 'idle' | 'requesting' | 'recording';

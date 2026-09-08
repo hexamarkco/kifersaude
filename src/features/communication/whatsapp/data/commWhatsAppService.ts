@@ -4,12 +4,14 @@ import {
   supabase,
   supabaseFunctionsUrl,
   waitForSupabaseSession,
-  type CommWhatsAppChannel,
-  type CommWhatsAppChat,
-  type CommWhatsAppMessage,
-  type CommWhatsAppPhoneContact,
-  type Contract,
-} from './supabase';
+} from '../../../../infrastructure/supabase';
+import type { Contract } from '../../../contracts';
+import type {
+  CommWhatsAppChannel,
+  CommWhatsAppChat,
+  CommWhatsAppMessage,
+  CommWhatsAppPhoneContact,
+} from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
 export type CommWhatsAppOperationalState = {

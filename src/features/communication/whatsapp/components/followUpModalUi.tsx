@@ -22,7 +22,7 @@ import type {
   CommWhatsAppFollowUpNextAction,
   CommWhatsAppFollowUpVariation,
   CommWhatsAppRewriteTone,
-} from '../../../../lib/commWhatsAppService';
+} from '../data';
 
 // ---- Shared visual building blocks for the follow-up (single + batch) modals.
 // Centralized here so both flows look and behave identically instead of

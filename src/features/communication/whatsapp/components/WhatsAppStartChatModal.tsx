@@ -4,7 +4,7 @@ import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } fro
 import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
-import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
+import type { CommWhatsAppLeadSearchResult } from '../data';
 import type { CommWhatsAppPhoneContact, LeadStatusConfig } from '../../../../lib/supabase';
 import WhatsAppDialog from './WhatsAppDialog';
 

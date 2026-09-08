@@ -1,7 +1,7 @@
 import { supabase, Reminder, Lead, type CommWhatsAppChat } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { isReminderDue } from './dateUtils';
-import { commWhatsAppService } from './commWhatsAppService';
+import { whatsappConversationsRepository } from '../features/communication/whatsapp/data/conversationsRepository';
 
 export type NotificationCallback = (reminder: Reminder) => void;
 export type LeadNotificationCallback = (lead: Lead) => void;
@@ -128,7 +128,7 @@ class NotificationService {
       return;
     }
 
-    void commWhatsAppService.getOperationalState()
+    void whatsappConversationsRepository.getOperationalState()
       .then((state) => {
         const channelId = state?.channel?.id;
         if (!channelId) return;
@@ -213,7 +213,7 @@ class NotificationService {
       }
     }
 
-    void commWhatsAppService.getUnreadChatsCount()
+    void whatsappConversationsRepository.getUnreadCount()
       .then((count) => {
         this.lastInboxUnreadCount = count;
         this.inboxUnreadCountCallbacks.forEach(callback => callback(count));
@@ -247,7 +247,7 @@ class NotificationService {
           .select('*')
           .eq('lido', false)
           .order('data_lembrete', { ascending: true }),
-        commWhatsAppService.getUnreadChatsCount(),
+        whatsappConversationsRepository.getUnreadCount(),
       ]);
 
       if (error) throw error;

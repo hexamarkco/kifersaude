@@ -33,3 +33,4 @@ test('returns null when no completed audit result exists', async () => {
   assert.equal(await pollForCompletedFollowUp(lookup, [0, 1], waitForDelay), null);
   assert.equal(lookupCount, 2);
 });
+

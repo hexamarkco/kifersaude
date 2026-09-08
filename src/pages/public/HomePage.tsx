@@ -26,9 +26,13 @@ import {
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import { Input, Select } from '../../design-system';
+import {
+  loadPublicHomeMetrics,
+  submitPublicLead,
+  type PublicLeadSubmission,
+} from '../../features/public-content';
 import { fetchCitiesByState } from '../../lib/brasilLocations';
 import { formatPhoneInput } from '../../lib/inputFormatters';
-import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 
 type ContractKind = 'PF' | 'MEI' | 'CNPJ';
@@ -595,13 +599,12 @@ export default function HomePage() {
     let active = true;
 
     const loadPublicMetrics = async () => {
-      const { data, error } = await supabase.functions.invoke('public-home-metrics');
-
-      if (!active || error || !data || !Array.isArray(data.metrics)) {
+      const values = await loadPublicHomeMetrics().catch(() => []);
+      if (!active) {
         return;
       }
 
-      const metrics = data.metrics
+      const metrics = values
         .map(normalizePublicMetric)
         .filter((metric: PublicMetric | null): metric is PublicMetric => Boolean(metric));
 
@@ -741,7 +744,7 @@ export default function HomePage() {
 
     setSubmitting(true);
 
-    const payload = {
+    const payload: PublicLeadSubmission = {
       name: cleanName,
       phone: cleanPhone,
       city: cleanCity,
@@ -760,10 +763,7 @@ export default function HomePage() {
     };
 
     try {
-      const { error } = await supabase.functions.invoke('public-lead-submit', { body: payload });
-      if (error) {
-        throw error;
-      }
+      await submitPublicLead(payload);
 
       const whatsappMessage = [
         'Olá! Acabei de preencher a cotação no site da Kifer.',

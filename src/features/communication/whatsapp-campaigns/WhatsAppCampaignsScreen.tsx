@@ -7,7 +7,7 @@ import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePi
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
-import { supabase } from '../../../lib/supabase';
+import { subscribeToCampaignListChanges } from './campaignRealtime';
 import {
   commWhatsAppCampaignService,
   computeAdmissionIntervalMinutes,
@@ -369,16 +369,11 @@ export default function WhatsAppCampaignsScreen() {
       refreshTimer = window.setTimeout(() => void loadCampaigns(), 350);
     };
 
-    const channel = supabase
-      .channel(`comm-whatsapp-campaigns-screen-${Math.random().toString(36).slice(2)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_campaigns' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_campaign_worker_runs' }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comm_whatsapp_ai_intent_suggestions' }, scheduleRefresh)
-      .subscribe();
+    const unsubscribe = subscribeToCampaignListChanges(scheduleRefresh);
 
     return () => {
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [loadCampaigns]);
 

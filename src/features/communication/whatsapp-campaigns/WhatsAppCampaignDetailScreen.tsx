@@ -6,8 +6,8 @@ import '../communicationTerracotta.css';
 import { Badge, Button, Card, EmptyState, IconButton, Input, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import Pagination from '../../../components/Pagination';
-import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../lib/toast';
+import { subscribeToCampaignChanges } from './campaignRealtime';
 import {
   commWhatsAppCampaignService,
   computeAdmissionIntervalMinutes,
@@ -258,21 +258,16 @@ export default function WhatsAppCampaignDetailScreen() {
       if (active) startPollingFallback();
     }, 4_000);
 
-    const channel = supabase
-      .channel(`comm-whatsapp-campaign-${campaignId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'comm_whatsapp_campaigns', filter: `id=eq.${campaignId}` },
-        (payload) => {
-          if (!active) return;
-          setCampaign(payload.new as CommWhatsAppCampaign);
-          void refreshLiveData();
-        },
-      )
-      .subscribe((status) => {
+    const unsubscribe = subscribeToCampaignChanges(campaignId, {
+      onCampaign: (nextCampaign) => {
+        if (!active) return;
+        setCampaign(nextCampaign);
+        void refreshLiveData();
+      },
+      onStatus: (status) => {
         if (!active) return;
 
-        if (status === 'SUBSCRIBED') {
+        if (status === 'connected') {
           window.clearTimeout(fallbackTimeoutId);
           if (pollIntervalId !== null) {
             window.clearInterval(pollIntervalId);
@@ -281,18 +276,19 @@ export default function WhatsAppCampaignDetailScreen() {
           setIsLive(true);
         }
 
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        if (status === 'disconnected') {
           window.clearTimeout(fallbackTimeoutId);
           startPollingFallback();
           setIsLive(false);
         }
-      });
+      },
+    });
 
     return () => {
       active = false;
       window.clearTimeout(fallbackTimeoutId);
       if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [campaignId, refreshLiveData]);
 

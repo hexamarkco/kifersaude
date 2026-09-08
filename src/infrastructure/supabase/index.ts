@@ -1,5 +1,6 @@
 export {
   getSupabaseRequestTimeoutMs,
+  databaseClient,
   supabase,
   supabaseFunctionsUrl,
 } from './client';

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { supabase, Contract, fetchAllPages } from "../../lib/supabase";
+import type { Contract } from "./domain/types";
+import {
+  deleteContract,
+  listContractsSearchSnapshot,
+  subscribeToContractChanges,
+} from "./data/contractsRepository";
 import {
   Plus,
   Search,
@@ -146,40 +151,21 @@ export default function ContractsManager({
   useEffect(() => {
     loadContracts();
 
-    const channel = supabase
-      .channel("contracts-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "contracts",
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            setContracts((current) => [payload.new as Contract, ...current]);
-          } else if (payload.eventType === "UPDATE") {
-            setContracts((current) =>
-              current.map((contract) =>
-                contract.id === (payload.new as Contract).id
-                  ? (payload.new as Contract)
-                  : contract,
-              ),
-            );
-          } else if (payload.eventType === "DELETE") {
-            setContracts((current) =>
-              current.filter(
-                (contract) => contract.id !== (payload.old as Contract).id,
-              ),
-            );
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return subscribeToContractChanges(({ eventType, current: changed, previous }) => {
+      if (eventType === "INSERT" && changed) {
+        setContracts((contracts) => [changed, ...contracts]);
+      } else if (eventType === "UPDATE" && changed) {
+        setContracts((contracts) =>
+          contracts.map((contract) =>
+            contract.id === changed.id ? changed : contract,
+          ),
+        );
+      } else if (eventType === "DELETE" && previous) {
+        setContracts((contracts) =>
+          contracts.filter((contract) => contract.id !== previous.id),
+        );
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -199,62 +185,11 @@ export default function ContractsManager({
   const loadContracts = async () => {
     setLoading(true);
     try {
-      const [contractsData, holdersData, dependentsData] = await Promise.all([
-        fetchAllPages<Contract>(
-          (from, to) =>
-            supabase
-              .from("contracts")
-              .select("*")
-              .order("created_at", { ascending: false })
-              .range(from, to) as unknown as Promise<{
-              data: Contract[] | null;
-              error: unknown;
-            }>,
-        ),
-        fetchAllPages<ContractHolder>(
-          (from, to) =>
-            supabase
-              .from("contract_holders")
-              .select(
-                "id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj, data_nascimento",
-              )
-              .range(from, to) as unknown as Promise<{
-               data: ContractHolder[] | null;
-                 error: unknown;
-              }>,
-        ),
-        fetchAllPages<ContractDependentSearch>(
-          (from, to) =>
-            supabase
-              .from("dependents")
-              .select("id, contract_id, nome_completo, data_nascimento")
-              .range(from, to) as unknown as Promise<{
-              data: ContractDependentSearch[] | null;
-               error: unknown;
-             }>,
-        ),
-      ]);
-
-      const holdersMap: Record<string, ContractHolder[]> = {};
-      holdersData?.forEach((holder) => {
-        if (!holdersMap[holder.contract_id]) {
-          holdersMap[holder.contract_id] = [];
-        }
-        holdersMap[holder.contract_id].push(holder);
-      });
-
-      const dependentsMap: Record<string, ContractDependentSearch[]> = {};
-      dependentsData?.forEach((dependent) => {
-        if (!dependentsMap[dependent.contract_id]) {
-          dependentsMap[dependent.contract_id] = [];
-        }
-        dependentsMap[dependent.contract_id].push(dependent);
-      });
-
-      setContracts(contractsData || []);
-      setHolders(holdersMap);
-      setDependentsByContract(dependentsMap);
-      return contractsData || [];
+      const snapshot = await listContractsSearchSnapshot();
+      setContracts(snapshot.contracts);
+      setHolders(snapshot.holdersByContractId);
+      setDependentsByContract(snapshot.dependentsByContractId);
+      return snapshot.contracts;
     } catch (error) {
       console.error("Erro ao carregar contratos:", error);
       return null;
@@ -371,12 +306,7 @@ export default function ContractsManager({
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase
-        .from("contracts")
-        .delete()
-        .eq("id", contract.id);
-
-      if (error) throw error;
+      await deleteContract(contract.id);
 
       setSelectedContract((current) =>
         current?.id === contract.id ? null : current,

@@ -1,4 +1,3 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
@@ -34,6 +33,8 @@ import {
 } from '../_shared/campaign-intent-classification.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
 import { composePrompt } from '../_shared/prompt-composer.ts';
+import { formatGreetingTitle, getGreetingForDate } from '../_shared/greeting.ts';
+import { createSupabaseAdminClient } from '../_shared/supabase-admin.ts';
 
 declare const Deno: {
   env: {
@@ -175,16 +176,7 @@ const getCampaignSendConcurrency = (): number => {
   return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : DEFAULT_CAMPAIGN_SEND_CONCURRENCY;
 };
 
-const createAdminClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Credenciais do Supabase nao configuradas.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-};
+const createAdminClient = createSupabaseAdminClient;
 
 const createJsonResponse = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), {
   status,
@@ -350,20 +342,11 @@ const getDelayMs = (step: CampaignStepRow) => {
 
 // Mesma logica de src/lib/greeting.ts, duplicada aqui porque Edge Functions
 // (Deno) nao podem importar codigo do bundle do frontend.
-const resolveCampaignGreeting = (now = new Date()): string => {
-  const timeZone = Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE;
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', hour12: false }).formatToParts(now);
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? now.getUTCHours()) % 24;
-
-  if (hour >= 5 && hour < 12) return 'bom dia';
-  if (hour >= 12 && hour < 18) return 'boa tarde';
-  return 'boa noite';
-};
-
-const formatGreetingTitle = (greeting: string): string => {
-  const trimmed = greeting.trim();
-  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}` : '';
-};
+const resolveCampaignGreeting = (now = new Date()): string =>
+  getGreetingForDate(
+    now,
+    Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
+  );
 
 // {{primeiro_nome}} sempre sai so com a inicial maiuscula, independente de
 // como o nome esta cadastrado (tudo maiusculo, tudo minusculo, etc.).

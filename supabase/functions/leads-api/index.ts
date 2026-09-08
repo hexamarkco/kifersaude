@@ -19,60 +19,16 @@ import {
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 import { isDuplicateLead } from '../_shared/leads.ts';
-const DEFAULT_GREETING_TIMEZONE = 'America/Sao_Paulo';
-
-const buildHourFormatter = (timeZone: string) =>
-  new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: '2-digit',
-    hour12: false,
-  });
-
-const getHourFromFormatter = (formatter: Intl.DateTimeFormat, date: Date): number => {
-  const hourPart = formatter.formatToParts(date).find((part) => part.type === 'hour');
-  if (!hourPart) {
-    return date.getUTCHours();
-  }
-  const hour = Number.parseInt(hourPart.value, 10);
-  return Number.isFinite(hour) ? hour : date.getUTCHours();
-};
-
-const resolveHourInTimeZone = (date: Date, timeZone: string, fallbackTimeZone: string): number => {
-  const normalizedTimeZone = timeZone?.trim() || fallbackTimeZone;
-
-  try {
-    return getHourFromFormatter(buildHourFormatter(normalizedTimeZone), date);
-  } catch {
-    if (normalizedTimeZone !== fallbackTimeZone) {
-      try {
-        return getHourFromFormatter(buildHourFormatter(fallbackTimeZone), date);
-      } catch {
-        return date.getUTCHours();
-      }
-    }
-    return date.getUTCHours();
-  }
-};
-
-const getGreetingForDate = (date: Date, timeZone: string = DEFAULT_GREETING_TIMEZONE): string => {
-  const hour = resolveHourInTimeZone(date, timeZone, DEFAULT_GREETING_TIMEZONE);
-
-  if (hour >= 5 && hour < 12) {
-    return 'bom dia';
-  }
-
-  if (hour >= 12 && hour < 18) {
-    return 'boa tarde';
-  }
-
-  return 'boa noite';
-};
-
-const formatGreetingTitle = (greeting: string): string => {
-  const trimmed = greeting.trim();
-  if (!trimmed) return '';
-  return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
-};
+import { formatGreetingTitle, getGreetingForDate } from '../_shared/greeting.ts';
+import {
+  DEFAULT_SCHEDULING,
+  buildDateInTimeZone,
+  buildTimeZoneDayWindow,
+  getNextAllowedSendAt,
+  parseHourMinute,
+  toZonedDate,
+  type AutoContactSchedulingSettings,
+} from './domain/scheduling.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -508,15 +464,6 @@ type AutoContactFlow = {
   invalidNumberStatus?: string;
 };
 
-type AutoContactSchedulingSettings = {
-  timezone: string;
-  startHour: string;
-  endHour: string;
-  allowedWeekdays: number[];
-  skipHolidays: boolean;
-  dailySendLimit: number | null;
-};
-
 type AutoContactFlowSettings = {
   enabled: boolean;
   autoSend: boolean;
@@ -537,171 +484,6 @@ function normalizeText(value: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
 }
-
-const DEFAULT_SCHEDULING: AutoContactSchedulingSettings = {
-  timezone: 'America/Sao_Paulo',
-  startHour: '08:00',
-  endHour: '19:00',
-  allowedWeekdays: [1, 2, 3, 4, 5],
-  skipHolidays: true,
-  dailySendLimit: null,
-};
-
-type DateParts = {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-};
-
-const parseHourMinute = (value: string): { hour: number; minute: number } => {
-  if (!value) return { hour: 0, minute: 0 };
-  const [rawHour, rawMinute] = value.split(':');
-  const hour = Number(rawHour);
-  const minute = Number(rawMinute);
-  return {
-    hour: Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 23) : 0,
-    minute: Number.isFinite(minute) ? Math.min(Math.max(minute, 0), 59) : 0,
-  };
-};
-
-const getTimeZoneOffset = (date: Date, timeZone: string): number => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(date);
-  const lookup: Record<string, string> = {};
-  for (const part of parts) {
-    if (part.type !== 'literal') {
-      lookup[part.type] = part.value;
-    }
-  }
-  const year = Number(lookup.year);
-  const month = Number(lookup.month);
-  const day = Number(lookup.day);
-  const hour = Number(lookup.hour);
-  const minute = Number(lookup.minute);
-  const second = Number(lookup.second);
-  const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
-  return asUtc - date.getTime();
-};
-
-const toZonedDate = (date: Date, timeZone: string): Date => {
-  const offset = getTimeZoneOffset(date, timeZone);
-  return new Date(date.getTime() + offset);
-};
-
-const buildDateInTimeZone = ({ year, month, day, hour, minute }: DateParts, timeZone: string): Date => {
-  const utcDate = new Date(Date.UTC(year, month, day, hour, minute, 0));
-  const offset = getTimeZoneOffset(utcDate, timeZone);
-  return new Date(utcDate.getTime() - offset);
-};
-
-const addDaysToZoned = (zoned: Date, days: number): Date => new Date(zoned.getTime() + days * 86400000);
-
-const getWeekdayNumber = (zoned: Date): number => {
-  const day = zoned.getUTCDay();
-  return day === 0 ? 7 : day;
-};
-
-const getNextAllowedSendAt = (reference: Date, scheduling: AutoContactSchedulingSettings): Date => {
-  const allowedWeekdays = scheduling.allowedWeekdays?.length
-    ? scheduling.allowedWeekdays
-    : [1, 2, 3, 4, 5, 6, 7];
-  const start = parseHourMinute(scheduling.startHour);
-  const end = parseHourMinute(scheduling.endHour);
-  let candidate = new Date(reference.getTime());
-
-  for (let attempt = 0; attempt < 370; attempt += 1) {
-    const zoned = toZonedDate(candidate, scheduling.timezone);
-    const weekday = getWeekdayNumber(zoned);
-    const isAllowedWeekday = allowedWeekdays.includes(weekday);
-
-    if (!isAllowedWeekday) {
-      const nextDay = addDaysToZoned(zoned, 1);
-      candidate = buildDateInTimeZone(
-        {
-          year: nextDay.getUTCFullYear(),
-          month: nextDay.getUTCMonth(),
-          day: nextDay.getUTCDate(),
-          hour: start.hour,
-          minute: start.minute,
-        },
-        scheduling.timezone,
-      );
-      continue;
-    }
-
-    const currentMinutes = zoned.getUTCHours() * 60 + zoned.getUTCMinutes();
-    const startMinutes = start.hour * 60 + start.minute;
-    const endMinutes = end.hour * 60 + end.minute;
-
-    if (currentMinutes < startMinutes) {
-      candidate = buildDateInTimeZone(
-        {
-          year: zoned.getUTCFullYear(),
-          month: zoned.getUTCMonth(),
-          day: zoned.getUTCDate(),
-          hour: start.hour,
-          minute: start.minute,
-        },
-        scheduling.timezone,
-      );
-      return candidate;
-    }
-
-    if (currentMinutes > endMinutes) {
-      const nextDay = addDaysToZoned(zoned, 1);
-      candidate = buildDateInTimeZone(
-        {
-          year: nextDay.getUTCFullYear(),
-          month: nextDay.getUTCMonth(),
-          day: nextDay.getUTCDate(),
-          hour: start.hour,
-          minute: start.minute,
-        },
-        scheduling.timezone,
-      );
-      continue;
-    }
-
-    return candidate;
-  }
-
-  return candidate;
-};
-
-const buildTimeZoneDayWindow = (
-  reference: Date,
-  timeZone: string,
-): { dayKey: string; start: Date; end: Date } => {
-  const zoned = toZonedDate(reference, timeZone);
-  const year = zoned.getUTCFullYear();
-  const month = zoned.getUTCMonth();
-  const day = zoned.getUTCDate();
-  const nextDayUtc = new Date(Date.UTC(year, month, day + 1, 0, 0, 0));
-  const start = buildDateInTimeZone({ year, month, day, hour: 0, minute: 0 }, timeZone);
-  const end = buildDateInTimeZone(
-    {
-      year: nextDayUtc.getUTCFullYear(),
-      month: nextDayUtc.getUTCMonth(),
-      day: nextDayUtc.getUTCDate(),
-      hour: 0,
-      minute: 0,
-    },
-    timeZone,
-  );
-  const dayKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  return { dayKey, start, end };
-};
 
 const getFlowDailySendCount = async ({
   supabase,

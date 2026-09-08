@@ -1,6 +1,10 @@
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { databaseClient, fetchAllPages } from '../../../infrastructure/supabase';
+import {
+  databaseClient,
+  fetchAllPages,
+  type Database,
+} from '../../../infrastructure/supabase';
 import type { Contract } from '../domain/types';
 import type {
   ContractDependentSearch,
@@ -71,6 +75,16 @@ export async function deleteContract(contractId: string): Promise<void> {
   if (error) {
     throw error;
   }
+}
+
+export async function saveContractDependent(
+  values: Database['public']['Tables']['dependents']['Insert'],
+  dependentId?: string,
+): Promise<void> {
+  const { error } = dependentId
+    ? await databaseClient.from('dependents').update(values).eq('id', dependentId)
+    : await databaseClient.from('dependents').insert(values);
+  if (error) throw error;
 }
 
 export function subscribeToContractChanges(

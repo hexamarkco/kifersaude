@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
-import { supabase, type ContractHolder, type Dependent } from '../lib/supabase';
+import {
+  saveContractDependent,
+  type ContractHolder,
+  type Dependent,
+} from '../features/contracts';
 import { formatDateForInput } from '../lib/dateUtils';
 import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
@@ -213,18 +217,7 @@ export default function DependentForm({
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
       };
 
-      if (dependent) {
-        const { error } = await supabase
-          .from('dependents')
-          .update(dataToSave)
-          .eq('id', dependent.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('dependents').insert([dataToSave]);
-
-        if (error) throw error;
-      }
+      await saveContractDependent(dataToSave, dependent?.id);
 
       onSave();
     } catch (error) {

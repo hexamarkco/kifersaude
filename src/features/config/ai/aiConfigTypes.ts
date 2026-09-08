@@ -145,6 +145,20 @@ export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
   "sandbox.scenario": "Cenário Sandbox",
 };
 
+export const AI_FEATURE_AI_TASK: Record<AiFeatureKey, string> = {
+  "followup.generate": "follow_up_generation",
+  "followup.analysis": "follow_up_analysis",
+  "followup.refine": "follow_up_generation",
+  "message.rewrite": "rewrite_message",
+  "message.suggest": "follow_up_generation",
+  "attendance.critique": "attendance_critique",
+  "audio.transcribe": "whatsapp_audio_transcription",
+  "autonomous.reply": "autonomous_attendance",
+  "sandbox.scenario": "autonomous_attendance",
+  "campaign.intent": "follow_up_generation",
+  "agenda.organize": "follow_up_agenda_organization",
+};
+
 export const AI_FEATURE_CATEGORIES: Record<string, string> = {
   transcription: "Transcrição",
   messaging: "Mensagens",

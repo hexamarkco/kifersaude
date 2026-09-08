@@ -211,6 +211,56 @@ export const aiConfigService = {
     return { data: models, error: null };
   },
 
+  async fetchModelCatalog(): Promise<ServiceResult<AiModelCatalogWithPricing[]>> {
+    const { data, error } = await supabase
+      .from("ai_models")
+      .select(`
+        id, provider, model, display_name, capabilities, active, deprecated_at, created_at, updated_at,
+        ai_model_pricing!left(input_per_million, output_per_million)
+      `)
+      .order("provider")
+      .order("display_name");
+
+    if (error) return { data: null, error: error.message };
+
+    const models: AiModelCatalogWithPricing[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const pricing = Array.isArray(row.ai_model_pricing) ? row.ai_model_pricing[0] : row.ai_model_pricing;
+      return {
+        id: row.id as string,
+        provider: row.provider as AiProviderSlug,
+        model: row.model as string,
+        display_name: row.display_name as string,
+        capabilities: (row.capabilities ?? []) as AiModelCatalogCapability[],
+        active: row.active as boolean,
+        deprecated_at: row.deprecated_at as string | null,
+        created_at: row.created_at as string,
+        updated_at: row.updated_at as string,
+        has_pricing: pricing != null,
+        input_per_million: pricing?.input_per_million ?? null,
+        output_per_million: pricing?.output_per_million ?? null,
+      };
+    });
+
+    return { data: models, error: null };
+  },
+
+  async fetchRoutingSettings(): Promise<ServiceResult<Record<string, unknown>>> {
+    const { data, error } = await supabase
+      .from("integration_settings")
+      .select("settings")
+      .eq("slug", "ai_routing")
+      .maybeSingle();
+
+    if (error) return { data: null, error: error.message };
+    const settings = data?.settings;
+    return {
+      data: typeof settings === "object" && settings !== null && !Array.isArray(settings)
+        ? settings as Record<string, unknown>
+        : {},
+      error: null,
+    };
+  },
+
   async validateModelOverride(
     provider: AiProviderSlug,
     model: string,

@@ -18,6 +18,7 @@ import type {
 } from "../aiConfigTypes";
 import {
   AI_FEATURE_LABELS,
+  AI_FEATURE_AI_TASK,
   AI_PROVIDER_OPTIONS,
   AI_MODEL_RESOLUTION_SOURCE_LABELS,
   TASK_TYPE_REQUIRED_CAPABILITIES,
@@ -43,36 +44,6 @@ const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
   ai_routing: "bg-[var(--color-info)]/10 text-[var(--color-info)]",
   provider_default: "bg-[var(--text-muted)]/10 text-[var(--text-muted)]",
   fallback: "bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
-};
-
-/** Maps feature key to the ai-feature-registry taskType */
-const FEATURE_TASK_TYPE: Record<string, string> = {
-  "followup.generate": "text",
-  "followup.analysis": "structured_output",
-  "followup.refine": "text",
-  "message.rewrite": "text",
-  "message.suggest": "text",
-  "attendance.critique": "structured_output",
-  "audio.transcribe": "transcription",
-  "autonomous.reply": "text",
-  "sandbox.scenario": "structured_output",
-  "campaign.intent": "structured_output",
-  "agenda.organize": "structured_output",
-};
-
-/** Maps feature key to aiTask for effective model resolution */
-const FEATURE_AI_TASK: Record<string, string> = {
-  "followup.generate": "follow_up_generation",
-  "followup.analysis": "follow_up_analysis",
-  "followup.refine": "follow_up_generation",
-  "message.rewrite": "rewrite_message",
-  "message.suggest": "follow_up_generation",
-  "attendance.critique": "attendance_critique",
-  "audio.transcribe": "whatsapp_audio_transcription",
-  "autonomous.reply": "autonomous_attendance",
-  "sandbox.scenario": "autonomous_attendance",
-  "campaign.intent": "follow_up_generation",
-  "agenda.organize": "follow_up_agenda_organization",
 };
 
 /**
@@ -125,7 +96,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
   const [catalogMeta, setCatalogMeta] = useState<Map<string, AiModelCatalogWithPricing>>(new Map());
 
-  const taskType = FEATURE_TASK_TYPE[feature.key] ?? "text";
+  const taskType = feature.task_type ?? "text";
   const requiredCapabilities = useMemo(
     () => TASK_TYPE_REQUIRED_CAPABILITIES[taskType] ?? ["text"],
     [taskType],
@@ -138,7 +109,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, [feature.id]);
 
   const loadEffectiveModel = useCallback(async () => {
-    const task = FEATURE_AI_TASK[feature.key];
+    const task = AI_FEATURE_AI_TASK[feature.key];
     if (!task) return;
     const { data } = await aiConfigService.fetchEffectiveModel(feature.key, task);
     if (data) {

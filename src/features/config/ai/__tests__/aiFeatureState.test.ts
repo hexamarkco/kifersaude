@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { test } from "vitest";
 
 import type { AiFeatureConfigRow, AiFeatureWithConfig } from "../aiConfigTypes";
 import {
@@ -49,14 +50,13 @@ const feature = (
   config_count: latestConfig ? 1 : 0,
 });
 
-describe("AI feature presentation state", () => {
-  it("treats a disabled Feature as legacy even if stale config data says active", () => {
+test("disabled AI Feature is legacy even if stale config data says active", () => {
     const staleLegacy = feature("followup.analysis", false, config(5, true));
 
-    expect(getAiFeatureDisplayState(staleLegacy)).toBe("legacy");
-  });
+    assert.equal(getAiFeatureDisplayState(staleLegacy), "legacy");
+});
 
-  it("separates legacy Features and excludes them from operational counters", () => {
+test("AI Feature presentation separates legacy Features from operational counters", () => {
     const generate = feature("followup.generate", true, config(6, true));
     const refine = feature("followup.refine", true, config(5, true));
     const analysis = feature("followup.analysis", false, null, config(5, false));
@@ -66,17 +66,14 @@ describe("AI feature presentation state", () => {
       { followup: "Follow-up" },
     );
 
-    expect(categories).toHaveLength(2);
-    expect(categories[0]).toMatchObject({ label: "Follow-up", features: [generate, refine] });
-    expect(categories[1]).toMatchObject({ label: "Legadas", features: [analysis] });
-    expect(countActiveAiFeatures([analysis, generate, refine])).toBe(2);
-    expect(countOperationalAiFeatures([analysis, generate, refine])).toBe(2);
-  });
+    assert.equal(categories.length, 2);
+    assert.deepEqual(categories[0], { label: "Follow-up", features: [generate, refine] });
+    assert.deepEqual(categories[1], { label: "Legadas", features: [analysis] });
+    assert.equal(countActiveAiFeatures([analysis, generate, refine]), 2);
+    assert.equal(countOperationalAiFeatures([analysis, generate, refine]), 2);
+});
 
-  it("distinguishes an inactive saved config from a Feature without history", () => {
-    expect(getAiFeatureDisplayState(feature("followup.refine", true, null, config(4, false))))
-      .toBe("inactive");
-    expect(getAiFeatureDisplayState(feature("followup.refine", true, null, null)))
-      .toBe("unconfigured");
-  });
+test("AI Feature presentation distinguishes inactive config from no history", () => {
+    assert.equal(getAiFeatureDisplayState(feature("followup.refine", true, null, config(4, false))), "inactive");
+    assert.equal(getAiFeatureDisplayState(feature("followup.refine", true, null, null)), "unconfigured");
 });

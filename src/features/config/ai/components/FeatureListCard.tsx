@@ -4,6 +4,7 @@ import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 import { Badge, Button, Card, ConfirmDialog } from "../../../../design-system";
 import type { AiFeatureWithConfig, AiFeatureCategory } from "../aiConfigTypes";
 import { AI_FEATURE_LABELS } from "../aiConfigTypes";
+import { getAiFeatureDisplayState } from "../aiFeatureState";
 
 type Props = {
   category: AiFeatureCategory;
@@ -25,7 +26,10 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
       </div>
       <div className="divide-y divide-[var(--border-subtle)]">
         {category.features.map((feature) => {
-          const hasActive = !!feature.active_config;
+          const state = getAiFeatureDisplayState(feature);
+          const isLegacy = state === "legacy";
+          const isActive = state === "active";
+          const displayConfig = feature.active_config ?? feature.latest_config;
           const label = AI_FEATURE_LABELS[feature.key] ?? feature.name;
 
           return (
@@ -33,16 +37,16 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
               key={feature.id}
               className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-subtle)] transition-colors"
             >
-              <Brain className={`h-4 w-4 shrink-0 ${hasActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}`} />
+              <Brain className={`h-4 w-4 shrink-0 ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}`} />
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-[var(--text-primary)] truncate">
                     {label}
                   </span>
-                  {hasActive ? (
-                    <Badge tone="success" size="sm">
-                      v{feature.active_config!.version}
+                  {displayConfig ? (
+                    <Badge tone={isActive ? "success" : "neutral"} size="sm">
+                      v{displayConfig.version}
                     </Badge>
                   ) : (
                     <Badge tone="neutral" size="sm">
@@ -58,35 +62,37 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                {hasActive && (
+                {displayConfig && (
                   <Badge
-                    tone={feature.active_config!.is_active ? "success" : "neutral"}
+                    tone={isActive ? "success" : "neutral"}
                     size="sm"
                   >
-                    {feature.active_config!.is_active ? "Ativo" : "Inativo"}
+                    {isLegacy ? "Desativada" : isActive ? "Ativo" : "Inativo"}
                   </Badge>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(feature)}
-                  title="Configurar"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                {hasActive && (
+                {!isLegacy && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(feature)}
+                    title="Configurar"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {!isLegacy && displayConfig && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() =>
                       setConfirmTarget({
-                        configId: feature.active_config!.id,
-                        action: feature.active_config!.is_active ? "deactivate" : "activate",
+                        configId: displayConfig.id,
+                        action: isActive ? "deactivate" : "activate",
                       })
                     }
-                    title={feature.active_config!.is_active ? "Desativar" : "Ativar"}
+                    title={isActive ? "Desativar" : "Ativar"}
                   >
-                    {feature.active_config!.is_active ? (
+                    {isActive ? (
                       <PowerOff className="h-3.5 w-3.5 text-[var(--color-danger)]" />
                     ) : (
                       <Power className="h-3.5 w-3.5 text-[var(--color-success)]" />

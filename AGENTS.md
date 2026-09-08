@@ -65,6 +65,7 @@ Ao implementar ou corrigir:
 
 ## Project memory
 
+- 2026-09-07: Export/import de Configuracoes de IA usa schema v2: cada Feature preserva `model_override_enabled`, `provider` e `model`; `effective_*`, `resolution_source`, `model_catalog_snapshot` e `routing_snapshot` sao estritamente informativos e nunca alteram catalogo/routing no import. Exports v1 continuam suportados sem inventar override. Features com `ai_features.enabled=false` sao legadas, ficam separadas na UI e nao podem ser reativadas por uma versao de config residual.
 - 2026-09-07: O pipeline normal de follow-up passa a usar somente `followup.generate` (`task_type='text'`) para raciocinar internamente e retornar a mensagem final. `followup.analysis` permanece como legado desativado; a validacao de output e deterministica/local, com no maximo 1 retry tecnico e sem validator/regeneracao por qualidade. `followup.refine` continua manual e a recuperacao tardia por `comm_follow_up_audit_log` evita nova chamada apos timeout do cliente.
 - 2026-03-10: Este repositorio passou a adotar como referencia permanente os frameworks `claude-mem`, `get-shit-done`, `superpowers` e `awesome-claude-code` para comportamento, planejamento e execucao.
 - 2026-03-11: A paleta institucional padrao do front passa a priorizar marrom, laranja, preto e branco, com cinzas apenas como apoio neutro. Cores semanticas como verde, vermelho e azul devem ficar restritas a feedback funcional e status.

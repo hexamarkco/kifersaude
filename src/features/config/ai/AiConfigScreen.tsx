@@ -21,10 +21,16 @@ import { toast } from "../../../lib/toast";
 import { aiConfigService } from "./aiConfigService";
 import type {
   AiFeatureWithConfig,
-  AiFeatureCategory,
   AiGlobalConfigRow,
+  AiModelResolutionSource,
+  AiProviderSlug,
 } from "./aiConfigTypes";
-import { AI_FEATURE_CATEGORIES } from "./aiConfigTypes";
+import { AI_FEATURE_AI_TASK, AI_FEATURE_CATEGORIES, AI_PROVIDER_OPTIONS } from "./aiConfigTypes";
+import {
+  buildAiConfigExportV2,
+  createAiConfigImportPlan,
+  type AiConfigImportPlan,
+} from "./aiConfigTransfer";
 import {
   buildAiFeatureCategories,
   countActiveAiFeatures,
@@ -46,7 +52,9 @@ export default function AiConfigScreen() {
   );
   const [editingFeature, setEditingFeature] = useState<AiFeatureWithConfig | null>(null);
   const [search, setSearch] = useState("");
-  const [importConfirm, setImportConfirm] = useState<{ data: string; count: number } | null>(null);
+  const [importConfirm, setImportConfirm] = useState<AiConfigImportPlan | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -101,88 +109,122 @@ export default function AiConfigScreen() {
     load();
   }, [load]);
 
-  const handleExport = useCallback(() => {
-    const exportData = {
-      version: 1,
-      exported_at: new Date().toISOString(),
-      features: features.map((f) => ({
-        key: f.key,
-        name: f.name,
-        active_config: f.active_config
-          ? {
-              feature_prompt: f.active_config.feature_prompt,
-              output_instructions: f.active_config.output_instructions,
-              temperature: f.active_config.temperature,
-              max_output_tokens: f.active_config.max_output_tokens,
-            }
-          : null,
-      })),
-      global_configs: globalConfigs.map((g) => ({ key: g.key, value: g.value })),
-    };
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const operationalFeatures = features.filter((feature) => feature.enabled !== false && feature.active_config);
+      const [catalogResult, routingResult, providerResults, effectiveResults] = await Promise.all([
+        aiConfigService.fetchModelCatalog(),
+        aiConfigService.fetchRoutingSettings(),
+        Promise.all(AI_PROVIDER_OPTIONS.map(async ({ value: provider }) => ({
+          provider,
+          result: await aiConfigService.fetchProviderModels(provider),
+        }))),
+        Promise.all(operationalFeatures.map(async (feature) => ({
+          key: feature.key,
+          result: await aiConfigService.fetchEffectiveModel(feature.key, AI_FEATURE_AI_TASK[feature.key]),
+        }))),
+      ]);
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ai-config-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Configurações exportadas");
+      if (catalogResult.error || !catalogResult.data) {
+        throw new Error(catalogResult.error ?? "Não foi possível carregar o catálogo de modelos.");
+      }
+
+      const selectableByProvider = Object.fromEntries(
+        providerResults.map(({ provider, result }) => [provider, result.data ?? []]),
+      ) as Record<AiProviderSlug, Array<{ value: string; label: string }>>;
+      const effectiveModels = new Map(effectiveResults.flatMap(({ key, result }) => (
+        result.data
+          ? [[key, {
+              provider: result.data.provider,
+              model: result.data.model,
+              source: result.data.source as AiModelResolutionSource,
+            }] as const]
+          : []
+      )));
+
+      const exportData = buildAiConfigExportV2({
+        features,
+        globalConfigs,
+        effectiveModels,
+        selectableByProvider,
+        modelCatalog: catalogResult.data,
+        routingSettings: routingResult.data,
+      });
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `ai-config-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+
+      const unavailableProviders = providerResults.filter(({ result }) => result.error).length;
+      if (unavailableProviders > 0) {
+        toast.warning(`Export concluído; ${unavailableProviders} provider(s) não responderam ao snapshot em tempo real.`);
+      } else {
+        toast.success("Configurações exportadas");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar as configurações.");
+    } finally {
+      setExporting(false);
+    }
   }, [features, globalConfigs]);
 
-  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result as string);
-        if (!data.features || !Array.isArray(data.features)) {
-          return toast.error("Formato de arquivo inválido");
-        }
-        const withConfig = data.features.filter((f: { active_config: unknown }) => f.active_config);
-        setImportConfirm({ data: reader.result as string, count: withConfig.length });
-      } catch {
-        toast.error("Não foi possível ler o arquivo.");
-      }
-    };
-    reader.readAsText(file);
     e.target.value = "";
-  }, []);
+
+    try {
+      const [contents, catalogResult] = await Promise.all([
+        file.text(),
+        aiConfigService.fetchModelCatalog(),
+      ]);
+      if (catalogResult.error || !catalogResult.data) {
+        throw new Error(catalogResult.error ?? "Não foi possível validar o catálogo atual.");
+      }
+      setImportConfirm(createAiConfigImportPlan(JSON.parse(contents), features, catalogResult.data));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível ler o arquivo.");
+    }
+  }, [features]);
 
   const handleImportConfirm = useCallback(async () => {
     if (!importConfirm) return;
 
+    setImporting(true);
     try {
-      const data = JSON.parse(importConfirm.data);
       let imported = 0;
+      const failures: string[] = [];
 
-      for (const feat of data.features) {
-        if (!feat.active_config) continue;
-        const feature = features.find((f) => f.key === feat.key);
-        if (!feature) continue;
-
-        const { error } = await aiConfigService.createConfig(feature.id, {
-          feature_prompt: feat.active_config.feature_prompt,
-          output_instructions: feat.active_config.output_instructions,
-          temperature: feat.active_config.temperature,
-          max_output_tokens: feat.active_config.max_output_tokens,
-        });
-        if (!error) imported++;
+      for (const featurePlan of importConfirm.features) {
+        const { error } = await aiConfigService.createConfig(featurePlan.featureId, featurePlan.payload);
+        if (error) failures.push(`${featurePlan.name}: ${error}`);
+        else imported++;
       }
 
-      for (const gc of data.global_configs ?? []) {
+      for (const gc of importConfirm.globalConfigs) {
         await aiConfigService.updateGlobalConfig(gc.key, gc.value);
       }
 
-      toast.success(`${imported} configurações importadas`);
+      if (failures.length > 0) {
+        toast.error(`${imported} importadas; ${failures.length} falharam. ${failures[0]}`);
+      } else if (importConfirm.warnings.length > 0) {
+        toast.warning(`${imported} configurações importadas com ${importConfirm.warnings.length} aviso(s) de modelo.`);
+      } else {
+        toast.success(`${imported} configurações importadas`);
+      }
       setImportConfirm(null);
       load();
-    } catch {
-      toast.error("Não foi possível importar as configurações.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível importar as configurações.");
+    } finally {
+      setImporting(false);
     }
-  }, [importConfirm, features, load]);
+  }, [importConfirm, load]);
 
   return (
     <div className="space-y-6">
@@ -192,7 +234,7 @@ export default function AiConfigScreen() {
         description="Gerencie prompts, parâmetros e versões das funcionalidades de IA do sistema."
         action={
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading}>
+            <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading || exporting} loading={exporting}>
               <Download className="h-4 w-4" />
               Exportar
             </Button>
@@ -280,10 +322,46 @@ export default function AiConfigScreen() {
         onOpenChange={() => setImportConfirm(null)}
         onConfirm={handleImportConfirm}
         title="Importar configurações?"
-        description={`Serão criadas ${importConfirm?.count ?? 0} novas versões de configurações a partir do arquivo importado. As versões atuais serão desativadas.`}
+        description={`Export v${importConfirm?.version ?? 1}: serão criadas ${importConfirm?.features.length ?? 0} novas versões. As versões atuais serão desativadas.`}
         confirmLabel="Importar"
+        loading={importing}
         closeOnConfirm
-      />
+      >
+        {importConfirm && (
+          <div className="max-h-80 space-y-4 overflow-y-auto text-sm">
+            <div>
+              <p className="font-medium text-[var(--text-primary)]">Modelos personalizados</p>
+              <ul className="mt-1 space-y-1 text-[var(--text-secondary)]">
+                {importConfirm.features.filter((feature) => feature.modelMode === "custom").map((feature) => (
+                  <li key={feature.key}>{feature.name} → {feature.modelLabel}</li>
+                ))}
+                {!importConfirm.features.some((feature) => feature.modelMode === "custom") && <li>Nenhum</li>}
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium text-[var(--text-primary)]">Roteamento padrão</p>
+              <ul className="mt-1 space-y-1 text-[var(--text-secondary)]">
+                {importConfirm.features.filter((feature) => feature.modelMode !== "custom").map((feature) => (
+                  <li key={feature.key}>
+                    {feature.name}{feature.modelMode === "legacy" ? " · export v1" : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {importConfirm.warnings.length > 0 && (
+              <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-3">
+                <p className="font-medium text-[var(--color-warning)]">Warnings</p>
+                <ul className="mt-1 space-y-1 text-xs text-[var(--text-secondary)]">
+                  {importConfirm.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
+                </ul>
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  O valor importado será preservado; nenhum modelo alternativo será escolhido silenciosamente.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

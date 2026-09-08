@@ -52,6 +52,19 @@ export async function deleteContractValueAdjustment(
   if (error) throw error;
 }
 
+export async function saveContractValueAdjustment(
+  input: Database['public']['Tables']['contract_value_adjustments']['Insert'],
+  adjustmentId?: string,
+): Promise<void> {
+  const { error } = adjustmentId
+    ? await databaseClient
+        .from('contract_value_adjustments')
+        .update(input)
+        .eq('id', adjustmentId)
+    : await databaseClient.from('contract_value_adjustments').insert(input);
+  if (error) throw error;
+}
+
 export async function saveContractRecord(
   input: ContractPersistenceInput,
   contractId?: string,

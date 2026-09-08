@@ -1,8 +1,10 @@
 export type * from './domain/types';
 export {
   deleteContract,
+  listContractHolders,
   listContractsSearchSnapshot,
   saveContractDependent,
+  saveContractHolder,
   subscribeToContractChanges,
 } from './data/contractsRepository';
 export {
@@ -21,6 +23,7 @@ export {
   listContractConversionLeads,
   listContractValueAdjustments,
   saveContractRecord,
+  saveContractValueAdjustment,
   type ContractPersistenceInput,
 } from './data/contractFormRepository';
 export { default as ContractsManagerScreen } from './ContractsManagerScreen';

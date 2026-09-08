@@ -5,15 +5,15 @@ import {
   fetchAllPages,
   type Database,
 } from '../../../infrastructure/supabase';
-import type { Contract } from '../domain/types';
+import type { Contract, ContractHolder } from '../domain/types';
 import type {
   ContractDependentSearch,
-  ContractHolder,
+  ContractHolder as ContractHolderSearch,
 } from '../shared/contractsManagerTypes';
 
 export type ContractsSearchSnapshot = {
   contracts: Contract[];
-  holdersByContractId: Record<string, ContractHolder[]>;
+  holdersByContractId: Record<string, ContractHolderSearch[]>;
   dependentsByContractId: Record<string, ContractDependentSearch[]>;
 };
 
@@ -40,14 +40,14 @@ export async function listContractsSearchSnapshot(): Promise<ContractsSearchSnap
         .overrideTypes<Contract[], { merge: false }>();
       return result;
     }),
-    fetchAllPages<ContractHolder>(async (from, to) => {
+    fetchAllPages<ContractHolderSearch>(async (from, to) => {
       const result = await databaseClient
         .from('contract_holders')
         .select(
           'id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj, data_nascimento',
         )
         .range(from, to)
-        .overrideTypes<ContractHolder[], { merge: false }>();
+        .overrideTypes<ContractHolderSearch[], { merge: false }>();
       return result;
     }),
     fetchAllPages<ContractDependentSearch>(async (from, to) => {
@@ -85,6 +85,41 @@ export async function saveContractDependent(
     ? await databaseClient.from('dependents').update(values).eq('id', dependentId)
     : await databaseClient.from('dependents').insert(values);
   if (error) throw error;
+}
+
+export async function listContractHolders(
+  contractId: string,
+): Promise<ContractHolder[]> {
+  const { data, error } = await databaseClient
+    .from('contract_holders')
+    .select('*')
+    .eq('contract_id', contractId)
+    .order('created_at')
+    .overrideTypes<ContractHolder[], { merge: false }>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function saveContractHolder(
+  input: Database['public']['Tables']['contract_holders']['Insert'],
+  holderId?: string,
+): Promise<string> {
+  if (holderId) {
+    const { error } = await databaseClient
+      .from('contract_holders')
+      .update(input)
+      .eq('id', holderId);
+    if (error) throw error;
+    return holderId;
+  }
+
+  const { data, error } = await databaseClient
+    .from('contract_holders')
+    .insert(input)
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
 }
 
 export function subscribeToContractChanges(

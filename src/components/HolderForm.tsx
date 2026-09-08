@@ -10,7 +10,11 @@ import {
   UserCircle,
   WalletCards,
 } from 'lucide-react';
-import { supabase, type ContractHolder } from '../lib/supabase';
+import {
+  listContractHolders,
+  saveContractHolder,
+  type ContractHolder,
+} from '../features/contracts';
 import { formatDateForInput } from '../lib/dateUtils';
 import { BRAZIL_STATE_OPTIONS, fetchCitiesByState } from '../lib/brasilLocations';
 import { consultarCep } from '../lib/cepService';
@@ -382,14 +386,7 @@ export default function HolderForm({
   };
 
   const loadHolders = async () => {
-    const { data, error } = await supabase
-      .from('contract_holders')
-      .select('*')
-      .eq('contract_id', contractId)
-      .order('created_at');
-
-    if (error) throw error;
-    const holdersData = data || [];
+    const holdersData = await listContractHolders(contractId);
     setHolders(holdersData);
     return holdersData;
   };
@@ -431,24 +428,8 @@ export default function HolderForm({
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
       };
 
-      if (holder) {
-        const { error } = await supabase
-          .from('contract_holders')
-          .update(dataToSave)
-          .eq('id', holder.id);
-
-        if (error) throw error;
-        setSelectedHolderId(holder.id);
-      } else {
-        const { data, error } = await supabase
-          .from('contract_holders')
-          .insert([dataToSave])
-          .select('*')
-          .single();
-
-        if (error) throw error;
-        setSelectedHolderId(data.id);
-      }
+      const savedHolderId = await saveContractHolder(dataToSave, holder?.id);
+      setSelectedHolderId(savedHolderId);
 
       if (!holder) {
         await loadHolders();

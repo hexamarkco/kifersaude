@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { supabase, ContractValueAdjustment } from '../lib/supabase';
+import {
+  saveContractValueAdjustment,
+  type ContractValueAdjustment,
+} from '../features/contracts';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { ActionSurface, Alert, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Field, Input, Textarea } from '../design-system';
 
@@ -51,20 +54,7 @@ export default function ValueAdjustmentForm({
         created_by: responsavel,
       };
 
-      if (adjustment) {
-        const { error } = await supabase
-          .from('contract_value_adjustments')
-          .update(dataToSave)
-          .eq('id', adjustment.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('contract_value_adjustments')
-          .insert([dataToSave]);
-
-        if (error) throw error;
-      }
+      await saveContractValueAdjustment(dataToSave, adjustment?.id);
 
       onSave();
     } catch (error) {

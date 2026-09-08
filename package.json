@@ -11,6 +11,8 @@
     "test": "node scripts/run-tests.mjs",
     "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "types:supabase": "node scripts/generate-supabase-types.mjs",
+    "types:supabase:check": "node scripts/generate-supabase-types.mjs --check",
     "migrations:report": "node scripts/audit-migrations.mjs",
     "migrations:report:write": "node scripts/audit-migrations.mjs --write",
     "migrations:baseline:write": "node scripts/audit-migrations.mjs --write-baseline",

@@ -27,6 +27,11 @@ import {
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
+import {
+  mapCampaignPermissionToLegacyIntent,
+  normalizeCampaignIntentClassification,
+  type CampaignIntentClassification,
+} from '../_shared/campaign-intent-classification.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
 import { composePrompt } from '../_shared/prompt-composer.ts';
 
@@ -131,14 +136,7 @@ type InboundMessageRow = {
   message_at: string;
 };
 
-type IntentClassification = {
-  contact_permission: 'OPT_OUT_EXPLICITO' | 'NUMERO_ERRADO' | 'DESTINATARIO_INCORRETO' | 'RECLAMACAO_CONTATO' | 'AMBIGUO' | 'NENHUM_SINAL';
-  commercial_intent: 'JA_POSSUI_PLANO' | 'INTERESSADO' | 'SEM_INTERESSE' | 'QUER_SABER_MAIS' | 'ADIAR_CONTATO' | 'OUTRO';
-  confidence: number;
-  recommended_action: 'suggest_block_whatsapp_campaigns' | 'keep_active' | 'review';
-  reason: string;
-  evidence: string;
-};
+type IntentClassification = CampaignIntentClassification;
 
 type WorkerRunSource = NonNullable<WorkerRequestBody['source']>;
 
@@ -340,36 +338,7 @@ const getNextRetryAt = (attempts: number) => {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 };
 
-const CONTACT_PERMISSIONS = new Set(['OPT_OUT_EXPLICITO', 'NUMERO_ERRADO', 'DESTINATARIO_INCORRETO', 'RECLAMACAO_CONTATO', 'AMBIGUO', 'NENHUM_SINAL']);
-const COMMERCIAL_INTENTS = new Set(['JA_POSSUI_PLANO', 'INTERESSADO', 'SEM_INTERESSE', 'QUER_SABER_MAIS', 'ADIAR_CONTATO', 'OUTRO']);
 const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
-
-function deriveRecommendedAction(cp: IntentClassification['contact_permission']): IntentClassification['recommended_action'] {
-  switch (cp) {
-    case 'OPT_OUT_EXPLICITO':
-    case 'NUMERO_ERRADO':
-    case 'DESTINATARIO_INCORRETO':
-    case 'RECLAMACAO_CONTATO':
-      return 'suggest_block_whatsapp_campaigns';
-    case 'AMBIGUO':
-      return 'review';
-    case 'NENHUM_SINAL':
-    default:
-      return 'keep_active';
-  }
-}
-
-function mapContactPermissionToLegacyIntent(
-  cp: IntentClassification['contact_permission'],
-  ci: IntentClassification['commercial_intent'],
-): string {
-  if (cp === 'OPT_OUT_EXPLICITO') return 'opt_out';
-  if (cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO') return 'wrong_number';
-  if (cp === 'RECLAMACAO_CONTATO') return 'angry_or_complaint';
-  if (cp === 'AMBIGUO') return 'unclear';
-  if (ci === 'SEM_INTERESSE') return 'negative_interest';
-  return 'continue_conversation';
-}
 
 const getDelayMs = (step: CampaignStepRow) => {
   const amount = Math.max(Number(step.delay_amount) || 0, 0);
@@ -435,30 +404,6 @@ const extractJsonObject = (value: string): Record<string, unknown> => {
   }
 };
 
-const normalizeClassification = (value: Record<string, unknown>): IntentClassification => {
-  const rawContactPermission = toTrimmedString(value.contact_permission);
-  const rawCommercialIntent = toTrimmedString(value.commercial_intent);
-
-  const contact_permission = CONTACT_PERMISSIONS.has(rawContactPermission)
-    ? rawContactPermission as IntentClassification['contact_permission']
-    : 'NENHUM_SINAL';
-
-  const commercial_intent = COMMERCIAL_INTENTS.has(rawCommercialIntent)
-    ? rawCommercialIntent as IntentClassification['commercial_intent']
-    : 'OUTRO';
-
-  return {
-    contact_permission,
-    commercial_intent,
-    confidence: (() => {
-      const n = Number(value.confidence);
-      return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : 0;
-    })(),
-    recommended_action: deriveRecommendedAction(contact_permission),
-    reason: toTrimmedString(value.reason).slice(0, 900),
-    evidence: toTrimmedString(value.evidence).slice(0, 500),
-  };
-};
 
 const isHiddenInboundPreviewText = (value: string, messageType: string) => {
   const normalizedValue = value.trim().toLowerCase();
@@ -645,7 +590,7 @@ async function classifyInboundCampaignIntent(params: {
       maxTokens: 280,
       edgeFunction: 'comm-whatsapp-campaign-worker',
     });
-    const classification = normalizeClassification(extractJsonObject(result.text));
+    const classification = normalizeCampaignIntentClassification(extractJsonObject(result.text));
 
     const shouldSuggest = classification.contact_permission === 'OPT_OUT_EXPLICITO'
       || classification.contact_permission === 'NUMERO_ERRADO'
@@ -663,7 +608,7 @@ async function classifyInboundCampaignIntent(params: {
         campaign_id: params.campaignId,
         lead_id: params.leadId ?? null,
         phone_digits: params.phoneDigits ?? null,
-        intent: mapContactPermissionToLegacyIntent(classification.contact_permission, classification.commercial_intent),
+        intent: mapCampaignPermissionToLegacyIntent(classification.contact_permission, classification.commercial_intent),
         contact_permission: classification.contact_permission,
         commercial_intent: classification.commercial_intent,
         confidence: classification.confidence,

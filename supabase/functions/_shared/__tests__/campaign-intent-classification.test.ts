@@ -1,62 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-
-// ============================================================
-// Contract: normalizeClassification + deriveRecommendedAction
-// These functions are tested in isolation (no DB, no AI).
-// They mirror the logic in comm-whatsapp-campaign-worker/index.ts.
-// ============================================================
-
-const CONTACT_PERMISSIONS = new Set([
-  'OPT_OUT_EXPLICITO', 'NUMERO_ERRADO', 'DESTINATARIO_INCORRETO',
-  'RECLAMACAO_CONTATO', 'AMBIGUO', 'NENHUM_SINAL',
-]);
-const COMMERCIAL_INTENTS = new Set([
-  'JA_POSSUI_PLANO', 'INTERESSADO', 'SEM_INTERESSE',
-  'QUER_SABER_MAIS', 'ADIAR_CONTATO', 'OUTRO',
-]);
-
-function deriveRecommendedAction(cp: string): string {
-  switch (cp) {
-    case 'OPT_OUT_EXPLICITO':
-    case 'NUMERO_ERRADO':
-    case 'DESTINATARIO_INCORRETO':
-    case 'RECLAMACAO_CONTATO':
-      return 'suggest_block_whatsapp_campaigns';
-    case 'AMBIGUO':
-      return 'review';
-    case 'NENHUM_SINAL':
-    default:
-      return 'keep_active';
-  }
-}
-
-function mapContactPermissionToLegacyIntent(cp: string, ci: string): string {
-  if (cp === 'OPT_OUT_EXPLICITO') return 'opt_out';
-  if (cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO') return 'wrong_number';
-  if (cp === 'RECLAMACAO_CONTATO') return 'angry_or_complaint';
-  if (cp === 'AMBIGUO') return 'unclear';
-  if (ci === 'SEM_INTERESSE') return 'negative_interest';
-  return 'continue_conversation';
-}
-
-function normalizeClassification(value: Record<string, unknown>) {
-  const rawContactPermission = typeof value.contact_permission === 'string' ? value.contact_permission.trim() : '';
-  const rawCommercialIntent = typeof value.commercial_intent === 'string' ? value.commercial_intent.trim() : '';
-
-  const contact_permission = CONTACT_PERMISSIONS.has(rawContactPermission) ? rawContactPermission : 'NENHUM_SINAL';
-  const commercial_intent = COMMERCIAL_INTENTS.has(rawCommercialIntent) ? rawCommercialIntent : 'OUTRO';
-
-  const n = Number(value.confidence);
-  const confidence = Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : 0;
-
-  return {
-    contact_permission,
-    commercial_intent,
-    confidence,
-    recommended_action: deriveRecommendedAction(contact_permission),
-  };
-}
+import {
+  deriveCampaignRecommendedAction as deriveRecommendedAction,
+  mapCampaignPermissionToLegacyIntent as mapContactPermissionToLegacyIntent,
+  normalizeCampaignIntentClassification as normalizeClassification,
+} from '../campaign-intent-classification';
 
 // ============================================================
 // Section A: deriveRecommendedAction

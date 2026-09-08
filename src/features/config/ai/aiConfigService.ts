@@ -8,12 +8,47 @@ import type {
   AiModelCatalogWithPricing,
 } from "./aiConfigTypes";
 import { TASK_TYPE_REQUIRED_CAPABILITIES } from "./aiConfigTypes";
+import {
+  mergeAiModelCatalogWithPricing,
+  type AiModelCatalogDbRow,
+  type AiModelPricingDbRow,
+} from "./aiModelCatalog";
 
 type ServiceResult<T> = { data: T | null; error: string | null };
 
 const TABLE_FEATURES = "ai_features";
 const TABLE_CONFIGS = "ai_feature_configs";
 const TABLE_GLOBAL = "ai_global_configs";
+
+const fetchModelsWithPricing = async (
+  includeInactive: boolean,
+): Promise<ServiceResult<AiModelCatalogWithPricing[]>> => {
+  let modelQuery = supabase
+    .from("ai_models")
+    .select("id, provider, model, display_name, capabilities, active, deprecated_at, created_at, updated_at");
+
+  if (!includeInactive) modelQuery = modelQuery.eq("active", true);
+
+  const [{ data: modelRows, error: modelError }, { data: pricingRows, error: pricingError }] = await Promise.all([
+    modelQuery.order("provider").order("display_name"),
+    supabase
+      .from("ai_model_pricing")
+      .select("provider, model, input_per_million, output_per_million, active, effective_from, effective_to")
+      .eq("active", true)
+      .order("effective_from", { ascending: false }),
+  ]);
+
+  if (modelError) return { data: null, error: modelError.message };
+  if (pricingError) return { data: null, error: pricingError.message };
+
+  return {
+    data: mergeAiModelCatalogWithPricing(
+      (modelRows ?? []) as AiModelCatalogDbRow[],
+      (pricingRows ?? []) as AiModelPricingDbRow[],
+    ),
+    error: null,
+  };
+};
 
 export const aiConfigService = {
   async fetchFeaturesWithConfigs(): Promise<ServiceResult<AiFeatureWithConfig[]>> {
@@ -178,70 +213,11 @@ export const aiConfigService = {
   },
 
   async fetchAvailableModels(): Promise<ServiceResult<AiModelCatalogWithPricing[]>> {
-    const { data, error } = await supabase
-      .from("ai_models")
-      .select(`
-        id, provider, model, display_name, capabilities, active, deprecated_at, created_at, updated_at,
-        ai_model_pricing!left(input_per_million, output_per_million)
-      `)
-      .eq("active", true)
-      .order("provider")
-      .order("display_name");
-
-    if (error) return { data: null, error: error.message };
-
-    const models: AiModelCatalogWithPricing[] = (data ?? []).map((row: Record<string, unknown>) => {
-      const pricing = Array.isArray(row.ai_model_pricing) ? row.ai_model_pricing[0] : row.ai_model_pricing;
-      return {
-        id: row.id as string,
-        provider: row.provider as AiProviderSlug,
-        model: row.model as string,
-        display_name: row.display_name as string,
-        capabilities: (row.capabilities ?? []) as AiModelCatalogCapability[],
-        active: row.active as boolean,
-        deprecated_at: row.deprecated_at as string | null,
-        created_at: row.created_at as string,
-        updated_at: row.updated_at as string,
-        has_pricing: pricing != null,
-        input_per_million: pricing?.input_per_million ?? null,
-        output_per_million: pricing?.output_per_million ?? null,
-      };
-    });
-
-    return { data: models, error: null };
+    return fetchModelsWithPricing(false);
   },
 
   async fetchModelCatalog(): Promise<ServiceResult<AiModelCatalogWithPricing[]>> {
-    const { data, error } = await supabase
-      .from("ai_models")
-      .select(`
-        id, provider, model, display_name, capabilities, active, deprecated_at, created_at, updated_at,
-        ai_model_pricing!left(input_per_million, output_per_million)
-      `)
-      .order("provider")
-      .order("display_name");
-
-    if (error) return { data: null, error: error.message };
-
-    const models: AiModelCatalogWithPricing[] = (data ?? []).map((row: Record<string, unknown>) => {
-      const pricing = Array.isArray(row.ai_model_pricing) ? row.ai_model_pricing[0] : row.ai_model_pricing;
-      return {
-        id: row.id as string,
-        provider: row.provider as AiProviderSlug,
-        model: row.model as string,
-        display_name: row.display_name as string,
-        capabilities: (row.capabilities ?? []) as AiModelCatalogCapability[],
-        active: row.active as boolean,
-        deprecated_at: row.deprecated_at as string | null,
-        created_at: row.created_at as string,
-        updated_at: row.updated_at as string,
-        has_pricing: pricing != null,
-        input_per_million: pricing?.input_per_million ?? null,
-        output_per_million: pricing?.output_per_million ?? null,
-      };
-    });
-
-    return { data: models, error: null };
+    return fetchModelsWithPricing(true);
   },
 
   async fetchRoutingSettings(): Promise<ServiceResult<Record<string, unknown>>> {

@@ -19,7 +19,7 @@ export const WhatsAppCampaignDetailWrapper = lazy(() => import('../pages/routes/
 export const BlogTab = lazy(() => import('../features/blog/BlogTabScreen'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));
 export const FinanceiroComissoesTab = lazy(() => import('../features/commissions/FinanceiroComissoesScreen'));
-export const FinanceiroAgendaTab = lazy(() => import('../components/finance/FinanceiroAgendaTab'));
+export const FinanceiroAgendaTab = lazy(() => import('../features/agenda/AgendaScreen'));
 
 export function RouteLoading() {
   return <AppLoadingScreen />;

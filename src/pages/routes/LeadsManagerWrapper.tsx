@@ -1,6 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import LeadsManager from '../../components/LeadsManager';
-import type { Lead } from '../../lib/supabase';
+import { LeadsManagerScreen as LeadsManager, type Lead } from '../../features/leads';
 import type { TabNavigationOptions } from '../../types/navigation';
 
 interface OutletContext {

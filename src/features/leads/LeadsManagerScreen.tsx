@@ -8,7 +8,20 @@ import {
   useState,
 } from "react";
 import { gsap } from "gsap";
-import { supabase, Lead, fetchAllPages } from "../../lib/supabase";
+import type { Lead } from "./domain/types";
+import {
+  clearLeadReminders,
+  createLeadReminder,
+  deleteLead,
+  listContractLeadIds,
+  listLeads,
+  listNextReminderByLeadId,
+  persistLeadStatusChange,
+  registerLeadContact,
+  subscribeToLeadChanges,
+  type LeadRealtimeChange,
+  updateLeadDetails,
+} from "./data/leadsRepository";
 import {
   Search,
   Filter,
@@ -39,7 +52,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { convertLocalToUTC, formatDateTimeFullBR } from "../../lib/dateUtils";
 import { toast } from "../../lib/toast";
 import { useConfig } from "../../contexts/ConfigContext";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import FilterMultiSelect from "../../components/FilterMultiSelect";
 import FilterDateRange from "../../components/FilterDateRange";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
@@ -288,15 +300,6 @@ export default function LeadsManager({
     });
   }, [initialStatusFilter]);
 
-  const chunkArray = useCallback(<T,>(items: T[], chunkSize: number): T[][] => {
-    if (chunkSize <= 0) return [items];
-    const chunks: T[][] = [];
-    for (let index = 0; index < items.length; index += chunkSize) {
-      chunks.push(items.slice(index, index + chunkSize));
-    }
-    return chunks;
-  }, []);
-
   const parseSearchQuery = useCallback((value: string) => {
     const tokens: Record<string, string[]> = {};
     const regex = /(\w+):"([^"]+)"|(\w+):(\S+)/g;
@@ -340,48 +343,19 @@ export default function LeadsManager({
       }
 
       try {
-        const uniqueLeadIds = Array.from(new Set(leadIds));
-        const leadIdChunks = chunkArray(uniqueLeadIds, 100);
-        const results = await Promise.all(
-          leadIdChunks.map(async (chunk) => {
-            const { data, error } = await supabase
-              .from("contracts")
-              .select("lead_id")
-              .in("lead_id", chunk);
-
-            if (error) throw error;
-            return data || [];
-          }),
-        );
-
-        const ids = results
-          .flat()
-          .map((contract) => contract.lead_id)
-          .filter((leadId): leadId is string => Boolean(leadId));
-
-        setLeadContractIds(new Set(ids));
+        setLeadContractIds(await listContractLeadIds(leadIds));
       } catch (error) {
         console.error("Erro ao carregar contratos dos leads:", error);
       }
     },
-    [chunkArray],
+    [],
   );
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAllPages<Lead>(
-        (from, to) =>
-          supabase
-            .from("leads")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .range(from, to) as unknown as Promise<{
-            data: Lead[] | null;
-            error: unknown;
-          }>,
-      );
-      const mappedLeads = (data || []).map((lead) =>
+      const data = await listLeads();
+      const mappedLeads = data.map((lead) =>
         mapLeadRelations(lead, {
           origins: leadOrigins,
           statuses: leadStatuses,
@@ -396,42 +370,13 @@ export default function LeadsManager({
 
       setLeads(visibleLeads);
       const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
-      if (leadIds.length === 0) {
-        setNextReminderByLeadId(new Map());
-      } else {
-        const nowIso = new Date().toISOString();
-        const leadIdChunks = chunkArray(leadIds, 100);
-        const results = await Promise.all(
-          leadIdChunks.map(async (chunk) => {
-            const { data: remindersData, error } = await supabase
-              .from("reminders")
-              .select("lead_id, data_lembrete, lido")
-              .in("lead_id", chunk)
-              .eq("lido", false)
-              .gte("data_lembrete", nowIso)
-              .order("data_lembrete", { ascending: true });
-
-            if (error) throw error;
-            return remindersData || [];
-          }),
-        );
-
-        const nextMap = new Map<string, string>();
-        results.flat().forEach((reminder) => {
-          if (!reminder.lead_id || !reminder.data_lembrete) return;
-          if (!nextMap.has(reminder.lead_id)) {
-            nextMap.set(reminder.lead_id, reminder.data_lembrete);
-          }
-        });
-        setNextReminderByLeadId(nextMap);
-      }
+      setNextReminderByLeadId(await listNextReminderByLeadId(leadIds));
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
     } finally {
       setLoading(false);
     }
   }, [
-    chunkArray,
     isObserver,
     isOriginVisibleToObserver,
     leadOrigins,
@@ -952,11 +897,7 @@ export default function LeadsManager({
     );
 
     try {
-      const { error } = await supabase
-        .from("leads")
-        .update(updates)
-        .in("id", selectedLeadIds);
-      if (error) throw error;
+      await updateLeadDetails(selectedLeadIds, updates);
       toast.success("Dados aplicados com sucesso aos leads selecionados.");
     } catch (error) {
       console.error("Erro ao aplicar dados em massa:", error);
@@ -1007,9 +948,7 @@ export default function LeadsManager({
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase.from("leads").delete().eq("id", lead.id);
-
-      if (error) throw error;
+      await deleteLead(lead.id);
 
       setSelectedLead((current) => (current?.id === lead.id ? null : current));
       setEditingLead((current) => (current?.id === lead.id ? null : current));
@@ -1050,23 +989,7 @@ export default function LeadsManager({
       );
 
       try {
-        await supabase
-          .from("interactions")
-          .insert([
-            {
-              lead_id: lead.id,
-              tipo,
-              descricao: `Contato via ${tipo}`,
-              responsavel: lead.responsavel,
-            },
-          ]);
-
-        const { error: updateError } = await supabase
-          .from("leads")
-          .update({ ultimo_contato: timestamp })
-          .eq("id", lead.id);
-
-        if (updateError) throw updateError;
+        await registerLeadContact(lead, tipo, timestamp);
       } catch (error) {
         console.error("Erro ao registrar contato:", error);
       }
@@ -1097,17 +1020,16 @@ export default function LeadsManager({
   };
 
   const handleRealtimeLeadChange = useCallback(
-    (payload: RealtimePostgresChangesPayload<Lead>) => {
-      const { eventType } = payload;
-      const newLead = payload.new
-        ? mapLeadRelations(payload.new as Lead, {
+    ({ eventType, current, previous }: LeadRealtimeChange) => {
+      const newLead = current
+        ? mapLeadRelations(current, {
             origins: leadOrigins,
             statuses: leadStatuses,
             tipoContratacao: tipoContratacaoOptions,
             responsaveis: responsavelOptions,
           })
         : null;
-      const oldLead = payload.old as Lead | null;
+      const oldLead = previous;
 
       setLeads((current) => {
         let updatedLeads = current;
@@ -1204,33 +1126,7 @@ export default function LeadsManager({
     );
 
     try {
-      const { error: updateError } = await supabase
-        .from("leads")
-        .update({
-          status: newStatus,
-          ultimo_contato: timestamp,
-        })
-        .eq("id", leadId);
-
-      if (updateError) throw updateError;
-
-      await supabase.from("interactions").insert([
-        {
-          lead_id: leadId,
-          tipo: "Observação",
-          descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
-          responsavel: lead.responsavel,
-        },
-      ]);
-
-      await supabase.from("lead_status_history").insert([
-        {
-          lead_id: leadId,
-          status_anterior: oldStatus,
-          status_novo: newStatus,
-          responsavel: lead.responsavel,
-        },
-      ]);
+      await persistLeadStatusChange({ lead, newStatus, timestamp });
 
       const normalizedStatus = newStatus.trim().toLowerCase();
 
@@ -1243,19 +1139,7 @@ export default function LeadsManager({
         normalizedStatus === "perdido" ||
         normalizedStatus === "convertido"
       ) {
-        const { error: deleteRemindersError } = await supabase
-          .from("reminders")
-          .delete()
-          .eq("lead_id", leadId);
-
-        if (deleteRemindersError) throw deleteRemindersError;
-
-        const { error: clearNextReturnError } = await supabase
-          .from("leads")
-          .update({ proximo_retorno: null })
-          .eq("id", leadId);
-
-        if (clearNextReturnError) throw clearNextReturnError;
+        await clearLeadReminders(leadId);
 
         setLeads((current) =>
           current.map((leadItem) =>
@@ -1276,21 +1160,14 @@ export default function LeadsManager({
 
           const reminderDateISO = reminderDate.toISOString();
 
-          const { error: insertReminderError } = await supabase
-            .from("reminders")
-            .insert([
-              {
-                lead_id: leadId,
-                tipo: reminderRule.type ?? "Follow-up",
-                titulo: `${reminderRule.title} - ${lead.nome_completo}`,
-                descricao: reminderRule.description ?? null,
-                data_lembrete: reminderDateISO,
-                lido: false,
-                prioridade: reminderRule.priority ?? "normal",
-              },
-            ]);
-
-          if (insertReminderError) throw insertReminderError;
+          await createLeadReminder({
+            leadId,
+            type: reminderRule.type ?? "Follow-up",
+            title: `${reminderRule.title} - ${lead.nome_completo}`,
+            description: reminderRule.description ?? null,
+            remindAt: reminderDateISO,
+            priority: reminderRule.priority ?? "normal",
+          });
 
           const nextReturnDate =
             await syncLeadNextReturnFromUpcomingReminder(leadId);
@@ -1330,22 +1207,7 @@ export default function LeadsManager({
   useEffect(() => {
     loadLeads();
 
-    const channel = supabase
-      .channel("leads-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "leads",
-        },
-        handleRealtimeLeadChange,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return subscribeToLeadChanges(handleRealtimeLeadChange);
   }, [handleRealtimeLeadChange, loadLeads]);
 
   useEffect(() => {

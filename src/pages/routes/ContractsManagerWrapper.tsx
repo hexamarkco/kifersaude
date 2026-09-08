@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
-import ContractsManager from '../../components/ContractsManager';
-import type { Lead } from '../../lib/supabase';
+import { ContractsManagerScreen as ContractsManager } from '../../features/contracts';
+import type { Lead } from '../../features/leads';
 import type { TabNavigationOptions } from '../../types/navigation';
 
 interface OutletContext {

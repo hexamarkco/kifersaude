@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import Dashboard from '../../components/Dashboard';
+import Dashboard from '../../features/dashboard/DashboardScreen';
 import type { TabNavigationOptions } from '../../types/navigation';
 
 interface OutletContext {

@@ -12,6 +12,7 @@ export type AiFeatureKey =
   | "sandbox.scenario";
 
 export type AiProviderSlug = "openai" | "gemini" | "claude";
+export type AiReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export type AiModelResolutionSource = "feature" | "ai_routing" | "provider_default" | "fallback";
 
@@ -42,7 +43,7 @@ export type AiFeatureConfigRow = {
   provider: AiProviderSlug | null;
   model: string | null;
   model_override_enabled: boolean;
-  reasoning_effort: "none" | "minimal" | null;
+  reasoning_effort: AiReasoningEffort | null;
   is_active: boolean;
   created_by: string | null;
   created_at: string;
@@ -130,6 +131,16 @@ export const AI_PROVIDER_OPTIONS: Array<{ value: AiProviderSlug; label: string }
   { value: "gemini", label: "Google Gemini" },
   { value: "claude", label: "Anthropic Claude" },
 ];
+
+export const AI_REASONING_EFFORT_LABELS: Record<AiReasoningEffort, string> = {
+  none: "Nenhum",
+  minimal: "Mínimo",
+  low: "Baixo",
+  medium: "Médio",
+  high: "Alto",
+  xhigh: "Muito alto",
+  max: "Máximo",
+};
 
 export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
   "audio.transcribe": "Transcrição de Áudio",

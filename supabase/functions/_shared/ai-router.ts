@@ -1,8 +1,10 @@
 import {
+  AI_REASONING_EFFORTS,
   clampTemperature,
   resolveClaudeRequestProfile,
   resolveGeminiRequestProfile,
   resolveOpenAiRequestProfile,
+  type AiReasoningEffort,
   type OpenAiReasoningEffort,
   type OpenAiTokenParameter,
 } from './ai-provider-request-profile.ts';
@@ -46,6 +48,7 @@ type ProviderCallParams = {
   temperature: number;
   maxTokens: number;
   task: AiTask;
+  reasoningEffort?: AiReasoningEffort | null;
   signal?: AbortSignal;
   maxHttpAttempts?: number;
 };
@@ -126,6 +129,7 @@ export type ResolvedModel = {
   provider: AiProvider;
   model: string;
   source: ModelResolutionSource;
+  reasoningEffort: AiReasoningEffort | null;
 };
 
 export type AiCallLogContext = {
@@ -553,7 +557,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   }
   messages.push({ role: 'user', content: params.userPrompt });
 
-  const requestProfile = resolveOpenAiRequestProfile(params.model, params.task);
+  const requestProfile = resolveOpenAiRequestProfile(params.model, params.task, params.reasoningEffort);
   let tokenParameter = requestProfile.tokenParameter;
   let reasoningEffort = requestProfile.reasoningEffort;
   let includeTemperature = requestProfile.supportsTemperature;
@@ -932,6 +936,7 @@ export const resolveModelForFeature = async (
 ): Promise<ResolvedModel> => {
   const runtime = await loadAiRuntimeConfig(supabaseAdmin);
   const taskRoute = runtime.routing[task];
+  let featureReasoningEffort: AiReasoningEffort | null = null;
 
   // 1. Check feature override
   try {
@@ -944,12 +949,19 @@ export const resolveModelForFeature = async (
     if (feature) {
       const { data: config } = await supabaseAdmin
         .from('ai_feature_configs')
-        .select('provider, model, model_override_enabled')
+        .select('provider, model, model_override_enabled, reasoning_effort')
         .eq('feature_id', feature.id)
         .eq('is_active', true)
         .order('version', { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      if (
+        typeof config?.reasoning_effort === 'string' &&
+        AI_REASONING_EFFORTS.includes(config.reasoning_effort as AiReasoningEffort)
+      ) {
+        featureReasoningEffort = config.reasoning_effort as AiReasoningEffort;
+      }
 
       if (config?.model_override_enabled && config.provider && config.model) {
         const provider = isAiProvider(config.provider) ? config.provider : 'openai';
@@ -983,6 +995,7 @@ export const resolveModelForFeature = async (
                 provider,
                 model: config.model,
                 source: 'feature',
+                reasoningEffort: featureReasoningEffort,
               };
             }
           }
@@ -1007,6 +1020,7 @@ export const resolveModelForFeature = async (
       provider,
       model: getCompatibleTaskModel(task, provider, providerSettings, taskRoute.model),
       source: 'ai_routing',
+      reasoningEffort: featureReasoningEffort,
     };
   }
 
@@ -1015,6 +1029,7 @@ export const resolveModelForFeature = async (
     provider,
     model: getTaskDefaultModel(task, provider, providerSettings),
     source: 'provider_default',
+    reasoningEffort: featureReasoningEffort,
   };
 };
 
@@ -1508,6 +1523,7 @@ export const generateTextForFeature = async (
         temperature: options.temperature ?? 0.4,
         maxTokens: options.maxTokens ?? 900,
         task: options.task,
+        reasoningEffort: resolved.reasoningEffort,
         signal: timeoutController?.signal,
         maxHttpAttempts: options.maxProviderRequestsPerAttempt,
       });

@@ -8,11 +8,14 @@ export type TextGenerationTask =
   | 'autonomous_attendance';
 
 export type OpenAiTokenParameter = 'max_tokens' | 'max_completion_tokens';
-export type OpenAiReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export const AI_REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type AiReasoningEffort = typeof AI_REASONING_EFFORTS[number];
+export type OpenAiReasoningEffort = AiReasoningEffort;
 
 export type OpenAiRequestProfile = {
   tokenParameter: OpenAiTokenParameter;
   reasoningEffort?: OpenAiReasoningEffort;
+  supportedReasoningEfforts: readonly OpenAiReasoningEffort[];
   supportsTemperature: boolean;
 };
 
@@ -42,6 +45,49 @@ const isOpenAiProModel = (model: string): boolean =>
 const isOpenAiModernReasoningModel = (model: string): boolean =>
   /^gpt-5\.(?:[1-9]\d*)(?:-|$)/.test(model);
 
+const OPENAI_REASONING_EFFORTS = {
+  gpt56: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+  modern: ['none', 'low', 'medium', 'high'],
+  classic: ['minimal', 'low', 'medium', 'high'],
+  future: ['low', 'medium', 'high', 'xhigh', 'max'],
+  pro: ['high'],
+} as const satisfies Record<string, readonly OpenAiReasoningEffort[]>;
+
+export const getOpenAiSupportedReasoningEfforts = (model: string): readonly OpenAiReasoningEffort[] => {
+  const normalized = normalizedModel(model);
+
+  if (isOpenAiProModel(normalized)) return OPENAI_REASONING_EFFORTS.pro;
+  if (normalized.startsWith('gpt-5.6') || normalized.startsWith('gpt-5.5')) {
+    return OPENAI_REASONING_EFFORTS.gpt56;
+  }
+  if (isOpenAiModernReasoningModel(normalized)) return OPENAI_REASONING_EFFORTS.modern;
+  if (/^gpt-(?:[6-9]|\d{2,})(?:[.-]|$)/.test(normalized)) return OPENAI_REASONING_EFFORTS.future;
+  if (
+    normalized === 'gpt-5' ||
+    normalized.startsWith('gpt-5-') ||
+    normalized.startsWith('o1') ||
+    normalized.startsWith('o3') ||
+    normalized.startsWith('o4')
+  ) {
+    return OPENAI_REASONING_EFFORTS.classic;
+  }
+
+  return [];
+};
+
+const chooseOpenAiReasoningEffort = (
+  supported: readonly OpenAiReasoningEffort[],
+  task: TextGenerationTask,
+  requested?: AiReasoningEffort | null,
+): OpenAiReasoningEffort | undefined => {
+  if (requested && supported.includes(requested)) return requested;
+  if (supported.length === 0) return undefined;
+  if (supported.length === 1) return supported[0];
+  if (!isDeepReasoningTask(task) && supported.includes('none')) return 'none';
+  if (supported.includes('low')) return 'low';
+  return supported[0];
+};
+
 /**
  * Resolves the request fields supported by an OpenAI model family before the
  * first HTTP request. Provider-error negotiation remains a compatibility net,
@@ -50,13 +96,17 @@ const isOpenAiModernReasoningModel = (model: string): boolean =>
 export const resolveOpenAiRequestProfile = (
   model: string,
   task: TextGenerationTask,
+  requestedReasoningEffort?: AiReasoningEffort | null,
 ): OpenAiRequestProfile => {
   const normalized = normalizedModel(model);
+  const supportedReasoningEfforts = getOpenAiSupportedReasoningEfforts(normalized);
+  const reasoningEffort = chooseOpenAiReasoningEffort(supportedReasoningEfforts, task, requestedReasoningEffort);
 
   if (isOpenAiProModel(normalized)) {
     return {
       tokenParameter: 'max_completion_tokens',
-      reasoningEffort: 'high',
+      reasoningEffort,
+      supportedReasoningEfforts,
       supportsTemperature: false,
     };
   }
@@ -64,16 +114,17 @@ export const resolveOpenAiRequestProfile = (
   if (/^gpt-(?:[6-9]|\d{2,})(?:[.-]|$)/.test(normalized)) {
     return {
       tokenParameter: 'max_completion_tokens',
-      reasoningEffort: isDeepReasoningTask(task) ? 'medium' : 'low',
+      reasoningEffort,
+      supportedReasoningEfforts,
       supportsTemperature: false,
     };
   }
 
   if (isOpenAiModernReasoningModel(normalized)) {
-    const reasoningEffort: OpenAiReasoningEffort = isDeepReasoningTask(task) ? 'low' : 'none';
     return {
       tokenParameter: 'max_completion_tokens',
       reasoningEffort,
+      supportedReasoningEfforts,
       supportsTemperature: reasoningEffort === 'none',
     };
   }
@@ -87,13 +138,15 @@ export const resolveOpenAiRequestProfile = (
   ) {
     return {
       tokenParameter: 'max_completion_tokens',
-      reasoningEffort: isDeepReasoningTask(task) ? 'medium' : 'low',
+      reasoningEffort,
+      supportedReasoningEfforts,
       supportsTemperature: false,
     };
   }
 
   return {
     tokenParameter: 'max_tokens',
+    supportedReasoningEfforts,
     supportsTemperature: true,
   };
 };

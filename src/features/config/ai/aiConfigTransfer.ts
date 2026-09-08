@@ -5,6 +5,7 @@ import type {
   AiModelCatalogWithPricing,
   AiModelResolutionSource,
   AiProviderSlug,
+  AiReasoningEffort,
 } from "./aiConfigTypes";
 import { TASK_TYPE_REQUIRED_CAPABILITIES } from "./aiConfigTypes";
 
@@ -26,6 +27,7 @@ export type AiExportFeature = {
     output_instructions: string;
     temperature: number;
     max_output_tokens: number;
+    reasoning_effort: AiReasoningEffort | null;
     model_config: AiExportModelConfig;
   } | null;
 };
@@ -37,6 +39,7 @@ export type AiModelCatalogSnapshotEntry = {
   active: boolean;
   deprecated: boolean;
   pricing_available: boolean;
+  reasoning_efforts: AiReasoningEffort[];
 };
 
 export type AiConfigExportV2 = {
@@ -61,6 +64,7 @@ export type AiImportFeaturePlan = {
     output_instructions: string;
     temperature: number;
     max_output_tokens: number;
+    reasoning_effort?: AiReasoningEffort | null;
     provider?: AiProviderSlug;
     model?: string;
     model_override_enabled?: boolean;
@@ -83,7 +87,11 @@ type EffectiveModelSnapshot = {
   source: AiModelResolutionSource;
 };
 
-type SelectableModel = { value: string; label: string };
+type SelectableModel = {
+  value: string;
+  label: string;
+  reasoningEfforts?: AiReasoningEffort[];
+};
 
 const PROVIDERS: AiProviderSlug[] = ["openai", "gemini", "claude"];
 
@@ -92,6 +100,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isProvider = (value: unknown): value is AiProviderSlug =>
   value === "openai" || value === "gemini" || value === "claude";
+
+const isReasoningEffort = (value: unknown): value is AiReasoningEffort =>
+  value === "none" || value === "minimal" || value === "low" || value === "medium" ||
+  value === "high" || value === "xhigh" || value === "max";
 
 const readFiniteNumber = (value: unknown, field: string): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -117,6 +129,7 @@ export const buildModelCatalogSnapshot = (
         active: item?.active ?? true,
         deprecated: item?.deprecated_at != null,
         pricing_available: item?.has_pricing ?? false,
+        reasoning_efforts: option.reasoningEfforts ?? [],
       };
     }),
   ])) as Record<AiProviderSlug, AiModelCatalogSnapshotEntry[]>;
@@ -166,6 +179,7 @@ export const buildAiConfigExportV2 = (params: {
           output_instructions: activeConfig.output_instructions,
           temperature: activeConfig.temperature,
           max_output_tokens: activeConfig.max_output_tokens,
+          reasoning_effort: activeConfig.reasoning_effort,
           model_config: {
             mode: custom ? "custom" : "default",
             model_override_enabled: custom,
@@ -248,6 +262,12 @@ export const createAiConfigImportPlan = (
       temperature: readFiniteNumber(rawConfig.temperature, `${feature.key}.temperature`),
       max_output_tokens: readFiniteNumber(rawConfig.max_output_tokens, `${feature.key}.max_output_tokens`),
     };
+
+    if (rawConfig.reasoning_effort === null || isReasoningEffort(rawConfig.reasoning_effort)) {
+      payload.reasoning_effort = rawConfig.reasoning_effort;
+    } else if (rawConfig.reasoning_effort !== undefined) {
+      throw new Error(`Campo ${feature.key}.reasoning_effort inválido.`);
+    }
     let modelMode: AiImportFeaturePlan["modelMode"] = "legacy";
     let modelLabel: string | null = null;
     const featureWarnings: string[] = [];

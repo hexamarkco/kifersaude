@@ -24,6 +24,7 @@ import type {
   AiGlobalConfigRow,
   AiModelResolutionSource,
   AiProviderSlug,
+  AiReasoningEffort,
 } from "./aiConfigTypes";
 import { AI_FEATURE_AI_TASK, AI_FEATURE_CATEGORIES, AI_PROVIDER_OPTIONS } from "./aiConfigTypes";
 import {
@@ -130,9 +131,18 @@ export default function AiConfigScreen() {
         throw new Error(catalogResult.error ?? "Não foi possível carregar o catálogo de modelos.");
       }
 
-      const selectableByProvider = Object.fromEntries(
-        providerResults.map(({ provider, result }) => [provider, result.data ?? []]),
-      ) as Record<AiProviderSlug, Array<{ value: string; label: string }>>;
+      const selectableByProvider: Record<AiProviderSlug, Array<{
+        value: string;
+        label: string;
+        reasoningEfforts?: AiReasoningEffort[];
+      }>> = {
+        openai: [],
+        gemini: [],
+        claude: [],
+      };
+      for (const { provider, result } of providerResults) {
+        selectableByProvider[provider] = result.data ?? [];
+      }
       const effectiveModels = new Map(effectiveResults.flatMap(({ key, result }) => (
         result.data
           ? [[key, {

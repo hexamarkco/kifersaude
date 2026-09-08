@@ -4,6 +4,7 @@ import type {
   AiFeatureConfigRow,
   AiGlobalConfigRow,
   AiProviderSlug,
+  AiReasoningEffort,
   AiModelCatalogCapability,
   AiModelCatalogWithPricing,
 } from "./aiConfigTypes";
@@ -118,6 +119,7 @@ export const aiConfigService = {
       provider?: AiProviderSlug;
       model?: string;
       model_override_enabled?: boolean;
+      reasoning_effort?: AiReasoningEffort | null;
     },
   ): Promise<ServiceResult<AiFeatureConfigRow>> {
     const { data: existing, error: fetchErr } = await supabase
@@ -156,6 +158,9 @@ export const aiConfigService = {
     if (payload.model !== undefined) insertPayload.model = payload.model;
     if (payload.model_override_enabled !== undefined) {
       insertPayload.model_override_enabled = payload.model_override_enabled;
+    }
+    if (payload.reasoning_effort !== undefined) {
+      insertPayload.reasoning_effort = payload.reasoning_effort;
     }
 
     const { data, error } = await supabase
@@ -294,7 +299,11 @@ export const aiConfigService = {
     return { data, error: null };
   },
 
-  async fetchProviderModels(provider: AiProviderSlug): Promise<ServiceResult<{ value: string; label: string }[]>> {
+  async fetchProviderModels(provider: AiProviderSlug): Promise<ServiceResult<Array<{
+    value: string;
+    label: string;
+    reasoningEfforts: AiReasoningEffort[];
+  }>>> {
     const { data, error } = await supabase.functions.invoke("list-ai-models", {
       body: { provider },
     });

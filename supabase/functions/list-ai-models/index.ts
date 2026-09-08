@@ -1,6 +1,10 @@
 // @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { getAiProviderApiKey, type AiProvider } from '../_shared/ai-router.ts';
+import {
+  getOpenAiSupportedReasoningEfforts,
+  type AiReasoningEffort,
+} from '../_shared/ai-provider-request-profile.ts';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 
 const corsHeaders = {
@@ -19,6 +23,7 @@ declare const Deno: {
 type ModelOption = {
   value: string;
   label: string;
+  reasoningEfforts: AiReasoningEffort[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -39,6 +44,7 @@ const uniqueOptions = (options: ModelOption[]): ModelOption[] => {
     normalized.push({
       value,
       label: option.label.trim() || value,
+      reasoningEfforts: option.reasoningEfforts,
     });
   }
 
@@ -71,7 +77,11 @@ const parseOpenAiModels = (payload: unknown): ModelOption[] => {
       if (!isRecord(row)) return null;
       const id = toTrimmedString(row.id);
       if (!id || !canUseOpenAiModel(id)) return null;
-      return { value: id, label: id };
+      return {
+        value: id,
+        label: id,
+        reasoningEfforts: [...getOpenAiSupportedReasoningEfforts(id)],
+      };
     })
     .filter((row): row is ModelOption => row !== null)
     .sort((a, b) => a.value.localeCompare(b.value));
@@ -104,6 +114,7 @@ const parseGeminiModels = (payload: unknown): ModelOption[] => {
       return {
         value,
         label: displayName || value,
+        reasoningEfforts: [],
       };
     })
     .filter((row): row is ModelOption => row !== null)
@@ -126,6 +137,7 @@ const parseClaudeModels = (payload: unknown): ModelOption[] => {
       return {
         value: id,
         label: displayName || id,
+        reasoningEfforts: [],
       };
     })
     .filter((row): row is ModelOption => row !== null)

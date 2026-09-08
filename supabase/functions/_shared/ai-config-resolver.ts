@@ -18,6 +18,7 @@ import {
   type AIFeatureKey,
 } from './ai-feature-registry.ts';
 import type { AiProvider } from './ai-router.ts';
+import type { AiReasoningEffort } from './ai-provider-request-profile.ts';
 
 // ============================================================
 // Types
@@ -31,7 +32,7 @@ export type ResolvedAIFeatureConfig = {
   modelOverrideEnabled: boolean;
   temperature: number;
   maxOutputTokens: number;
-  reasoningEffort: 'none' | 'minimal' | null;
+  reasoningEffort: AiReasoningEffort | null;
   timeoutMs: number | null;
   retryCount: number | null;
   useGlobalInstructions: boolean;

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateTextForFeature } from '../ai-router.ts';
+import type { AiReasoningEffort } from '../ai-provider-request-profile.ts';
 import { validateFollowUpTechnicalOutput } from '../comm-whatsapp-follow-up-output.ts';
 
 type QueryResult = { data: unknown; error: null };
@@ -28,7 +29,13 @@ const createSupabaseStub = ({
   provider = 'openai',
   featureModel = 'gpt-test',
   defaultModel = 'gpt-test',
-}: { provider?: 'openai' | 'gemini' | 'claude'; featureModel?: string; defaultModel?: string } = {}) => ({
+  reasoningEffort = null,
+}: {
+  provider?: 'openai' | 'gemini' | 'claude';
+  featureModel?: string;
+  defaultModel?: string;
+  reasoningEffort?: AiReasoningEffort | null;
+} = {}) => ({
   from: (table: string) => {
     if (table === 'integration_settings') {
       return makeQuery({
@@ -61,7 +68,7 @@ const createSupabaseStub = ({
     }
     if (table === 'ai_feature_configs') {
       return makeQuery({
-        data: { provider, model: featureModel, model_override_enabled: true },
+        data: { provider, model: featureModel, model_override_enabled: true, reasoning_effort: reasoningEffort },
         error: null,
       });
     }
@@ -82,7 +89,12 @@ const providerResponse = (text: string) => new Response(JSON.stringify({
 
 const runFollowUp = (
   attemptTimeoutMs = 5_000,
-  models: { provider?: 'openai' | 'gemini' | 'claude'; featureModel?: string; defaultModel?: string } = {},
+  models: {
+    provider?: 'openai' | 'gemini' | 'claude';
+    featureModel?: string;
+    defaultModel?: string;
+    reasoningEffort?: AiReasoningEffort | null;
+  } = {},
 ) => generateTextForFeature({
   supabaseAdmin: createSupabaseStub(models),
   featureKey: 'followup.generate',
@@ -134,6 +146,22 @@ describe('AI router technical retry budget', () => {
     expect(body).not.toHaveProperty('max_tokens');
     expect(result.model).toBe('gpt-5.6-sol');
     expect(result.fallbackUsed).toBe(false);
+  });
+
+  it('uses the reasoning effort selected in the active feature version', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(providerResponse('Mensagem válida.'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runFollowUp(5_000, {
+      featureModel: 'gpt-5.6-sol',
+      defaultModel: 'gpt-4.1-mini',
+      reasoningEffort: 'high',
+    });
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(request.body));
+    expect(body.reasoning_effort).toBe('high');
+    expect(body).not.toHaveProperty('temperature');
   });
 
   it('omits deprecated sampling controls for new Claude models', async () => {

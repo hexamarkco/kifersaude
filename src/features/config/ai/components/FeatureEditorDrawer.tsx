@@ -15,8 +15,10 @@ import type {
   AiModelResolutionSource,
   AiModelCatalogCapability,
   AiModelCatalogWithPricing,
+  AiReasoningEffort,
 } from "../aiConfigTypes";
 import {
+  AI_REASONING_EFFORT_LABELS,
   AI_FEATURE_LABELS,
   AI_FEATURE_AI_TASK,
   AI_PROVIDER_OPTIONS,
@@ -37,7 +39,14 @@ type EffectiveModel = {
   sourceLabel: string;
 };
 
-type ProviderModelOption = { value: string; label: string };
+type ProviderModelOption = {
+  value: string;
+  label: string;
+  reasoningEfforts?: AiReasoningEffort[];
+};
+
+const isProviderSlug = (value: string | undefined): value is AiProviderSlug =>
+  value === "openai" || value === "gemini" || value === "claude";
 
 const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
   feature: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
@@ -86,11 +95,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [modelOverrideEnabled, setModelOverrideEnabled] = useState(false);
   const [provider, setProvider] = useState<AiProviderSlug>("openai");
   const [model, setModel] = useState("gpt-4o-mini");
+  const [reasoningEffort, setReasoningEffort] = useState<AiReasoningEffort | null>(null);
   const [effectiveModel, setEffectiveModel] = useState<EffectiveModel | null>(null);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Array<{ version: number; is_active: boolean; created_at: string }>>([]);
 
   const [providerModels, setProviderModels] = useState<ProviderModelOption[]>([]);
+  const [loadedProvider, setLoadedProvider] = useState<AiProviderSlug | null>(null);
   const [providerLoading, setProviderLoading] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
 
@@ -120,8 +131,10 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const loadProviderModels = useCallback(async (providerSlug: AiProviderSlug) => {
     setProviderLoading(true);
     setProviderError(null);
+    setLoadedProvider(null);
     const { data, error } = await aiConfigService.fetchProviderModels(providerSlug);
     setProviderLoading(false);
+    setLoadedProvider(providerSlug);
     if (error) {
       setProviderError(error);
       setProviderModels([]);
@@ -140,6 +153,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       setModelOverrideEnabled(currentConfig.model_override_enabled);
       setProvider(currentConfig.provider ?? "openai");
       setModel(currentConfig.model ?? "gpt-4o-mini");
+      setReasoningEffort(currentConfig.reasoning_effort);
     } else {
       setPrompt(feature.default_feature_prompt);
       setOutputInstructions(feature.default_output_instructions);
@@ -148,6 +162,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       setModelOverrideEnabled(false);
       setProvider("openai");
       setModel("gpt-4o-mini");
+      setReasoningEffort(null);
     }
 
     loadHistory();
@@ -162,11 +177,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     });
   }, [feature, loadHistory, loadEffectiveModel]);
 
+  const effectiveProvider = isProviderSlug(effectiveModel?.provider) ? effectiveModel.provider : null;
+  const reasoningProvider = modelOverrideEnabled ? provider : effectiveProvider;
+  const reasoningModel = modelOverrideEnabled ? model : (effectiveModel?.model ?? "");
+
   useEffect(() => {
-    if (modelOverrideEnabled) {
-      loadProviderModels(provider);
-    }
-  }, [modelOverrideEnabled, provider, loadProviderModels]);
+    if (reasoningProvider) loadProviderModels(reasoningProvider);
+  }, [reasoningProvider, loadProviderModels]);
 
   /** Models from provider API, enriched with catalog metadata, filtered by taskType */
   const compatibleModels = useMemo(() => {
@@ -183,6 +200,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         label: m.meta?.display_name ?? m.label,
         hasPricing: m.meta?.has_pricing ?? false,
         deprecated: m.meta?.deprecated_at != null,
+        reasoningEfforts: m.reasoningEfforts ?? [],
       }));
   }, [providerModels, catalogMeta, provider, requiredCapabilities]);
 
@@ -192,10 +210,27 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
   const isSelectedModelDeprecated = selectedModelData?.deprecated_at != null;
   const isSelectedModelWithoutPricing = selectedModelData != null && !selectedModelData.has_pricing;
+  const supportedReasoningEfforts = useMemo(() => (
+    loadedProvider === reasoningProvider
+      ? providerModels.find((item) => item.value === reasoningModel)?.reasoningEfforts ?? []
+      : []
+  ), [loadedProvider, reasoningProvider, providerModels, reasoningModel]);
+
+  useEffect(() => {
+    if (
+      loadedProvider === reasoningProvider &&
+      !providerError &&
+      reasoningEffort &&
+      !supportedReasoningEfforts.includes(reasoningEffort)
+    ) {
+      setReasoningEffort(null);
+    }
+  }, [loadedProvider, reasoningProvider, providerError, reasoningEffort, supportedReasoningEfforts]);
 
   const handleProviderChange = useCallback((newProvider: AiProviderSlug) => {
     setProvider(newProvider);
     setModel("");
+    setReasoningEffort(null);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -217,6 +252,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       provider: modelOverrideEnabled ? provider : undefined,
       model: modelOverrideEnabled ? model : undefined,
       model_override_enabled: modelOverrideEnabled,
+      reasoning_effort: reasoningEffort,
     });
     setSaving(false);
 
@@ -225,7 +261,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     loadHistory();
     loadEffectiveModel();
     onSaved();
-  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, modelOverrideEnabled, provider, model, taskType, onSaved, loadHistory, loadEffectiveModel]);
+  }, [feature.id, prompt, outputInstructions, temperature, maxTokens, modelOverrideEnabled, provider, model, reasoningEffort, taskType, onSaved, loadHistory, loadEffectiveModel]);
 
   const handleResetToDefaults = useCallback(() => {
     setPrompt(feature.default_feature_prompt);
@@ -235,6 +271,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     setModelOverrideEnabled(false);
     setProvider("openai");
     setModel("gpt-4o-mini");
+    setReasoningEffort(null);
     toast.info("Valores restaurados para os padrões do sistema");
   }, [feature]);
 
@@ -344,7 +381,10 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   ) : (
                     <select
                       value={model}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setModel(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        setModel(e.target.value);
+                        setReasoningEffort(null);
+                      }}
                       className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
                     >
                       <option value="" disabled>
@@ -361,6 +401,33 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   )}
                 </Field>
               </div>
+            )}
+
+            {taskType !== "transcription" && reasoningProvider && reasoningModel && (
+              <Field
+                label="Esforço de raciocínio"
+                description={supportedReasoningEfforts.length > 0
+                  ? "Automático usa o nível seguro definido para o modelo e a tarefa."
+                  : "Este modelo não oferece controle de esforço neste provider."}
+              >
+                <select
+                  value={reasoningEffort ?? ""}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                    setReasoningEffort((e.target.value || null) as AiReasoningEffort | null);
+                  }}
+                  disabled={providerLoading || supportedReasoningEfforts.length === 0}
+                  className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">
+                    {supportedReasoningEfforts.length > 0 ? "Automático (recomendado)" : "Não disponível"}
+                  </option>
+                  {supportedReasoningEfforts.map((effort) => (
+                    <option key={effort} value={effort}>
+                      {AI_REASONING_EFFORT_LABELS[effort]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             )}
 
             {/* Warnings for deprecated / no-pricing models */}

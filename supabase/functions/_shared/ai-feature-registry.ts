@@ -14,6 +14,7 @@
  */
 
 import type { AiTask } from './ai-router.ts';
+import type { AiReasoningEffort } from './ai-provider-request-profile.ts';
 
 // ============================================================
 // Feature Key Constants
@@ -51,7 +52,7 @@ export type AIFeatureMeta = {
   defaultModel: string;
   defaultTemperature: number;
   defaultMaxTokens: number;
-  defaultReasoningEffort: 'none' | 'minimal' | null;
+  defaultReasoningEffort: AiReasoningEffort | null;
   /** Which context blocks this feature uses */
   defaultContextConfig: Record<string, boolean>;
   /** Template variables available for prompt interpolation */

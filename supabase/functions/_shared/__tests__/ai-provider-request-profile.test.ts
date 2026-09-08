@@ -14,21 +14,37 @@ describe('AI provider request profiles', () => {
     ['gpt-5.6-luna', 'rewrite_message', 'max_completion_tokens', 'none', true],
     ['gpt-5.7-future', 'follow_up_generation', 'max_completion_tokens', 'low', false],
     ['gpt-5.2-pro', 'follow_up_generation', 'max_completion_tokens', 'high', false],
-    ['gpt-6-astra', 'follow_up_generation', 'max_completion_tokens', 'medium', false],
+    ['gpt-6-astra', 'follow_up_generation', 'max_completion_tokens', 'low', false],
     ['gpt-6-astra', 'rewrite_message', 'max_completion_tokens', 'low', false],
     ['gpt-7-future', 'rewrite_message', 'max_completion_tokens', 'low', false],
-    ['o3', 'follow_up_generation', 'max_completion_tokens', 'medium', false],
+    ['o3', 'follow_up_generation', 'max_completion_tokens', 'low', false],
     ['o4-mini', 'rewrite_message', 'max_completion_tokens', 'low', false],
   ] as const)(
     'resolves OpenAI fields for %s / %s',
     (model, task, tokenParameter, reasoningEffort, supportsTemperature) => {
-      expect(resolveOpenAiRequestProfile(model, task)).toEqual({
+      const profile = resolveOpenAiRequestProfile(model, task);
+      expect(profile).toMatchObject({
         tokenParameter,
-        reasoningEffort,
         supportsTemperature,
       });
+      expect(profile.reasoningEffort).toBe(reasoningEffort);
     },
   );
+
+  it('honors a supported feature-level effort and keeps temperature rules coherent', () => {
+    expect(resolveOpenAiRequestProfile('gpt-5.6-sol', 'follow_up_generation', 'high')).toMatchObject({
+      reasoningEffort: 'high',
+      supportsTemperature: false,
+    });
+    expect(resolveOpenAiRequestProfile('gpt-5.6-sol', 'follow_up_generation', 'none')).toMatchObject({
+      reasoningEffort: 'none',
+      supportsTemperature: true,
+    });
+  });
+
+  it('falls back to the safe automatic effort when a model does not support the requested value', () => {
+    expect(resolveOpenAiRequestProfile('o3', 'follow_up_generation', 'none').reasoningEffort).toBe('low');
+  });
 
   it('keeps temperature for older Claude models and removes it for newer ones', () => {
     expect(resolveClaudeRequestProfile('claude-sonnet-4-6').supportsTemperature).toBe(true);

@@ -72,7 +72,11 @@ const buildExport = (override: boolean) => buildAiConfigExportV2({
     source: override ? "feature" : "ai_routing",
   }]]),
   selectableByProvider: {
-    openai: [{ value: "gpt-5.6-sol", label: "GPT-5.6 Sol" }],
+    openai: [{
+      value: "gpt-5.6-sol",
+      label: "GPT-5.6 Sol",
+      reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    }],
     gemini: [],
     claude: [],
   },
@@ -102,10 +106,12 @@ test("AI config v2 round-trips a custom provider/model override exactly", () => 
       output_instructions: "somente texto",
       temperature: 0.7,
       max_output_tokens: 520,
+      reasoning_effort: "minimal",
       model_override_enabled: true,
       provider: "openai",
       model: "gpt-5.6-sol",
     });
+    assert.equal(exported.features[0].active_config?.reasoning_effort, "minimal");
 });
 
 test("AI config v2 round-trips default routing without creating an override", () => {
@@ -218,6 +224,7 @@ test("AI config v2 exports the real-time selectable catalog enriched with metada
       active: true,
       deprecated: false,
       pricing_available: true,
+      reasoning_efforts: ["none", "low", "medium", "high", "xhigh", "max"],
     }]);
     assert.deepEqual(exported.routing_snapshot.follow_up_generation, {
       provider: "openai",

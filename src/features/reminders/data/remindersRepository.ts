@@ -41,6 +41,35 @@ export async function listReminders(): Promise<Reminder[]> {
   });
 }
 
+const listRemindersByRelation = (
+  relation: 'lead_id' | 'contract_id',
+  ids: string[],
+): Promise<Reminder[]> => {
+  if (ids.length === 0) return Promise.resolve([]);
+  return fetchAllPages<Reminder>(async (from, to) => {
+    const result = await databaseClient
+      .from('reminders')
+      .select('*')
+      .in(relation, ids)
+      .order('data_lembrete', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to)
+      .overrideTypes<Reminder[], { merge: false }>();
+    return result;
+  });
+};
+
+export async function listRemindersForLeadContext(
+  leadId: string,
+  contractIds: string[],
+): Promise<{ leadReminders: Reminder[]; contractReminders: Reminder[] }> {
+  const [leadReminders, contractReminders] = await Promise.all([
+    listRemindersByRelation('lead_id', [leadId]),
+    listRemindersByRelation('contract_id', contractIds),
+  ]);
+  return { leadReminders, contractReminders };
+}
+
 async function listByIds<T>(params: {
   table: 'contracts' | 'leads';
   ids: string[];

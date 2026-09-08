@@ -9,14 +9,20 @@ import DateTimePicker from '../../../../components/ui/DateTimePicker';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
-import { supabase, fetchAllPages, type Reminder } from '../../../../lib/supabase';
+import {
+  listRemindersForLeadContext,
+  updateReminder,
+  type Reminder,
+} from '../../../reminders';
 import { toast } from '../../../../lib/toast';
 import type {
   CommWhatsAppLeadContractSummary,
   CommWhatsAppLeadPanel,
   CommWhatsAppLeadSearchResult,
 } from '../data';
-import type { ConfigOption, Contract, LeadStatusConfig } from '../../../../lib/supabase';
+import type { ConfigOption } from '../../../config';
+import type { Contract } from '../../../contracts';
+import type { LeadStatusConfig } from '../../../leads';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 
 type LeadDrawerTab = 'crm' | 'critique';
@@ -190,30 +196,8 @@ export default function WhatsAppLeadDrawer({
     setAgendaError(null);
 
     try {
-      const [leadReminders, contractReminders] = await Promise.all([
-        fetchAllPages<Reminder>(
-          (from, to) =>
-            supabase
-              .from('reminders')
-              .select('*')
-              .eq('lead_id', leadId)
-              .order('data_lembrete', { ascending: true })
-              .order('id', { ascending: true })
-              .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
-        ),
-        contractIds.length > 0
-          ? fetchAllPages<Reminder>(
-              (from, to) =>
-                supabase
-                  .from('reminders')
-                  .select('*')
-                  .in('contract_id', contractIds)
-                  .order('data_lembrete', { ascending: true })
-                  .order('id', { ascending: true })
-                  .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
-            )
-          : Promise.resolve([] as Reminder[]),
-      ]);
+      const { leadReminders, contractReminders } =
+        await listRemindersForLeadContext(leadId, contractIds);
 
       const next = new Map<string, Reminder>();
       [...leadReminders, ...contractReminders].forEach((reminder) => {
@@ -250,17 +234,10 @@ export default function WhatsAppLeadDrawer({
   const handleAgendaToggleRead = useCallback(async (reminderId: string, currentStatus: boolean) => {
     try {
       const completionDate = !currentStatus ? new Date().toISOString() : null;
-      const { error } = await supabase
-        .from('reminders')
-        .update({
-          lido: !currentStatus,
-          concluido_em: completionDate,
-        })
-        .eq('id', reminderId);
-
-      if (error) {
-        throw error;
-      }
+      await updateReminder(reminderId, {
+        lido: !currentStatus,
+        concluido_em: completionDate,
+      });
 
       if (linkedLead?.id) {
         await syncLeadNextReturnFromUpcomingReminder(linkedLead.id);
@@ -276,14 +253,7 @@ export default function WhatsAppLeadDrawer({
   const handleAgendaReschedule = useCallback(async (reminderId: string, newDate: string) => {
     try {
       const nextDateIso = new Date(newDate).toISOString();
-      const { error } = await supabase
-        .from('reminders')
-        .update({ data_lembrete: nextDateIso })
-        .eq('id', reminderId);
-
-      if (error) {
-        throw error;
-      }
+      await updateReminder(reminderId, { data_lembrete: nextDateIso });
 
       if (linkedLead?.id) {
         await syncLeadNextReturnFromUpcomingReminder(linkedLead.id);

@@ -8,6 +8,7 @@ export {
   listReminderContracts,
   listReminderLeads,
   listReminders,
+  listRemindersForLeadContext,
   markLeadLostFromAgenda,
   subscribeToReminderChanges,
   updateReminder,

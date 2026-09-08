@@ -8,8 +8,10 @@ export {
   listNextReminderByLeadId,
   persistLeadStatusChange,
   registerLeadContact,
+  saveLeadRecord,
   subscribeToLeadChanges,
   touchLeadContact,
   updateLeadDetails,
+  upsertLeadReturnReminder,
 } from './data/leadsRepository';
 export { default as LeadsManagerScreen } from './LeadsManagerScreen';

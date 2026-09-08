@@ -4,6 +4,7 @@ import {
   databaseClient,
   fetchAllPages,
   supabase,
+  type Database,
 } from '../../../infrastructure/supabase';
 import type { Lead } from '../domain/types';
 
@@ -262,6 +263,89 @@ export async function createLeadReminder(input: {
   if (error) {
     throw error;
   }
+}
+
+type LeadWritePayload = Database['public']['Tables']['leads']['Update'];
+
+export async function saveLeadRecord(input: {
+  leadId?: string;
+  payload: Record<string, unknown>;
+  duplicatePhone?: string | null;
+  duplicateEmail?: string | null;
+  duplicateStatusId?: string | null;
+}): Promise<Lead> {
+  const writePayload = input.payload as LeadWritePayload;
+
+  if (input.leadId) {
+    const { data, error } = await databaseClient
+      .from('leads')
+      .update(writePayload)
+      .eq('id', input.leadId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as Lead;
+  }
+
+  const duplicateFilters = [
+    input.duplicatePhone ? `telefone.eq.${input.duplicatePhone}` : null,
+    input.duplicateEmail ? `email.ilike.${input.duplicateEmail}` : null,
+  ].filter((filter): filter is string => Boolean(filter));
+
+  let payload = writePayload;
+  if (duplicateFilters.length > 0) {
+    const { data: duplicateLead, error } = await databaseClient
+      .from('leads')
+      .select('id')
+      .or(duplicateFilters.join(','))
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (duplicateLead && input.duplicateStatusId) {
+      payload = { ...writePayload, status_id: input.duplicateStatusId };
+    }
+  }
+
+  const { data, error } = await databaseClient
+    .from('leads')
+    .insert(payload as Database['public']['Tables']['leads']['Insert'])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as Lead;
+}
+
+export async function upsertLeadReturnReminder(input: {
+  leadId: string;
+  leadName: string;
+  phone: string;
+  remindAt: string;
+}): Promise<void> {
+  const { data: existingReminder, error: lookupError } = await databaseClient
+    .from('reminders')
+    .select('id')
+    .eq('lead_id', input.leadId)
+    .eq('tipo', 'Retorno')
+    .eq('lido', false)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+
+  const values = {
+    titulo: `Retorno agendado: ${input.leadName}`,
+    descricao: `Retorno agendado para ${input.leadName}. Telefone: ${input.phone}`,
+    data_lembrete: input.remindAt,
+    prioridade: 'alta',
+  };
+
+  const { error } = existingReminder
+    ? await databaseClient.from('reminders').update(values).eq('id', existingReminder.id)
+    : await databaseClient.from('reminders').insert({
+        ...values,
+        lead_id: input.leadId,
+        tipo: 'Retorno',
+        lido: false,
+      });
+  if (error) throw error;
 }
 
 export function subscribeToLeadChanges(

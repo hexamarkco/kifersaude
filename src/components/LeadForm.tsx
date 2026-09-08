@@ -12,7 +12,11 @@ import {
   Search,
   UserCircle,
 } from 'lucide-react';
-import { supabase, type Lead } from '../lib/supabase';
+import {
+  saveLeadRecord,
+  upsertLeadReturnReminder,
+  type Lead,
+} from '../features/leads';
 import {
   convertLocalToUTC,
   formatDateForInput,
@@ -418,100 +422,30 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
       delete leadDataForDb.tipo_contratacao;
       delete leadDataForDb.responsavel;
 
-      let savedLeadId = lead?.id;
-      let savedLead: Lead | null = lead;
-
-      if (lead) {
-        const { data: updatedLead, error } = await supabase
-          .from('leads')
-          .update(leadDataForDb)
-          .eq('id', lead.id)
-          .select()
-          .single<Lead>();
-
-        if (error) throw error;
-        savedLead = updatedLead as Lead;
-      } else {
-        const duplicateFilters = [
-          normalizedLeadData.telefone
-            ? `telefone.eq.${normalizedLeadData.telefone}`
-            : null,
-          normalizedLeadData.email ? `email.ilike.${normalizedLeadData.email}` : null,
-        ].filter(Boolean);
-
-        if (duplicateFilters.length > 0) {
-          const { data: duplicateLead, error: duplicateCheckError } = await supabase
-            .from('leads')
-            .select('id')
-            .or(duplicateFilters.join(','))
-            .limit(1)
-            .maybeSingle();
-
-          if (duplicateCheckError) {
-            throw duplicateCheckError;
-          }
-
-          if (duplicateLead) {
-            const duplicateStatus = leadStatuses.find((status) => status.nome === 'Duplicado');
-            if (duplicateStatus) {
-              leadDataForDb.status_id = duplicateStatus.id;
-            }
-          }
-        }
-
-        const { data: insertedLead, error } = await supabase
-          .from('leads')
-          .insert([leadDataForDb])
-          .select()
-          .single<Lead>();
-
-        if (error) throw error;
-
-        savedLead = insertedLead as Lead;
-        savedLeadId = insertedLead.id;
-      }
+      const savedLead = await saveLeadRecord({
+        leadId: lead?.id,
+        payload: leadDataForDb,
+        duplicatePhone: normalizedLeadData.telefone,
+        duplicateEmail: normalizedLeadData.email,
+        duplicateStatusId: leadStatuses.find((status) => status.nome === 'Duplicado')?.id,
+      });
+      const savedLeadId = savedLead.id;
 
       if (formData.proximo_retorno && savedLeadId) {
         const localDate = new Date(formData.proximo_retorno);
         localDate.setMinutes(localDate.getMinutes() - 1);
         const reminderDate = localDate.toISOString();
 
-        const existingReminder = await supabase
-          .from('reminders')
-          .select('id')
-          .eq('lead_id', savedLeadId)
-          .eq('tipo', 'Retorno')
-          .eq('lido', false)
-          .maybeSingle();
+        await upsertLeadReturnReminder({
+          leadId: savedLeadId,
+          leadName: normalizedLeadData.nome_completo,
+          phone: formData.telefone,
+          remindAt: reminderDate,
+        });
 
-        if (existingReminder.data) {
-          await supabase
-            .from('reminders')
-            .update({
-              titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
-              descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
-              data_lembrete: reminderDate,
-              prioridade: 'alta',
-            })
-            .eq('id', existingReminder.data.id);
-        } else {
-          await supabase.from('reminders').insert([
-            {
-              lead_id: savedLeadId,
-              tipo: 'Retorno',
-              titulo: `Retorno agendado: ${normalizedLeadData.nome_completo}`,
-              descricao: `Retorno agendado para ${normalizedLeadData.nome_completo}. Telefone: ${formData.telefone}`,
-              data_lembrete: reminderDate,
-              lido: false,
-              prioridade: 'alta',
-            },
-          ]);
-        }
       }
 
-      if (savedLead) {
-        onSave(savedLead, { created: isNewLead });
-      }
+      onSave(savedLead, { created: isNewLead });
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
       toast.error('Não foi possível salvar o lead. Tente novamente.');

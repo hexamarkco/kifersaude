@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
-import { supabase, Lead } from '../lib/supabase';
+import type { Lead } from '../features/leads';
+import { touchLeadContact } from '../features/leads';
+import { createReminder } from '../features/reminders';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
@@ -124,30 +126,19 @@ export default function ReminderSchedulerModal({
       const trimmedDescription = description.trim();
       const finalDescription = trimmedDescription ? trimmedDescription : null;
 
-      const { error: insertError } = await supabase.from('reminders').insert([
-        {
-          lead_id: lead.id,
-          tipo: type,
-          titulo: trimmedTitle,
-          descricao: finalDescription,
-          data_lembrete: reminderDateUTC,
-          lido: false,
-          prioridade: priority,
-        },
-      ]);
-
-      if (insertError) throw insertError;
+      await createReminder({
+        lead_id: lead.id,
+        tipo: type,
+        titulo: trimmedTitle,
+        descricao: finalDescription,
+        data_lembrete: reminderDateUTC,
+        lido: false,
+        prioridade: priority,
+      });
 
       const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(lead.id);
 
-      const { error: leadUpdateError } = await supabase
-        .from('leads')
-        .update({
-          ultimo_contato: new Date().toISOString(),
-        })
-        .eq('id', lead.id);
-
-      if (leadUpdateError) throw leadUpdateError;
+      await touchLeadContact(lead.id);
 
       onScheduled?.({
         reminderDate: nextReturnDate || reminderDateUTC,

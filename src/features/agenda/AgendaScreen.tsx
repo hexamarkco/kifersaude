@@ -29,13 +29,21 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import type { Contract } from "../contracts";
+import type { Lead } from "../leads";
 import {
-  supabase,
-  Reminder,
-  Lead,
-  Contract,
-  fetchAllPages,
-} from "../../lib/supabase";
+  createReminder,
+  deleteReminder,
+  getReminderLead,
+  listReminderContracts,
+  listReminderLeads,
+  listReminders,
+  markLeadLostFromAgenda,
+  subscribeToReminderChanges,
+  updateReminder,
+  updateReminders,
+  type Reminder,
+} from "../reminders";
 import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
 import {
   addBusinessDaysSkippingWeekends,
@@ -80,8 +88,6 @@ import {
 import type { ManualReminderPrompt } from "../reminders/shared/reminderTypes";
 import FollowUpAgendaOrganizerModal from "./components/FollowUpAgendaOrganizerModal";
 
-const RELATED_ENTITY_BATCH_SIZE = 100;
-
 type AgendaStatusFilter = "todos" | "nao-lidos" | "lidos";
 type AgendaTimeFilter = "todos" | "atrasados" | "dia" | "futuros";
 type AgendaTone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
@@ -116,65 +122,6 @@ const AGENDA_DAY_SECTION_STYLES = {
     description: "Itens já finalizados",
     tone: "success" as const,
   },
-};
-
-const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
-  if (batchSize <= 0) {
-    return [items];
-  }
-
-  const batches: T[][] = [];
-  for (let index = 0; index < items.length; index += batchSize) {
-    batches.push(items.slice(index, index + batchSize));
-  }
-
-  return batches;
-};
-
-const fetchContractsByIds = async (ids: string[]) => {
-  const uniqueIds = Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
-
-  if (uniqueIds.length === 0) {
-    return [] as Contract[];
-  }
-
-  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const { data, error } = await supabase.from("contracts").select("*").in("id", batch);
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as Contract[];
-    }),
-  );
-
-  return results.flat();
-};
-
-const fetchLeadsByIds = async (ids: string[]) => {
-  const uniqueIds = Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
-
-  if (uniqueIds.length === 0) {
-    return [] as Lead[];
-  }
-
-  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const { data, error } = await supabase.from("leads").select("*").in("id", batch);
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as Lead[];
-    }),
-  );
-
-  return results.flat();
 };
 
 export default function AgendaScreen() {
@@ -229,18 +176,7 @@ export default function AgendaScreen() {
     }
 
     try {
-      const remindersData = await fetchAllPages<Reminder>(
-        (from, to) =>
-          supabase
-            .from("reminders")
-            .select("*")
-            .order("data_lembrete", { ascending: true })
-            .order("id", { ascending: true })
-            .range(from, to) as unknown as Promise<{
-            data: Reminder[] | null;
-            error: unknown;
-          }>,
-      );
+      const remindersData = await listReminders();
 
       const contractIds = Array.from(
         new Set(
@@ -249,7 +185,7 @@ export default function AgendaScreen() {
             .filter((id): id is string => Boolean(id)),
         ),
       );
-      const fetchedContracts = await fetchContractsByIds(contractIds);
+      const fetchedContracts = await listReminderContracts(contractIds);
       const nextContractsMap = new Map<string, Contract>();
 
       fetchedContracts.forEach((contract) => {
@@ -268,7 +204,7 @@ export default function AgendaScreen() {
           ...contractLeadIds,
         ]),
       );
-      const fetchedLeads = await fetchLeadsByIds(leadIds);
+      const fetchedLeads = await listReminderLeads(leadIds);
       const nextLeadsMap = new Map<string, Lead>();
 
       fetchedLeads.forEach((lead) => {
@@ -300,33 +236,16 @@ export default function AgendaScreen() {
   useEffect(() => {
     void loadReminders({ showLoading: true });
 
-    const channel = supabase
-      .channel("agenda-reminders-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "reminders",
-        },
-        (payload) => {
-          const newReminder = payload.new as Reminder | null;
-          const oldReminder = payload.old as Reminder | null;
-          const affectedId = newReminder?.id ?? oldReminder?.id;
+    return subscribeToReminderChanges(({ current, previous }) => {
+      const affectedId = current?.id ?? previous?.id;
 
-          if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
-            pendingRefreshIdsRef.current.delete(affectedId);
-            return;
-          }
+      if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
+        pendingRefreshIdsRef.current.delete(affectedId);
+        return;
+      }
 
-          void loadReminders();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      void loadReminders();
+    });
   }, [loadReminders]);
 
   const getLeadIdForReminder = useCallback(
@@ -362,21 +281,10 @@ export default function AgendaScreen() {
       setLoadingLeadId(leadId);
 
       try {
-        const { data, error: leadError } = await supabase
-          .from("leads")
-          .select("*")
-          .eq("id", leadId)
-          .maybeSingle();
-
-        if (leadError) {
-          throw leadError;
-        }
-
-        if (!data) {
+        const leadData = await getReminderLead(leadId);
+        if (!leadData) {
           return null;
         }
-
-        const leadData = data as Lead;
         setLeadsMap((current) => {
           const next = new Map(current);
           next.set(leadData.id, leadData);
@@ -472,47 +380,16 @@ export default function AgendaScreen() {
     try {
       const nowIso = new Date().toISOString();
 
-      const { error: updateLeadError } = await supabase
-        .from("leads")
-        .update({
-          status: "Perdido",
-          proximo_retorno: null,
-          ultimo_contato: nowIso,
-        })
-        .eq("id", leadId);
-
-      if (updateLeadError) {
-        throw updateLeadError;
-      }
-
-      if (leadInfo) {
-        await supabase.from("interactions").insert([
-          {
-            lead_id: leadId,
-            tipo: "Observacao",
-            descricao: `Status alterado de "${previousStatus}" para "Perdido"`,
-            responsavel: leadInfo.responsavel,
-          },
-        ]);
-
-        await supabase.from("lead_status_history").insert([
-          {
-            lead_id: leadId,
-            status_anterior: previousStatus,
-            status_novo: "Perdido",
-            responsavel: leadInfo.responsavel,
-          },
-        ]);
-      }
-
       const remindersForLead = reminders.filter((item) => getLeadIdForReminder(item) === leadId);
       remindersForLead.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
 
-      const { error: deleteRemindersError } = await supabase.from("reminders").delete().eq("lead_id", leadId);
-
-      if (deleteRemindersError) {
-        throw deleteRemindersError;
-      }
+      await markLeadLostFromAgenda({
+        leadId,
+        previousStatus,
+        responsible: leadInfo?.responsavel,
+        changedAt: nowIso,
+        logHistory: Boolean(leadInfo),
+      });
 
       setLeadsMap((current) => {
         const next = new Map(current);
@@ -551,15 +428,12 @@ export default function AgendaScreen() {
       const leadId = getLeadIdForReminder(reminder);
       const completionDate = !currentStatus ? new Date().toISOString() : null;
 
-      const { error: updateError } = await supabase
-        .from("reminders")
-        .update({
+      try {
+        await updateReminder(reminderId, {
           lido: !currentStatus,
           concluido_em: completionDate,
-        })
-        .eq("id", reminderId);
-
-      if (updateError) {
+        });
+      } catch (updateError) {
         pendingRefreshIdsRef.current.delete(reminderId);
         throw updateError;
       }
@@ -572,17 +446,13 @@ export default function AgendaScreen() {
         let leadInfo = leadsMap.get(leadId);
 
         if (!leadInfo) {
-          const { data } = await supabase
-            .from("leads")
-            .select("id, nome_completo, telefone, proximo_retorno")
-            .eq("id", leadId)
-            .maybeSingle();
+          leadInfo = (await getReminderLead(leadId)) ?? undefined;
 
-          if (data) {
-            leadInfo = data as Lead;
+          if (leadInfo) {
+            const loadedLead = leadInfo;
             setLeadsMap((current) => {
               const next = new Map(current);
-              next.set(leadInfo!.id, leadInfo!);
+              next.set(loadedLead.id, loadedLead);
               return next;
             });
           }
@@ -648,26 +518,16 @@ export default function AgendaScreen() {
         return;
       }
 
-      const { data: createdReminder, error: insertError } = await supabase
-        .from("reminders")
-        .insert([
-          {
-            lead_id: leadId,
-            contract_id: reminder.contract_id ?? undefined,
-            tipo: reminder.tipo,
-            titulo: reminder.titulo,
-            descricao: reminder.descricao ?? null,
-            data_lembrete: nextReminderDateIso,
-            lido: false,
-            prioridade: reminder.prioridade,
-          },
-        ])
-        .select("*")
-        .maybeSingle();
-
-      if (insertError) {
-        throw insertError;
-      }
+      const createdReminder = await createReminder({
+        lead_id: leadId,
+        contract_id: reminder.contract_id ?? undefined,
+        tipo: reminder.tipo,
+        titulo: reminder.titulo,
+        descricao: reminder.descricao ?? null,
+        data_lembrete: nextReminderDateIso,
+        lido: false,
+        prioridade: reminder.prioridade,
+      });
 
       if (createdReminder) {
         pendingRefreshIdsRef.current.add(createdReminder.id);
@@ -676,9 +536,8 @@ export default function AgendaScreen() {
       await updateLeadNextReturnDate(leadId);
 
       if (createdReminder) {
-        const nextReminder = createdReminder as Reminder;
         setReminders((current) =>
-          [...current, nextReminder].sort(
+          [...current, createdReminder].sort(
             (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
           ),
         );
@@ -708,9 +567,9 @@ export default function AgendaScreen() {
 
     try {
       pendingRefreshIdsRef.current.add(reminderToDelete.id);
-      const { error: deleteError } = await supabase.from("reminders").delete().eq("id", reminderToDelete.id);
-
-      if (deleteError) {
+      try {
+        await deleteReminder(reminderToDelete.id);
+      } catch (deleteError) {
         pendingRefreshIdsRef.current.delete(reminderToDelete.id);
         throw deleteError;
       }
@@ -743,12 +602,9 @@ export default function AgendaScreen() {
       const newDateIso = newDateTime.toISOString();
 
       pendingRefreshIdsRef.current.add(reminderId);
-      const { error: updateError } = await supabase
-        .from("reminders")
-        .update({ data_lembrete: newDateIso })
-        .eq("id", reminderId);
-
-      if (updateError) {
+      try {
+        await updateReminder(reminderId, { data_lembrete: newDateIso });
+      } catch (updateError) {
         pendingRefreshIdsRef.current.delete(reminderId);
         throw updateError;
       }
@@ -789,29 +645,19 @@ export default function AgendaScreen() {
     dueDate.setHours(12, 0, 0, 0);
 
     try {
-      const { data: createdTask, error: insertError } = await supabase
-        .from("reminders")
-        .insert([
-          {
-            tipo: "Tarefa",
-            titulo: newTaskTitle.trim(),
-            descricao: newTaskDescription.trim() || null,
-            data_lembrete: dueDate.toISOString(),
-            lido: false,
-            prioridade: "normal",
-          },
-        ])
-        .select("*")
-        .maybeSingle();
-
-      if (insertError) {
-        throw insertError;
-      }
+      const createdTask = await createReminder({
+        tipo: "Tarefa",
+        titulo: newTaskTitle.trim(),
+        descricao: newTaskDescription.trim() || null,
+        data_lembrete: dueDate.toISOString(),
+        lido: false,
+        prioridade: "normal",
+      });
 
       if (createdTask) {
         pendingRefreshIdsRef.current.add(createdTask.id);
         setReminders((current) =>
-          [...current, createdTask as Reminder].sort(
+          [...current, createdTask].sort(
             (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
           ),
         );
@@ -850,18 +696,12 @@ export default function AgendaScreen() {
       const completionDate = new Date().toISOString();
       unreadFiltered.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
 
-      const { error: updateError } = await supabase
-        .from("reminders")
-        .update({
-          lido: true,
-          concluido_em: completionDate,
-        })
-        .in(
-          "id",
+      try {
+        await updateReminders(
           unreadFiltered.map((item) => item.id),
+          { lido: true, concluido_em: completionDate },
         );
-
-      if (updateError) {
+      } catch (updateError) {
         unreadFiltered.forEach((item) => pendingRefreshIdsRef.current.delete(item.id));
         throw updateError;
       }
@@ -1932,7 +1772,7 @@ function AgendaReminderContextLink({
           return;
         }
 
-        const { data } = await supabase.from("leads").select("nome_completo, favorito").eq("id", leadId).maybeSingle();
+        const data = (await listReminderLeads([leadId]))[0];
 
         if (active && data?.nome_completo) {
           setContextInfo({ type: "lead", label: data.nome_completo, favorito: Boolean(data.favorito) });
@@ -1941,11 +1781,7 @@ function AgendaReminderContextLink({
       }
 
       if (contractId) {
-        const { data } = await supabase
-          .from("contracts")
-          .select("codigo_contrato")
-          .eq("id", contractId)
-          .maybeSingle();
+        const data = (await listReminderContracts([contractId]))[0];
 
         if (active && data?.codigo_contrato) {
           setContextInfo({ type: "contract", label: data.codigo_contrato });

@@ -9,6 +9,7 @@ export {
   persistLeadStatusChange,
   registerLeadContact,
   subscribeToLeadChanges,
+  touchLeadContact,
   updateLeadDetails,
 } from './data/leadsRepository';
 export { default as LeadsManagerScreen } from './LeadsManagerScreen';

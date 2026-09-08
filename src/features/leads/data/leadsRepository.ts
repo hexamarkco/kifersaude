@@ -138,6 +138,19 @@ export async function registerLeadContact(
   }
 }
 
+export async function touchLeadContact(
+  leadId: string,
+  timestamp = new Date().toISOString(),
+): Promise<void> {
+  const { error } = await databaseClient
+    .from('leads')
+    .update({ ultimo_contato: timestamp })
+    .eq('id', leadId);
+  if (error) {
+    throw error;
+  }
+}
+
 export async function persistLeadStatusChange(params: {
   lead: Lead;
   newStatus: string;

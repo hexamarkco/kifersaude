@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { configService, ConfigCategory } from '../lib/configService';
+import { configService, type ConfigCategory } from '../features/config/data/configService';
 import { AccessProfile, ConfigOption, LeadOrigem, LeadStatusConfig, ProfilePermission } from '../lib/supabase';
 import { getModuleLookupOrder } from '../lib/accessControl';
 

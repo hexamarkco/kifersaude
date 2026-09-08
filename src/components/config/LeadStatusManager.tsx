@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PaintBucket, Plus, Star, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
-import { configService } from '../../lib/configService';
+import { configService } from '../../features/config/data/configService';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { toast } from '../../lib/toast';

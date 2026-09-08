@@ -23,7 +23,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { configService } from "../../../lib/configService";
+import { configService } from "../data/configService";
 import { useConfig } from "../../../contexts/ConfigContext";
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,

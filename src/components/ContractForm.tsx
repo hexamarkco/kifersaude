@@ -58,7 +58,7 @@ import {
   Surface,
   Textarea,
 } from "../design-system";
-import { configService } from "../lib/configService";
+import { configService } from "../features/config/data/configService";
 import { useConfig } from "../contexts/ConfigContext";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
 import { toast } from "../lib/toast";

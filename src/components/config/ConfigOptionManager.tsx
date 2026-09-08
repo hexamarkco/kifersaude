@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
-import { configService, type ConfigCategory } from '../../lib/configService';
+import { configService, type ConfigCategory } from '../../features/config/data/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { toast } from '../../lib/toast';
 import {

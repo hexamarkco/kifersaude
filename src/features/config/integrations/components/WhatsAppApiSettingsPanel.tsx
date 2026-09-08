@@ -6,7 +6,7 @@ import {
   Save,
 } from "lucide-react";
 
-import { configService } from "../../../../lib/configService";
+import { configService } from "../../data/configService";
 import {
   AUTO_CONTACT_INTEGRATION_SLUG,
   normalizeAutoContactSettings,

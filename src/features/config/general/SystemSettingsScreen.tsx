@@ -12,7 +12,7 @@ import {
 import { useConfig } from "../../../contexts/ConfigContext";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
-import { configService } from "../../../lib/configService";
+import { configService } from "../data/configService";
 import { type SystemSettings } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "../../../components/config/ConfigOptionManager";

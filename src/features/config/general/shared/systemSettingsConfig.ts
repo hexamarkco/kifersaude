@@ -6,7 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { ConfigCategory } from "../../../../lib/configService";
+import type { ConfigCategory } from "../../data/configService";
 import type { SystemSettings } from "../../../../lib/supabase";
 
 export type SectionId =

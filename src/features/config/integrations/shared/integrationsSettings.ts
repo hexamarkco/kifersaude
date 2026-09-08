@@ -1,4 +1,4 @@
-import type { IntegrationSetting } from "../../../../lib/supabase";
+import type { IntegrationSetting } from "../../domain/types";
 
 export const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 export const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";

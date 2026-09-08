@@ -34,7 +34,7 @@ import {
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
-import { configService } from '../../../lib/configService';
+import { configService } from '../../config/data/configService';
 import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';

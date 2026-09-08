@@ -8,7 +8,7 @@ import {
   Tag,
 } from "lucide-react";
 
-import { configService } from "../../../lib/configService";
+import { configService } from "../data/configService";
 import { supabase, type IntegrationSetting } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
@@ -30,6 +30,7 @@ import {
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
+import { normalizeModelOptions } from "./shared/integrationsSettings";
 
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
@@ -171,42 +172,6 @@ const isOpenAiTranscriptionModel = (model: string): boolean => {
 const isOpenAiTextModel = (model: string): boolean => {
   const normalized = normalizeModelName(model);
   return Boolean(normalized) && !isOpenAiTranscriptionModel(normalized);
-};
-
-const normalizeModelOptions = (value: unknown): ModelOption[] => {
-  if (!Array.isArray(value)) return [];
-
-  const seen = new Set<string>();
-  const options: ModelOption[] = [];
-
-  for (const item of value) {
-    if (typeof item === "string") {
-      const trimmed = item.trim();
-      if (!trimmed || seen.has(trimmed)) continue;
-      seen.add(trimmed);
-      options.push({ value: trimmed, label: trimmed });
-      continue;
-    }
-
-    if (!isRecord(item)) continue;
-
-    const modelValue =
-      toTrimmedString(item.value) ||
-      toTrimmedString(item.id) ||
-      toTrimmedString(item.name);
-
-    if (!modelValue || seen.has(modelValue)) continue;
-
-    const modelLabel =
-      toTrimmedString(item.label) ||
-      toTrimmedString(item.displayName) ||
-      modelValue;
-
-    seen.add(modelValue);
-    options.push({ value: modelValue, label: modelLabel || modelValue });
-  }
-
-  return options;
 };
 
 const createDefaultProviderModelsState = (): Record<

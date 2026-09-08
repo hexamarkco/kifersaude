@@ -6,7 +6,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useConfig } from "../../../contexts/ConfigContext";
-import { configService } from "../../../lib/configService";
+import { configService } from "../data/configService";
 import { supabase } from "../../../lib/supabase";
 import {
   ACCESS_MODULES,

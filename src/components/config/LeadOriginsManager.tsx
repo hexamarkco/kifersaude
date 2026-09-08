@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
-import { configService } from '../../lib/configService';
+import { configService } from '../../features/config/data/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { toast } from '../../lib/toast';
 import {

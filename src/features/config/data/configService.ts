@@ -3,16 +3,22 @@ import type { PostgrestError } from '@supabase/supabase-js';
 import {
   fetchAllPages,
   supabase,
+} from '../../../infrastructure/supabase';
+import type {
   SystemSettings,
-  Operadora,
-  ProdutoPlano,
-  LeadStatusConfig,
-  LeadOrigem,
-  ConfigOption,
-  ProfilePermission,
   IntegrationSetting,
   AccessProfile,
-} from './supabase';
+  ConfigOption,
+  ProfilePermission,
+} from '../domain/types';
+import type {
+  Operadora,
+  ProdutoPlano,
+} from '../../contracts';
+import type {
+  LeadStatusConfig,
+  LeadOrigem,
+} from '../../leads';
 
 export type ConfigCategory =
   | 'lead_tipo_contratacao'

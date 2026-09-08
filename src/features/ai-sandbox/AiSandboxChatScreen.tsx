@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Clock, Download, FlaskConical, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
 import { Badge, Button, EmptyState, Input, LoadingState } from '../../design-system';
 import { toast } from '../../lib/toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import {
   aiSandboxChatService,
   type AiSandboxConversation,
   type AiSandboxMessage,
+  type AiSandboxTestRun,
 } from '../../lib/aiSandboxChatService';
 
 const REPLY_DEBOUNCE_SECONDS = 8;
@@ -122,13 +123,13 @@ export default function AiSandboxChatScreen() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiSandboxMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [activeTestRun, setActiveTestRun] = useState<AiSandboxTestRun | null>(null);
   const [draft, setDraft] = useState('');
   const [sendingDraft, setSendingDraft] = useState(false);
   const [secondsUntilReply, setSecondsUntilReply] = useState<number | null>(null);
   const [generatingReply, setGeneratingReply] = useState(false);
   const [leadNameForApproach, setLeadNameForApproach] = useState('');
   const [startingApproach, setStartingApproach] = useState(false);
-  const [showAutomated, setShowAutomated] = useState(false);
   const [runningScenario, setRunningScenario] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
   const [showScenarioPicker, setShowScenarioPicker] = useState(false);
@@ -154,6 +155,28 @@ export default function AiSandboxChatScreen() {
     [messages],
   );
 
+  const verdict = useMemo(() => {
+    const raw = activeTestRun?.verdict;
+    const strings = (value: unknown): string[] => Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean)
+      : [];
+    return {
+      violations: strings(raw?.violations),
+      notes: typeof raw?.notes === 'string' ? raw.notes.trim() : '',
+      playbookImprovements: strings(raw?.playbook_improvements),
+    };
+  }, [activeTestRun]);
+
+  const mergeMessage = useCallback((incoming: AiSandboxMessage) => {
+    setMessages((previous) => {
+      const existingIndex = previous.findIndex((message) => message.id === incoming.id);
+      const next = existingIndex >= 0
+        ? previous.map((message, index) => index === existingIndex ? incoming : message)
+        : [...previous, incoming];
+      return next.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+    });
+  }, []);
+
   const filteredScenarioGroups = useMemo(() => {
     if (!scenarioSearch.trim()) return SCENARIO_GROUPS;
     const q = scenarioSearch.toLowerCase();
@@ -172,10 +195,10 @@ export default function AiSandboxChatScreen() {
 
   useEffect(() => () => clearPendingTimer(), [clearPendingTimer]);
 
-  const loadConversations = useCallback(async (automatedOnly: boolean) => {
+  const loadConversations = useCallback(async () => {
     setConversationsLoading(true);
     try {
-      const rows = await aiSandboxChatService.listConversations(automatedOnly);
+      const rows = await aiSandboxChatService.listConversations();
       setConversations(rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar simulações.');
@@ -185,22 +208,27 @@ export default function AiSandboxChatScreen() {
   }, []);
 
   useEffect(() => {
-    handleNewConversation();
-    loadConversations(showAutomated);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAutomated]);
+    loadConversations();
+  }, [loadConversations]);
 
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([]);
+      setActiveTestRun(null);
       return;
     }
     let cancelled = false;
     setMessagesLoading(true);
-    aiSandboxChatService
-      .listMessages(activeConversationId)
-      .then((rows) => {
-        if (!cancelled) setMessages(rows);
+    setActiveTestRun(null);
+    Promise.all([
+      aiSandboxChatService.listMessages(activeConversationId),
+      aiSandboxChatService.getLatestTestRun(activeConversationId),
+    ])
+      .then(([rows, testRun]) => {
+        if (!cancelled) {
+          setMessages(rows);
+          setActiveTestRun(testRun);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');
@@ -212,6 +240,26 @@ export default function AiSandboxChatScreen() {
       cancelled = true;
     };
   }, [activeConversationId]);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    return aiSandboxChatService.subscribeToConversation(activeConversationId, {
+      onMessageInserted: (message) => {
+        if (activeConversationIdRef.current !== message.conversation_id) return;
+        mergeMessage(message);
+        if (message.role === 'ai') setGeneratingReply(false);
+      },
+      onTestRunInserted: (testRun) => {
+        if (activeConversationIdRef.current !== testRun.conversation_id) return;
+        setActiveTestRun(testRun);
+        setRunningScenario(false);
+      },
+      onConversationUpdated: (conversation) => {
+        setConversations((previous) => previous.map((item) => item.id === conversation.id ? conversation : item));
+      },
+    });
+  }, [activeConversationId, mergeMessage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -248,8 +296,10 @@ export default function AiSandboxChatScreen() {
 
   const handleNewConversation = () => {
     clearPendingTimer();
+    activeConversationIdRef.current = null;
     setActiveConversationId(null);
     setMessages([]);
+    setActiveTestRun(null);
     setDraft('');
     setLeadNameForApproach('');
     setError(null);
@@ -258,6 +308,7 @@ export default function AiSandboxChatScreen() {
   const handleSelectConversation = (conversationId: string) => {
     if (conversationId === activeConversationId) return;
     clearPendingTimer();
+    activeConversationIdRef.current = conversationId;
     setActiveConversationId(conversationId);
   };
 
@@ -276,26 +327,13 @@ export default function AiSandboxChatScreen() {
   const triggerGenerateReply = useCallback(async (conversationId: string) => {
     setGeneratingReply(true);
     try {
-      const result = await aiSandboxChatService.generateReply(conversationId);
-      if (result === null) return; // conversa ja foi encaminhada — IA nao responde mais
+      const generated = await aiSandboxChatService.generateReply(conversationId);
+      if (generated === null) return; // conversa ja foi encaminhada — IA nao responde mais
 
       if (activeConversationIdRef.current !== conversationId) return;
 
-      const aiMessage: AiSandboxMessage = {
-        id: `ai-${Date.now()}`,
-        conversation_id: conversationId,
-        role: 'ai',
-        content: result.reply,
-        handoff_reason: result.handoffReason,
-        handoff_code: result.handoffCode,
-        provider: result.provider,
-        model: result.model,
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === conversationId ? { ...c, updated_at: new Date().toISOString() } : c)),
-      );
+      const rows = await aiSandboxChatService.listMessages(conversationId);
+      if (activeConversationIdRef.current === conversationId) setMessages(rows);
     } catch (err) {
       if (activeConversationIdRef.current === conversationId) {
         setError(err instanceof Error ? err.message : 'Erro ao gerar resposta da IA.');
@@ -350,11 +388,12 @@ export default function AiSandboxChatScreen() {
         const conversation = await aiSandboxChatService.createConversation(text, user.id);
         conversationId = conversation.id;
         setConversations((prev) => [conversation, ...prev]);
+        activeConversationIdRef.current = conversation.id;
         setActiveConversationId(conversation.id);
       }
 
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
-      setMessages((prev) => [...prev, leadMessage]);
+      mergeMessage(leadMessage);
 
       // Depois do handoff a IA nao responde mais — o lead pode mandar mais
       // mensagens (ex: agradecendo), mas ninguem gera resposta automatica.
@@ -385,22 +424,11 @@ export default function AiSandboxChatScreen() {
       setLeadNameForApproach('');
 
       setGeneratingReply(true);
-      const result = await aiSandboxChatService.generateOpening(conversation.id, name || undefined);
+      await aiSandboxChatService.generateOpening(conversation.id, name || undefined);
       if (activeConversationIdRef.current !== conversation.id) return;
 
-      const now = Date.now();
-      const openingMessages: AiSandboxMessage[] = result.messages.map((content, index) => ({
-        id: `ai-opening-${now}-${index}`,
-        conversation_id: conversation.id,
-        role: 'ai',
-        content,
-        handoff_reason: index === result.messages.length - 1 ? result.handoffReason : null,
-        handoff_code: index === result.messages.length - 1 ? result.handoffCode : null,
-        provider: result.provider,
-        model: result.model,
-        created_at: new Date().toISOString(),
-      }));
-      setMessages(openingMessages);
+      const rows = await aiSandboxChatService.listMessages(conversation.id);
+      if (activeConversationIdRef.current === conversation.id) setMessages(rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
     } finally {
@@ -410,15 +438,27 @@ export default function AiSandboxChatScreen() {
   };
 
   const handleRunTestScenario = async (scenarioKey: string, scenarioLabel: string, personaPrompt: string) => {
+    if (!user) return;
     setRunningScenario(true);
     setError(null);
     try {
-      const result = await aiSandboxChatService.runScenario(scenarioKey, scenarioLabel, personaPrompt);
-      await loadConversations(true);
-      setShowAutomated(true);
-      if (result.conversationId) {
-        setActiveConversationId(result.conversationId);
+      const conversation = await aiSandboxChatService.createAutomatedConversation(scenarioLabel, user.id);
+      setConversations((previous) => [conversation, ...previous]);
+      activeConversationIdRef.current = conversation.id;
+      setActiveConversationId(conversation.id);
+      setMessages([]);
+      setActiveTestRun(null);
+
+      const result = await aiSandboxChatService.runScenario(scenarioKey, scenarioLabel, personaPrompt, conversation.id);
+      const [rows, testRun] = await Promise.all([
+        aiSandboxChatService.listMessages(conversation.id),
+        aiSandboxChatService.getLatestTestRun(conversation.id),
+      ]);
+      if (activeConversationIdRef.current === conversation.id) {
+        setMessages(rows);
+        setActiveTestRun(testRun);
       }
+      await loadConversations();
       if (result.passed) {
         toast.success(`Teste "${scenarioLabel}" passou!`);
       } else {
@@ -452,21 +492,11 @@ export default function AiSandboxChatScreen() {
         </div>
 
         <div className="px-3 pt-3">
-          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation} disabled={showAutomated}>
+          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation}>
             <MessageCirclePlus className="mr-1.5 h-4 w-4" />
             Nova simulação
           </Button>
         </div>
-
-        <label className="flex items-center gap-2 px-4 pt-3 text-xs text-[var(--text-secondary)]">
-          <input
-            type="checkbox"
-            checked={showAutomated}
-            onChange={(event) => setShowAutomated(event.target.checked)}
-            className="h-3.5 w-3.5"
-          />
-          Ver testes automatizados
-        </label>
 
         <div className="border-b border-[var(--border-subtle)] px-3 pt-3 pb-3">
           <button
@@ -533,9 +563,7 @@ export default function AiSandboxChatScreen() {
             <LoadingState compact label="Carregando..." />
           ) : conversations.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
-              {showAutomated
-                ? 'Nenhum teste automatizado rodado ainda.'
-                : 'Nenhuma simulação ainda. Comece uma conversa como se fosse um lead.'}
+              Nenhuma simulação ainda. Comece uma conversa como se fosse um lead ou rode um cenário automatizado.
             </p>
           ) : (
             <ul className="flex flex-col gap-1">
@@ -551,10 +579,15 @@ export default function AiSandboxChatScreen() {
                     <button
                       type="button"
                       onClick={() => handleSelectConversation(conversation.id)}
-                      className="min-w-0 flex-1 truncate text-left"
+                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
                       title={conversation.title}
                     >
-                      {conversation.title}
+                      <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+                      {conversation.is_automated && (
+                        <Badge tone="warning" size="sm" className="shrink-0">
+                          Automatizado
+                        </Badge>
+                      )}
                     </button>
                     <button
                       type="button"
@@ -648,6 +681,60 @@ export default function AiSandboxChatScreen() {
                     )}
                   </div>
                 ))
+              )}
+
+              {runningScenario && activeConversation?.is_automated && (
+                <div className="flex justify-start">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-4 py-2.5 text-sm text-[var(--text-secondary)]">
+                    Cenário em execução — acompanhando os turnos ao vivo...
+                  </div>
+                </div>
+              )}
+
+              {activeTestRun && (
+                <section className={`rounded-[var(--radius-lg)] border p-4 ${
+                  activeTestRun.passed
+                    ? 'border-[var(--success-border)] bg-[var(--success-soft)]'
+                    : 'border-[var(--warning-border)] bg-[var(--warning-soft)]'
+                }`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeTestRun.passed ? (
+                      <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-[var(--warning-text)]" />
+                    )}
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      Avaliação do juiz: {activeTestRun.passed ? 'aprovado' : 'precisa de ajuste'}
+                    </p>
+                    <Badge tone={activeTestRun.passed ? 'success' : 'warning'} size="sm">
+                      {activeTestRun.turns} turno{activeTestRun.turns === 1 ? '' : 's'}
+                    </Badge>
+                  </div>
+
+                  {verdict.notes && (
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">{verdict.notes}</p>
+                  )}
+
+                  {verdict.violations.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Pontos reprovados</p>
+                      <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
+                        {verdict.violations.map((violation) => <li key={violation}>• {violation}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {verdict.playbookImprovements.length > 0 && (
+                    <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                        <Lightbulb className="h-3.5 w-3.5" /> Sugestões para o playbook
+                      </p>
+                      <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
+                        {verdict.playbookImprovements.map((improvement) => <li key={improvement}>• {improvement}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </section>
               )}
 
               {secondsUntilReply !== null && (

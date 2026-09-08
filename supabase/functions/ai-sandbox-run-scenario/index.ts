@@ -32,6 +32,7 @@ type RequestBody = {
   firstLeadMessage?: string;
   leadName?: string;
   maxTurns?: number;
+  conversationId?: string;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -104,25 +105,29 @@ const buildJudgePrompt = (
     '14. Se o beneficiario tinha menos de 12 anos e o lead queria plano so para a crianca, o atendente deixou claro antes de qualificar que nao ha operadora trabalhada pela Kifer que aceite essa crianca como titular sozinha? Explicou que um adulto entra como titular, a crianca como dependente e ha mensalidade para os dois? E proibido dizer que isso depende de operadora, que pode haver cotacao so para a crianca, que o adulto pode ficar somente como responsavel/assinante ou que nao precisa usar o plano. Tambem conta como violacao pedir idade, cidade ou CNPJ/MEI antes de responder a objecao de forma direta.',
     '',
     '--- FORMATO DA RESPOSTA ---',
+    'Além do veredito, sugira de 0 a 3 melhorias concretas para o PLAYBOOK quando elas reduzirem as violações observadas. Sugestões devem ser regras ou instruções que possam ser adicionadas/ajustadas no playbook; não sugira trocar modelo, mudar temperatura ou ações vagas. Se não houver melhoria relevante, retorne uma lista vazia.',
     'Responda APENAS com um JSON valido, sem markdown, no formato:',
-    '{"passed": true ou false, "violations": ["lista curta de violacoes encontradas, uma por item do checklist que falhou"], "notes": "observacao livre de 1-2 frases"}',
+    '{"passed": true ou false, "violations": ["lista curta de violacoes encontradas, uma por item do checklist que falhou"], "notes": "observacao livre de 1-2 frases", "playbook_improvements": ["0 a 3 sugestoes concretas"]}',
     'Se nenhuma violacao foi encontrada, "passed" deve ser true e "violations" uma lista vazia.',
   ].join('\n');
 
   return { systemPrompt, userPrompt };
 };
 
-const parseVerdict = (raw: string): { passed: boolean | null; violations: string[]; notes: string } => {
+const parseVerdict = (raw: string): { passed: boolean | null; violations: string[]; notes: string; playbookImprovements: string[] } => {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
   try {
-    const parsed = JSON.parse(cleaned) as { passed?: unknown; violations?: unknown; notes?: unknown };
+    const parsed = JSON.parse(cleaned) as { passed?: unknown; violations?: unknown; notes?: unknown; playbook_improvements?: unknown };
     return {
       passed: typeof parsed.passed === 'boolean' ? parsed.passed : null,
       violations: Array.isArray(parsed.violations) ? parsed.violations.filter((v) => typeof v === 'string') : [],
       notes: typeof parsed.notes === 'string' ? parsed.notes : '',
+      playbookImprovements: Array.isArray(parsed.playbook_improvements)
+        ? parsed.playbook_improvements.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean).slice(0, 3)
+        : [],
     };
   } catch {
-    return { passed: null, violations: [], notes: `[Resposta do juiz nao veio em JSON valido] ${cleaned}`.slice(0, 2000) };
+    return { passed: null, violations: [], notes: `[Resposta do juiz nao veio em JSON valido] ${cleaned}`.slice(0, 2000), playbookImprovements: [] };
   }
 };
 
@@ -154,6 +159,7 @@ Deno.serve(async (req: Request) => {
     const startMode = body.startMode === 'lead_opens' ? 'lead_opens' : 'ai_opens';
     const firstLeadMessage = toTrimmedString(body.firstLeadMessage);
     const leadName = toTrimmedString(body.leadName).slice(0, 120);
+    const requestedConversationId = toTrimmedString(body.conversationId);
     const maxTurns = Math.min(HARD_MAX_TURNS, Math.max(1, Math.floor(body.maxTurns ?? DEFAULT_MAX_TURNS)));
 
     if (!leadPersonaPrompt) {
@@ -177,17 +183,30 @@ Deno.serve(async (req: Request) => {
     // Load autonomous.reply config — the single source of truth for the attendant agent
     const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
 
-    const { data: conversation, error: createError } = await supabaseAdmin
-      .from('ai_sandbox_conversations')
-      .insert({
-        title: `[Teste automatizado] ${scenarioLabel}`,
-        created_by: createdBy,
-        is_automated: true,
-      })
-      .select('id')
-      .single();
-    if (createError) throw new Error(`Erro ao criar conversa: ${createError.message}`);
-    const conversationId = conversation.id as string;
+    let conversationId = requestedConversationId;
+    if (conversationId) {
+      const { data: conversation, error: conversationError } = await supabaseAdmin
+        .from('ai_sandbox_conversations')
+        .select('id, created_by, is_automated')
+        .eq('id', conversationId)
+        .maybeSingle();
+      if (conversationError) throw new Error(`Erro ao carregar conversa: ${conversationError.message}`);
+      if (!conversation || !conversation.is_automated || (createdBy && conversation.created_by !== createdBy)) {
+        throw new Error('Conversa de cenário inválida.');
+      }
+    } else {
+      const { data: conversation, error: createError } = await supabaseAdmin
+        .from('ai_sandbox_conversations')
+        .insert({
+          title: `[Teste automatizado] ${scenarioLabel}`,
+          created_by: createdBy,
+          is_automated: true,
+        })
+        .select('id')
+        .single();
+      if (createError) throw new Error(`Erro ao criar conversa: ${createError.message}`);
+      conversationId = conversation.id as string;
+    }
 
     const history: AutonomousMessageRow[] = [];
     let handoffTriggered = false;
@@ -309,7 +328,10 @@ Deno.serve(async (req: Request) => {
 
     // ---- Avaliacao (juiz) ----
 
-    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(autonomousConfig.featurePrompt, history, handoffTriggered, finalHandoffCode);
+    const judgePlaybook = [autonomousConfig.featurePrompt, autonomousConfig.outputInstructions]
+      .filter(Boolean)
+      .join('\n\n');
+    const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(judgePlaybook, history, handoffTriggered, finalHandoffCode);
     const judgeResult = await generateTextForFeature({
       supabaseAdmin,
       featureKey: 'sandbox.scenario',
@@ -330,7 +352,7 @@ Deno.serve(async (req: Request) => {
       handoff_triggered: handoffTriggered,
       handoff_code: finalHandoffCode,
       passed: verdict.passed,
-      verdict: { violations: verdict.violations, notes: verdict.notes },
+      verdict: { violations: verdict.violations, notes: verdict.notes, playbook_improvements: verdict.playbookImprovements },
       provider: lastProvider,
       model: lastModel,
     });
@@ -347,6 +369,7 @@ Deno.serve(async (req: Request) => {
       passed: verdict.passed,
       violations: verdict.violations,
       notes: verdict.notes,
+      playbookImprovements: verdict.playbookImprovements,
     }), { status: 200, headers: jsonHeaders });
   } catch (error) {
     console.error('[ai-sandbox-run-scenario] erro inesperado', error);

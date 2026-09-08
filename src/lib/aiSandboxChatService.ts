@@ -21,6 +21,31 @@ export type AiSandboxMessage = {
   created_at: string;
 };
 
+export type AiSandboxTestRun = {
+  id: string;
+  conversation_id: string;
+  scenario_key: string;
+  scenario_label: string;
+  turns: number;
+  handoff_triggered: boolean;
+  handoff_code: string | null;
+  passed: boolean | null;
+  verdict: {
+    violations?: unknown;
+    notes?: unknown;
+    playbook_improvements?: unknown;
+  };
+  provider: string | null;
+  model: string | null;
+  created_at: string;
+};
+
+type SandboxRealtimeHandlers = {
+  onMessageInserted: (message: AiSandboxMessage) => void;
+  onTestRunInserted: (testRun: AiSandboxTestRun) => void;
+  onConversationUpdated: (conversation: AiSandboxConversation) => void;
+};
+
 type GenerateReplyResult = {
   reply: string;
   handoffCode: string | null;
@@ -45,11 +70,10 @@ const buildTitleFromMessage = (message: string): string => {
 };
 
 export const aiSandboxChatService = {
-  async listConversations(automatedOnly = false): Promise<AiSandboxConversation[]> {
+  async listConversations(): Promise<AiSandboxConversation[]> {
     const { data, error } = await supabase
       .from('ai_sandbox_conversations')
       .select('*')
-      .eq('is_automated', automatedOnly)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as simulacoes.'));
@@ -65,6 +89,42 @@ export const aiSandboxChatService = {
 
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens.'));
     return (data ?? []) as AiSandboxMessage[];
+  },
+
+  async getLatestTestRun(conversationId: string): Promise<AiSandboxTestRun | null> {
+    const { data, error } = await supabase
+      .from('ai_sandbox_test_runs')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a avaliacao do cenário.'));
+    return data ? data as AiSandboxTestRun : null;
+  },
+
+  subscribeToConversation(conversationId: string, handlers: SandboxRealtimeHandlers): () => void {
+    const channel = supabase
+      .channel(`ai-sandbox-conversation-${conversationId}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_sandbox_messages', filter: `conversation_id=eq.${conversationId}` },
+        (payload) => handlers.onMessageInserted(payload.new as AiSandboxMessage),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_sandbox_test_runs', filter: `conversation_id=eq.${conversationId}` },
+        (payload) => handlers.onTestRunInserted(payload.new as AiSandboxTestRun),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_sandbox_conversations', filter: `id=eq.${conversationId}` },
+        (payload) => handlers.onConversationUpdated(payload.new as AiSandboxConversation),
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
   },
 
   async renameConversation(conversationId: string, title: string): Promise<void> {
@@ -93,6 +153,17 @@ export const aiSandboxChatService = {
       .single();
 
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel criar a simulacao.'));
+    return data as AiSandboxConversation;
+  },
+
+  async createAutomatedConversation(title: string, createdBy: string): Promise<AiSandboxConversation> {
+    const { data, error } = await supabase
+      .from('ai_sandbox_conversations')
+      .insert({ title: `[Teste automatizado] ${title}`, created_by: createdBy, is_automated: true })
+      .select('*')
+      .single();
+
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel iniciar o cenário.'));
     return data as AiSandboxConversation;
   },
 
@@ -136,19 +207,20 @@ export const aiSandboxChatService = {
     return result;
   },
 
-  async runScenario(scenarioKey: string, scenarioLabel: string, leadPersonaPrompt: string): Promise<{ conversationId: string; passed: boolean; violations: string[]; notes: string }> {
+  async runScenario(scenarioKey: string, scenarioLabel: string, leadPersonaPrompt: string, conversationId: string): Promise<{ conversationId: string; passed: boolean; violations: string[]; notes: string; playbookImprovements: string[] }> {
     const { data, error } = await supabase.functions.invoke('ai-sandbox-run-scenario', {
-      body: { scenarioKey, scenarioLabel, leadPersonaPrompt },
+      body: { scenarioKey, scenarioLabel, leadPersonaPrompt, conversationId },
     });
 
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Erro ao rodar cenário de teste.'));
-    const payload = (data ?? {}) as { conversationId?: string; passed?: boolean; violations?: string[]; notes?: string; error?: string };
+    const payload = (data ?? {}) as { conversationId?: string; passed?: boolean; violations?: string[]; notes?: string; playbookImprovements?: string[]; error?: string };
     if (payload.error) throw new Error(payload.error);
     return {
       conversationId: payload.conversationId ?? '',
       passed: payload.passed ?? false,
       violations: payload.violations ?? [],
       notes: payload.notes ?? '',
+      playbookImprovements: payload.playbookImprovements ?? [],
     };
   },
 };

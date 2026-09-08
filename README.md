@@ -1,23 +1,30 @@
-# Kifer Saúde Frontend
+# Kifer Saúde
 
-## Pré-requisitos
+Aplicação web da Kifer Saúde: site público, formulários de captação e CRM comercial com leads, contratos, agenda, configurações, IA e comunicação por WhatsApp.
 
-- Node.js 20+ e npm
+## Stack
 
-## Configuração de variáveis de ambiente
+- React 18, TypeScript e Vite
+- Supabase: Postgres, Auth, Realtime, Storage e Edge Functions
+- Vitest, ESLint e Tailwind/PostCSS
 
-1. Copie o arquivo de exemplo e crie um arquivo local:
+## Requisitos
 
-   ```bash
-   cp .env.example .env.local
-   ```
+- Node.js 20 ou superior
+- npm
+- Um projeto Supabase para usar autenticação, dados e Edge Functions
 
-2. Edite `.env.local` (ou `.env`) e informe os dados do seu projeto Supabase:
+## Configuração
 
-   - `VITE_SUPABASE_URL`: normalmente `https://<project>.supabase.co` ou, no Supabase CLI, `http://127.0.0.1:54321`.
-   - `VITE_SUPABASE_FUNCTIONS_URL`: use o endpoint das funções (`https://<project>.supabase.co/functions/v1` ou `http://127.0.0.1:54321/functions/v1`).
-   - `VITE_SUPABASE_ANON_KEY`: chave anônima (`anon key`) do projeto.
-   - `SUPABASE_SERVICE_ROLE_KEY`: apenas para uso em servidor, scripts protegidos ou secrets do Supabase. Nao use prefixo `VITE_` nessa chave.
+Copie `.env.example` para `.env.local` e preencha:
+
+```env
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_FUNCTIONS_URL=https://<project>.supabase.co/functions/v1
+VITE_SUPABASE_ANON_KEY=<anon-key>
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` é exclusiva de servidor, scripts protegidos e secrets das Edge Functions. Nunca use prefixo `VITE_` nessa chave.
 
 ## Desenvolvimento
 
@@ -26,45 +33,44 @@ npm install
 npm run dev
 ```
 
-Após configurar as variáveis e instalar as dependências, acesse o endereço informado pelo Vite (normalmente `http://localhost:5173`).
+O Vite informa a URL local, normalmente `http://localhost:5173`.
 
-## Scripts Supabase (Windows + WSL)
+## Validação
 
-Os scripts `.bat` executam o Supabase CLI dentro do WSL (Ubuntu).
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+npm run migrations:check
+npm run audit:visual
+```
 
-1. Instale o Supabase CLI no Ubuntu (uma vez):
+Para conferir se os tipos persistidos correspondem ao projeto Supabase vinculado:
 
-   ```bash
-   wsl -e bash -lc "curl -fsSL https://github.com/supabase/cli/releases/download/v2.75.0/supabase_2.75.0_linux_amd64.deb -o /tmp/supabase.deb && sudo dpkg -i /tmp/supabase.deb"
-   ```
+```bash
+npm run types:supabase:check
+```
 
-2. Crie o arquivo local de configuracao:
+Use `npm run types:supabase` somente quando uma mudança de banco intencional exigir regenerar `src/infrastructure/supabase/database.generated.ts`.
 
-   ```bat
-   copy supabase.local.ini.example supabase.local.ini
-   ```
+## Organização
 
-3. Edite `supabase.local.ini` com:
+- `src/features`: implementação organizada por domínio
+- `src/infrastructure/supabase`: fronteira tipada do frontend com Supabase
+- `src/design-system`: tokens, estilos e componentes visuais
+- `supabase/functions`: Edge Functions e módulos Deno compartilhados
+- `supabase/migrations`: histórico append-only do banco
+- `scripts`: ferramentas operacionais suportadas; `scripts/legacy` contém apenas referências históricas
 
-   - `PROJECT_REF`
-   - `DB_PASSWORD`
-   - `SUPABASE_ACCESS_TOKEN`
+Leia [AGENTS.md](AGENTS.md) para convenções de contribuição e [docs/architecture.md](docs/architecture.md) para a visão arquitetural.
 
-   Esse arquivo e ignorado pelo Git.
+## Banco e deploy
 
-Scripts disponiveis:
+Não edite migrations já aplicadas; crie uma nova migration corretiva. `deploy.bat` aplica migrations e chama o deploy incremental de functions em Windows; `deploy-functions.bat` usa `supabase.local.ini` e o Supabase CLI. Esses comandos alteram o ambiente remoto e só devem ser executados de forma intencional.
 
-- `run-migrations.bat`: aplica migrations (`supabase db push`).
-- `deploy-functions.bat`: faz deploy apenas das functions alteradas em `supabase/functions` desde a ultima execucao, usando cache local em `.deploy-cache/`.
-- `npm run migrations:report`: audita o diretorio `supabase/migrations` (duplicidades, wrappers e distribuicao por mes).
-- `npm run migrations:report:write`: atualiza `supabase/migrations/INDEX.md`.
-- `npm run migrations:baseline:write`: grava baseline atual da auditoria.
-- `npm run migrations:check`: valida que nao surgiram novas duplicidades/wrappers alem do baseline.
+Após um deploy autorizado de automações, execute:
 
-Boas praticas para migrations:
-
-- Nao editar migrations antigas ja aplicadas.
-- Nao renomear prefixos de versao (`YYYYMMDDHHMMSS`) de migrations existentes.
-- Fazer ajustes via nova migration corretiva.
-
-Observacao: os dois scripts pausam no final para voce conseguir ler o resultado ao abrir com duplo clique. Se executar via terminal e quiser sem pausa, use `--no-pause`.
+```bash
+npm run verify:automations
+```

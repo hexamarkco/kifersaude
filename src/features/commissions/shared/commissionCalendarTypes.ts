@@ -1,4 +1,4 @@
-import type { Contract } from "../../../lib/supabase";
+import type { Contract } from "../../contracts";
 
 export type CommissionEventType = "comissao" | "bonificacao";
 

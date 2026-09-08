@@ -1,4 +1,4 @@
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../infrastructure/supabase";
 import type {
   AiFeatureWithConfig,
   AiFeatureConfigRow,

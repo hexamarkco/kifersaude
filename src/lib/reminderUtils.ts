@@ -1,4 +1,4 @@
-import { Reminder } from './supabase';
+import type { Reminder } from '../features/reminders';
 import { isOverdue, getCurrentTimeBR } from './dateUtils';
 
 export type ReminderPeriod = 'overdue' | 'today' | 'tomorrow' | 'thisWeek' | 'thisMonth' | 'later';

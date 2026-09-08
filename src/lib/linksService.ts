@@ -1,6 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import { supabase, type PublicLinkItem, type PublicLinkPageSettings } from './supabase';
+import { supabase } from '../infrastructure/supabase';
+import type { PublicLinkItem, PublicLinkPageSettings } from '../features/public-content';
 
 const PAGE_SETTINGS_TABLE = 'public_link_page_settings';
 const LINK_ITEMS_TABLE = 'public_link_items';

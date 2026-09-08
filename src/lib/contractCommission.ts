@@ -1,4 +1,4 @@
-import type { Contract, ContractCommissionInstallment } from "./supabase";
+import type { Contract, ContractCommissionInstallment } from "../features/contracts";
 
 export const normalizeCommissionInstallments = (
   installments: Contract["comissao_parcelas"],

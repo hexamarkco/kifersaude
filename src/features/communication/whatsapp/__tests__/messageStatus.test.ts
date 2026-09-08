@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import type { CommWhatsAppMessage } from '../../../../lib/supabase';
+import type { CommWhatsAppMessage } from '../domain/types';
 import {
   getMessageDisplayMetadataSignature,
   mergeCommWhatsAppMessages,

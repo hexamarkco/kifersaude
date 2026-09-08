@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import type { CommWhatsAppChat } from '../../../../lib/supabase';
+import type { CommWhatsAppChat } from '../domain/types';
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { supabase } from './supabase';
+import { supabase } from '../infrastructure/supabase';
 
 export const toggleLeadFavorito = async (leadId: string, nextFavorito: boolean): Promise<void> => {
   const { error } = await supabase.from('leads').update({ favorito: nextFavorito }).eq('id', leadId);

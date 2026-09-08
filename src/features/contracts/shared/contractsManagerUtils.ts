@@ -1,4 +1,4 @@
-import type { Contract } from "../../../lib/supabase";
+import type { Contract } from "../domain/types";
 import type {
   ContractDateDisplayType,
   ContractHolder,

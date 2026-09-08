@@ -1,4 +1,5 @@
-import { ConfigOption, Lead, LeadOrigem, LeadStatusConfig } from './supabase';
+import type { ConfigOption } from '../features/config';
+import type { Lead, LeadOrigem, LeadStatusConfig } from '../features/leads';
 
 type LeadRelationLookups = {
   origins: LeadOrigem[];

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
 
-import type { CommWhatsAppChat } from '../../../../lib/supabase';
+import type { CommWhatsAppChat } from '../domain/types';
 
 type LoadChats = (options?: { sections?: Array<'active' | 'archived'> }) => Promise<void>;
 

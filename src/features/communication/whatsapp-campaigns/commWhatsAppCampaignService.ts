@@ -1,5 +1,5 @@
 import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
-import { getSupabaseErrorMessage, supabase } from '../../../lib/supabase';
+import { getSupabaseErrorMessage, supabase } from '../../../infrastructure/supabase';
 
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CommWhatsAppCampaignAudienceSource = 'crm' | 'csv' | 'manual' | 'mixed';
@@ -302,7 +302,7 @@ const getCurrentUserId = async () => {
 
 // CSVs grandes (dezenas de milhares de linhas) nao cabem num unico upsert:
 // o payload fica enorme e o cliente Supabase tem um timeout fixo de 8s por
-// requisicao (src/lib/supabase.ts), pensado para consultas normais - um
+// requisicao do cliente Supabase, pensado para consultas normais - um
 // upsert de dezenas de milhares de linhas de uma vez estoura isso e derruba
 // a criacao do disparo inteiro. Envia em lotes menores, com retry por lote.
 const CSV_TARGET_BATCH_SIZE = 500;

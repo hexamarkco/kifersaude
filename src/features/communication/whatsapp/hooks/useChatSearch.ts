@@ -5,7 +5,7 @@ import {
   whatsappMessagesRepository,
   type CommWhatsAppMessageSearchResult,
 } from '../data';
-import type { CommWhatsAppChat } from '../../../../lib/supabase';
+import type { CommWhatsAppChat } from '../domain/types';
 import {
   applyPendingChatInboxState,
   type PendingChatInboxStatePatch,

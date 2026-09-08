@@ -10,7 +10,7 @@ import {
   getSupabaseErrorMessage,
   getSupabaseRequestTimeoutMs,
   supabaseFunctionsUrl,
-} from '../supabase';
+} from '../../infrastructure/supabase';
 
 test('allows the observed follow-up durations inside the long request window', () => {
   const timeoutMs = getSupabaseRequestTimeoutMs(

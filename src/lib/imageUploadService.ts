@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../infrastructure/supabase';
 
 export interface UploadResult {
   success: boolean;

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 import type { ConfigCategory } from "../../data/configService";
-import type { SystemSettings } from "../../../../lib/supabase";
+import type { SystemSettings } from "../../domain/types";
 
 export type SectionId =
   | "general"

@@ -1,4 +1,4 @@
-import type { Lead } from "../../../lib/supabase";
+import type { Lead } from "../domain/types";
 
 export type LeadsManagerProps = {
   onConvertToContract?: (lead: Lead) => void;

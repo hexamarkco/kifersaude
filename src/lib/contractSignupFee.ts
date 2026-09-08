@@ -1,4 +1,4 @@
-import type { Contract } from './supabase';
+import type { Contract } from '../features/contracts';
 
 export const isAdesaoContract = (modalidade?: string | null) => {
   const normalized = (modalidade || '').toLowerCase();

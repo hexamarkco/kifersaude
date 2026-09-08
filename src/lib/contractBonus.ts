@@ -1,4 +1,4 @@
-import type { Contract, ContractBonusConfiguration } from './supabase';
+import type { Contract, ContractBonusConfiguration } from '../features/contracts';
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);

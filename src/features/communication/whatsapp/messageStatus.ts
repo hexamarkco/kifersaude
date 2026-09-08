@@ -1,4 +1,4 @@
-import type { CommWhatsAppMessage } from '../../../lib/supabase';
+import type { CommWhatsAppMessage } from './domain/types';
 
 // Mesma ordem de public.comm_whatsapp_status_rank (ver migration
 // 20260911385000_fix_comm_whatsapp_status_preview_unread_consistency.sql).

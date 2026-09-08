@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import type { Lead } from '../supabase';
+import type { Lead } from '../../features/leads';
 import {
   getNextAllowedSendAt,
   isAutoContactRuntimeEnabled,

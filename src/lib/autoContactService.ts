@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { supabase, type Lead } from './supabase';
+import { supabase } from '../infrastructure/supabase';
+import type { Lead } from '../features/leads';
 import { BRAZIL_STATES } from './brasilLocations';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
 import { evaluateSafeFormula } from './safeFormula';

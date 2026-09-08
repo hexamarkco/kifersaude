@@ -1,4 +1,4 @@
-import type { Contract } from "../../../lib/supabase";
+import type { Contract } from "../../contracts";
 import { getContractBonusSummary } from "../../../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../../../lib/contractCommission";
 import type { CommissionEvent } from "./commissionCalendarTypes";

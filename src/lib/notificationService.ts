@@ -1,7 +1,12 @@
-import { supabase, Reminder, Lead, type CommWhatsAppChat } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '../infrastructure/supabase';
+import type { Lead } from '../features/leads';
+import type { Reminder } from '../features/reminders';
+import {
+  whatsappConversationsRepository,
+  type CommWhatsAppChat,
+} from '../features/communication/whatsapp';
 import { isReminderDue } from './dateUtils';
-import { whatsappConversationsRepository } from '../features/communication/whatsapp/data/conversationsRepository';
 
 export type NotificationCallback = (reminder: Reminder) => void;
 export type LeadNotificationCallback = (lead: Lead) => void;

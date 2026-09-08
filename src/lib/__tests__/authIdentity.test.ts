@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 
-import { getAuthenticatedUserId } from '../supabase';
+import { getAuthenticatedUserId } from '../../infrastructure/supabase';
 
 test('usa somente o identificador imutavel da sessao', () => {
   const user = {

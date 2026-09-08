@@ -1,4 +1,5 @@
-import { Lead, Contract } from './supabase';
+import type { Contract } from '../features/contracts';
+import type { Lead } from '../features/leads';
 
 export type DateRange = {
   start: Date;

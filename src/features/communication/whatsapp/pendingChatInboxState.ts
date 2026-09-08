@@ -1,4 +1,4 @@
-import type { CommWhatsAppChat } from '../../../lib/supabase';
+import type { CommWhatsAppChat } from './domain/types';
 
 export type PendingChatInboxStateFields = Partial<Pick<CommWhatsAppChat,
   'is_archived'

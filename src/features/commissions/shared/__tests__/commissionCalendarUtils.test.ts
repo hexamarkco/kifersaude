@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Contract } from "../../../../lib/supabase";
+import type { Contract } from "../../../contracts";
 import {
   buildCommissionEvents,
   formatCommissionCurrency,

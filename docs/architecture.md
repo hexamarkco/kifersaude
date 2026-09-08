@@ -46,7 +46,7 @@ Dentro de uma feature:
 - `components`: apresentação e interação;
 - `index.ts`: superfície pública mínima.
 
-`src/lib/supabase.ts` ainda funciona como compatibilidade de tipos/imports antigos. Código novo usa `src/infrastructure/supabase` e tipos da feature proprietária. O tipo `Database` gerado descreve persistência; não é modelo de tela.
+O cliente Supabase fica exclusivamente em `src/infrastructure/supabase`. Repositories tipados usam `databaseClient`; serviços legados ainda não migrados para tipos persistidos podem importar `supabase` diretamente dessa infraestrutura. Tipos de tela e domínio vêm da feature proprietária. O tipo `Database` gerado descreve persistência; não é modelo de tela.
 
 ## Backend Supabase
 

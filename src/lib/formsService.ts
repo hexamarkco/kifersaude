@@ -1,11 +1,11 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import {
-  supabase,
-  type PublicForm,
-  type PublicFormStep,
-  type PublicFormSubmission,
-} from './supabase';
+import { supabase } from '../infrastructure/supabase';
+import type {
+  PublicForm,
+  PublicFormStep,
+  PublicFormSubmission,
+} from '../features/public-content';
 
 const FORMS_TABLE = 'public_forms';
 const STEPS_TABLE = 'public_form_steps';

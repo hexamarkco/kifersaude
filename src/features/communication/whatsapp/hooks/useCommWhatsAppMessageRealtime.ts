@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { supabase, type CommWhatsAppMessage } from '../../../../lib/supabase';
+import { databaseClient } from '../../../../infrastructure/supabase';
+import type { CommWhatsAppMessage } from '../domain/types';
 
 export type CommWhatsAppMessageRealtimeState = {
   readyChatId: string | null;
@@ -34,7 +35,7 @@ export const useCommWhatsAppMessageRealtime = (
       }
     }, 900);
 
-    const channel = supabase
+    const channel = databaseClient
       .channel(`comm-whatsapp-messages-${selectedChatId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
@@ -67,7 +68,7 @@ export const useCommWhatsAppMessageRealtime = (
     return () => {
       active = false;
       window.clearTimeout(readyFallbackTimeoutId);
-      void supabase.removeChannel(channel);
+      void databaseClient.removeChannel(channel);
     };
   }, [onMessageChange, selectedChatId]);
 

@@ -1,4 +1,4 @@
-import { getSupabaseErrorMessage, supabase } from './supabase';
+import { getSupabaseErrorMessage, supabase } from '../infrastructure/supabase';
 
 export type AiSandboxConversation = {
   id: string;

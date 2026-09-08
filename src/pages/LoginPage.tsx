@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Alert, Button, Input, Surface } from '../design-system';
-import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../lib/supabase';
+import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../infrastructure/supabase';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import type { PublicFormFieldKey, PublicFormStep, PublicFormStepOption, PublicFormStepType } from "../../../lib/supabase";
+import type { PublicFormFieldKey, PublicFormStep, PublicFormStepOption, PublicFormStepType } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
   Button,

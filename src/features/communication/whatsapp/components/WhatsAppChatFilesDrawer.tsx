@@ -3,7 +3,7 @@ import { Download, FileAudio, FileText, Image, Loader2, Pause, Play, Video } fro
 
 import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
-import type { CommWhatsAppMessage } from '../../../../lib/supabase';
+import type { CommWhatsAppMessage } from '../domain/types';
 
 type ChatFilesDrawerProps = {
   chatId: string | null;

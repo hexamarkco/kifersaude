@@ -3,7 +3,7 @@ import { ArrowDownRight, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { SectionHeader, Surface } from '../design-system';
 import { DASHBOARD_CHART_PALETTE } from '../features/dashboard/shared/dashboardConstants';
-import type { Lead } from '../lib/supabase';
+import type { Lead } from '../features/leads';
 
 type LeadFunnelProps = {
   leads: Lead[];

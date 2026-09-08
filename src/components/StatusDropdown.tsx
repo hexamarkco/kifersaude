@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 import { OperationalStatusDot, Popover, PopoverContent, PopoverTrigger } from '../design-system';
 import { cx } from '../lib/cx';
-import { LeadStatusConfig } from '../lib/supabase';
+import type { LeadStatusConfig } from '../features/leads';
 
 type StatusDropdownProps = { currentStatus: string; leadId: string; onStatusChange: (leadId: string, newStatus: string) => Promise<void>; disabled?: boolean; statusOptions: LeadStatusConfig[] };
 

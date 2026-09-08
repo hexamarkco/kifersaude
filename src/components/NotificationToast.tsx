@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { Reminder } from '../lib/supabase';
+import type { Reminder } from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { Toast } from '../design-system';
 

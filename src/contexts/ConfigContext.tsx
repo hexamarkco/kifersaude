@@ -1,7 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { configService, type ConfigCategory } from '../features/config/data/configService';
-import { AccessProfile, ConfigOption, LeadOrigem, LeadStatusConfig, ProfilePermission } from '../lib/supabase';
+import {
+  configService,
+  type AccessProfile,
+  type ConfigCategory,
+  type ConfigOption,
+  type ProfilePermission,
+} from '../features/config';
+import type { LeadOrigem, LeadStatusConfig } from '../features/leads';
 import { getModuleLookupOrder } from '../lib/accessControl';
 
 export type ConfigCategoryMap = Record<ConfigCategory, ConfigOption[]>;

@@ -31,7 +31,7 @@ import {
   type AutoContactTemplate,
 } from "../../../../lib/autoContactService";
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/templateVariableSuggestions";
-import { type LeadStatusConfig } from "../../../../lib/supabase";
+import type { LeadStatusConfig } from "../../../leads";
 import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import { evaluateSafeFormula } from "../../../../lib/safeFormula";

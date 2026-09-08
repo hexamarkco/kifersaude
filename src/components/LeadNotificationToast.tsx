@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
-import { Lead } from '../lib/supabase';
+import type { Lead } from '../features/leads';
 import { Toast } from '../design-system';
 import { LeadFavoriteBadge } from './LeadFavoriteStar';
 

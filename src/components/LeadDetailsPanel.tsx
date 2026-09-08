@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Contract,
-  ConfigOption,
-  Lead,
-  LeadStatusConfig,
-} from '../lib/supabase';
+import type { Contract } from '../features/contracts';
+import type { ConfigOption } from '../features/config';
+import type { Lead, LeadStatusConfig } from '../features/leads';
 import StatusDropdown from './StatusDropdown';
 import FilterSingleSelect from './FilterSingleSelect';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';

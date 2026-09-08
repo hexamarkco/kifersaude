@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { Lead, Reminder } from '../lib/supabase';
+import type { Lead } from '../features/leads';
+import type { Reminder } from '../features/reminders';
 import Layout from '../components/Layout';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';

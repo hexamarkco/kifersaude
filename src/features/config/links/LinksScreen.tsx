@@ -18,7 +18,7 @@ import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { uploadLinkPageImage } from "../../../lib/imageUploadService";
 import { getLinkIcon, LINK_ICON_OPTIONS } from "../../../lib/linkIcons";
 import { linksService } from "../../../lib/linksService";
-import type { PublicLinkItem, PublicLinkPageSettings } from "../../../lib/supabase";
+import type { PublicLinkItem, PublicLinkPageSettings } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
   Button,

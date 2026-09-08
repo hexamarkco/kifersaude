@@ -6,7 +6,7 @@ import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
 import { formsService, type PublicFormSubmitPayload } from '../../lib/formsService';
 import { formatPhoneInput } from '../../lib/inputFormatters';
-import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../lib/supabase';
+import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../features/public-content';
 import { toast } from '../../lib/toast';
 import { Button, Field, KIFER_THEME_COLORS, getPanelButtonClass, Input, LoadingState, Stepper } from '../../design-system';
 

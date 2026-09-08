@@ -3,7 +3,7 @@ import { Copy, ExternalLink, FileText, Plus, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
-import type { PublicForm } from "../../../lib/supabase";
+import type { PublicForm } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
   Badge,

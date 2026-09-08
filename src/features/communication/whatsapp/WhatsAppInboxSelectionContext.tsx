@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { CommWhatsAppChat } from '../../../lib/supabase';
+import type { CommWhatsAppChat } from './domain/types';
 
 export type WhatsAppInboxSelectionContextValue = {
   selectedChatId: string | null;

@@ -5,7 +5,8 @@ import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem } from
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
 import type { CommWhatsAppLeadSearchResult } from '../data';
-import type { CommWhatsAppPhoneContact, LeadStatusConfig } from '../../../../lib/supabase';
+import type { LeadStatusConfig } from '../../../leads';
+import type { CommWhatsAppPhoneContact } from '../domain/types';
 import WhatsAppDialog from './WhatsAppDialog';
 
 type StartChatSource = 'saved' | 'crm' | 'manual';

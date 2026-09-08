@@ -17,7 +17,7 @@ import {
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
-import type { PublicForm, PublicFormStep, PublicFormSubmission } from "../../../lib/supabase";
+import type { PublicForm, PublicFormStep, PublicFormSubmission } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
   Badge,

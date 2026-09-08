@@ -49,7 +49,9 @@ import {
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
 } from './data';
-import { configService } from '../../config/data/configService';
+import { configService, type IntegrationSetting } from '../../config';
+import type { Lead } from '../../leads';
+import type { Reminder } from '../../reminders';
 import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
@@ -63,7 +65,8 @@ import {
   sanitizeWhatsAppQuickReplyShortcut,
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
-import { isSupabaseConnectivityError, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
+import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
+import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from './domain/types';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';

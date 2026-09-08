@@ -243,6 +243,14 @@ export async function clearLeadReminders(leadId: string): Promise<void> {
   }
 }
 
+export async function markLeadLost(leadId: string): Promise<void> {
+  const { error } = await databaseClient
+    .from('leads')
+    .update({ status: 'Perdido' })
+    .eq('id', leadId);
+  if (error) throw error;
+}
+
 export async function createLeadReminder(input: {
   leadId: string;
   type: string;

@@ -7,7 +7,7 @@ import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../data';
-import { supabase } from '../../../../lib/supabase';
+import { markLeadLost } from '../../../leads';
 import { toast } from '../../../../lib/toast';
 import WhatsAppDialog from './WhatsAppDialog';
 import {
@@ -471,8 +471,7 @@ export default function WhatsAppBatchFollowUpModal({
 
     setMarkingLostReminderIds((prev) => new Set(prev).add(item.reminderId));
     try {
-      const { error } = await supabase.from('leads').update({ status: 'Perdido' }).eq('id', item.leadId);
-      if (error) throw error;
+      await markLeadLost(item.leadId);
 
       setMarkedLostReminderIds((prev) => new Set(prev).add(item.reminderId));
       toast.success(`${item.leadName || 'Lead'} marcado como perdido.`);

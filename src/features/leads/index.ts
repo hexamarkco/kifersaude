@@ -6,6 +6,7 @@ export {
   listContractLeadIds,
   listLeads,
   listNextReminderByLeadId,
+  markLeadLost,
   persistLeadStatusChange,
   registerLeadContact,
   saveLeadRecord,

@@ -1,15 +1,19 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  supabase,
   Contract,
-  Lead,
   ContractHolder,
   ContractValueAdjustment,
   Operadora,
-  fetchAllPages,
   ContractBonusConfiguration,
   ContractCommissionInstallment,
-} from "../lib/supabase";
+  convertLeadAfterContractCreation,
+  deleteContractValueAdjustment,
+  listContractConversionLeads,
+  listContractValueAdjustments,
+  saveContractRecord,
+  type ContractPersistenceInput,
+} from "../features/contracts";
+import type { Lead } from "../features/leads";
 import {
   getContractBonusSummary,
   normalizeBonusConfigurations,
@@ -58,7 +62,7 @@ import {
   Surface,
   Textarea,
 } from "../design-system";
-import { configService } from "../features/config/data/configService";
+import { configService } from "../features/config";
 import { useConfig } from "../contexts/ConfigContext";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
 import { toast } from "../lib/toast";
@@ -663,18 +667,7 @@ export default function ContractForm({
 
   const loadLeads = async () => {
     try {
-      const data = await fetchAllPages<Lead>(async (from, to) => {
-        let query = supabase.from("leads").select("*").eq("arquivado", false);
-
-        if (convertibleLeadStatuses.length > 0) {
-          query = query.in("status", convertibleLeadStatuses);
-        }
-
-        const response = await query.order("nome_completo").range(from, to);
-        return { data: response.data, error: response.error };
-      });
-
-      setLeads(data || []);
+      setLeads(await listContractConversionLeads(convertibleLeadStatuses));
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
     }
@@ -761,14 +754,7 @@ export default function ContractForm({
 
   const loadAdjustments = async (contractId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("contract_value_adjustments")
-        .select("*")
-        .eq("contract_id", contractId)
-        .order("created_at");
-
-      if (error) throw error;
-      setAdjustments(data || []);
+      setAdjustments(await listContractValueAdjustments(contractId));
     } catch (error) {
       console.error("Erro ao carregar ajustes:", error);
     }
@@ -874,12 +860,7 @@ export default function ContractForm({
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase
-        .from("contract_value_adjustments")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      await deleteContractValueAdjustment(id);
 
       if (contract?.id) {
         await loadAdjustments(contract.id);
@@ -1051,7 +1032,7 @@ export default function ContractForm({
         observacoes_internas: formData.observacoes_internas || null,
       };
 
-      const normalizedContractData = {
+      const normalizedContractData: ContractPersistenceInput = {
         ...dataToSave,
         status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
         modalidade:
@@ -1068,21 +1049,10 @@ export default function ContractForm({
       };
 
       if (contract) {
-        const { error } = await supabase
-          .from("contracts")
-          .update(normalizedContractData)
-          .eq("id", contract.id);
-
-        if (error) throw error;
+        await saveContractRecord(normalizedContractData, contract.id);
         onSave();
       } else {
-        const { data, error } = await supabase
-          .from("contracts")
-          .insert([normalizedContractData])
-          .select()
-          .single();
-
-        if (error) throw error;
+        const createdContractId = await saveContractRecord(normalizedContractData);
 
         if (leadToConvert) {
           const conversionTimestamp = new Date().toISOString();
@@ -1092,65 +1062,17 @@ export default function ContractForm({
           const nextLeadStatusId =
             convertedLeadStatus?.id ??
             resolveStatusIdByName(leadStatuses, nextLeadStatus);
-          const leadUpdatePayload: {
-            ultimo_contato: string;
-            proximo_retorno: null;
-            status?: string;
-            status_id?: string | null;
-          } = {
-            ultimo_contato: conversionTimestamp,
-            proximo_retorno: null,
-          };
-
-          if (nextLeadStatus) {
-            leadUpdatePayload.status = nextLeadStatus;
-            leadUpdatePayload.status_id = nextLeadStatusId;
-          }
-
-          const { error: leadUpdateError } = await supabase
-            .from("leads")
-            .update(leadUpdatePayload)
-            .eq("id", leadToConvert.id);
-
-          if (leadUpdateError) throw leadUpdateError;
-
-          const { error: deleteRemindersError } = await supabase
-            .from("reminders")
-            .delete()
-            .eq("lead_id", leadToConvert.id);
-
-          if (deleteRemindersError) throw deleteRemindersError;
-
-          if (nextLeadStatus && nextLeadStatus !== previousLeadStatus) {
-            const interactionPayload = {
-              lead_id: leadToConvert.id,
-              tipo: "Observacao",
-              descricao: `Status alterado de "${previousLeadStatus}" para "${nextLeadStatus}" (via conversao em contrato)`,
-              responsavel: leadToConvert.responsavel,
-            };
-
-            const { error: interactionError } = await supabase
-              .from("interactions")
-              .insert([interactionPayload]);
-
-            if (interactionError) throw interactionError;
-
-            const { error: statusHistoryError } = await supabase
-              .from("lead_status_history")
-              .insert([
-                {
-                  lead_id: leadToConvert.id,
-                  status_anterior: previousLeadStatus,
-                  status_novo: nextLeadStatus,
-                  responsavel: leadToConvert.responsavel,
-                },
-              ]);
-
-            if (statusHistoryError) throw statusHistoryError;
-          }
+          await convertLeadAfterContractCreation({
+            leadId: leadToConvert.id,
+            previousStatus: previousLeadStatus,
+            nextStatus: nextLeadStatus,
+            nextStatusId: nextLeadStatusId,
+            responsible: leadToConvert.responsavel,
+            conversionTimestamp,
+          });
         }
 
-        setContractId(data.id);
+        setContractId(createdContractId);
         setShowHolderForm(true);
       }
     } catch (error) {

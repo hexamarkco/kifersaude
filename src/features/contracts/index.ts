@@ -15,4 +15,12 @@ export {
   type ContractDocument,
   type ContractInteractionInput,
 } from './data/contractDetailsRepository';
+export {
+  convertLeadAfterContractCreation,
+  deleteContractValueAdjustment,
+  listContractConversionLeads,
+  listContractValueAdjustments,
+  saveContractRecord,
+  type ContractPersistenceInput,
+} from './data/contractFormRepository';
 export { default as ContractsManagerScreen } from './ContractsManagerScreen';

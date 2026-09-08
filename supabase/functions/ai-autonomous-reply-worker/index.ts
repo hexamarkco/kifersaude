@@ -78,15 +78,52 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
-const DIACRITICS_REGEX = new RegExp('[\\u0300-\\u036f]', 'g');
+async function completeAutonomousAttendanceHandoff(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  chatId: string;
+  leadId: string;
+  handoffCode: HandoffCode;
+}): Promise<void> {
+  const { supabaseAdmin, chatId, leadId, handoffCode } = params;
+  const { data, error } = await supabaseAdmin.rpc('complete_ai_autonomous_attendance_handoff', {
+    p_chat_id: chatId,
+    p_lead_id: leadId,
+    p_handoff_code: handoffCode,
+  });
+  if (error) throw new Error(`Erro ao concluir handoff do atendimento autonomo: ${error.message}`);
 
-function normalizeText(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(DIACRITICS_REGEX, '')
-    .replace(/\s+/g, ' ');
+  const result = Array.isArray(data) ? data[0] : data;
+  if (HANDOFF_STATUS_TARGET[handoffCode] && !result?.status_applied) {
+    console.error('[ai-autonomous-reply-worker] status de handoff nao encontrado', {
+      chatId,
+      leadId,
+      handoffCode,
+      targetStatusName: HANDOFF_STATUS_TARGET[handoffCode],
+    });
+  }
+}
+
+async function prepareAutonomousAttendanceReply(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  chatId: string;
+  leadId: string;
+}): Promise<{ canReply: boolean; movedToAttendance: boolean }> {
+  const { supabaseAdmin, chatId, leadId } = params;
+  const { data, error } = await supabaseAdmin.rpc('prepare_ai_autonomous_attendance_reply', {
+    p_chat_id: chatId,
+    p_lead_id: leadId,
+  });
+  if (error) throw new Error(`Erro ao preparar resposta do atendimento autonomo: ${error.message}`);
+
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result || typeof result.can_reply !== 'boolean') {
+    throw new Error('Resposta invalida ao preparar atendimento autonomo.');
+  }
+
+  return {
+    canReply: result.can_reply,
+    movedToAttendance: result.moved_to_attendance === true,
+  };
 }
 
 const isAudioMessage = (messageType: string | null | undefined) => {
@@ -562,21 +599,12 @@ Deno.serve(async (req: Request) => {
               chatId: chat.id,
             });
             // Aplicar handoff mesmo sem mensagem visível para não deixar a conversa presa
-            await supabaseAdmin
-              .from('comm_whatsapp_chats')
-              .update({ autonomous_attendance_status: 'handed_off' })
-              .eq('id', chat.id);
-            const targetStatusName = HANDOFF_STATUS_TARGET[handoffCode];
-            if (targetStatusName) {
-              const { data: statuses } = await supabaseAdmin.from('lead_status_config').select('id, nome');
-              const normalizedTarget = normalizeText(targetStatusName);
-              const statusRow = (statuses ?? []).find(
-                (s: { id: string; nome: string }) => normalizeText(s.nome) === normalizedTarget,
-              );
-              if (statusRow) {
-                await supabaseAdmin.from('leads').update({ status_id: statusRow.id }).eq('id', leadId);
-              }
-            }
+            await completeAutonomousAttendanceHandoff({
+              supabaseAdmin,
+              chatId: chat.id,
+              leadId,
+              handoffCode,
+            });
             await supabaseAdmin
               .from('ai_autonomous_reply_jobs')
               .update({ status: 'completed', last_error: 'retry tag-only sem mensagem visível — handoff seguro aplicado' })
@@ -603,6 +631,28 @@ Deno.serve(async (req: Request) => {
           throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
         }
 
+        // A primeira resposta automatica confirma que o lead entrou em
+        // atendimento. A RPC tambem bloqueia este envio se um humano tiver
+        // desativado a IA entre a leitura inicial do chat e este momento.
+        const replyPreparation = await prepareAutonomousAttendanceReply({
+          supabaseAdmin,
+          chatId: chat.id,
+          leadId,
+        });
+        if (!replyPreparation.canReply) {
+          await supabaseAdmin
+            .from('ai_autonomous_reply_jobs')
+            .update({ status: 'cancelled', last_error: 'Atendimento autonomo foi desativado antes do envio.' })
+            .eq('id', job.id);
+          continue;
+        }
+        if (replyPreparation.movedToAttendance) {
+          console.log('[ai-autonomous-reply-worker] lead movido para Atendimento antes da resposta automatica', {
+            chatId: chat.id,
+            leadId,
+          });
+        }
+
         for (let i = 0; i < messages.length; i++) {
           await sendAutonomousWhatsAppText({
             supabaseAdmin,
@@ -618,28 +668,12 @@ Deno.serve(async (req: Request) => {
         }
 
         if (handoffCode) {
-          await supabaseAdmin
-            .from('comm_whatsapp_chats')
-            .update({ autonomous_attendance_status: 'handed_off' })
-            .eq('id', chat.id);
-
-          const targetStatusName = HANDOFF_STATUS_TARGET[handoffCode];
-          if (targetStatusName) {
-            const { data: statuses } = await supabaseAdmin.from('lead_status_config').select('id, nome');
-            const normalizedTarget = normalizeText(targetStatusName);
-            const statusRow = (statuses ?? []).find(
-              (s: { id: string; nome: string }) => normalizeText(s.nome) === normalizedTarget,
-            );
-            if (statusRow) {
-              await supabaseAdmin.from('leads').update({ status_id: statusRow.id }).eq('id', leadId);
-            } else {
-              console.error('[ai-autonomous-reply-worker] status de handoff nao encontrado', {
-                leadId,
-                handoffCode,
-                targetStatusName,
-              });
-            }
-          }
+          await completeAutonomousAttendanceHandoff({
+            supabaseAdmin,
+            chatId: chat.id,
+            leadId,
+            handoffCode,
+          });
         }
 
         await supabaseAdmin

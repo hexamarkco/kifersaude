@@ -19,6 +19,11 @@ type ServiceResult<T> = { data: T | null; error: string | null };
 const TABLE_FEATURES = "ai_features";
 const TABLE_CONFIGS = "ai_feature_configs";
 const TABLE_GLOBAL = "ai_global_configs";
+// `sandbox.chat` was superseded by `autonomous.reply`: the interactive
+// sandbox intentionally executes the same attendant configuration as live
+// autonomous attendance. Keep this guard while clients transition to the
+// migration that removes the obsolete database record.
+const RETIRED_FEATURE_KEYS = ["sandbox.chat"] as const;
 
 const fetchModelsWithPricing = async (
   includeInactive: boolean,
@@ -55,6 +60,7 @@ export const aiConfigService = {
     const { data: features, error: featErr } = await supabase
       .from(TABLE_FEATURES)
       .select("*")
+      .not("key", "in", `(${RETIRED_FEATURE_KEYS.join(",")})`)
       .order("category")
       .order("name");
 

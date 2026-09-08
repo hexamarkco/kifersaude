@@ -185,6 +185,29 @@ test("AI config v2 ignores catalog and routing snapshots during import", () => {
     assert.equal(plan.features[0].payload.model, "gpt-5.6-sol");
 });
 
+test("AI config import ignores the retired Chat Sandbox feature", () => {
+    const plan = createAiConfigImportPlan({
+      version: 2,
+      features: [{
+        key: "sandbox.chat",
+        active_config: {
+          feature_prompt: "legacy sandbox prompt",
+          output_instructions: "legacy output",
+          temperature: 0.6,
+          max_output_tokens: 350,
+          model_config: {
+            model_override_enabled: true,
+            provider: "openai",
+            model: "gpt-5.6-sol",
+          },
+        },
+      }],
+    }, [feature(config(false))], [catalogModel()]);
+
+    assert.deepEqual(plan.features, []);
+    assert.deepEqual(plan.warnings, ["Feature desconhecida ignorada: sandbox.chat."]);
+});
+
 test("AI config v2 exports the real-time selectable catalog enriched with metadata", () => {
     const exported = buildExport(true);
 

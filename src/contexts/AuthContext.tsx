@@ -1,7 +1,17 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, UserProfile, getAuthenticatedUserId } from '../lib/supabase';
+import type { UserProfile } from '../features/config';
+import { getAuthenticatedUserId } from '../infrastructure/supabase';
 import { User, Session } from '@supabase/supabase-js';
+import {
+  clearLocalAuthSession,
+  getCurrentSession,
+  loadAuthenticatedUserProfile,
+  signInWithUsername,
+  signOutAuthenticatedUser,
+  signUpWithEmail,
+  subscribeToAuthState,
+} from '../app/auth/authService';
 
 type AuthContextType = {
   user: User | null;
@@ -49,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearBrokenSession = async () => {
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await clearLocalAuthSession();
     } catch (error) {
       console.warn('⚠️ Nao foi possivel limpar a sessao local automaticamente:', error);
     }
@@ -67,18 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log('📥 Carregando perfil...');
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', profileId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('❌ Erro ao carregar perfil do usuário:', error);
-        setUserProfile(null);
-        return;
-      }
-
+      const data = await loadAuthenticatedUserProfile(profileId);
       console.log('✅ Perfil carregado:', data);
       setUserProfile(data);
     } catch (error) {
@@ -93,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         console.log('🔐 Inicializando autenticação...');
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { session, error } = await getCurrentSession();
 
         if (!mounted) return;
 
@@ -129,9 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const unsubscribe = subscribeToAuthState((_event, session) => {
       console.log('🔄 Estado de autenticação mudou:', _event);
 
       if (!mounted) return;
@@ -152,84 +149,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = async (username: string, password: string) => {
-    try {
-      const normalizedUsername = username.trim();
-
-      if (!normalizedUsername) {
-        return { error: { message: 'Usuário não encontrado' } };
-      }
-
-      let emailToUse: string | null = null;
-
-      const resolveEmailFromUsername = async () => {
-        const { data: emailFromRpc, error: emailLookupError } = await supabase.rpc(
-          'get_email_by_username',
-          { p_username: normalizedUsername }
-        );
-
-        if (emailLookupError) {
-          return { email: null, error: emailLookupError } as const;
-        }
-
-        if (emailFromRpc) {
-          return { email: emailFromRpc as string, error: null } as const;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('username', normalizedUsername)
-          .maybeSingle();
-
-        if (profileError) {
-          return { email: null, error: profileError } as const;
-        }
-
-        return { email: profile?.email ?? null, error: null } as const;
-      };
-
-      if (normalizedUsername.includes('@')) {
-        emailToUse = normalizedUsername;
-      } else {
-        const { email, error } = await resolveEmailFromUsername();
-
-        if (error) {
-          return { error };
-        }
-
-        emailToUse = email;
-      }
-
-      if (!emailToUse) {
-        return { error: { message: 'Usuário não encontrado' } };
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password,
-      });
-
-      return { error };
-    } catch (error) {
-      return { error };
-    }
+    return signInWithUsername(username, password);
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    return { error };
+    return signUpWithEmail(email, password);
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await signOutAuthenticatedUser();
     setUserProfile(null);
   };
 

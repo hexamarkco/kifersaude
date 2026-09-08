@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useConfig } from "../../../contexts/ConfigContext";
 import { configService } from "../data/configService";
-import { supabase } from "../../../lib/supabase";
+import { countUsersByRole } from "../users/data/usersRepository";
 import {
   ACCESS_MODULES,
   buildProfileSlug,
@@ -203,17 +203,15 @@ export default function AccessControlManagerScreen() {
       return;
     }
 
-    const { count, error: countError } = await supabase
-      .from("user_profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", profile.slug);
-
-    if (countError) {
+    let userCount: number;
+    try {
+      userCount = await countUsersByRole(profile.slug);
+    } catch {
       showMessage("error", "Não foi possível validar se o perfil está em uso.");
       return;
     }
 
-    if ((count ?? 0) > 0) {
+    if (userCount > 0) {
       showMessage(
         "error",
         "Este perfil está vinculado a usuários e não pode ser excluído.",

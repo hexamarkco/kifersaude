@@ -1,8 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  supabase,
-  UserProfile,
-} from "../../../lib/supabase";
+import type { UserProfile } from "../domain/types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
 import {
@@ -46,6 +43,12 @@ import {
   TableRow,
 } from "../../../design-system";
 import { FALLBACK_PROFILES } from "./shared/usersSettingsConstants";
+import {
+  createUser,
+  deleteUser,
+  listUsers,
+  updateUser,
+} from "./data/usersRepository";
 
 export default function UsersScreen() {
   const { user, refreshProfile, role: currentRole } = useAuth();
@@ -107,13 +110,7 @@ export default function UsersScreen() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
+      setUsers(await listUsers());
     } catch (error) {
       console.error("Erro ao carregar usuários:", error);
       showMessage("error", "Não foi possível carregar os usuários.");
@@ -166,23 +163,12 @@ export default function UsersScreen() {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("manage-users", {
-        body: {
-          action: "createUser",
-          email: trimmedEmail,
-          password: newUserPassword,
-          username: trimmedUsername,
-          role: newUserRole,
-        },
+      await createUser({
+        email: trimmedEmail,
+        password: newUserPassword,
+        username: trimmedUsername,
+        role: newUserRole,
       });
-
-      if (error) {
-        throw new Error(error.message || "Não foi possível criar o usuário.");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
 
       showMessage("success", "Usuário criado com sucesso.");
       resetCreateForm();
@@ -232,26 +218,15 @@ export default function UsersScreen() {
     setActionLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("manage-users", {
-        body: {
-          action: "updateUser",
-          userId: editingUser.id,
-          updates: {
-            username: trimmedUsername,
-            email: trimmedEmail,
-            role: editUserRole,
-            password: editUserPassword || undefined,
-          },
+      await updateUser({
+        userId: editingUser.id,
+        updates: {
+          username: trimmedUsername,
+          email: trimmedEmail,
+          role: editUserRole,
+          password: editUserPassword || undefined,
         },
       });
-
-      if (error) {
-        throw new Error(error.message || "Não foi possível atualizar o usuário.");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
 
       showMessage("success", "Usuário atualizado com sucesso.");
       setEditingUser(null);
@@ -288,20 +263,7 @@ export default function UsersScreen() {
 
     setActionLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-users", {
-        body: {
-          action: "deleteUser",
-          userId,
-        },
-      });
-
-      if (error) {
-        throw new Error(error.message || "Não foi possível excluir o usuário.");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      await deleteUser(userId);
 
       showMessage("success", "Usuário excluído com sucesso.");
       await loadUsers();

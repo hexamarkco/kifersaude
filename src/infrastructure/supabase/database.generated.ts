@@ -5977,6 +5977,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      complete_ai_autonomous_attendance_handoff: {
+        Args: { p_chat_id: string; p_handoff_code: string; p_lead_id: string }
+        Returns: {
+          chat_id: string
+          lead_status_id: string
+          status_applied: boolean
+        }[]
+      }
       compute_next_adjustment_date: {
         Args: {
           contract_start: string
@@ -6116,6 +6124,13 @@ export type Database = {
       }
       normalize_cpf: { Args: { value: string }; Returns: string }
       normalize_person_name: { Args: { value: string }; Returns: string }
+      prepare_ai_autonomous_attendance_reply: {
+        Args: { p_chat_id: string; p_lead_id: string }
+        Returns: {
+          can_reply: boolean
+          moved_to_attendance: boolean
+        }[]
+      }
       release_pending_stage_dispatches: {
         Args: { p_lock_token: string; p_target_id: string }
         Returns: number

@@ -58,12 +58,8 @@ import {
   buildFlowGraphFromFlow,
   expandFlowGraphToFlows,
 } from "../../../lib/autoContactFlowGraph";
-import { supabase } from "../../../lib/supabase";
-import type {
-  IntegrationSetting,
-  LeadStatusConfig,
-  Lead,
-} from "../../../lib/supabase";
+import type { IntegrationSetting } from "../domain/types";
+import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import { MessageListEditor } from "./components/MessageListEditor";
@@ -74,6 +70,10 @@ import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocom
 import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import {
+  countDailyAutomationInteractions,
+  sendAutomationFlowTest,
+} from "./data/automationApi";
 import {
   ActionSurface,
   Alert,
@@ -216,24 +216,7 @@ export default function AutoContactFlowSettingsScreen() {
     setDailyAutomationError(null);
 
     try {
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const startOfNextDay = new Date(startOfDay);
-      startOfNextDay.setDate(startOfNextDay.getDate() + 1);
-
-      const { count, error } = await supabase
-        .from("interactions")
-        .select("id", { count: "exact", head: true })
-        .eq("tipo", "Mensagem Automática")
-        .gte("data_interacao", startOfDay.toISOString())
-        .lt("data_interacao", startOfNextDay.toISOString());
-
-      if (error) {
-        throw error;
-      }
-
-      setDailyAutomationCount(count ?? 0);
+      setDailyAutomationCount(await countDailyAutomationInteractions());
     } catch (error) {
       console.error("Erro ao carregar contador diário de automações:", error);
       setDailyAutomationError("Não foi possível carregar o contador diário.");
@@ -1462,23 +1445,19 @@ export default function AutoContactFlowSettingsScreen() {
     }
 
     setSendingTest(true);
-    const { data, error } = await supabase.functions.invoke("leads-api", {
-      headers: { "x-action": "test-flow" },
-      body: {
-        flow_id: activeFlow.id,
-        step_id: stepId,
-        test_phone: testPhone.trim(),
-        test_name: testName.trim() || "Contato de teste",
-      },
-    });
-    setSendingTest(false);
-
-    if (error || !data?.success) {
-      toast.error(data?.error || error?.message || "Não foi possível enviar a mensagem de teste.");
-      return;
+    try {
+      await sendAutomationFlowTest({
+        flowId: activeFlow.id,
+        stepId,
+        phone: testPhone.trim(),
+        name: testName.trim() || "Contato de teste",
+      });
+      toast.success("Mensagem de teste enviada para o número informado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar a mensagem de teste.");
+    } finally {
+      setSendingTest(false);
     }
-
-    toast.success("Mensagem de teste enviada para o número informado.");
   };
 
   useEffect(() => {

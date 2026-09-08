@@ -1337,6 +1337,7 @@ Deno.serve(async (req: Request) => {
       maxAttempts: 2,
       attemptTimeoutMs,
       maxProviderRequestsPerAttempt: 1,
+      retrySameResolvedModel: true,
       validateOutput: validateFollowUpTechnicalOutput,
     });
 

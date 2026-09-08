@@ -47,7 +47,7 @@ type OpenAiMessage = {
 };
 
 type OpenAiTokenParameter = 'max_tokens' | 'max_completion_tokens';
-type OpenAiReasoningEffort = 'none' | 'minimal';
+type OpenAiReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 type OpenAiChatRequestBody = {
   model: string;
@@ -164,6 +164,8 @@ export type GenerateTextForFeatureOptions = {
   attemptTimeoutMs?: number;
   /** Caps OpenAI parameter-negotiation requests inside one routed attempt. */
   maxProviderRequestsPerAttempt?: number;
+  /** Technical retries keep the resolved provider/model instead of changing intelligence. */
+  retrySameResolvedModel?: boolean;
   /** Deterministic validation. A rejection consumes the optional technical retry. */
   validateOutput?: (text: string) => AiOutputValidationResult;
 };
@@ -488,7 +490,13 @@ const getPreferredOpenAiReasoningEffort = (model: string, task: AiTask): OpenAiR
   const needsDeepReasoning = DEEP_REASONING_TASKS.has(task);
 
   if (
-    normalized.startsWith('gpt-5.5') ||
+    normalized.startsWith('gpt-5.6') ||
+    normalized.startsWith('gpt-5.5')
+  ) {
+    return needsDeepReasoning ? 'low' : 'none';
+  }
+
+  if (
     normalized.startsWith('gpt-5.4') ||
     normalized.startsWith('gpt-5.2') ||
     normalized.startsWith('gpt-5.1')
@@ -595,8 +603,11 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   messages.push({ role: 'user', content: params.userPrompt });
 
   let tokenParameter = getPreferredOpenAiTokenParameter(params.model);
-  let includeTemperature = true;
   let reasoningEffort = getPreferredOpenAiReasoningEffort(params.model, params.task);
+  // Reasoning models reject sampling parameters whenever reasoning is active.
+  // Starting with the known-compatible body is essential when the caller caps
+  // provider requests to preserve a strict physical-call retry budget.
+  let includeTemperature = reasoningEffort === undefined || reasoningEffort === 'none';
 
   const maxHttpAttempts = Math.max(1, Math.min(3, params.maxHttpAttempts ?? 3));
 
@@ -1458,10 +1469,14 @@ export const generateTextForFeature = async (
   }
 
   const maxAttempts = Math.max(1, Math.min(3, options.maxAttempts ?? attempts.length));
-  while (attempts.length < maxAttempts) {
-    attempts.push({ ...attempts[0] });
-  }
-  const boundedAttempts = attempts.slice(0, maxAttempts);
+  const boundedAttempts = options.retrySameResolvedModel
+    ? Array.from({ length: maxAttempts }, () => ({ ...attempts[0] }))
+    : (() => {
+        while (attempts.length < maxAttempts) {
+          attempts.push({ ...attempts[0] });
+        }
+        return attempts.slice(0, maxAttempts);
+      })();
 
   // Load pricing for cost calculation
   const pricing = await loadPricingCache(options.supabaseAdmin);
@@ -1564,6 +1579,7 @@ export const generateTextForFeature = async (
 
       const stopReason: AiCallStopReason = providerResult.stopReason
         || (index === 0 ? 'completed' : 'completed_after_retry');
+      const fallbackUsed = attempt.provider !== resolved.provider || attempt.model !== resolved.model;
 
       await Promise.all([
         callLogId
@@ -1584,7 +1600,7 @@ export const generateTextForFeature = async (
           success: true,
           finalProvider: attempt.provider,
           finalModel: attempt.model,
-          fallbackUsed: index > 0,
+          fallbackUsed,
           attemptsCount: index + 1,
           retryCount: index,
           stopReason,
@@ -1603,7 +1619,7 @@ export const generateTextForFeature = async (
         provider: attempt.provider,
         model: attempt.model,
         source: attempt.source,
-        fallbackUsed: index > 0,
+        fallbackUsed,
         usage: providerResult.usage,
         durationMs: Date.now() - startTime,
         estimatedCostUsd: attemptCost,
@@ -1652,7 +1668,9 @@ export const generateTextForFeature = async (
     success: false,
     finalProvider: boundedAttempts[boundedAttempts.length - 1]?.provider,
     finalModel: boundedAttempts[boundedAttempts.length - 1]?.model,
-    fallbackUsed: boundedAttempts.length > 1,
+    fallbackUsed: boundedAttempts.some((attempt) => (
+      attempt.provider !== resolved.provider || attempt.model !== resolved.model
+    )),
     attemptsCount: attemptsTried,
     retryCount: Math.max(0, attemptsTried - 1),
     stopReason: lastStopReason,

@@ -26,6 +26,7 @@ test('pipeline normal usa uma única Feature e não chama analysis', () => {
 test('pipeline limita o provider a uma chamada normal e um retry técnico', () => {
   assert.match(edgeSource, /maxAttempts: 2/);
   assert.match(edgeSource, /maxProviderRequestsPerAttempt: 1/);
+  assert.match(edgeSource, /retrySameResolvedModel: true/);
   assert.match(edgeSource, /validateOutput: validateFollowUpTechnicalOutput/);
 });
 

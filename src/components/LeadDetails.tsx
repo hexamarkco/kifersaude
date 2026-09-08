@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase, Lead, Interaction, Reminder, LeadStatusHistory } from '../lib/supabase';
+import {
+  addLeadInteraction,
+  getLeadTimeline,
+  type Lead,
+  type LeadStatusHistory,
+} from '../features/leads';
+import type { Interaction } from '../features/activity';
+import type { Reminder } from '../features/reminders';
 import { MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -110,31 +117,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const loadLeadTimeline = async () => {
     setLoading(true);
     try {
-      const [interactionsRes, statusRes, remindersRes] = await Promise.all([
-        supabase
-          .from('interactions')
-          .select('*')
-          .eq('lead_id', lead.id)
-          .order('data_interacao', { ascending: false }),
-        supabase
-          .from('lead_status_history')
-          .select('*')
-          .eq('lead_id', lead.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('reminders')
-          .select('*')
-          .eq('lead_id', lead.id)
-          .order('data_lembrete', { ascending: false }),
-      ]);
-
-      if (interactionsRes.error) throw interactionsRes.error;
-      if (statusRes.error) throw statusRes.error;
-      if (remindersRes.error) throw remindersRes.error;
-
-      setInteractions(interactionsRes.data || []);
-      setStatusHistory(statusRes.data || []);
-      setReminders(remindersRes.data || []);
+      const timeline = await getLeadTimeline(lead.id);
+      setInteractions(timeline.interactions);
+      setStatusHistory(timeline.statusHistory);
+      setReminders(timeline.reminders);
     } catch (error) {
       console.error('Erro ao carregar interações:', error);
     } finally {
@@ -146,21 +132,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     e.preventDefault();
 
     try {
-      const { error } = await supabase
-        .from('interactions')
-        .insert([
-          {
-            lead_id: lead.id,
-            ...formData,
-          },
-        ]);
-
-      if (error) throw error;
-
-      await supabase
-        .from('leads')
-        .update({ ultimo_contato: new Date().toISOString() })
-        .eq('id', lead.id);
+      await addLeadInteraction(lead.id, formData);
 
       setFormData({ tipo: 'Observação', descricao: '', responsavel: 'Luiza' });
       setShowForm(false);

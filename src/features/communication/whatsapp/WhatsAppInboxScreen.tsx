@@ -67,6 +67,28 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from './domain/types';
+import {
+  canDeleteOutboundMessage,
+  canEditOutboundMessage,
+  canReplyOrForwardMessage,
+  getChatPreviewIconType,
+  getMessageEditableText,
+  getMessageSearchPreviewText,
+  getMessageSummaryMarker,
+  getMessageVisibleCaption,
+  getQuotePayloadFromMessage,
+  getUnknownMessageMarker,
+  getVisiblePreviewText,
+  isGalleryMediaMessage,
+  isHiddenTechnicalMessageMarker,
+  isMessageStarred,
+  isMessageSummaryMarker,
+  isVideoLikeMessageType,
+  normalizeChatDraftPreview,
+  normalizeComparableMessageText,
+  normalizeInboxSearch,
+  type ChatPreviewIconType,
+} from './domain/messagePresentation';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
@@ -265,10 +287,7 @@ const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
 const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
 const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createClientRequestId = () => `client-request-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
-const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
 const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
-const EDITABLE_OUTBOUND_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
 
 const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document') => {
   if (kind === 'image') return '[Imagem]';
@@ -284,129 +303,6 @@ const buildComposerQueueSnapshotKey = (chatId: string, text: string, attachments
 
   return `${chatId}:${text}:${attachmentKey}`;
 };
-
-const getMessageSummaryMarker = (messageType: string) => {
-  const normalized = messageType.trim().toLowerCase();
-
-  if (normalized === 'text') return '[Mensagem]';
-  if (normalized === 'image') return '[Imagem]';
-  if (VIDEO_LIKE_MESSAGE_TYPES.has(normalized)) return '[Video]';
-  if (normalized === 'audio' || normalized === 'voice') return '[Audio]';
-  if (normalized === 'document' || normalized === 'documentwithcaption') return '[Documento]';
-  if (normalized === 'link_preview') return '[Link]';
-  if (normalized === 'location' || normalized === 'live_location') return '[Localizacao]';
-  if (normalized === 'sticker') return '[Sticker]';
-  if (normalized === 'contact' || normalized === 'contact_list') return '[Contato]';
-  if (normalized === 'poll') return '[Enquete]';
-  if (normalized === 'quiz') return '[Quiz]';
-  if (normalized === 'question') return '[Pergunta]';
-  if (normalized === 'event') return '[Evento]';
-  if (normalized === 'product') return '[Produto]';
-  if (normalized === 'catalog') return '[Catalogo]';
-  if (normalized === 'group_invite') return '[Convite]';
-  if (normalized === 'newsletter_invite') return '[Newsletter]';
-  if (normalized === 'admin_invite') return '[Convite admin]';
-  if (normalized === 'system') return '[Sistema]';
-  if (normalized === 'call') return '[Chamada]';
-  if (normalized === 'pin') return '[Fixada]';
-  if (normalized === 'story') return '[Status]';
-  if (normalized === 'album') return '[Album]';
-  if (normalized === 'reply') return '[Resposta]';
-  if (normalized === 'list') return '[Lista]';
-  if (normalized === 'buttons') return '[Botoes]';
-  if (normalized === 'interactive' || normalized === 'hsm' || normalized === 'carousel') return '[Mensagem interativa]';
-  return getUnknownMessageMarker(normalized);
-};
-
-const normalizeTechnicalMarker = (value?: string | null) => String(value ?? '')
-  .trim()
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s+/g, ' ');
-
-const VISIBLE_SUMMARY_MARKERS = new Set([
-  '[imagem]',
-  '[video]',
-  '[documento]',
-  '[audio]',
-  '[link]',
-  '[localizacao]',
-  '[sticker]',
-  '[contato]',
-  '[enquete]',
-  '[quiz]',
-  '[pergunta]',
-  '[evento]',
-  '[produto]',
-  '[catalogo]',
-  '[convite]',
-  '[newsletter]',
-  '[convite admin]',
-  '[sistema]',
-  '[chamada]',
-  '[fixada]',
-  '[status]',
-  '[album]',
-  '[resposta]',
-  '[lista]',
-  '[botoes]',
-  '[mensagem interativa]',
-]);
-
-const HIDDEN_TECHNICAL_MESSAGE_MARKERS = new Set([
-  '[mensagem]',
-  '[mensagem sem texto]',
-  '[mensagem sem conteudo]',
-  '[payload invalido]',
-  '[acao]',
-  '[action]',
-  '[reacao]',
-  '[reaction]',
-  '[atualizacao de midia]',
-  '[media update]',
-  '[voto em enquete]',
-]);
-
-const isBracketOnlyMarker = (value?: string | null) => /^\[[^\]]+\]$/.test(String(value ?? '').trim());
-
-const isHiddenTechnicalMessageMarker = (value?: string | null, messageType?: string) => {
-  const normalized = normalizeTechnicalMarker(value);
-  if (!normalized) {
-    return false;
-  }
-
-  if (HIDDEN_TECHNICAL_MESSAGE_MARKERS.has(normalized)) {
-    return true;
-  }
-
-  if (messageType?.trim() && normalized === normalizeTechnicalMarker(getMessageSummaryMarker(messageType))) {
-    return !VISIBLE_SUMMARY_MARKERS.has(normalized);
-  }
-
-  return isBracketOnlyMarker(value) && !VISIBLE_SUMMARY_MARKERS.has(normalized);
-};
-
-const isMessageSummaryMarker = (value?: string | null, messageType?: string) => {
-  const normalized = normalizeTechnicalMarker(value);
-  if (!normalized) {
-    return false;
-  }
-
-  if (VISIBLE_SUMMARY_MARKERS.has(normalized) || HIDDEN_TECHNICAL_MESSAGE_MARKERS.has(normalized)) {
-    return true;
-  }
-
-  if (messageType?.trim()) {
-    return normalized === normalizeTechnicalMarker(getMessageSummaryMarker(messageType));
-  }
-
-  return false;
-};
-
-const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
-  isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
-);
 
 const resolveStableDeliveryStatus = (incoming?: string | null, previous?: string | null) => {
   return resolveDeliveryStatus(previous, incoming);
@@ -457,40 +353,6 @@ const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWh
   };
 };
 
-type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive' | 'list' | 'event' | 'product' | 'system';
-
-const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIconType | null => {
-  const normalized = normalizeTechnicalMarker(value);
-
-  if (normalized === '[imagem]' || normalized.startsWith('[imagem] ')) return 'image';
-  if (normalized === '[video]' || normalized.startsWith('[video] ')) return 'video';
-  if (normalized === '[audio]' || normalized.startsWith('[audio] ')) return 'audio';
-  if (normalized === '[documento]' || normalized.startsWith('[documento] ')) return 'document';
-  if (normalized === '[link]' || normalized.startsWith('[link] ')) return 'link';
-  if (normalized === '[localizacao]' || normalized.startsWith('[localizacao] ')) return 'location';
-  if (normalized === '[sticker]' || normalized.startsWith('[sticker] ')) return 'sticker';
-  if (normalized === '[contato]' || normalized.startsWith('[contato] ')) return 'contact';
-  if (normalized === '[enquete]' || normalized.startsWith('[enquete] ')) return 'poll';
-  if (normalized === '[quiz]' || normalized.startsWith('[quiz] ')) return 'poll';
-  if (normalized === '[pergunta]' || normalized.startsWith('[pergunta] ')) return 'interactive';
-  if (normalized === '[evento]' || normalized.startsWith('[evento] ')) return 'event';
-  if (normalized === '[produto]' || normalized.startsWith('[produto] ')) return 'product';
-  if (normalized === '[catalogo]' || normalized.startsWith('[catalogo] ')) return 'product';
-  if (normalized === '[convite]' || normalized.startsWith('[convite] ')) return 'link';
-  if (normalized === '[newsletter]' || normalized.startsWith('[newsletter] ')) return 'link';
-  if (normalized === '[convite admin]' || normalized.startsWith('[convite admin] ')) return 'link';
-  if (normalized === '[sistema]' || normalized.startsWith('[sistema] ')) return 'system';
-  if (normalized === '[chamada]' || normalized.startsWith('[chamada] ')) return 'system';
-  if (normalized === '[fixada]' || normalized.startsWith('[fixada] ')) return 'interactive';
-  if (normalized === '[status]' || normalized.startsWith('[status] ')) return 'interactive';
-  if (normalized === '[album]' || normalized.startsWith('[album] ')) return 'image';
-  if (normalized === '[resposta]' || normalized.startsWith('[resposta] ')) return 'interactive';
-  if (normalized === '[lista]' || normalized.startsWith('[lista] ')) return 'list';
-  if (normalized === '[botoes]' || normalized.startsWith('[botoes] ')) return 'interactive';
-  if (normalized === '[mensagem interativa]' || normalized.startsWith('[mensagem interativa] ')) return 'interactive';
-  return null;
-};
-
 const CHAT_PREVIEW_ICON_CONFIG: Record<ChatPreviewIconType, { label: string; Icon: typeof FileImage }> = {
   image: { label: 'foto', Icon: FileImage },
   video: { label: 'vídeo', Icon: Images },
@@ -524,111 +386,6 @@ function ChatPreviewIcon({ type }: { type: ChatPreviewIconType }) {
   );
 }
 
-const isVideoLikeMessageType = (messageType: string) => VIDEO_LIKE_MESSAGE_TYPES.has(messageType.trim().toLowerCase());
-
-const isGalleryMediaMessage = (message: CommWhatsAppMessage) => GALLERY_MESSAGE_TYPES.has(message.message_type.trim().toLowerCase());
-
-const getMessageVisibleCaption = (message: CommWhatsAppMessage) => {
-  const directCaption = String(message.media_caption ?? '').trim();
-  if (directCaption && !isMessageSummaryMarker(directCaption, message.message_type) && !isHiddenTechnicalMessageMarker(directCaption, message.message_type)) {
-    return directCaption;
-  }
-
-  const fallbackText = String(message.text_content ?? '').trim();
-  if (!fallbackText || isMessageSummaryMarker(fallbackText, message.message_type) || isHiddenTechnicalMessageMarker(fallbackText, message.message_type)) {
-    return '';
-  }
-
-  const marker = getMessageSummaryMarker(message.message_type);
-  if (message.message_type.trim().toLowerCase() !== 'text' && marker && fallbackText.startsWith(`${marker} `)) {
-    return fallbackText.slice(marker.length).trim();
-  }
-
-  return fallbackText;
-};
-
-const getMessageEditableText = (message: CommWhatsAppMessage) => {
-  const messageType = message.message_type.trim().toLowerCase();
-
-  if (messageType === 'text') {
-    return String(message.text_content ?? '').trim();
-  }
-
-  return getMessageVisibleCaption(message);
-};
-
-const normalizeComparableMessageText = (messageType: string, value: unknown) => {
-  const text = String(value ?? '').trim();
-  if (!text) return '';
-
-  if (messageType.trim().toLowerCase() === 'text') {
-    return text;
-  }
-
-  const marker = getMessageSummaryMarker(messageType);
-  if (!marker) {
-    return text;
-  }
-
-  if (text === marker) {
-    return '';
-  }
-
-  if (text.startsWith(`${marker} `)) {
-    return text.slice(marker.length).trim();
-  }
-
-  return text;
-};
-
-const getMessageSearchPreviewText = (message: CommWhatsAppMessage) => {
-  const text = getVisiblePreviewText(getMessageEditableText(message), message.message_type);
-  const marker = getVisiblePreviewText(getMessageSummaryMarker(message.message_type), message.message_type);
-  return text || marker;
-};
-
-const canEditOutboundMessage = (message: CommWhatsAppMessage) => {
-  if (message.direction !== 'outbound') {
-    return false;
-  }
-
-  if (!message.external_message_id?.trim()) {
-    return false;
-  }
-
-  if (message.delivery_status.trim().toLowerCase() === 'deleted') {
-    return false;
-  }
-
-  return EDITABLE_OUTBOUND_MESSAGE_TYPES.has(message.message_type.trim().toLowerCase());
-};
-
-const canDeleteOutboundMessage = (message: CommWhatsAppMessage) => {
-  return message.direction === 'outbound'
-    && Boolean(message.external_message_id?.trim())
-    && message.delivery_status.trim().toLowerCase() !== 'deleted';
-};
-
-const canReplyOrForwardMessage = (message: CommWhatsAppMessage) => {
-  return message.direction !== 'system'
-    && Boolean(message.external_message_id?.trim())
-    && message.delivery_status.trim().toLowerCase() !== 'deleted';
-};
-
-const isMessageStarred = (message: CommWhatsAppMessage) => {
-  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-    ? message.metadata as Record<string, unknown>
-    : {};
-  return metadata.starred === true;
-};
-
-const getQuotePayloadFromMessage = (message: CommWhatsAppMessage) => ({
-  quotedMessageId: message.external_message_id?.trim() || '',
-  quotedPreviewText: getMessageSearchPreviewText(message),
-  quotedType: message.message_type.trim().toLowerCase(),
-  quotedAuthorPhone: message.sender_phone?.trim() || '',
-});
-
 const getMessageTimestampMs = (value?: string | null) => {
   if (!value) {
     return null;
@@ -637,26 +394,6 @@ const getMessageTimestampMs = (value?: string | null) => {
   const timestamp = parseCommMessageDate(value).getTime();
   return Number.isFinite(timestamp) ? timestamp : null;
 };
-
-const normalizeChatDraftPreview = (value: string) => {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  if (!normalized) {
-    return '';
-  }
-
-  if (normalized.length <= 100) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, 97).trimEnd()}...`;
-};
-
-const normalizeInboxSearch = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
 
 const URL_PATTERN = /https?:\/\/[^\s<]+/gi;
 
@@ -1240,15 +977,6 @@ const formatTranscriptTimestamp = (value: string, timeZone: string) => {
 };
 
 const normalizeTranscriptText = (value?: string | null) => String(value ?? '').replace(/\s+/g, ' ').trim();
-
-const getUnknownMessageMarker = (messageType: string) => {
-  const normalized = messageType.trim().toLowerCase();
-  if (!normalized) {
-    return '[Mensagem sem conteudo]';
-  }
-
-  return `[${normalized}]`;
-};
 
 const getDeletedMessageMarker = (messageType: string) => {
   const normalized = messageType.trim().toLowerCase();

@@ -1089,7 +1089,7 @@ const callOpenAiResponses = async (
       { type: 'input_text', text: params.userPrompt },
       ...(params.documents ?? []).map((document) => ({
         type: 'input_file',
-        file_data: document.fileData,
+        file_data: `data:application/pdf;base64,${document.fileData}`,
         filename: document.fileName,
       })),
     ];

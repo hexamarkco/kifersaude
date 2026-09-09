@@ -95,6 +95,12 @@ const providerResponse = (text: string) => new Response(JSON.stringify({
   usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
 }), { status: 200, headers: { 'content-type': 'application/json' } });
 
+const responsesProviderResponse = (text: string) => new Response(JSON.stringify({
+  output_text: text,
+  status: 'completed',
+  usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+}), { status: 200, headers: { 'content-type': 'application/json' } });
+
 const runFollowUp = (
   attemptTimeoutMs = 5_000,
   models: {
@@ -132,6 +138,32 @@ describe('AI router technical retry budget', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.retryCount).toBe(0);
     expect(result.stopReason).toBe('stop');
+  });
+
+  it('sends attached PDFs as data URLs to the Responses API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(responsesProviderResponse('Mensagem válida.'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await generateTextForFeature({
+      supabaseAdmin: createSupabaseStub(),
+      featureKey: 'followup.generate',
+      task: 'follow_up_generation',
+      systemPrompt: 'system',
+      userPrompt: 'context',
+      documents: [{ fileName: 'contrato.pdf', fileData: 'JVBERi0xLjQK' }],
+      maxAttempts: 1,
+      maxProviderRequestsPerAttempt: 1,
+      validateOutput: validateFollowUpTechnicalOutput,
+    });
+
+    const [endpoint, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(request.body));
+    expect(endpoint).toBe('https://provider.test/v1/responses');
+    expect(body.input[0].content).toContainEqual({
+      type: 'input_file',
+      filename: 'contrato.pdf',
+      file_data: 'data:application/pdf;base64,JVBERi0xLjQK',
+    });
   });
 
   it('sends GPT-5.6 Sol with a compatible body on the first physical request', async () => {

@@ -5,7 +5,8 @@ export type TextGenerationTask =
   | 'whatsapp_audio_transcription'
   | 'follow_up_agenda_organization'
   | 'attendance_critique'
-  | 'autonomous_attendance';
+  | 'autonomous_attendance'
+  | 'contract_document_extraction';
 
 export type OpenAiTokenParameter = 'max_tokens' | 'max_completion_tokens';
 export const AI_REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;

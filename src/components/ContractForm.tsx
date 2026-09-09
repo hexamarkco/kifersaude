@@ -11,8 +11,10 @@ import {
   listContractConversionLeads,
   listContractValueAdjustments,
   saveContractRecord,
+  type ContractImportFields,
   type ContractPersistenceInput,
 } from "../features/contracts";
+import { ContractDocumentImportDialog } from "../features/contracts/components/ContractDocumentImportDialog";
 import type { Lead } from "../features/leads";
 import {
   getContractBonusSummary,
@@ -40,6 +42,7 @@ import {
   Calendar,
   Building2,
   WalletCards,
+  Sparkles,
 } from "lucide-react";
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
@@ -300,6 +303,7 @@ export default function ContractForm({
   );
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
+  const [showDocumentImport, setShowDocumentImport] = useState(false);
   const [editingAdjustment, setEditingAdjustment] =
     useState<ContractValueAdjustment | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -638,6 +642,18 @@ export default function ContractForm({
       ...currentFormData,
       taxa_adesao_tipo: nextSignupFeeType,
     }));
+  };
+
+  const handleDocumentImportApply = (fields: ContractImportFields) => {
+    setFormData((current) => ({
+      ...current,
+      ...fields,
+      cnpj: fields.cnpj ? formatCnpj(fields.cnpj) : current.cnpj,
+      mensalidade_total: fields.mensalidade_total
+        ? formatCurrencyInput(fields.mensalidade_total)
+        : current.mensalidade_total,
+    }));
+    toast.success("Campos extraídos aplicados. Revise os dados antes de salvar.");
   };
   const remainingCommissionValue = Math.max(
     0,
@@ -1125,6 +1141,16 @@ export default function ContractForm({
               Registre os dados comerciais, financeiros e de vigencia do contrato.
             </DialogDescription>
           )}
+          <Button
+            type="button"
+            variant="soft"
+            size="sm"
+            className="mt-3"
+            onClick={() => setShowDocumentImport(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Preencher com PDFs
+          </Button>
         </DialogHeader>
         <DialogBody className="p-0">
         <form
@@ -2165,6 +2191,13 @@ export default function ContractForm({
           </Button>
         </DialogFooter>
       </Dialog>
+
+      {showDocumentImport && (
+        <ContractDocumentImportDialog
+          onApply={handleDocumentImportApply}
+          onClose={() => setShowDocumentImport(false)}
+        />
+      )}
 
       {showAdjustmentForm && contract?.id && (
         <ValueAdjustmentForm

@@ -10,9 +10,9 @@ import {
 } from '../ai-feature-registry.ts';
 
 describe('AI Feature Registry', () => {
-  it('contains all 11 expected features', () => {
+  it('contains all 12 expected features', () => {
     const keys = getAllFeatureKeys();
-    expect(keys).toHaveLength(11);
+    expect(keys).toHaveLength(12);
   });
 
   it('has metadata for every feature key', () => {
@@ -98,5 +98,11 @@ describe('AI Feature Registry', () => {
   it('AGENDA_ORGANIZE has high maxTokens for batch scoring', () => {
     const meta = AI_FEATURE_META[AI_FEATURES.AGENDA_ORGANIZE];
     expect(meta.defaultMaxTokens).toBe(1800);
+  });
+
+  it('CONTRACT_DOCUMENT_EXTRACT is structured and uses a deterministic temperature', () => {
+    const meta = AI_FEATURE_META[AI_FEATURES.CONTRACT_DOCUMENT_EXTRACT];
+    expect(meta.taskType).toBe('structured_output');
+    expect(meta.defaultTemperature).toBe(0);
   });
 });

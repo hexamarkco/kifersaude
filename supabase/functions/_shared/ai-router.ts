@@ -18,7 +18,7 @@ declare const Deno: {
   };
 };
 
-export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'follow_up_analysis' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique' | 'autonomous_attendance';
+export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'follow_up_analysis' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization' | 'attendance_critique' | 'autonomous_attendance' | 'contract_document_extraction';
 
 type ProviderSettings = {
   enabled: boolean;
@@ -52,6 +52,13 @@ type ProviderCallParams = {
   signal?: AbortSignal;
   maxHttpAttempts?: number;
   onReasoningEffortApplied?: (effort: AiReasoningEffort | null) => void;
+  documents?: AiDocumentInput[];
+};
+
+/** A short-lived document payload used only for a single model request. */
+export type AiDocumentInput = {
+  fileData: string;
+  fileName: string;
 };
 
 type OpenAiMessage = {
@@ -179,6 +186,8 @@ export type GenerateTextForFeatureOptions = {
   retrySameResolvedModel?: boolean;
   /** Deterministic validation. A rejection consumes the optional technical retry. */
   validateOutput?: (text: string) => AiOutputValidationResult;
+  /** Files are supported by the OpenAI Responses API only. */
+  documents?: AiDocumentInput[];
 };
 
 export type GenerateTextForFeatureResult = {
@@ -223,7 +232,7 @@ const GEMINI_DEFAULT_TRANSCRIPTION_MODEL = GEMINI_DEFAULT_TEXT_MODEL;
 const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
 const CLAUDE_DEFAULT_TRANSCRIPTION_MODEL = CLAUDE_DEFAULT_TEXT_MODEL;
 
-const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'follow_up_analysis', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance'];
+const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'follow_up_analysis', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance', 'contract_document_extraction'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -253,6 +262,7 @@ const getRequiredCapabilitiesForTask = (task: AiTask): string[] => {
     case 'attendance_critique':
     case 'autonomous_attendance':
     case 'follow_up_agenda_organization':
+    case 'contract_document_extraction':
       return ['text'];
     default:
       return ['text'];
@@ -445,6 +455,12 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
       providers,
       fallbackEnabled,
     ),
+    contract_document_extraction: normalizeTaskRouting(
+      'contract_document_extraction',
+      rawTasks.contract_document_extraction,
+      providers,
+      false,
+    ),
   };
 
   return {
@@ -551,6 +567,10 @@ const extractGeminiText = (payload: any): string => {
 };
 
 const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
+  if (params.documents?.length) {
+    return callOpenAiResponses(settings, params);
+  }
+
   const endpointBase = settings.baseUrl.replace(/\/+$/, '');
   const endpoint = `${endpointBase}/chat/completions`;
 
@@ -1035,6 +1055,103 @@ export const resolveModelForFeature = async (
     source: 'provider_default',
     reasoningEffort: featureReasoningEffort,
   };
+};
+
+const extractOpenAiResponsesText = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  if (!Array.isArray(payload.output)) return '';
+
+  return payload.output
+    .flatMap((item) => isRecord(item) && Array.isArray(item.content) ? item.content : [])
+    .map((part) => isRecord(part) && part.type === 'output_text' && typeof part.text === 'string' ? part.text : '')
+    .join('')
+    .trim();
+};
+
+const callOpenAiResponses = async (
+  settings: ProviderSettings,
+  params: ProviderCallParams,
+): Promise<ProviderCallResult> => {
+  const endpointBase = settings.baseUrl.replace(/\/+$/, '');
+  const endpoint = `${endpointBase}/responses`;
+  const requestProfile = resolveOpenAiRequestProfile(params.model, params.task, params.reasoningEffort);
+  let includeTemperature = requestProfile.supportsTemperature;
+  let reasoningEffort = requestProfile.reasoningEffort;
+  const maxHttpAttempts = Math.max(1, Math.min(3, params.maxHttpAttempts ?? 3));
+
+  for (let attempt = 0; attempt < maxHttpAttempts; attempt += 1) {
+    params.onReasoningEffortApplied?.(reasoningEffort ?? null);
+    const content = [
+      { type: 'input_text', text: params.userPrompt },
+      ...(params.documents ?? []).map((document) => ({
+        type: 'input_file',
+        file_data: document.fileData,
+        filename: document.fileName,
+      })),
+    ];
+    const body: Record<string, unknown> = {
+      model: params.model,
+      input: [{ role: 'user', content }],
+      max_output_tokens: params.maxTokens,
+      store: false,
+    };
+
+    if (params.systemPrompt.trim()) body.instructions = params.systemPrompt;
+    if (includeTemperature) body.temperature = params.temperature;
+    if (reasoningEffort) body.reasoning = { effort: reasoningEffort };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${settings.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: params.signal,
+    });
+
+    if (response.ok) {
+      const payload: unknown = await response.json().catch(() => ({}));
+      const text = extractOpenAiResponsesText(payload);
+      if (!text) throw new Error('OpenAI retornou resposta vazia.');
+
+      const root = isRecord(payload) ? payload : {};
+      const usage = isRecord(root.usage) ? root.usage : {};
+      const inputDetails = isRecord(usage.input_tokens_details) ? usage.input_tokens_details : {};
+      const outputDetails = isRecord(usage.output_tokens_details) ? usage.output_tokens_details : {};
+      return {
+        text,
+        stopReason: typeof root.status === 'string' ? root.status : null,
+        usage: {
+          inputTokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : null,
+          cachedInputTokens: typeof inputDetails.cached_tokens === 'number' ? inputDetails.cached_tokens : null,
+          outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : null,
+          reasoningTokens: typeof outputDetails.reasoning_tokens === 'number' ? outputDetails.reasoning_tokens : null,
+          totalTokens: typeof usage.total_tokens === 'number' ? usage.total_tokens : null,
+        },
+      };
+    }
+
+    const errorText = await response.text();
+    if (response.status === 400) {
+      if (includeTemperature && isUnsupportedOpenAiParameterError(errorText, 'temperature')) {
+        includeTemperature = false;
+        continue;
+      }
+      if (reasoningEffort && isUnsupportedOpenAiParameterError(errorText, 'reasoning')) {
+        reasoningEffort = undefined;
+        continue;
+      }
+    }
+
+    throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
+  }
+
+  throw new Error('OpenAI não aceitou a combinação de parâmetros para leitura de documentos.');
 };
 
 // ============================================================
@@ -1541,6 +1658,7 @@ export const generateTextForFeature = async (
         onReasoningEffortApplied: (effort) => {
           appliedReasoningEffort = effort;
         },
+        documents: options.documents,
       });
 
       const attemptDuration = Date.now() - attemptStart;

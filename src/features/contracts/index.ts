@@ -1,4 +1,9 @@
 export type * from './domain/types';
+export type {
+  ContractDocumentExtraction,
+  ContractDocumentProfile,
+  ContractImportFields,
+} from './domain/contractDocumentImport';
 export {
   deleteContract,
   listContractHolders,

@@ -64,6 +64,7 @@ describe('AI Feature Meta — consistency checks', () => {
       'follow_up_agenda_organization',
       'attendance_critique',
       'autonomous_attendance',
+      'contract_document_extraction',
     ]);
 
     const allKeys = Object.values(AI_FEATURES);

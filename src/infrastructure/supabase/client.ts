@@ -22,6 +22,7 @@ const LONG_FUNCTION_REQUEST_TIMEOUT_MS = 180_000;
 const LONG_RUNNING_FUNCTION_PATHS = new Set([
   '/functions/v1/comm-whatsapp-generate-follow-up',
   '/functions/v1/comm-whatsapp-sync-chat',
+  '/functions/v1/contract-document-extract',
 ]);
 
 const isSupabaseRequestUrl = (value: string): boolean =>

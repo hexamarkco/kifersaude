@@ -32,6 +32,7 @@ export const AI_FEATURES = {
   SANDBOX_SCENARIO: 'sandbox.scenario',
   CAMPAIGN_INTENT: 'campaign.intent',
   AGENDA_ORGANIZE: 'agenda.organize',
+  CONTRACT_DOCUMENT_EXTRACT: 'contract.document_extract',
 } as const;
 
 export type AIFeatureKey = typeof AI_FEATURES[keyof typeof AI_FEATURES];
@@ -321,6 +322,27 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
       { key: 'pending_follow_ups', label: 'Follow-ups pendentes', description: 'Lista de follow-ups aguardando.' },
       { key: 'lead_data', label: 'Dados dos leads', description: 'Informações dos leads associados.' },
       { key: 'temporal_context', label: 'Contexto temporal', description: 'Datas e horários relevantes.' },
+    ],
+  },
+
+  [AI_FEATURES.CONTRACT_DOCUMENT_EXTRACT]: {
+    key: AI_FEATURES.CONTRACT_DOCUMENT_EXTRACT,
+    name: 'Ler documentos de contrato',
+    description: 'Lê propostas e contratos em PDF para sugerir o preenchimento do cadastro de contrato.',
+    taskType: 'structured_output',
+    aiTask: 'contract_document_extraction',
+    defaultProvider: 'openai',
+    defaultModel: 'gpt-4o-mini',
+    defaultTemperature: 0,
+    defaultMaxTokens: 1800,
+    defaultReasoningEffort: null,
+    defaultContextConfig: {
+      documentProfiles: true,
+      requestedFields: true,
+    },
+    availableVariables: [
+      { key: 'document_profiles', label: 'Perfis de documento', description: 'Perfil escolhido ou detectado para os PDFs enviados.' },
+      { key: 'requested_fields', label: 'Campos solicitados', description: 'Campos do cadastro de contrato que a IA deve tentar extrair.' },
     ],
   },
 };

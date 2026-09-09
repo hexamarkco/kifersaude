@@ -117,11 +117,11 @@ export function ContractDocumentImportDialog({
           A IA lê a proposta e sugere dados para este formulário. Revise tudo antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>
-      <DialogBody className="space-y-5 p-4 sm:p-5">
+      <DialogBody className="min-w-0 space-y-5 overflow-x-hidden p-4 sm:p-5">
         {!extraction ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-[var(--text-primary)]">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <label className="block min-w-0 text-sm font-medium text-[var(--text-primary)]">
                 Perfil do documento
                 <Select
                   value={profile}

@@ -2418,13 +2418,15 @@ async function scheduleFlowJobs({
     // The lead completed its window in the past (e.g. while the queue was
     // paused). Abordagem (lead_created) never spreads: it fires as soon as
     // detected, respecting the window (now if inside, next opening otherwise).
-    // Fresh eligibility (cron pickup a few minutes late) also fires
-    // immediately; only real backlogs are spread deterministically across the
-    // send window so drains happen individually instead of bursting.
+    // Fresh inactivity eligibility is spread over a short window so a cron
+    // batch never sends several messages in the same second. Real backlogs
+    // are spread deterministically across the full send window.
     const backlogMinutes = (now.getTime() - firstScheduledAt.getTime()) / 60000;
     firstScheduledAt =
-      flow.triggerType === 'lead_created' || backlogMinutes <= 15
+      flow.triggerType === 'lead_created'
         ? getNextAllowedSendAt(now, effectiveScheduling)
+        : backlogMinutes <= 15
+          ? getFreshInactivitySendAt(now, leadId, effectiveScheduling)
         : getSpreadSendAt(now, leadId, effectiveScheduling);
   }
 
@@ -2457,6 +2459,15 @@ const getLeadSpreadMinutes = (leadId: string, windowMinutes: number): number => 
     hash = (hash * 31 + leadId.charCodeAt(i)) >>> 0;
   }
   return hash % Math.max(1, windowMinutes);
+};
+
+const getFreshInactivitySendAt = (
+  from: Date,
+  leadId: string,
+  scheduling: AutoContactSchedulingSettings,
+): Date => {
+  const staggerSeconds = 60 + getLeadSpreadMinutes(leadId, 10 * 60);
+  return getNextAllowedSendAt(new Date(from.getTime() + staggerSeconds * 1000), scheduling);
 };
 
 const getSpreadSendAt = (
@@ -2646,6 +2657,27 @@ async function cancelFlowJobs({
   }
 
   await query;
+}
+
+const AUTO_CONTACT_SEND_INTERVAL_SECONDS = 180;
+
+async function reserveAutoContactSendSlot(
+  supabase: ReturnType<typeof createClient>,
+): Promise<Date> {
+  const { data, error } = await supabase.rpc('reserve_auto_contact_send_slot', {
+    p_interval_seconds: AUTO_CONTACT_SEND_INTERVAL_SECONDS,
+  });
+
+  if (error || typeof data !== 'string') {
+    throw new Error(error?.message ?? 'Não foi possível reservar o próximo horário de envio.');
+  }
+
+  const reservedAt = new Date(data);
+  if (Number.isNaN(reservedAt.getTime())) {
+    throw new Error('A reserva do próximo horário de envio é inválida.');
+  }
+
+  return reservedAt;
 }
 
 async function processFlowJobs({
@@ -2914,6 +2946,10 @@ async function processFlowJobs({
         const multiMessages = Array.isArray(job.action_payload?.messages)
           ? (job.action_payload.messages as Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>)
           : null;
+        const multiPayloads: Array<{
+          contentType: FlowMessageType;
+          content: string | { url: string; caption?: string; filename?: string };
+        }> = [];
 
         if (multiMessages && multiMessages.length > 0) {
           for (const item of multiMessages) {
@@ -2930,13 +2966,7 @@ async function processFlowJobs({
                     : null;
                 })()
               : buildCustomMessagePayload(item?.custom ?? null, leadWithRelations, settings.scheduling?.timezone);
-            if (!itemPayload) continue;
-            await sendAutoContactMessage({
-              supabase,
-              lead: leadWithRelations,
-              contentType: itemPayload.contentType,
-              content: itemPayload.content,
-            });
+            if (itemPayload) multiPayloads.push(itemPayload);
           }
         } else if (job.message_source === 'custom') {
           payload = buildCustomMessagePayload(job.custom_message, leadWithRelations, settings.scheduling?.timezone);
@@ -2954,17 +2984,63 @@ async function processFlowJobs({
           }
         }
 
-        if (!payload && !(multiMessages && multiMessages.length > 0)) {
+        const messagePayloads = multiMessages ? multiPayloads : payload ? [payload] : [];
+        if (messagePayloads.length === 0) {
           throw new Error('Conteúdo inválido para envio automático.');
         }
 
-        if (payload) {
-          await sendAutoContactMessage({
-            supabase,
-            lead: leadWithRelations,
-            contentType: payload.contentType,
-            content: payload.content,
-          });
+        const storedMessageIndex = Number(job.action_payload?.message_index ?? 0);
+        const messageIndex =
+          Number.isInteger(storedMessageIndex) && storedMessageIndex >= 0 ? storedMessageIndex : 0;
+        const messagePayload = messagePayloads[messageIndex];
+        if (!messagePayload) {
+          throw new Error('Índice de mensagem automática inválido.');
+        }
+
+        const reservedAt = await reserveAutoContactSendSlot(supabase);
+        if (reservedAt.getTime() > Date.now()) {
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({
+              status: 'pending',
+              scheduled_at: reservedAt.toISOString(),
+              attempts: previousAttempts,
+              last_error: 'Aguardando intervalo mínimo entre envios automáticos.',
+            })
+            .eq('id', job.id);
+          continue;
+        }
+
+        await sendAutoContactMessage({
+          supabase,
+          lead: leadWithRelations,
+          contentType: messagePayload.contentType,
+          content: messagePayload.content,
+        });
+
+        if (messageIndex < messagePayloads.length - 1) {
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({
+              status: 'pending',
+              scheduled_at: new Date(Date.now() + AUTO_CONTACT_SEND_INTERVAL_SECONDS * 1000).toISOString(),
+              action_payload: {
+                ...(job.action_payload ?? {}),
+                message_index: messageIndex + 1,
+              },
+              attempts: previousAttempts,
+              last_error: 'Próxima mensagem do passo aguardando intervalo mínimo.',
+            })
+            .eq('id', job.id);
+          continue;
+        }
+
+        if (job.action_payload?.message_index != null) {
+          const { message_index: _messageIndex, ...actionPayload } = job.action_payload;
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({ action_payload: actionPayload })
+            .eq('id', job.id);
         }
 
         const contactNowIso = new Date().toISOString();
@@ -4344,7 +4420,7 @@ Deno.serve(async (req: Request) => {
           : undefined;
         // Use effectiveTriggerAt (not raw inactivityStartedAt) so dedup matches what's stored
         const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration'
-          ? (effectiveTriggerAt ?? undefined)
+          ? (effectiveTriggerAt ? new Date(effectiveTriggerAt) : undefined)
           : undefined;
 
         await scheduleFlowJobs({

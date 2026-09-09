@@ -75,10 +75,8 @@ import {
   getMessageSearchPreviewText,
   getMessageVisibleCaption,
   getQuotePayloadFromMessage,
-  getUnknownMessageMarker,
   getVisiblePreviewText,
   isGalleryMediaMessage,
-  isHiddenTechnicalMessageMarker,
   isMessageStarred,
   isVideoLikeMessageType,
   normalizeChatDraftPreview,
@@ -122,6 +120,11 @@ import {
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
+import {
+  buildTranscriptLine,
+  normalizeSystemTimeZone,
+} from './domain/messageTranscript';
+import { shouldHideTechnicalMessage } from './domain/messageVisibility';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
@@ -178,8 +181,6 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE = 30;
 const CHAT_IDENTITY_LOOKUP_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
 const SAVED_CONTACT_FORCE_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
-const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
-const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
@@ -610,129 +611,6 @@ const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): 
   };
 };
 
-const normalizeSystemTimeZone = (value: unknown) => {
-  const candidate = String(value ?? '').trim();
-  if (!candidate) {
-    return DEFAULT_TRANSCRIPT_TIME_ZONE;
-  }
-
-  try {
-    new Intl.DateTimeFormat('pt-BR', { timeZone: candidate }).format(new Date());
-    return candidate;
-  } catch {
-    return DEFAULT_TRANSCRIPT_TIME_ZONE;
-  }
-};
-
-const getTranscriptDateTimeParts = (date: Date, timeZone: string) => {
-  const formatter = new Intl.DateTimeFormat('pt-BR', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(date);
-  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
-
-  return {
-    day: read('day'),
-    month: read('month'),
-    year: read('year'),
-    hour: read('hour'),
-    minute: read('minute'),
-  };
-};
-
-const formatTranscriptTimestamp = (value: string, timeZone: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '[--:--, --/--/----]';
-  }
-
-  const parts = getTranscriptDateTimeParts(date, timeZone);
-  return `[${parts.hour}:${parts.minute}, ${parts.day}/${parts.month}/${parts.year}]`;
-};
-
-const normalizeTranscriptText = (value?: string | null) => String(value ?? '').replace(/\s+/g, ' ').trim();
-
-const buildTranscriptContent = (message: CommWhatsAppMessage) => {
-  if (shouldHideTechnicalMessage(message)) {
-    return '';
-  }
-
-  if (message.direction === 'system') {
-    return '';
-  }
-
-  if (message.direction === 'outbound' && message.delivery_status.trim().toLowerCase() === 'failed') {
-    return '';
-  }
-
-  const text = normalizeTranscriptText(message.text_content);
-  const caption = normalizeTranscriptText(message.media_caption);
-  const transcription = normalizeTranscriptText(message.transcription_text);
-  const kind = message.message_type.trim().toLowerCase();
-  const isDeleted = message.delivery_status.trim().toLowerCase() === 'deleted';
-  const visibleText = isHiddenTechnicalMessageMarker(text, message.message_type) ? '' : text;
-  const visibleCaption = isHiddenTechnicalMessageMarker(caption, message.message_type) ? '' : caption;
-
-  const withDeletedFlag = (content: string) => {
-    if (!isDeleted) {
-      return content;
-    }
-
-    return content ? `[Mensagem apagada] ${content}` : getDeletedMessageMarker(kind);
-  };
-
-  if (kind === 'text') {
-    return withDeletedFlag(visibleText);
-  }
-
-  if (kind === 'image') {
-    return withDeletedFlag(visibleCaption ? `[Imagem] ${visibleCaption}` : '[Imagem]');
-  }
-
-  if (kind === 'video' || kind === 'gif' || kind === 'short') {
-    return withDeletedFlag(visibleCaption ? `[Video] ${visibleCaption}` : '[Video]');
-  }
-
-  if (kind === 'document') {
-    return withDeletedFlag(visibleCaption ? `[Documento] ${visibleCaption}` : '[Documento]');
-  }
-
-  if (kind === 'audio' || kind === 'voice') {
-    return withDeletedFlag(transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER);
-  }
-
-  if (visibleCaption) {
-    return withDeletedFlag(visibleCaption);
-  }
-
-  if (visibleText) {
-    return withDeletedFlag(visibleText);
-  }
-
-  if (transcription) {
-    return withDeletedFlag(transcription);
-  }
-
-  return withDeletedFlag(getUnknownMessageMarker(kind));
-};
-
-const buildTranscriptLine = (message: CommWhatsAppMessage, leadLabel: string, timeZone: string) => {
-  const content = buildTranscriptContent(message);
-  if (!content) {
-    return null;
-  }
-
-  const author = message.direction === 'outbound' ? 'Eu' : leadLabel;
-  return `${formatTranscriptTimestamp(message.message_at, timeZone)} ${author}: ${content}`;
-};
-
 const formatConnectionStatusLabel = (value?: string | null, fallback = 'Indisponível') => {
   const normalized = String(value ?? '').trim().toUpperCase();
 
@@ -778,37 +656,6 @@ const inboxInlineActionClassName = getPanelButtonClass({
   size: 'sm',
   className: 'h-8 px-3 text-[11px] font-semibold',
 });
-
-const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
-  '[acao]',
-  '[ação]',
-  '[reacao]',
-  '[reação]',
-  '[mensagem apagada]',
-  '[atualizacao de midia]',
-  '[atualização de mídia]',
-  '[voto em enquete]',
-]);
-
-const shouldHideTechnicalMessage = (message: CommWhatsAppMessage) => {
-  const messageType = message.message_type.trim().toLowerCase();
-  const textContent = String(message.text_content ?? '').trim();
-
-  if (messageType === 'action') {
-    const normalizedText = normalizeQuickReplyLookup(textContent).replace(/\s+/g, ' ').trim();
-    return !normalizedText || REDUNDANT_ACTION_MESSAGE_MARKERS.has(normalizedText) || isHiddenTechnicalMessageMarker(textContent, message.message_type);
-  }
-
-  if (!isHiddenTechnicalMessageMarker(textContent, message.message_type)) {
-    return false;
-  }
-
-  const hasRenderableMedia = Boolean(message.media_id || message.media_url);
-  const hasVisibleCaption = Boolean(getMessageVisibleCaption(message));
-  const hasStructuredPreview = Boolean(getMessageLinkPreview(message) || getMessageContactCardInfo(message) || hasMessageQuote(message));
-
-  return !hasRenderableMedia && !hasVisibleCaption && !hasStructuredPreview;
-};
 
 const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
 

@@ -43,7 +43,6 @@ type SystemSettingsRow = {
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const CHAT_CONTEXT_LIMIT = 80;
-const AI_REPLY_SUGGESTION_SLUG = 'ai_reply_suggestion_prompt';
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -200,7 +199,7 @@ Deno.serve(async (req: Request) => {
 
     // ---- Parallel data loading ----
 
-    const [messagesResult, styleMessagesResult, systemSettingsResult, promptIntegrationResult] = await Promise.all([
+    const [messagesResult, styleMessagesResult, systemSettingsResult] = await Promise.all([
       supabaseAdmin
         .from('comm_whatsapp_messages')
         .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
@@ -218,11 +217,6 @@ Deno.serve(async (req: Request) => {
         .order('message_at', { ascending: false })
         .limit(STYLE_SAMPLE_LIMIT),
       supabaseAdmin.from('system_settings').select('company_name, timezone').limit(1).maybeSingle(),
-      supabaseAdmin
-        .from('integration_settings')
-        .select('settings')
-        .eq('slug', AI_REPLY_SUGGESTION_SLUG)
-        .maybeSingle(),
     ]);
 
     if (messagesResult.error) throw new Error(`Erro ao carregar historico: ${messagesResult.error.message}`);
@@ -233,12 +227,6 @@ Deno.serve(async (req: Request) => {
     const timeZone = normalizeSystemTimeZone(systemSettings?.timezone);
     const companyName = toTrimmedString(systemSettings?.company_name) || 'Kifer Saude';
     const contactLabel = getChatLabel(chat, leadData);
-
-    // ---- Configurable prompt ----
-
-    const promptIntegration = promptIntegrationResult.data as { settings?: Record<string, unknown> } | null;
-    const promptSettings = (promptIntegration?.settings ?? {}) as Record<string, unknown>;
-    const legacyConfiguredInstructions = toTrimmedString(promptSettings.instructions);
 
     const aiConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.MESSAGE_SUGGEST).catch(() => null);
 
@@ -311,10 +299,6 @@ Deno.serve(async (req: Request) => {
       '',
       styleExamples.length > 0
         ? '--- EXEMPLOS REAIS DO SEU ESTILO (copie o padrao, nao o conteudo) ---\n' + styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')
-        : null,
-      '',
-      legacyConfiguredInstructions
-        ? '--- INSTRUCOES PERSONALIZADAS DA OPERACAO ---\n' + legacyConfiguredInstructions
         : null,
       '',
       composerDraft

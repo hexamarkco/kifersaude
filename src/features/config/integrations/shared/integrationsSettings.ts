@@ -4,8 +4,6 @@ export const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 export const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
 export const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
 export const AI_ROUTING_SLUG = "ai_routing";
-export const AI_FOLLOW_UP_PROMPT_SLUG = "ai_follow_up_prompt";
-export const AI_REPLY_SUGGESTION_PROMPT_SLUG = "ai_reply_suggestion_prompt";
 export const META_PIXEL_SLUG = "meta_pixel";
 export const GTM_SLUG = "google_tag_manager";
 
@@ -257,11 +255,4 @@ export const normalizeRoutingSettings = (
 
     return accumulator;
   }, createDefaultRoutingForm());
-};
-
-export const normalizeFollowUpInstructions = (
-  integration: IntegrationSetting | null,
-) => {
-  const settings = isRecord(integration?.settings) ? integration.settings : {};
-  return toTrimmedString(settings.instructions);
 };

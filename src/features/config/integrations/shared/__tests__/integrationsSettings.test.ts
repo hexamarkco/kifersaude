@@ -3,7 +3,6 @@ import { test } from "vitest";
 
 import {
   getPreferredTaskModel,
-  normalizeFollowUpInstructions,
   normalizeModelOptions,
   normalizeProviderSettings,
   normalizeRoutingSettings,
@@ -67,18 +66,4 @@ test("normalizeRoutingSettings and helpers keep provider models stable", () => {
   assert.equal(routing.rewrite_message.model, "gemini-custom");
   assert.equal(routing.rewrite_message.fallbackToOpenAi, false);
   assert.equal(preferredModel, "claude-3-5-sonnet-latest");
-});
-
-test("normalizeFollowUpInstructions returns a trimmed string", () => {
-  assert.equal(
-    normalizeFollowUpInstructions({
-      id: "follow-up-1",
-      slug: "ai_follow_up_prompt",
-      name: "Follow-up",
-      settings: { instructions: "  Seja objetiva.  " },
-      created_at: "",
-      updated_at: "",
-    }),
-    "Seja objetiva.",
-  );
 });

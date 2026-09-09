@@ -82,10 +82,6 @@ type SystemSettingsRow = {
   timezone: string | null;
 };
 
-type IntegrationSettingRow = {
-  settings: Record<string, unknown> | null;
-};
-
 type FollowUpLeadContext = {
   nome: string;
   primeiro_nome: string;
@@ -95,7 +91,6 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 class FollowUpValidationError extends Error {}
 
-const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
@@ -617,11 +612,6 @@ const formatDateForPrompt = (date: Date, timeZone: string) => {
   return `${parts.day}/${parts.month}/${parts.year}`;
 };
 
-const formatTimeForPrompt = (date: Date, timeZone: string) => {
-  const parts = getDateTimeParts(date, timeZone);
-  return `${parts.hour}:${parts.minute}`;
-};
-
 const formatDateTimeForPrompt = (date: Date, timeZone: string) => {
   const parts = getDateTimeParts(date, timeZone);
   return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
@@ -642,20 +632,6 @@ const buildFollowUpLeadContext = (lead: LeadRow | null, chat: ChatRow): FollowUp
     nome,
     primeiro_nome: getFirstName(nome),
   };
-};
-
-const applyFollowUpPromptVariables = (template: string, context: FollowUpLeadContext, timeZone: string) => {
-  const now = new Date();
-  const replacements: Array<[RegExp, string]> = [
-    [/{{\s*nome\s*}}/gi, context.nome],
-    [/{{\s*primeiro_nome\s*}}/gi, context.primeiro_nome],
-    [/{{\s*data_hoje\s*}}/gi, formatDateForPrompt(now, timeZone)],
-    [/{{\s*hora_agora\s*}}/gi, formatTimeForPrompt(now, timeZone)],
-    [/{{\s*data_hora_atual_sistema\s*}}/gi, formatDateTimeForPrompt(now, timeZone)],
-    [/{{\s*data_hora_atual_brasilia\s*}}/gi, formatDateTimeForPrompt(now, timeZone)],
-  ];
-
-  return replacements.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), template).trim();
 };
 
 const normalizeTranscriptText = (value: string) => value.replace(/\s+/g, ' ').trim();
@@ -1088,11 +1064,10 @@ Deno.serve(async (req: Request) => {
 
     const chat = chatData as ChatRow;
 
-    const [messages, lead, systemSettingsResult, promptResult, recentAudits, reminders] = await Promise.all([
+    const [messages, lead, systemSettingsResult, recentAudits, reminders] = await Promise.all([
       loadAllMessagesForChat(supabaseAdmin, chat.id),
       loadLeadContext(supabaseAdmin, chat.lead_id),
       supabaseAdmin.from('system_settings').select('company_name, timezone').limit(1).maybeSingle(),
-      supabaseAdmin.from('integration_settings').select('settings').eq('slug', AI_FOLLOW_UP_PROMPT_SLUG).maybeSingle(),
       loadRecentFollowUpAudits(supabaseAdmin, chat.id),
       loadFollowUpReminders(supabaseAdmin, chat.lead_id),
     ]);
@@ -1101,11 +1076,7 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Erro ao carregar configuracoes do sistema: ${systemSettingsResult.error.message}`);
     }
 
-    if (promptResult.error) {
-      throw new Error(`Erro ao carregar prompt de follow-up: ${promptResult.error.message}`);
-    }
     const systemSettings = (systemSettingsResult.data ?? null) as SystemSettingsRow | null;
-    const promptIntegration = (promptResult.data ?? null) as IntegrationSettingRow | null;
     const systemTimeZone = normalizeSystemTimeZone(systemSettings?.timezone);
     const companyName = toTrimmedString(systemSettings?.company_name) || 'Kifer Saude';
     const leadContext = buildFollowUpLeadContext(lead, chat);
@@ -1143,14 +1114,6 @@ Deno.serve(async (req: Request) => {
         headers: jsonHeaders,
       });
     }
-
-    const promptSettings = isRecord(promptIntegration?.settings) ? promptIntegration.settings : {};
-    const configuredInstructions = applyFollowUpPromptVariables(
-      toTrimmedString(promptSettings.instructions),
-      leadContext,
-      systemTimeZone,
-    );
-    const hasCustomInstructions = Boolean(configuredInstructions);
 
     const now = new Date();
     const temporalFacts = buildTemporalFacts(messages, now, systemTimeZone);
@@ -1208,13 +1171,8 @@ Deno.serve(async (req: Request) => {
         'A mensagem precisa soar como uma continuacao natural do ultimo contato.',
       ].join('\n');
 
-      const operationCustomPromptBlock = configuredInstructions
-        ? ['PERSONALIZACAO DA OPERACAO:', configuredInstructions].join('\n')
-        : '';
-
       const refinementSystemPrompt = [
         refineConfig?.featurePrompt || baseIdentityBlock,
-        operationCustomPromptBlock,
         'A mensagem deve soar NATURAL, como se fosse escrita por um humano — jamais como texto gerado por IA.',
         MULTI_MESSAGE_MECHANISM_NOTE,
         MESSAGE_SPLITTING_INSTRUCTION,
@@ -1251,7 +1209,7 @@ Deno.serve(async (req: Request) => {
         task: 'follow_up_generation',
         systemPrompt: refinementSystemPrompt,
         userPrompt: refinementUserPrompt,
-        temperature: hasCustomInstructions ? 0.5 : (refineConfig?.temperature || 0.7),
+        temperature: refineConfig?.temperature || 0.7,
         maxTokens: refineConfig?.maxOutputTokens || 320,
         edgeFunction: 'comm-whatsapp-generate-follow-up',
       });
@@ -1290,7 +1248,6 @@ Deno.serve(async (req: Request) => {
     const outputInstructions = toTrimmedString(generateConfig?.outputInstructions)
       || FOLLOW_UP_GENERATE_OUTPUT_INSTRUCTIONS;
     const operationInstructions = [
-      configuredInstructions,
       customInstructions,
     ].filter(Boolean).join('\n\n');
 
@@ -1329,7 +1286,7 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt: generationSystemPrompt,
       userPrompt: generationUserPrompt,
-      temperature: hasCustomInstructions ? 0.5 : (generateConfig?.temperature ?? 0.7),
+        temperature: generateConfig?.temperature ?? 0.7,
       maxTokens: generateConfig?.maxOutputTokens ?? 520,
       edgeFunction: 'comm-whatsapp-generate-follow-up',
       leadId: chat.lead_id ?? undefined,

@@ -43,6 +43,8 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - `sandbox.chat` foi aposentada: chat interativo usa `autonomous.reply`; `sandbox.scenario` fica restrita a lead simulado e juiz.
 - Menor de 12 anos não é cotado sozinho: adulto é titular e criança dependente, com mensalidade para ambos.
 - Antes da primeira resposta autônoma, `Contato Inicial` muda condicionalmente para `Atendimento`; nunca regredir outro status.
+- A resposta autônoma só pode ser enviada se a última inbound ainda for a mesma que embasou o prompt. Nova mensagem durante a geração cancela a resposta obsoleta; o job pendente responde ao turno completo após o debounce.
+- Quando a IA confirma que vai preparar/enviar a cotação após coletar a qualificação, o chat faz handoff para atendimento manual e o lead vai para `Aguardando cotação`. A tag técnica é o caminho normal; a confirmação explícita é uma proteção contra sua omissão pelo modelo.
 - Ao concluir qualificação, `QUALIFICACAO_COMPLETA` faz handoff para `Aguardando cotação`, cancela respostas pendentes e impede novas mensagens até reativação manual.
 - `ai_models` e `ai_model_pricing` são deliberadamente desacopladas. Resolva o preço vigente pelo par `(provider, model)`; não use join PostgREST `ai_model_pricing!left`.
 

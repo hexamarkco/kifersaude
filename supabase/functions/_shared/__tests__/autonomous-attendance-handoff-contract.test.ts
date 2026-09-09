@@ -45,3 +45,15 @@ test('the first autonomous reply moves only Contato Inicial to Atendimento befor
   const preSendSource = workerSource.slice(Math.max(0, sendStart - 1800), sendStart);
   assert.match(preSendSource, /const replyPreparation = await prepareAutonomousAttendanceReply/);
 });
+
+test('the worker discards an answer if the customer writes again while the model generates it', () => {
+  const generatedResponseIndex = workerSource.indexOf("console.log('[ai-autonomous-reply-worker] resposta gerada'");
+  const staleReplyCheckIndex = workerSource.indexOf('hasNewInboundMessageSincePrompt', generatedResponseIndex);
+  const sendLoopIndex = workerSource.indexOf('for (let i = 0; i < messages.length; i++)');
+
+  assert.ok(generatedResponseIndex >= 0);
+  assert.ok(staleReplyCheckIndex > generatedResponseIndex);
+  assert.ok(sendLoopIndex > staleReplyCheckIndex);
+  assert.match(workerSource, /cancelStaleAutonomousReplyJob/);
+  assert.match(workerSource, /order\('created_at', \{ ascending: false \}\)/);
+});

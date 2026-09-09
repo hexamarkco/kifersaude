@@ -3,6 +3,7 @@ import { describe, test } from 'vitest';
 
 import {
   buildReplyUserPrompt,
+  inferQualificationCompletionHandoff,
   getReliableLeadFirstName,
   splitGeneratedReply,
   extractHandoff,
@@ -191,6 +192,22 @@ describe('splitGeneratedReply — handoff lifecycle', () => {
     assert.equal(messages.length, 2);
     assert.ok(messages[0].includes('Mensagem 1'));
     assert.ok(messages[1].includes('Mensagem 2'));
+  });
+});
+
+describe('inferQualificationCompletionHandoff', () => {
+  test('protege o handoff quando a IA promete preparar a cotação sem a tag técnica', () => {
+    assert.equal(
+      inferQualificationCompletionHandoff(['Certo, Jefferson! Vou preparar sua cotação e já te retorno.']),
+      'QUALIFICACAO_COMPLETA',
+    );
+  });
+
+  test('nao encerra apenas por mencionar cotação sem assumir o envio', () => {
+    assert.equal(
+      inferQualificationCompletionHandoff(['Posso preparar uma cotação depois que eu confirmar a sua cidade.']),
+      null,
+    );
   });
 });
 

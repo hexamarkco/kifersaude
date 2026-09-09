@@ -245,3 +245,14 @@ export const splitGeneratedReply = (
 
   return { messages, handoffCode, handoffNote };
 };
+
+// Safety net for the terminal commercial commitment. The primary path remains
+// the explicit technical tag, but a model must not be allowed to promise a
+// quotation and then leave the autonomous attendant active just because it
+// omitted that invisible tag.
+const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|já vou|agora vou)\s+(?:preparar|montar|elaborar|enviar|encaminhar|providenciar)\s+(?:(?:a|uma)\s+)?(?:(?:sua|a sua)\s+)?(?:cotação|cotacao|proposta)\b/i;
+
+export const inferQualificationCompletionHandoff = (visibleMessages: string[]): HandoffCode | null => {
+  const visibleReply = visibleMessages.join('\n').trim();
+  return QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleReply) ? 'QUALIFICACAO_COMPLETA' : null;
+};

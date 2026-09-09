@@ -22,6 +22,7 @@ import {
   type CommWhatsAppCanonicalChatRoute,
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
+import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
   buildReferencePrompt,
   buildReplyUserPrompt,
@@ -29,6 +30,7 @@ import {
   fetchQuickReplies,
   fetchSimilarSituations,
   getReliableLeadFirstName,
+  inferQualificationCompletionHandoff,
   splitGeneratedReply,
   type HandoffCode,
 } from '../_shared/ai-autonomous-helpers.ts';
@@ -45,6 +47,12 @@ const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
 const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
+const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
+  '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
+  'Quando idade(s), localizacao e a resposta sobre CNPJ/MEI ja tiverem sido coletadas e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
+  'No FINAL ABSOLUTO, inclua exatamente `[[HANDOFF: QUALIFICACAO_COMPLETA | cotacao encaminhada para atendimento manual]]`.',
+  'A tag e interna: nunca a explique ao cliente. Nao faca nova pergunta nem continue o atendimento depois da confirmacao.',
+].join('\n');
 
 type WorkerRequestBody = {
   source?: string;
@@ -53,6 +61,7 @@ type WorkerRequestBody = {
 };
 
 type AutonomousHistoryMessageRow = MessageRow & {
+  created_at: string;
   media_id: string | null;
   media_url: string | null;
   media_mime_type: string | null;
@@ -60,6 +69,50 @@ type AutonomousHistoryMessageRow = MessageRow & {
   transcription_status: string | null;
   transcription_error: string | null;
 };
+
+async function hasNewInboundMessageSincePrompt(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  chatId: string;
+  promptInboundMessageId: string;
+}): Promise<boolean> {
+  const { supabaseAdmin, chatId, promptInboundMessageId } = params;
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('id')
+    .eq('chat_id', chatId)
+    .eq('direction', 'inbound')
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Erro ao verificar mensagem recebida mais recente: ${error.message}`);
+
+  return isAutonomousReplyStale(promptInboundMessageId, data?.id ?? null);
+}
+
+async function cancelStaleAutonomousReplyJob(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  jobId: string;
+  chatId: string;
+  promptInboundMessageId: string;
+}): Promise<void> {
+  const { supabaseAdmin, jobId, chatId, promptInboundMessageId } = params;
+  const reason = 'Resposta descartada: o cliente enviou nova mensagem durante a geracao da IA.';
+  const { error } = await supabaseAdmin
+    .from('ai_autonomous_reply_jobs')
+    .update({ status: 'cancelled', last_error: reason })
+    .eq('id', jobId)
+    .eq('status', 'processing');
+
+  if (error) throw new Error(`Erro ao descartar resposta autonoma obsoleta: ${error.message}`);
+
+  console.log('[ai-autonomous-reply-worker] resposta obsoleta descartada', {
+    jobId,
+    chatId,
+    promptInboundMessageId,
+  });
+}
 
 // Handoff -> status do lead no CRM. QUALIFICACAO_COMPLETA e RECUSOU_COTACAO
 // mudam o status; FORA_DE_ESCOPO e PRECISA_HUMANO deixam como esta (nao e
@@ -457,11 +510,13 @@ Deno.serve(async (req: Request) => {
         const [historyResult, styleMessagesResult, quickReplies, leadResult] = await Promise.all([
           supabaseAdmin
             .from('comm_whatsapp_messages')
-            .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name')
+            .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name')
             .eq('chat_id', chat.id)
             .neq('delivery_status', 'failed')
             .neq('direction', 'system')
             .order('message_at', { ascending: false })
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
             .limit(CONVERSATION_HISTORY_LIMIT),
           supabaseAdmin
             .from('comm_whatsapp_messages')
@@ -524,6 +579,11 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        const promptInboundMessageId = fetchedHistoryRows.find((row) => row.direction === 'inbound')?.id;
+        if (!promptInboundMessageId) {
+          throw new Error('Nao foi possivel identificar a mensagem recebida que embasou a resposta autonoma.');
+        }
+
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
         const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
         console.log('[ai-autonomous-reply-worker] contexto pronto para gerar resposta', {
@@ -547,10 +607,10 @@ Deno.serve(async (req: Request) => {
           referenceBlock ? `\n${referenceBlock}` : '',
         ].filter(Boolean).join('\n');
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
-        const userPrompt = buildReplyUserPrompt(history, {
+        const userPrompt = [buildReplyUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
-        });
+        }), AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION].join('\n\n');
 
         const result = await generateTextForFeature({
           supabaseAdmin,
@@ -563,7 +623,9 @@ Deno.serve(async (req: Request) => {
           edgeFunction: 'ai-autonomous-reply-worker',
         });
 
-        const { messages, handoffCode } = splitGeneratedReply(result.text, false);
+        const parsedReply = splitGeneratedReply(result.text, false);
+        const messages = [...parsedReply.messages];
+        let handoffCode = parsedReply.handoffCode;
 
         // Se o modelo retornou apenas a tag de handoff sem mensagem visível,
         // regenera uma única vez pedindo explicitamente a mensagem final.
@@ -592,6 +654,7 @@ Deno.serve(async (req: Request) => {
           const retryParsed = splitGeneratedReply(retryResult.text, false);
           if (retryParsed.messages.length > 0) {
             messages.push(...retryParsed.messages);
+            handoffCode = retryParsed.handoffCode ?? handoffCode;
           } else {
             // Retry falhou — registrar erro mas NÃO deixar conversa presa em active
             console.error('[ai-autonomous-reply-worker] retry tag-only falhou, aplicando handoff seguro', {
@@ -614,6 +677,17 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        if (!handoffCode) {
+          handoffCode = inferQualificationCompletionHandoff(messages);
+          if (handoffCode) {
+            console.warn('[ai-autonomous-reply-worker] handoff de cotacao inferido da confirmacao visivel', {
+              jobId: job.id,
+              chatId: chat.id,
+              leadId,
+            });
+          }
+        }
+
         if (messages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
         console.log('[ai-autonomous-reply-worker] resposta gerada', {
           jobId: job.id,
@@ -622,6 +696,14 @@ Deno.serve(async (req: Request) => {
           messageCount: messages.length,
           handoffCode: handoffCode ?? null,
         });
+
+        // A IA pode levar alguns segundos para gerar. Se o cliente escreveu
+        // nesse intervalo, nao enviamos uma resposta baseada no turno anterior:
+        // o webhook ja deixou um novo job pendente para responder ao conjunto.
+        if (await hasNewInboundMessageSincePrompt({ supabaseAdmin, chatId: chat.id, promptInboundMessageId })) {
+          await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+          continue;
+        }
 
         const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chat.id);
         if (!chatRoute || chatRoute.identityConflict) {
@@ -653,7 +735,15 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        let replyWasDiscarded = false;
         for (let i = 0; i < messages.length; i++) {
+          // Uma resposta pode conter mais de uma bolha. Revalida antes de
+          // cada envio para nunca continuar uma sequencia apos nova mensagem.
+          if (await hasNewInboundMessageSincePrompt({ supabaseAdmin, chatId: chat.id, promptInboundMessageId })) {
+            await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+            replyWasDiscarded = true;
+            break;
+          }
           await sendAutonomousWhatsAppText({
             supabaseAdmin,
             channelId: channel.id,
@@ -666,6 +756,7 @@ Deno.serve(async (req: Request) => {
             await new Promise((resolve) => setTimeout(resolve, MESSAGE_SEND_DELAY_MS));
           }
         }
+        if (replyWasDiscarded) continue;
 
         if (handoffCode) {
           await completeAutonomousAttendanceHandoff({

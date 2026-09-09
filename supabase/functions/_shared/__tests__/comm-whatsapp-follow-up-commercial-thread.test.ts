@@ -25,7 +25,8 @@ test('promessa de retorno: exige recuperar compromisso e microdecisao pendentes'
 test('documentacao: mantem a regra de mudar a estrategia depois de uma tentativa', () => {
   assert.match(COMMERCIAL_THREAD_RULE, /NAO REPETIR ESTRATEGIA/i);
   assert.match(COMMERCIAL_THREAD_RULE, /investigando o bloqueio/i);
-  assert.match(COMMERCIAL_THREAD_RULE, /pedindo posicionamento sobre continuidade/i);
+  assert.match(COMMERCIAL_THREAD_RULE, /oferecendo uma alternativa concreta/i);
+  assert.match(COMMERCIAL_THREAD_RULE, /nao envie uma mensagem apenas para anunciar uma pausa/i);
 });
 
 test('objecao nao resolvida: permanece um fio comercial valido', () => {
@@ -36,7 +37,7 @@ test('objecao nao resolvida: permanece um fio comercial valido', () => {
 test('contexto humano sensivel: continua acima da retomada comercial', () => {
   assert.match(COMMERCIAL_THREAD_RULE, /nao supera o CONTEXTO HUMANO E EMPATIA/i);
   assert.match(COMMERCIAL_THREAD_RULE, /luto, doenca, cirurgia, internacao/i);
-  assert.match(COMMERCIAL_THREAD_RULE, /recomendacao de esperar/i);
+  assert.match(COMMERCIAL_THREAD_RULE, /esperar sem enviar uma mensagem comercial/i);
 });
 
 test('oportunidade encerrada: nao recria artificialmente uma pendencia', () => {

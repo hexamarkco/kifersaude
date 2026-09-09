@@ -187,6 +187,9 @@ const SELLER_ACTION_PATTERNS = [
   /\bdeixa eu (?:confirmar|verificar|consultar|atualizar)\b/,
 ];
 
+const PAUSE_LANGUAGE_PATTERN = /\b(?:pausar|pausad[ao]s?|deixar\s+[^.?!]{0,80}\s+em\s+pausa)\b/;
+const PAUSE_WITH_COMMERCIAL_ALTERNATIVE_PATTERN = /\bou\b[^.?!]{0,120}\b(?:ajustar|buscar|comparar|confirmar|recalcular|rever|seguir|retomar|trocar|verificar)\b/;
+
 const UNSUPPORTED_URGENCY_PATTERNS = [
   /\bultima chance\b/,
   /\bso hoje\b/,
@@ -246,6 +249,17 @@ export const validateFollowUpBusinessOutput = (
       valid: false,
       stopReason: 'invalid_output',
       message: 'A mensagem é uma checagem genérica e não define uma microdecisão comercial específica.',
+    };
+  }
+
+  if (
+    PAUSE_LANGUAGE_PATTERN.test(normalized)
+    && !PAUSE_WITH_COMMERCIAL_ALTERNATIVE_PATTERN.test(normalized)
+  ) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: 'A mensagem pausa ou encerra a oportunidade unilateralmente. Use WAIT quando não houver movimento útil, ou ofereça uma alternativa comercial concreta junto da pausa.',
     };
   }
 

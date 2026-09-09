@@ -76,7 +76,7 @@ describe('deterministic commercial guardrail', () => {
     'Conseguiu falar com sua esposa sobre manter a Unimed?',
     'Vou confirmar a rede desse hospital e volto com a opção correta.',
     'Quer que eu ajuste a cotação para uma faixa mais enxuta?',
-    'Posso deixar essa análise pausada por enquanto?',
+    'Você prefere pausar essa cotação por enquanto ou buscar uma opção mais enxuta?',
     'O que falta para decidirmos entre a Amil e a Leve?',
   ])('accepts a contextual choice or concrete commercial action: %s', (value) => {
     expect(validateFollowUpBusinessOutput(value, evidence)).toEqual({ valid: true });
@@ -90,6 +90,8 @@ describe('deterministic commercial guardrail', () => {
     'O que falta para decidirmos?',
     'Só passando para saber se você viu minha mensagem.',
     'Quando fizer sentido, pode me chamar. Estou por aqui.',
+    'Posso deixar essa análise pausada por enquanto?',
+    'Vou deixar a cotação pausada. Quando quiser retomar, pode me chamar.',
     'Você prefere mensagem ou ligação?',
   ])('rejects generic or socially empty messages: %s', (value) => {
     expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({

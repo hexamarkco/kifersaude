@@ -31,3 +31,33 @@ test('normaliza os valores de importação esperados pelo formulário de contrat
 test('rejeita retorno que não seja JSON de objeto', () => {
   assert.throws(() => parseContractDocumentExtraction('[]'));
 });
+
+test('normaliza o padrão MedSênior e não usa dados da operadora como dados do cliente', () => {
+  const extraction = parseContractDocumentExtraction(JSON.stringify({
+    profile: 'medsenior',
+    fields: {
+      modalidade: 'Individual',
+      operadora: 'SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.',
+      produto_plano: 'MEDSÊNIOR RJ 1',
+      acomodacao: 'ENFERMARIA – Quarto Coletivo de até 3 (três) leitos',
+      cnpj: '31.466.949/0001-05',
+      razao_social: 'SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.',
+      nome_fantasia: 'MedSênior',
+      endereco_empresa: 'Rua Pedro Fonseca, nº 170, Vitória - ES',
+    },
+    field_sources: {
+      cnpj: 'Página 2 do contrato',
+      razao_social: 'Página 2 do contrato',
+    },
+  }));
+
+  assert.equal(extraction.fields.operadora, 'MedSênior');
+  assert.equal(extraction.fields.produto_plano, 'RJ1');
+  assert.equal(extraction.fields.acomodacao, 'Enfermaria');
+  assert.equal(extraction.fields.cnpj, undefined);
+  assert.equal(extraction.fields.razao_social, undefined);
+  assert.equal(extraction.fields.nome_fantasia, undefined);
+  assert.equal(extraction.fields.endereco_empresa, undefined);
+  assert.equal(extraction.fieldSources.cnpj, undefined);
+  assert.equal(extraction.warnings).toHaveLength(1);
+});

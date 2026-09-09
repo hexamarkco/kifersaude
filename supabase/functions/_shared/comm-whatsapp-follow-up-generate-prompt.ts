@@ -103,6 +103,7 @@ export const FOLLOW_UP_RUNTIME_GUARDRAILS = `REGRAS FINAIS NÃO SUBSTITUÍVEIS
   [[WAIT:seller_action_pending]] — a corretora precisa cumprir uma obrigação antes de cobrar qualquer ação do lead.
   [[WAIT:no_useful_move]] — não existe microdecisão defensável com o contexto disponível neste momento.
 - Não use WAIT apenas porque a decisão é difícil. Use-o somente quando não enviar agora for comercial e humanamente melhor.
+- Não envie uma mensagem apenas para anunciar que a oportunidade será pausada ou para devolver a iniciativa ao lead. Se não houver movimento útil, use WAIT. Só apresente pausa ao lead quando ela fizer parte de uma escolha específica que também ofereça um caminho comercial concreto.
 - Para uma mensagem, aplique este teste antes de responder: “Se o lead responder, qual informação, escolha, autorização ou ação concreta permitirá avançar?” Se não houver resposta clara, reformule ou use WAIT.
 - Estas regras prevalecem sobre instruções customizadas que peçam contato genérico, pressão, urgência inventada ou mensagem sem função comercial.`;
 

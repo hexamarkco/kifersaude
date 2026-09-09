@@ -55,15 +55,6 @@ import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
-import {
-  WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION,
-  WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME,
-  WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG,
-  buildWhatsAppQuickRepliesSettings,
-  normalizeWhatsAppQuickRepliesSettings,
-  sanitizeWhatsAppQuickReplyShortcut,
-  type WhatsAppQuickReply,
-} from '../../../lib/whatsAppQuickReplies';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from './domain/types';
 import {
@@ -126,6 +117,18 @@ import {
   normalizeSystemTimeZone,
 } from './domain/messageTranscript';
 import { shouldHideTechnicalMessage } from './domain/messageVisibility';
+import {
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION,
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME,
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG,
+  buildQuickReplyShortcut,
+  buildWhatsAppQuickRepliesSettings,
+  getActiveQuickReplyMatch,
+  normalizeQuickReplyLookup,
+  normalizeWhatsAppQuickRepliesSettings,
+  summarizeQuickReplyPreview,
+  type WhatsAppQuickReply,
+} from './domain/quickReplies';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
@@ -141,7 +144,7 @@ import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
-import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDraft';
+import { useComposerDraft } from './hooks/useComposerDraft';
 import { useVoiceRecording } from './hooks/useVoiceRecording';
 import { useChatSearch } from './hooks/useChatSearch';
 import { useClickOutside } from './hooks/useClickOutside';
@@ -211,7 +214,6 @@ type MediaUploadProgress = {
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type ChatActivityFilter = 'all' | 'unread';
-type QuickReplyCommandMatch = { query: string; start: number; end: number };
 type QuickReplyOption = {
   id: string;
   name: string;
@@ -261,28 +263,6 @@ type QueuedTextMessage = {
 type OutgoingQuotePayload = ReturnType<typeof getQuotePayloadFromMessage>;
 
 const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
-
-const normalizeQuickReplyLookup = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-
-const buildQuickReplyShortcut = (value: string, index: number) => {
-  const normalized = sanitizeWhatsAppQuickReplyShortcut(value);
-
-  return normalized || `msg-${index + 1}`;
-};
-
-const summarizeQuickReplyPreview = (value: string) => {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= 120) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, 117).trimEnd()}...`;
-};
 
 const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const MEDIA_ATTACHMENT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.heic,.heif,video/*,.mp4,.mov,.avi,.mkv,.webm';
@@ -505,38 +485,6 @@ const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
   width: 0,
   height: 0,
 });
-
-const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): QuickReplyCommandMatch | null => {
-  if (selection.start !== selection.end) {
-    return null;
-  }
-
-  const cursor = Math.max(0, Math.min(selection.start, value.length));
-  const textBeforeCursor = value.slice(0, cursor);
-  const slashIndex = textBeforeCursor.lastIndexOf('/');
-
-  if (slashIndex < 0) {
-    return null;
-  }
-
-  const query = textBeforeCursor.slice(slashIndex + 1);
-  if (/\s/.test(query)) {
-    return null;
-  }
-
-  if (slashIndex > 0) {
-    const previousCharacter = textBeforeCursor[slashIndex - 1] ?? '';
-    if (!/\s/.test(previousCharacter)) {
-      return null;
-    }
-  }
-
-  return {
-    query,
-    start: slashIndex,
-    end: cursor,
-  };
-};
 
 const formatConnectionStatusLabel = (value?: string | null, fallback = 'Indisponível') => {
   const normalized = String(value ?? '').trim().toUpperCase();

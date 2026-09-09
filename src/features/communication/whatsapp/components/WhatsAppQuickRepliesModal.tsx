@@ -4,7 +4,7 @@ import { MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { Alert, Button, Input, Surface } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
-import { sanitizeWhatsAppQuickReplyShortcut, type WhatsAppQuickReply } from '../../../../lib/whatsAppQuickReplies';
+import { sanitizeWhatsAppQuickReplyShortcut, type WhatsAppQuickReply } from '../domain/quickReplies';
 import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppQuickRepliesModalProps = {

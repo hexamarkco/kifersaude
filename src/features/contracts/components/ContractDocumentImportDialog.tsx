@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { CheckCircle2, FileUp, Loader2, Sparkles } from 'lucide-react';
+import { useRef, useState, type DragEvent } from 'react';
+import { CheckCircle2, FileUp, Loader2, Sparkles, X } from 'lucide-react';
 
 import {
   extractContractDocumentData,
@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
+  Select,
 } from '../../../design-system';
 
 type ContractDocumentImportDialogProps = {
@@ -67,12 +67,24 @@ export function ContractDocumentImportDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extraction, setExtraction] = useState<ContractDocumentExtraction | null>(null);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const updateFiles = (nextFiles: File[]) => {
     setError(validateContractImportFiles(nextFiles));
     setFiles(nextFiles);
     setExtraction(null);
+  };
+
+  const handleFileDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDraggingFiles(false);
+    updateFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const removeFile = (fileToRemove: File) => {
+    updateFiles(files.filter((file) => file !== fileToRemove));
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const handleExtract = async () => {
@@ -111,15 +123,16 @@ export function ContractDocumentImportDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-[var(--text-primary)]">
                 Perfil do documento
-                <select
+                <Select
                   value={profile}
                   onChange={(event) => setProfile(event.target.value as ContractDocumentProfile)}
-                  className="mt-2 w-full rounded-[var(--kds-radius-sm)] border border-[var(--border-default)] bg-[var(--surface-primary)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                >
-                  {CONTRACT_DOCUMENT_PROFILES.map((option) => (
-                    <option key={option} value={option}>{profileLabels[option]}</option>
-                  ))}
-                </select>
+                  className="mt-2"
+                  aria-label="Perfil do documento"
+                  options={CONTRACT_DOCUMENT_PROFILES.map((option) => ({
+                    value: option,
+                    label: profileLabels[option],
+                  }))}
+                />
               </label>
               <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-secondary)]">
                 <p className="font-medium text-[var(--text-primary)]">Como usar</p>
@@ -127,11 +140,26 @@ export function ContractDocumentImportDialog({
               </div>
             </div>
 
-            <label className="block rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--surface-muted)] p-5 text-center transition-colors hover:border-[var(--brand-primary)]">
+            <div
+              className={`rounded-[var(--kds-radius-md)] border border-dashed bg-[var(--surface-muted)] p-5 text-center transition-colors ${
+                isDraggingFiles
+                  ? 'border-[var(--brand-primary)] bg-[var(--surface-primary)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand-primary)_16%,transparent)]'
+                  : 'border-[var(--border-default)] hover:border-[var(--brand-primary)]'
+              }`}
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDraggingFiles(true);
+              }}
+              onDragOver={(event) => event.preventDefault()}
+              onDragLeave={(event) => {
+                if (event.currentTarget === event.target) setIsDraggingFiles(false);
+              }}
+              onDrop={handleFileDrop}
+            >
               <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
-              <span className="mt-2 block font-medium text-[var(--text-primary)]">Selecionar PDFs</span>
-              <span className="mt-1 block text-sm text-[var(--text-secondary)]">Até 4 arquivos, 16 MB por PDF e 28 MB no total.</span>
-              <Input
+              <p className="mt-2 font-medium text-[var(--text-primary)]">Arraste os PDFs ou escolha os arquivos</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Até 4 arquivos, 16 MB por PDF e 28 MB no total.</p>
+              <input
                 ref={inputRef}
                 type="file"
                 accept="application/pdf,.pdf"
@@ -139,14 +167,25 @@ export function ContractDocumentImportDialog({
                 className="sr-only"
                 onChange={(event) => updateFiles(Array.from(event.target.files ?? []))}
               />
-            </label>
+              <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => inputRef.current?.click()}>
+                Selecionar PDFs
+              </Button>
+            </div>
 
             {files.length > 0 && (
               <ul className="space-y-2" aria-label="PDFs selecionados">
                 {files.map((file) => (
-                  <li key={`${file.name}-${file.lastModified}`} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                  <li key={`${file.name}-${file.lastModified}`} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-3 py-2 text-sm">
                     <span className="min-w-0 truncate text-[var(--text-primary)]">{file.name}</span>
-                    <span className="shrink-0 text-[var(--text-muted)]">{fileSizeLabel(file.size)}</span>
+                    <span className="ml-auto shrink-0 text-[var(--text-muted)]">{fileSizeLabel(file.size)}</span>
+                    <button
+                      type="button"
+                      className="rounded-[var(--kds-radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                      aria-label={`Remover ${file.name}`}
+                      onClick={() => removeFile(file)}
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </li>
                 ))}
               </ul>

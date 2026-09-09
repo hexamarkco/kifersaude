@@ -47,6 +47,7 @@ const isOpenAiModernReasoningModel = (model: string): boolean =>
 
 const OPENAI_REASONING_EFFORTS = {
   gpt56: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+  gpt55: ['none', 'low', 'medium', 'high', 'xhigh'],
   modern: ['none', 'low', 'medium', 'high'],
   classic: ['minimal', 'low', 'medium', 'high'],
   future: ['low', 'medium', 'high', 'xhigh', 'max'],
@@ -57,9 +58,8 @@ export const getOpenAiSupportedReasoningEfforts = (model: string): readonly Open
   const normalized = normalizedModel(model);
 
   if (isOpenAiProModel(normalized)) return OPENAI_REASONING_EFFORTS.pro;
-  if (normalized.startsWith('gpt-5.6') || normalized.startsWith('gpt-5.5')) {
-    return OPENAI_REASONING_EFFORTS.gpt56;
-  }
+  if (normalized.startsWith('gpt-5.6')) return OPENAI_REASONING_EFFORTS.gpt56;
+  if (normalized.startsWith('gpt-5.5')) return OPENAI_REASONING_EFFORTS.gpt55;
   if (isOpenAiModernReasoningModel(normalized)) return OPENAI_REASONING_EFFORTS.modern;
   if (/^gpt-(?:[6-9]|\d{2,})(?:[.-]|$)/.test(normalized)) return OPENAI_REASONING_EFFORTS.future;
   if (

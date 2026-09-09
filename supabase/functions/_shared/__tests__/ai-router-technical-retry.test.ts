@@ -35,7 +35,7 @@ const createSupabaseStub = ({
   featureModel?: string;
   defaultModel?: string;
   reasoningEffort?: AiReasoningEffort | null;
-} = {}) => ({
+} = {}, attemptInserts: Array<Record<string, unknown>> = []) => ({
   from: (table: string) => {
     if (table === 'integration_settings') {
       return makeQuery({
@@ -78,6 +78,14 @@ const createSupabaseStub = ({
     if (table === 'ai_call_logs') {
       return makeQuery({ data: { id: 'call-id' }, error: null });
     }
+    if (table === 'ai_call_attempts') {
+      return {
+        insert: async (payload: Record<string, unknown>) => {
+          attemptInserts.push(payload);
+          return { data: null, error: null };
+        },
+      };
+    }
     return makeQuery({ data: [], error: null });
   },
 });
@@ -95,8 +103,9 @@ const runFollowUp = (
     defaultModel?: string;
     reasoningEffort?: AiReasoningEffort | null;
   } = {},
+  attemptInserts: Array<Record<string, unknown>> = [],
 ) => generateTextForFeature({
-  supabaseAdmin: createSupabaseStub(models),
+  supabaseAdmin: createSupabaseStub(models, attemptInserts),
   featureKey: 'followup.generate',
   task: 'follow_up_generation',
   systemPrompt: 'system',
@@ -150,18 +159,32 @@ describe('AI router technical retry budget', () => {
 
   it('uses the reasoning effort selected in the active feature version', async () => {
     const fetchMock = vi.fn().mockResolvedValue(providerResponse('Mensagem válida.'));
+    const attemptInserts: Array<Record<string, unknown>> = [];
     vi.stubGlobal('fetch', fetchMock);
 
-    await runFollowUp(5_000, {
+    const result = await runFollowUp(5_000, {
       featureModel: 'gpt-5.6-sol',
       defaultModel: 'gpt-4.1-mini',
       reasoningEffort: 'high',
-    });
+    }, attemptInserts);
 
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
     const body = JSON.parse(String(request.body));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(body.reasoning_effort).toBe('high');
     expect(body).not.toHaveProperty('temperature');
+    expect(result).toMatchObject({
+      model: 'gpt-5.6-sol',
+      requestedReasoningEffort: 'high',
+      appliedReasoningEffort: 'high',
+    });
+    expect(attemptInserts).toContainEqual(expect.objectContaining({
+      provider: 'openai',
+      model: 'gpt-5.6-sol',
+      success: true,
+      requested_reasoning_effort: 'high',
+      applied_reasoning_effort: 'high',
+    }));
   });
 
   it('omits deprecated sampling controls for new Claude models', async () => {

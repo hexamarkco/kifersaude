@@ -28,7 +28,7 @@ import type {
 } from "./aiConfigTypes";
 import { AI_FEATURE_AI_TASK, AI_FEATURE_CATEGORIES, AI_PROVIDER_OPTIONS } from "./aiConfigTypes";
 import {
-  buildAiConfigExportV2,
+  buildAiConfigExportV3,
   createAiConfigImportPlan,
   type AiConfigImportPlan,
 } from "./aiConfigTransfer";
@@ -153,7 +153,7 @@ export default function AiConfigScreen() {
           : []
       )));
 
-      const exportData = buildAiConfigExportV2({
+      const exportData = buildAiConfigExportV3({
         features,
         globalConfigs,
         effectiveModels,
@@ -189,6 +189,9 @@ export default function AiConfigScreen() {
     e.target.value = "";
 
     try {
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("O arquivo excede o limite de 5 MB.");
+      }
       const [contents, catalogResult] = await Promise.all([
         file.text(),
         aiConfigService.fetchModelCatalog(),
@@ -217,13 +220,14 @@ export default function AiConfigScreen() {
       }
 
       for (const gc of importConfirm.globalConfigs) {
-        await aiConfigService.updateGlobalConfig(gc.key, gc.value);
+        const { error } = await aiConfigService.updateGlobalConfig(gc.key, gc.value);
+        if (error) failures.push(`Configuração global ${gc.key}: ${error}`);
       }
 
       if (failures.length > 0) {
         toast.error(`${imported} importadas; ${failures.length} falharam. ${failures[0]}`);
       } else if (importConfirm.warnings.length > 0) {
-        toast.warning(`${imported} configurações importadas com ${importConfirm.warnings.length} aviso(s) de modelo.`);
+        toast.warning(`${imported} configurações importadas com ${importConfirm.warnings.length} aviso(s).`);
       } else {
         toast.success(`${imported} configurações importadas`);
       }
@@ -332,13 +336,22 @@ export default function AiConfigScreen() {
         onOpenChange={() => setImportConfirm(null)}
         onConfirm={handleImportConfirm}
         title="Importar configurações?"
-        description={`Export v${importConfirm?.version ?? 1}: serão criadas ${importConfirm?.features.length ?? 0} novas versões. As versões atuais serão desativadas.`}
+        description={`Export v${importConfirm?.version ?? 1}: serão criadas ${importConfirm?.features.length ?? 0} novas versões. As versões atuais dessas Features serão desativadas.`}
         confirmLabel="Importar"
         loading={importing}
         closeOnConfirm
       >
         {importConfirm && (
           <div className="max-h-80 space-y-4 overflow-y-auto text-sm">
+            <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[var(--text-secondary)]">
+              <p>{importConfirm.features.length} Feature(s) e {importConfirm.globalConfigs.length} configuração(ões) global(is) prontas para importar.</p>
+              {importConfirm.skippedFeatures > 0 && (
+                <p className="mt-1">{importConfirm.skippedFeatures} Feature(s) sem configuração aplicável serão ignoradas.</p>
+              )}
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Exemplos, catálogo de modelos e snapshots de roteamento do arquivo são somente informativos e nunca são aplicados.
+              </p>
+            </div>
             <div>
               <p className="font-medium text-[var(--text-primary)]">Modelos personalizados</p>
               <ul className="mt-1 space-y-1 text-[var(--text-secondary)]">

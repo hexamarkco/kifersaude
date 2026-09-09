@@ -5,8 +5,11 @@ import type {
   AiFeatureConfigRow,
   AiFeatureWithConfig,
   AiModelCatalogWithPricing,
+  AiReasoningEffort,
+  AiModelResolutionSource,
 } from "../aiConfigTypes";
 import {
+  buildAiConfigExportV3,
   buildAiConfigExportV2,
   createAiConfigImportPlan,
 } from "../aiConfigTransfer";
@@ -63,10 +66,10 @@ const catalogModel = (overrides: Partial<AiModelCatalogWithPricing> = {}): AiMod
   ...overrides,
 });
 
-const buildExport = (override: boolean) => buildAiConfigExportV2({
+const exportParams = (override: boolean) => ({
   features: [feature(config(override))],
   globalConfigs: [],
-  effectiveModels: new Map([["followup.generate", {
+  effectiveModels: new Map<string, { provider: string; model: string; source: AiModelResolutionSource }>([["followup.generate", {
     provider: "openai",
     model: "gpt-5.6-sol",
     source: override ? "feature" : "ai_routing",
@@ -75,7 +78,7 @@ const buildExport = (override: boolean) => buildAiConfigExportV2({
     openai: [{
       value: "gpt-5.6-sol",
       label: "GPT-5.6 Sol",
-      reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+      reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"] as AiReasoningEffort[],
     }],
     gemini: [],
     claude: [],
@@ -87,11 +90,14 @@ const buildExport = (override: boolean) => buildAiConfigExportV2({
   exportedAt: "2026-09-07T12:00:00.000Z",
 });
 
-test("AI config v2 round-trips a custom provider/model override exactly", () => {
+const buildExport = (override: boolean) => buildAiConfigExportV3(exportParams(override));
+
+test("AI config v3 round-trips a custom provider/model override exactly", () => {
     const exported = buildExport(true);
     const plan = createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel()]);
 
-    assert.equal(exported.version, 2);
+    assert.equal(exported.version, 3);
+    assert.equal(exported.format, "kifer-saude-ai-config");
     assert.deepEqual(exported.features[0].active_config?.model_config, {
       mode: "custom",
       model_override_enabled: true,
@@ -114,7 +120,7 @@ test("AI config v2 round-trips a custom provider/model override exactly", () => 
     assert.equal(exported.features[0].active_config?.reasoning_effort, "minimal");
 });
 
-test("AI config v2 round-trips default routing without creating an override", () => {
+test("AI config v3 round-trips default routing without creating an override", () => {
     const exported = buildExport(false);
     const plan = createAiConfigImportPlan(exported, [feature(config(true))], [catalogModel()]);
 
@@ -145,7 +151,7 @@ test("AI config v1 imports without inventing model settings", () => {
     assert.equal("model" in plan.features[0].payload, false);
 });
 
-test("AI config v2 warns about an unavailable custom model and preserves the imported value", () => {
+test("AI config v3 warns about an unavailable custom model and preserves the imported value", () => {
     const exported = buildExport(true);
     const plan = createAiConfigImportPlan(exported, [feature(config(false))], []);
 
@@ -155,7 +161,7 @@ test("AI config v2 warns about an unavailable custom model and preserves the imp
     assert.equal(plan.features[0].payload.model, "gpt-5.6-sol");
 });
 
-test("AI config v2 warns about inactive, deprecated and incompatible overrides", () => {
+test("AI config v3 warns about inactive, deprecated and incompatible overrides", () => {
     const exported = buildExport(true);
     const plan = createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel({
       active: false,
@@ -163,14 +169,15 @@ test("AI config v2 warns about inactive, deprecated and incompatible overrides",
       capabilities: ["transcription"],
     })]);
 
-    assert.equal(plan.warnings.length, 3);
+    assert.equal(plan.warnings.length, 4);
     assert.match(plan.warnings.join("\n"), /inativo/);
     assert.match(plan.warnings.join("\n"), /deprecated/);
     assert.match(plan.warnings.join("\n"), /incompatível/);
+    assert.match(plan.warnings.join("\n"), /não aceita esforço de raciocínio/);
     assert.equal(plan.features[0].payload.model, "gpt-5.6-sol");
 });
 
-test("AI config v2 never promotes effective_model to a custom override", () => {
+test("AI config v3 never promotes effective_model to a custom override", () => {
     const exported = buildExport(false);
     const modelConfig = exported.features[0].active_config!.model_config;
     const plan = createAiConfigImportPlan(exported, [feature(config(true))], [catalogModel()]);
@@ -180,10 +187,11 @@ test("AI config v2 never promotes effective_model to a custom override", () => {
     assert.equal(plan.features[0].payload.model, undefined);
 });
 
-test("AI config v2 ignores catalog and routing snapshots during import", () => {
+test("AI config v3 ignores examples, catalog and routing snapshots during import", () => {
     const exported = buildExport(true);
     exported.model_catalog_snapshot.providers.openai = [];
     exported.routing_snapshot.follow_up_generation = { provider: "gemini", model: "do-not-import" };
+    exported.configuration_examples[0].example.key = "followup.generate";
 
     const plan = createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel()]);
 
@@ -214,7 +222,7 @@ test("AI config import ignores the retired Chat Sandbox feature", () => {
     assert.deepEqual(plan.warnings, ["Feature desconhecida ignorada: sandbox.chat."]);
 });
 
-test("AI config v2 exports the real-time selectable catalog enriched with metadata", () => {
+test("AI config v3 exports the real-time selectable catalog enriched with metadata", () => {
     const exported = buildExport(true);
 
     assert.deepEqual(exported.model_catalog_snapshot.providers.openai, [{
@@ -230,4 +238,53 @@ test("AI config v2 exports the real-time selectable catalog enriched with metada
       provider: "openai",
       model: "gpt-5.6-sol",
     });
+});
+
+test("AI config v3 is self-describing and includes non-importable examples for supported modes", () => {
+  const exported = buildExport(true);
+
+  assert.match(exported.documentation.description, /Configurações de IA/);
+  assert.deepEqual(exported.configuration_examples.map((example) => example.importable), [false, false, false]);
+  assert.deepEqual(
+    exported.configuration_examples.map((example) => example.example.active_config?.model_config.mode),
+    ["default", "custom", "custom"],
+  );
+  assert.deepEqual(
+    exported.configuration_examples.map((example) => example.example.active_config?.reasoning_effort),
+    [null, "high", null],
+  );
+});
+
+test("AI config v2 remains importable after v3 becomes the export format", () => {
+  const exported = buildAiConfigExportV2(exportParams(true));
+  const plan = createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel()]);
+
+  assert.equal(plan.version, 2);
+  assert.equal(plan.features[0].payload.model, "gpt-5.6-sol");
+});
+
+test("AI config v3 rejects duplicate Features before applying anything", () => {
+  const exported = buildExport(true);
+  exported.features.push(structuredClone(exported.features[0]));
+
+  assert.throws(
+    () => createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel()]),
+    /Feature duplicada/,
+  );
+});
+
+test("AI config v3 rejects malformed values and inconsistent model mode", () => {
+  const invalidTemperature = buildExport(true);
+  invalidTemperature.features[0].active_config!.temperature = 3;
+  assert.throws(
+    () => createAiConfigImportPlan(invalidTemperature, [feature(config(false))], [catalogModel()]),
+    /temperature deve estar entre 0 e 1/,
+  );
+
+  const inconsistentMode = buildExport(true);
+  inconsistentMode.features[0].active_config!.model_config.mode = "default";
+  assert.throws(
+    () => createAiConfigImportPlan(inconsistentMode, [feature(config(false))], [catalogModel()]),
+    /inconsistentes/,
+  );
 });

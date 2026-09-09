@@ -178,8 +178,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, [feature, loadHistory, loadEffectiveModel]);
 
   const effectiveProvider = isProviderSlug(effectiveModel?.provider) ? effectiveModel.provider : null;
-  const reasoningProvider = modelOverrideEnabled ? provider : effectiveProvider;
-  const reasoningModel = modelOverrideEnabled ? model : (effectiveModel?.model ?? "");
+  const effectiveDefaultIsKnown = effectiveModel?.source !== "feature";
+  const reasoningProvider = modelOverrideEnabled
+    ? provider
+    : (effectiveDefaultIsKnown ? effectiveProvider : null);
+  const reasoningModel = modelOverrideEnabled
+    ? model
+    : (effectiveDefaultIsKnown ? effectiveModel?.model ?? "" : "");
 
   useEffect(() => {
     if (reasoningProvider) loadProviderModels(reasoningProvider);
@@ -334,7 +339,10 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   type="radio"
                   name={`model-mode-${feature.key}`}
                   checked={!modelOverrideEnabled}
-                  onChange={() => setModelOverrideEnabled(false)}
+                  onChange={() => {
+                    setModelOverrideEnabled(false);
+                    if (effectiveModel?.source === "feature") setReasoningEffort(null);
+                  }}
                   className="accent-[var(--brand-primary)]"
                 />
                 <span className="text-sm text-[var(--text-primary)]">Usar roteamento padrão</span>
@@ -492,7 +500,12 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
           {/* Temperature + Max Tokens */}
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Temperatura" description={`Padrão: ${feature.default_temperature}`}>
+            <Field
+              label="Temperatura"
+              description={reasoningEffort && reasoningEffort !== "none"
+                ? "Ignorada por este modelo enquanto o raciocínio estiver ativo."
+                : `Padrão: ${feature.default_temperature}. Pode ser ignorada no modo de raciocínio automático.`}
+            >
               <Input
                 type="number"
                 min={0}

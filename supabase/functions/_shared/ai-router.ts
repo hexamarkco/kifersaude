@@ -51,6 +51,7 @@ type ProviderCallParams = {
   reasoningEffort?: AiReasoningEffort | null;
   signal?: AbortSignal;
   maxHttpAttempts?: number;
+  onReasoningEffortApplied?: (effort: AiReasoningEffort | null) => void;
 };
 
 type OpenAiMessage = {
@@ -192,6 +193,8 @@ export type GenerateTextForFeatureResult = {
   callLogId: string | null;
   retryCount: number;
   stopReason: AiCallStopReason;
+  requestedReasoningEffort: AiReasoningEffort | null;
+  appliedReasoningEffort: AiReasoningEffort | null;
 };
 
 class AiAttemptError extends Error {
@@ -565,6 +568,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   const maxHttpAttempts = Math.max(1, Math.min(3, params.maxHttpAttempts ?? 3));
 
   for (let attempt = 0; attempt < maxHttpAttempts; attempt += 1) {
+    params.onReasoningEffortApplied?.(reasoningEffort ?? null);
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -1048,6 +1052,8 @@ const logAiCallAttempt = async (
   durationMs: number,
   success: boolean,
   costUsd: number | null,
+  requestedReasoningEffort: AiReasoningEffort | null,
+  appliedReasoningEffort: AiReasoningEffort | null,
   error?: { code?: string; message?: string },
 ): Promise<void> => {
   try {
@@ -1065,6 +1071,8 @@ const logAiCallAttempt = async (
       duration_ms: durationMs,
       success,
       estimated_cost_usd: costUsd,
+      requested_reasoning_effort: requestedReasoningEffort,
+      applied_reasoning_effort: appliedReasoningEffort,
       error_code: error?.code ?? null,
       error_message: error?.message ?? null,
     });
@@ -1331,6 +1339,7 @@ export const transcribeAudioWithRouting = async (
               options.supabaseAdmin, callLogId, index + 1,
               attempt.provider, attempt.model, attempt.source,
               emptyUsage, attemptDuration, true, null,
+              null, null,
             )
           : Promise.resolve(),
         logAiCall(options.supabaseAdmin, {
@@ -1365,6 +1374,7 @@ export const transcribeAudioWithRouting = async (
           options.supabaseAdmin, callLogId, index + 1,
           attempt.provider, attempt.model, attempt.source,
           emptyUsage, attemptDuration, false, null,
+          null, null,
           { message },
         );
       }
@@ -1500,6 +1510,7 @@ export const generateTextForFeature = async (
           attempt.provider, attempt.model, attempt.source,
           { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
           0, false, null,
+          resolved.reasoningEffort, null,
           { code: 'provider_error', message: providerStatus.reason },
         );
       }
@@ -1510,6 +1521,7 @@ export const generateTextForFeature = async (
     const attemptStart = Date.now();
     let providerResult: ProviderCallResult | null = null;
     let attemptCost: number | null = null;
+    let appliedReasoningEffort: AiReasoningEffort | null = null;
     const timeoutController = options.attemptTimeoutMs ? new AbortController() : null;
     const timeoutHandle = timeoutController
       ? setTimeout(() => timeoutController.abort(), Math.max(1, options.attemptTimeoutMs!))
@@ -1526,6 +1538,9 @@ export const generateTextForFeature = async (
         reasoningEffort: resolved.reasoningEffort,
         signal: timeoutController?.signal,
         maxHttpAttempts: options.maxProviderRequestsPerAttempt,
+        onReasoningEffortApplied: (effort) => {
+          appliedReasoningEffort = effort;
+        },
       });
 
       const attemptDuration = Date.now() - attemptStart;
@@ -1563,6 +1578,7 @@ export const generateTextForFeature = async (
               options.supabaseAdmin, callLogId, index + 1,
               attempt.provider, attempt.model, attempt.source,
               providerResult.usage, attemptDuration, true, attemptCost,
+              resolved.reasoningEffort, appliedReasoningEffort,
             )
           : Promise.resolve(),
         logAiCall(options.supabaseAdmin, {
@@ -1602,6 +1618,8 @@ export const generateTextForFeature = async (
         callLogId,
         retryCount: index,
         stopReason,
+        requestedReasoningEffort: resolved.reasoningEffort,
+        appliedReasoningEffort,
       };
     } catch (error) {
       const attemptDuration = Date.now() - attemptStart;
@@ -1624,6 +1642,7 @@ export const generateTextForFeature = async (
           attempt.provider, attempt.model, attempt.source,
           providerResult?.usage ?? { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
           attemptDuration, false, attemptCost,
+          resolved.reasoningEffort, appliedReasoningEffort,
           { code: lastStopReason, message },
         );
       }

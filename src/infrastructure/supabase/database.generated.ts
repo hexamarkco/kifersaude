@@ -100,6 +100,7 @@ export type Database = {
       }
       ai_call_attempts: {
         Row: {
+          applied_reasoning_effort: string | null
           attempt_number: number
           cached_input_tokens: number | null
           call_id: string
@@ -114,11 +115,13 @@ export type Database = {
           output_tokens: number | null
           provider: string
           reasoning_tokens: number | null
+          requested_reasoning_effort: string | null
           resolution_source: string
           success: boolean
           total_tokens: number | null
         }
         Insert: {
+          applied_reasoning_effort?: string | null
           attempt_number: number
           cached_input_tokens?: number | null
           call_id: string
@@ -133,11 +136,13 @@ export type Database = {
           output_tokens?: number | null
           provider: string
           reasoning_tokens?: number | null
+          requested_reasoning_effort?: string | null
           resolution_source: string
           success?: boolean
           total_tokens?: number | null
         }
         Update: {
+          applied_reasoning_effort?: string | null
           attempt_number?: number
           cached_input_tokens?: number | null
           call_id?: string
@@ -152,6 +157,7 @@ export type Database = {
           output_tokens?: number | null
           provider?: string
           reasoning_tokens?: number | null
+          requested_reasoning_effort?: string | null
           resolution_source?: string
           success?: boolean
           total_tokens?: number | null
@@ -792,6 +798,24 @@ export type Database = {
           started_at?: string | null
           summary?: Json | null
           total_leads?: number | null
+        }
+        Relationships: []
+      }
+      auto_contact_dispatch_throttle: {
+        Row: {
+          next_send_at: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          next_send_at?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          next_send_at?: string
+          singleton?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -6138,6 +6162,10 @@ export type Database = {
       replace_cotador_produto_rede_hospitalar: {
         Args: { p_entries?: Json; p_produto_id: string }
         Returns: undefined
+      }
+      reserve_auto_contact_send_slot: {
+        Args: { p_interval_seconds?: number }
+        Returns: string
       }
       reserve_comm_whatsapp_campaign_dispatch: {
         Args: {

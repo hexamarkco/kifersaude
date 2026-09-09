@@ -68,12 +68,12 @@ describe('AI Feature Registry', () => {
     }
   });
 
-  it('FOLLOWUP_GENERATE defaults match current production values', () => {
+  it('FOLLOWUP_GENERATE reserves enough output budget for reasoning plus visible text', () => {
     const meta = AI_FEATURE_META[AI_FEATURES.FOLLOWUP_GENERATE];
     expect(meta.defaultProvider).toBe('openai');
     expect(meta.defaultModel).toBe('gpt-4o-mini');
     expect(meta.defaultTemperature).toBe(0.7);
-    expect(meta.defaultMaxTokens).toBe(520);
+    expect(meta.defaultMaxTokens).toBe(1600);
     expect(meta.taskType).toBe('text');
   });
 

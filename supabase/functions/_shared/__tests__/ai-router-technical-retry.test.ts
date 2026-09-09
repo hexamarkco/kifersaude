@@ -341,6 +341,34 @@ describe('AI router technical retry budget', () => {
     expect(result.retryCount).toBe(1);
   });
 
+  it('appends deterministic correction only to a validation retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(providerResponse('Conseguiu analisar?'))
+      .mockResolvedValueOnce(providerResponse('Entre Amil e Leve, qual você prefere?'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await generateTextForFeature({
+      supabaseAdmin: createSupabaseStub(),
+      featureKey: 'followup.generate',
+      task: 'follow_up_generation',
+      systemPrompt: 'system',
+      userPrompt: 'context',
+      maxAttempts: 2,
+      maxProviderRequestsPerAttempt: 1,
+      retrySameResolvedModel: true,
+      validateOutput: (text) => text.includes('Conseguiu analisar')
+        ? { valid: false, stopReason: 'invalid_output', message: 'Mensagem genérica.' }
+        : { valid: true },
+      buildValidationRetryInstruction: (validation) => `CORRIJA: ${validation.message}`,
+    });
+
+    const firstBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body));
+    const secondBody = JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body));
+    expect(firstBody.messages[0].content).toBe('system');
+    expect(secondBody.messages[0].content).toContain('CORRIJA: Mensagem genérica.');
+    expect(result.retryCount).toBe(1);
+  });
+
   it('stops after two failed physical requests', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('provider unavailable', { status: 503 }));
     vi.stubGlobal('fetch', fetchMock);

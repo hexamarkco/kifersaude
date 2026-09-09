@@ -18,9 +18,15 @@ import { COMMERCIAL_THREAD_RULE } from '../_shared/comm-whatsapp-follow-up-comme
 import {
   buildFollowUpGenerateUserPrompt,
   FOLLOW_UP_GENERATE_OUTPUT_INSTRUCTIONS,
+  FOLLOW_UP_RUNTIME_GUARDRAILS,
   FOLLOW_UP_GENERATE_SYSTEM_PROMPT,
 } from '../_shared/comm-whatsapp-follow-up-generate-prompt.ts';
-import { validateFollowUpTechnicalOutput } from '../_shared/comm-whatsapp-follow-up-output.ts';
+import {
+  buildFollowUpValidationRetryInstruction,
+  parseFollowUpOutput,
+  validateFollowUpBusinessOutput,
+  type FollowUpWaitReasonCode,
+} from '../_shared/comm-whatsapp-follow-up-output.ts';
 
 declare const Deno: {
   env: {
@@ -103,6 +109,8 @@ const OUTBOUND_ATTEMPT_GROUP_GAP_MS = 2 * 60 * 60 * 1000;
 // mesmo que a IA sugira — evita agendamentos "impossiveis" ou absurdamente
 // distantes por erro de interpretacao do modelo.
 const MAX_SUGGESTED_DELAY_DAYS = 30;
+const FOLLOW_UP_GENERATE_MIN_OUTPUT_TOKENS = 1_600;
+const FINAL_LEAD_STATUSES = new Set(['perdido', 'convertido', 'fechado', 'duplicado']);
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -152,9 +160,46 @@ type AiContextRecommendation = {
   currentAction: 'send' | 'wait' | null;
   currentActionReason: string | null;
   opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended' | null;
+  goal?: string | null;
   scheduleReason: string | null;
   nextActionSuggestedDelayBusinessDays: number | null;
   nextActionSuggestedDate: string | null;
+};
+
+const FOLLOW_UP_WAIT_REASON: Record<FollowUpWaitReasonCode, string> = {
+  recent_contact: 'O contato anterior ainda é recente e não existe fato novo que justifique outra mensagem agora.',
+  future_date: 'Existe uma data futura combinada com o lead; o melhor movimento é respeitar esse timing.',
+  personal_context: 'O histórico contém um contexto pessoal sensível; uma abordagem comercial agora seria inadequada.',
+  seller_action_pending: 'Existe uma obrigação pendente da corretora que deve ser cumprida antes de cobrar qualquer ação do lead.',
+  no_useful_move: 'Não há uma microdecisão comercial defensável com o contexto disponível neste momento.',
+};
+
+const buildWaitAiContext = (
+  reasonCode: FollowUpWaitReasonCode,
+  suggestedDate: string | null,
+): AiContextRecommendation => ({
+  currentAction: 'wait',
+  currentActionReason: FOLLOW_UP_WAIT_REASON[reasonCode],
+  opportunityRecommendation: reasonCode === 'personal_context' || reasonCode === 'no_useful_move'
+    ? 'pause'
+    : 'continue',
+  scheduleReason: FOLLOW_UP_WAIT_REASON[reasonCode],
+  nextActionSuggestedDelayBusinessDays: reasonCode === 'recent_contact' || reasonCode === 'seller_action_pending'
+    ? 1
+    : suggestedDate ? null : WAIT_COOLDOWN_BUSINESS_DAYS,
+  nextActionSuggestedDate: suggestedDate,
+});
+
+const buildFinalStatusWaitAiContext = (status: string): AiContextRecommendation => {
+  const reason = `O lead está com status finalizado (${status}); não deve receber um novo follow-up comercial.`;
+  return {
+    currentAction: 'wait',
+    currentActionReason: reason,
+    opportunityRecommendation: 'pause',
+    scheduleReason: reason,
+    nextActionSuggestedDelayBusinessDays: null,
+    nextActionSuggestedDate: null,
+  };
 };
 const normalizeSystemTimeZone = (value: unknown) => {
   const candidate = toTrimmedString(value);
@@ -501,7 +546,7 @@ const buildFollowUpNextAction = async (params: {
   const aiNextActionReason = params.aiContext?.scheduleReason ?? params.aiContext?.currentActionReason ?? null;
   const aiNextActionPriority: FollowUpNextAction['priority'] | null = null;
 
-  if (['perdido', 'convertido', 'fechado', 'duplicado'].includes(leadStatus)) {
+  if (FINAL_LEAD_STATUSES.has(leadStatus)) {
     return {
       type: 'wait',
       suggestedDateTime: null,
@@ -957,8 +1002,8 @@ const EMOTIONAL_CONTEXT_INSTRUCTION = [
 
 const OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION = [
   'ATENCAO A SUA PROPRIA ULTIMA MENSAGEM (sempre ativo): releia com atencao a(s) sua(s) ultima(s) mensagem(ns) marcadas como "Eu" no historico, principalmente se o cliente ainda nao respondeu depois delas.',
-  'NUNCA reformule ou repita, como se fosse novidade, algo que voce mesmo ja disse na ultima mensagem (a mesma sugestao, o mesmo pedido, o mesmo prazo ou referencia de dia). Se voce ja pediu para o cliente ver algo ate um dia especifico (ex.: "ve isso no fim de semana") e esse dia ja passou segundo os FATOS TEMPORAIS, NAO repita essa instrucao como se ainda fosse futura — em vez disso, pergunte se ele conseguiu ver, sem soar repetitivo.',
-  'O follow-up precisa ser uma CONTINUACAO real da conversa, acrescentando algo novo (uma checagem, uma pergunta de acompanhamento, uma informacao adicional) — nunca apenas parafrasear o que voce mesmo ja escreveu.',
+  'NUNCA reformule ou repita, como se fosse novidade, algo que voce mesmo ja disse na ultima mensagem (a mesma sugestao, o mesmo pedido, o mesmo prazo ou referencia de dia). Se voce ja pediu para o cliente ver algo ate um dia especifico e esse dia passou, nao use uma checagem generica como "conseguiu ver?": mude o angulo para uma microdecisao sustentada pelo que foi apresentado ou use WAIT quando nao houver movimento util.',
+  'O follow-up precisa ser uma CONTINUACAO real da conversa, acrescentando uma decisao, informacao ou acao comercial nova — nunca apenas parafrasear o que voce mesmo ja escreveu.',
 ].join('\n');
 
 const MULTI_MESSAGE_MECHANISM_NOTE = 'MECANISMO DO SISTEMA: uma linha contendo APENAS "---" (nada mais nela, nem antes nem depois na mesma linha) e reconhecida como separador entre mensagens distintas do WhatsApp — cada trecho entre separadores vira uma mensagem enviada em sequencia. Isso e diferente dos cabecalhos como "--- CONTEXTO ---" usados neste prompt como organizacao visual: so conta como separador real quando a linha tiver somente os tres tracos, sem texto colado.';
@@ -1254,12 +1299,12 @@ Deno.serve(async (req: Request) => {
     const generationSystemPrompt = [
       featurePrompt,
       COMMERCIAL_THREAD_RULE,
-      EMOTIONAL_CONTEXT_INSTRUCTION,
       OWN_LAST_MESSAGE_AWARENESS_INSTRUCTION,
       operationInstructions
         ? ['INSTRUÇÕES ADICIONAIS DA OPERAÇÃO:', operationInstructions].join('\n')
         : '',
       outputInstructions,
+      FOLLOW_UP_RUNTIME_GUARDRAILS,
     ].filter(Boolean).join('\n\n');
 
     const generationUserPrompt = buildFollowUpGenerateUserPrompt({
@@ -1286,8 +1331,11 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt: generationSystemPrompt,
       userPrompt: generationUserPrompt,
-        temperature: generateConfig?.temperature ?? 0.7,
-      maxTokens: generateConfig?.maxOutputTokens ?? 520,
+      temperature: generateConfig?.temperature ?? 0.7,
+      maxTokens: Math.max(
+        FOLLOW_UP_GENERATE_MIN_OUTPUT_TOKENS,
+        generateConfig?.maxOutputTokens ?? FOLLOW_UP_GENERATE_MIN_OUTPUT_TOKENS,
+      ),
       edgeFunction: 'comm-whatsapp-generate-follow-up',
       leadId: chat.lead_id ?? undefined,
       chatId: chat.id,
@@ -1295,17 +1343,29 @@ Deno.serve(async (req: Request) => {
       attemptTimeoutMs,
       maxProviderRequestsPerAttempt: 1,
       retrySameResolvedModel: true,
-      validateOutput: validateFollowUpTechnicalOutput,
+      validateOutput: (text) => validateFollowUpBusinessOutput(text, generationUserPrompt),
+      buildValidationRetryInstruction: buildFollowUpValidationRetryInstruction,
     });
 
-    const responseText = normalizeGreetingForTemporalFacts(
-      generationResult.text.trim(),
-      temporalFacts,
-    );
-    const finalTechnicalValidation = validateFollowUpTechnicalOutput(responseText);
-    if (!finalTechnicalValidation.valid) {
+    const parsedOutput = parseFollowUpOutput(generationResult.text);
+    if (!parsedOutput) {
+      throw new FollowUpValidationError('A IA retornou um sinal de espera inválido.');
+    }
+    const normalizedLeadStatus = toTrimmedString(lead?.status).toLowerCase();
+    const waitAiContext = FINAL_LEAD_STATUSES.has(normalizedLeadStatus)
+      ? buildFinalStatusWaitAiContext(normalizedLeadStatus)
+      : parsedOutput.kind === 'wait'
+        ? buildWaitAiContext(parsedOutput.reasonCode, parsedOutput.suggestedDate)
+        : null;
+    const responseText = parsedOutput.kind === 'send' && !waitAiContext
+      ? normalizeGreetingForTemporalFacts(parsedOutput.text, temporalFacts)
+      : null;
+    const finalValidation = responseText
+      ? validateFollowUpBusinessOutput(responseText, generationUserPrompt)
+      : { valid: true };
+    if (!finalValidation.valid) {
       throw new FollowUpValidationError(
-        finalTechnicalValidation.message || 'A IA retornou uma saída tecnicamente inválida.',
+        finalValidation.message || 'A IA retornou uma saída comercialmente inválida.',
       );
     }
 
@@ -1314,7 +1374,7 @@ Deno.serve(async (req: Request) => {
       messages,
       lead,
       leadContext,
-      aiContext: null,
+      aiContext: waitAiContext,
       now,
     });
     const scheduleRecommendation = {
@@ -1337,27 +1397,27 @@ Deno.serve(async (req: Request) => {
           generated_by: authResult.user.profileId,
           provider: generationResult.provider,
           model: generationResult.model,
-          current_action: 'send',
-          current_action_reason: null,
+          current_action: waitAiContext ? 'wait' : 'send',
+          current_action_reason: waitAiContext?.currentActionReason ?? null,
           stage: null,
           blocker: null,
           goal: null,
-          commercial_function: null,
+          commercial_function: waitAiContext ? 'nenhuma' : null,
           next_action_owner: null,
           pending_microdecision: null,
           last_commercial_commitment: null,
           decision_maker: null,
-          opportunity_recommendation: 'continue',
+          opportunity_recommendation: waitAiContext?.opportunityRecommendation ?? 'continue',
           schedule_action: scheduleRecommendation.action,
           schedule_suggested_date: scheduleRecommendation.suggestedDate,
           schedule_reason: scheduleRecommendation.reason,
           schedule_confidence: scheduleRecommendation.confidence,
           rationale: null,
           generated_text: responseText,
-          text_content: responseText,
+          text_content: responseText || '[WAIT — sem mensagem gerada]',
           v3_analysis: null,
           v3_strategy: null,
-          v3_validation: { valid: true, kind: 'technical' },
+          v3_validation: { valid: true, kind: waitAiContext ? 'business_wait' : 'business_send' },
           v3_regeneration_count: 0,
           v3_analysis_model: null,
           v3_copy_model: generationResult.model,
@@ -1376,7 +1436,8 @@ Deno.serve(async (req: Request) => {
       model: generationResult.model,
       retryCount: generationResult.retryCount,
       stopReason: generationResult.stopReason,
-      responseTextLength: responseText.length,
+      responseTextLength: responseText?.length ?? 0,
+      currentAction: waitAiContext ? 'wait' : 'send',
     });
 
     return new Response(
@@ -1384,9 +1445,9 @@ Deno.serve(async (req: Request) => {
         success: true,
         text: responseText,
         aiContext: null,
-        currentAction: 'send',
-        currentActionReason: null,
-        opportunityRecommendation: 'continue',
+        currentAction: waitAiContext ? 'wait' : 'send',
+        currentActionReason: waitAiContext?.currentActionReason ?? null,
+        opportunityRecommendation: waitAiContext?.opportunityRecommendation ?? 'continue',
         scheduleRecommendation,
         nextAction,
         generationId,

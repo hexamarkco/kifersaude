@@ -31,7 +31,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Mídias históricas ficam em Storage (`comm-whatsapp-media`), não dependem de URL/MediaID temporário da Whapi.
 - Status outbound continua sendo consultado de `delivered` até `read`; webhook ausente usa `GET /statuses/{MessageID}`.
 - Follow-up normal usa somente `followup.generate`; há no máximo um retry técnico, sempre no mesmo modelo resolvido para não degradar silenciosamente a inteligência configurada. `followup.refine` é manual e a recuperação tardia usa `comm_follow_up_audit_log` para evitar chamada duplicada.
-- A mensagem de follow-up retoma o último fio comercial não resolvido, preservando decisor, objeção, compromisso e microdecisão; sugestões são curtas e fazem uma pergunta por vez.
+- A mensagem de follow-up retoma o último fio comercial não resolvido, preservando decisor, objeção, compromisso e microdecisão; sugestões são curtas e fazem uma pergunta por vez. Quando não existe contato comercialmente útil e apropriado naquele momento, a mesma chamada retorna uma decisão interna de espera e não fabrica uma mensagem social ou uma cobrança genérica.
 
 ## Atendimento autônomo e IA
 

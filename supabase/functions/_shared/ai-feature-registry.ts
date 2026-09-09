@@ -72,7 +72,7 @@ export const AI_FEATURE_META: Record<AIFeatureKey, AIFeatureMeta> = {
     defaultProvider: 'openai',
     defaultModel: 'gpt-4o-mini',
     defaultTemperature: 0.7,
-    defaultMaxTokens: 520,
+    defaultMaxTokens: 1600,
     defaultReasoningEffort: 'minimal',
     defaultContextConfig: {
       transcript: true,

@@ -186,6 +186,8 @@ export type GenerateTextForFeatureOptions = {
   retrySameResolvedModel?: boolean;
   /** Deterministic validation. A rejection consumes the optional technical retry. */
   validateOutput?: (text: string) => AiOutputValidationResult;
+  /** Optional safe instruction appended only after deterministic validation rejects an output. */
+  buildValidationRetryInstruction?: (validation: AiOutputValidationResult) => string;
   /** Files are supported by the OpenAI Responses API only. */
   documents?: AiDocumentInput[];
 };
@@ -1610,6 +1612,7 @@ export const generateTextForFeature = async (
   let totalTokensSum = 0;
   let attemptsTried = 0;
   let lastStopReason: Exclude<AiCallStopReason, 'completed' | 'completed_after_retry'> = 'provider_error';
+  let validationRetryInstruction = '';
 
   for (let index = 0; index < boundedAttempts.length; index += 1) {
     const attempt = boundedAttempts[index];
@@ -1647,7 +1650,9 @@ export const generateTextForFeature = async (
     try {
       providerResult = await callProvider(attempt.provider, providerSettings, {
         model: attempt.model,
-        systemPrompt: options.systemPrompt,
+        systemPrompt: validationRetryInstruction
+          ? `${options.systemPrompt}\n\n${validationRetryInstruction}`
+          : options.systemPrompt,
         userPrompt: options.userPrompt,
         temperature: options.temperature ?? 0.4,
         maxTokens: options.maxTokens ?? 900,
@@ -1680,6 +1685,7 @@ export const generateTextForFeature = async (
 
       const outputValidation = options.validateOutput?.(providerResult.text);
       if (outputValidation && !outputValidation.valid) {
+        validationRetryInstruction = (options.buildValidationRetryInstruction?.(outputValidation) ?? '').trim();
         throw new AiAttemptError(
           outputValidation.stopReason ?? 'invalid_output',
           outputValidation.message ?? 'Saída tecnicamente inválida.',

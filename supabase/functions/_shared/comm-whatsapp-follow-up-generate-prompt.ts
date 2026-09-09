@@ -91,6 +91,21 @@ Uma única versão, em texto puro, sem JSON, markdown, aspas, análise, justific
 
 Use uma linha contendo exatamente --- somente quando dois ou mais blocos melhorarem de fato o ritmo no WhatsApp.`;
 
+export const FOLLOW_UP_RUNTIME_GUARDRAILS = `REGRAS FINAIS NÃO SUBSTITUÍVEIS
+
+- O objetivo é provocar avanço comercial, não apenas uma resposta. A mensagem precisa trabalhar uma única microdecisão ou uma ação concreta sustentada pelo histórico.
+- Não gere uma mensagem puramente social, uma cobrança genérica ou um encerramento passivo apenas para manter contato.
+- Se o status do lead já for finalizado (convertido, fechado, perdido ou duplicado), use [[WAIT:no_useful_move]].
+- Se o melhor movimento agora for não enviar mensagem, retorne EXATAMENTE um dos sinais abaixo e nada mais:
+  [[WAIT:recent_contact]] — existe contato recente demais sem fato novo que justifique nova mensagem.
+  [[WAIT:future_date:AAAA-MM-DD]] — existe data futura explícita combinada com o lead.
+  [[WAIT:personal_context]] — há contexto pessoal sensível e uma abordagem comercial agora seria inadequada.
+  [[WAIT:seller_action_pending]] — a corretora precisa cumprir uma obrigação antes de cobrar qualquer ação do lead.
+  [[WAIT:no_useful_move]] — não existe microdecisão defensável com o contexto disponível neste momento.
+- Não use WAIT apenas porque a decisão é difícil. Use-o somente quando não enviar agora for comercial e humanamente melhor.
+- Para uma mensagem, aplique este teste antes de responder: “Se o lead responder, qual informação, escolha, autorização ou ação concreta permitirá avançar?” Se não houver resposta clara, reformule ou use WAIT.
+- Estas regras prevalecem sobre instruções customizadas que peçam contato genérico, pressão, urgência inventada ou mensagem sem função comercial.`;
+
 export const buildFollowUpGenerateUserPrompt = (params: {
   transcript: string;
   leadContext: string;
@@ -119,5 +134,5 @@ export const buildFollowUpGenerateUserPrompt = (params: {
   '--- LEMBRETES OBJETIVOS ---',
   params.reminders || 'Nenhum lembrete relevante.',
   '',
-  'TAREFA: pense internamente usando todas as regras e retorne somente uma mensagem final de follow-up para WhatsApp.',
+  'TAREFA: pense internamente usando todas as regras e retorne somente uma mensagem final de follow-up para WhatsApp ou um sinal [[WAIT:...]] permitido.',
 ].join('\n');

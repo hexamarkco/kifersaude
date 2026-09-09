@@ -3423,13 +3423,6 @@ async function sendAutoContactMessage({
   if (lead?.id !== 'flow-test' && chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
     throw new Error('A identidade do WhatsApp está vinculada a outro lead.');
   }
-  if (
-    dispatchRoute.phoneNumber
-    && !getCommWhatsAppPhoneLookupKeys(dispatchRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
-  ) {
-    throw new Error('A identidade do WhatsApp resolvida pertence a outro telefone.');
-  }
-
   let chatId = chatRoute.externalChatId;
   let endpoint = '';
   const body: Record<string, unknown> = { to: chatId };

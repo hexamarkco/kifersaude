@@ -10,8 +10,31 @@ export type AutonomousMessageRow = {
   content: string;
 };
 
+export type AutonomousReplyValidationResult = {
+  valid: boolean;
+  stopReason?: 'empty_response' | 'invalid_output';
+  message?: string;
+};
+
 export const HANDOFF_TAG_REGEX = /\[\[HANDOFF:\s*([^\]]{1,200})\]\]\s*$/i;
 export const OPENING_MESSAGE_SPLIT_REGEX = /\n?-{3,}\n?/;
+
+// Este bloco e anexado por ultimo ao prompt configuravel. Ele protege regras
+// semanticas que nao podem depender de exemplos historicos (que podem conter
+// os mesmos vicios que queremos corrigir) nem de uma versao antiga salva no
+// painel de configuracoes.
+export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
+  '--- REGRAS CRITICAS DE CONVERSA NATURAL E QUALIFICACAO ---',
+  'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
+  'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
+  'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
+  'Quando uma resposta curta admitir uma interpretacao muito provavel, nao reinicie a coleta como formulario e nao assuma silenciosamente. Faca uma confirmacao fechada e facil. Exemplo: voce perguntou as idades de um casal e recebeu apenas "56"; a melhor resposta e "So para confirmar: voces dois tem 56 anos?", e nao "Qual a idade do seu marido?".',
+  'A abordagem inicial ja apresentou a Luiza. Na primeira resposta do lead, nao se apresente de novo e nao force frases como "prazer em falar com voce" ou "que bom falar com voce". Acolha o conteudo real e avance naturalmente.',
+  'Nao transforme cada turno em "marcador + pergunta". Varie a estrutura: as vezes va direto a pergunta, as vezes faca uma confirmacao breve, e use o primeiro nome apenas ocasionalmente quando trouxer proximidade real. Nao use o nome em mensagens consecutivas.',
+  'Nao comece com o mesmo marcador usado nas tres respostas anteriores (por exemplo: Certo, Perfeito, Entendi, Otimo, Beleza ou Maravilha). Evite especialmente sequencias de "Certo!".',
+  'Responda sempre a pergunta, duvida, objecao ou contexto humano trazido pelo lead antes de fazer a proxima pergunta de qualificacao. Empatia deve ser especifica ao que foi dito, curta e sincera.',
+  'Preserve informacoes ja dadas e promessas ja feitas. Uma pergunta de confirmacao so e apropriada quando existe ambiguidade real e deve apresentar a hipotese mais provavel para exigir o minimo de esforco do lead.',
+].join('\n');
 
 // Codigos fixos de handoff: permitem mapear o desfecho da IA para uma acao
 // deterministica no CRM (status do lead) sem depender de interpretar texto
@@ -175,26 +198,160 @@ export const buildReplyUserPrompt = (
   const nameUsageGuidance = firstName
     ? `Primeiro nome validado para uso eventual: "${firstName}". Use somente esse primeiro nome, nunca o nome completo; use-o apenas quando soar natural e nao em mensagens consecutivas.`
     : 'Nenhum primeiro nome foi validado para esta conversa. Nao use nem invente nome.';
-  const mandatoryOpening = options.isFirstLeadReplyAfterApproach
+  const firstReplyGuidance = options.isFirstLeadReplyAfterApproach
     ? [
-        '--- ABERTURA OBRIGATORIA DESTA RESPOSTA ---',
-        'Esta e a primeira resposta apos a abordagem inicial. Comece a mensagem visivel com uma apresentacao curta e pessoal ANTES de responder ao conteudo ou fazer a proxima pergunta.',
+        '--- PRIMEIRA RESPOSTA APOS A ABORDAGEM ---',
+        'A abordagem anterior ja cumprimentou e apresentou a Luiza. Nao se apresente novamente e nao force uma frase social antes de responder ao conteudo do lead.',
         firstName
-          ? `Use somente este primeiro nome validado, nunca o nome completo: "${firstName}". Escolha uma abertura natural no mesmo sentido de "${firstName}, prazer em falar com você." ou "${firstName}, que bom falar com você.".`
-          : 'O nome do CRM nao foi validado. Nao use nem invente nome; abra naturalmente, por exemplo "Prazer em falar com você." ou "Que bom falar com você.".',
-        'Nao use bom dia, boa tarde, boa noite ou outra saudacao de horario. Use essa apresentacao mesmo que o lead ja tenha dado informacoes na primeira mensagem. Em seguida, acolha o que ele disse e continue a qualificacao com no maximo uma pergunta. Nao repita essa apresentacao nas respostas seguintes.',
+          ? `Se trouxer proximidade de verdade, voce pode usar apenas o primeiro nome validado "${firstName}"; nao e obrigatorio e nunca use o nome completo.`
+          : 'O nome do CRM nao foi validado. Nao use nem invente nome.',
+        'Acolha ou confirme objetivamente o que a pessoa informou e continue a qualificacao com no maximo uma pergunta. Evite aberturas prontas como "prazer em falar com voce" e "que bom falar com voce".',
       ].join('\n')
     : '';
   return [
     '--- CONVERSA ATE AGORA (LEAD = pessoa simulando o cliente, VOCE = suas respostas anteriores) ---',
     transcriptLines.join('\n'),
     nameUsageGuidance,
-    mandatoryOpening,
+    firstReplyGuidance,
     '',
     '--- TAREFA ---',
     'Gere a proxima resposta, como VOCE, para a ultima mensagem do LEAD.',
   ].join('\n');
 };
+
+const normalizeForSemanticMatch = (value: string): string => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const getReplyOpener = (value: string): string | null => {
+  const normalized = normalizeForSemanticMatch(value);
+  return normalized.match(/^(certo|perfeito|otimo|entendi|beleza|maravilha|sem problema)\b/)?.[1] ?? null;
+};
+
+const BARE_AGE_REGEX = /^(?:tenho\s+)?(\d{1,3})(?:\s*anos?)?[.!]?$/;
+const GROUP_AGE_QUESTION_REGEX = /(?:\bidades\s+(?:de\s+)?voces\b|\bidades\s+d[oa]s?\b|\bidade\s+de\s+cada\b|\bquais\s+sao\s+as\s+idades\b)/;
+const GROUP_CONFIRMATION_REGEX = /\b(voces\s+dois|os\s+dois|as\s+duas|ambos|ambas|todo(?:s|as))\b/;
+const CNPJ_OR_MEI_REGEX = /\b(cnpj|mei)\b/;
+const BUSINESS_ID_VALUE_QUESTION_REGEX = /(?:\bmuda\b|\bfaz\s+diferenca\b|\bqual\s+(?:e\s+)?a\s+diferenca\b|\bmais\s+(?:barato|em\s+conta)\b)/;
+const BUSINESS_ID_VALUE_ANSWER_REGEX = /(?:\bempresari[oa]\b.*\bmais\s+(?:barato|em\s+conta)\b|\bmais\s+(?:barato|em\s+conta)\b.*\b(?:cnpj|mei|pessoa\s+fisica)\b)/;
+const ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX = /\bvoce\s+(?:tem|possui|teria)\b/;
+const GROUP_BUSINESS_ID_SCOPE_REGEX = /\b(alguem\s+que\s+(?:vai|ira)\s+entrar|alguem\s+d[oa]\s+cotacao|algum(?:a)?\s+d[oa]s?\s+(?:beneficiari|pessoa)|voces|voce\s+ou)\b/;
+const MULTIPLE_BENEFICIARIES_REGEX = /(?:\beu\s+e\s+(?:meu|minha)\b|\b(?:para|pro|pra)\s+mim\s+e\b|\bpara\s+(?:nos|a\s+gente)\s+dois\b|\b(?:duas|dois|tres|quatro|[2-9])\s+(?:vidas|pessoas|beneficiarios)\b|\bcasal\b|\bminha\s+familia\b)/;
+const THIRD_PARTY_RELATION_REGEX = /(?:meu|minha)\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)/;
+const THIRD_PARTY_ONLY_REGEX = new RegExp(
+  `\\b(?:para|pro|pra)\\s+(?:o\\s+|a\\s+)?${THIRD_PARTY_RELATION_REGEX.source}`,
+);
+const THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX = new RegExp(
+  `(?:(?:seu|sua)\\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)|\\bbeneficiari[oa]\\b|\\bquem\\s+vai\\s+entrar\\b|\\balguem\\s+que\\s+(?:vai|ira)\\s+entrar\\b)`,
+);
+
+/**
+ * Valida somente erros conversacionais de alta confianca. O modelo recebe uma
+ * segunda tentativa no mesmo modelo quando a saida repetiria um vicio ou
+ * qualificaria a pessoa errada; nuances abertas continuam a cargo do prompt.
+ */
+export const validateAutonomousReplyOutput = (
+  rawText: string,
+  history: AutonomousMessageRow[],
+): AutonomousReplyValidationResult => {
+  const trimmed = rawText.trim();
+  if (!trimmed) {
+    return { valid: false, stopReason: 'empty_response', message: 'Resposta vazia.' };
+  }
+  if (trimmed.length > 1_200) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Resposta longa demais para WhatsApp.' };
+  }
+  if (trimmed.includes('[[HANDOFF') && !HANDOFF_TAG_REGEX.test(trimmed)) {
+    return { valid: false, stopReason: 'invalid_output', message: 'Tag interna de handoff malformada ou fora do final.' };
+  }
+
+  // Tag-only e aceita aqui porque o worker possui um encerramento seguro
+  // especifico para esse caso e nao deve transformar handoff em fallback.
+  const visibleCandidate = extractHandoff(trimmed).text;
+  if (!visibleCandidate) return { valid: true };
+
+  const candidateOpener = getReplyOpener(visibleCandidate);
+  if (candidateOpener) {
+    const recentAiOpeners = history
+      .filter((row) => row.role === 'ai')
+      .slice(-3)
+      .map((row) => getReplyOpener(row.content));
+    if (recentAiOpeners.includes(candidateOpener)) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: `A abertura "${candidateOpener}" ja foi usada recentemente. Varie a estrutura e responda sem esse marcador.`,
+      };
+    }
+  }
+
+  const previousAi = [...history].reverse().find((row) => row.role === 'ai');
+  const latestLead = [...history].reverse().find((row) => row.role === 'lead');
+  const normalizedPreviousAi = normalizeForSemanticMatch(previousAi?.content ?? '');
+  const normalizedLatestLead = normalizeForSemanticMatch(latestLead?.content ?? '');
+  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+  const bareAge = normalizedLatestLead.match(BARE_AGE_REGEX)?.[1];
+  if (bareAge && GROUP_AGE_QUESTION_REGEX.test(normalizedPreviousAi)) {
+    const confirmsLikelyGroupAge = normalizedCandidate.includes(bareAge)
+      && GROUP_CONFIRMATION_REGEX.test(normalizedCandidate)
+      && visibleCandidate.includes('?');
+    if (!confirmsLikelyGroupAge) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: `A resposta "${bareAge}" veio depois de uma pergunta de idades no plural. Confirme em pergunta fechada se essa idade vale para todos, sem perguntar apenas por uma pessoa nem seguir assumindo.`,
+      };
+    }
+  }
+
+  if (
+    CNPJ_OR_MEI_REGEX.test(normalizedPreviousAi)
+    && BUSINESS_ID_VALUE_QUESTION_REGEX.test(normalizedLatestLead)
+    && !BUSINESS_ID_VALUE_ANSWER_REGEX.test(normalizedCandidate)
+  ) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: 'O lead perguntou se CNPJ/MEI muda algo. Responda primeiro, com clareza, que o plano empresarial geralmente fica mais em conta que pessoa fisica; depois continue a qualificacao.',
+    };
+  }
+
+  if (CNPJ_OR_MEI_REGEX.test(normalizedCandidate) && visibleCandidate.includes('?')) {
+    const leadHistory = normalizeForSemanticMatch(
+      history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
+    );
+    const hasMultipleBeneficiaries = MULTIPLE_BENEFICIARIES_REGEX.test(leadHistory);
+    const isThirdPartyOnly = THIRD_PARTY_ONLY_REGEX.test(leadHistory) && !hasMultipleBeneficiaries;
+    const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
+    const hasThirdPartyScope = THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
+    const asksOnlyInterlocutor = ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate) && !hasGroupScope;
+    const hasWrongScope = hasMultipleBeneficiaries
+      ? !hasGroupScope
+      : isThirdPartyOnly && !hasThirdPartyScope;
+    if (hasWrongScope || ((hasMultipleBeneficiaries || isThirdPartyOnly) && asksOnlyInterlocutor)) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: hasMultipleBeneficiaries
+          ? 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.'
+          : 'O interlocutor esta cotando para outra pessoa. Direcione CNPJ/MEI ao beneficiario, nao a quem esta digitando.',
+      };
+    }
+  }
+
+  return { valid: true };
+};
+
+export const buildAutonomousValidationRetryInstruction = (
+  validation: AutonomousReplyValidationResult,
+): string => [
+  '--- CORRECAO OBRIGATORIA DA RESPOSTA ANTERIOR ---',
+  validation.message ?? 'A resposta anterior violou uma regra critica de qualificacao.',
+  'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
+].join('\n');
 
 export const extractHandoff = (
   text: string,

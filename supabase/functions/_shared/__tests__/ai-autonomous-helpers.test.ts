@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
 
 import {
+  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
   buildReplyUserPrompt,
   inferQualificationCompletionHandoff,
   getReliableLeadFirstName,
   splitGeneratedReply,
   extractHandoff,
   normalizeHandoffCode,
+  validateAutonomousReplyOutput,
   HANDOFF_CODES,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
@@ -22,7 +24,7 @@ describe('getReliableLeadFirstName', () => {
 });
 
 describe('buildReplyUserPrompt', () => {
-  test('abre a primeira resposta apos a abordagem com apresentacao pessoal', () => {
+  test('nao reapresenta a Luiza nem exige frase social na primeira resposta', () => {
     const prompt = buildReplyUserPrompt([
       { role: 'ai', content: 'Oi, tudo bem?' },
       { role: 'lead', content: 'Quero um plano para mim.' },
@@ -31,8 +33,11 @@ describe('buildReplyUserPrompt', () => {
       leadFirstName: 'Maria',
     });
 
-    assert.match(prompt, /ABERTURA OBRIGATORIA DESTA RESPOSTA/);
-    assert.match(prompt, /somente este primeiro nome validado, nunca o nome completo/i);
+    assert.match(prompt, /PRIMEIRA RESPOSTA APOS A ABORDAGEM/);
+    assert.match(prompt, /ja cumprimentou e apresentou a Luiza/i);
+    assert.match(prompt, /pode usar apenas o primeiro nome validado "Maria"/i);
+    assert.match(prompt, /Evite aberturas prontas como "prazer em falar com voce"/i);
+    assert.doesNotMatch(prompt, /ABERTURA OBRIGATORIA DESTA RESPOSTA/);
   });
 
   test('nao usa nome quando o CRM nao forneceu um nome confiavel', () => {
@@ -70,7 +75,89 @@ describe('buildReplyUserPrompt', () => {
       leadFirstName: 'Maria',
     });
 
-    assert.doesNotMatch(prompt, /ABERTURA OBRIGATORIA DESTA RESPOSTA/);
+    assert.doesNotMatch(prompt, /PRIMEIRA RESPOSTA APOS A ABORDAGEM/);
+  });
+});
+
+describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
+  test('protege interlocutor, beneficiarios e confirmacao de resposta ambigua', () => {
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /INTERLOCUTOR de BENEFICIARIOS/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Alguem que vai entrar no plano tem CNPJ ou MEI/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voces dois tem 56 anos/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /planos empresariais por CNPJ\/MEI ficam mais em conta/);
+  });
+});
+
+describe('validateAutonomousReplyOutput', () => {
+  const iedaHistory: AutonomousMessageRow[] = [
+    { role: 'lead', content: 'eu e meu marido' },
+    { role: 'ai', content: 'Pode me dizer as idades de vocês?' },
+    { role: 'lead', content: '56' },
+  ];
+
+  test('rejeita pedir apenas a idade do marido depois de uma unica idade no plural', () => {
+    const result = validateAutonomousReplyOutput('E qual é a idade do seu marido?', iedaHistory);
+    assert.equal(result.valid, false);
+    assert.match(result.message ?? '', /Confirme em pergunta fechada/i);
+  });
+
+  test('aceita confirmar a hipotese mais provavel para as duas pessoas', () => {
+    const result = validateAutonomousReplyOutput('Só para confirmar: vocês dois têm 56 anos?', iedaHistory);
+    assert.equal(result.valid, true);
+  });
+
+  test('rejeita assumir a idade e seguir para outra pergunta', () => {
+    const result = validateAutonomousReplyOutput('Em qual cidade vocês moram?', iedaHistory);
+    assert.equal(result.valid, false);
+  });
+
+  test('rejeita CNPJ restrito ao interlocutor quando ha casal', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'O plano é para eu e meu marido.' },
+      { role: 'ai', content: 'Vocês moram em qual cidade?' },
+      { role: 'lead', content: 'Rio de Janeiro.' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('Certo! Você possui CNPJ ou MEI?', history).valid, false);
+    assert.equal(validateAutonomousReplyOutput('Você ou seu marido, algum dos dois tem CNPJ ou MEI?', history).valid, true);
+    assert.equal(validateAutonomousReplyOutput('Alguém que vai entrar no plano tem CNPJ ou MEI?', history).valid, true);
+  });
+
+  test('direciona CNPJ ao filho quando o pai apenas conversa', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Estou procurando um plano para o meu filho.' },
+      { role: 'ai', content: 'Qual a idade dele?' },
+      { role: 'lead', content: '23 anos.' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('Você tem CNPJ ou MEI?', history).valid, false);
+    assert.equal(validateAutonomousReplyOutput('Seu filho tem CNPJ ou MEI?', history).valid, true);
+  });
+
+  test('responde com clareza quando o lead pergunta se CNPJ ou MEI muda o valor', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'Alguém que vai entrar no plano tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'Isso muda alguma coisa?' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('Vocês já possuem plano atualmente?', history).valid, false);
+    assert.equal(
+      validateAutonomousReplyOutput('Sim. Plano empresarial por CNPJ ou MEI geralmente fica mais em conta que pessoa física. Alguém da cotação possui?', history).valid,
+      true,
+    );
+  });
+
+  test('rejeita repetir o mesmo marcador das respostas recentes', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'Certo! Quantas pessoas vão entrar?' },
+      { role: 'lead', content: 'Duas.' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('Certo! Quais são as idades?', history).valid, false);
+    assert.equal(validateAutonomousReplyOutput('E quais são as idades?', history).valid, true);
+  });
+
+  test('aceita handoff tag-only para o encerramento seguro do worker', () => {
+    assert.equal(
+      validateAutonomousReplyOutput('[[HANDOFF: QUALIFICACAO_COMPLETA | completo]]', []).valid,
+      true,
+    );
   });
 });
 

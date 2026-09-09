@@ -11,6 +11,10 @@ const handoffMigrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261007005000_complete_autonomous_attendance_handoff.sql'),
   'utf8',
 );
+const handoffFixMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261007012000_fix_autonomous_handoff_chat_id_ambiguity.sql'),
+  'utf8',
+);
 const attendanceMigrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261007006000_move_autonomous_reply_to_attendance.sql'),
   'utf8',
@@ -33,6 +37,13 @@ test('qualification handoff atomically disables the attendant and moves the lead
   assert.match(handoffMigrationSource, /status = 'cancelled'/);
   assert.match(workerSource, /completeAutonomousAttendanceHandoff/);
   assert.doesNotMatch(workerSource, /\.update\(\{ autonomous_attendance_status: 'handed_off' \}\)/);
+});
+
+test('handoff reply-job predicates qualify chat_id to avoid PL/pgSQL output-column ambiguity', () => {
+  assert.match(handoffFixMigrationSource, /UPDATE public\.ai_autonomous_reply_jobs AS jobs/);
+  assert.match(handoffFixMigrationSource, /WHERE jobs\.chat_id = v_chat_id/);
+  assert.doesNotMatch(handoffFixMigrationSource, /WHERE chat_id = v_chat_id/);
+  assert.match(handoffFixMigrationSource, /autonomous_attendance_status = 'handed_off'/);
 });
 
 test('the first autonomous reply moves only Contato Inicial to Atendimento before sending', () => {

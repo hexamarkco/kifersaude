@@ -28,7 +28,8 @@ test('manual and automated sandbox conversations share one list with a visible a
 test('scenario judge persists actionable playbook improvements for the UI', () => {
   assert.match(scenarioSource, /playbook_improvements/);
   assert.match(scenarioSource, /playbookImprovements: verdict\.playbookImprovements/);
-  assert.match(scenarioSource, /const judgePlaybook = \[autonomousConfig\.featurePrompt, autonomousConfig\.outputInstructions\]/);
+  assert.match(scenarioSource, /const judgePlaybook = \[/);
+  assert.match(scenarioSource, /AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS/);
   assert.match(screenSource, /Sugestões para o playbook/);
   assert.match(screenSource, /createAutomatedConversation/);
 });

@@ -6,13 +6,17 @@ import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import {
+  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
   buildReferencePrompt,
   buildReplyUserPrompt,
   buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
+  getReliableLeadFirstName,
   splitGeneratedReply,
+  validateAutonomousReplyOutput,
   type HandoffCode,
   type AutonomousMessageRow,
 } from '../_shared/ai-autonomous-helpers.ts';
@@ -103,6 +107,9 @@ const buildJudgePrompt = (
     '12. Se o lead mencionou gravidez, o atendente informou corretamente que a carencia de parto e SEMPRE 10 meses (sem reducao mesmo com plano anterior)? Se mencionou doenca preexistente, informou que a CPT e 24 meses APENAS para procedimentos de alta complexidade daquela doenca (nao afeta o resto da cobertura)? Essas sao regras fixas da ANS que podem ser informadas com seguranca — so operadora/valores especificos ficam para a cotacao manual.',
     '13. Se houve handoff, o codigo usado bate com o motivo real da conversa? QUALIFICACAO_COMPLETA so quando idade(s), localizacao e CNPJ/MEI foram coletados normalmente; RECUSOU_COTACAO so quando o lead recusou a oferta de nova cotacao numa reclamacao/cancelamento (ou so queria cancelar sem interesse em recotar); FORA_DE_ESCOPO so quando o pedido nao era sobre plano de saude/odontologico novo; PRECISA_HUMANO para qualquer outra situacao que exigiu julgamento humano. Um codigo trocado (ex: QUALIFICACAO_COMPLETA usado numa reclamacao recusada) conta como violacao.',
     '14. Se o beneficiario tinha menos de 12 anos e o lead queria plano so para a crianca, o atendente deixou claro antes de qualificar que nao ha operadora trabalhada pela Kifer que aceite essa crianca como titular sozinha? Explicou que um adulto entra como titular, a crianca como dependente e ha mensalidade para os dois? E proibido dizer que isso depende de operadora, que pode haver cotacao so para a crianca, que o adulto pode ficar somente como responsavel/assinante ou que nao precisa usar o plano. Tambem conta como violacao pedir idade, cidade ou CNPJ/MEI antes de responder a objecao de forma direta.',
+    '15. O atendente distinguiu corretamente quem estava conversando de quem entraria no plano? A pergunta sobre CNPJ/MEI deve abranger todos os beneficiarios: em cotacao para terceiro, deve se referir a esse beneficiario; em cotacao de grupo, deve perguntar se alguem que entrara no plano tem CNPJ/MEI, e nao somente se o interlocutor tem.',
+    '16. Quando uma unica idade foi dada em resposta a uma pergunta sobre idades no plural, o atendente confirmou em pergunta fechada se aquela idade valia para todos, em vez de perguntar mecanicamente a idade de apenas uma pessoa ou assumir silenciosamente?',
+    '17. A conversa soou humana e contextual? Considere violacao repetir o mesmo marcador como "Certo" em respostas proximas, reapresentar a Luiza depois da abordagem, usar o nome mecanicamente em cada turno, ignorar uma pergunta/objecao antes de continuar o roteiro ou responder como formulario.',
     '',
     '--- FORMATO DA RESPOSTA ---',
     'Além do veredito, sugira de 0 a 3 melhorias concretas para o PLAYBOOK quando elas reduzirem as violações observadas. Sugestões devem ser regras ou instruções que possam ser adicionadas/ajustadas no playbook; não sugira trocar modelo, mudar temperatura ou ações vagas. Se não houver melhoria relevante, retorne uma lista vazia.',
@@ -209,6 +216,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const history: AutonomousMessageRow[] = [];
+    const leadFirstName = getReliableLeadFirstName(leadName);
     let handoffTriggered = false;
     let finalHandoffCode: HandoffCode | null = null;
     let lastProvider: string | null = null;
@@ -232,7 +240,13 @@ Deno.serve(async (req: Request) => {
       const styleBlock = buildStylePrompt(styleMessages);
       // Use autonomous.reply featurePrompt + outputInstructions (from DB) as the system prompt,
       // same as production. This ensures /chat and scenario test exactly what runs live.
-      return [autonomousConfig.featurePrompt, autonomousConfig.outputInstructions, styleBlock, referenceBlock].filter(Boolean).join('\n\n');
+      return [
+        autonomousConfig.featurePrompt,
+        autonomousConfig.outputInstructions,
+        styleBlock,
+        referenceBlock,
+        AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+      ].filter(Boolean).join('\n\n');
     };
 
     // ---- Abertura ----
@@ -247,6 +261,11 @@ Deno.serve(async (req: Request) => {
         temperature: autonomousConfig.temperature,
         maxTokens: autonomousConfig.maxOutputTokens,
         edgeFunction: 'ai-sandbox-run-scenario',
+        maxAttempts: 2,
+        maxProviderRequestsPerAttempt: 1,
+        retrySameResolvedModel: true,
+        validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+        buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
       });
       const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, true);
       lastProvider = result.provider;
@@ -296,10 +315,18 @@ Deno.serve(async (req: Request) => {
         featureKey: 'autonomous.reply',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
-        userPrompt: buildReplyUserPrompt(history),
+        userPrompt: buildReplyUserPrompt(history, {
+          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
+          leadFirstName: leadFirstName ?? undefined,
+        }),
         temperature: autonomousConfig.temperature,
         maxTokens: autonomousConfig.maxOutputTokens,
         edgeFunction: 'ai-sandbox-run-scenario',
+        maxAttempts: 2,
+        maxProviderRequestsPerAttempt: 1,
+        retrySameResolvedModel: true,
+        validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+        buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
       });
       lastProvider = result.provider;
       lastModel = result.model;
@@ -328,7 +355,11 @@ Deno.serve(async (req: Request) => {
 
     // ---- Avaliacao (juiz) ----
 
-    const judgePlaybook = [autonomousConfig.featurePrompt, autonomousConfig.outputInstructions]
+    const judgePlaybook = [
+      autonomousConfig.featurePrompt,
+      autonomousConfig.outputInstructions,
+      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+    ]
       .filter(Boolean)
       .join('\n\n');
     const { systemPrompt: judgeSystemPrompt, userPrompt: judgeUserPrompt } = buildJudgePrompt(judgePlaybook, history, handoffTriggered, finalHandoffCode);

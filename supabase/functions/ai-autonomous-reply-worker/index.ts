@@ -24,6 +24,8 @@ import {
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
+  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousValidationRetryInstruction,
   buildReferencePrompt,
   buildReplyUserPrompt,
   buildStylePrompt,
@@ -32,6 +34,7 @@ import {
   getReliableLeadFirstName,
   inferQualificationCompletionHandoff,
   splitGeneratedReply,
+  validateAutonomousReplyOutput,
   type HandoffCode,
 } from '../_shared/ai-autonomous-helpers.ts';
 
@@ -605,6 +608,7 @@ Deno.serve(async (req: Request) => {
           '',
           buildStylePrompt(styleMessagesForPrompt),
           referenceBlock ? `\n${referenceBlock}` : '',
+          AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
         ].filter(Boolean).join('\n');
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
         const userPrompt = [buildReplyUserPrompt(history, {
@@ -621,6 +625,14 @@ Deno.serve(async (req: Request) => {
           temperature: autonomousConfig?.temperature || 0.6,
           maxTokens: autonomousConfig?.maxOutputTokens || 350,
           edgeFunction: 'ai-autonomous-reply-worker',
+          leadId,
+          chatId: chat.id,
+          messageId: promptInboundMessageId,
+          maxAttempts: 2,
+          maxProviderRequestsPerAttempt: 1,
+          retrySameResolvedModel: true,
+          validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+          buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
         });
 
         const parsedReply = splitGeneratedReply(result.text, false);
@@ -650,6 +662,14 @@ Deno.serve(async (req: Request) => {
             temperature: autonomousConfig?.temperature || 0.6,
             maxTokens: autonomousConfig?.maxOutputTokens || 350,
             edgeFunction: 'ai-autonomous-reply-worker',
+            leadId,
+            chatId: chat.id,
+            messageId: promptInboundMessageId,
+            maxAttempts: 2,
+            maxProviderRequestsPerAttempt: 1,
+            retrySameResolvedModel: true,
+            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+            buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
           });
           const retryParsed = splitGeneratedReply(retryResult.text, false);
           if (retryParsed.messages.length > 0) {

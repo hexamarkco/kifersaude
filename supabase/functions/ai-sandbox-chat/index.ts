@@ -6,13 +6,17 @@ import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
+  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
   buildReferencePrompt,
   buildReplyUserPrompt,
   buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
+  getReliableLeadFirstName,
   splitGeneratedReply,
+  validateAutonomousReplyOutput,
   type AutonomousMessageRow,
 } from '../_shared/ai-autonomous-helpers.ts';
 
@@ -130,8 +134,15 @@ Deno.serve(async (req: Request) => {
       '',
       buildStylePrompt(styleMessagesResult.error ? [] : styleMessages),
       referenceBlock ? `\n${referenceBlock}` : '',
+      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
     ].filter(Boolean).join('\n');
-    const userPrompt = isOpeningMode ? buildOpeningUserPrompt(leadName) : buildReplyUserPrompt(history);
+    const leadFirstName = getReliableLeadFirstName(leadName);
+    const userPrompt = isOpeningMode
+      ? buildOpeningUserPrompt(leadName)
+      : buildReplyUserPrompt(history, {
+          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
+          leadFirstName: leadFirstName ?? undefined,
+        });
 
     const result = await generateTextForFeature({
       supabaseAdmin,
@@ -142,6 +153,11 @@ Deno.serve(async (req: Request) => {
       temperature: autonomousConfig?.temperature || 0.6,
       maxTokens: isOpeningMode ? (autonomousConfig?.maxOutputTokens || 450) : (autonomousConfig?.maxOutputTokens || 350),
       edgeFunction: 'ai-sandbox-chat',
+      maxAttempts: 2,
+      maxProviderRequestsPerAttempt: 1,
+      retrySameResolvedModel: true,
+      validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+      buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
     });
 
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);

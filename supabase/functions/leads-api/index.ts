@@ -4238,6 +4238,8 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        let effectiveTriggerAt: string | null = inactivityStartedAt;
+
         if (targetFlow.triggerType === 'inactivity_duration') {
           if (triggerStatuses.length === 0) {
             return new Response(JSON.stringify({ success: false, error: 'Fluxos de inatividade requerem pelo menos um status de gatilho' }), {
@@ -4269,7 +4271,7 @@ Deno.serve(async (req: Request) => {
           // The trigger timestamp must be the last outbound (not an old one)
           // If inactivityStartedAt (from cron) is older than latestOutboundAt,
           // the cron used a stale reference — use the fresher one
-          const effectiveTriggerAt = isAfter(latestOutboundAt, inactivityStartedAt)
+          effectiveTriggerAt = isAfter(latestOutboundAt, inactivityStartedAt)
             ? latestOutboundAt
             : inactivityStartedAt;
 
@@ -4342,7 +4344,7 @@ Deno.serve(async (req: Request) => {
           : undefined;
         // Use effectiveTriggerAt (not raw inactivityStartedAt) so dedup matches what's stored
         const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration'
-          ? effectiveTriggerAt
+          ? (effectiveTriggerAt ?? undefined)
           : undefined;
 
         await scheduleFlowJobs({

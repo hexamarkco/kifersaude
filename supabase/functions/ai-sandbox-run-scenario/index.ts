@@ -104,12 +104,13 @@ const buildJudgePrompt = (
     '9. Quando a qualificacao terminou (idade(s), localizacao e resposta sobre CNPJ/MEI coletadas), o atendente informou que vai preparar/enviar a cotacao, encerrou a conversa e acionou QUALIFICACAO_COMPLETA em vez de continuar tentando avancar sozinho? Depois dessa confirmacao, nao pode haver nova pergunta nem nova resposta automatica.',
     '10. Se o lead perguntou se e um robo ou pediu para falar com um humano, o atendente manteve o personagem da Luiza (pessoa real) e desviou da pergunta com naturalidade, sem confirmar ser IA/robo/sistema automatizado e sem mencionar handoff/repasse para outra pessoa?',
     '11. Se a cidade mencionada tinha "Rio" no nome mas nao era a cidade do Rio de Janeiro (capital) — ex: Rio das Ostras, Rio Grande — o atendente NAO perguntou bairro por engano?',
-    '12. Se o lead mencionou gravidez, o atendente informou corretamente que a carencia de parto e SEMPRE 10 meses (sem reducao mesmo com plano anterior)? Se mencionou doenca preexistente, informou que a CPT e 24 meses APENAS para procedimentos de alta complexidade daquela doenca (nao afeta o resto da cobertura)? Essas sao regras fixas da ANS que podem ser informadas com seguranca — so operadora/valores especificos ficam para a cotacao manual.',
+    '12. Se o lead perguntou sobre gravidez ou parto, o atendente informou que parto a termo tem carencia de 10 meses (300 dias), sem prometer reducao pelo plano anterior? Para quem ainda planeja engravidar, explicou de forma comercial que apos 2 meses de plano ja pode engravidar e completar a carencia durante a gestacao; nao pode usar essa fala com quem ja esta gravida. Se perguntou sobre prematuridade, explicou o corte de ate 36 semanas e 6 dias e urgencia/emergencia apos 24 horas, ressalvada a segmentacao contratada? Se mencionou doenca preexistente, informou que a CPT e 24 meses APENAS para procedimentos de alta complexidade daquela doenca?',
     '13. Se houve handoff, o codigo usado bate com o motivo real da conversa? QUALIFICACAO_COMPLETA so quando idade(s), localizacao e CNPJ/MEI foram coletados normalmente; RECUSOU_COTACAO so quando o lead recusou a oferta de nova cotacao numa reclamacao/cancelamento (ou so queria cancelar sem interesse em recotar); FORA_DE_ESCOPO so quando o pedido nao era sobre plano de saude/odontologico novo; PRECISA_HUMANO para qualquer outra situacao que exigiu julgamento humano. Um codigo trocado (ex: QUALIFICACAO_COMPLETA usado numa reclamacao recusada) conta como violacao.',
-    '14. Se o beneficiario tinha menos de 12 anos e o lead queria plano so para a crianca, o atendente deixou claro antes de qualificar que nao ha operadora trabalhada pela Kifer que aceite essa crianca como titular sozinha? Explicou que um adulto entra como titular, a crianca como dependente e ha mensalidade para os dois? E proibido dizer que isso depende de operadora, que pode haver cotacao so para a crianca, que o adulto pode ficar somente como responsavel/assinante ou que nao precisa usar o plano. Tambem conta como violacao pedir idade, cidade ou CNPJ/MEI antes de responder a objecao de forma direta.',
+    '14. Se o lead queria plano EXCLUSIVAMENTE para crianca menor de 12 anos, o atendente explicou que um adulto precisa entrar como titular e que ha mensalidade para ambos antes de qualificar? Em contrapartida, se a cotacao ja incluia um adulto, mencionar titular, dependente ou mensalidade sem o lead perguntar e uma violacao por aplicar a regra fora de contexto.',
     '15. O atendente distinguiu corretamente quem estava conversando de quem entraria no plano? A pergunta sobre CNPJ/MEI deve abranger todos os beneficiarios: em cotacao para terceiro, deve se referir a esse beneficiario; em cotacao de grupo, deve perguntar se alguem que entrara no plano tem CNPJ/MEI, e nao somente se o interlocutor tem.',
     '16. Quando uma unica idade foi dada em resposta a uma pergunta sobre idades no plural, o atendente confirmou em pergunta fechada se aquela idade valia para todos, em vez de perguntar mecanicamente a idade de apenas uma pessoa ou assumir silenciosamente?',
     '17. A conversa soou humana e contextual? Considere violacao repetir o mesmo marcador como "Certo" em respostas proximas, reapresentar a Luiza depois da abordagem, usar o nome mecanicamente em cada turno, ignorar uma pergunta/objecao antes de continuar o roteiro ou responder como formulario.',
+    '18. Se o lead informou MEI com menos de 6 meses, o atendente afirmou que ainda nao pode contratar o empresarial por esse MEI, explicou o prazo minimo de 6 meses e ofereceu pessoa fisica como alternativa temporaria ate completar o prazo? Deve esperar a resposta a essa oferta e nao pode pedir o numero do CNPJ nem tratar a elegibilidade como incerta.',
     '',
     '--- FORMATO DA RESPOSTA ---',
     'Além do veredito, sugira de 0 a 3 melhorias concretas para o PLAYBOOK quando elas reduzirem as violações observadas. Sugestões devem ser regras ou instruções que possam ser adicionadas/ajustadas no playbook; não sugira trocar modelo, mudar temperatura ou ações vagas. Se não houver melhoria relevante, retorne uma lista vazia.',
@@ -136,6 +137,18 @@ const parseVerdict = (raw: string): { passed: boolean | null; violations: string
   } catch {
     return { passed: null, violations: [], notes: `[Resposta do juiz nao veio em JSON valido] ${cleaned}`.slice(0, 2000), playbookImprovements: [] };
   }
+};
+
+const collectDeterministicViolations = (history: AutonomousMessageRow[]): string[] => {
+  const violations: string[] = [];
+  history.forEach((row, index) => {
+    if (row.role !== 'ai') return;
+    const validation = validateAutonomousReplyOutput(row.content, history.slice(0, index));
+    if (!validation.valid && validation.message) {
+      violations.push(`Regra objetiva: ${validation.message}`);
+    }
+  });
+  return [...new Set(violations)];
 };
 
 Deno.serve(async (req: Request) => {
@@ -223,8 +236,13 @@ Deno.serve(async (req: Request) => {
     let lastModel: string | null = null;
 
     const persist = async (rows: Array<{ role: 'lead' | 'ai'; content: string; handoff_reason: string | null; handoff_code: string | null; provider: string | null; model: string | null }>) => {
+      const persistedAt = Date.now();
       const { error } = await supabaseAdmin.from('ai_sandbox_messages').insert(
-        rows.map((row) => ({ conversation_id: conversationId, ...row })),
+        rows.map((row, index) => ({
+          conversation_id: conversationId,
+          ...row,
+          created_at: new Date(persistedAt + index).toISOString(),
+        })),
       );
       if (error) throw new Error(`Erro ao salvar mensagem: ${error.message}`);
       for (const row of rows) history.push({ role: row.role, content: row.content });
@@ -373,7 +391,16 @@ Deno.serve(async (req: Request) => {
       maxTokens: 600,
       edgeFunction: 'ai-sandbox-run-scenario',
     });
-    const verdict = parseVerdict(judgeResult.text);
+    const modelVerdict = parseVerdict(judgeResult.text);
+    const deterministicViolations = collectDeterministicViolations(history);
+    const verdict = {
+      ...modelVerdict,
+      passed: deterministicViolations.length > 0 ? false : modelVerdict.passed,
+      violations: [...new Set([...modelVerdict.violations, ...deterministicViolations])],
+      notes: deterministicViolations.length > 0
+        ? [modelVerdict.notes, 'A avaliação objetiva encontrou violações que o juiz por IA não pode ignorar.'].filter(Boolean).join(' ')
+        : modelVerdict.notes,
+    };
 
     const { error: insertRunError } = await supabaseAdmin.from('ai_sandbox_test_runs').insert({
       conversation_id: conversationId,

@@ -15,6 +15,7 @@ test('sandbox publishes messages and final verdicts through Realtime', () => {
   }
   assert.match(serviceSource, /subscribeToConversation/);
   assert.match(screenSource, /aiSandboxChatService\.subscribeToConversation/);
+  assert.match(scenarioSource, /created_at: new Date\(persistedAt \+ index\)\.toISOString\(\)/);
 });
 
 test('manual and automated sandbox conversations share one list with a visible automated tag', () => {
@@ -30,6 +31,8 @@ test('scenario judge persists actionable playbook improvements for the UI', () =
   assert.match(scenarioSource, /playbookImprovements: verdict\.playbookImprovements/);
   assert.match(scenarioSource, /const judgePlaybook = \[/);
   assert.match(scenarioSource, /AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS/);
+  assert.match(scenarioSource, /collectDeterministicViolations/);
+  assert.match(scenarioSource, /deterministicViolations\.length > 0 \? false/);
   assert.match(screenSource, /Sugestões para o playbook/);
   assert.match(screenSource, /createAutomatedConversation/);
 });

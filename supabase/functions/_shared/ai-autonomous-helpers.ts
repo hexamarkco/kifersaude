@@ -28,6 +28,10 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
   'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
   'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
+  'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
+  'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
+  'Se perguntarem especificamente sobre parto prematuro, explique que ate 36 semanas e 6 dias ele nao e parto a termo e fica fora da carencia de 10 meses do parto a termo, sendo tratado pelas regras de urgencia/emergencia apos 24 horas. Nao prometa cobertura irrestrita: ressalve a segmentacao/cobertura hospitalar contratada e as regras assistenciais aplicaveis.',
+  'CRIANCA MENOR DE 12 ANOS: so explique a necessidade de adulto titular quando a cotacao pedida for exclusivamente para uma ou mais criancas menores de 12 anos e ainda nao houver adulto beneficiario confirmado. Se um adulto ja estiver incluido na cotacao, a composicao titular/dependente e natural e nao precisa ser explicada nem gerar alerta; continue a qualificacao sem discurso sobre dependencia ou mensalidade, salvo se o lead perguntar.',
   'Quando uma resposta curta admitir uma interpretacao muito provavel, nao reinicie a coleta como formulario e nao assuma silenciosamente. Faca uma confirmacao fechada e facil. Exemplo: voce perguntou as idades de um casal e recebeu apenas "56"; a melhor resposta e "So para confirmar: voces dois tem 56 anos?", e nao "Qual a idade do seu marido?".',
   'A abordagem inicial ja apresentou a Luiza. Na primeira resposta do lead, nao se apresente de novo e nao force frases como "prazer em falar com voce" ou "que bom falar com voce". Acolha o conteudo real e avance naturalmente.',
   'Nao transforme cada turno em "marcador + pergunta". Varie a estrutura: as vezes va direto a pergunta, as vezes faca uma confirmacao breve, e use o primeiro nome apenas ocasionalmente quando trouxer proximidade real. Nao use o nome em mensagens consecutivas.',
@@ -237,9 +241,23 @@ const GROUP_CONFIRMATION_REGEX = /\b(voces\s+dois|os\s+dois|as\s+duas|ambos|amba
 const CNPJ_OR_MEI_REGEX = /\b(cnpj|mei)\b/;
 const BUSINESS_ID_VALUE_QUESTION_REGEX = /(?:\bmuda\b|\bfaz\s+diferenca\b|\bqual\s+(?:e\s+)?a\s+diferenca\b|\bmais\s+(?:barato|em\s+conta)\b)/;
 const BUSINESS_ID_VALUE_ANSWER_REGEX = /(?:\bempresari[oa]\b.*\bmais\s+(?:barato|em\s+conta)\b|\bmais\s+(?:barato|em\s+conta)\b.*\b(?:cnpj|mei|pessoa\s+fisica)\b)/;
+const MEI_AGE_IN_MONTHS_REGEX = /\b(\d{1,2})\s*mes(?:es)?\b/;
+const MEI_SIX_MONTH_RULE_REGEX = /\b6\s*mes(?:es)?\b/;
+const PERSONA_FISICA_REGEX = /\bpessoa\s+fisica\b/;
+const PREGNANCY_CONTEXT_REGEX = /\b(gravida|gestante|gestacao|engravid|parto)\b/;
+const MATERNITY_QUESTION_REGEX = /\b(carencia|parto|gestacao|pre[- ]?natal|engravid)\b/;
+const TERM_BIRTH_WAIT_REGEX = /(?:\b10\s*mes(?:es)?\b|\b300\s*dias\b)/;
+const PLANNING_PREGNANCY_REGEX = /\b(planej|pretend|quero\s+engravid|posso\s+engravid|quando\s+engravid)\w*/;
+const TWO_MONTH_COMMERCIAL_FRAME_REGEX = /\b2\s*mes(?:es)?\b/;
+const PREMATURE_BIRTH_QUESTION_REGEX = /(?:\bprematur\w*\b|\b36\s*(?:s\b|semanas?\b)|\bantes\s+d[ea]\s+37\s+semanas?\b)/;
+const PREMATURE_CUTOFF_REGEX = /(?:\b36\s*(?:s\s*e?\s*6\s*d|semanas?\s+e\s+6\s+dias?)\b|\bantes\s+d[ea]\s+37\s+semanas?\b)/;
+const URGENT_COVERAGE_REGEX = /\b(urgencia|emergencia)\b/;
+const TWENTY_FOUR_HOURS_REGEX = /\b24\s*horas?\b/;
+const DEPENDENCY_EXPLANATION_REGEX = /\b(titular|dependente|mensalidade)\b/;
+const CHILD_COMPOSITION_QUESTION_REGEX = /\b(titular|dependente|mensalidade|entra\s+no\s+plano|pode\s+entrar)\b/;
 const ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX = /\bvoce\s+(?:tem|possui|teria)\b/;
 const GROUP_BUSINESS_ID_SCOPE_REGEX = /\b(alguem\s+que\s+(?:vai|ira)\s+entrar|alguem\s+d[oa]\s+cotacao|algum(?:a)?\s+d[oa]s?\s+(?:beneficiari|pessoa)|voces|voce\s+ou)\b/;
-const MULTIPLE_BENEFICIARIES_REGEX = /(?:\beu\s+e\s+(?:meu|minha)\b|\b(?:para|pro|pra)\s+mim\s+e\b|\bpara\s+(?:nos|a\s+gente)\s+dois\b|\b(?:duas|dois|tres|quatro|[2-9])\s+(?:vidas|pessoas|beneficiarios)\b|\bcasal\b|\bminha\s+familia\b)/;
+const MULTIPLE_BENEFICIARIES_REGEX = /(?:\beu\s+e\s+(?:meu|minha)\b|\b(?:para|pro|pra)\s+mim\s+e\b|\bpara\s+(?:nos|a\s+gente)\s+dois\b|\bsomos\s+[2-9]\b|\b(?:duas|dois|tres|quatro|[2-9])\s+(?:vidas|pessoas|beneficiarios)\b|\bcasal\b|\bminha\s+familia\b)/;
 const THIRD_PARTY_RELATION_REGEX = /(?:meu|minha)\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)/;
 const THIRD_PARTY_ONLY_REGEX = new RegExp(
   `\\b(?:para|pro|pra)\\s+(?:o\\s+|a\\s+)?${THIRD_PARTY_RELATION_REGEX.source}`,
@@ -319,12 +337,78 @@ export const validateAutonomousReplyOutput = (
     };
   }
 
+  const meiAgeMonths = CNPJ_OR_MEI_REGEX.test(normalizedLatestLead)
+    ? Number(normalizedLatestLead.match(MEI_AGE_IN_MONTHS_REGEX)?.[1] ?? Number.NaN)
+    : Number.NaN;
+  if (Number.isFinite(meiAgeMonths) && meiAgeMonths < 6) {
+    const explainsSixMonthRule = MEI_SIX_MONTH_RULE_REGEX.test(normalizedCandidate);
+    const offersTemporaryIndividualPlan = PERSONA_FISICA_REGEX.test(normalizedCandidate);
+    const asksForCnpjNumber = /\b(?:numero|cnpj)\b.*\b(?:envia|mande|passa|informa|consult)/.test(normalizedCandidate)
+      || /\b(?:envia|mande|passa|informa)\b.*\bcnpj\b/.test(normalizedCandidate);
+    if (!explainsSixMonthRule || !offersTemporaryIndividualPlan || asksForCnpjNumber) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: `O lead informou MEI com ${meiAgeMonths} meses. Explique que o empresarial por MEI exige 6 meses, nao peca o CNPJ agora e ofereca pessoa fisica como solucao temporaria ate completar o prazo.`,
+      };
+    }
+  }
+
+  const leadHistoryText = normalizeForSemanticMatch(
+    history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
+  );
+  if (PREGNANCY_CONTEXT_REGEX.test(leadHistoryText) && MATERNITY_QUESTION_REGEX.test(normalizedLatestLead)) {
+    const explainsTermBirthWait = TERM_BIRTH_WAIT_REGEX.test(normalizedCandidate);
+    const treatsWaitAsUncertain = /(?:depende\s+d[ae]\s+operadora|precisa\s+ser\s+verificad|carencias?\s+aplicaveis|aproveitamento.*plano\s+anterior)/.test(normalizedCandidate);
+    const needsPlanningFrame = PLANNING_PREGNANCY_REGEX.test(normalizedLatestLead)
+      && !/\b(ja\s+estou|estou)\s+gravida\b/.test(leadHistoryText);
+    if (!explainsTermBirthWait || treatsWaitAsUncertain || (needsPlanningFrame && !TWO_MONTH_COMMERCIAL_FRAME_REGEX.test(normalizedCandidate))) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: needsPlanningFrame
+          ? 'Explique que parto a termo tem 10 meses de carencia e use o enquadramento comercial correto: apos 2 meses de plano, a pessoa pode engravidar e completar a carencia durante os 9 meses de gestacao.'
+          : 'A carencia de parto a termo deve ser informada como 10 meses (300 dias), sem tratar como incerta nem prometer aproveitamento do plano anterior. Se a pessoa ja esta gravida, nao use o enquadramento de esperar 2 meses para engravidar.',
+      };
+    }
+  }
+
+  if (PREMATURE_BIRTH_QUESTION_REGEX.test(normalizedLatestLead)) {
+    const explainsPrematureRule = PREMATURE_CUTOFF_REGEX.test(normalizedCandidate)
+      && URGENT_COVERAGE_REGEX.test(normalizedCandidate)
+      && TWENTY_FOUR_HOURS_REGEX.test(normalizedCandidate);
+    if (!explainsPrematureRule) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: 'Explique que parto prematuro ate 36 semanas e 6 dias fica fora da carencia de 10 meses do parto a termo e segue urgencia/emergencia apos 24 horas, sem prometer cobertura alem da segmentacao contratada.',
+      };
+    }
+  }
+
+  const agesInLatestLead = [...normalizedLatestLead.matchAll(/\b(\d{1,2})\b/g)]
+    .map((match) => Number(match[1]));
+  const hasAdultAndChildUnder12 = MULTIPLE_BENEFICIARIES_REGEX.test(normalizedLatestLead)
+    && /\b(filh|crianc)\w*/.test(normalizedLatestLead)
+    && agesInLatestLead.some((age) => age >= 18)
+    && agesInLatestLead.some((age) => age < 12);
+  const leadAskedAboutChildComposition = normalizedLatestLead.includes('?')
+    && CHILD_COMPOSITION_QUESTION_REGEX.test(normalizedLatestLead);
+  if (
+    hasAdultAndChildUnder12
+    && !leadAskedAboutChildComposition
+    && DEPENDENCY_EXPLANATION_REGEX.test(normalizedCandidate)
+  ) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: 'A cotacao ja inclui adulto e crianca menor de 12 anos. Nao explique titular, dependente ou mensalidade sem o lead perguntar; essa regra so precisa ser apresentada quando a cotacao e exclusivamente para crianca menor de 12 anos.',
+    };
+  }
+
   if (CNPJ_OR_MEI_REGEX.test(normalizedCandidate) && visibleCandidate.includes('?')) {
-    const leadHistory = normalizeForSemanticMatch(
-      history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
-    );
-    const hasMultipleBeneficiaries = MULTIPLE_BENEFICIARIES_REGEX.test(leadHistory);
-    const isThirdPartyOnly = THIRD_PARTY_ONLY_REGEX.test(leadHistory) && !hasMultipleBeneficiaries;
+    const hasMultipleBeneficiaries = MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText);
+    const isThirdPartyOnly = THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) && !hasMultipleBeneficiaries;
     const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
     const hasThirdPartyScope = THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
     const asksOnlyInterlocutor = ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate) && !hasGroupScope;

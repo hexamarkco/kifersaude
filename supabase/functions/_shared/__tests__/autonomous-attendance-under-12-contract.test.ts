@@ -20,8 +20,9 @@ test('Resposta Autônoma receives the fixed eligibility rule for children under 
   assert.match(migrationSource, /sem insistir em idade, cidade, CNPJ\/MEI ou outros dados/);
 });
 
-test('automated scenarios reject ambiguous handling of a child under 12', () => {
-  assert.match(scenarioSource, /14\. Se o beneficiario tinha menos de 12 anos/);
-  assert.match(scenarioSource, /pode haver cotacao so para a crianca/);
-  assert.match(scenarioSource, /pedir idade, cidade ou CNPJ\/MEI antes de responder a objecao/);
+test('automated scenarios apply the child-under-12 rule only to child-only quotes', () => {
+  assert.match(scenarioSource, /14\. Se o lead queria plano EXCLUSIVAMENTE para crianca menor de 12 anos/);
+  assert.match(scenarioSource, /se a cotacao ja incluia um adulto/);
+  assert.match(scenarioSource, /mencionar titular, dependente ou mensalidade sem o lead perguntar e uma violacao/);
+  assert.match(scenarioSource, /collectDeterministicViolations/);
 });

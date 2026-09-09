@@ -25,6 +25,13 @@ test('keeps the default timeout for ordinary Edge Functions', () => {
   assert.equal(getSupabaseRequestTimeoutMs(`${supabaseFunctionsUrl}/ordinary-function`), 60_000);
 });
 
+test('allows automated sandbox scenarios to finish their multi-turn evaluation', () => {
+  assert.equal(
+    getSupabaseRequestTimeoutMs(`${supabaseFunctionsUrl}/ai-sandbox-run-scenario`),
+    180_000,
+  );
+});
+
 test('reads the JSON payload from an HTTP function error', async () => {
   const error = new FunctionsHttpError(new Response(
     JSON.stringify({ error: 'Falha interna da função.' }),

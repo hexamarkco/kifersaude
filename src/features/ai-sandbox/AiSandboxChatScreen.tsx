@@ -33,7 +33,7 @@ const SCENARIO_GROUPS: ScenarioGroup[] = [
     { key: 'b7', label: 'Mãe + 2 filhos', p: 'Preciso pra mim de 35 anos, minha filha de 12 e meu filho de 8. Niteroi.' },
   ]},
   { cat: 'CNPJ / MEI', scenarios: [
-    { key: 'c1', label: 'MEI <6 meses', p: 'Sou o Rafa, 30 anos, Rio de Janeiro, não tenho plano, tenho MEI aberto há 3 meses.' },
+    { key: 'c1', label: 'MEI <6 meses', p: 'Sou o Rafa, 30 anos, Rio de Janeiro, não tenho plano, tenho MEI aberto há 3 meses. Vou perguntar se já posso contratar pelo MEI; se oferecerem pessoa física até completar 6 meses, aceito essa alternativa.' },
     { key: 'c2', label: 'MEI >6 meses', p: 'Oi, sou a Juliana, 38 anos, Niteroi, tenho Amil, tenho MEI há 1 ano e meio.' },
     { key: 'c3', label: 'CNPJ não-MEI', p: 'Sou Lucas, 45 anos, São Paulo, sem plano, tenho CNPJ empresa normal há 8 meses.' },
     { key: 'c4', label: 'Sem CNPJ', p: 'Marina, 29 anos, Rio, não tenho plano e não tenho CNPJ nem MEI.' },

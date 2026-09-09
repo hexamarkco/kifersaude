@@ -85,6 +85,11 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Alguem que vai entrar no plano tem CNPJ ou MEI/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voces dois tem 56 anos/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /planos empresariais por CNPJ\/MEI ficam mais em conta/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /depois de completar 6 meses de abertura/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pessoa fisica como solucao temporaria/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /carencia para parto a termo e de 10 meses/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /ate 36 semanas e 6 dias/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /exclusivamente para uma ou mais criancas menores de 12 anos/);
   });
 });
 
@@ -142,6 +147,72 @@ describe('validateAutonomousReplyOutput', () => {
       validateAutonomousReplyOutput('Sim. Plano empresarial por CNPJ ou MEI geralmente fica mais em conta que pessoa física. Alguém da cotação possui?', history).valid,
       true,
     );
+  });
+
+  test('MEI com menos de 6 meses recebe oferta temporaria de pessoa fisica', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'Tenho MEI sim, abri há 3 meses. Já consigo contratar por ele?' },
+    ];
+
+    assert.equal(
+      validateAutonomousReplyOutput('A elegibilidade precisa ser confirmada. Me envia o número do CNPJ?', history).valid,
+      false,
+    );
+    assert.equal(
+      validateAutonomousReplyOutput('Como seu MEI tem 3 meses, ele ainda não pode ser usado: precisa completar 6 meses. Enquanto isso, posso cotar pessoa física para você não ficar sem cobertura. Faz sentido?', history).valid,
+      true,
+    );
+  });
+
+  test('informa 10 meses para parto mesmo quando havia plano anterior', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Estou grávida e já tive plano antes.' },
+      { role: 'ai', content: 'Você está com plano hoje?' },
+      { role: 'lead', content: 'Estou sem plano. Como funciona a carência para o parto?' },
+    ];
+
+    assert.equal(
+      validateAutonomousReplyOutput('A carência e o aproveitamento do plano anterior precisam ser verificados na cotação.', history).valid,
+      false,
+    );
+    assert.equal(
+      validateAutonomousReplyOutput('Para parto a termo, a carência é de 10 meses, mesmo você já tendo tido plano antes. Como você já está grávida, uma contratação agora não completaria esse prazo para o parto desta gestação.', history).valid,
+      true,
+    );
+  });
+
+  test('usa o enquadramento de 2 meses somente para quem planeja engravidar', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Quero engravidar. Como funciona a carência do parto?' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('A carência para parto é de 10 meses.', history).valid, false);
+    assert.equal(
+      validateAutonomousReplyOutput('A carência do parto a termo é de 10 meses. Na prática, depois de 2 meses de plano você já pode engravidar, porque os outros meses se completam durante a gestação.', history).valid,
+      true,
+    );
+  });
+
+  test('explica parto prematuro com corte e regra de urgencia', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'E se o parto for prematuro, o plano cobre mesmo na carência?' },
+    ];
+    assert.equal(validateAutonomousReplyOutput('Isso depende da operadora.', history).valid, false);
+    assert.equal(
+      validateAutonomousReplyOutput('Até 36 semanas e 6 dias, é parto prematuro e fica fora da carência de 10 meses do parto a termo. Ele segue as regras de urgência e emergência após 24 horas, conforme a cobertura hospitalar contratada.', history).valid,
+      true,
+    );
+  });
+
+  test('nao explica dependencia quando um adulto ja integra a cotacao', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Somos 6: eu 45, esposa 42 e filhos 20, 17, 14 e 10.' },
+    ];
+    assert.equal(
+      validateAutonomousReplyOutput('O filho de 10 anos precisa entrar como dependente de um adulto titular. Em qual cidade vocês moram?', history).valid,
+      false,
+    );
+    assert.equal(validateAutonomousReplyOutput('Em qual cidade vocês vão utilizar o plano?', history).valid, true);
   });
 
   test('rejeita repetir o mesmo marcador das respostas recentes', () => {

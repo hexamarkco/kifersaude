@@ -163,6 +163,7 @@ Deno.serve(async (req: Request) => {
     const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);
     if (finalMessages.length === 0) throw new Error('A IA não retornou uma resposta válida.');
 
+    const responseStartedAt = Date.now();
     const rowsToInsert = finalMessages.map((content, index) => ({
       conversation_id: conversationId,
       role: 'ai' as const,
@@ -171,6 +172,7 @@ Deno.serve(async (req: Request) => {
       handoff_code: index === finalMessages.length - 1 ? handoffCode : null,
       provider: result.provider,
       model: result.model,
+      created_at: new Date(responseStartedAt + index).toISOString(),
     }));
 
     const { error: insertAiError } = await supabaseAdmin

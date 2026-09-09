@@ -52,7 +52,7 @@ import {
 import { configService, type IntegrationSetting } from '../../config';
 import type { Lead } from '../../leads';
 import type { Reminder } from '../../reminders';
-import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
+import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
@@ -104,6 +104,15 @@ import {
   hasMessageQuote,
   messagesReferToSameOutgoing,
 } from './domain/messageMetadata';
+import {
+  compareMessageChronology,
+  dedupeObviousDuplicateMessages,
+  formatMessageDaySeparatorLabel,
+  formatMessageTime,
+  getMessageDayKey,
+  getMessageTimestampMs,
+  mergeMessages,
+} from './domain/messageTimeline';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
@@ -125,7 +134,6 @@ import { useChatSearch } from './hooks/useChatSearch';
 import { useClickOutside } from './hooks/useClickOutside';
 import {
   mergeCommWhatsAppMessage,
-  mergeCommWhatsAppMessages,
   getMessageDisplayMetadataSignature,
   normalizeDeliveryStatus,
   resolveDeliveryStatus,
@@ -370,15 +378,6 @@ function ChatPreviewIcon({ type }: { type: ChatPreviewIconType }) {
     </span>
   );
 }
-
-const getMessageTimestampMs = (value?: string | null) => {
-  if (!value) {
-    return null;
-  }
-
-  const timestamp = parseCommMessageDate(value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : null;
-};
 
 const URL_PATTERN = /https?:\/\/[^\s<]+/gi;
 
@@ -651,54 +650,6 @@ const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): 
   };
 };
 
-const formatMessageTime = (value?: string | null) => {
-  const date = parseCommMessageDate(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: SAO_PAULO_TIMEZONE,
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
-};
-
-const parseCommMessageDate = (value?: string | null) => {
-  if (!value) return new Date(Number.NaN);
-
-  const direct = new Date(value);
-  if (!Number.isNaN(direct.getTime())) {
-    return direct;
-  }
-
-  const normalized = String(value).trim();
-  const withoutTimezone = normalized.match(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/);
-  if (withoutTimezone) {
-    const fallback = new Date(`${normalized.replace(' ', 'T')}Z`);
-    if (!Number.isNaN(fallback.getTime())) {
-      return fallback;
-    }
-  }
-
-  return new Date(Number.NaN);
-};
-
-const getComparableMessageTimestampMs = (message: Pick<CommWhatsAppMessage, 'message_at' | 'created_at' | 'metadata'>) => {
-  const clientOrderTimestamp = getMessageTimestampMs(getMessageClientOrderAt(message as CommWhatsAppMessage));
-  if (clientOrderTimestamp !== null) {
-    return clientOrderTimestamp;
-  }
-
-  const messageTimestamp = getMessageTimestampMs(message.message_at);
-  if (messageTimestamp !== null) {
-    return messageTimestamp;
-  }
-
-  return getMessageTimestampMs(message.created_at);
-};
-
 const normalizeSystemTimeZone = (value: unknown) => {
   const candidate = String(value ?? '').trim();
   if (!candidate) {
@@ -822,50 +773,6 @@ const buildTranscriptLine = (message: CommWhatsAppMessage, leadLabel: string, ti
   return `${formatTranscriptTimestamp(message.message_at, timeZone)} ${author}: ${content}`;
 };
 
-const getMessageDayKey = (value?: string | null) => {
-  if (!value) return '';
-
-  const date = parseCommMessageDate(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return getDateKey(date, SAO_PAULO_TIMEZONE);
-};
-
-const formatMessageDaySeparatorLabel = (value?: string | null) => {
-  if (!value) return '';
-
-  const date = parseCommMessageDate(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const today = new Date();
-  const todayKey = getDateKey(today, SAO_PAULO_TIMEZONE);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = getDateKey(yesterday, SAO_PAULO_TIMEZONE);
-  const targetKey = getDateKey(date, SAO_PAULO_TIMEZONE);
-
-  if (targetKey === todayKey) {
-    return 'Hoje';
-  }
-
-  if (targetKey === yesterdayKey) {
-    return 'Ontem';
-  }
-
-  const diffDays = Math.round((today.getTime() - date.getTime()) / (24 * 60 * 60 * 1000));
-
-  if (diffDays > 1 && diffDays < 7) {
-    return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: SAO_PAULO_TIMEZONE }).format(date);
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: SAO_PAULO_TIMEZONE,
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-};
-
 const formatConnectionStatusLabel = (value?: string | null, fallback = 'Indisponível') => {
   const normalized = String(value ?? '').trim().toUpperCase();
 
@@ -911,85 +818,6 @@ const inboxInlineActionClassName = getPanelButtonClass({
   size: 'sm',
   className: 'h-8 px-3 text-[11px] font-semibold',
 });
-
-const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
-  const aTime = getComparableMessageTimestampMs(a) ?? 0;
-  const bTime = getComparableMessageTimestampMs(b) ?? 0;
-  const timeDiff = aTime - bTime;
-  if (timeDiff !== 0) {
-    return timeDiff;
-  }
-
-  const aCreatedTime = getMessageTimestampMs(a.created_at) ?? 0;
-  const bCreatedTime = getMessageTimestampMs(b.created_at) ?? 0;
-  const createdDiff = aCreatedTime - bCreatedTime;
-  if (createdDiff !== 0) {
-    return createdDiff;
-  }
-
-  return a.id.localeCompare(b.id);
-};
-
-const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
-  return mergeCommWhatsAppMessages(existing, incoming).sort(compareMessageChronology);
-};
-
-const getObviousDuplicateMessageKey = (message: CommWhatsAppMessage) => {
-  if (message.direction === 'system') {
-    return '';
-  }
-
-  const messageAtMs = getMessageTimestampMs(message.message_at);
-  if (messageAtMs === null) {
-    return '';
-  }
-
-  const text = normalizeQuickReplyLookup(getMessageSearchPreviewText(message)).replace(/\s+/g, ' ').trim();
-  if (text.length < 12) {
-    return '';
-  }
-
-  const messageAtSecond = Math.floor(messageAtMs / 1000);
-  const sender = normalizeQuickReplyLookup(String(message.sender_phone ?? message.sender_name ?? ''));
-  return [message.chat_id, message.direction, message.message_type.trim().toLowerCase(), messageAtSecond, sender, text].join(':');
-};
-
-const pickMoreCompleteDuplicateMessage = (current: CommWhatsAppMessage, candidate: CommWhatsAppMessage) => {
-  const currentExternalId = String(current.external_message_id ?? '').trim();
-  const candidateExternalId = String(candidate.external_message_id ?? '').trim();
-
-  if (!currentExternalId && candidateExternalId) {
-    return candidate;
-  }
-
-  if (!current.media_id && candidate.media_id) {
-    return candidate;
-  }
-
-  if (!current.transcription_text && candidate.transcription_text) {
-    return candidate;
-  }
-
-  return current;
-};
-
-const dedupeObviousDuplicateMessages = (items: CommWhatsAppMessage[]) => {
-  const bySemanticKey = new Map<string, CommWhatsAppMessage>();
-  const passthrough: CommWhatsAppMessage[] = [];
-
-  for (const message of items) {
-    const key = getObviousDuplicateMessageKey(message);
-    if (!key) {
-      passthrough.push(message);
-      continue;
-    }
-
-    const current = bySemanticKey.get(key);
-    bySemanticKey.set(key, current ? pickMoreCompleteDuplicateMessage(current, message) : message);
-  }
-
-  return [...passthrough, ...bySemanticKey.values()].sort(compareMessageChronology);
-};
 
 const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
   '[acao]',

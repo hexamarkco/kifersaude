@@ -130,6 +130,8 @@ const normalizeAcomodacao = (value: string) => {
   const normalized = normalizeText(value);
   if (normalized.startsWith('ENFERMARIA')) return 'Enfermaria';
   if (normalized.startsWith('APARTAMENTO')) return 'Apartamento';
+  if (normalized === 'COLETIVA') return 'Enfermaria';
+  if (['PARTICULAR', 'INDIVIDUAL'].includes(normalized)) return 'Apartamento';
   return value;
 };
 
@@ -142,12 +144,12 @@ const normalizeCarencia = (value: string) => {
   return value;
 };
 
-const removeCompanyFieldsFromIndividualContract = (
+const removeCompanyFieldsWithoutCorporateClient = (
   fields: ContractImportFields,
   fieldSources: ContractDocumentExtraction['fieldSources'],
   warnings: string[],
 ) => {
-  if (fields.modalidade !== 'Pessoa física') return;
+  if (['Empresarial', 'PME'].includes(fields.modalidade ?? '')) return;
 
   const companyFieldKeys: ContractImportFieldKey[] = [
     'cnpj',
@@ -161,7 +163,7 @@ const removeCompanyFieldsFromIndividualContract = (
     delete fieldSources[key];
   }
   if (removedCompanyData) {
-    warnings.push('Os dados cadastrais da operadora foram ignorados: este é um contrato individual e não possui dados empresariais do cliente.');
+    warnings.push('Os dados cadastrais da operadora ou administradora foram ignorados: este contrato não possui empresa cliente.');
   }
 };
 
@@ -258,7 +260,7 @@ export const parseContractDocumentExtraction = (value: string): ContractDocument
   if (profile === 'medsenior') {
     applyMedSeniorRules(fields, fieldSources, warnings);
   }
-  removeCompanyFieldsFromIndividualContract(fields, fieldSources, warnings);
+  removeCompanyFieldsWithoutCorporateClient(fields, fieldSources, warnings);
 
   return {
     profile,
@@ -277,6 +279,7 @@ export const buildContractExtractionPrompt = (profile: ContractDocumentProfile) 
   `Perfil selecionado pelo usuário: ${profile}.`,
   'Perfis conhecidos: supermed (um PDF de adesão com dados cadastrais), hcommerce (Assim Saúde, Klini e outras: pode vir em dois PDFs, empresa e titulares), planium (Hapvida, Leve e outras), qualicorp e medsenior.',
   'Normalize os campos de lista antes de retornar: modalidade deve ser exatamente Empresarial, PME, Adesão ou Pessoa física; abrangencia deve ser Regional, Estadual ou Nacional; acomodacao deve ser Enfermaria ou Apartamento; carencia deve ser Padrão, Reduzida, Zerada ou Zerada/Reduzida (montado). Por exemplo, Individual vira Pessoa física e Grupo de Municípios vira Regional.',
+  'Regra Qualicorp: a tabela de plano pode continuar na página seguinte. Retorne produto_plano e acomodacao somente da linha marcada com X na coluna "Assinale abaixo o plano pretendido"; nunca escolha a primeira linha, uma linha sem marcação ou uma linha de página anterior. Na Qualicorp, acomodação Coletiva significa Enfermaria e Particular ou Individual significa Apartamento.',
   'Se o perfil for auto, detecte o perfil somente se houver evidência no documento. Ao receber dois arquivos HCommerce, consolide empresa e beneficiários.',
   'Campos cnpj, razao_social, nome_fantasia e endereco_empresa são exclusivamente da empresa cliente/contratante. Nunca preencha esses campos com dados da operadora, administradora ou seguradora. Em contratos de modalidade Individual, omita todos esses campos.',
   'Regra MedSênior: use operadora como "MedSênior", nunca a razão social "SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.". Para o produto "MEDSÊNIOR RJ 1", retorne somente "RJ1". Para acomodação, retorne somente "Enfermaria" ou "Apartamento", sem a descrição do quarto.',

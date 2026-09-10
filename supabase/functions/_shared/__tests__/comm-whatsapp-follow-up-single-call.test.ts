@@ -55,6 +55,7 @@ describe('follow-up generation prompt', () => {
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/confirmar se agora pode retomar/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/microdecisão é o destino comercial/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/ponte humana/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/preciso alinhar este ponto/iu);
   });
 
   it('allows the same call to recommend waiting instead of inventing a social touch', () => {
@@ -180,6 +181,7 @@ describe('AI commercial validator contract', () => {
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/retorno solicitado pelo lead/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/pergunta seca/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/CTA frio/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/linguagem burocrática/iu);
   });
 });
 

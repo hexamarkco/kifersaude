@@ -47,7 +47,7 @@ test('converte as variações dos PDFs para as opções fechadas do CRM', () => 
   });
 });
 
-test('não mantém dados empresariais em contratos pessoa física de outros perfis', () => {
+test('não mantém dados empresariais em contratos sem empresa cliente', () => {
   const extraction = parseContractDocumentExtraction(JSON.stringify({
     profile: 'planium',
     fields: {
@@ -63,6 +63,34 @@ test('não mantém dados empresariais em contratos pessoa física de outros perf
 
   assert.deepEqual(extraction.fields, { modalidade: 'Pessoa física' });
   assert.deepEqual(extraction.fieldSources, {});
+  assert.equal(extraction.warnings.length, 1);
+});
+
+test('normaliza o plano Qualicorp marcado e a acomodação coletiva', () => {
+  const extraction = parseContractDocumentExtraction(JSON.stringify({
+    profile: 'qualicorp',
+    fields: {
+      modalidade: 'Coletivo por adesão',
+      operadora: 'Assim Saúde',
+      produto_plano: 'A40 QC ADESÃO COM COPART PARCIAL',
+      acomodacao: 'Coletiva',
+      cnpj: '00.000.000/0001-00',
+      razao_social: 'Qualicorp Administradora de Benefícios',
+    },
+    field_sources: {
+      produto_plano: 'Página 3 da proposta',
+      acomodacao: 'Página 3 da proposta',
+      cnpj: 'Página 1 da proposta',
+    },
+  }));
+
+  assert.deepEqual(extraction.fields, {
+    modalidade: 'Adesão',
+    operadora: 'Assim Saúde',
+    produto_plano: 'A40 QC ADESÃO COM COPART PARCIAL',
+    acomodacao: 'Enfermaria',
+  });
+  assert.equal(extraction.fieldSources.cnpj, undefined);
   assert.equal(extraction.warnings.length, 1);
 });
 

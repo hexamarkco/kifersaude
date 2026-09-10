@@ -648,14 +648,15 @@ export default function ContractsManager({
 
                   return (
                     <TableRow key={contract.id} className="align-middle">
-                    <TableCell>
+                    <TableCell className="overflow-hidden">
                       <button
                         type="button"
                         onClick={() => setSelectedContract(contract)}
-                        className="block max-w-64 text-left transition-colors hover:text-[var(--brand-primary)]"
+                        className="block w-full min-w-0 overflow-hidden text-left transition-colors hover:text-[var(--brand-primary)]"
+                        title={getContractDisplayName(contract)}
                       >
-                        <span className="block truncate font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
-                        <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
+                        <span className="block max-w-full truncate font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
+                        <span className="mt-1 block max-w-full truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
                       </button>
                     </TableCell>
                     <TableCell>

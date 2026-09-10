@@ -524,11 +524,10 @@
 }
 
 .kds-op-pagination {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: max-content minmax(15rem, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   padding: 0.75rem 1rem;
@@ -543,17 +542,21 @@
 }
 
 .kds-op-pagination-summary {
-  flex: 1 1 auto;
+  justify-self: start;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .kds-op-pagination-controls {
-  flex: 0 0 auto;
-  gap: 0.375rem;
+  display: grid;
+  width: 100%;
+  grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .kds-op-pagination-pages {
+  justify-content: center;
   gap: 0.375rem;
 }
 
@@ -594,13 +597,29 @@
   padding: 0;
 }
 
-@media (min-width: 1024px) {
-  .kds-op-pagination-controls {
+@media (max-width: 767px) {
+  .kds-op-pagination {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0.625rem;
+  }
+
+  .kds-op-pagination-summary {
     justify-content: center;
+    justify-self: stretch;
+    gap: 0.25rem;
+  }
+
+  .kds-op-pagination-controls {
+    min-width: 0;
   }
 
   .kds-op-pagination-pages {
-    justify-content: center;
+    gap: 0.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kds-op-pagination-pages {
     gap: 0.5rem;
   }
 }

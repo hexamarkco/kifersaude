@@ -890,8 +890,10 @@
 
 .kds-op-page-button:hover:not(:disabled),
 .kds-op-page-button.is-active {
-  border-color: var(--text-primary);
-  background: var(--text-primary);
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
 }
 
 .kds-kanban-board,

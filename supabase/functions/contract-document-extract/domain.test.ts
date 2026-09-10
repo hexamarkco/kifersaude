@@ -59,5 +59,5 @@ test('normaliza o padrão MedSênior e não usa dados da operadora como dados do
   assert.equal(extraction.fields.nome_fantasia, undefined);
   assert.equal(extraction.fields.endereco_empresa, undefined);
   assert.equal(extraction.fieldSources.cnpj, undefined);
-  assert.equal(extraction.warnings).toHaveLength(1);
+  assert.equal(extraction.warnings.length, 1);
 });

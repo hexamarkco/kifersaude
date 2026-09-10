@@ -36,6 +36,16 @@ const normalizeForMatching = (value: string): string => value
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase();
 
+const countCommercialQuestions = (normalizedValue: string): number => {
+  // "Tudo bem?" is a courtesy greeting, not a second commercial decision.
+  // Remove at most one occurrence so repeated social questions remain invalid.
+  const withoutCourtesyGreeting = normalizedValue.replace(/\btudo bem\s*\?/, '');
+  return (withoutCourtesyGreeting.match(/\?/g) ?? []).length;
+};
+
+const COURTESY_GREETING_PATTERN = /\btudo bem\s*\?/;
+const OPENING_GREETING_PATTERN = /^(?:oi|ola|bom dia|boa tarde|boa noite)\b/;
+
 const isValidIsoDate = (value: string): boolean => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T12:00:00Z`);
@@ -227,6 +237,34 @@ export const validateFollowUpBusinessOutput = (
   const hasCommercialAnchor = COMMERCIAL_ANCHOR_PATTERNS.some((pattern) => pattern.test(normalized));
   const hasSpecificAdvance = SPECIFIC_ADVANCE_PATTERNS.some((pattern) => pattern.test(normalized));
   const hasSellerAction = SELLER_ACTION_PATTERNS.some((pattern) => pattern.test(normalized));
+  const hasGreeting = COURTESY_GREETING_PATTERN.test(normalized) || OPENING_GREETING_PATTERN.test(normalized);
+
+  if (hasGreeting) {
+    const blocks = parsed.text.split(/\r?\n---\r?\n/);
+    const greetingBlock = normalizeForMatching(blocks[0] ?? '');
+    const remainingBlocks = normalizeForMatching(blocks.slice(1).join('\n'));
+    const greetingIsInFirstBlock = COURTESY_GREETING_PATTERN.test(greetingBlock)
+      || OPENING_GREETING_PATTERN.test(greetingBlock);
+    const greetingLeaksIntoCommercialBlock = COURTESY_GREETING_PATTERN.test(remainingBlocks)
+      || OPENING_GREETING_PATTERN.test(remainingBlocks);
+    const greetingBlockHasCommercialContent = COMMERCIAL_ANCHOR_PATTERNS.some((pattern) => pattern.test(greetingBlock))
+      || SPECIFIC_ADVANCE_PATTERNS.some((pattern) => pattern.test(greetingBlock))
+      || SELLER_ACTION_PATTERNS.some((pattern) => pattern.test(greetingBlock));
+
+    if (
+      blocks.length < 2
+      || !greetingIsInFirstBlock
+      || greetingLeaksIntoCommercialBlock
+      || greetingBlockHasCommercialContent
+      || countCommercialQuestions(greetingBlock) > 0
+    ) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: 'A saudação deve ocupar sozinha o primeiro bloco e ser seguida por uma linha contendo exatamente --- antes da mensagem comercial.',
+      };
+    }
+  }
 
   if (/\bprefere (?:receber )?(?:mensagem|ligacao|telefone|whatsapp) ou (?:mensagem|ligacao|telefone|whatsapp)\b/.test(normalized)) {
     return {
@@ -236,7 +274,7 @@ export const validateFollowUpBusinessOutput = (
     };
   }
 
-  if ((parsed.text.match(/\?/g) ?? []).length > 1) {
+  if (countCommercialQuestions(normalized) > 1) {
     return {
       valid: false,
       stopReason: 'invalid_output',

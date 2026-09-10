@@ -82,6 +82,30 @@ describe('deterministic commercial guardrail', () => {
     expect(validateFollowUpBusinessOutput(value, evidence)).toEqual({ valid: true });
   });
 
+  it('allows a standalone Tudo bem? greeting before one commercial question', () => {
+    const value = 'Boa tarde, Brenda! Tudo bem?\n---\nPara você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?';
+    expect(validateFollowUpBusinessOutput(value, evidence)).toEqual({ valid: true });
+  });
+
+  it.each([
+    'Boa tarde, Brenda! Tudo bem? Para você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?',
+    'Boa tarde, Brenda! Tudo bem?\n\nPara você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?',
+    'Boa tarde, Brenda! Separei a cotação da Amil.\n---\nPara você pesa mais a rede ou o valor?',
+  ])('rejects a greeting that is not isolated in its own block: %s', (value) => {
+    expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({
+      valid: false,
+      stopReason: 'invalid_output',
+    });
+  });
+
+  it('still rejects two commercial questions even when a Tudo bem? greeting is present', () => {
+    const value = 'Tudo bem?\n---\nVocê prefere Amil ou Leve? E apartamento ou enfermaria?';
+    expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({
+      valid: false,
+      stopReason: 'invalid_output',
+    });
+  });
+
   it.each([
     'Oi, tudo bem?',
     'Passei para saber como você e sua família estão.',

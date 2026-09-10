@@ -57,6 +57,10 @@ describe('follow-up generation prompt', () => {
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/ponte humana/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/preciso alinhar este ponto/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/frase declarativa curta e completa/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/Não confunda objetividade com frieza/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/não soa como formulário/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/frases intercambiáveis/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/use por padrão uma saudação natural com “Tudo bem\?”/iu);
     expect(FOLLOW_UP_RUNTIME_GUARDRAILS).toMatch(/passagem do tempo, sozinha/iu);
     expect(FOLLOW_UP_RUNTIME_GUARDRAILS).toMatch(/sem reagendamento automático/iu);
   });
@@ -187,6 +191,9 @@ describe('AI commercial validator contract', () => {
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/linguagem burocrática/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/oração subordinada ao CTA/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/não haverá novo follow-up automático/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/equilibra avanço comercial e vínculo/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/comercialmente correta, porém gelada/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/intermediário a adivinhar/iu);
   });
 });
 

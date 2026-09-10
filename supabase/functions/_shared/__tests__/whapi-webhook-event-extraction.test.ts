@@ -7,6 +7,7 @@ import {
   extractWhapiInteractiveMeta,
   extractWhapiReactionEvent,
   extractWhapiStarEvent,
+  isWhapiTechnicalPlaceholderMessage,
   summarizeWhapiMessage,
 } from '../comm-whatsapp';
 
@@ -214,6 +215,29 @@ test('summarizeWhapiMessage descreve uma acao de exclusao quando nao ha texto', 
 test('summarizeWhapiMessage cai no rotulo generico para payload que nao e um record', () => {
   assert.equal(summarizeWhapiMessage(null), '[Mensagem]');
   assert.equal(summarizeWhapiMessage('texto solto'), '[Mensagem]');
+});
+
+test('identifica evento tecnico system/unknown sem conteudo para nao acionar atendimento', () => {
+  const message = {
+    id: 'whapi-system-event-1',
+    from_me: false,
+    type: 'unknown',
+    source: 'system',
+    chat_id: '5511999999999@s.whatsapp.net',
+  };
+
+  assert.equal(isWhapiTechnicalPlaceholderMessage(message, summarizeWhapiMessage(message)), true);
+});
+
+test('nao confunde midia ou acoes de sistema com o placeholder tecnico', () => {
+  assert.equal(
+    isWhapiTechnicalPlaceholderMessage({ type: 'image', source: 'system' }, '[Imagem]'),
+    false,
+  );
+  assert.equal(
+    isWhapiTechnicalPlaceholderMessage({ type: 'action', source: 'system' }, '[Reação]'),
+    false,
+  );
 });
 
 // Mensagens interativas (botoes/listas) chegam no formato do WhatsApp Cloud

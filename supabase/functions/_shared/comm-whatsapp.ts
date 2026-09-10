@@ -1176,6 +1176,21 @@ export const summarizeWhapiMessage = (message: unknown): string => {
   }
 };
 
+/**
+ * A Whapi pode publicar registros auxiliares sem qualquer conteudo da
+ * conversa. Eles chegam como `source: system` e `type: unknown`; o resumo
+ * generico existe apenas para auditoria e nao representa uma mensagem do
+ * contato.
+ */
+export const isWhapiTechnicalPlaceholderMessage = (
+  message: Record<string, unknown>,
+  summaryText: string,
+): boolean => (
+  toTrimmedString(message.source).toLowerCase() === 'system'
+  && toTrimmedString(message.type).toLowerCase() === 'unknown'
+  && summaryText.trim() === '[Mensagem]'
+);
+
 const firstNonEmpty = (...candidates: unknown[]) => {
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);

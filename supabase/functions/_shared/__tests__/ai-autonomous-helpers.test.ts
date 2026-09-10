@@ -89,7 +89,12 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pessoa fisica como solucao temporaria/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /carencia para parto a termo e de 10 meses/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /ate 36 semanas e 6 dias/);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /exclusivamente para uma ou mais criancas menores de 12 anos/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nunca apresente a idade de 12 anos como uma regra universal/i);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /o adolescente mais velho pode ser titular e o menor dependente/i);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /não insista para que um adulto que já tem plano entre em uma nova cotação/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /mostre que entendeu a situação concreta/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voce e sempre a Luiza Kifer/i);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nunca diga ou sugira que e IA/i);
   });
 });
 
@@ -213,6 +218,49 @@ describe('validateAutonomousReplyOutput', () => {
       false,
     );
     assert.equal(validateAutonomousReplyOutput('Em qual cidade vocês vão utilizar o plano?', history).valid, true);
+  });
+
+  test('rejeita exigir adulto como regra universal para cotacao apenas infantil', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Quero um plano para meus netos de 8 e 13 anos. Eu e a mãe deles já temos plano.' },
+    ];
+
+    const result = validateAutonomousReplyOutput(
+      'Para o neto de 8 anos, é necessário um adulto titular entrar no plano.',
+      history,
+    );
+    assert.equal(result.valid, false);
+    assert.match(result.message ?? '', /elegibilidade varia por operadora/i);
+  });
+
+  test('aceita conduzir com acolhimento e elegibilidade condicionada à operadora', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Quero um plano para meus netos de 8 e 13 anos. Eu e a mãe deles já temos plano.' },
+    ];
+
+    assert.equal(
+      validateAutonomousReplyOutput(
+        'Entendo. Como vocês adultas já têm plano, a composição para os dois depende da operadora. Vou verificar a alternativa adequada e já te retorno. [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]',
+        history,
+      ).valid,
+      true,
+    );
+  });
+
+  test('rejeita expor IA ou direcionar o lead para outra pessoa', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Quero cotar um plano para meus netos.' },
+    ];
+
+    for (const candidate of [
+      'Sou uma assistente virtual e vou analisar isso.',
+      'Vou pedir para o time verificar e já te retorno.',
+      'Uma especialista vai conferir essa possibilidade.',
+    ]) {
+      const result = validateAutonomousReplyOutput(candidate, history);
+      assert.equal(result.valid, false, candidate);
+      assert.match(result.message ?? '', /conversa sempre com a Luiza/i);
+    }
   });
 
   test('rejeita repetir o mesmo marcador das respostas recentes', () => {

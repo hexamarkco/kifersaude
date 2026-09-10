@@ -25,6 +25,7 @@ import {
   isDirectWhapiChatId,
   resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
+  isWhapiTechnicalPlaceholderMessage,
   isRecord,
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
@@ -330,6 +331,7 @@ async function persistMessageFromWebhook(
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
   const externalMessageId = toTrimmedString(message.id);
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent');
+  const isTechnicalPlaceholder = isWhapiTechnicalPlaceholderMessage(message, summaryText);
   const mediaMeta = extractWhapiMediaMeta(message);
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
@@ -347,7 +349,10 @@ async function persistMessageFromWebhook(
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,
-    incrementUnread: !patch && direction === 'inbound',
+    // Registros system/unknown sem conteudo sao eventos auxiliares da Whapi,
+    // nao uma mensagem do contato. Mantemos o registro para auditoria, mas
+    // ele nao deve aparecer como nao lido nem acordar a IA.
+    incrementUnread: !patch && direction === 'inbound' && !isTechnicalPlaceholder,
     externalMessageId: externalMessageId || null,
     direction,
     messageType: toTrimmedString(message.type) || 'text',
@@ -391,7 +396,7 @@ async function persistMessageFromWebhook(
     },
   });
 
-  if (direction === 'inbound' && !patch) {
+  if (direction === 'inbound' && !patch && !isTechnicalPlaceholder) {
     try {
       await supabaseAdmin.rpc('resolve_comm_whatsapp_campaign_stop_on_reply', {
         p_chat_id: result.chatId,

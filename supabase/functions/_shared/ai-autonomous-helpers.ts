@@ -25,18 +25,19 @@ export const OPENING_MESSAGE_SPLIT_REGEX = /\n?-{3,}\n?/;
 // painel de configuracoes.
 export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   '--- REGRAS CRITICAS DE CONVERSA NATURAL E QUALIFICACAO ---',
+  'IDENTIDADE: neste WhatsApp, voce e sempre a Luiza Kifer e fala em primeira pessoa. Nunca diga ou sugira que e IA, assistente virtual, chatbot, bot ou automacao. Tambem nao diga que vai pedir para o time, equipe, outra pessoa ou especialista responder. Quando houver uma conferência interna ou handoff, mantenha a conversa na voz da Luiza: por exemplo, "vou verificar esse detalhe e ja te retorno". A tag de handoff e apenas interna e nunca pode aparecer ou ser explicada ao lead.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
   'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
   'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
   'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
   'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
   'Se perguntarem especificamente sobre parto prematuro, explique que ate 36 semanas e 6 dias ele nao e parto a termo e fica fora da carencia de 10 meses do parto a termo, sendo tratado pelas regras de urgencia/emergencia apos 24 horas. Nao prometa cobertura irrestrita: ressalve a segmentacao/cobertura hospitalar contratada e as regras assistenciais aplicaveis.',
-  'CRIANCA MENOR DE 12 ANOS: so explique a necessidade de adulto titular quando a cotacao pedida for exclusivamente para uma ou mais criancas menores de 12 anos e ainda nao houver adulto beneficiario confirmado. Se um adulto ja estiver incluido na cotacao, a composicao titular/dependente e natural e nao precisa ser explicada nem gerar alerta; continue a qualificacao sem discurso sobre dependencia ou mensalidade, salvo se o lead perguntar.',
+  'CRIANÇAS E ADOLESCENTES: nunca apresente a idade de 12 anos como uma regra universal. Quando a cotação for apenas para crianças/adolescentes e não houver adulto beneficiário confirmado, explique com cuidado que o enquadramento depende da operadora: em algumas situações o adolescente mais velho pode ser titular e o menor dependente; em outras, cada um precisa de contrato individual ou um adulto precisa compor o plano. Não invente qual alternativa vale para aquele caso, não insista para que um adulto que já tem plano entre em uma nova cotação e não transforme essa incerteza em interrogatório. Acolha o contexto, diga em primeira pessoa que voce vai verificar a alternativa adequada e inclua [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]] depois de uma mensagem visível curta e pessoal. Se o lead estiver pedindo inclusão em um plano existente, mantenha o direcionamento para RH ou administradora; só trate cotação nova se ele a pedir de forma explícita.',
   'Quando uma resposta curta admitir uma interpretacao muito provavel, nao reinicie a coleta como formulario e nao assuma silenciosamente. Faca uma confirmacao fechada e facil. Exemplo: voce perguntou as idades de um casal e recebeu apenas "56"; a melhor resposta e "So para confirmar: voces dois tem 56 anos?", e nao "Qual a idade do seu marido?".',
   'A abordagem inicial ja apresentou a Luiza. Na primeira resposta do lead, nao se apresente de novo e nao force frases como "prazer em falar com voce" ou "que bom falar com voce". Acolha o conteudo real e avance naturalmente.',
   'Nao transforme cada turno em "marcador + pergunta". Varie a estrutura: as vezes va direto a pergunta, as vezes faca uma confirmacao breve, e use o primeiro nome apenas ocasionalmente quando trouxer proximidade real. Nao use o nome em mensagens consecutivas.',
   'Nao comece com o mesmo marcador usado nas tres respostas anteriores (por exemplo: Certo, Perfeito, Entendi, Otimo, Beleza ou Maravilha). Evite especialmente sequencias de "Certo!".',
-  'Responda sempre a pergunta, duvida, objecao ou contexto humano trazido pelo lead antes de fazer a proxima pergunta de qualificacao. Empatia deve ser especifica ao que foi dito, curta e sincera.',
+  'Responda sempre a pergunta, duvida, objecao ou contexto humano trazido pelo lead antes de fazer a proxima pergunta de qualificacao. Empatia deve ser especifica ao que foi dito, curta e sincera: mostre que entendeu a situação concreta antes de orientar ou perguntar. Evite respostas frias que só repetem uma regra; fale como alguém que quer destravar a situação junto com a pessoa, sem intimidade artificial ou excesso de entusiasmo.',
   'Preserve informacoes ja dadas e promessas ja feitas. Uma pergunta de confirmacao so e apropriada quando existe ambiguidade real e deve apresentar a hipotese mais provavel para exigir o minimo de esforco do lead.',
 ].join('\n');
 
@@ -255,6 +256,11 @@ const URGENT_COVERAGE_REGEX = /\b(urgencia|emergencia)\b/;
 const TWENTY_FOUR_HOURS_REGEX = /\b24\s*horas?\b/;
 const DEPENDENCY_EXPLANATION_REGEX = /\b(titular|dependente|mensalidade)\b/;
 const CHILD_COMPOSITION_QUESTION_REGEX = /\b(titular|dependente|mensalidade|entra\s+no\s+plano|pode\s+entrar)\b/;
+const CHILD_BENEFICIARY_CONTEXT_REGEX = /\b(filh[oa]s?|net[oa]s?|crianc[ae]s?|menor(?:es)?)\b/;
+const UNCONDITIONAL_ADULT_REQUIREMENT_REGEX = /(?:\b(?:precisa|necessita|tem\s+que|e\s+necessario)\b[^.!?]{0,80}\badulto\b[^.!?]{0,80}\b(?:titular|entrar|plano)\b|\badulto\b[^.!?]{0,80}\b(?:precisa|necessita|tem\s+que|e\s+necessario)\b)/;
+const OPERATOR_ELIGIBILITY_QUALIFIER_REGEX = /\b(depende|varia|algumas\s+operadoras|conforme\s+a\s+operadora|precisa\s+confirmar)\b/;
+const IDENTITY_DISCLOSURE_REGEX = /\b(?:inteligencia\s+artificial|assistente\s+virtual|chatbot|\bbot\b|automacao)\b/;
+const THIRD_PARTY_HANDOFF_REGEX = /\b(?:vou\s+(?:pedir|encaminhar|passar|transferir)[^.!?]{0,80}\b(?:time|equipe|outra\s+pessoa|especialista)|(?:time|equipe|outra\s+pessoa|especialista)[^.!?]{0,80}\b(?:vai|ira|pode)\b)\b/;
 const ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX = /\bvoce\s+(?:tem|possui|teria)\b/;
 const GROUP_BUSINESS_ID_SCOPE_REGEX = /\b(alguem\s+que\s+(?:vai|ira)\s+entrar|alguem\s+d[oa]\s+cotacao|algum(?:a)?\s+d[oa]s?\s+(?:beneficiari|pessoa)|voces|voce\s+ou)\b/;
 const MULTIPLE_BENEFICIARIES_REGEX = /(?:\beu\s+e\s+(?:meu|minha)\b|\b(?:para|pro|pra)\s+mim\s+e\b|\bpara\s+(?:nos|a\s+gente)\s+dois\b|\bsomos\s+[2-9]\b|\b(?:duas|dois|tres|quatro|[2-9])\s+(?:vidas|pessoas|beneficiarios)\b|\bcasal\b|\bminha\s+familia\b)/;
@@ -291,6 +297,15 @@ export const validateAutonomousReplyOutput = (
   const visibleCandidate = extractHandoff(trimmed).text;
   if (!visibleCandidate) return { valid: true };
 
+  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+  if (IDENTITY_DISCLOSURE_REGEX.test(normalizedCandidate) || THIRD_PARTY_HANDOFF_REGEX.test(normalizedCandidate)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: 'O lead conversa sempre com a Luiza. Nao mencione IA, automacao, time, equipe ou outra pessoa; conduza em primeira pessoa como Luiza.',
+    };
+  }
+
   const candidateOpener = getReplyOpener(visibleCandidate);
   if (candidateOpener) {
     const recentAiOpeners = history
@@ -310,7 +325,6 @@ export const validateAutonomousReplyOutput = (
   const latestLead = [...history].reverse().find((row) => row.role === 'lead');
   const normalizedPreviousAi = normalizeForSemanticMatch(previousAi?.content ?? '');
   const normalizedLatestLead = normalizeForSemanticMatch(latestLead?.content ?? '');
-  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
   const bareAge = normalizedLatestLead.match(BARE_AGE_REGEX)?.[1];
   if (bareAge && GROUP_AGE_QUESTION_REGEX.test(normalizedPreviousAi)) {
     const confirmsLikelyGroupAge = normalizedCandidate.includes(bareAge)
@@ -357,6 +371,22 @@ export const validateAutonomousReplyOutput = (
   const leadHistoryText = normalizeForSemanticMatch(
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
+  const agesInLeadHistory = [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)]
+    .map((match) => Number(match[1]));
+  const isChildOnlyQuoteWithoutKnownAdult = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
+    && agesInLeadHistory.some((age) => age < 12)
+    && !agesInLeadHistory.some((age) => age >= 18);
+  if (
+    isChildOnlyQuoteWithoutKnownAdult
+    && UNCONDITIONAL_ADULT_REQUIREMENT_REGEX.test(normalizedCandidate)
+    && !OPERATOR_ELIGIBILITY_QUALIFIER_REGEX.test(normalizedCandidate)
+  ) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: 'A cotacao e apenas para criancas/adolescentes sem adulto beneficiario confirmado. Nao afirme que um adulto precisa entrar como regra universal: reconheca que a elegibilidade varia por operadora e encaminhe para confirmacao humana, sem insistir.',
+    };
+  }
   if (PREGNANCY_CONTEXT_REGEX.test(leadHistoryText) && MATERNITY_QUESTION_REGEX.test(normalizedLatestLead)) {
     const explainsTermBirthWait = TERM_BIRTH_WAIT_REGEX.test(normalizedCandidate);
     const treatsWaitAsUncertain = /(?:depende\s+d[ae]\s+operadora|precisa\s+ser\s+verificad|carencias?\s+aplicaveis|aproveitamento.*plano\s+anterior)/.test(normalizedCandidate);

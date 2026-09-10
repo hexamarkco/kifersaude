@@ -30,8 +30,8 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Deduplicação e `message_at > archived_at` protegem contra ecos. Mensagem inbound ou outbound nova desarquiva o chat, salvo regra de silenciamento; soft-delete reabre com inbound real posterior.
 - Mídias históricas ficam em Storage (`comm-whatsapp-media`), não dependem de URL/MediaID temporário da Whapi.
 - Status outbound continua sendo consultado de `delivered` até `read`; webhook ausente usa `GET /statuses/{MessageID}`.
-- Follow-up normal usa somente `followup.generate`; há no máximo um retry técnico, sempre no mesmo modelo resolvido para não degradar silenciosamente a inteligência configurada. `followup.refine` é manual e a recuperação tardia usa `comm_follow_up_audit_log` para evitar chamada duplicada.
-- A mensagem de follow-up retoma o último fio comercial não resolvido, preservando decisor, objeção, compromisso e microdecisão; sugestões são curtas e fazem uma pergunta por vez. Quando não existe contato comercialmente útil e apropriado naquele momento, a mesma chamada retorna uma decisão interna de espera e não fabrica uma mensagem social ou uma cobrança genérica.
+- Follow-up normal usa duas etapas na mesma Feature `followup.generate`: a primeira gera o rascunho e a segunda IA faz revisão semântica com o histórico completo, podendo aprovar, reescrever ou recomendar espera. Cada etapa admite no máximo um retry de contrato técnico e mantém o mesmo modelo resolvido. `followup.refine` é manual e a recuperação tardia usa `comm_follow_up_audit_log` para evitar chamada duplicada.
+- A mensagem de follow-up retoma o último fio comercial não resolvido, preservando decisor, objeção, compromisso e uma microdecisão atômica. Julgamentos como genericidade, repetição, pressão, coerência de estágio e avanço comercial pertencem à revisão por IA; validações determinísticas cuidam apenas de transporte, segurança da saída e formatação. Quando não existe contato comercialmente útil e apropriado naquele momento, a revisão retorna uma decisão interna de espera.
 
 ## Atendimento autônomo e IA
 

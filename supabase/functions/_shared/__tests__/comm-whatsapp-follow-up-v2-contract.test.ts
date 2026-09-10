@@ -20,32 +20,38 @@ const reasoningBudgetMigrationSource = readFileSync(
   'utf8',
 );
 
-test('pipeline normal usa uma única Feature e não chama analysis', () => {
-  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP'));
-  assert.equal((normalPipeline.match(/generateTextForFeature\(\{/g) ?? []).length, 1);
+test('pipeline normal usa geração e validação por IA na mesma Feature', () => {
+  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// TWO-STAGE FOLLOW-UP'));
+  assert.equal((normalPipeline.match(/generateTextForFeature\(\{/g) ?? []).length, 2);
   assert.match(normalPipeline, /featureKey: AI_FEATURES\.FOLLOWUP_GENERATE/);
+  assert.match(normalPipeline, /FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT/);
   assert.doesNotMatch(normalPipeline, /FOLLOWUP_ANALYSIS|followup\.analysis|buildAnalysisUserPrompt/);
 });
 
-test('pipeline limita o provider a uma chamada normal e um retry técnico', () => {
+test('cada etapa limita provider e mantém retry apenas para contrato técnico', () => {
   assert.match(edgeSource, /maxAttempts: 2/);
   assert.match(edgeSource, /maxProviderRequestsPerAttempt: 1/);
   assert.match(edgeSource, /retrySameResolvedModel: true/);
-  assert.match(edgeSource, /validateOutput: \(text\) => validateFollowUpBusinessOutput/);
-  assert.match(edgeSource, /buildValidationRetryInstruction: buildFollowUpValidationRetryInstruction/);
+  assert.match(edgeSource, /validateOutput: validateFollowUpStructuralOutput/);
+  assert.match(edgeSource, /validateOutput: validateFollowUpAiValidationOutput/);
+  assert.match(edgeSource, /buildValidationRetryInstruction: buildFollowUpStructuralRetryInstruction/);
+  assert.match(edgeSource, /buildValidationRetryInstruction: buildFollowUpAiValidationRetryInstruction/);
 });
 
-test('não há validator por IA, regeneration por qualidade ou JSON comercial no caminho normal', () => {
-  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP'));
-  assert.doesNotMatch(normalPipeline, /validateCommercialMessage|formatValidationFeedback/);
-  assert.doesNotMatch(normalPipeline, /parseFollowUpGenerationResult|validationFeedback/);
+test('julgamento comercial é feito pela IA e não por padrões semânticos locais', () => {
+  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// TWO-STAGE FOLLOW-UP'));
+  assert.match(normalPipeline, /parseFollowUpAiValidationOutput/);
+  assert.match(normalPipeline, /aiValidation\.decision === 'rewrite'/);
+  assert.match(normalPipeline, /aiValidation\.decision === 'approve'/);
+  assert.doesNotMatch(normalPipeline, /validateCommercialMessage|validateFollowUpBusinessOutput/);
   assert.doesNotMatch(normalPipeline, /upsert_commercial_state/);
   assert.match(normalPipeline, /v3_analysis: null/);
   assert.match(normalPipeline, /v3_strategy: null/);
+  assert.match(normalPipeline, /validator: 'ai'/);
 });
 
 test('pipeline pode aguardar sem gerar contato social e reserva orçamento para raciocínio', () => {
-  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP'));
+  const normalPipeline = edgeSource.slice(edgeSource.indexOf('// TWO-STAGE FOLLOW-UP'));
   assert.match(normalPipeline, /FOLLOW_UP_RUNTIME_GUARDRAILS/);
   assert.match(normalPipeline, /parseFollowUpOutput/);
   assert.match(normalPipeline, /currentAction: waitAiContext \? 'wait' : 'send'/);
@@ -78,7 +84,7 @@ test('UI não oferece geração automática de múltiplas versões', () => {
 
 test('followup.refine continua manual e em uma única chamada própria', () => {
   const refinementStart = edgeSource.indexOf('// REFINEMENT MODE');
-  const normalStart = edgeSource.indexOf('// SINGLE-CALL FOLLOW-UP');
+  const normalStart = edgeSource.indexOf('// TWO-STAGE FOLLOW-UP');
   const refinementPipeline = edgeSource.slice(refinementStart, normalStart);
 
   assert.equal((refinementPipeline.match(/generateTextForFeature\(\{/g) ?? []).length, 1);

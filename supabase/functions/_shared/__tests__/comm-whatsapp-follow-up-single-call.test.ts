@@ -7,11 +7,17 @@ import {
 } from '../comm-whatsapp-follow-up-generate-prompt.ts';
 import {
   parseFollowUpOutput,
-  validateFollowUpBusinessOutput,
+  validateFollowUpStructuralOutput,
   validateFollowUpTechnicalOutput,
 } from '../comm-whatsapp-follow-up-output.ts';
+import {
+  buildFollowUpAiValidationUserPrompt,
+  FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT,
+  parseFollowUpAiValidationOutput,
+  validateFollowUpAiValidationOutput,
+} from '../comm-whatsapp-follow-up-ai-validator.ts';
 
-describe('single-call follow-up prompt', () => {
+describe('follow-up generation prompt', () => {
   it('passes the five direct context blocks without analysis or strategy JSON', () => {
     const prompt = buildFollowUpGenerateUserPrompt({
       transcript: 'Cliente: vou falar com meu marido.',
@@ -66,59 +72,25 @@ describe('deterministic technical validation', () => {
   });
 });
 
-describe('deterministic commercial guardrail', () => {
-  const evidence = 'Foram apresentadas Amil e Leve. O cliente prioriza o Hospital X e falou com a esposa.';
-
+describe('deterministic structural validation', () => {
   it.each([
-    'Entre a Amil e a Leve, qual ficou mais próxima do que você procura?',
-    'Para você pesa mais manter o Hospital X ou reduzir o valor mensal?',
-    'Se eu conseguir manter esse hospital perto do seu orçamento, faz sentido iniciar a proposta?',
-    'Conseguiu falar com sua esposa sobre manter a Unimed?',
-    'Vou confirmar a rede desse hospital e volto com a opção correta.',
-    'Quer que eu ajuste a cotação para uma faixa mais enxuta?',
-    'Você prefere pausar essa cotação por enquanto ou buscar uma opção mais enxuta?',
-    'O que falta para decidirmos entre a Amil e a Leve?',
-  ])('accepts a contextual choice or concrete commercial action: %s', (value) => {
-    expect(validateFollowUpBusinessOutput(value, evidence)).toEqual({ valid: true });
+    'Conseguiu analisar as opções?',
+    'A condição especial acaba hoje. Entre Amil e Leve, qual você prefere?',
+    'Você quer que eu descarte a opção atual e procure somente uma alternativa nova?',
+  ])('does not hardcode commercial judgment: %s', (value) => {
+    expect(validateFollowUpStructuralOutput(value)).toEqual({ valid: true });
   });
 
-  it('allows a standalone Tudo bem? greeting before one commercial question', () => {
+  it('allows a standalone Tudo bem? greeting before commercial content', () => {
     const value = 'Boa tarde, Brenda! Tudo bem?\n---\nPara você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?';
-    expect(validateFollowUpBusinessOutput(value, evidence)).toEqual({ valid: true });
+    expect(validateFollowUpStructuralOutput(value)).toEqual({ valid: true });
   });
 
   it.each([
     'Boa tarde, Brenda! Tudo bem? Para você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?',
     'Boa tarde, Brenda! Tudo bem?\n\nPara você pesa mais a economia da Porto ou ter o Hospital Serrano na Amil?',
-    'Boa tarde, Brenda! Separei a cotação da Amil.\n---\nPara você pesa mais a rede ou o valor?',
-  ])('rejects a greeting that is not isolated in its own block: %s', (value) => {
-    expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({
-      valid: false,
-      stopReason: 'invalid_output',
-    });
-  });
-
-  it('still rejects two commercial questions even when a Tudo bem? greeting is present', () => {
-    const value = 'Tudo bem?\n---\nVocê prefere Amil ou Leve? E apartamento ou enfermaria?';
-    expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({
-      valid: false,
-      stopReason: 'invalid_output',
-    });
-  });
-
-  it.each([
-    'Oi, tudo bem?',
-    'Passei para saber como você e sua família estão.',
-    'Conseguiu analisar as opções?',
-    'Ficou com alguma dúvida?',
-    'O que falta para decidirmos?',
-    'Só passando para saber se você viu minha mensagem.',
-    'Quando fizer sentido, pode me chamar. Estou por aqui.',
-    'Posso deixar essa análise pausada por enquanto?',
-    'Vou deixar a cotação pausada. Quando quiser retomar, pode me chamar.',
-    'Você prefere mensagem ou ligação?',
-  ])('rejects generic or socially empty messages: %s', (value) => {
-    expect(validateFollowUpBusinessOutput(value, evidence)).toMatchObject({
+  ])('rejects a greeting without the required separator: %s', (value) => {
+    expect(validateFollowUpStructuralOutput(value)).toMatchObject({
       valid: false,
       stopReason: 'invalid_output',
     });
@@ -135,15 +107,61 @@ describe('deterministic commercial guardrail', () => {
       reasonCode: 'future_date',
       suggestedDate: '2026-10-15',
     });
-    expect(validateFollowUpBusinessOutput('[[WAIT:recent_contact]]')).toEqual({ valid: true });
-    expect(validateFollowUpBusinessOutput('[[WAIT:future_date]]')).toMatchObject({ valid: false });
-    expect(validateFollowUpBusinessOutput('[[WAIT:future_date:2026-02-31]]')).toMatchObject({ valid: false });
-    expect(validateFollowUpBusinessOutput('[[WAIT:unknown]]')).toMatchObject({ valid: false });
+    expect(validateFollowUpStructuralOutput('[[WAIT:recent_contact]]')).toEqual({ valid: true });
+    expect(validateFollowUpStructuralOutput('[[WAIT:future_date]]')).toMatchObject({ valid: false });
+    expect(validateFollowUpStructuralOutput('[[WAIT:future_date:2026-02-31]]')).toMatchObject({ valid: false });
+    expect(validateFollowUpStructuralOutput('[[WAIT:unknown]]')).toMatchObject({ valid: false });
+  });
+});
+
+describe('AI commercial validator contract', () => {
+  const candidate = 'Boa tarde, Joana! Tudo bem?\n---\nQual limite mensal faz sentido para a opção individual em apartamento?';
+
+  it('accepts approve, rewrite and wait decisions with valid contracts', () => {
+    expect(parseFollowUpAiValidationOutput(JSON.stringify({
+      decision: 'approve',
+      reason: 'Uma única microdecisão contextual.',
+      text: null,
+      waitSignal: null,
+    }))).toMatchObject({ decision: 'approve' });
+
+    expect(parseFollowUpAiValidationOutput(JSON.stringify({
+      decision: 'rewrite',
+      reason: 'A candidata reunia duas decisões.',
+      text: candidate,
+      waitSignal: null,
+    }))).toMatchObject({ decision: 'rewrite', text: candidate });
+
+    expect(parseFollowUpAiValidationOutput(JSON.stringify({
+      decision: 'wait',
+      reason: 'Contato recente sem fato novo.',
+      text: null,
+      waitSignal: '[[WAIT:recent_contact]]',
+    }))).toMatchObject({ decision: 'wait', waitSignal: '[[WAIT:recent_contact]]' });
   });
 
-  it('blocks artificial urgency unless the same fact exists in the evidence', () => {
-    const message = 'A condição especial acaba hoje. Entre Amil e Leve, qual você prefere?';
-    expect(validateFollowUpBusinessOutput(message, evidence)).toMatchObject({ valid: false });
-    expect(validateFollowUpBusinessOutput(message, `${evidence} A condição especial acaba hoje.`)).toEqual({ valid: true });
+  it('rejects malformed decisions and structurally invalid rewrites', () => {
+    expect(validateFollowUpAiValidationOutput('APROVADO')).toMatchObject({ valid: false });
+    expect(validateFollowUpAiValidationOutput(JSON.stringify({
+      decision: 'rewrite',
+      reason: 'Saudação misturada ao conteúdo.',
+      text: 'Boa tarde, Joana! Tudo bem? Qual opção você prefere?',
+      waitSignal: null,
+    }))).toMatchObject({ valid: false });
+  });
+
+  it('gives the AI the full policy, context and candidate for semantic judgment', () => {
+    const prompt = buildFollowUpAiValidationUserPrompt({
+      policy: 'Uma microdecisão por mensagem.',
+      context: 'Joana prefere apartamento e ainda compara dois caminhos.',
+      candidate,
+    });
+
+    expect(prompt).toContain('REGRAS DA FEATURE');
+    expect(prompt).toContain('CONTEXTO DA NEGOCIAÇÃO');
+    expect(prompt).toContain('MENSAGEM CANDIDATA');
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/avaliação semântica real/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/duas decisões independentes/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/familiares ou terceiros/iu);
   });
 });

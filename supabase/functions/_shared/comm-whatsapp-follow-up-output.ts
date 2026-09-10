@@ -36,13 +36,6 @@ const normalizeForMatching = (value: string): string => value
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase();
 
-const countCommercialQuestions = (normalizedValue: string): number => {
-  // "Tudo bem?" is a courtesy greeting, not a second commercial decision.
-  // Remove at most one occurrence so repeated social questions remain invalid.
-  const withoutCourtesyGreeting = normalizedValue.replace(/\btudo bem\s*\?/, '');
-  return (withoutCourtesyGreeting.match(/\?/g) ?? []).length;
-};
-
 const COURTESY_GREETING_PATTERN = /\btudo bem\s*\?/;
 const OPENING_GREETING_PATTERN = /^(?:oi|ola|bom dia|boa tarde|boa noite)\b/;
 
@@ -149,74 +142,13 @@ export const validateFollowUpTechnicalOutput = (rawValue: string): FollowUpTechn
   return { valid: true };
 };
 
-const GENERIC_CHECK_IN_PATTERNS = [
-  /conseguiu (?:ver|olhar|analisar|avaliar)/,
-  /teve tempo de (?:ver|olhar|analisar|avaliar)/,
-  /(?:ficou|esta|está) com alguma duvida/,
-  /alguma novidade/,
-  /o que (?:voce )?achou/,
-  /ainda (?:tem|teria) interesse/,
-  /gostaria de prosseguir/,
-];
-
-const PASSIVE_HANDOFF_PATTERNS = [
-  /(?:estou|fico|seguimos) (?:aqui |por aqui )?(?:a disposicao|disponivel)/,
-  /\bestou por aqui\b/,
-  /quando (?:fizer sentido|quiser|puder).*(?:me chama|pode me chamar|falamos|retomamos)/,
-  /qualquer (?:coisa|duvida).*(?:me chama|estou por aqui)/,
-  /passando (?:so |apenas )?para (?:saber|lembrar|ver)/,
-  /pode me chamar quando/,
-];
-
-const COMMERCIAL_ANCHOR_PATTERNS = [
-  /\b(?:plano|opcao|alternativa|cotacao|simulacao|operadora|amil|unimed|leve|bradesco|sulamerica|medsenior|hapvida|notredame|rede|cobertura|hospital|acomodacao|enfermaria|apartamento|coparticipacao|carencia|mensalidade|valor|preco|custo|orcamento|limite|teto|proposta|contratacao|contrato|documentacao|documentos|boleto|vigencia|beneficiari[oa]s?|titular|dependente|elegibilidade|entrevista|pagamento|inicio|necessidade)\b/,
-  /\b(?:falar|conversar|decidir|confirmar|alinhar|definir|falou|conversou|decidiu|confirmou|alinhou|definiu)\b.*\b(?:marido|esposa|familia|soci[oa]|rh)\b/,
-  /\b(?:marido|esposa|familia|soci[oa]|rh)\b.*\b(?:falar|conversar|decidir|confirmar|alinhar|definir|falou|conversou|decidiu|confirmou|alinhou|definiu)\b/,
-  /r\$\s*\d/i,
-];
-
-const SPECIFIC_ADVANCE_PATTERNS = [
-  /\b(?:prefere|escolhe|escolheria|ficou mais proxima|ficou mais perto)\b.*\b(?:ou|entre)\b/,
-  /\bentre\b.+\b(?:qual|que|voce prefere|ficou)\b/,
-  /\bpesa mais\b/,
-  /\bprincipal (?:criterio|prioridade|preocupacao|bloqueio)\b/,
-  /\b(?:limite|teto) (?:de )?(?:valor|orcamento|mensalidade)\b/,
-  /\bse eu conseguir\b.+\b(?:faria sentido|podemos|seguimos|resolve)\b/,
-  /\b(?:posso|podemos|vamos) (?:dar entrada|iniciar|montar|emitir|gerar|seguir com|verificar)\b/,
-  /\b(?:posso|podemos) (?:deixar|pausar|encerrar)\b/,
-  /\b(?:incluir|retirar|manter)\b.+\b(?:titular|dependente|beneficiari[oa]|marido|esposa|filh[oa]|mae|pai)\b/,
-  /\b(?:me envie|preciso de|pode enviar|consegue enviar)\b.+\b(?:documento|documentacao|dados)\b/,
-  /\bqual (?:plano|opcao|operadora|hospital|rede|acomodacao|data)\b/,
-  /\bqual (?:das|dentre as) (?:duas|opcoes)\b/,
-  /\b(?:preco|valor|rede|hospital|carencia|acomodacao)\b.+\b(?:ou|versus|x)\b/,
-];
-
-const SELLER_ACTION_PATTERNS = [
-  /\b(?:vou|posso) (?:confirmar|verificar|consultar|atualizar|ajustar|recalcular|enviar|montar)\b/,
-  /\b(?:quer que eu|devo) (?:confirmar|verificar|consultar|atualizar|ajustar|recalcular|enviar|montar)\b/,
-  /\bdeixa eu (?:confirmar|verificar|consultar|atualizar)\b/,
-];
-
-const PAUSE_LANGUAGE_PATTERN = /\b(?:pausar|pausad[ao]s?|deixar\s+[^.?!]{0,80}\s+em\s+pausa)\b/;
-const PAUSE_WITH_COMMERCIAL_ALTERNATIVE_PATTERN = /\bou\b[^.?!]{0,120}\b(?:ajustar|buscar|comparar|confirmar|recalcular|rever|seguir|retomar|trocar|verificar)\b/;
-
-const UNSUPPORTED_URGENCY_PATTERNS = [
-  /\bultima chance\b/,
-  /\bso hoje\b/,
-  /\bapenas hoje\b/,
-  /\bantes que (?:acabe|expire|aumente)\b/,
-  /\bcondicao especial\b/,
-  /\bpreco vai (?:subir|aumentar)\b/,
-];
-
 /**
- * Conservative business guardrail. The model still performs the semantic
- * analysis; this validator only blocks well-known failure modes that should
- * never be sent as the final result.
+ * Validates only objective transport and formatting contracts. Commercial
+ * quality is intentionally evaluated by the AI review stage, where the full
+ * conversation can be interpreted semantically.
  */
-export const validateFollowUpBusinessOutput = (
+export const validateFollowUpStructuralOutput = (
   rawValue: string,
-  evidenceText = '',
 ): FollowUpTechnicalValidation => {
   const parsed = parseFollowUpOutput(rawValue);
   if (!parsed) {
@@ -233,10 +165,6 @@ export const validateFollowUpBusinessOutput = (
   if (!technicalValidation.valid) return technicalValidation;
 
   const normalized = normalizeForMatching(parsed.text);
-  const normalizedEvidence = normalizeForMatching(evidenceText);
-  const hasCommercialAnchor = COMMERCIAL_ANCHOR_PATTERNS.some((pattern) => pattern.test(normalized));
-  const hasSpecificAdvance = SPECIFIC_ADVANCE_PATTERNS.some((pattern) => pattern.test(normalized));
-  const hasSellerAction = SELLER_ACTION_PATTERNS.some((pattern) => pattern.test(normalized));
   const hasGreeting = COURTESY_GREETING_PATTERN.test(normalized) || OPENING_GREETING_PATTERN.test(normalized);
 
   if (hasGreeting) {
@@ -245,97 +173,25 @@ export const validateFollowUpBusinessOutput = (
     const remainingBlocks = normalizeForMatching(blocks.slice(1).join('\n'));
     const greetingIsInFirstBlock = COURTESY_GREETING_PATTERN.test(greetingBlock)
       || OPENING_GREETING_PATTERN.test(greetingBlock);
-    const greetingLeaksIntoCommercialBlock = COURTESY_GREETING_PATTERN.test(remainingBlocks)
+    const greetingLeaksIntoLaterBlock = COURTESY_GREETING_PATTERN.test(remainingBlocks)
       || OPENING_GREETING_PATTERN.test(remainingBlocks);
-    const greetingBlockHasCommercialContent = COMMERCIAL_ANCHOR_PATTERNS.some((pattern) => pattern.test(greetingBlock))
-      || SPECIFIC_ADVANCE_PATTERNS.some((pattern) => pattern.test(greetingBlock))
-      || SELLER_ACTION_PATTERNS.some((pattern) => pattern.test(greetingBlock));
 
-    if (
-      blocks.length < 2
-      || !greetingIsInFirstBlock
-      || greetingLeaksIntoCommercialBlock
-      || greetingBlockHasCommercialContent
-      || countCommercialQuestions(greetingBlock) > 0
-    ) {
+    if (blocks.length < 2 || !greetingIsInFirstBlock || greetingLeaksIntoLaterBlock) {
       return {
         valid: false,
         stopReason: 'invalid_output',
-        message: 'A saudação deve ocupar sozinha o primeiro bloco e ser seguida por uma linha contendo exatamente --- antes da mensagem comercial.',
+        message: 'A saudação deve ocupar o primeiro bloco e ser seguida por uma linha contendo exatamente --- antes da mensagem comercial.',
       };
     }
-  }
-
-  if (/\bprefere (?:receber )?(?:mensagem|ligacao|telefone|whatsapp) ou (?:mensagem|ligacao|telefone|whatsapp)\b/.test(normalized)) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem escolhe apenas o canal de contato e não trabalha a decisão comercial pendente.',
-    };
-  }
-
-  if (countCommercialQuestions(normalized) > 1) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'O follow-up empilha mais de uma pergunta; persiga uma única microdecisão.',
-    };
-  }
-
-  if (GENERIC_CHECK_IN_PATTERNS.some((pattern) => pattern.test(normalized)) && !hasSpecificAdvance) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem é uma checagem genérica e não define uma microdecisão comercial específica.',
-    };
-  }
-
-  if (
-    PAUSE_LANGUAGE_PATTERN.test(normalized)
-    && !PAUSE_WITH_COMMERCIAL_ALTERNATIVE_PATTERN.test(normalized)
-  ) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem pausa ou encerra a oportunidade unilateralmente. Use WAIT quando não houver movimento útil, ou ofereça uma alternativa comercial concreta junto da pausa.',
-    };
-  }
-
-  if (PASSIVE_HANDOFF_PATTERNS.some((pattern) => pattern.test(normalized)) && !hasSpecificAdvance && !hasSellerAction) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem apenas mantém contato ou devolve a iniciativa ao lead, sem produzir avanço comercial.',
-    };
-  }
-
-  if (!hasCommercialAnchor && !hasSpecificAdvance && !hasSellerAction) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem não contém contexto, decisão ou ação comercial identificável.',
-    };
-  }
-
-  const unsupportedUrgency = UNSUPPORTED_URGENCY_PATTERNS.find((pattern) => (
-    pattern.test(normalized) && !pattern.test(normalizedEvidence)
-  ));
-  if (unsupportedUrgency) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A mensagem cria urgência ou condição comercial sem sustentação no contexto fornecido.',
-    };
   }
 
   return { valid: true };
 };
 
-export const buildFollowUpValidationRetryInstruction = (
+export const buildFollowUpStructuralRetryInstruction = (
   validation: FollowUpTechnicalValidation,
 ): string => [
-  'CORREÇÃO OBRIGATÓRIA PARA ESTA NOVA TENTATIVA:',
-  validation.message || 'A tentativa anterior não passou pela validação comercial determinística.',
-  'Gere uma mensagem diferente que trabalhe uma única microdecisão comercial sustentada pelo histórico.',
-  'Se não houver um contato comercialmente útil e apropriado agora, retorne um dos sinais [[WAIT:...]] permitidos, em vez de uma mensagem social ou genérica.',
+  'CORREÇÃO TÉCNICA OBRIGATÓRIA PARA ESTA NOVA TENTATIVA:',
+  validation.message || 'A tentativa anterior não respeitou o contrato de saída.',
+  'Preserve a estratégia, mas corrija somente o formato objetivo solicitado.',
 ].join('\n');

@@ -22,11 +22,18 @@ import {
   FOLLOW_UP_GENERATE_SYSTEM_PROMPT,
 } from '../_shared/comm-whatsapp-follow-up-generate-prompt.ts';
 import {
-  buildFollowUpValidationRetryInstruction,
+  buildFollowUpStructuralRetryInstruction,
   parseFollowUpOutput,
-  validateFollowUpBusinessOutput,
+  validateFollowUpStructuralOutput,
   type FollowUpWaitReasonCode,
 } from '../_shared/comm-whatsapp-follow-up-output.ts';
+import {
+  buildFollowUpAiValidationRetryInstruction,
+  buildFollowUpAiValidationUserPrompt,
+  FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT,
+  parseFollowUpAiValidationOutput,
+  validateFollowUpAiValidationOutput,
+} from '../_shared/comm-whatsapp-follow-up-ai-validator.ts';
 
 declare const Deno: {
   env: {
@@ -1277,7 +1284,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // =====================================================================
-    // SINGLE-CALL FOLLOW-UP: think internally + write the final message
+    // TWO-STAGE FOLLOW-UP: generate a draft, then review it semantically with AI
     // =====================================================================
     const generateConfig = await loadFeatureConfig(
       supabaseAdmin,
@@ -1319,7 +1326,7 @@ Deno.serve(async (req: Request) => {
     const configuredAttemptTimeout = generateConfig?.timeoutMs ?? 75_000;
     const attemptTimeoutMs = Math.max(10_000, Math.min(80_000, configuredAttemptTimeout));
 
-    console.log('[FollowUpAI] single logical call', {
+    console.log('[FollowUpAI] generation stage', {
       featureKey: AI_FEATURES.FOLLOWUP_GENERATE,
       maxAttempts: 2,
       attemptTimeoutMs,
@@ -1343,11 +1350,47 @@ Deno.serve(async (req: Request) => {
       attemptTimeoutMs,
       maxProviderRequestsPerAttempt: 1,
       retrySameResolvedModel: true,
-      validateOutput: (text) => validateFollowUpBusinessOutput(text, generationUserPrompt),
-      buildValidationRetryInstruction: buildFollowUpValidationRetryInstruction,
+      validateOutput: validateFollowUpStructuralOutput,
+      buildValidationRetryInstruction: buildFollowUpStructuralRetryInstruction,
     });
 
-    const parsedOutput = parseFollowUpOutput(generationResult.text);
+    const aiValidationResult = await generateTextForFeature({
+      supabaseAdmin,
+      featureKey: AI_FEATURES.FOLLOWUP_GENERATE,
+      task: 'follow_up_generation',
+      systemPrompt: FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT,
+      userPrompt: buildFollowUpAiValidationUserPrompt({
+        policy: generationSystemPrompt,
+        context: generationUserPrompt,
+        candidate: generationResult.text.trim(),
+      }),
+      temperature: Math.min(generateConfig?.temperature ?? 0.7, 0.2),
+      maxTokens: Math.max(
+        FOLLOW_UP_GENERATE_MIN_OUTPUT_TOKENS,
+        generateConfig?.maxOutputTokens ?? FOLLOW_UP_GENERATE_MIN_OUTPUT_TOKENS,
+      ),
+      edgeFunction: 'comm-whatsapp-generate-follow-up',
+      leadId: chat.lead_id ?? undefined,
+      chatId: chat.id,
+      maxAttempts: 2,
+      attemptTimeoutMs,
+      maxProviderRequestsPerAttempt: 1,
+      retrySameResolvedModel: true,
+      validateOutput: validateFollowUpAiValidationOutput,
+      buildValidationRetryInstruction: buildFollowUpAiValidationRetryInstruction,
+    });
+
+    const aiValidation = parseFollowUpAiValidationOutput(aiValidationResult.text);
+    if (!aiValidation) {
+      throw new FollowUpValidationError('A etapa de validação por IA retornou uma decisão inválida.');
+    }
+
+    const reviewedOutput = aiValidation.decision === 'approve'
+      ? generationResult.text.trim()
+      : aiValidation.decision === 'rewrite'
+        ? aiValidation.text
+        : aiValidation.waitSignal;
+    const parsedOutput = parseFollowUpOutput(reviewedOutput);
     if (!parsedOutput) {
       throw new FollowUpValidationError('A IA retornou um sinal de espera inválido.');
     }
@@ -1361,11 +1404,11 @@ Deno.serve(async (req: Request) => {
       ? normalizeGreetingForTemporalFacts(parsedOutput.text, temporalFacts)
       : null;
     const finalValidation = responseText
-      ? validateFollowUpBusinessOutput(responseText, generationUserPrompt)
+      ? validateFollowUpStructuralOutput(responseText)
       : { valid: true };
     if (!finalValidation.valid) {
       throw new FollowUpValidationError(
-        finalValidation.message || 'A IA retornou uma saída comercialmente inválida.',
+        finalValidation.message || 'A revisão por IA retornou uma saída estruturalmente inválida.',
       );
     }
 
@@ -1412,13 +1455,21 @@ Deno.serve(async (req: Request) => {
           schedule_suggested_date: scheduleRecommendation.suggestedDate,
           schedule_reason: scheduleRecommendation.reason,
           schedule_confidence: scheduleRecommendation.confidence,
-          rationale: null,
+          rationale: aiValidation.reason,
           generated_text: responseText,
           text_content: responseText || '[WAIT — sem mensagem gerada]',
           v3_analysis: null,
           v3_strategy: null,
-          v3_validation: { valid: true, kind: waitAiContext ? 'business_wait' : 'business_send' },
-          v3_regeneration_count: 0,
+          v3_validation: {
+            valid: true,
+            kind: waitAiContext ? 'business_wait' : 'business_send',
+            validator: 'ai',
+            decision: aiValidation.decision,
+            reason: aiValidation.reason,
+            model: aiValidationResult.model,
+            call_log_id: aiValidationResult.callLogId,
+          },
+          v3_regeneration_count: aiValidation.decision === 'rewrite' ? 1 : 0,
           v3_analysis_model: null,
           v3_copy_model: generationResult.model,
         })
@@ -1434,8 +1485,10 @@ Deno.serve(async (req: Request) => {
     console.log('[FollowUpAI] completed', {
       featureKey: AI_FEATURES.FOLLOWUP_GENERATE,
       model: generationResult.model,
-      retryCount: generationResult.retryCount,
-      stopReason: generationResult.stopReason,
+      validatorModel: aiValidationResult.model,
+      validationDecision: aiValidation.decision,
+      retryCount: generationResult.retryCount + aiValidationResult.retryCount,
+      stopReason: aiValidationResult.stopReason,
       responseTextLength: responseText?.length ?? 0,
       currentAction: waitAiContext ? 'wait' : 'send',
     });
@@ -1453,9 +1506,9 @@ Deno.serve(async (req: Request) => {
         generationId,
         provider: generationResult.provider,
         model: generationResult.model,
-        fallback_used: generationResult.fallbackUsed,
-        retry_count: generationResult.retryCount,
-        stop_reason: generationResult.stopReason,
+        fallback_used: generationResult.fallbackUsed || aiValidationResult.fallbackUsed,
+        retry_count: generationResult.retryCount + aiValidationResult.retryCount,
+        stop_reason: aiValidationResult.stopReason,
       }),
       { status: 200, headers: jsonHeaders },
     );

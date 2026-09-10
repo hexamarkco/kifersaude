@@ -51,6 +51,8 @@ describe('follow-up generation prompt', () => {
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/ações pendentes de ações já concluídas/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/não podem ser oferecidos como se ainda faltassem fazer/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/situações que podem coexistir/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/retomada de qualificação/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/confirmar se agora pode retomar/iu);
   });
 
   it('allows the same call to recommend waiting instead of inventing a social touch', () => {
@@ -173,6 +175,7 @@ describe('AI commercial validator contract', () => {
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/ações já concluídas/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/não faça uma edição mínima/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/falsa escolha/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/retorno solicitado pelo lead/iu);
   });
 });
 

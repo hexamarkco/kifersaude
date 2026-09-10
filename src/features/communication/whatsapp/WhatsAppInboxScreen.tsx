@@ -1752,7 +1752,7 @@ function WhatsAppMessageBody({
         {deletedBannerNode}
         {quotePreviewNode}
         <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
-          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tracking-[0.08em]">
+          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tracking-[0.08em]">
             {extension.slice(0, 4)}
           </div>
           <div className="min-w-0 flex-1">

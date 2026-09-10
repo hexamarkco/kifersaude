@@ -28,6 +28,44 @@ test('normaliza os valores de importação esperados pelo formulário de contrat
   assert.equal(extraction.dependentCount, 2);
 });
 
+test('converte as variações dos PDFs para as opções fechadas do CRM', () => {
+  const extraction = parseContractDocumentExtraction(JSON.stringify({
+    profile: 'auto',
+    fields: {
+      modalidade: 'Individual familiar',
+      abrangencia: 'Grupo de Municípios',
+      acomodacao: 'ENFERMARIA – Quarto Coletivo de até 3 leitos',
+      carencia: 'Carência reduzida para consultas e exames',
+    },
+  }));
+
+  assert.deepEqual(extraction.fields, {
+    modalidade: 'Pessoa física',
+    abrangencia: 'Regional',
+    acomodacao: 'Enfermaria',
+    carencia: 'Reduzida',
+  });
+});
+
+test('não mantém dados empresariais em contratos pessoa física de outros perfis', () => {
+  const extraction = parseContractDocumentExtraction(JSON.stringify({
+    profile: 'planium',
+    fields: {
+      modalidade: 'Individual',
+      cnpj: '12.345.678/0001-90',
+      razao_social: 'Dados da operadora que não são do cliente',
+    },
+    field_sources: {
+      cnpj: 'Página 1',
+      razao_social: 'Página 1',
+    },
+  }));
+
+  assert.deepEqual(extraction.fields, { modalidade: 'Pessoa física' });
+  assert.deepEqual(extraction.fieldSources, {});
+  assert.equal(extraction.warnings.length, 1);
+});
+
 test('rejeita retorno que não seja JSON de objeto', () => {
   assert.throws(() => parseContractDocumentExtraction('[]'));
 });
@@ -57,6 +95,7 @@ test('normaliza o padrão MedSênior e não usa dados da operadora como dados do
     },
   }));
 
+  assert.equal(extraction.fields.modalidade, 'Pessoa física');
   assert.equal(extraction.fields.operadora, 'MedSênior');
   assert.equal(extraction.fields.produto_plano, 'RJ1');
   assert.equal(extraction.fields.acomodacao, 'Enfermaria');

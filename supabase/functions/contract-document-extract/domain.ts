@@ -85,46 +85,69 @@ const normalizeDate = (value: string) => {
   return `${brazilian[3]}-${brazilian[2]}-${brazilian[1]}`;
 };
 
-const normalizeField = (key: ContractImportFieldKey, value: string) => {
-  if (key === 'data_inicio') return normalizeDate(value);
-  if (key === 'mes_reajuste') {
-    const numeric = Number(value.replace(/\D/g, ''));
-    return Number.isInteger(numeric) && numeric >= 1 && numeric <= 12
-      ? String(numeric).padStart(2, '0')
-      : value;
-  }
-  if (key === 'vidas') {
-    const numeric = Number(value.replace(/\D/g, ''));
-    return Number.isInteger(numeric) && numeric > 0 ? String(numeric) : value;
-  }
-  return value;
-};
-
 const normalizeText = (value: string) => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Za-z0-9]+/g, ' ')
   .trim()
   .toUpperCase();
 
-const applyMedSeniorRules = (
+const normalizeModalidade = (value: string) => {
+  const normalized = normalizeText(value);
+
+  if (['PF', 'PESSOA FISICA', 'INDIVIDUAL', 'FAMILIAR', 'INDIVIDUAL FAMILIAR'].includes(normalized)) {
+    return 'Pessoa física';
+  }
+  if (['ADESAO', 'COLETIVO POR ADESAO', 'COLETIVO ADESAO'].includes(normalized)) {
+    return 'Adesão';
+  }
+  if (['PME', 'PEQUENA E MEDIA EMPRESA', 'PEQUENAS E MEDIAS EMPRESAS'].includes(normalized)) {
+    return 'PME';
+  }
+  if (['EMPRESARIAL', 'COLETIVO EMPRESARIAL', 'EMPRESA', 'PJ', 'CNPJ'].includes(normalized)) {
+    return 'Empresarial';
+  }
+
+  return value;
+};
+
+const normalizeAbrangencia = (value: string) => {
+  const normalized = normalizeText(value);
+
+  if (['NACIONAL', 'NACIONAL COM REEMBOLSO'].includes(normalized)) return 'Nacional';
+  if (['ESTADUAL', 'GRUPO DE ESTADOS', 'ESTADUAL E MUNICIPAL'].includes(normalized)) return 'Estadual';
+  if ([
+    'REGIONAL',
+    'GRUPO DE MUNICIPIOS',
+    'MUNICIPAL',
+    'GRUPO DE MUNICIPIOS E ESTADOS',
+  ].includes(normalized)) return 'Regional';
+
+  return value;
+};
+
+const normalizeAcomodacao = (value: string) => {
+  const normalized = normalizeText(value);
+  if (normalized.startsWith('ENFERMARIA')) return 'Enfermaria';
+  if (normalized.startsWith('APARTAMENTO')) return 'Apartamento';
+  return value;
+};
+
+const normalizeCarencia = (value: string) => {
+  const normalized = normalizeText(value);
+  if (normalized.includes('ZERADA') && normalized.includes('REDUZIDA')) return 'Zerada/Reduzida (montado)';
+  if (normalized.includes('ZERADA')) return 'Zerada';
+  if (normalized.includes('REDUZIDA')) return 'Reduzida';
+  if (normalized.includes('PADRAO')) return 'Padrão';
+  return value;
+};
+
+const removeCompanyFieldsFromIndividualContract = (
   fields: ContractImportFields,
   fieldSources: ContractDocumentExtraction['fieldSources'],
   warnings: string[],
 ) => {
-  fields.operadora = 'MedSênior';
-
-  const product = fields.produto_plano;
-  const rjPlan = product?.match(/\bRJ\s*(\d+)\b/i);
-  if (rjPlan) fields.produto_plano = `RJ${rjPlan[1]}`;
-
-  const accommodation = fields.acomodacao;
-  if (accommodation) {
-    const normalizedAccommodation = normalizeText(accommodation);
-    if (normalizedAccommodation.startsWith('ENFERMARIA')) fields.acomodacao = 'Enfermaria';
-    if (normalizedAccommodation.startsWith('APARTAMENTO')) fields.acomodacao = 'Apartamento';
-  }
-
-  if (normalizeText(fields.modalidade ?? '') !== 'INDIVIDUAL') return;
+  if (fields.modalidade !== 'Pessoa física') return;
 
   const companyFieldKeys: ContractImportFieldKey[] = [
     'cnpj',
@@ -140,6 +163,38 @@ const applyMedSeniorRules = (
   if (removedCompanyData) {
     warnings.push('Os dados cadastrais da operadora foram ignorados: este é um contrato individual e não possui dados empresariais do cliente.');
   }
+};
+
+const normalizeField = (key: ContractImportFieldKey, value: string) => {
+  if (key === 'data_inicio') return normalizeDate(value);
+  if (key === 'modalidade') return normalizeModalidade(value);
+  if (key === 'abrangencia') return normalizeAbrangencia(value);
+  if (key === 'acomodacao') return normalizeAcomodacao(value);
+  if (key === 'carencia') return normalizeCarencia(value);
+  if (key === 'mes_reajuste') {
+    const numeric = Number(value.replace(/\D/g, ''));
+    return Number.isInteger(numeric) && numeric >= 1 && numeric <= 12
+      ? String(numeric).padStart(2, '0')
+      : value;
+  }
+  if (key === 'vidas') {
+    const numeric = Number(value.replace(/\D/g, ''));
+    return Number.isInteger(numeric) && numeric > 0 ? String(numeric) : value;
+  }
+  return value;
+};
+
+const applyMedSeniorRules = (
+  fields: ContractImportFields,
+  fieldSources: ContractDocumentExtraction['fieldSources'],
+  warnings: string[],
+) => {
+  fields.operadora = 'MedSênior';
+
+  const product = fields.produto_plano;
+  const rjPlan = product?.match(/\bRJ\s*(\d+)\b/i);
+  if (rjPlan) fields.produto_plano = `RJ${rjPlan[1]}`;
+
 };
 
 const parseJsonObject = (value: string): Record<string, unknown> => {
@@ -203,6 +258,7 @@ export const parseContractDocumentExtraction = (value: string): ContractDocument
   if (profile === 'medsenior') {
     applyMedSeniorRules(fields, fieldSources, warnings);
   }
+  removeCompanyFieldsFromIndividualContract(fields, fieldSources, warnings);
 
   return {
     profile,
@@ -220,6 +276,7 @@ export const buildContractExtractionPrompt = (profile: ContractDocumentProfile) 
   'Os PDFs são exemplos de propostas/contratos de planos de saúde brasileiros; não crie dados, não complete lacunas e não deduza valores.',
   `Perfil selecionado pelo usuário: ${profile}.`,
   'Perfis conhecidos: supermed (um PDF de adesão com dados cadastrais), hcommerce (Assim Saúde, Klini e outras: pode vir em dois PDFs, empresa e titulares), planium (Hapvida, Leve e outras), qualicorp e medsenior.',
+  'Normalize os campos de lista antes de retornar: modalidade deve ser exatamente Empresarial, PME, Adesão ou Pessoa física; abrangencia deve ser Regional, Estadual ou Nacional; acomodacao deve ser Enfermaria ou Apartamento; carencia deve ser Padrão, Reduzida, Zerada ou Zerada/Reduzida (montado). Por exemplo, Individual vira Pessoa física e Grupo de Municípios vira Regional.',
   'Se o perfil for auto, detecte o perfil somente se houver evidência no documento. Ao receber dois arquivos HCommerce, consolide empresa e beneficiários.',
   'Campos cnpj, razao_social, nome_fantasia e endereco_empresa são exclusivamente da empresa cliente/contratante. Nunca preencha esses campos com dados da operadora, administradora ou seguradora. Em contratos de modalidade Individual, omita todos esses campos.',
   'Regra MedSênior: use operadora como "MedSênior", nunca a razão social "SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.". Para o produto "MEDSÊNIOR RJ 1", retorne somente "RJ1". Para acomodação, retorne somente "Enfermaria" ou "Apartamento", sem a descrição do quarto.',

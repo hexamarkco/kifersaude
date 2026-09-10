@@ -119,6 +119,27 @@ const MAX_CANDIDATES = 500;
 const MAX_AI_CANDIDATES = 35;
 const MAX_MESSAGES_PER_CHAT = 10;
 const MAX_MESSAGE_TEXT_LENGTH = 220;
+const AGENDA_RANKING_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      maxItems: MAX_AI_CANDIDATES,
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          score: { type: 'integer', minimum: 0, maximum: 100 },
+          reason: { type: 'string' },
+        },
+        required: ['id', 'score', 'reason'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['items'],
+  additionalProperties: false,
+};
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -459,6 +480,13 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
       temperature: aiConfig?.temperature || 0.15,
       maxTokens: aiConfig?.maxOutputTokens || 1800,
       edgeFunction: 'organize-follow-up-agenda',
+      maxAttempts: 1,
+      maxProviderRequestsPerAttempt: 1,
+      responseFormat: {
+        name: 'agenda_ranking',
+        schema: AGENDA_RANKING_SCHEMA,
+        strict: true,
+      },
     });
     const parsed = JSON.parse(result.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim());
     const items = Array.isArray(parsed?.items) ? parsed.items.flatMap((item: unknown) => {

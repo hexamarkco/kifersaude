@@ -126,13 +126,13 @@ type BuildAiConfigExportParams = {
   exportedAt?: string;
 };
 
-const PROVIDERS: AiProviderSlug[] = ["openai", "gemini", "claude"];
+const PROVIDERS: AiProviderSlug[] = ["openai"];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isProvider = (value: unknown): value is AiProviderSlug =>
-  value === "openai" || value === "gemini" || value === "claude";
+  value === "openai";
 
 const isReasoningEffort = (value: unknown): value is AiReasoningEffort =>
   value === "none" || value === "minimal" || value === "low" || value === "medium" ||

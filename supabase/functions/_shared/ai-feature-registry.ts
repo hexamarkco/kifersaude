@@ -49,7 +49,7 @@ export type AIFeatureMeta = {
   description: string;
   taskType: AIFeatureTaskType;
   aiTask: AiTask;
-  defaultProvider: 'openai' | 'gemini' | 'claude';
+  defaultProvider: 'openai';
   defaultModel: string;
   defaultTemperature: number;
   defaultMaxTokens: number;

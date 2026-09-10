@@ -26,7 +26,6 @@ import {
   AI_REASONING_EFFORT_LABELS,
   AI_FEATURE_LABELS,
   AI_FEATURE_AI_TASK,
-  AI_PROVIDER_OPTIONS,
   AI_MODEL_RESOLUTION_SOURCE_LABELS,
   TASK_TYPE_REQUIRED_CAPABILITIES,
 } from "../aiConfigTypes";
@@ -51,7 +50,7 @@ type ProviderModelOption = {
 };
 
 const isProviderSlug = (value: string | undefined): value is AiProviderSlug =>
-  value === "openai" || value === "gemini" || value === "claude";
+  value === "openai";
 
 const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
   feature: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-active)]",
@@ -73,16 +72,6 @@ function inferCapabilityFromModelId(modelId: string): AiModelCatalogCapability[]
     caps.push("structured_output");
     if (lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) caps.push("reasoning");
     if (!lower.includes("mini")) caps.push("multimodal");
-    return caps;
-  }
-  if (lower.startsWith("gemini")) {
-    const caps: AiModelCatalogCapability[] = ["text", "structured_output", "multimodal"];
-    if (lower.includes("thinking") || lower.includes("pro")) caps.push("reasoning");
-    return caps;
-  }
-  if (lower.startsWith("claude-")) {
-    const caps: AiModelCatalogCapability[] = ["text", "structured_output", "multimodal"];
-    if (lower.includes("opus") || lower.includes("sonnet")) caps.push("reasoning");
     return caps;
   }
   return ["text"];
@@ -237,12 +226,6 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     }
   }, [loadedProvider, reasoningProvider, providerError, reasoningEffort, supportedReasoningEfforts]);
 
-  const handleProviderChange = useCallback((newProvider: AiProviderSlug) => {
-    setProvider(newProvider);
-    setModel("");
-    setReasoningEffort(null);
-  }, []);
-
   const handleSave = useCallback(async () => {
     if (!prompt.trim()) return toast.error("O prompt não pode estar vazio");
 
@@ -371,13 +354,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <Field label="Provedor">
-                  <Select
-                    value={provider}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      handleProviderChange(e.target.value as AiProviderSlug)
-                    }
-                    options={AI_PROVIDER_OPTIONS}
-                  />
+                  <div className="flex h-10 items-center rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)]">
+                    OpenAI
+                  </div>
                 </Field>
                 <Field label="Modelo">
                   {providerLoading ? (

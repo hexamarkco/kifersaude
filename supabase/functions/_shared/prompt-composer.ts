@@ -50,8 +50,8 @@ export type ComposePromptResult = {
 // ============================================================
 
 export const GLOBAL_CONFIG_KEYS = {
-  CLOSER_INSTRUCTIONS: 'closer_global_instructions',
-  WHATSAPP_STYLE: 'whatsapp_style',
+  CLOSER_INSTRUCTIONS: 'global_instructions',
+  WHATSAPP_STYLE: 'global_style',
 } as const;
 
 // ============================================================
@@ -276,6 +276,7 @@ function buildUserPrompt(
     'validationFeedback', 'pendingFollowUps', 'leadData', 'temporalContext',
     'suggestionMode', 'currentMessage', 'adjustmentInstruction',
     'conversationHistory', 'sellerName',
+    'message_text', 'company_name',
   ]);
 
   for (const [key, value] of Object.entries(context)) {

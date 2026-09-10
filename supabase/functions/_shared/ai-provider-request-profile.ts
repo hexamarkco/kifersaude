@@ -20,15 +20,6 @@ export type OpenAiRequestProfile = {
   supportsTemperature: boolean;
 };
 
-export type ClaudeRequestProfile = {
-  supportsTemperature: boolean;
-};
-
-export type GeminiRequestProfile = {
-  supportsTemperature: boolean;
-  maxTemperature: number;
-};
-
 const DEEP_REASONING_TASKS: ReadonlySet<TextGenerationTask> = new Set([
   'follow_up_generation',
   'follow_up_analysis',
@@ -151,23 +142,3 @@ export const resolveOpenAiRequestProfile = (
     supportsTemperature: true,
   };
 };
-
-/** Claude deprecated sampling controls and newer families reject custom values. */
-export const resolveClaudeRequestProfile = (model: string): ClaudeRequestProfile => {
-  const normalized = normalizedModel(model);
-  const isNewSamplingApi =
-    /^claude-(?:opus-)?4[.-](?:7|8)(?:-|$)/.test(normalized) ||
-    /^claude-(?:sonnet|opus|haiku|fable|mythos)-5(?:-|$)/.test(normalized) ||
-    /^claude-5(?:-|$)/.test(normalized);
-
-  return { supportsTemperature: !isNewSamplingApi };
-};
-
-/** Gemini's generateContent API accepts temperature up to the model-reported cap. */
-export const resolveGeminiRequestProfile = (_model: string): GeminiRequestProfile => ({
-  supportsTemperature: true,
-  maxTemperature: 2,
-});
-
-export const clampTemperature = (temperature: number, maximum: number): number =>
-  Math.min(maximum, Math.max(0, temperature));

@@ -9,9 +9,10 @@ export type AiFeatureKey =
   | "followup.generate"
   | "followup.refine"
   | "autonomous.reply"
-  | "sandbox.scenario";
+  | "sandbox.scenario"
+  | "contract.document_extract";
 
-export type AiProviderSlug = "openai" | "gemini" | "claude";
+export type AiProviderSlug = "openai";
 export type AiReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export type AiModelResolutionSource = "feature" | "ai_routing" | "provider_default" | "fallback";
@@ -128,8 +129,6 @@ export const TASK_TYPE_REQUIRED_CAPABILITIES: Record<string, AiModelCatalogCapab
 
 export const AI_PROVIDER_OPTIONS: Array<{ value: AiProviderSlug; label: string }> = [
   { value: "openai", label: "OpenAI" },
-  { value: "gemini", label: "Google Gemini" },
-  { value: "claude", label: "Anthropic Claude" },
 ];
 
 export const AI_REASONING_EFFORT_LABELS: Record<AiReasoningEffort, string> = {
@@ -154,6 +153,7 @@ export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
   "followup.refine": "Refinar Follow-up",
   "autonomous.reply": "Resposta Autônoma",
   "sandbox.scenario": "Cenário Sandbox",
+  "contract.document_extract": "Leitura de Documentos de Contrato",
 };
 
 export const AI_FEATURE_AI_TASK: Record<AiFeatureKey, string> = {
@@ -168,6 +168,7 @@ export const AI_FEATURE_AI_TASK: Record<AiFeatureKey, string> = {
   "sandbox.scenario": "autonomous_attendance",
   "campaign.intent": "follow_up_generation",
   "agenda.organize": "follow_up_agenda_organization",
+  "contract.document_extract": "contract_document_extraction",
 };
 
 export const AI_FEATURE_CATEGORIES: Record<string, string> = {
@@ -178,6 +179,7 @@ export const AI_FEATURE_CATEGORIES: Record<string, string> = {
   followup: "Follow-up",
   autonomous: "Atendimento Autônomo",
   sandbox: "Sandbox",
+  contratos: "Contratos",
 };
 
 export const AI_MODEL_RESOLUTION_SOURCE_LABELS: Record<AiModelResolutionSource, string> = {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Plug,
   Save,
   Facebook,
   MessageCircle,
@@ -20,7 +19,6 @@ import {
   Button,
   Card,
   CardIcon,
-  Checkbox,
   Input,
   SectionHeader,
   Switch,
@@ -32,8 +30,6 @@ import { normalizeModelOptions } from "./shared/integrationsSettings";
 import { loadAiProviderModels } from "./data/integrationsApi";
 
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
-const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
-const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
 const AI_ROUTING_SLUG = "ai_routing";
 
 const META_PIXEL_SLUG = "meta_pixel";
@@ -41,11 +37,9 @@ const GTM_SLUG = "google_tag_manager";
 
 const OPENAI_DEFAULT_TEXT_MODEL = "gpt-4o-mini";
 const OPENAI_DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
-const GEMINI_DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
-const CLAUDE_DEFAULT_TEXT_MODEL = "claude-3-5-sonnet-latest";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
-type AiProvider = "openai" | "gemini" | "claude";
+type AiProvider = "openai";
 type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
@@ -63,7 +57,6 @@ type AiProviderFormState = {
 type AiTaskRouteState = {
   provider: AiProvider;
   model: string;
-  fallbackToOpenAi: boolean;
 };
 
 type AiRoutingFormState = Record<AiTaskKey, AiTaskRouteState>;
@@ -80,7 +73,7 @@ type AiProviderModelsState = {
   error: string | null;
 };
 
-const AI_PROVIDER_ORDER: AiProvider[] = ["openai", "gemini", "claude"];
+const AI_PROVIDER_ORDER: AiProvider[] = ["openai"];
 
 const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
   openai: {
@@ -88,16 +81,6 @@ const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
     name: "OpenAI",
     description:
       "Use modelos GPT para reescrita, follow-up e futuras tarefas de IA.",
-  },
-  gemini: {
-    slug: AI_PROVIDER_GEMINI_SLUG,
-    name: "Google Gemini",
-    description: "Use modelos Gemini com a credencial protegida no Edge Secret.",
-  },
-  claude: {
-    slug: AI_PROVIDER_CLAUDE_SLUG,
-    name: "Claude (Anthropic)",
-    description: "Use modelos Claude com a credencial protegida no Edge Secret.",
   },
 };
 
@@ -142,11 +125,6 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind
     },
   ];
 
-const AI_PROVIDER_OPTIONS = AI_PROVIDER_ORDER.map((provider) => ({
-  value: provider,
-  label: AI_PROVIDER_META[provider].name,
-}));
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -154,7 +132,7 @@ const toTrimmedString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
 const isAiProvider = (value: string): value is AiProvider =>
-  value === "openai" || value === "gemini" || value === "claude";
+  value === "openai";
 
 const getTaskKind = (taskKey: AiTaskKey): AiTaskKind =>
   AI_TASKS.find((task) => task.key === taskKey)?.kind ?? "text";
@@ -180,61 +158,24 @@ const createDefaultProviderModelsState = (): Record<
     options: [],
     error: null,
   },
-  gemini: {
-    loading: false,
-    options: [],
-    error: null,
-  },
-  claude: {
-    loading: false,
-    options: [],
-    error: null,
-  },
 });
 
-const getDefaultTaskModel = (provider: AiProvider, taskKey?: AiTaskKey): string => {
-  if (provider === "openai") {
-    if (taskKey && getTaskKind(taskKey) === "transcription") {
-      return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
-    }
-
-    return OPENAI_DEFAULT_TEXT_MODEL;
+const getDefaultTaskModel = (_provider: AiProvider, taskKey?: AiTaskKey): string => {
+  if (taskKey && getTaskKind(taskKey) === "transcription") {
+    return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
   }
 
-  if (provider === "gemini") {
-    return GEMINI_DEFAULT_TEXT_MODEL;
-  }
-
-  return CLAUDE_DEFAULT_TEXT_MODEL;
-};
-
-const getPreferredTaskModel = (
-  taskKey: AiTaskKey,
-  provider: AiProvider,
-  providerOptions: ModelOption[],
-): string => {
-  const defaultModel = getDefaultTaskModel(provider, taskKey);
-  const compatibleOptions = getCompatibleModelOptions(taskKey, provider, providerOptions);
-
-  if (compatibleOptions.some((option) => option.value === defaultModel)) {
-    return defaultModel;
-  }
-
-  return compatibleOptions[0]?.value ?? defaultModel;
+  return OPENAI_DEFAULT_TEXT_MODEL;
 };
 
 function getCompatibleModelOptions(
   taskKey: AiTaskKey,
-  provider: AiProvider,
+  _provider: AiProvider,
   providerOptions: ModelOption[],
 ): ModelOption[] {
   const taskKind = getTaskKind(taskKey);
 
   if (taskKind === "transcription") {
-    if (provider !== "openai") {
-      return [];
-    }
-
     const transcriptionOptions = providerOptions.filter((option) => isOpenAiTranscriptionModel(option.value));
     const hasDefault = transcriptionOptions.some((option) => option.value === OPENAI_DEFAULT_TRANSCRIPTION_MODEL);
     const hasWhisper = transcriptionOptions.some((option) => option.value === "whisper-1");
@@ -246,35 +187,19 @@ function getCompatibleModelOptions(
     ];
   }
 
-  if (provider === "openai") {
-    return providerOptions.filter((option) => isOpenAiTextModel(option.value));
-  }
-
-  return providerOptions;
+  return providerOptions.filter((option) => isOpenAiTextModel(option.value));
 }
-
-const getProviderOptionsForTask = (taskKey: AiTaskKey) => {
-  if (getTaskKind(taskKey) === "transcription") {
-    return AI_PROVIDER_OPTIONS.filter((option) => option.value === "openai");
-  }
-
-  return AI_PROVIDER_OPTIONS;
-};
 
 const getTaskRouteError = (taskKey: AiTaskKey, route: AiTaskRouteState): string | null => {
   const taskKind = getTaskKind(taskKey);
 
   if (taskKind === "transcription") {
-    if (route.provider !== "openai") {
-      return "Transcrição de áudio só é suportada com OpenAI no momento.";
-    }
-
     if (!isOpenAiTranscriptionModel(route.model)) {
       return "Transcrição precisa usar um modelo de áudio, como gpt-4o-mini-transcribe, gpt-4o-transcribe ou whisper-1.";
     }
   }
 
-  if (route.provider === "openai" && taskKind === "text" && isOpenAiTranscriptionModel(route.model)) {
+  if (taskKind === "text" && isOpenAiTranscriptionModel(route.model)) {
     return "Reescrita e follow-up precisam usar modelos de texto, não modelos de transcrição.";
   }
 
@@ -288,44 +213,32 @@ const createDefaultProviderForms = (): Record<
   openai: {
     enabled: false,
   },
-  gemini: {
-    enabled: false,
-  },
-  claude: {
-    enabled: false,
-  },
 });
 
 const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "rewrite_message"),
-    fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "follow_up_generation"),
-    fallbackToOpenAi: true,
   },
   follow_up_agenda_organization: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "follow_up_agenda_organization"),
-    fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "whatsapp_audio_transcription"),
-    fallbackToOpenAi: true,
   },
   attendance_critique: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "attendance_critique"),
-    fallbackToOpenAi: true,
   },
   autonomous_attendance: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "autonomous_attendance"),
-    fallbackToOpenAi: true,
   },
 });
 
@@ -353,20 +266,15 @@ const normalizeRoutingSettings = (
       ? providerCandidate
       : defaults[task.key].provider;
 
-    const model =
-      toTrimmedString(rawTask.model) ||
-      toTrimmedString(rawTask.textModel) ||
-      getDefaultTaskModel(provider, task.key);
-
-    const fallbackToOpenAi =
-      typeof rawTask.fallbackToOpenAi === "boolean"
-        ? rawTask.fallbackToOpenAi
-        : true;
+    const model = (!providerCandidate || isAiProvider(providerCandidate))
+      ? toTrimmedString(rawTask.model) ||
+        toTrimmedString(rawTask.textModel) ||
+        getDefaultTaskModel(provider, task.key)
+      : getDefaultTaskModel(provider, task.key);
 
     accumulator[task.key] = {
       provider,
       model,
-      fallbackToOpenAi,
     };
 
     return accumulator;
@@ -383,8 +291,6 @@ export default function IntegrationsScreen() {
     Record<AiProvider, IntegrationSetting | null>
   >({
     openai: null,
-    gemini: null,
-    claude: null,
   });
   const [aiProviderForms, setAiProviderForms] = useState<
     Record<AiProvider, AiProviderFormState>
@@ -402,8 +308,6 @@ export default function IntegrationsScreen() {
     Record<AiProvider, boolean>
   >({
     openai: false,
-    gemini: false,
-    claude: false,
   });
   const [savingAiRouting, setSavingAiRouting] = useState(false);
   const [metaPixelIntegration, setMetaPixelIntegration] =
@@ -482,15 +386,8 @@ export default function IntegrationsScreen() {
     setAiMessage(null);
 
     try {
-      const [
-        openaiIntegration,
-        geminiIntegration,
-        claudeIntegration,
-        routingIntegration,
-      ] = await Promise.all([
+      const [openaiIntegration, routingIntegration] = await Promise.all([
         configService.getIntegrationSetting(AI_PROVIDER_OPENAI_SLUG),
-        configService.getIntegrationSetting(AI_PROVIDER_GEMINI_SLUG),
-        configService.getIntegrationSetting(AI_PROVIDER_CLAUDE_SLUG),
         configService.getIntegrationSetting(AI_ROUTING_SLUG),
       ]);
 
@@ -499,14 +396,10 @@ export default function IntegrationsScreen() {
         IntegrationSetting | null
       > = {
         openai: openaiIntegration,
-        gemini: geminiIntegration,
-        claude: claudeIntegration,
       };
 
       const nextProviderForms: Record<AiProvider, AiProviderFormState> = {
         openai: normalizeProviderSettings(openaiIntegration),
-        gemini: normalizeProviderSettings(geminiIntegration),
-        claude: normalizeProviderSettings(claudeIntegration),
       };
 
       setAiProviderIntegrations(nextProviderIntegrations);
@@ -646,20 +539,17 @@ export default function IntegrationsScreen() {
         accumulator[task.key] = {
           provider: route.provider,
           model,
-          fallbackToOpenAi: route.fallbackToOpenAi,
         };
 
         return accumulator;
       },
       {} as Record<
         AiTaskKey,
-        { provider: AiProvider; model: string; fallbackToOpenAi: boolean }
+        { provider: AiProvider; model: string }
       >,
     );
 
     const settingsPayload = {
-      fallbackEnabled: true,
-      fallbackProvider: "openai",
       tasks: tasksPayload,
     };
 
@@ -793,8 +683,6 @@ export default function IntegrationsScreen() {
   const hasIntegrationSnapshot =
     aiRoutingIntegration !== null ||
     aiProviderIntegrations.openai !== null ||
-    aiProviderIntegrations.gemini !== null ||
-    aiProviderIntegrations.claude !== null ||
     metaPixelIntegration !== null ||
     gtmIntegration !== null;
 
@@ -826,10 +714,10 @@ export default function IntegrationsScreen() {
         />
 
         {activeSection === "ai" && <section className="space-y-4">
-          <SectionHeader title="Integrações de IA" description="Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo cada funcionalidade deve usar." />
+          <SectionHeader title="Integração de IA" description="Configure a OpenAI e escolha o modelo de cada funcionalidade." />
 
 
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-4 xl:grid-cols-1">
             {AI_PROVIDER_ORDER.map((provider) => {
               const providerMeta = AI_PROVIDER_META[provider];
               const formState = aiProviderForms[provider];
@@ -907,8 +795,8 @@ export default function IntegrationsScreen() {
                   Roteamento por funcionalidade
                 </h3>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Escolha qual provedor/modelo cada funcionalidade de IA deve
-                  usar. Se falhar, pode cair para OpenAI automaticamente.
+                  Escolha qual modelo OpenAI cada funcionalidade de IA deve usar.
+                  Em caso de incompatibilidade, o backend pode usar o modelo OpenAI padrão.
                 </p>
               </div>
 
@@ -969,53 +857,7 @@ export default function IntegrationsScreen() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
-                            Provedor
-                          </label>
-                          <FilterSingleSelect
-                            icon={Plug}
-                            value={routeState.provider}
-                            onChange={(value) => {
-                              const nextProvider = isAiProvider(value)
-                                ? value
-                                : "openai";
-                              const nextProviderModelsState =
-                                aiProviderModels[nextProvider];
-                              const nextProviderEnabled =
-                                aiProviderForms[nextProvider].enabled;
-
-                              if (
-                                nextProviderEnabled &&
-                                nextProviderModelsState.options.length === 0 &&
-                                !nextProviderModelsState.loading
-                              ) {
-                                void loadProviderModels(nextProvider);
-                              }
-
-                              const nextModel = getPreferredTaskModel(
-                                task.key,
-                                nextProvider,
-                                nextProviderModelsState.options,
-                              );
-
-                              setAiRoutingForm((prev) => ({
-                                ...prev,
-                                [task.key]: {
-                                  ...prev[task.key],
-                                  provider: nextProvider,
-                                  model: nextModel,
-                                },
-                              }));
-                            }}
-                            placeholder="Selecione o provedor"
-                            includePlaceholderOption={false}
-                            options={getProviderOptionsForTask(task.key)}
-                            size="large"
-                          />
-                        </div>
-
+                      <div className="grid grid-cols-1 gap-3">
                         <div>
                           <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                             Modelo
@@ -1045,33 +887,17 @@ export default function IntegrationsScreen() {
                             {routeError
                               ? routeError
                               : providerModelsState.loading
-                              ? "Consultando modelos na API do provedor..."
+                              ? "Consultando modelos na API da OpenAI..."
                               : !providerEnabled
-                                ? "Ative este provedor e confirme o Edge Secret para carregar os modelos."
+                                ? "Ative a OpenAI e confirme o Edge Secret para carregar os modelos."
                                 : providerModelsState.error
                                   ? providerModelsState.error
                                   : providerModelOptions.length > 0
                                     ? `${providerModelOptions.length} modelos disponíveis.`
-                                    : "Nenhum modelo disponível para este provedor."}
+                                    : "Nenhum modelo OpenAI disponível."}
                           </p>
                         </div>
                       </div>
-
-                      <label className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                        <Checkbox
-                          checked={routeState.fallbackToOpenAi}
-                          onChange={(event) =>
-                            setAiRoutingForm((prev) => ({
-                              ...prev,
-                              [task.key]: {
-                                ...prev[task.key],
-                                fallbackToOpenAi: event.target.checked,
-                              },
-                            }))
-                          }
-                        />
-                        Se este provedor falhar, tentar OpenAI automaticamente.
-                      </label>
                     </Card>
                   );
                 })}

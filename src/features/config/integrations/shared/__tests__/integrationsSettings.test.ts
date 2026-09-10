@@ -12,12 +12,12 @@ test("normalizeModelOptions removes duplicates and preserves labels", () => {
   const options = normalizeModelOptions([
     "gpt-4o-mini",
     { value: "gpt-4o-mini", label: "GPT 4o Mini" },
-    { id: "claude-3-5-sonnet", displayName: "Claude Sonnet" },
+    { id: "gpt-4.1-mini", displayName: "GPT 4.1 Mini" },
   ]);
 
   assert.deepEqual(options, [
     { value: "gpt-4o-mini", label: "gpt-4o-mini" },
-    { value: "claude-3-5-sonnet", label: "Claude Sonnet" },
+    { value: "gpt-4.1-mini", label: "GPT 4.1 Mini" },
   ]);
 });
 
@@ -33,13 +33,13 @@ test("normalizeProviderSettings reads only the non-secret enabled flag", () => {
     },
   );
 
-  const geminiSettings = normalizeProviderSettings(null);
+  const missingSettings = normalizeProviderSettings(null);
 
   assert.equal(openAiSettings.enabled, true);
-  assert.equal(geminiSettings.enabled, false);
+  assert.equal(missingSettings.enabled, false);
 });
 
-test("normalizeRoutingSettings and helpers keep provider models stable", () => {
+test("normalizeRoutingSettings forces legacy providers back to OpenAI", () => {
   const routing = normalizeRoutingSettings({
     id: "routing-1",
     slug: "ai_routing",
@@ -47,9 +47,8 @@ test("normalizeRoutingSettings and helpers keep provider models stable", () => {
     settings: {
       tasks: {
         rewrite_message: {
-          provider: "gemini",
-          model: "gemini-custom",
-          fallbackToOpenAi: false,
+          provider: "unsupported",
+          model: "foreign-model",
         },
       },
     },
@@ -58,12 +57,11 @@ test("normalizeRoutingSettings and helpers keep provider models stable", () => {
   });
 
   const preferredModel = getPreferredTaskModel(
-    "claude",
-    [{ value: "claude-3-5-sonnet-latest", label: "Claude Sonnet" }],
+    "openai",
+    [{ value: "gpt-4.1-mini", label: "GPT 4.1 Mini" }],
   );
 
-  assert.equal(routing.rewrite_message.provider, "gemini");
-  assert.equal(routing.rewrite_message.model, "gemini-custom");
-  assert.equal(routing.rewrite_message.fallbackToOpenAi, false);
-  assert.equal(preferredModel, "claude-3-5-sonnet-latest");
+  assert.equal(routing.rewrite_message.provider, "openai");
+  assert.equal(routing.rewrite_message.model, "gpt-4o-mini");
+  assert.equal(preferredModel, "gpt-4.1-mini");
 });

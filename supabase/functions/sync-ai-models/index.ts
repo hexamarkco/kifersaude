@@ -15,29 +15,20 @@ type SyncResult = {
 };
 
 /** Determine capabilities from model ID patterns */
-function inferCapabilities(modelId: string, provider: string): string[] {
+function inferCapabilities(modelId: string): string[] {
   const id = modelId.toLowerCase();
   const caps: string[] = [];
 
-  if (provider === "openai") {
-    if (id.includes("transcribe") || id.includes("whisper")) {
-      caps.push("transcription");
-    } else {
-      caps.push("text", "structured_output");
-      if (id.includes("o3") || id.includes("o4") || id.includes("reason")) {
-        caps.push("reasoning");
-      }
-      if (!id.includes("nano")) {
-        caps.push("multimodal");
-      }
-    }
-  } else if (provider === "gemini") {
-    caps.push("text", "structured_output", "multimodal");
-    if (id.includes("pro") || id.includes("reason")) {
+  if (id.includes("transcribe") || id.includes("whisper")) {
+    caps.push("transcription");
+  } else {
+    caps.push("text", "structured_output");
+    if (id.includes("o3") || id.includes("o4") || id.includes("reason")) {
       caps.push("reasoning");
     }
-  } else if (provider === "claude") {
-    caps.push("text", "structured_output", "reasoning", "multimodal");
+    if (!id.includes("nano")) {
+      caps.push("multimodal");
+    }
   }
 
   return caps;
@@ -48,8 +39,6 @@ function inferDisplayName(modelId: string): string {
   return modelId
     .replace(/^gpt-/, "GPT-")
     .replace(/^o([0-9])/, "o$1")
-    .replace(/^gemini-/, "Gemini ")
-    .replace(/^claude-/, "Claude ")
     .replace(/-/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -80,58 +69,13 @@ async function syncOpenAI(): Promise<SyncResult> {
       );
     });
 
-    return { provider: "openai", fetched: relevant.length, upserted: 0, deprecated: [], ...await upsertModels("openai", relevant) };
+    return { provider: "openai", fetched: relevant.length, upserted: 0, deprecated: [], ...await upsertModels(relevant) };
   } catch (e) {
     return { provider: "openai", fetched: 0, upserted: 0, deprecated: [], error: String(e) };
   }
 }
 
-async function syncGemini(): Promise<SyncResult> {
-  const apiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
-  if (!apiKey) return { provider: "gemini", fetched: 0, upserted: 0, deprecated: [], error: "No API key" };
-
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (!res.ok) return { provider: "gemini", fetched: 0, upserted: 0, deprecated: [], error: `HTTP ${res.status}` };
-
-    const data = await res.json();
-    const models: Array<{ name: string; supportedMethods?: string[] }> = data.models ?? [];
-
-    const relevant = models.filter((m) => {
-      const name = m.name.replace("models/", "").toLowerCase();
-      return name.startsWith("gemini-") && !name.includes("embedding") && !name.includes("image") && !name.includes("video");
-    });
-
-    return { provider: "gemini", fetched: relevant.length, upserted: 0, deprecated: [], ...await upsertModels("gemini", relevant.map((m) => ({ id: m.name.replace("models/", "") }))) };
-  } catch (e) {
-    return { provider: "gemini", fetched: 0, upserted: 0, deprecated: [], error: String(e) };
-  }
-}
-
-async function syncClaude(): Promise<SyncResult> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")?.trim();
-  if (!apiKey) return { provider: "claude", fetched: 0, upserted: 0, deprecated: [], error: "No API key" };
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/models", {
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-    });
-    if (!res.ok) return { provider: "claude", fetched: 0, upserted: 0, deprecated: [], error: `HTTP ${res.status}` };
-
-    const data = await res.json();
-    const models: Array<{ id: string; display_name?: string }> = data.data ?? [];
-
-    return { provider: "claude", fetched: models.length, upserted: 0, deprecated: [], ...await upsertModels("claude", models) };
-  } catch (e) {
-    return { provider: "claude", fetched: 0, upserted: 0, deprecated: [], error: String(e) };
-  }
-}
-
 async function upsertModels(
-  provider: string,
   remoteModels: Array<{ id: string }>,
 ): Promise<{ upserted: number; deprecated: string[] }> {
   const supabase = createClient(
@@ -144,12 +88,12 @@ async function upsertModels(
   // Upsert each remote model
   let upserted = 0;
   for (const m of remoteModels) {
-    const capabilities = inferCapabilities(m.id, provider);
+    const capabilities = inferCapabilities(m.id);
     const { error } = await supabase
       .from("ai_models")
       .upsert(
         {
-          provider,
+          provider: "openai",
           model: m.id,
           display_name: inferDisplayName(m.id),
           capabilities,
@@ -165,7 +109,7 @@ async function upsertModels(
   const { data: existingModels } = await supabase
     .from("ai_models")
     .select("model, deprecated_at")
-    .eq("provider", provider)
+    .eq("provider", "openai")
     .eq("active", true)
     .is("deprecated_at", null);
 
@@ -175,7 +119,7 @@ async function upsertModels(
       await supabase
         .from("ai_models")
         .update({ deprecated_at: new Date().toISOString() })
-        .eq("provider", provider)
+        .eq("provider", "openai")
         .eq("model", m.model);
       deprecated.push(m.model);
     }
@@ -190,7 +134,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const results = await Promise.all([syncOpenAI(), syncGemini(), syncClaude()]);
+    const results = [await syncOpenAI()];
 
     return new Response(
       JSON.stringify({ success: true, results }),

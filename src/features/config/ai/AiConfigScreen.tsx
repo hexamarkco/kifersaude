@@ -137,8 +137,6 @@ export default function AiConfigScreen() {
         reasoningEfforts?: AiReasoningEffort[];
       }>> = {
         openai: [],
-        gemini: [],
-        claude: [],
       };
       for (const { provider, result } of providerResults) {
         selectableByProvider[provider] = result.data ?? [];

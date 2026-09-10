@@ -32,6 +32,7 @@ import {
   buildFollowUpAiValidationRetryInstruction,
   buildFollowUpAiValidationUserPrompt,
   FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT,
+  FOLLOW_UP_AI_VALIDATION_SCHEMA,
   parseFollowUpAiValidationOutput,
   validateFollowUpAiValidationOutput,
 } from '../_shared/comm-whatsapp-follow-up-ai-validator.ts';
@@ -1424,6 +1425,11 @@ Deno.serve(async (req: Request) => {
       attemptTimeoutMs,
       maxProviderRequestsPerAttempt: 1,
       retrySameResolvedModel: true,
+      responseFormat: {
+        name: 'follow_up_validation',
+        schema: FOLLOW_UP_AI_VALIDATION_SCHEMA,
+        strict: true,
+      },
       validateOutput: validateFollowUpAiValidationOutput,
       buildValidationRetryInstruction: buildFollowUpAiValidationRetryInstruction,
     });

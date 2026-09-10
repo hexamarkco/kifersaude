@@ -80,8 +80,6 @@ const exportParams = (override: boolean) => ({
       label: "GPT-5.6 Sol",
       reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"] as AiReasoningEffort[],
     }],
-    gemini: [],
-    claude: [],
   },
   modelCatalog: [catalogModel()],
   routingSettings: {
@@ -190,7 +188,7 @@ test("AI config v3 never promotes effective_model to a custom override", () => {
 test("AI config v3 ignores examples, catalog and routing snapshots during import", () => {
     const exported = buildExport(true);
     exported.model_catalog_snapshot.providers.openai = [];
-    exported.routing_snapshot.follow_up_generation = { provider: "gemini", model: "do-not-import" };
+    exported.routing_snapshot.follow_up_generation = { provider: "unsupported", model: "do-not-import" };
     exported.configuration_examples[0].example.key = "followup.generate";
 
     const plan = createAiConfigImportPlan(exported, [feature(config(false))], [catalogModel()]);

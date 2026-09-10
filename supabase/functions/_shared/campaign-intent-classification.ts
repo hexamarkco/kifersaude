@@ -7,6 +7,29 @@ export type CampaignIntentClassification = {
   evidence: string;
 };
 
+export const CAMPAIGN_INTENT_CLASSIFICATION_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    contact_permission: {
+      type: 'string',
+      enum: ['OPT_OUT_EXPLICITO', 'NUMERO_ERRADO', 'DESTINATARIO_INCORRETO', 'RECLAMACAO_CONTATO', 'AMBIGUO', 'NENHUM_SINAL'],
+    },
+    commercial_intent: {
+      type: 'string',
+      enum: ['JA_POSSUI_PLANO', 'INTERESSADO', 'SEM_INTERESSE', 'QUER_SABER_MAIS', 'ADIAR_CONTATO', 'OUTRO'],
+    },
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+    recommended_action: {
+      type: 'string',
+      enum: ['suggest_block_whatsapp_campaigns', 'keep_active', 'review'],
+    },
+    reason: { type: 'string' },
+    evidence: { type: 'string' },
+  },
+  required: ['contact_permission', 'commercial_intent', 'confidence', 'recommended_action', 'reason', 'evidence'],
+  additionalProperties: false,
+};
+
 const CONTACT_PERMISSIONS = new Set<CampaignIntentClassification['contact_permission']>([
   'OPT_OUT_EXPLICITO',
   'NUMERO_ERRADO',

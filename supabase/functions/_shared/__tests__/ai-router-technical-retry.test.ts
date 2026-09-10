@@ -31,7 +31,7 @@ const createSupabaseStub = ({
   defaultModel = 'gpt-test',
   reasoningEffort = null,
 }: {
-  provider?: 'openai' | 'gemini' | 'claude';
+  provider?: 'openai';
   featureModel?: string;
   defaultModel?: string;
   reasoningEffort?: AiReasoningEffort | null;
@@ -45,18 +45,9 @@ const createSupabaseStub = ({
             settings: { enabled: true, defaultModelText: defaultModel, baseUrl: 'https://provider.test/v1' },
           },
           {
-            slug: 'ai_provider_gemini',
-            settings: { enabled: true, defaultModelText: defaultModel },
-          },
-          {
-            slug: 'ai_provider_claude',
-            settings: { enabled: true, defaultModelText: defaultModel },
-          },
-          {
             slug: 'ai_routing',
             settings: {
-              fallbackEnabled: false,
-              tasks: { follow_up_generation: { provider, model: defaultModel, fallbackToOpenAi: false } },
+              tasks: { follow_up_generation: { provider, model: defaultModel } },
             },
           },
         ],
@@ -104,7 +95,7 @@ const responsesProviderResponse = (text: string) => new Response(JSON.stringify(
 const runFollowUp = (
   attemptTimeoutMs = 5_000,
   models: {
-    provider?: 'openai' | 'gemini' | 'claude';
+    provider?: 'openai';
     featureModel?: string;
     defaultModel?: string;
     reasoningEffort?: AiReasoningEffort | null;
@@ -151,6 +142,15 @@ describe('AI router technical retry budget', () => {
       systemPrompt: 'system',
       userPrompt: 'context',
       documents: [{ fileName: 'contrato.pdf', fileData: 'JVBERi0xLjQK' }],
+      responseFormat: {
+        name: 'contract_extract',
+        schema: {
+          type: 'object',
+          properties: { value: { type: 'string' } },
+          required: ['value'],
+          additionalProperties: false,
+        },
+      },
       maxAttempts: 1,
       maxProviderRequestsPerAttempt: 1,
       validateOutput: validateFollowUpTechnicalOutput,
@@ -164,6 +164,29 @@ describe('AI router technical retry budget', () => {
       filename: 'contrato.pdf',
       file_data: 'data:application/pdf;base64,JVBERi0xLjQK',
     });
+    expect(body.prompt_cache_key).toBe('followup.generate');
+    expect(body.text.format).toMatchObject({
+      type: 'json_schema',
+      name: 'contract_extract',
+      strict: true,
+    });
+  });
+
+  it('reads cached input tokens from the Chat Completions usage details', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: 'Mensagem válida.' }, finish_reason: 'stop' }],
+      usage: {
+        prompt_tokens: 1200,
+        completion_tokens: 20,
+        total_tokens: 1220,
+        prompt_tokens_details: { cached_tokens: 1024 },
+      },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await runFollowUp();
+
+    expect(result.usage.cachedInputTokens).toBe(1024);
   });
 
   it('sends GPT-5.6 Sol with a compatible body on the first physical request', async () => {
@@ -217,48 +240,6 @@ describe('AI router technical retry budget', () => {
       requested_reasoning_effort: 'high',
       applied_reasoning_effort: 'high',
     }));
-  });
-
-  it('omits deprecated sampling controls for new Claude models', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      content: [{ type: 'text', text: 'Mensagem válida.' }],
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 10, output_tokens: 5 },
-    }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const result = await runFollowUp(5_000, {
-      provider: 'claude',
-      featureModel: 'claude-opus-4-8',
-      defaultModel: 'claude-opus-4-8',
-    });
-
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    const body = JSON.parse(String(request.body));
-    expect(body).toMatchObject({ model: 'claude-opus-4-8', max_tokens: 900 });
-    expect(body).not.toHaveProperty('temperature');
-    expect(result.provider).toBe('claude');
-  });
-
-  it('uses Gemini generationConfig names instead of OpenAI parameters', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: 'Mensagem válida.' }] }, finishReason: 'STOP' }],
-      usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 },
-    }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const result = await runFollowUp(5_000, {
-      provider: 'gemini',
-      featureModel: 'gemini-3.7-flash',
-      defaultModel: 'gemini-3.7-flash',
-    });
-
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    const body = JSON.parse(String(request.body));
-    expect(body.generationConfig).toEqual({ temperature: 0.4, maxOutputTokens: 900 });
-    expect(body).not.toHaveProperty('max_tokens');
-    expect(body).not.toHaveProperty('max_completion_tokens');
-    expect(result.provider).toBe('gemini');
   });
 
   it('uses exactly three provider requests for a normal batch of three follow-ups', async () => {

@@ -9,6 +9,18 @@ export type FollowUpAiValidationDecision =
   | { decision: 'rewrite'; reason: string; text: string; waitSignal: null }
   | { decision: 'wait'; reason: string; text: null; waitSignal: string };
 
+export const FOLLOW_UP_AI_VALIDATION_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    decision: { type: 'string', enum: ['approve', 'rewrite', 'wait'] },
+    reason: { type: 'string' },
+    text: { type: ['string', 'null'] },
+    waitSignal: { type: ['string', 'null'] },
+  },
+  required: ['decision', 'reason', 'text', 'waitSignal'],
+  additionalProperties: false,
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 

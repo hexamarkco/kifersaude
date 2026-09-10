@@ -1,18 +1,14 @@
 import type { IntegrationSetting } from "../../domain/types";
 
 export const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
-export const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
-export const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
 export const AI_ROUTING_SLUG = "ai_routing";
 export const META_PIXEL_SLUG = "meta_pixel";
 export const GTM_SLUG = "google_tag_manager";
 
 export const OPENAI_DEFAULT_TEXT_MODEL = "gpt-4o-mini";
-export const GEMINI_DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
-export const CLAUDE_DEFAULT_TEXT_MODEL = "claude-3-5-sonnet-latest";
 
 export type MessageState = { type: "success" | "error"; text: string } | null;
-export type AiProvider = "openai" | "gemini" | "claude";
+export type AiProvider = "openai";
 export type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
@@ -28,7 +24,6 @@ export type AiProviderFormState = {
 export type AiTaskRouteState = {
   provider: AiProvider;
   model: string;
-  fallbackToOpenAi: boolean;
 };
 
 export type AiRoutingFormState = Record<AiTaskKey, AiTaskRouteState>;
@@ -45,7 +40,7 @@ export type AiProviderModelsState = {
   error: string | null;
 };
 
-export const AI_PROVIDER_ORDER: AiProvider[] = ["openai", "gemini", "claude"];
+export const AI_PROVIDER_ORDER: AiProvider[] = ["openai"];
 
 export const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
   openai: {
@@ -53,16 +48,6 @@ export const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
     name: "OpenAI",
     description:
       "Use modelos GPT para reescrita, follow-up e futuras tarefas de IA.",
-  },
-  gemini: {
-    slug: AI_PROVIDER_GEMINI_SLUG,
-    name: "Google Gemini",
-    description: "Use modelos Gemini com a credencial protegida no Edge Secret.",
-  },
-  claude: {
-    slug: AI_PROVIDER_CLAUDE_SLUG,
-    name: "Claude (Anthropic)",
-    description: "Use modelos Claude com a credencial protegida no Edge Secret.",
   },
 };
 
@@ -110,7 +95,7 @@ export const toTrimmedString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
 export const isAiProvider = (value: string): value is AiProvider =>
-  value === "openai" || value === "gemini" || value === "claude";
+  value === "openai";
 
 export const normalizeModelOptions = (value: unknown): ModelOption[] => {
   if (!Array.isArray(value)) return [];
@@ -152,21 +137,9 @@ export const createDefaultProviderModelsState = (): Record<
   AiProviderModelsState
 > => ({
   openai: { loading: false, options: [], error: null },
-  gemini: { loading: false, options: [], error: null },
-  claude: { loading: false, options: [], error: null },
 });
 
-export const getDefaultTaskModel = (provider: AiProvider): string => {
-  if (provider === "openai") {
-    return OPENAI_DEFAULT_TEXT_MODEL;
-  }
-
-  if (provider === "gemini") {
-    return GEMINI_DEFAULT_TEXT_MODEL;
-  }
-
-  return CLAUDE_DEFAULT_TEXT_MODEL;
-};
+export const getDefaultTaskModel = (_provider: AiProvider): string => OPENAI_DEFAULT_TEXT_MODEL;
 
 export const getPreferredTaskModel = (
   provider: AiProvider,
@@ -186,35 +159,28 @@ export const createDefaultProviderForms = (): Record<
   AiProviderFormState
 > => ({
   openai: { enabled: false },
-  gemini: { enabled: false },
-  claude: { enabled: false },
 });
 
 export const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
-    fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
-    fallbackToOpenAi: true,
   },
   follow_up_agenda_organization: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
-    fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
-    fallbackToOpenAi: true,
   },
   attendance_critique: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
-    fallbackToOpenAi: true,
   },
 });
 
@@ -241,16 +207,12 @@ export const normalizeRoutingSettings = (
     const provider = isAiProvider(providerCandidate)
       ? providerCandidate
       : defaults[task.key].provider;
-    const model = toTrimmedString(rawTask.model) || defaults[task.key].model;
-    const fallbackToOpenAi =
-      typeof rawTask.fallbackToOpenAi === "boolean"
-        ? rawTask.fallbackToOpenAi
-        : defaults[task.key].fallbackToOpenAi;
-
+    const model = (!providerCandidate || isAiProvider(providerCandidate))
+      ? toTrimmedString(rawTask.model) || defaults[task.key].model
+      : defaults[task.key].model;
     accumulator[task.key] = {
       provider,
       model,
-      fallbackToOpenAi,
     };
 
     return accumulator;

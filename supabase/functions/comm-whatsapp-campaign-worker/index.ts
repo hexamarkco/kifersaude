@@ -27,6 +27,7 @@ import {
 } from '../_shared/comm-whatsapp.ts';
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../_shared/campaign-lock.ts';
 import {
+  CAMPAIGN_INTENT_CLASSIFICATION_SCHEMA,
   mapCampaignPermissionToLegacyIntent,
   normalizeCampaignIntentClassification,
   type CampaignIntentClassification,
@@ -558,7 +559,6 @@ async function classifyInboundCampaignIntent(params: {
       message_text: messageText,
       company_name: 'Kifer Saúde',
       transcript,
-      inboundMessage: messageText,
     },
   });
 
@@ -572,6 +572,12 @@ async function classifyInboundCampaignIntent(params: {
       temperature: 0.1,
       maxTokens: 280,
       edgeFunction: 'comm-whatsapp-campaign-worker',
+      maxProviderRequestsPerAttempt: 1,
+      responseFormat: {
+        name: 'campaign_intent_classification',
+        schema: CAMPAIGN_INTENT_CLASSIFICATION_SCHEMA,
+        strict: true,
+      },
     });
     const classification = normalizeCampaignIntentClassification(extractJsonObject(result.text));
 

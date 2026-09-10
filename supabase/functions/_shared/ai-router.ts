@@ -1,8 +1,5 @@
 import {
   AI_REASONING_EFFORTS,
-  clampTemperature,
-  resolveClaudeRequestProfile,
-  resolveGeminiRequestProfile,
   resolveOpenAiRequestProfile,
   type AiReasoningEffort,
   type OpenAiReasoningEffort,
@@ -10,7 +7,7 @@ import {
 } from './ai-provider-request-profile.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type AiProvider = 'openai' | 'gemini' | 'claude';
+export type AiProvider = 'openai';
 
 declare const Deno: {
   env: {
@@ -31,14 +28,17 @@ type ProviderSettings = {
 type TaskRouting = {
   provider: AiProvider;
   model: string;
-  fallbackToOpenAi: boolean;
 };
 
 type AiRuntimeConfig = {
   providers: Record<AiProvider, ProviderSettings>;
   routing: Record<AiTask, TaskRouting>;
-  fallbackEnabled: boolean;
-  fallbackProvider: AiProvider;
+};
+
+export type AiJsonSchemaFormat = {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
 };
 
 type ProviderCallParams = {
@@ -53,6 +53,8 @@ type ProviderCallParams = {
   maxHttpAttempts?: number;
   onReasoningEffortApplied?: (effort: AiReasoningEffort | null) => void;
   documents?: AiDocumentInput[];
+  responseFormat?: AiJsonSchemaFormat;
+  promptCacheKey?: string;
 };
 
 /** A short-lived document payload used only for a single model request. */
@@ -73,6 +75,10 @@ type OpenAiChatRequestBody = {
   reasoning_effort?: OpenAiReasoningEffort;
   max_tokens?: number;
   max_completion_tokens?: number;
+  response_format?: {
+    type: 'json_schema';
+    json_schema: AiJsonSchemaFormat;
+  };
 };
 
 type IntegrationRow = {
@@ -190,6 +196,10 @@ export type GenerateTextForFeatureOptions = {
   buildValidationRetryInstruction?: (validation: AiOutputValidationResult) => string;
   /** Files are supported by the OpenAI Responses API only. */
   documents?: AiDocumentInput[];
+  /** Optional Structured Outputs schema for OpenAI Responses requests. */
+  responseFormat?: AiJsonSchemaFormat;
+  /** Stable, non-sensitive key used to improve OpenAI prompt-cache bucketing. */
+  promptCacheKey?: string;
 };
 
 export type GenerateTextForFeatureResult = {
@@ -223,16 +233,10 @@ class AiAttemptError extends Error {
 
 const LEGACY_GPT_SLUG = 'gpt_transcription';
 const OPENAI_SLUG = 'ai_provider_openai';
-const GEMINI_SLUG = 'ai_provider_gemini';
-const CLAUDE_SLUG = 'ai_provider_claude';
 const AI_ROUTING_SLUG = 'ai_routing';
 
 const OPENAI_DEFAULT_TEXT_MODEL = 'gpt-4o-mini';
 const OPENAI_DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe';
-const GEMINI_DEFAULT_TEXT_MODEL = 'gemini-2.0-flash';
-const GEMINI_DEFAULT_TRANSCRIPTION_MODEL = GEMINI_DEFAULT_TEXT_MODEL;
-const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
-const CLAUDE_DEFAULT_TRANSCRIPTION_MODEL = CLAUDE_DEFAULT_TEXT_MODEL;
 
 const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'follow_up_analysis', 'whatsapp_audio_transcription', 'follow_up_agenda_organization', 'attendance_critique', 'autonomous_attendance', 'contract_document_extraction'];
 
@@ -271,40 +275,14 @@ const getRequiredCapabilitiesForTask = (task: AiTask): string[] => {
   }
 };
 
-const toBoolean = (value: unknown, fallback = false): boolean => {
-  if (typeof value === 'boolean') {
-    return value;
-  }
+const isAiProvider = (value: string): value is AiProvider => value === 'openai';
 
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true') return true;
-    if (normalized === 'false') return false;
-  }
+export const getAiProviderApiKey = (_provider: AiProvider): string =>
+  Deno.env.get('OPENAI_API_KEY')?.trim() || '';
 
-  return fallback;
-};
-
-const isAiProvider = (value: string): value is AiProvider => value === 'openai' || value === 'gemini' || value === 'claude';
-
-export const getAiProviderApiKey = (provider: AiProvider): string => {
-  const secretName =
-    provider === 'openai'
-      ? 'OPENAI_API_KEY'
-      : provider === 'gemini'
-        ? 'GEMINI_API_KEY'
-        : 'ANTHROPIC_API_KEY';
-
-  return Deno.env.get(secretName)?.trim() || '';
-};
-
-const getTaskDefaultModel = (task: AiTask, provider: AiProvider, settings: ProviderSettings): string => {
+const getTaskDefaultModel = (task: AiTask, _provider: AiProvider, settings: ProviderSettings): string => {
   if (task === 'whatsapp_audio_transcription') {
-    if (provider === 'openai') {
-      return settings.defaultModelTranscription || OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
-    }
-
-    return settings.defaultModelTranscription || settings.defaultModelText;
+    return settings.defaultModelTranscription || OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
   }
 
   return settings.defaultModelText;
@@ -317,10 +295,6 @@ const getCompatibleTaskModel = (
   model: string,
 ): string => {
   const candidate = toTrimmedString(model) || getTaskDefaultModel(task, provider, settings);
-
-  if (provider !== 'openai') {
-    return candidate;
-  }
 
   if (task === 'whatsapp_audio_transcription') {
     return isOpenAiTranscriptionModel(candidate) ? candidate : OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
@@ -343,30 +317,17 @@ const normalizeProviderSettings = (
     toTrimmedString(settings.defaultModelText) ||
     toTrimmedString(settings.textModel) ||
     toTrimmedString(settings.model) ||
-    (provider === 'openai'
-      ? legacyTextModel
-      : provider === 'gemini'
-        ? GEMINI_DEFAULT_TEXT_MODEL
-        : CLAUDE_DEFAULT_TEXT_MODEL);
+    legacyTextModel;
 
   const defaultModelTranscription =
     toTrimmedString(settings.defaultModelTranscription) ||
     toTrimmedString(settings.transcriptionModel) ||
-    (provider === 'openai'
-      ? OPENAI_DEFAULT_TRANSCRIPTION_MODEL
-      : provider === 'gemini'
-        ? GEMINI_DEFAULT_TRANSCRIPTION_MODEL
-        : CLAUDE_DEFAULT_TRANSCRIPTION_MODEL);
+    OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
 
   const baseUrl = toTrimmedString(settings.baseUrl) || 'https://api.openai.com/v1';
 
   const hasApiKey = apiKey.length > 0;
-  const enabled =
-    typeof settings.enabled === 'boolean'
-      ? settings.enabled
-      : provider === 'openai'
-        ? hasApiKey
-        : toBoolean(settings.enabled, false);
+  const enabled = typeof settings.enabled === 'boolean' ? settings.enabled : hasApiKey;
 
   return {
     enabled,
@@ -381,21 +342,19 @@ const normalizeTaskRouting = (
   task: AiTask,
   value: unknown,
   providers: Record<AiProvider, ProviderSettings>,
-  fallbackEnabled: boolean,
 ): TaskRouting => {
   const settings = isRecord(value) ? value : {};
-  const providerCandidate = toTrimmedString(settings.provider).toLowerCase();
-  const provider = isAiProvider(providerCandidate) ? providerCandidate : 'openai';
+  const provider: AiProvider = 'openai';
 
-  const modelCandidate = toTrimmedString(settings.model) || toTrimmedString(settings.textModel);
+  const configuredProvider = toTrimmedString(settings.provider).toLowerCase();
+  const modelCandidate = (!configuredProvider || isAiProvider(configuredProvider))
+    ? toTrimmedString(settings.model) || toTrimmedString(settings.textModel)
+    : '';
   const model = modelCandidate || getTaskDefaultModel(task, provider, providers[provider]);
-  const fallbackToOpenAi =
-    typeof settings.fallbackToOpenAi === 'boolean' ? settings.fallbackToOpenAi : fallbackEnabled;
 
   return {
     provider,
     model,
-    fallbackToOpenAi,
   };
 };
 
@@ -403,7 +362,7 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
   const { data, error } = await supabaseAdmin
     .from('integration_settings')
     .select('slug, settings')
-    .in('slug', [OPENAI_SLUG, GEMINI_SLUG, CLAUDE_SLUG, AI_ROUTING_SLUG, LEGACY_GPT_SLUG]);
+    .in('slug', [OPENAI_SLUG, AI_ROUTING_SLUG, LEGACY_GPT_SLUG]);
 
   if (error) {
     throw new Error(`Falha ao carregar configuracoes de IA: ${error.message}`);
@@ -418,58 +377,45 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
 
   const providers: Record<AiProvider, ProviderSettings> = {
     openai: normalizeProviderSettings('openai', integrationMap.get(OPENAI_SLUG) ?? {}, legacySettings),
-    gemini: normalizeProviderSettings('gemini', integrationMap.get(GEMINI_SLUG) ?? {}, legacySettings),
-    claude: normalizeProviderSettings('claude', integrationMap.get(CLAUDE_SLUG) ?? {}, legacySettings),
   };
 
   const routingSettings = integrationMap.get(AI_ROUTING_SLUG) ?? {};
-  const fallbackEnabled = toBoolean(routingSettings.fallbackEnabled, true);
-  const fallbackProviderCandidate = toTrimmedString(routingSettings.fallbackProvider).toLowerCase();
-  const fallbackProvider = isAiProvider(fallbackProviderCandidate) ? fallbackProviderCandidate : 'openai';
-
   const rawTasks = isRecord(routingSettings.tasks) ? routingSettings.tasks : {};
 
   const routing: Record<AiTask, TaskRouting> = {
-    rewrite_message: normalizeTaskRouting('rewrite_message', rawTasks.rewrite_message, providers, fallbackEnabled),
-    follow_up_generation: normalizeTaskRouting('follow_up_generation', rawTasks.follow_up_generation, providers, fallbackEnabled),
-    follow_up_analysis: normalizeTaskRouting('follow_up_analysis', rawTasks.follow_up_analysis, providers, fallbackEnabled),
+    rewrite_message: normalizeTaskRouting('rewrite_message', rawTasks.rewrite_message, providers),
+    follow_up_generation: normalizeTaskRouting('follow_up_generation', rawTasks.follow_up_generation, providers),
+    follow_up_analysis: normalizeTaskRouting('follow_up_analysis', rawTasks.follow_up_analysis, providers),
     follow_up_agenda_organization: normalizeTaskRouting(
       'follow_up_agenda_organization',
       rawTasks.follow_up_agenda_organization,
       providers,
-      fallbackEnabled,
     ),
     whatsapp_audio_transcription: normalizeTaskRouting(
       'whatsapp_audio_transcription',
       rawTasks.whatsapp_audio_transcription,
       providers,
-      fallbackEnabled,
     ),
     attendance_critique: normalizeTaskRouting(
       'attendance_critique',
       rawTasks.attendance_critique,
       providers,
-      fallbackEnabled,
     ),
     autonomous_attendance: normalizeTaskRouting(
       'autonomous_attendance',
       rawTasks.autonomous_attendance,
       providers,
-      fallbackEnabled,
     ),
     contract_document_extraction: normalizeTaskRouting(
       'contract_document_extraction',
       rawTasks.contract_document_extraction,
       providers,
-      false,
     ),
   };
 
   return {
     providers,
     routing,
-    fallbackEnabled,
-    fallbackProvider,
   };
 };
 
@@ -513,6 +459,13 @@ const buildOpenAiChatRequestBody = (
     body.reasoning_effort = reasoningEffort;
   }
 
+  if (params.responseFormat) {
+    body.response_format = {
+      type: 'json_schema',
+      json_schema: params.responseFormat,
+    };
+  }
+
   if (tokenParameter === 'max_completion_tokens') {
     body.max_completion_tokens = params.maxTokens;
   } else {
@@ -538,34 +491,6 @@ const isUnsupportedOpenAiParameterError = (errorText: string, parameter: string)
       normalized.includes(`"param": "${expected}"`) ||
       normalized.includes(`"param":"${expected}"`))
   );
-};
-
-const extractClaudeText = (payload: any): string => {
-  if (!Array.isArray(payload?.content)) {
-    return '';
-  }
-
-  return payload.content
-    .map((part: any) => (part?.type === 'text' && typeof part?.text === 'string' ? part.text : ''))
-    .join('')
-    .trim();
-};
-
-const extractGeminiText = (payload: any): string => {
-  const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
-  for (const candidate of candidates) {
-    const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
-    const collected = parts
-      .map((part: any) => (typeof part?.text === 'string' ? part.text : ''))
-      .join('')
-      .trim();
-
-    if (collected) {
-      return collected;
-    }
-  }
-
-  return '';
 };
 
 const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
@@ -616,7 +541,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
           : null,
         usage: {
           inputTokens: usage?.prompt_tokens ?? null,
-          cachedInputTokens: usage?.cached_tokens ?? null,
+          cachedInputTokens: usage?.prompt_tokens_details?.cached_tokens ?? usage?.cached_tokens ?? null,
           outputTokens: usage?.completion_tokens ?? null,
           reasoningTokens: usage?.completion_tokens_details?.reasoning_tokens ?? null,
           totalTokens: usage?.total_tokens ?? null,
@@ -738,145 +663,17 @@ const callOpenAiTranscription = async (
   return text;
 };
 
-const callClaude = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
-  const requestProfile = resolveClaudeRequestProfile(params.model);
-  const requestBody: Record<string, unknown> = {
-    model: params.model,
-    max_tokens: params.maxTokens,
-    system: params.systemPrompt,
-    messages: [{ role: 'user', content: params.userPrompt }],
-  };
-
-  if (requestProfile.supportsTemperature) {
-    requestBody.temperature = clampTemperature(params.temperature, 1);
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': settings.apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(requestBody),
-    signal: params.signal,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Claude retornou erro HTTP ${response.status}: ${errorText}`);
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  const text = extractClaudeText(payload);
-  if (!text) {
-    throw new Error('Claude retornou resposta vazia.');
-  }
-
-  const usage = payload?.usage;
-  return {
-    text,
-    stopReason: typeof payload?.stop_reason === 'string' ? payload.stop_reason : null,
-    usage: {
-      inputTokens: usage?.input_tokens ?? null,
-      cachedInputTokens: usage?.cache_read_input_tokens ?? null,
-      outputTokens: usage?.output_tokens ?? null,
-      reasoningTokens: null,
-      totalTokens: (usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0),
-    },
-  };
-};
-
-const callGemini = async (settings: ProviderSettings, params: ProviderCallParams): Promise<ProviderCallResult> => {
-  const normalizedModel = params.model.startsWith('models/') ? params.model : `models/${params.model}`;
-  const requestProfile = resolveGeminiRequestProfile(params.model);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${normalizedModel}:generateContent?key=${encodeURIComponent(
-    settings.apiKey,
-  )}`;
-
-  const generationConfig: Record<string, unknown> = {
-    maxOutputTokens: params.maxTokens,
-  };
-  if (requestProfile.supportsTemperature) {
-    generationConfig.temperature = clampTemperature(params.temperature, requestProfile.maxTemperature);
-  }
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      systemInstruction: params.systemPrompt
-        ? {
-            parts: [{ text: params.systemPrompt }],
-          }
-        : undefined,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: params.userPrompt }],
-        },
-      ],
-      generationConfig,
-    }),
-    signal: params.signal,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini retornou erro HTTP ${response.status}: ${errorText}`);
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  const text = extractGeminiText(payload);
-  if (!text) {
-    throw new Error('Gemini retornou resposta vazia.');
-  }
-
-  const usage = payload?.usageMetadata;
-  return {
-    text,
-    stopReason: typeof payload?.candidates?.[0]?.finishReason === 'string'
-      ? payload.candidates[0].finishReason
-      : null,
-    usage: {
-      inputTokens: usage?.promptTokenCount ?? null,
-      cachedInputTokens: null,
-      outputTokens: usage?.candidatesTokenCount ?? null,
-      reasoningTokens: null,
-      totalTokens: usage?.totalTokenCount ?? null,
-    },
-  };
-};
-
 const callProvider = async (
-  provider: AiProvider,
+  _provider: AiProvider,
   settings: ProviderSettings,
   params: ProviderCallParams,
-): Promise<ProviderCallResult> => {
-  if (provider === 'openai') {
-    return callOpenAi(settings, params);
-  }
-
-  if (provider === 'gemini') {
-    return callGemini(settings, params);
-  }
-
-  return callClaude(settings, params);
-};
+): Promise<ProviderCallResult> => callOpenAi(settings, params);
 
 const callProviderTranscription = async (
-  provider: AiProvider,
+  _provider: AiProvider,
   settings: ProviderSettings,
   params: { model: string; audioBlob: Blob; fileName?: string; mimeType?: string; prompt?: string },
-): Promise<string> => {
-  if (provider === 'openai') {
-    return callOpenAiTranscription(settings, params);
-  }
-
-  throw new Error(`Transcricao de audio nao suportada pelo provedor ${provider}.`);
-};
+): Promise<string> => callOpenAiTranscription(settings, params);
 
 // ============================================================
 // Pricing cache + cost calculation
@@ -1103,6 +900,17 @@ const callOpenAiResponses = async (
     };
 
     if (params.systemPrompt.trim()) body.instructions = params.systemPrompt;
+    if (params.promptCacheKey?.trim()) body.prompt_cache_key = params.promptCacheKey.trim().slice(0, 64);
+    if (params.responseFormat) {
+      body.text = {
+        format: {
+          type: 'json_schema',
+          name: params.responseFormat.name,
+          schema: params.responseFormat.schema,
+          strict: params.responseFormat.strict ?? true,
+        },
+      };
+    }
     if (includeTemperature) body.temperature = params.temperature;
     if (reasoningEffort) body.reasoning = { effort: reasoningEffort };
 
@@ -1312,22 +1120,6 @@ export const generateTextWithRouting = async (
     attempts.push({ provider: preferredProvider, model: preferredDefaultModel });
   }
 
-  const allowFallback = taskRoute.fallbackToOpenAi;
-  const fallbackProvider = runtime.fallbackProvider;
-  if (allowFallback && fallbackProvider !== preferredProvider) {
-    const fallbackSettings = runtime.providers[fallbackProvider];
-    const fallbackModel = getCompatibleTaskModel(
-      options.task,
-      fallbackProvider,
-      fallbackSettings,
-      getTaskDefaultModel(options.task, fallbackProvider, fallbackSettings),
-    );
-    attempts.push({
-      provider: fallbackProvider,
-      model: fallbackModel,
-    });
-  }
-
   const failures: string[] = [];
 
   for (let index = 0; index < attempts.length; index += 1) {
@@ -1396,22 +1188,6 @@ export const transcribeAudioWithRouting = async (
     isOpenAiTranscriptionModel(preferredDefaultModel)
   ) {
     attempts.push({ provider: preferredProvider, model: preferredDefaultModel, source: 'provider_default' });
-  }
-
-  if (taskRoute.fallbackToOpenAi && runtime.fallbackProvider !== preferredProvider) {
-    const fallbackProvider = runtime.fallbackProvider;
-    const fallbackSettings = runtime.providers[fallbackProvider];
-    const fallbackModel = getCompatibleTaskModel(
-      'whatsapp_audio_transcription',
-      fallbackProvider,
-      fallbackSettings,
-      getTaskDefaultModel('whatsapp_audio_transcription', fallbackProvider, fallbackSettings),
-    );
-    attempts.push({
-      provider: fallbackProvider,
-      model: fallbackModel,
-      source: 'fallback',
-    });
   }
 
   const failures: string[] = [];
@@ -1540,7 +1316,6 @@ export const generateTextForFeature = async (
 
   // Resolve model with precedence: feature > ai_routing > provider default
   const resolved = await resolveModelForFeature(options.supabaseAdmin, options.featureKey, options.task);
-  const taskRoute = runtime.routing[options.task];
 
   // Build attempt list following the same fallback chain as generateTextWithRouting
   const preferredProvider = resolved.provider;
@@ -1557,19 +1332,6 @@ export const generateTextForFeature = async (
     isOpenAiTextModel(preferredDefaultModel)
   ) {
     attempts.push({ provider: preferredProvider, model: preferredDefaultModel, source: 'provider_default' });
-  }
-
-  const allowFallback = taskRoute.fallbackToOpenAi;
-  const fallbackProvider = runtime.fallbackProvider;
-  if (allowFallback && fallbackProvider !== preferredProvider) {
-    const fallbackSettings = runtime.providers[fallbackProvider];
-    const fallbackModel = getCompatibleTaskModel(
-      options.task,
-      fallbackProvider,
-      fallbackSettings,
-      getTaskDefaultModel(options.task, fallbackProvider, fallbackSettings),
-    );
-    attempts.push({ provider: fallbackProvider, model: fallbackModel, source: 'fallback' });
   }
 
   const maxAttempts = Math.max(1, Math.min(3, options.maxAttempts ?? attempts.length));
@@ -1664,6 +1426,8 @@ export const generateTextForFeature = async (
           appliedReasoningEffort = effort;
         },
         documents: options.documents,
+        responseFormat: options.responseFormat,
+        promptCacheKey: options.promptCacheKey ?? options.featureKey,
       });
 
       const attemptDuration = Date.now() - attemptStart;
@@ -1807,8 +1571,6 @@ export const generateTextForFeature = async (
 
 export const aiProviderSlugByProvider: Record<AiProvider, string> = {
   openai: OPENAI_SLUG,
-  gemini: GEMINI_SLUG,
-  claude: CLAUDE_SLUG,
 };
 
 export const aiRoutingSlug = AI_ROUTING_SLUG;

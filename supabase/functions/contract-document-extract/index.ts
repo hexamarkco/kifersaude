@@ -7,6 +7,7 @@ import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { corsHeaders } from '../_shared/comm-whatsapp.ts';
 import {
   CONTRACT_DOCUMENT_PROFILES,
+  CONTRACT_DOCUMENT_EXTRACTION_SCHEMA,
   buildContractExtractionPrompt,
   parseContractDocumentExtraction,
   type ContractDocumentProfile,
@@ -109,6 +110,14 @@ Deno.serve(async (req: Request) => {
       temperature: aiConfig.temperature,
       maxTokens: aiConfig.maxOutputTokens,
       edgeFunction: 'contract-document-extract',
+      maxAttempts: 1,
+      maxProviderRequestsPerAttempt: 1,
+      promptCacheKey: 'contract-document-extract-v1',
+      responseFormat: {
+        name: 'contract_document_extraction',
+        schema: CONTRACT_DOCUMENT_EXTRACTION_SCHEMA,
+        strict: true,
+      },
       documents: await Promise.all(documents.map(async (document) => ({
         fileName: document.name.slice(0, 180),
         fileData: toBase64(new Uint8Array(await document.arrayBuffer())),

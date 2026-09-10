@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  clampTemperature,
-  resolveClaudeRequestProfile,
-  resolveGeminiRequestProfile,
   resolveOpenAiRequestProfile,
 } from '../ai-provider-request-profile.ts';
 
@@ -46,18 +43,4 @@ describe('AI provider request profiles', () => {
     expect(resolveOpenAiRequestProfile('o3', 'follow_up_generation', 'none').reasoningEffort).toBe('low');
   });
 
-  it('keeps temperature for older Claude models and removes it for newer ones', () => {
-    expect(resolveClaudeRequestProfile('claude-sonnet-4-6').supportsTemperature).toBe(true);
-    expect(resolveClaudeRequestProfile('claude-opus-4-8').supportsTemperature).toBe(false);
-    expect(resolveClaudeRequestProfile('claude-sonnet-5').supportsTemperature).toBe(false);
-  });
-
-  it('uses Gemini model configuration bounds', () => {
-    expect(resolveGeminiRequestProfile('gemini-3.7-flash')).toEqual({
-      supportsTemperature: true,
-      maxTemperature: 2,
-    });
-    expect(clampTemperature(3, 2)).toBe(2);
-    expect(clampTemperature(-1, 2)).toBe(0);
-  });
 });

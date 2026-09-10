@@ -62,6 +62,38 @@ export type ContractDocumentExtraction = {
   warnings: string[];
 };
 
+const nullableStringSchema = { type: ['string', 'null'] } as const;
+const objectWithNullableStringFields = (keys: readonly string[]) => ({
+  type: 'object',
+  properties: Object.fromEntries(keys.map((key) => [key, nullableStringSchema])),
+  required: [...keys],
+  additionalProperties: false,
+});
+
+export const CONTRACT_DOCUMENT_EXTRACTION_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    profile: { type: 'string', enum: [...CONTRACT_DOCUMENT_PROFILES] },
+    fields: objectWithNullableStringFields(CONTRACT_IMPORT_FIELD_KEYS),
+    field_sources: objectWithNullableStringFields(CONTRACT_IMPORT_FIELD_KEYS),
+    holder: {
+      anyOf: [
+        objectWithNullableStringFields(CONTRACT_HOLDER_IMPORT_FIELD_KEYS),
+        { type: 'null' },
+      ],
+    },
+    holder_count: { type: 'integer', minimum: 0, maximum: 99 },
+    dependent_count: { type: 'integer', minimum: 0, maximum: 99 },
+    warnings: {
+      type: 'array',
+      items: { type: 'string' },
+      maxItems: 10,
+    },
+  },
+  required: ['profile', 'fields', 'field_sources', 'holder', 'holder_count', 'dependent_count', 'warnings'],
+  additionalProperties: false,
+};
+
 const profileSet = new Set<string>(CONTRACT_DOCUMENT_PROFILES);
 const fieldSet = new Set<string>(CONTRACT_IMPORT_FIELD_KEYS);
 const holderFieldSet = new Set<string>(CONTRACT_HOLDER_IMPORT_FIELD_KEYS);
@@ -285,26 +317,5 @@ export const buildContractExtractionPrompt = (profile: ContractDocumentProfile) 
   'Regra MedSênior: use operadora como "MedSênior", nunca a razão social "SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.". Para o produto "MEDSÊNIOR RJ 1", retorne somente "RJ1". Para acomodação, retorne somente "Enfermaria" ou "Apartamento", sem a descrição do quarto.',
   'Extraia em holder somente o titular principal/beneficiário contratante, nunca dados da operadora, de representantes ou de dependentes. Inclua todos os dados pessoais e de contato presentes; se um dado não aparecer com clareza, omita-o. A data de nascimento deve usar YYYY-MM-DD.',
   'Use data_inicio em YYYY-MM-DD; mes_reajuste entre 01 e 12; vidas como número inteiro; mensalidade_total no formato visual do documento.',
-  'Retorne SOMENTE JSON válido, sem markdown, no formato:',
-  JSON.stringify({
-    profile: 'auto|supermed|hcommerce|planium|qualicorp|medsenior',
-    fields: {
-      codigo_contrato: 'string ou omitido', modalidade: 'string ou omitido', operadora: 'string ou omitido',
-      produto_plano: 'string ou omitido', abrangencia: 'string ou omitido', acomodacao: 'string ou omitido',
-      data_inicio: 'YYYY-MM-DD ou omitido', mes_reajuste: '01-12 ou omitido', carencia: 'string ou omitido',
-      mensalidade_total: 'string ou omitido', vidas: 'string ou omitido', cnpj: 'string ou omitido',
-      razao_social: 'string ou omitido', nome_fantasia: 'string ou omitido', endereco_empresa: 'string ou omitido',
-    },
-    field_sources: { codigo_contrato: 'nome do arquivo e página, para cada campo extraído' },
-    holder: {
-      nome_completo: 'string ou omitido', cpf: 'string ou omitido', rg: 'string ou omitido',
-      data_nascimento: 'YYYY-MM-DD ou omitido', sexo: 'string ou omitido', estado_civil: 'string ou omitido',
-      telefone: 'string ou omitido', email: 'string ou omitido', cep: 'string ou omitido',
-      endereco: 'string ou omitido', numero: 'string ou omitido', complemento: 'string ou omitido',
-      bairro: 'string ou omitido', cidade: 'string ou omitido', estado: 'UF ou omitido', cns: 'string ou omitido',
-    },
-    holder_count: 0,
-    dependent_count: 0,
-    warnings: ['qualquer ambiguidade, conflito entre PDFs ou campo importante não identificado'],
-  }),
+  'A resposta segue o schema estruturado informado à API. Use null para campos ausentes e nunca invente valores.',
 ].join('\n');

@@ -31,7 +31,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const toTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-const isAiProvider = (value: string): value is AiProvider => value === 'openai' || value === 'gemini' || value === 'claude';
+const isAiProvider = (value: string): value is AiProvider => value === 'openai';
 
 const uniqueOptions = (options: ModelOption[]): ModelOption[] => {
   const seen = new Set<string>();
@@ -89,63 +89,6 @@ const parseOpenAiModels = (payload: unknown): ModelOption[] => {
   return uniqueOptions(options);
 };
 
-const parseGeminiModels = (payload: unknown): ModelOption[] => {
-  const rows = isRecord(payload) && Array.isArray(payload.models) ? payload.models : [];
-
-  const options = rows
-    .map((row) => {
-      if (!isRecord(row)) return null;
-
-      const supportedMethods = Array.isArray(row.supportedGenerationMethods)
-        ? row.supportedGenerationMethods
-            .map((method) => (typeof method === 'string' ? method : ''))
-            .filter((method) => method)
-        : [];
-
-      if (supportedMethods.length > 0 && !supportedMethods.includes('generateContent')) {
-        return null;
-      }
-
-      const rawName = toTrimmedString(row.name);
-      const value = rawName.replace(/^models\//, '');
-      if (!value || !value.toLowerCase().startsWith('gemini')) return null;
-
-      const displayName = toTrimmedString(row.displayName);
-      return {
-        value,
-        label: displayName || value,
-        reasoningEfforts: [],
-      };
-    })
-    .filter((row): row is ModelOption => row !== null)
-    .sort((a, b) => a.value.localeCompare(b.value));
-
-  return uniqueOptions(options);
-};
-
-const parseClaudeModels = (payload: unknown): ModelOption[] => {
-  const rows = isRecord(payload) && Array.isArray(payload.data) ? payload.data : [];
-
-  const options = rows
-    .map((row) => {
-      if (!isRecord(row)) return null;
-
-      const id = toTrimmedString(row.id);
-      if (!id || !id.toLowerCase().startsWith('claude-')) return null;
-
-      const displayName = toTrimmedString(row.display_name);
-      return {
-        value: id,
-        label: displayName || id,
-        reasoningEfforts: [],
-      };
-    })
-    .filter((row): row is ModelOption => row !== null)
-    .sort((a, b) => a.value.localeCompare(b.value));
-
-  return uniqueOptions(options);
-};
-
 const getProviderErrorMessage = (response: Response, _provider: AiProvider): string =>
   `O provedor retornou erro HTTP ${response.status}.`;
 
@@ -165,48 +108,8 @@ const listOpenAiModels = async (apiKey: string): Promise<ModelOption[]> => {
   return parseOpenAiModels(payload);
 };
 
-const listGeminiModels = async (apiKey: string): Promise<ModelOption[]> => {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(endpoint, {
-    method: 'GET',
-  });
-
-  if (!response.ok) {
-    throw new Error(getProviderErrorMessage(response, 'gemini'));
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  return parseGeminiModels(payload);
-};
-
-const listClaudeModels = async (apiKey: string): Promise<ModelOption[]> => {
-  const response = await fetch('https://api.anthropic.com/v1/models', {
-    method: 'GET',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(getProviderErrorMessage(response, 'claude'));
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  return parseClaudeModels(payload);
-};
-
-const listModelsByProvider = async (provider: AiProvider, apiKey: string): Promise<ModelOption[]> => {
-  if (provider === 'openai') {
-    return listOpenAiModels(apiKey);
-  }
-
-  if (provider === 'gemini') {
-    return listGeminiModels(apiKey);
-  }
-
-  return listClaudeModels(apiKey);
-};
+const listModelsByProvider = async (_provider: AiProvider, apiKey: string): Promise<ModelOption[]> =>
+  listOpenAiModels(apiKey);
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');

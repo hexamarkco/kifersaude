@@ -10,8 +10,9 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
  */
 
 const MCP_PROTOCOL_VERSION = '2025-03-26';
-const MAX_PAGE_SIZE = 100;
-const MAX_TEXT_RESPONSE_LENGTH = 90_000;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+const MAX_TEXT_RESPONSE_LENGTH = 40_000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -182,7 +183,7 @@ async function writeAuditLog(params: {
 async function listRecords(supabase: SupabaseClient, params: Record<string, unknown>) {
   const table = assertReadableTable(params.table);
   const page = positiveInt(params.page, 1, 10_000);
-  const pageSize = positiveInt(params.page_size, 50, MAX_PAGE_SIZE);
+  const pageSize = positiveInt(params.page_size, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
   const orderBy = text(params.order_by) || 'created_at';
   const ascending = params.ascending === true;
 
@@ -264,12 +265,12 @@ async function getLead360(supabase: SupabaseClient, params: Record<string, unkno
 
   const [lead, contracts, interactions, reminders, chats, statusHistory, jobs] = await Promise.all([
     supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
-    supabase.from('contracts').select('*').eq('lead_id', leadId).order('updated_at', { ascending: false }).limit(100),
-    supabase.from('interactions').select('*').eq('lead_id', leadId).order('data_interacao', { ascending: false }).limit(100),
-    supabase.from('reminders').select('*').eq('lead_id', leadId).order('data_lembrete', { ascending: true }).limit(100),
-    supabase.from('comm_whatsapp_chats').select('*').eq('lead_id', leadId).order('last_message_at', { ascending: false }).limit(20),
-    supabase.from('lead_status_history').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(100),
-    supabase.from('auto_contact_flow_jobs').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(100),
+    supabase.from('contracts').select('*').eq('lead_id', leadId).order('updated_at', { ascending: false }).limit(20),
+    supabase.from('interactions').select('*').eq('lead_id', leadId).order('data_interacao', { ascending: false }).limit(30),
+    supabase.from('reminders').select('*').eq('lead_id', leadId).order('data_lembrete', { ascending: true }).limit(30),
+    supabase.from('comm_whatsapp_chats').select('*').eq('lead_id', leadId).order('last_message_at', { ascending: false }).limit(10),
+    supabase.from('lead_status_history').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(30),
+    supabase.from('auto_contact_flow_jobs').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(20),
   ]);
 
   const firstError = [lead, contracts, interactions, reminders, chats, statusHistory, jobs].find((result) => result.error)?.error;
@@ -289,7 +290,7 @@ async function getChatTranscript(supabase: SupabaseClient, params: Record<string
   const chatId = text(params.chat_id);
   if (!chatId) throw new Error('Informe chat_id.');
   const page = positiveInt(params.page, 1, 10_000);
-  const pageSize = positiveInt(params.page_size, 50, MAX_PAGE_SIZE);
+  const pageSize = positiveInt(params.page_size, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
   const from = (page - 1) * pageSize;
 
   const [chat, messages] = await Promise.all([
@@ -319,7 +320,7 @@ async function getOperationalOverview(supabase: SupabaseClient) {
     supabase.from('comm_whatsapp_chats').select('*', { count: 'exact', head: true }).gt('unread_count', 0).is('deleted_at', null),
     supabase.from('auto_contact_flow_jobs').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('automation_run_log').select('*', { count: 'exact', head: true }).neq('status', 'ok'),
-    supabase.from('automation_run_log').select('*').order('run_at', { ascending: false }).limit(20),
+    supabase.from('automation_run_log').select('*').order('run_at', { ascending: false }).limit(10),
   ]);
   const firstError = [leads, contracts, chats, unreadChats, pendingJobs, failedRuns, latestRuns].find((result) => result.error)?.error;
   if (firstError) throw new Error(`Falha ao carregar resumo: ${firstError.message}`);
@@ -352,7 +353,7 @@ const tools = [
       properties: {
         table: { type: 'string', description: 'Tabela retornada por kifer_list_resources.' },
         page: { type: 'integer', minimum: 1, default: 1 },
-        page_size: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+        page_size: { type: 'integer', minimum: 1, maximum: MAX_PAGE_SIZE, default: DEFAULT_PAGE_SIZE },
         order_by: { type: 'string', default: 'created_at' },
         ascending: { type: 'boolean', default: false },
         filters: {
@@ -407,7 +408,7 @@ const tools = [
       properties: {
         chat_id: { type: 'string' },
         page: { type: 'integer', minimum: 1, default: 1 },
-        page_size: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+        page_size: { type: 'integer', minimum: 1, maximum: MAX_PAGE_SIZE, default: DEFAULT_PAGE_SIZE },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },

@@ -79,6 +79,7 @@ type WhatsAppAgendaModalProps = {
     approvedScheduleAction: 'schedule' | 'no_schedule';
     approvedScheduleDate: string | null;
     scheduleReason: string | null;
+    opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended';
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => Promise<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string }>;

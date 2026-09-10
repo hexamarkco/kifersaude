@@ -165,6 +165,7 @@ import {
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
+import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
@@ -8047,6 +8048,7 @@ export default function WhatsAppInboxScreen() {
     approvedScheduleAction: 'schedule' | 'no_schedule';
     approvedScheduleDate: string | null;
     scheduleReason: string | null;
+    opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended';
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => {
@@ -8055,6 +8057,9 @@ export default function WhatsAppInboxScreen() {
     const failures: string[] = [];
     const warnings: string[] = [];
     const approvedSchedules: Array<{ leadId: string; generationId: string | null; sourceReminderId: string; dueAt: string; reason: string | null }> = [];
+    const statusUpdates = new Map<string, { chatId: string; leadId: string; status: BatchFollowUpFinalStatus; reminderId: string }>();
+    const resolvedReminderIds = new Set<string>();
+    let waitWithoutScheduleCount = 0;
     const legacyAuditEntries: Array<{
       lead_id: string;
       chat_id: string;
@@ -8065,6 +8070,16 @@ export default function WhatsAppInboxScreen() {
 
     for (const [index, result] of results.entries()) {
       const totalSegments = result.textSegments.length;
+      const chat = chats.find((c) => c.id === result.chatId)
+        ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
+        ?? chats.find((c) => c.lead_id === result.leadId);
+      const finalStatus = resolveBatchFollowUpFinalStatus({
+        approvedScheduleAction: result.approvedScheduleAction,
+        approvedScheduleDate: result.approvedScheduleDate,
+        opportunityRecommendation: result.opportunityRecommendation,
+        currentLeadStatus: chat?.lead_status,
+      });
+
       if (result.currentAction === 'wait') {
         if (result.approvedScheduleAction === 'schedule' && result.approvedScheduleDate) {
           approvedSchedules.push({
@@ -8074,6 +8089,24 @@ export default function WhatsAppInboxScreen() {
             dueAt: result.approvedScheduleDate,
             reason: result.scheduleReason,
           });
+          options?.onProgress?.({
+            reminderId: result.reminderId,
+            status: 'sent',
+            sentSegments: 0,
+            totalSegments: 0,
+          });
+        } else {
+          waitWithoutScheduleCount += 1;
+          if (finalStatus) {
+            statusUpdates.set(result.leadId, {
+              chatId: result.chatId,
+              leadId: result.leadId,
+              status: finalStatus,
+              reminderId: result.reminderId,
+            });
+          } else {
+            resolvedReminderIds.add(result.reminderId);
+          }
           options?.onProgress?.({
             reminderId: result.reminderId,
             status: 'sent',
@@ -8090,9 +8123,6 @@ export default function WhatsAppInboxScreen() {
         totalSegments,
       });
 
-      const chat = chats.find((c) => c.id === result.chatId)
-        ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
-        ?? chats.find((c) => c.lead_id === result.leadId);
       const phoneChatId = normalizeWhapiDirectChatId(result.phone);
       const externalChatId = normalizeWhapiDirectChatId(chat?.external_chat_id)
         || normalizeWhapiDirectChatId(result.externalChatId)
@@ -8166,6 +8196,18 @@ export default function WhatsAppInboxScreen() {
       }
 
       sentIds.push(result.reminderId);
+      if (!finalStatus) {
+        if (result.approvedScheduleAction !== 'schedule' || !result.approvedScheduleDate) {
+          resolvedReminderIds.add(result.reminderId);
+        }
+      } else {
+        statusUpdates.set(result.leadId, {
+          chatId: result.chatId,
+          leadId: result.leadId,
+          status: finalStatus,
+          reminderId: result.reminderId,
+        });
+      }
       options?.onProgress?.({
         reminderId: result.reminderId,
         status: 'sent',
@@ -8195,11 +8237,9 @@ export default function WhatsAppInboxScreen() {
       }
     }
 
-    if (sentIds.length === 0 && approvedSchedules.length === 0) {
+    if (sentIds.length === 0 && approvedSchedules.length === 0 && waitWithoutScheduleCount === 0) {
       throw new Error(failures[0] || 'Nenhum follow-up selecionado possui mensagem para enviar ou agenda aprovada.');
     }
-
-    const resolvedReminderIds = [...sentIds];
 
     let scheduledCount = 0;
     for (const schedule of approvedSchedules) {
@@ -8216,7 +8256,7 @@ export default function WhatsAppInboxScreen() {
           origin: 'follow_up_v2_batch',
         });
         scheduledCount += 1;
-        if (!resolvedReminderIds.includes(schedule.sourceReminderId)) resolvedReminderIds.push(schedule.sourceReminderId);
+        resolvedReminderIds.add(schedule.sourceReminderId);
         if (schedule.generationId) {
           try {
             await approveInboxFollowUpSchedule({
@@ -8235,8 +8275,28 @@ export default function WhatsAppInboxScreen() {
       }
     }
 
+    for (const statusUpdate of statusUpdates.values()) {
+      try {
+        await whatsappContactsRepository.updateLeadStatus(statusUpdate.chatId, statusUpdate.status);
+        if (statusUpdate.status === 'Perdido') {
+          await clearInboxLeadAgenda(statusUpdate.leadId);
+        }
+        resolvedReminderIds.add(statusUpdate.reminderId);
+        options?.onProgress?.({
+          reminderId: statusUpdate.reminderId,
+          status: 'sent',
+          sentSegments: 0,
+          totalSegments: 0,
+          finalStatus: statusUpdate.status,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'erro desconhecido';
+        warnings.push(`Follow-up concluído, mas não foi possível mover o lead ${statusUpdate.leadId} para ${statusUpdate.status}: ${message}`);
+      }
+    }
+
     try {
-      await markInboxRemindersRead(resolvedReminderIds);
+      await markInboxRemindersRead([...resolvedReminderIds]);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'erro desconhecido';
       warnings.push(`Erro ao marcar lembretes como lidos: ${message}`);

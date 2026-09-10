@@ -218,9 +218,9 @@ for /d %%D in ("supabase\functions\*") do (
       )
 
       if "!SUPABASE_USE_NPX!"=="1" (
-        call "!NPX_BIN!" --yes supabase functions deploy "!FUNCTION_NAME!" !DEPLOY_ARGS!
+        call "!NPX_BIN!" --yes supabase functions deploy "!FUNCTION_NAME!" --use-api !DEPLOY_ARGS!
       ) else (
-        call "!SUPABASE_BIN!" functions deploy "!FUNCTION_NAME!" !DEPLOY_ARGS!
+        call "!SUPABASE_BIN!" functions deploy "!FUNCTION_NAME!" --use-api !DEPLOY_ARGS!
       )
 
       if errorlevel 1 (

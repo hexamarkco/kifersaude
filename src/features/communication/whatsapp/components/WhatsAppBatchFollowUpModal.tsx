@@ -7,8 +7,8 @@ import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../data';
-import { markLeadLost } from '../../../leads';
 import { toast } from '../../../../lib/toast';
+import type { BatchFollowUpFinalStatus, BatchFollowUpOpportunityRecommendation } from '../domain/batchFollowUpOutcome';
 import WhatsAppDialog from './WhatsAppDialog';
 import {
   AiContextPanel,
@@ -60,6 +60,7 @@ type BatchItemState = {
   generationId: string | null;
   approvedScheduleAction: 'schedule' | 'no_schedule';
   approvedScheduleDate: string | null;
+  finalStatus: BatchFollowUpFinalStatus | null;
   error: string | null;
   selected: boolean;
   sendStatus: 'idle' | 'queued' | 'sending' | 'sent' | 'failed';
@@ -80,6 +81,7 @@ export type WhatsAppBatchFollowUpSendProgress = {
   status: 'queued' | 'sending' | 'sent' | 'failed';
   sentSegments: number;
   totalSegments: number;
+  finalStatus?: BatchFollowUpFinalStatus | null;
   errorMessage?: string;
 };
 
@@ -98,6 +100,7 @@ type WhatsAppBatchFollowUpModalProps = {
     approvedScheduleAction: 'schedule' | 'no_schedule';
     approvedScheduleDate: string | null;
     scheduleReason: string | null;
+    opportunityRecommendation: BatchFollowUpOpportunityRecommendation;
   }>, options?: {
     onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
   }) => Promise<SentSummary>;
@@ -121,8 +124,6 @@ export default function WhatsAppBatchFollowUpModal({
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [sentSummary, setSentSummary] = useState<SentSummary | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
-  const [markingLostReminderIds, setMarkingLostReminderIds] = useState<Set<string>>(new Set());
-  const [markedLostReminderIds, setMarkedLostReminderIds] = useState<Set<string>>(new Set());
   const [batchId, setBatchId] = useState<string | null>(null);
   const cancelRequestedRef = useRef(false);
 
@@ -177,6 +178,7 @@ export default function WhatsAppBatchFollowUpModal({
           generationId: null,
           approvedScheduleAction: 'no_schedule',
           approvedScheduleDate: null,
+          finalStatus: null,
           error: null,
           selected: true,
           sendStatus: 'idle',
@@ -249,6 +251,7 @@ export default function WhatsAppBatchFollowUpModal({
           generationId: result.generationId ?? null,
           approvedScheduleAction: 'no_schedule',
           approvedScheduleDate: null,
+          finalStatus: null,
           error: null,
         }),
       );
@@ -367,6 +370,7 @@ export default function WhatsAppBatchFollowUpModal({
             generationId: result.value.generationId ?? null,
             approvedScheduleAction: 'no_schedule',
             approvedScheduleDate: null,
+            finalStatus: null,
           };
         } else {
           allReady = false;
@@ -395,7 +399,7 @@ export default function WhatsAppBatchFollowUpModal({
   // ---- Send ----
 
   const handleSendSelected = async () => {
-    const readyItems = items.filter((it) => it.status === 'ready' && it.selected && (it.currentAction === 'send' || (it.approvedScheduleAction === 'schedule' && Boolean(it.approvedScheduleDate))));
+    const readyItems = items.filter((it) => it.status === 'ready' && it.selected);
     if (readyItems.length === 0 || !onSendBatchFollowUps) {
       if (!onSendBatchFollowUps) toast.error('Envio não disponível.');
       return;
@@ -403,7 +407,7 @@ export default function WhatsAppBatchFollowUpModal({
 
     setPhase('sending');
     setItems((prev) => prev.map((item) => {
-      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId) || item.currentAction === 'wait') return item;
+      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId)) return item;
       return {
         ...item,
         sendStatus: 'queued',
@@ -427,6 +431,7 @@ export default function WhatsAppBatchFollowUpModal({
           approvedScheduleAction: it.approvedScheduleAction,
           approvedScheduleDate: it.approvedScheduleDate,
           scheduleReason: it.scheduleRecommendation?.reason ?? null,
+          opportunityRecommendation: it.opportunityRecommendation,
         })),
         {
           onProgress: (progress) => {
@@ -438,6 +443,7 @@ export default function WhatsAppBatchFollowUpModal({
                     sendError: progress.errorMessage ?? null,
                     sendSegmentsSent: progress.sentSegments,
                     sendSegmentsTotal: progress.totalSegments,
+                    finalStatus: progress.finalStatus ?? item.finalStatus,
                   }
                 : item
             )));
@@ -462,28 +468,6 @@ export default function WhatsAppBatchFollowUpModal({
     }
 
     setPhase('sent');
-  };
-
-  // ---- Mark as lost (from the final summary, when the AI recommends giving up on a lead) ----
-
-  const handleMarkLeadAsLost = async (item: BatchItemState) => {
-    if (markingLostReminderIds.has(item.reminderId) || markedLostReminderIds.has(item.reminderId)) return;
-
-    setMarkingLostReminderIds((prev) => new Set(prev).add(item.reminderId));
-    try {
-      await markLeadLost(item.leadId);
-
-      setMarkedLostReminderIds((prev) => new Set(prev).add(item.reminderId));
-      toast.success(`${item.leadName || 'Lead'} marcado como perdido.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível marcar o lead como perdido.');
-    } finally {
-      setMarkingLostReminderIds((prev) => {
-        const next = new Set(prev);
-        next.delete(item.reminderId);
-        return next;
-      });
-    }
   };
 
   // ---- Close / cancel ----
@@ -548,9 +532,6 @@ export default function WhatsAppBatchFollowUpModal({
               {items.filter((item) => item.selected && item.sendStatus !== 'idle').map((item) => {
                 const willReschedule = item.sendStatus === 'sent' && item.approvedScheduleAction === 'schedule' && Boolean(item.approvedScheduleDate);
                 const isWaitReschedule = item.currentAction === 'wait';
-                const recommendsLost = item.sendStatus === 'sent' && item.opportunityRecommendation === 'mark_lost_recommended';
-                const isMarkingLost = markingLostReminderIds.has(item.reminderId);
-                const isMarkedLost = markedLostReminderIds.has(item.reminderId);
                 return (
                   <div key={item.reminderId} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs" style={{ background: 'var(--bg-elevated)' }}>
                     <div className="min-w-0">
@@ -563,10 +544,10 @@ export default function WhatsAppBatchFollowUpModal({
                           <CalendarPlus className="h-3 w-3 shrink-0" />
                           {isWaitReschedule ? 'Follow-up agendado' : 'Reagendado'} para {new Date(item.approvedScheduleDate!).toLocaleString('pt-BR')}
                         </p>
-                      ) : recommendsLost ? (
+                      ) : item.finalStatus ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">
                           <AlertCircle className="h-3 w-3 shrink-0" />
-                          {isMarkedLost ? 'Marcado como perdido' : 'IA recomenda marcar como perdido'}
+                          Movido para {item.finalStatus}
                         </p>
                       ) : item.sendStatus === 'sent' ? (
                         <p className="mt-0.5 text-[var(--text-muted)]">Sem novo reagendamento</p>
@@ -574,21 +555,7 @@ export default function WhatsAppBatchFollowUpModal({
                         <p className="mt-0.5 text-[var(--danger-text)]">{item.sendError || 'Falha ao enviar'}</p>
                       ) : null}
                     </div>
-                    {recommendsLost ? (
-                      isMarkedLost ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="warning"
-                          size="xs"
-                          onClick={() => void handleMarkLeadAsLost(item)}
-                          loading={isMarkingLost}
-                        >
-                          Marcar como perdido
-                        </Button>
-                      )
-                    ) : item.sendStatus === 'sent' ? (
+                    {item.sendStatus === 'sent' ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
                     ) : item.sendStatus === 'failed' ? (
                       <AlertCircle className="h-4 w-4 shrink-0 text-[var(--danger)]" />

@@ -201,7 +201,7 @@ for function_path in "${function_paths[@]}"; do
     echo "=== Deploy da function: $function_name (JWT padrao) ==="
   fi
 
-  if supabase functions deploy "$function_name" "${deploy_args[@]}"; then
+  if supabase functions deploy "$function_name" --use-api "${deploy_args[@]}"; then
     printf '%s=%s\n' "$function_name" "$current_hash" >>"$next_state_file"
     deployed_count=$((deployed_count + 1))
   else

@@ -45,6 +45,12 @@ test('normaliza o padrão MedSênior e não usa dados da operadora como dados do
       nome_fantasia: 'MedSênior',
       endereco_empresa: 'Rua Pedro Fonseca, nº 170, Vitória - ES',
     },
+    holder: {
+      nome_completo: 'Alba Cristina Aquino dos Santos',
+      cpf: '123.456.789-00',
+      data_nascimento: '01/02/1960',
+      telefone: '(27) 99999-9999',
+    },
     field_sources: {
       cnpj: 'Página 2 do contrato',
       razao_social: 'Página 2 do contrato',
@@ -60,4 +66,10 @@ test('normaliza o padrão MedSênior e não usa dados da operadora como dados do
   assert.equal(extraction.fields.endereco_empresa, undefined);
   assert.equal(extraction.fieldSources.cnpj, undefined);
   assert.equal(extraction.warnings.length, 1);
+  assert.deepEqual(extraction.holder, {
+    nome_completo: 'Alba Cristina Aquino dos Santos',
+    cpf: '123.456.789-00',
+    data_nascimento: '1960-02-01',
+    telefone: '(27) 99999-9999',
+  });
 });

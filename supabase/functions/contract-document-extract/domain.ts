@@ -30,10 +30,33 @@ export const CONTRACT_IMPORT_FIELD_KEYS = [
 export type ContractImportFieldKey = typeof CONTRACT_IMPORT_FIELD_KEYS[number];
 export type ContractImportFields = Partial<Record<ContractImportFieldKey, string>>;
 
+export const CONTRACT_HOLDER_IMPORT_FIELD_KEYS = [
+  'nome_completo',
+  'cpf',
+  'rg',
+  'data_nascimento',
+  'sexo',
+  'estado_civil',
+  'telefone',
+  'email',
+  'cep',
+  'endereco',
+  'numero',
+  'complemento',
+  'bairro',
+  'cidade',
+  'estado',
+  'cns',
+] as const;
+
+export type ContractHolderImportFieldKey = typeof CONTRACT_HOLDER_IMPORT_FIELD_KEYS[number];
+export type ContractHolderImportFields = Partial<Record<ContractHolderImportFieldKey, string>>;
+
 export type ContractDocumentExtraction = {
   profile: ContractDocumentProfile;
   fields: ContractImportFields;
   fieldSources: Partial<Record<ContractImportFieldKey, string>>;
+  holder: ContractHolderImportFields | null;
   holderCount: number;
   dependentCount: number;
   warnings: string[];
@@ -41,6 +64,7 @@ export type ContractDocumentExtraction = {
 
 const profileSet = new Set<string>(CONTRACT_DOCUMENT_PROFILES);
 const fieldSet = new Set<string>(CONTRACT_IMPORT_FIELD_KEYS);
+const holderFieldSet = new Set<string>(CONTRACT_HOLDER_IMPORT_FIELD_KEYS);
 
 const asNonEmptyString = (value: unknown, maxLength = 500) =>
   typeof value === 'string' && value.trim()
@@ -141,8 +165,12 @@ export const parseContractDocumentExtraction = (value: string): ContractDocument
   const rawSources = parsed.field_sources && typeof parsed.field_sources === 'object' && !Array.isArray(parsed.field_sources)
     ? parsed.field_sources as Record<string, unknown>
     : {};
+  const rawHolder = parsed.holder && typeof parsed.holder === 'object' && !Array.isArray(parsed.holder)
+    ? parsed.holder as Record<string, unknown>
+    : {};
   const fields: ContractImportFields = {};
   const fieldSources: ContractDocumentExtraction['fieldSources'] = {};
+  const holder: ContractHolderImportFields = {};
 
   for (const [key, rawValue] of Object.entries(rawFields)) {
     if (!fieldSet.has(key)) continue;
@@ -153,6 +181,16 @@ export const parseContractDocumentExtraction = (value: string): ContractDocument
 
     const source = asNonEmptyString(rawSources[key], 180);
     if (source) fieldSources[normalizedKey] = source;
+  }
+
+  for (const [key, rawValue] of Object.entries(rawHolder)) {
+    if (!holderFieldSet.has(key)) continue;
+    const normalizedKey = key as ContractHolderImportFieldKey;
+    const normalizedValue = asNonEmptyString(rawValue);
+    if (!normalizedValue) continue;
+    holder[normalizedKey] = normalizedKey === 'data_nascimento'
+      ? normalizeDate(normalizedValue)
+      : normalizedValue;
   }
 
   const warnings = Array.isArray(parsed.warnings)
@@ -170,6 +208,7 @@ export const parseContractDocumentExtraction = (value: string): ContractDocument
     profile,
     fields,
     fieldSources,
+    holder: Object.keys(holder).length > 0 ? holder : null,
     holderCount: asCount(parsed.holder_count),
     dependentCount: asCount(parsed.dependent_count),
     warnings,
@@ -184,6 +223,7 @@ export const buildContractExtractionPrompt = (profile: ContractDocumentProfile) 
   'Se o perfil for auto, detecte o perfil somente se houver evidência no documento. Ao receber dois arquivos HCommerce, consolide empresa e beneficiários.',
   'Campos cnpj, razao_social, nome_fantasia e endereco_empresa são exclusivamente da empresa cliente/contratante. Nunca preencha esses campos com dados da operadora, administradora ou seguradora. Em contratos de modalidade Individual, omita todos esses campos.',
   'Regra MedSênior: use operadora como "MedSênior", nunca a razão social "SAMEDIL - SERVIÇOS DE ATENDIMENTO MÉDICO S.A.". Para o produto "MEDSÊNIOR RJ 1", retorne somente "RJ1". Para acomodação, retorne somente "Enfermaria" ou "Apartamento", sem a descrição do quarto.',
+  'Extraia em holder somente o titular principal/beneficiário contratante, nunca dados da operadora, de representantes ou de dependentes. Inclua todos os dados pessoais e de contato presentes; se um dado não aparecer com clareza, omita-o. A data de nascimento deve usar YYYY-MM-DD.',
   'Use data_inicio em YYYY-MM-DD; mes_reajuste entre 01 e 12; vidas como número inteiro; mensalidade_total no formato visual do documento.',
   'Retorne SOMENTE JSON válido, sem markdown, no formato:',
   JSON.stringify({
@@ -196,6 +236,13 @@ export const buildContractExtractionPrompt = (profile: ContractDocumentProfile) 
       razao_social: 'string ou omitido', nome_fantasia: 'string ou omitido', endereco_empresa: 'string ou omitido',
     },
     field_sources: { codigo_contrato: 'nome do arquivo e página, para cada campo extraído' },
+    holder: {
+      nome_completo: 'string ou omitido', cpf: 'string ou omitido', rg: 'string ou omitido',
+      data_nascimento: 'YYYY-MM-DD ou omitido', sexo: 'string ou omitido', estado_civil: 'string ou omitido',
+      telefone: 'string ou omitido', email: 'string ou omitido', cep: 'string ou omitido',
+      endereco: 'string ou omitido', numero: 'string ou omitido', complemento: 'string ou omitido',
+      bairro: 'string ou omitido', cidade: 'string ou omitido', estado: 'UF ou omitido', cns: 'string ou omitido',
+    },
     holder_count: 0,
     dependent_count: 0,
     warnings: ['qualquer ambiguidade, conflito entre PDFs ou campo importante não identificado'],

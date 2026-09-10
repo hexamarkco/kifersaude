@@ -371,11 +371,6 @@
   letter-spacing: 0;
 }
 
-.kds-button:hover:not(:disabled),
-.kds-button:active:not(:disabled) {
-  transform: none;
-}
-
 .kds-button:focus-visible {
   box-shadow: 0 0 0 2px var(--focus-ring);
 }

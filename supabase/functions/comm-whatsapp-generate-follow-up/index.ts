@@ -12,6 +12,7 @@ import {
 import {
   buildStyleProfile,
   buildStyleProfileText,
+  collapseConsecutiveDuplicateTranscriptLines,
   STYLE_SAMPLE_LIMIT,
 } from '../_shared/comm-whatsapp-transcript.ts';
 import { COMMERCIAL_THREAD_RULE } from '../_shared/comm-whatsapp-follow-up-commercial-thread.ts';
@@ -1132,9 +1133,11 @@ Deno.serve(async (req: Request) => {
     const systemTimeZone = normalizeSystemTimeZone(systemSettings?.timezone);
     const companyName = toTrimmedString(systemSettings?.company_name) || 'Kifer Saude';
     const leadContext = buildFollowUpLeadContext(lead, chat);
-    const transcriptLines = messages
-      .map((message) => buildTranscriptLine(message, leadContext.nome, systemTimeZone))
-      .filter((line): line is string => Boolean(line));
+    const transcriptLines = collapseConsecutiveDuplicateTranscriptLines(
+      messages
+        .map((message) => buildTranscriptLine(message, leadContext.nome, systemTimeZone))
+        .filter((line): line is string => Boolean(line)),
+    );
 
     // ---- Style analysis (aprende o estilo real de escrita a partir do
     // proprio historico ja carregado, sem round-trip extra ao banco) ----

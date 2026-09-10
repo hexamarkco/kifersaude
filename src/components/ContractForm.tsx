@@ -11,7 +11,7 @@ import {
   listContractConversionLeads,
   listContractValueAdjustments,
   saveContractRecord,
-  type ContractImportFields,
+  type ContractDocumentExtraction,
   type ContractPersistenceInput,
 } from "../features/contracts";
 import { ContractDocumentImportDialog } from "../features/contracts/components/ContractDocumentImportDialog";
@@ -304,6 +304,7 @@ export default function ContractForm({
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [showDocumentImport, setShowDocumentImport] = useState(false);
+  const [importedHolderData, setImportedHolderData] = useState<Partial<ContractHolder> | null>(null);
   const [editingAdjustment, setEditingAdjustment] =
     useState<ContractValueAdjustment | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -644,7 +645,8 @@ export default function ContractForm({
     }));
   };
 
-  const handleDocumentImportApply = (fields: ContractImportFields) => {
+  const handleDocumentImportApply = (extraction: ContractDocumentExtraction) => {
+    const { fields } = extraction;
     setFormData((current) => ({
       ...current,
       ...fields,
@@ -653,7 +655,10 @@ export default function ContractForm({
         ? formatCurrencyInput(fields.mensalidade_total)
         : current.mensalidade_total,
     }));
-    toast.success("Campos extraídos aplicados. Revise os dados antes de salvar.");
+    setImportedHolderData(extraction.holder);
+    toast.success(extraction.holder
+      ? "Contrato e titular principal preparados. Revise os dados antes de salvar."
+      : "Campos extraídos aplicados. Revise os dados antes de salvar.");
   };
   const remainingCommissionValue = Math.max(
     0,
@@ -1101,6 +1106,7 @@ export default function ContractForm({
 
   if (showHolderForm && contractId) {
     const initialHolderData: Partial<ContractHolder> = {
+      ...importedHolderData,
       cnpj: formData.cnpj || undefined,
       razao_social: formData.razao_social || undefined,
       nome_fantasia: formData.nome_fantasia || undefined,

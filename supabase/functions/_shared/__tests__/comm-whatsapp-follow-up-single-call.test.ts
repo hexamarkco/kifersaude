@@ -16,6 +16,7 @@ import {
   parseFollowUpAiValidationOutput,
   validateFollowUpAiValidationOutput,
 } from '../comm-whatsapp-follow-up-ai-validator.ts';
+import { collapseConsecutiveDuplicateTranscriptLines } from '../comm-whatsapp-transcript.ts';
 
 describe('follow-up generation prompt', () => {
   it('passes the five direct context blocks without analysis or strategy JSON', () => {
@@ -27,11 +28,14 @@ describe('follow-up generation prompt', () => {
       styleProfile: 'Curto e natural.',
     });
 
-    expect(prompt).toContain('HISTÓRICO DA CONVERSA');
+    expect(prompt).toContain('HISTÓRICO COMPLETO DA CONVERSA');
     expect(prompt).toContain('CONTEXTO DO LEAD');
     expect(prompt).toContain('FATOS TEMPORAIS');
     expect(prompt).toContain('AUDITORIAS RECENTES');
     expect(prompt).toContain('PERFIL DE ESTILO');
+    expect(prompt.lastIndexOf('HISTÓRICO COMPLETO DA CONVERSA')).toBeGreaterThan(
+      prompt.lastIndexOf('PERFIL DE ESTILO'),
+    );
     expect(prompt).not.toContain('COMMERCIAL ANALYSIS');
     expect(prompt).not.toContain('VALIDATION FEEDBACK');
   });
@@ -44,6 +48,8 @@ describe('follow-up generation prompt', () => {
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/sinais concretos de compra/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/não volte ao discurso de convencimento/iu);
     expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/Silêncio isolado não é objeção/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/ações pendentes de ações já concluídas/iu);
+    expect(FOLLOW_UP_GENERATE_SYSTEM_PROMPT).toMatch(/não podem ser oferecidos como se ainda faltassem fazer/iu);
   });
 
   it('allows the same call to recommend waiting instead of inventing a social touch', () => {
@@ -163,5 +169,22 @@ describe('AI commercial validator contract', () => {
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/avaliação semântica real/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/duas decisões independentes/iu);
     expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/familiares ou terceiros/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/ações já concluídas/iu);
+    expect(FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT).toMatch(/não faça uma edição mínima/iu);
+  });
+});
+
+describe('follow-up context hygiene', () => {
+  it('collapses only consecutive duplicate transcript lines', () => {
+    expect(collapseConsecutiveDuplicateTranscriptLines([
+      '[10:00] Eu: Cotação enviada.',
+      '[10:00] Eu: Cotação enviada.',
+      '[10:01] Joana: Obrigada.',
+      '[10:02] Eu: Cotação enviada.',
+    ])).toEqual([
+      '[10:00] Eu: Cotação enviada.',
+      '[10:01] Joana: Obrigada.',
+      '[10:02] Eu: Cotação enviada.',
+    ]);
   });
 });

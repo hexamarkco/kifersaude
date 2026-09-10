@@ -62,6 +62,10 @@ export const formatTimestamp = (value: string, timeZone: string) => {
 
 export const normalizeTranscriptText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
+export const collapseConsecutiveDuplicateTranscriptLines = (lines: string[]): string[] => (
+  lines.filter((line, index) => index === 0 || line !== lines[index - 1])
+);
+
 export const getMessageContent = (message: MessageRow) => {
   if (message.direction === 'system') return '';
   if (message.direction === 'outbound' && message.delivery_status.trim().toLowerCase() === 'failed') return '';

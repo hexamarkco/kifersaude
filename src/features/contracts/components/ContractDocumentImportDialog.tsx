@@ -10,7 +10,6 @@ import {
   type ContractDocumentExtraction,
   type ContractDocumentProfile,
   type ContractImportFieldKey,
-  type ContractImportFields,
 } from '../domain/contractDocumentImport';
 import {
   Alert,
@@ -25,7 +24,7 @@ import {
 } from '../../../design-system';
 
 type ContractDocumentImportDialogProps = {
-  onApply: (fields: ContractImportFields) => void;
+  onApply: (extraction: ContractDocumentExtraction) => void;
   onClose: () => void;
 };
 
@@ -211,7 +210,9 @@ export function ContractDocumentImportDialog({
             </div>
             {(extraction.holderCount > 0 || extraction.dependentCount > 0) && (
               <p className="text-sm text-[var(--text-secondary)]">
-                O documento também indica {extraction.holderCount} titular(es) e {extraction.dependentCount} dependente(s). Esses cadastros continuam na etapa própria após salvar o contrato.
+                O documento indica {extraction.holderCount} titular(es) e {extraction.dependentCount} dependente(s). {extraction.holder
+                  ? 'O titular principal será pré-preenchido na próxima etapa após salvar o contrato.'
+                  : 'Os cadastros continuam na etapa própria após salvar o contrato.'}
               </p>
             )}
             {extraction.warnings.map((warning) => (
@@ -226,7 +227,7 @@ export function ContractDocumentImportDialog({
         {extraction ? (
           <>
             <Button type="button" variant="secondary" onClick={() => setExtraction(null)}>Ler outros PDFs</Button>
-            <Button type="button" onClick={() => { onApply(extraction.fields); onClose(); }}>
+            <Button type="button" onClick={() => { onApply(extraction); onClose(); }}>
               <CheckCircle2 className="h-4 w-4" /> Aplicar ao formulário
             </Button>
           </>

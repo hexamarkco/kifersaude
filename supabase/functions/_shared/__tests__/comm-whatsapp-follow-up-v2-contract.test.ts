@@ -92,3 +92,10 @@ test('followup.refine continua manual e em uma única chamada própria', () => {
   assert.match(refinementPipeline, /Mensagem atual a refinar/);
   assert.match(refinementPipeline, /Ajuste solicitado/);
 });
+
+test('modo interno de simulação exige service role e não grava auditoria comercial', () => {
+  assert.match(edgeSource, /body\.simulationMode === true/);
+  assert.match(edgeSource, /isServiceRoleRequest\(req, serviceRoleKey\)/);
+  assert.match(edgeSource, /if \(chat\.lead_id && !isInternalSimulation\)/);
+  assert.match(edgeSource, /simulationValidation: isInternalSimulation/);
+});

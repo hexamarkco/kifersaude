@@ -482,25 +482,20 @@ export default function ContractsManager({
           eyebrow="Operação contratual"
           title="Gestão de Contratos"
           description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
+          actions={canEditContracts ? (
+            <Button
+              className="w-full lg:w-auto"
+              onClick={() => {
+                setEditingContract(null);
+                setShowForm(true);
+              }}
+            >
+              <Plus className="h-5 w-5" />
+              <span>Novo contrato</span>
+            </Button>
+          ) : undefined}
           data-panel-animate
-        >
-          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              {canEditContracts && (
-                <Button
-                  onClick={() => {
-                    setEditingContract(null);
-                    setShowForm(true);
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>Novo Contrato</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </PageHeader>
+        />
 
         <Surface className="space-y-5" data-panel-animate>
           <Toolbar>

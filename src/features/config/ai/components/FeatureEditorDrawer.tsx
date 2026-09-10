@@ -3,8 +3,13 @@ import { AlertTriangle, RotateCcw, Save, X } from "lucide-react";
 
 import {
   Button,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
   Field,
   Input,
+  Select,
   Textarea,
 } from "../../../../design-system";
 import { toast } from "../../../../lib/toast";
@@ -49,10 +54,10 @@ const isProviderSlug = (value: string | undefined): value is AiProviderSlug =>
   value === "openai" || value === "gemini" || value === "claude";
 
 const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
-  feature: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
-  ai_routing: "bg-[var(--color-info)]/10 text-[var(--color-info)]",
+  feature: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-active)]",
+  ai_routing: "bg-[var(--info-soft)] text-[var(--info-text)]",
   provider_default: "bg-[var(--text-muted)]/10 text-[var(--text-muted)]",
-  fallback: "bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
+  fallback: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
 };
 
 /**
@@ -283,12 +288,16 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const label = AI_FEATURE_LABELS[feature.key] ?? feature.name;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      <div className="relative flex h-full w-full max-w-2xl flex-col bg-[var(--bg-surface)] shadow-xl">
+    <Drawer
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      className="w-full max-w-2xl"
+    >
+      <div className="flex h-full min-h-0 flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
+        <DrawerHeader className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-[var(--text-primary)]">
               {label}
@@ -298,16 +307,16 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="icon" size="icon" onClick={onClose} aria-label="Fechar painel">
             <X className="h-4 w-4" />
           </Button>
-        </div>
+        </DrawerHeader>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <DrawerBody className="space-y-5">
           {/* Variables info */}
           {feature.available_variables && feature.available_variables.length > 0 && (
-            <div className="rounded-lg bg-[var(--bg-subtle)] p-3">
+            <div className="rounded-[var(--radius-lg)] bg-[var(--bg-surface-muted)] p-3">
               <p className="text-xs font-medium text-[var(--text-secondary)] mb-1.5">
                 Variáveis disponíveis:
               </p>
@@ -362,50 +371,38 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <Field label="Provedor">
-                  <select
+                  <Select
                     value={provider}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                       handleProviderChange(e.target.value as AiProviderSlug)
                     }
-                    className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                  >
-                    {AI_PROVIDER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={AI_PROVIDER_OPTIONS}
+                  />
                 </Field>
                 <Field label="Modelo">
                   {providerLoading ? (
-                    <div className="flex items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                    <div className="flex h-10 items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-muted)]">
                       <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
                       Carregando modelos...
                     </div>
                   ) : providerError ? (
-                    <div className="rounded-md border border-[var(--color-error)]/30 bg-[var(--color-error)]/5 px-3 py-2 text-xs text-[var(--color-error)]">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)]">
                       {providerError}
                     </div>
                   ) : (
-                    <select
+                    <Select
                       value={model}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                         setModel(e.target.value);
                         setReasoningEffort(null);
                       }}
-                      className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                    >
-                      <option value="" disabled>
-                        {compatibleModels.length === 0 ? "Nenhum modelo compatível" : "Selecione..."}
-                      </option>
-                      {compatibleModels.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                          {!m.hasPricing ? " (sem preço)" : ""}
-                          {m.deprecated ? " (descontinuado)" : ""}
-                        </option>
-                      ))}
-                    </select>
+                      disabled={compatibleModels.length === 0}
+                      placeholder={compatibleModels.length === 0 ? "Nenhum modelo compatível" : "Selecione..."}
+                      options={compatibleModels.map((modelOption) => ({
+                        value: modelOption.value,
+                        label: `${modelOption.label}${!modelOption.hasPricing ? " (sem preço)" : ""}${modelOption.deprecated ? " (descontinuado)" : ""}`,
+                      }))}
+                    />
                   )}
                 </Field>
               </div>
@@ -418,35 +415,35 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   ? "Automático usa o nível seguro definido para o modelo e a tarefa."
                   : "Este modelo não oferece controle de esforço neste provider."}
               >
-                <select
+                <Select
                   value={reasoningEffort ?? ""}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                     setReasoningEffort((e.target.value || null) as AiReasoningEffort | null);
                   }}
                   disabled={providerLoading || supportedReasoningEfforts.length === 0}
-                  className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <option value="">
-                    {supportedReasoningEfforts.length > 0 ? "Automático (recomendado)" : "Não disponível"}
-                  </option>
-                  {supportedReasoningEfforts.map((effort) => (
-                    <option key={effort} value={effort}>
-                      {AI_REASONING_EFFORT_LABELS[effort]}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    {
+                      value: "",
+                      label: supportedReasoningEfforts.length > 0 ? "Automático (recomendado)" : "Não disponível",
+                    },
+                    ...supportedReasoningEfforts.map((effort) => ({
+                      value: effort,
+                      label: AI_REASONING_EFFORT_LABELS[effort],
+                    })),
+                  ]}
+                />
               </Field>
             )}
 
             {/* Warnings for deprecated / no-pricing models */}
             {modelOverrideEnabled && isSelectedModelDeprecated && (
-              <div className="flex items-start gap-2 rounded-md bg-[var(--color-warning)]/10 p-2.5 text-xs text-[var(--color-warning)]">
+              <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-2.5 text-xs text-[var(--warning-text)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
                 <p>Este modelo foi descontinuado pelo provedor. Considere trocar para uma versão mais recente.</p>
               </div>
             )}
             {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
-              <div className="flex items-start gap-2 rounded-md bg-[var(--color-info)]/10 p-2.5 text-xs text-[var(--color-info)]">
+              <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-2.5 text-xs text-[var(--info-text)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
                 <p>Preço não cadastrado para este modelo. A telemetria registrará tokens, mas o custo estimado ficará indeterminado até o preço ser configurado.</p>
               </div>
@@ -454,7 +451,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
             {/* Effective model display */}
             {effectiveModel && (
-              <div className="rounded bg-[var(--bg-subtle)] p-2.5 text-xs space-y-1">
+              <div className="space-y-1 rounded-[var(--radius-md)] bg-[var(--bg-surface-muted)] p-2.5 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--text-muted)]">Modelo efetivo</span>
                   <span className="font-medium text-[var(--text-primary)]">
@@ -537,11 +534,11 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 {history.slice(0, 5).map((h) => (
                   <div
                     key={h.version}
-                    className="flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--text-muted)] bg-[var(--bg-subtle)]"
+                    className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--text-muted)]"
                   >
                     <span className="font-mono">v{h.version}</span>
                     {h.is_active && (
-                      <span className="rounded bg-[var(--color-success)]/10 px-1.5 py-0.5 text-[var(--color-success)] font-medium">
+                      <span className="rounded-full bg-[var(--success-soft)] px-1.5 py-0.5 font-medium text-[var(--success-text)]">
                         Ativo
                       </span>
                     )}
@@ -564,10 +561,10 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               <p>Máximo de tokens: {feature.default_max_output_tokens}</p>
             </div>
           </div>
-        </div>
+        </DrawerBody>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-5 py-3">
+        <DrawerFooter className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleResetToDefaults}>
             <RotateCcw className="h-3.5 w-3.5" />
             Restaurar padrão
@@ -581,8 +578,8 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               {saving ? "Salvando..." : "Criar versão e ativar"}
             </Button>
           </div>
-        </div>
+        </DrawerFooter>
       </div>
-    </div>
+    </Drawer>
   );
 }

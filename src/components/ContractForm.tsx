@@ -1950,7 +1950,7 @@ export default function ContractForm({
               </div>
             </div>
 
-            <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+            <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
               <Field label="Quantidade de Vidas *" description="Titular + dependentes">
                 <Input
                   type="number"

@@ -501,7 +501,7 @@ export default function AiSandboxChatScreen() {
         <div className="border-b border-[var(--border-subtle)] px-3 pt-3 pb-3">
           <button
             type="button"
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+            className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-muted)]"
             onClick={() => setShowScenarioPicker(!showScenarioPicker)}
           >
             <FlaskConical className="h-3.5 w-3.5 shrink-0" />
@@ -535,7 +535,7 @@ export default function AiSandboxChatScreen() {
                       <button
                         key={s.key}
                         type="button"
-                        className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] disabled:opacity-50"
+                        className="flex w-full items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-50"
                         disabled={runningScenario}
                         onClick={() => {
                           setShowScenarioPicker(false);

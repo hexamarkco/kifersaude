@@ -35,7 +35,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
           return (
             <div
               key={feature.id}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--bg-subtle)] transition-colors"
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-surface-muted)]"
             >
               <Brain className={`h-4 w-4 shrink-0 ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}`} />
 
@@ -95,7 +95,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     {isActive ? (
                       <PowerOff className="h-3.5 w-3.5 text-[var(--color-danger)]" />
                     ) : (
-                      <Power className="h-3.5 w-3.5 text-[var(--color-success)]" />
+                      <Power className="h-3.5 w-3.5 text-[var(--success-text)]" />
                     )}
                   </Button>
                 )}

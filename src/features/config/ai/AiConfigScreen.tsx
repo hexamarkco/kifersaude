@@ -372,8 +372,8 @@ export default function AiConfigScreen() {
               </ul>
             </div>
             {importConfirm.warnings.length > 0 && (
-              <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-3">
-                <p className="font-medium text-[var(--color-warning)]">Warnings</p>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3">
+                <p className="font-medium text-[var(--warning-text)]">Avisos</p>
                 <ul className="mt-1 space-y-1 text-xs text-[var(--text-secondary)]">
                   {importConfirm.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
                 </ul>

@@ -1,5 +1,5 @@
 ﻿import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
@@ -45,6 +45,7 @@ declare const Deno: {
 
 type GenerateFollowUpBody = {
   chatId?: string;
+  simulationMode?: boolean;
   customInstructions?: string;
   mode?: string;
   currentMessage?: string;
@@ -1033,25 +1034,32 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
+    const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
+    const isInternalSimulation = body.simulationMode === true
+      && isServiceRoleRequest(req, serviceRoleKey);
 
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'view',
-    });
-
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), {
-        status: authResult.status,
-        headers: jsonHeaders,
+    let generatedBy: string | null = null;
+    if (!isInternalSimulation) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: COMM_WHATSAPP_MODULE,
+        requiredPermission: 'view',
       });
+
+      if (!authResult.authorized) {
+        return new Response(JSON.stringify(authResult.body), {
+          status: authResult.status,
+          headers: jsonHeaders,
+        });
+      }
+      generatedBy = authResult.user.profileId;
     }
 
-    const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
     const refinementMode = toTrimmedString(body.mode) === 'refine';
@@ -1064,6 +1072,7 @@ Deno.serve(async (req: Request) => {
     console.log('[FollowUpAI][edge] request received', {
       chatId,
       refinementMode,
+      isInternalSimulation,
       hasCustomInstructions: Boolean(customInstructions),
       hasCurrentMessage: Boolean(currentMessage),
       hasAdjustmentInstruction: Boolean(adjustmentInstruction),
@@ -1431,7 +1440,7 @@ Deno.serve(async (req: Request) => {
     };
 
     let generationId: string | null = null;
-    if (chat.lead_id) {
+    if (chat.lead_id && !isInternalSimulation) {
       const { data: auditRow, error: auditError } = await supabaseAdmin
         .from('comm_follow_up_audit_log')
         .insert({
@@ -1440,7 +1449,7 @@ Deno.serve(async (req: Request) => {
           source_reminder_id: toTrimmedString(body.sourceReminderId) || null,
           batch_id: toTrimmedString(body.batchId) || null,
           trigger_source: toTrimmedString(body.triggerSource) || 'individual',
-          generated_by: authResult.user.profileId,
+          generated_by: generatedBy,
           provider: generationResult.provider,
           model: generationResult.model,
           current_action: waitAiContext ? 'wait' : 'send',
@@ -1494,6 +1503,7 @@ Deno.serve(async (req: Request) => {
       stopReason: aiValidationResult.stopReason,
       responseTextLength: responseText?.length ?? 0,
       currentAction: waitAiContext ? 'wait' : 'send',
+      isInternalSimulation,
     });
 
     return new Response(
@@ -1507,6 +1517,14 @@ Deno.serve(async (req: Request) => {
         scheduleRecommendation,
         nextAction,
         generationId,
+        simulation: isInternalSimulation,
+        simulationValidation: isInternalSimulation
+          ? {
+              decision: aiValidation.decision,
+              reason: aiValidation.reason,
+              model: aiValidationResult.model,
+            }
+          : null,
         provider: generationResult.provider,
         model: generationResult.model,
         fallback_used: generationResult.fallbackUsed || aiValidationResult.fallbackUsed,

@@ -615,14 +615,13 @@
   display: block;
   width: 100%;
   text-align: left;
-  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .kds-action-surface:hover,
 .kds-card-interactive:hover {
   border-color: var(--border-accent);
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-1px);
 }
 
 .kds-action-surface:focus-visible,
@@ -714,7 +713,6 @@
   background: color-mix(in srgb, var(--disabled-bg) 82%, transparent);
   color: var(--disabled-text);
   box-shadow: none;
-  transform: none;
   opacity: 0.72;
 }
 

@@ -343,7 +343,6 @@
   border-color: var(--brand-primary-border);
   background: var(--bg-surface);
   box-shadow: var(--shadow-card-hover);
-  transform: none;
 }
 
 .kds-card-title {
@@ -708,10 +707,16 @@
 
 .kds-pagination-page-active,
 .kds-pagination-page-active:hover {
-  border-color: var(--text-primary);
-  background: var(--text-primary);
-  color: var(--text-inverse);
-  box-shadow: none;
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
+}
+
+.kds-pagination-button:focus-visible,
+.kds-pagination-page:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .kds-stepper-circle {

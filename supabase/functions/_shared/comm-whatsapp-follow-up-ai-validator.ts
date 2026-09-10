@@ -20,6 +20,7 @@ export const FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT = [
   'APROVE somente quando a mensagem:',
   '- executa o melhor próximo movimento para esta negociação;',
   '- busca uma única microdecisão atômica ou uma única ação concreta;',
+  '- quando usa alternativas, compara opções realmente distintas no critério perguntado e não cria uma falsa escolha entre situações que podem coexistir;',
   '- não reúne duas decisões independentes na mesma pergunta, mesmo que exista apenas um ponto de interrogação;',
   '- respeita estágio, último posicionamento, preferências, objeções, decisores e compromissos;',
   '- distingue ações pendentes de ações já concluídas e não oferece como futura uma cotação, pesquisa, comparação, verificação ou envio já realizado;',

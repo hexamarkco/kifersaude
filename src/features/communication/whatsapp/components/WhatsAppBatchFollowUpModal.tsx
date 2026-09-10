@@ -561,7 +561,7 @@ export default function WhatsAppBatchFollowUpModal({
                       {willReschedule ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
                           <CalendarPlus className="h-3 w-3 shrink-0" />
-                          {isWaitReschedule ? 'Retorno agendado' : 'Reagendado'} para {new Date(item.approvedScheduleDate!).toLocaleString('pt-BR')}
+                          {isWaitReschedule ? 'Follow-up agendado' : 'Reagendado'} para {new Date(item.approvedScheduleDate!).toLocaleString('pt-BR')}
                         </p>
                       ) : recommendsLost ? (
                         <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">

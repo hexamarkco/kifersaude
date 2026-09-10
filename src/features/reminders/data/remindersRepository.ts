@@ -8,6 +8,7 @@ import {
 import type { Contract } from '../../contracts';
 import type { Lead } from '../../leads';
 import type { Reminder } from '../domain/types';
+import { normalizeReminderTitle, normalizeReminderType } from '../shared/reminderTypes';
 
 type ReminderPatch = Database['public']['Tables']['reminders']['Update'];
 
@@ -20,6 +21,12 @@ export type ReminderRealtimeChange = {
   previous: Reminder | null;
 };
 
+const normalizeReminder = (reminder: Reminder): Reminder => ({
+  ...reminder,
+  tipo: normalizeReminderType(reminder.tipo),
+  titulo: normalizeReminderTitle(reminder.titulo),
+});
+
 const batchesOf = <T>(items: T[], size = 100): T[][] => {
   const result: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -29,7 +36,7 @@ const batchesOf = <T>(items: T[], size = 100): T[][] => {
 };
 
 export async function listReminders(): Promise<Reminder[]> {
-  return fetchAllPages<Reminder>(async (from, to) => {
+  const reminders = await fetchAllPages<Reminder>(async (from, to) => {
     const result = await databaseClient
       .from('reminders')
       .select('*')
@@ -39,6 +46,7 @@ export async function listReminders(): Promise<Reminder[]> {
       .overrideTypes<Reminder[], { merge: false }>();
     return result;
   });
+  return reminders.map(normalizeReminder);
 }
 
 const listRemindersByRelation = (
@@ -56,7 +64,7 @@ const listRemindersByRelation = (
       .range(from, to)
       .overrideTypes<Reminder[], { merge: false }>();
     return result;
-  });
+  }).then((reminders) => reminders.map(normalizeReminder));
 };
 
 export async function listRemindersForLeadContext(
@@ -141,15 +149,20 @@ export async function updateReminders(
 export async function createReminder(
   input: ReminderCreateInput,
 ): Promise<Reminder | null> {
+  const normalizedInput = {
+    ...input,
+    tipo: normalizeReminderType(input.tipo),
+    titulo: normalizeReminderTitle(input.titulo),
+  };
   const { data, error } = await databaseClient
     .from('reminders')
-    .insert(input)
+    .insert(normalizedInput)
     .select('*')
     .maybeSingle();
   if (error) {
     throw error;
   }
-  return data as Reminder | null;
+  return data ? normalizeReminder(data as Reminder) : null;
 }
 
 export async function deleteReminder(reminderId: string): Promise<void> {

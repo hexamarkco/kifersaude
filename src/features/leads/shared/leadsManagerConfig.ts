@@ -19,7 +19,7 @@ export const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
     hoursFromNow: 48,
     title: "Acompanhar proposta em análise",
     description: "Verifique dúvidas pendentes e reforce benefícios do plano.",
-    type: "Retorno",
+    type: "Follow-up",
     priority: "normal",
   },
 };

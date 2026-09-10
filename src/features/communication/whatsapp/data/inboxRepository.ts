@@ -6,7 +6,11 @@ import {
   type Database,
 } from '../../../../infrastructure/supabase';
 import type { Lead } from '../../../leads';
-import type { Reminder } from '../../../reminders';
+import {
+  normalizeReminderTitle,
+  normalizeReminderType,
+  type Reminder,
+} from '../../../reminders';
 import type { CommWhatsAppChat } from '../domain/types';
 
 type SubscriptionStatusHandler = (status: 'connected' | 'unavailable') => void;
@@ -89,7 +93,11 @@ export async function listInboxAgendaReminders(
 
   return Array.from(
     new Map([...leadReminders, ...contractReminders].map((reminder) => [reminder.id, reminder])).values(),
-  );
+  ).map((reminder) => ({
+    ...reminder,
+    tipo: normalizeReminderType(reminder.tipo),
+    titulo: normalizeReminderTitle(reminder.titulo),
+  }));
 }
 
 export async function clearInboxLeadAgenda(leadId: string): Promise<void> {

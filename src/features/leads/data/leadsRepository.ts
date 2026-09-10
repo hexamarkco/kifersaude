@@ -323,7 +323,7 @@ export async function saveLeadRecord(input: {
   return data as unknown as Lead;
 }
 
-export async function upsertLeadReturnReminder(input: {
+export async function upsertLeadFollowUpReminder(input: {
   leadId: string;
   leadName: string;
   phone: string;
@@ -333,14 +333,16 @@ export async function upsertLeadReturnReminder(input: {
     .from('reminders')
     .select('id')
     .eq('lead_id', input.leadId)
-    .eq('tipo', 'Retorno')
+    .in('tipo', ['Follow-up', 'Retorno'])
     .eq('lido', false)
+    .limit(1)
     .maybeSingle();
   if (lookupError) throw lookupError;
 
   const values = {
-    titulo: `Retorno agendado: ${input.leadName}`,
-    descricao: `Retorno agendado para ${input.leadName}. Telefone: ${input.phone}`,
+    tipo: 'Follow-up',
+    titulo: `Follow-up agendado: ${input.leadName}`,
+    descricao: `Follow-up agendado para ${input.leadName}. Telefone: ${input.phone}`,
     data_lembrete: input.remindAt,
     prioridade: 'alta',
   };
@@ -350,7 +352,7 @@ export async function upsertLeadReturnReminder(input: {
     : await databaseClient.from('reminders').insert({
         ...values,
         lead_id: input.leadId,
-        tipo: 'Retorno',
+        tipo: 'Follow-up',
         lido: false,
       });
   if (error) throw error;

@@ -13,7 +13,7 @@ export {
   subscribeToLeadChanges,
   touchLeadContact,
   updateLeadDetails,
-  upsertLeadReturnReminder,
+  upsertLeadFollowUpReminder,
 } from './data/leadsRepository';
 export {
   addLeadInteraction,

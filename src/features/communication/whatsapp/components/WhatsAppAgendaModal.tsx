@@ -89,7 +89,7 @@ type SchedulerDraft = {
   promptMessage: string;
   defaultTitle?: string;
   defaultDescription?: string;
-  defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
+  defaultType?: 'Follow-up' | 'Outro';
   defaultPriority?: 'normal' | 'alta' | 'baixa';
 };
 

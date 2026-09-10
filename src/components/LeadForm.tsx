@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import {
   saveLeadRecord,
-  upsertLeadReturnReminder,
+  upsertLeadFollowUpReminder,
   type Lead,
 } from '../features/leads';
 import {
@@ -436,7 +436,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         localDate.setMinutes(localDate.getMinutes() - 1);
         const reminderDate = localDate.toISOString();
 
-        await upsertLeadReturnReminder({
+        await upsertLeadFollowUpReminder({
           leadId: savedLeadId,
           leadName: normalizedLeadData.nome_completo,
           phone: formData.telefone,

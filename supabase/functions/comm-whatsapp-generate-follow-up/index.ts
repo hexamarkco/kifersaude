@@ -585,7 +585,7 @@ const buildFollowUpNextAction = async (params: {
       type: 'wait',
       suggestedDateTime: waitDate.toISOString(),
       priority: aiNextActionPriority ?? 'baixa',
-      title: `Retomar contato: ${params.leadContext.nome}`,
+      title: `Follow-up: ${params.leadContext.nome}`,
       reason: aiNextActionReason || (
         initialCandidate.source === 'ai_date'
           ? 'Combinado explícito identificado na conversa — mantivemos a data indicada pelo cliente para retomar contato.'

@@ -211,7 +211,10 @@ const normalizeText = (value: unknown) => toTrimmedString(value)
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase();
 
-const isFollowUpReminder = (reminder: ReminderRow) => normalizeText(reminder.tipo) === 'follow-up';
+const isFollowUpReminder = (reminder: ReminderRow) => {
+  const type = normalizeText(reminder.tipo);
+  return type === 'follow-up' || type === 'follow up' || type === 'followup' || type === 'retorno';
+};
 
 const isHotStatus = (status: unknown) => {
   const normalized = normalizeText(status);

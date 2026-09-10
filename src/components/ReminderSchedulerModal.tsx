@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react';
 import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import type { Lead } from '../features/leads';
 import { touchLeadContact } from '../features/leads';
-import { createReminder } from '../features/reminders';
+import {
+  createReminder,
+  FOLLOW_UP_REMINDER_TYPE,
+  MANUAL_REMINDER_TYPES,
+  type ManualReminderType,
+} from '../features/reminders';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
@@ -23,7 +28,7 @@ import {
 } from '../design-system';
 import { toast } from '../lib/toast';
 
-const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
+const TYPE_OPTIONS = MANUAL_REMINDER_TYPES;
 const PRIORITY_OPTIONS = ['alta', 'normal', 'baixa'] as const;
 
 type ReminderSchedulerModalProps = {
@@ -80,14 +85,14 @@ export default function ReminderSchedulerModal({
   onScheduled,
   defaultTitle,
   defaultDescription,
-  defaultType = 'Retorno',
+  defaultType = FOLLOW_UP_REMINDER_TYPE,
   defaultPriority = 'normal',
   promptMessage,
 }: ReminderSchedulerModalProps) {
   const [scheduledFor, setScheduledFor] = useState(getDefaultDateTime);
   const [title, setTitle] = useState(() => defaultTitle ?? `Follow-up: ${lead.nome_completo}`);
   const [description, setDescription] = useState(() => defaultDescription ?? '');
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>(defaultType);
+  const [type, setType] = useState<ManualReminderType>(defaultType);
   const [priority, setPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>(defaultPriority);
   const [saving, setSaving] = useState(false);
 

@@ -8203,7 +8203,7 @@ export default function WhatsAppInboxScreen() {
 
     let scheduledCount = 0;
     for (const schedule of approvedSchedules) {
-      const title = 'Retomar follow-up de WhatsApp';
+      const title = 'Follow-up de WhatsApp';
       const description = schedule.reason || 'Lembrete aprovado após revisão do follow-up gerado por IA.';
       try {
         const scheduledReminder = await scheduleInboxFollowUp({

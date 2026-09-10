@@ -62,6 +62,16 @@ test('pipeline pode aguardar sem gerar contato social e reserva orçamento para 
   assert.match(reasoningBudgetMigrationSource, /v_current\.max_output_tokens, 0\) >= 1600/);
 });
 
+test('esperas dependentes de fato novo não criam reagendamento automático por passagem do tempo', () => {
+  assert.match(edgeSource, /EVENT_DRIVEN_WAIT_REASONS/);
+  assert.match(edgeSource, /'personal_context'/);
+  assert.match(edgeSource, /'seller_action_pending'/);
+  assert.match(edgeSource, /'no_useful_move'/);
+  assert.match(edgeSource, /suggestedDateTime: null/);
+  assert.match(edgeSource, /Não criar uma nova cobrança apenas pela passagem do tempo/);
+  assert.doesNotMatch(edgeSource, /WAIT_COOLDOWN_BUSINESS_DAYS/);
+});
+
 test('V2 persiste proveniência, textos e aprovação de reminder', () => {
   for (const column of [
     'source_reminder_id',

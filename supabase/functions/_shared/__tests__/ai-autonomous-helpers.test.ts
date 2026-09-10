@@ -95,6 +95,9 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /mostre que entendeu a situação concreta/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voce e sempre a Luiza Kifer/i);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nunca diga ou sugira que e IA/i);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /VINCULO ANTES DO ROTEIRO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /criar proximidade real/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao precisa parecer uma sequencia de formulario/);
   });
 });
 

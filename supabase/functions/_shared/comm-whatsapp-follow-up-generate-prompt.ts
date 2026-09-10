@@ -120,9 +120,9 @@ export const FOLLOW_UP_RUNTIME_GUARDRAILS = `REGRAS FINAIS NÃO SUBSTITUÍVEIS
 - Se o melhor movimento agora for não enviar mensagem, retorne EXATAMENTE um dos sinais abaixo e nada mais:
   [[WAIT:recent_contact]] — existe contato recente demais sem fato novo que justifique nova mensagem.
   [[WAIT:future_date:AAAA-MM-DD]] — existe data futura explícita combinada com o lead.
-  [[WAIT:personal_context]] — há contexto pessoal sensível e uma abordagem comercial agora seria inadequada.
-  [[WAIT:seller_action_pending]] — a corretora precisa cumprir uma obrigação antes de cobrar qualquer ação do lead.
-  [[WAIT:no_useful_move]] — não existe microdecisão defensável com o contexto disponível neste momento.
+  [[WAIT:personal_context]] — há contexto pessoal sensível e uma abordagem comercial agora seria inadequada; a oportunidade fica sem reagendamento automático até existir uma nova sinalização concreta.
+  [[WAIT:seller_action_pending]] — a corretora precisa cumprir uma obrigação antes de cobrar qualquer ação do lead; não agenda nova cobrança ao lead enquanto essa ação não for concluída.
+  [[WAIT:no_useful_move]] — não existe microdecisão defensável com o contexto disponível; a passagem do tempo, sozinha, não cria um novo movimento e portanto não haverá reagendamento automático.
 - Não use WAIT apenas porque a decisão é difícil. Use-o somente quando não enviar agora for comercial e humanamente melhor.
 - Não envie uma mensagem apenas para anunciar que a oportunidade será pausada ou para devolver a iniciativa ao lead. Se não houver movimento útil, use WAIT. Só apresente pausa ao lead quando ela fizer parte de uma escolha específica que também ofereça um caminho comercial concreto.
 - Para uma mensagem, aplique este teste antes de responder: “Se o lead responder, qual informação, escolha, autorização ou ação concreta permitirá avançar?” Se não houver resposta clara, reformule ou use WAIT.

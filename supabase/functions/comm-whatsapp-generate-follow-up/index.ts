@@ -110,7 +110,7 @@ const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const DAILY_FOLLOW_UP_CAPACITY = 15;
-const WAIT_COOLDOWN_BUSINESS_DAYS = 7;
+const RECENT_CONTACT_RECHECK_BUSINESS_DAYS = 1;
 const FOLLOW_UP_SCHEDULE_HOURS = [10, 11, 14, 15, 16] as const;
 const OUTBOUND_ATTEMPT_GROUP_GAP_MS = 2 * 60 * 60 * 1000;
 // Teto de sanidade para qualquer sugestao de data/prazo vinda da IA (combinado
@@ -168,6 +168,7 @@ type FollowUpNextActionType = FollowUpNextAction['type'];
 type AiContextRecommendation = {
   currentAction: 'send' | 'wait' | null;
   currentActionReason: string | null;
+  waitReasonCode: FollowUpWaitReasonCode | null;
   opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended' | null;
   goal?: string | null;
   scheduleReason: string | null;
@@ -183,19 +184,35 @@ const FOLLOW_UP_WAIT_REASON: Record<FollowUpWaitReasonCode, string> = {
   no_useful_move: 'Não há uma microdecisão comercial defensável com o contexto disponível neste momento.',
 };
 
+const EVENT_DRIVEN_WAIT_REASONS = new Set<FollowUpWaitReasonCode>([
+  'personal_context',
+  'seller_action_pending',
+  'no_useful_move',
+]);
+
+const EVENT_DRIVEN_WAIT_RECOMMENDATION: Record<
+  Extract<FollowUpWaitReasonCode, 'personal_context' | 'seller_action_pending' | 'no_useful_move'>,
+  string
+> = {
+  personal_context: 'Não reagendar automaticamente. Retome somente quando houver uma sinalização do lead ou um novo contexto concreto.',
+  seller_action_pending: 'Não cobrar o lead. Conclua primeiro a ação pendente da corretora e só então reavalie o próximo movimento.',
+  no_useful_move: 'Não criar uma nova cobrança apenas pela passagem do tempo. Reavalie somente após mensagem do lead, atualização da corretora ou revisão manual com fato novo.',
+};
+
 const buildWaitAiContext = (
   reasonCode: FollowUpWaitReasonCode,
   suggestedDate: string | null,
 ): AiContextRecommendation => ({
   currentAction: 'wait',
   currentActionReason: FOLLOW_UP_WAIT_REASON[reasonCode],
+  waitReasonCode: reasonCode,
   opportunityRecommendation: reasonCode === 'personal_context' || reasonCode === 'no_useful_move'
     ? 'pause'
     : 'continue',
   scheduleReason: FOLLOW_UP_WAIT_REASON[reasonCode],
-  nextActionSuggestedDelayBusinessDays: reasonCode === 'recent_contact' || reasonCode === 'seller_action_pending'
-    ? 1
-    : suggestedDate ? null : WAIT_COOLDOWN_BUSINESS_DAYS,
+  nextActionSuggestedDelayBusinessDays: reasonCode === 'recent_contact'
+    ? RECENT_CONTACT_RECHECK_BUSINESS_DAYS
+    : null,
   nextActionSuggestedDate: suggestedDate,
 });
 
@@ -204,6 +221,7 @@ const buildFinalStatusWaitAiContext = (status: string): AiContextRecommendation 
   return {
     currentAction: 'wait',
     currentActionReason: reason,
+    waitReasonCode: null,
     opportunityRecommendation: 'pause',
     scheduleReason: reason,
     nextActionSuggestedDelayBusinessDays: null,
@@ -571,10 +589,28 @@ const buildFollowUpNextAction = async (params: {
   }
 
   if (aiNextActionType === 'wait') {
+    const waitReasonCode = params.aiContext?.waitReasonCode ?? null;
+    if (waitReasonCode && EVENT_DRIVEN_WAIT_REASONS.has(waitReasonCode)) {
+      return {
+        type: 'wait',
+        suggestedDateTime: null,
+        priority: aiNextActionPriority ?? 'baixa',
+        title: `Follow-up: ${params.leadContext.nome}`,
+        reason: aiNextActionReason || FOLLOW_UP_WAIT_REASON[waitReasonCode],
+        attemptNumber,
+        maxAttempts,
+        dayLoad: null,
+        dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
+        giveUpRecommendation: EVENT_DRIVEN_WAIT_RECOMMENDATION[
+          waitReasonCode as keyof typeof EVENT_DRIVEN_WAIT_RECOMMENDATION
+        ],
+      };
+    }
+
     const initialCandidate = resolveInitialCandidateDay({
       now: params.now,
       aiContext: params.aiContext,
-      fallbackBusinessDays: WAIT_COOLDOWN_BUSINESS_DAYS,
+      fallbackBusinessDays: RECENT_CONTACT_RECHECK_BUSINESS_DAYS,
     });
     const { suggestedDate: waitDate, dayLoad: waitDayLoad } = await computeAvailableFollowUpDate(
       params.supabaseAdmin,

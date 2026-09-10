@@ -47,6 +47,7 @@ export const FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT = [
   'Expressões como “preciso alinhar este ponto” ou “essa condição é suficiente” devem ser reescritas em linguagem de conversa natural, sem perder a decisão pretendida.',
   'Se houver uma opção incompatível com preferência explícita, não prometa uma alternativa inexistente. Peça somente a informação que permita um ajuste comercial concreto, quando isso for o melhor próximo passo.',
   'Se não houver movimento comercial útil ou o momento pedir espera, escolha wait e use um sinal [[WAIT:...]] permitido pelas regras recebidas.',
+  'Não trate WAIT como simples adiamento. Para no_useful_move, personal_context ou seller_action_pending, presuma que não haverá novo follow-up automático até surgir o evento concreto que muda o contexto.',
   '',
   'Retorne SOMENTE JSON válido, sem markdown ou texto externo. Use exatamente um destes contratos:',
   '{"decision":"approve","reason":"motivo curto e objetivo","text":null,"waitSignal":null}',

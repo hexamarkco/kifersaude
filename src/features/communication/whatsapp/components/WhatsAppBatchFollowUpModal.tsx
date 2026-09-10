@@ -203,6 +203,10 @@ export default function WhatsAppBatchFollowUpModal({
     () => (activeItem ? splitWhatsAppMessageSegments(activeItem.generatedText) : []),
     [activeItem],
   );
+  const aiRecommendsSchedule = Boolean(
+    activeItem?.scheduleRecommendation?.action === 'schedule'
+      && activeItem.scheduleRecommendation.suggestedDate,
+  );
 
   const pendingCount = items.filter((i) => i.status === 'pending' && i.selected).length;
   const readyCount = items.filter((i) => i.status === 'ready' && i.selected).length;
@@ -249,8 +253,12 @@ export default function WhatsAppBatchFollowUpModal({
           opportunityRecommendation: result.opportunityRecommendation ?? 'continue',
           scheduleRecommendation: result.scheduleRecommendation ?? null,
           generationId: result.generationId ?? null,
-          approvedScheduleAction: 'no_schedule',
-          approvedScheduleDate: null,
+          approvedScheduleAction: result.scheduleRecommendation?.action === 'schedule' && Boolean(result.scheduleRecommendation.suggestedDate)
+            ? 'schedule'
+            : 'no_schedule',
+          approvedScheduleDate: result.scheduleRecommendation?.action === 'schedule'
+            ? result.scheduleRecommendation.suggestedDate ?? null
+            : null,
           finalStatus: null,
           error: null,
         }),
@@ -368,8 +376,12 @@ export default function WhatsAppBatchFollowUpModal({
             opportunityRecommendation: result.value.opportunityRecommendation ?? 'continue',
             scheduleRecommendation: result.value.scheduleRecommendation ?? null,
             generationId: result.value.generationId ?? null,
-            approvedScheduleAction: 'no_schedule',
-            approvedScheduleDate: null,
+            approvedScheduleAction: result.value.scheduleRecommendation?.action === 'schedule' && Boolean(result.value.scheduleRecommendation.suggestedDate)
+              ? 'schedule'
+              : 'no_schedule',
+            approvedScheduleDate: result.value.scheduleRecommendation?.action === 'schedule'
+              ? result.value.scheduleRecommendation.suggestedDate ?? null
+              : null,
             finalStatus: null,
           };
         } else {
@@ -812,6 +824,72 @@ export default function WhatsAppBatchFollowUpModal({
                     />
                   ) : null}
 
+                  {/* Schedule decision: visible before the message so the operator reviews the AI recommendation first. */}
+                  <div className={`mb-4 rounded-2xl border p-4 shadow-sm ${aiRecommendsSchedule ? 'border-[var(--info-border)] bg-[var(--info-soft)]' : 'border-[var(--warning-border)] bg-[var(--warning-soft)]'}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 rounded-lg p-2 ${aiRecommendsSchedule ? 'bg-[var(--info-soft)] text-[var(--info-text)]' : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'}`}>
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-bold text-[var(--text-primary)]">Próximo passo comercial</p>
+                          <Pill tone={aiRecommendsSchedule ? 'accent' : 'neutral'}>
+                            IA: {aiRecommendsSchedule ? 'agendar lembrete' : 'não agendar'}
+                          </Pill>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                          {aiRecommendsSchedule
+                            ? `A IA recomenda manter a oportunidade ativa e retomar em ${new Date(activeItem.scheduleRecommendation!.suggestedDate!).toLocaleString('pt-BR')}.`
+                            : 'A IA não identificou um próximo passo que justifique novo lembrete agora.'}
+                        </p>
+                        {activeItem.scheduleRecommendation?.reason ? (
+                          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                            Motivo: {activeItem.scheduleRecommendation.reason}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={activeItem.approvedScheduleAction === 'schedule'}
+                        onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
+                          approvedScheduleAction: event.target.checked ? 'schedule' : 'no_schedule',
+                          approvedScheduleDate: event.target.checked ? activeItem.scheduleRecommendation?.suggestedDate ?? null : null,
+                        }))}
+                        disabled={phase !== 'ready'}
+                        aria-label="Agendar próximo lembrete"
+                      />
+                      <span>
+                        <span className="block font-semibold text-[var(--text-primary)]">
+                          {activeItem.approvedScheduleAction === 'schedule'
+                            ? 'Concordo: agendar próximo lembrete'
+                            : 'Discordo ou encerrar: não agendar próximo lembrete'}
+                        </span>
+                        <span className="mt-0.5 block text-[var(--text-muted)]">
+                          {activeItem.approvedScheduleAction === 'schedule'
+                            ? 'Você pode ajustar a data abaixo antes de enviar.'
+                            : 'Sem próximo lembrete, o lead será movido para Reativação ou Perdido conforme a decisão comercial.'}
+                        </span>
+                      </span>
+                    </label>
+
+                    {activeItem.approvedScheduleAction === 'schedule' ? (
+                      <input
+                        type="datetime-local"
+                        className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
+                        value={activeItem.approvedScheduleDate ? new Date(activeItem.approvedScheduleDate).toISOString().slice(0, 16) : ''}
+                        onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
+                          approvedScheduleDate: event.target.value ? new Date(event.target.value).toISOString() : null,
+                        }))}
+                        disabled={phase !== 'ready'}
+                        aria-label="Data do próximo lembrete"
+                      />
+                    ) : null}
+                  </div>
+
                   {/* Variations carousel */}
                   {activeItem.variations.length > 0 ? (
                     <div className="mb-4">
@@ -908,43 +986,6 @@ export default function WhatsAppBatchFollowUpModal({
                   <div className="max-h-[320px] overflow-y-auto pr-1">
                     <ChatBubblePreview segments={activeMessageSegments} />
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
-                  <p className="text-sm font-bold text-[var(--text-primary)]">Decisão da IA</p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                    {activeItem.currentAction === 'wait'
-                      ? activeItem.currentActionReason || 'Aguardar antes de novo contato.'
-                      : 'Enviar a mensagem e revisar a próxima ação abaixo.'}
-                  </p>
-                  {(
-                    <label className="mt-3 flex items-start gap-2 text-xs text-[var(--text-secondary)]">
-                      <input
-                        type="checkbox"
-                        checked={activeItem.approvedScheduleAction === 'schedule'}
-                        onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
-                          approvedScheduleAction: event.target.checked ? 'schedule' : 'no_schedule',
-                          approvedScheduleDate: event.target.checked ? activeItem.scheduleRecommendation?.suggestedDate ?? null : null,
-                        }))}
-                        disabled={phase !== 'ready'}
-                      />
-                      <span>
-                        Criar lembrete {activeItem.scheduleRecommendation?.suggestedDate ? `para ${new Date(activeItem.scheduleRecommendation.suggestedDate).toLocaleString('pt-BR')}` : 'mesmo sem sugestão automática'}.
-                        <span className="mt-1 block text-[var(--text-muted)]">{activeItem.scheduleRecommendation?.reason || 'Defina uma data se quiser manter a oportunidade na agenda.'}</span>
-                      </span>
-                    </label>
-                  )}
-                  {activeItem.approvedScheduleAction === 'schedule' ? (
-                    <input
-                      type="datetime-local"
-                      className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
-                      value={activeItem.approvedScheduleDate ? new Date(activeItem.approvedScheduleDate).toISOString().slice(0, 16) : ''}
-                      onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
-                        approvedScheduleDate: event.target.value ? new Date(event.target.value).toISOString() : null,
-                      }))}
-                      disabled={phase !== 'ready'}
-                    />
-                  ) : null}
                 </div>
 
                 {/* Ajustes extras accordion */}

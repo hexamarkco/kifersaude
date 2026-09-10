@@ -1,0 +1,6 @@
+-- This migration was applied to the linked remote database before its source
+-- file was lost from version control. It intentionally performs no SQL: the
+-- remote schema already contains the original change, and the file restores
+-- the immutable migration-version reference required by Supabase.
+--
+-- Do not remove, rename, or repurpose this migration timestamp.

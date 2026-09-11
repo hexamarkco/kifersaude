@@ -1,6 +1,9 @@
 import { Lightbulb, ArrowRight } from 'lucide-react';
 
-import { Alert, Surface } from '../design-system';
+import {
+  Alert,
+  Surface,
+} from '../design-system';
 
 type NextStepSuggestionProps = {
   leadStatus: string;

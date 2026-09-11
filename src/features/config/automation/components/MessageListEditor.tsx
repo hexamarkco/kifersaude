@@ -8,7 +8,11 @@ import {
 } from "../../../../lib/autoContactService";
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/templateVariableSuggestions";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
-import { FilterSelect } from "../../../../design-system";
+import {
+  Button,
+  FilterSelect,
+  IconButton,
+} from "../../../../design-system";
 
 export type MessageListItem = {
   templateId?: string;
@@ -74,33 +78,36 @@ export function MessageListEditor({
                 Mensagem {index + 1}
               </span>
               <div className="flex items-center gap-0.5">
-                <button
+                <IconButton
                   type="button"
-                  className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => moveItem(index, -1)}
                   disabled={index === 0}
                   aria-label="Mover para cima"
                 >
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <button
+                  <ChevronUp />
+                </IconButton>
+                <IconButton
                   type="button"
-                  className="rounded-full p-1 text-[var(--text-subtle)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => moveItem(index, 1)}
                   disabled={index === currentMessages.length - 1}
                   aria-label="Mover para baixo"
                 >
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                <button
+                  <ChevronDown />
+                </IconButton>
+                <IconButton
                   type="button"
-                  className="rounded-full p-1 text-[var(--danger-text)] hover:bg-[var(--bg-hover)] disabled:opacity-30"
+                  size="sm"
+                  variant="danger"
                   onClick={() => removeItem(index)}
                   disabled={currentMessages.length === 1}
                   aria-label="Remover mensagem"
                 >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                  <Trash2 />
+                </IconButton>
               </div>
             </div>
 
@@ -165,13 +172,14 @@ export function MessageListEditor({
         );
       })}
 
-      <button
+      <Button
         type="button"
-        className="flex items-center gap-1 text-[11px] text-[var(--brand-primary)] hover:underline"
+        size="sm"
+        variant="text"
         onClick={addItem}
       >
-        <Plus className="h-3 w-3" /> Adicionar mensagem
-      </button>
+        <Plus /> Adicionar mensagem
+      </Button>
 
       <div className="text-[10px] text-[var(--text-subtle)]">
         As mensagens desta etapa são enviadas em ordem, cada uma como uma

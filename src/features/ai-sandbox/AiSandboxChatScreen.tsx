@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
-import { Badge, Button, EmptyState, Input, LoadingState, IconButton
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  LoadingState,
+  IconButton,
 } from '../../design-system';
 import { toast } from '../../lib/toast';
 import { useAuth } from '../../contexts/AuthContext';

@@ -1,9 +1,7 @@
 /* ── Kanban / Funnel ───────────────────────────────── */
 .kds-kanban-board,
 .kds-funnel-board {
-  background:
-    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 34%),
-    var(--surface-bg);
+  background: var(--surface-bg);
 }
 
 .kds-kanban-scroll { scrollbar-color: var(--brand-primary) transparent; }
@@ -293,7 +291,7 @@
 .kds-calendar-day-selected,
 .calendar-day-selected {
   border-color: var(--button-primary-border) !important;
-  background: linear-gradient(180deg, var(--brand-primary-hover), var(--brand-primary-active)) !important;
+  background: var(--brand-primary) !important;
   color: var(--text-on-brand) !important;
 }
 
@@ -312,7 +310,7 @@
   gap: 0.5rem;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 80%, transparent), color-mix(in srgb, var(--bg-inset) 92%, transparent));
+  background: var(--bg-elevated);
   color: var(--text-secondary);
   padding: 0.35rem 0.7rem;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 12px 24px -22px rgba(0,0,0,0.85);
@@ -358,7 +356,7 @@
 .kds-op-pagination {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 58%, transparent), color-mix(in srgb, var(--bg-inset) 86%, transparent));
+  background: var(--bg-surface);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, RotateCcw, Save, X } from "lucide-react";
+import { AlertTriangle, RotateCcw, Save } from "lucide-react";
 
 import {
   Button,
@@ -11,7 +11,6 @@ import {
   Input,
   Select,
   Textarea,
-  IconButton,
 } from "../../../../design-system";
 import { toast } from "../../../../lib/toast";
 import { aiConfigService } from "../aiConfigService";
@@ -277,11 +276,11 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      className="w-full max-w-2xl"
+      size="lg"
     >
       <div className="flex h-full min-h-0 flex-col">
         {/* Header */}
-        <DrawerHeader className="flex items-center justify-between">
+        <DrawerHeader onClose={onClose}>
           <div>
             <h2 className="text-base font-semibold text-[var(--text-primary)]">
               {label}
@@ -291,9 +290,6 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}
             </p>
           </div>
-          <IconButton variant="icon" onClick={onClose} aria-label="Fechar painel" size="md">
-            <X className="kds-control-icon" />
-          </IconButton>
         </DrawerHeader>
 
         {/* Body */}

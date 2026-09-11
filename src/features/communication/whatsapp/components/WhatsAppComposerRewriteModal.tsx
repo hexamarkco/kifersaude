@@ -1,4 +1,8 @@
-import { Button, Surface, Textarea, WorkspaceDialog
+import {
+  Button,
+  Surface,
+  Textarea,
+  WorkspaceDialog,
 } from '../../../../design-system';
 import type { CommWhatsAppRewriteTone } from '../data';
 
@@ -73,7 +77,6 @@ export default function WhatsAppComposerRewriteModal({
       title="Reescrever mensagem com IA"
       description="Ajuste o objetivo, clique em reescrever e aplique o texto final no composer quando estiver bom."
       size="xl"
-      panelClassName="max-w-5xl"
       footer={(
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose} disabled={generating}>

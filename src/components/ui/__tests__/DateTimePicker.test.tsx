@@ -3,7 +3,9 @@ import { act, useState } from 'react';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
 
-import { DateTimePicker } from '../../../design-system';
+import {
+  DateTimePicker,
+} from '../../../design-system';
 import { normalizeYearInput, parseCommittedYearInput } from '../dateTimePickerUtils';
 
 const click = (element: Element | null) => {

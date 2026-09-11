@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import type { Lead } from '../features/leads';
-import { Toast } from '../design-system';
+import {
+  Toast,
+} from '../design-system';
 import { LeadFavoriteBadge } from './LeadFavoriteStar';
 
 type LeadNotificationToastProps = {

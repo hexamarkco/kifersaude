@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import type { Reminder } from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
-import { Toast } from '../design-system';
+import {
+  Toast,
+} from '../design-system';
 
 type NotificationToastProps = {
   reminder: Reminder;

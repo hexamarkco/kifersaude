@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
-import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem, WorkspaceDialog
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OperationalMetricChip,
+  Surface,
+  type TabItem,
+  WorkspaceDialog,
+  SegmentedControl,
 } from '../../../../design-system';
 import {
   whatsappConversationsRepository,
@@ -367,7 +375,6 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       title="Painel WhatsApp"
       description="Dashboard operacional para decidir onde olhar agora no inbox."
       size="xl"
-      panelClassName="max-w-6xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[var(--text-muted)]">
@@ -450,7 +457,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
           {/* Right: tabbed priorities / recent chats */}
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <Tabs items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} variant="pill" />
+            <SegmentedControl items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} />
 
             {view === 'priorities' ? (
               <div className="space-y-2.5">

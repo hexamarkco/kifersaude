@@ -2,7 +2,10 @@ import { ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { Eye, Lock } from 'lucide-react';
-import { Alert, Surface } from '../design-system';
+import {
+  Alert,
+  Surface,
+} from '../design-system';
 
 type ObserverRestrictionProps = {
   children: ReactNode;

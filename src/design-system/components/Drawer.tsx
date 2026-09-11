@@ -1,21 +1,23 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
-import { Dialog, type DialogProps } from './Dialog';
+import { Dialog, DialogHeader, type DialogHeaderProps, type DialogProps } from './Dialog';
 
 export type DrawerSide = 'left' | 'right' | 'bottom';
+export type DrawerSize = 'sm' | 'md' | 'lg';
 
 export type DrawerProps = Omit<DialogProps, 'size'> & {
   side?: DrawerSide;
+  size?: DrawerSize;
   children: ReactNode;
 };
 
 /** A Dialog presentation anchored to a viewport edge. */
-export function Drawer({ side = 'right', className, children, ...props }: DrawerProps) {
+export function Drawer({ side = 'right', size = 'md', className, children, ...props }: DrawerProps) {
   return (
     <Dialog
       size="full"
-      className={cx('kds-drawer', `kds-drawer-${side}`, className)}
+      className={cx('kds-drawer', `kds-drawer-${side}`, `kds-drawer-${size}`, className)}
       {...props}
     >
       {children}
@@ -23,10 +25,10 @@ export function Drawer({ side = 'right', className, children, ...props }: Drawer
   );
 }
 
-export type DrawerHeaderProps = HTMLAttributes<HTMLDivElement>;
+export type DrawerHeaderProps = DialogHeaderProps;
 
 export function DrawerHeader({ className, ...props }: DrawerHeaderProps) {
-  return <div className={cx('kds-drawer-header', className)} {...props} />;
+  return <DialogHeader className={cx('kds-drawer-header', className)} {...props} />;
 }
 
 export type DrawerBodyProps = HTMLAttributes<HTMLDivElement>;

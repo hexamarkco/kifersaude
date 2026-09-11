@@ -12,7 +12,9 @@ import { notificationService, type InboxMessageNotification } from '../lib/notif
 import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
-import { AppLoadingScreen } from '../design-system';
+import {
+  AppLoadingScreen,
+} from '../design-system';
 import type { TabNavigationOptions } from '../types/navigation';
 
 const ROUTE_TAB_MAP: Record<string, string> = {

@@ -15,7 +15,21 @@ import {
 } from "../../../lib/accessControl";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { toast } from "../../../lib/toast";
-import { Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, IconButton
+import {
+  Badge,
+  Button,
+  Card,
+  CardIcon,
+  Checkbox,
+  Field,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  IconButton,
 } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 

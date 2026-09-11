@@ -17,7 +17,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Tabs, type TabItem } from '../../../../design-system';
+import {
+  type TabItem,
+  SegmentedControl,
+} from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 
 type DrawerMode = 'emoji' | 'gif' | 'sticker';
@@ -670,7 +673,7 @@ export default function WhatsAppMediaDrawer({
         )}
       </div>
 
-      <Tabs
+      <SegmentedControl
         items={DRAWER_MODE_TABS}
         value={mode}
         onChange={(nextMode) => {
@@ -680,7 +683,6 @@ export default function WhatsAppMediaDrawer({
             setActiveShortcutId(MEDIA_SHORTCUTS[nextMode][0].id);
           }
         }}
-        variant="pill"
         size="sm"
         className="mx-3 mb-3 mt-1"
         listClassName="comm-media-picker-mode-tabs"

@@ -4,7 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
-import { Badge, Button, DateTimePicker, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
+import {
+  Badge,
+  Button,
+  DateTimePicker,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  EmptyState,
+  Input,
+  Surface,
+  type TabItem,
+  SegmentedControl,
+} from '../../../../design-system';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
@@ -396,20 +409,18 @@ export default function WhatsAppLeadDrawer({
         open={isOpen}
         onOpenChange={(open) => !open && onClose()}
         side="right"
-        className="comm-whatsapp-lead-drawer w-full max-w-[400px]"
+        size="sm"
+        className="comm-whatsapp-lead-drawer"
       >
-        <DrawerHeader>
-          <DialogHeader onClose={onClose}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">CRM do chat</p>
-            <DialogTitle>{chatDisplayName}</DialogTitle>
-          </DialogHeader>
+        <DrawerHeader onClose={onClose}>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">CRM do chat</p>
+          <DialogTitle>{chatDisplayName}</DialogTitle>
         </DrawerHeader>
         <DrawerBody className="overflow-y-auto">
-          <Tabs
+          <SegmentedControl
             items={LEAD_DRAWER_TABS}
             value={activeTab}
             onChange={setActiveTab}
-            variant="pill"
             className="mb-4"
           />
 

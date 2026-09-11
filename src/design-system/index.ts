@@ -41,7 +41,7 @@ export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
 export type { FilterTriggerProps } from './components/FilterTrigger';
 export { Drawer, DrawerBody, DrawerFooter, DrawerHeader } from './components/Drawer';
-export type { DrawerProps, DrawerSide, DrawerBodyProps, DrawerFooterProps, DrawerHeaderProps } from './components/Drawer';
+export type { DrawerProps, DrawerSide, DrawerSize, DrawerBodyProps, DrawerFooterProps, DrawerHeaderProps } from './components/Drawer';
 export { default as DateTimePicker } from './components/DateTimePicker';
 export type { DateTimePickerProps } from './components/DateTimePicker';
 export { default as Field } from './components/Field';

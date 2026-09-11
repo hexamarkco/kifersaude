@@ -75,11 +75,11 @@ import {
   PopoverTrigger,
   SectionHeader,
   Surface,
-  Tabs,
   Textarea,
   type SurfaceVariant,
   IconButton,
   FilterSelect,
+  SegmentedControl,
 } from "../../design-system";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
@@ -1431,7 +1431,7 @@ export default function AgendaScreen() {
                 />
           </div>
           <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-3 lg:flex-row lg:items-center lg:justify-between">
-            <Tabs
+            <SegmentedControl
               items={[
                 { id: "nao-lidos", label: "Pendentes", badge: pendingFilteredCount },
                 { id: "todos", label: "Todos" },
@@ -1439,7 +1439,6 @@ export default function AgendaScreen() {
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
-              variant="pill"
               listClassName="flex-nowrap overflow-x-auto pb-1"
               triggerClassName="min-w-[7.5rem] shrink-0 whitespace-nowrap"
             />

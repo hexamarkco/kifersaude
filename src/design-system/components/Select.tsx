@@ -14,7 +14,7 @@ export type SelectOption = {
   disabled?: boolean;
 };
 
-export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
+export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'multiple'> & {
   size?: SelectSize;
   invalid?: boolean;
   state?: SelectState;
@@ -53,7 +53,6 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
     defaultValue,
     onChange,
     onKeyDown,
-    multiple,
     disabled,
     id,
     name,
@@ -148,41 +147,6 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
       setActiveIndex(optionItems.reduce((last, option, index) => (!option.disabled ? index : last), -1));
     }
   };
-
-  // MultiSelect preserva a semântica de seleção múltipla do navegador.
-  if (multiple) {
-    return (
-      <select
-        ref={forwardedRef}
-        multiple
-        className={cx(
-          'kds-select panel-ui-input w-full disabled:cursor-not-allowed',
-          panelInputSizeClasses[size],
-          panelInputStateClasses[resolvedState],
-          className,
-        )}
-        value={value}
-        defaultValue={defaultValue}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        disabled={disabled}
-        id={id}
-        name={name}
-        required={required}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        {...nativeProps}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options?.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-        {children}
-      </select>
-    );
-  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>

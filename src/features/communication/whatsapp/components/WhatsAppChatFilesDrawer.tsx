@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, FileAudio, FileText, Image, Loader2, Pause, Play, Video } from 'lucide-react';
 
-import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs, IconButton
+import {
+  Badge,
+  Button,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  EmptyState,
+  Surface,
+  IconButton,
+  SegmentedControl,
 } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import type { CommWhatsAppMessage } from '../domain/types';
@@ -160,15 +170,13 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const files = messages.filter((message) => message.message_type !== 'image' && message.message_type !== 'video');
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" className="w-full max-w-[380px]">
-      <DrawerHeader>
-        <DialogHeader onClose={onClose}>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Arquivos da conversa</p>
-          <DialogTitle>{chatDisplayName}</DialogTitle>
-        </DialogHeader>
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="sm">
+      <DrawerHeader onClose={onClose}>
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Arquivos da conversa</p>
+        <DialogTitle>{chatDisplayName}</DialogTitle>
       </DrawerHeader>
       <DrawerBody className="space-y-4 overflow-y-auto">
-        <Tabs items={mediaTabs} value={mediaType} onChange={setMediaType} variant="pill" listClassName="flex-nowrap overflow-x-auto" />
+        <SegmentedControl items={mediaTabs} value={mediaType} onChange={setMediaType} listClassName="flex-nowrap overflow-x-auto" />
         {loading ? <div className="flex min-h-40 items-center justify-center text-sm text-[var(--text-muted)]"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando arquivos...</div> : error ? <EmptyState title="Arquivos indisponíveis" description={error} action={<Button variant="secondary" size="sm" onClick={() => void load(false)}>Tentar novamente</Button>} /> : messages.length === 0 ? <EmptyState icon={<FileText className="h-7 w-7" />} title="Nenhum arquivo encontrado" description="Esta conversa ainda não possui arquivos neste filtro." /> : <>
           {visuals.length > 0 && (
             <div className="space-y-2.5">

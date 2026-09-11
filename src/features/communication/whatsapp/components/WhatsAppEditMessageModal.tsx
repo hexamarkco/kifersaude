@@ -1,4 +1,7 @@
-import { Button, Textarea, WorkspaceDialog
+import {
+  Button,
+  Textarea,
+  WorkspaceDialog,
 } from '../../../../design-system';
 
 type WhatsAppEditMessageModalProps = {

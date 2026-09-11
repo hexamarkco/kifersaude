@@ -43,6 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       type={type ?? 'button'}
       disabled={isDisabled}
       aria-busy={loading || undefined}
+      data-loading={loading || undefined}
       className={getPanelButtonClass({
         variant,
         size,
@@ -51,8 +52,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       })}
       {...props}
     >
-      {loading && <Loader2 className={cx('animate-spin', panelButtonSpinnerSizeClasses[size])} aria-hidden="true" />}
-      {children}
+      {loading && <Loader2 className={cx('kds-button-spinner animate-spin', panelButtonSpinnerSizeClasses[size])} aria-hidden="true" />}
+      <span className="kds-button-content">{children}</span>
     </button>
   );
 });

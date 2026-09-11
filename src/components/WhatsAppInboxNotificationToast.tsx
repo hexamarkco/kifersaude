@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 
-import { Toast } from '../design-system';
+import {
+  Toast,
+} from '../design-system';
 import type { BrowserNotificationPermission } from '../lib/browserNotificationService';
 import type { InboxMessageNotification } from '../lib/notificationService';
 

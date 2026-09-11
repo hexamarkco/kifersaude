@@ -28,7 +28,17 @@ import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
-import { Badge, Button, DateTimePicker, EmptyState, Input, Surface, Textarea, IconButton, FilterSelect, WorkspaceDialog
+import {
+  Badge,
+  Button,
+  DateTimePicker,
+  EmptyState,
+  Input,
+  Surface,
+  Textarea,
+  IconButton,
+  FilterSelect,
+  WorkspaceDialog,
 } from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 import type { PanelTone } from '../../../../design-system';
@@ -1431,7 +1441,6 @@ export default function WhatsAppAgendaModal({
         title="Agenda do WhatsApp"
         description="Mesma base da Agenda unificada, agora acessível dentro do inbox. Tudo o que você fizer aqui reflete em /painel/agenda."
         size="xl"
-        panelClassName="max-w-6xl"
         footer={
           <div className="flex items-center justify-end gap-3">
             <Button variant="secondary" onClick={onClose}>
@@ -1672,7 +1681,6 @@ export default function WhatsAppAgendaModal({
           title="Nova tarefa"
           description={selectedDateLabel}
           size="sm"
-          panelClassName="max-w-md"
         >
           <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
             <div className="space-y-1">
@@ -1757,7 +1765,6 @@ export default function WhatsAppAgendaModal({
           title="Lembretes duplicados"
           description="Mesmo lead, mesmo tipo e vencendo juntos hoje (atrasados de outros dias contam). Escolha qual lembrete manter em cada grupo antes de remover os repetidos."
           size="lg"
-          panelClassName="max-w-3xl"
           footer={
             <div className="flex w-full flex-wrap items-center justify-between gap-3">
               <span className="text-sm text-[var(--text-muted)]">

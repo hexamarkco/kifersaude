@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Plus, Trash2 } from 'lucide-react';
 
-import { Alert, Button, Input, Surface, WorkspaceDialog
+import {
+  Alert,
+  Button,
+  Input,
+  Surface,
+  WorkspaceDialog,
 } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
@@ -122,7 +127,6 @@ export default function WhatsAppQuickRepliesModal({
         title="Mensagens rápidas"
         description="Cadastre atalhos independentes do inbox. Use {{ para inserir variáveis dinâmicas na mensagem."
         size="xl"
-        panelClassName="max-w-6xl"
         footer={(
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div className="text-xs text-[var(--text-muted)]">

@@ -1,6 +1,9 @@
 import { Filter, Target, Users } from 'lucide-react';
 
-import { Input, PageHeader, FilterSelect
+import {
+  Input,
+  PageHeader,
+  FilterSelect,
 } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';

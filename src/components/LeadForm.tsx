@@ -455,18 +455,17 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg" className="sm:max-w-3xl">
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
         <DialogDescription>
           {lead ? 'Atualize os dados comerciais e o próximo retorno.' : 'Registre o contato e defina o primeiro acompanhamento.'}
         </DialogDescription>
       </DialogHeader>
-      <DialogBody className="p-0">
+      <DialogBody>
       <form
         id="lead-form"
         onSubmit={handleSubmit}
-        className="px-4 py-4 sm:px-5 sm:py-5"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">

@@ -27,7 +27,7 @@ const click = (element: Element | null) => {
   act(() => element.click());
 };
 
-const keyDown = (element: Element, key: string) => {
+const keyDown = (element: EventTarget, key: string) => {
   act(() => element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
 };
 
@@ -35,7 +35,7 @@ test('controls share the sm/md/lg scale and loading semantics', () => {
   const { container, unmount } = render(
     <div>
       <Button size="sm">Pequeno</Button>
-      <Button size="md" loading>Médio</Button>
+      <Button size="md" loading><Settings />Médio</Button>
       <Button size="lg">Grande</Button>
       <IconButton size="md" aria-label="Configurações"><Settings /></IconButton>
     </div>,
@@ -45,6 +45,9 @@ test('controls share the sm/md/lg scale and loading semantics', () => {
   assert.match(buttons[1].className, /kds-control-md/);
   assert.equal(buttons[1].disabled, true);
   assert.equal(buttons[1].getAttribute('aria-busy'), 'true');
+  assert.equal(buttons[1].getAttribute('data-loading'), 'true');
+  assert.ok(buttons[1].querySelector('.kds-button-spinner'));
+  assert.ok(buttons[1].querySelector('.kds-button-content'));
   assert.match(buttons[2].className, /kds-control-lg/);
   assert.match(buttons[3].className, /kds-icon-button/);
   assert.equal(buttons[3].getAttribute('aria-label'), 'Configurações');
@@ -146,7 +149,7 @@ test('Pagination renders summary, page size, ellipsis and disabled boundaries', 
     <Pagination currentPage={1} totalPages={12} totalItems={230} itemsPerPage={25} onItemsPerPageChange={() => {}} onPageChange={() => {}} />,
   );
   const navigation = container.querySelector('nav');
-  assert.equal(navigation?.getAttribute('aria-label'), 'Paginacao');
+  assert.equal(navigation?.getAttribute('aria-label'), 'Paginação');
   assert.match(container.textContent ?? '', /1–25 de 230/);
   assert.ok(container.querySelector('.kds-pagination-ellipsis'));
   assert.equal(container.querySelector<HTMLButtonElement>('[aria-label="Pagina anterior"]')?.disabled, true);

@@ -340,12 +340,12 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                 <Card key={step.id} variant="muted" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                      <button type="button" onClick={() => void moveStep(index, -1)} disabled={index === 0 || isBusy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30" aria-label="Mover para cima">
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
-                      <button type="button" onClick={() => void moveStep(index, 1)} disabled={index === questionSteps.length - 1 || isBusy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30" aria-label="Mover para baixo">
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
+                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, -1)} disabled={index === 0 || isBusy} aria-label="Mover para cima">
+                        <ChevronUp />
+                      </IconButton>
+                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, 1)} disabled={index === questionSteps.length - 1 || isBusy} aria-label="Mover para baixo">
+                        <ChevronDown />
+                      </IconButton>
                     </div>
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                       <ListChecks className="h-4 w-4" />

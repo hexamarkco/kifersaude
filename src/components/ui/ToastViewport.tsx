@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
-import { Toast } from '../../design-system';
+import {
+  Toast,
+} from '../../design-system';
 import { toastStore, type ToastItem } from '../../lib/toast';
 
 const toneMeta = {

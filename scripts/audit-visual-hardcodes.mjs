@@ -36,6 +36,9 @@ const canonicalControls = [
   'DateRangeFilter',
   'Tabs',
   'SegmentedControl',
+  'Dialog',
+  'Drawer',
+  'Pagination',
 ];
 const legacySizePattern = /\bsize=(['"])(?:icon|xs|default|compact|large)\1/;
 const geometryTokenPattern = /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:(?:min-|max-)?h-|(?:p|px|py|pl|pr|pt|pb)-|rounded(?:-|$)|text-(?:xs|sm|base|lg|xl|\[)|leading-(?:none|tight|snug|normal|relaxed|loose|\[)|gap-)/;
@@ -121,6 +124,22 @@ const auditFile = async (filePath) => {
   const source = await fs.readFile(filePath, 'utf8');
   const matches = [];
   const isDesignSystemFile = path.relative(projectRoot, filePath).split(path.sep).includes('design-system');
+
+  for (const value of source.match(/(?:linear|radial|conic)-gradient/gi) || []) {
+    matches.push({ type: 'non-flat-gradient', value });
+  }
+
+  for (const value of source.match(/<(?:linear|radial|conic)Gradient\b/gi) || []) {
+    matches.push({ type: 'non-flat-svg-gradient', value });
+  }
+
+  for (const value of source.match(/\bbg-gradient-to-[^\s"']+/g) || []) {
+    matches.push({ type: 'non-flat-utility-gradient', value });
+  }
+
+  for (const value of source.match(/\bsize=(['"])(?:icon|default|compact|large)\1/g) || []) {
+    matches.push({ type: 'legacy-size-alias', value });
+  }
 
   if (!isDesignSystemFile) {
     for (const value of source.match(legacyImportPattern) || []) {

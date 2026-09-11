@@ -4,7 +4,9 @@ import type { ConfigOption } from '../features/config';
 import type { Lead, LeadStatusConfig } from '../features/leads';
 import StatusDropdown from './StatusDropdown';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
-import { FilterSelect } from '../design-system';
+import {
+  FilterSelect,
+} from '../design-system';
 import {
   AlertCircle,
   ClipboardList,

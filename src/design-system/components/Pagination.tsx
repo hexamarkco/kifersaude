@@ -53,7 +53,7 @@ export default function Pagination({
 
   return (
     <nav
-      aria-label="Paginacao"
+      aria-label="Paginação"
       className={cx('kds-pagination', className)}
     >
       {hasSummary && (
@@ -98,6 +98,7 @@ export default function Pagination({
               onClick={() => onPageChange(page)}
               className={cx(
                 'kds-pagination-page',
+                (page === 1 || page === totalPages) && 'kds-pagination-page-edge',
                 currentPage === page && 'kds-pagination-page-active',
               )}
               aria-current={currentPage === page ? 'page' : undefined}

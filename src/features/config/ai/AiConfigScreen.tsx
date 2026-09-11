@@ -15,7 +15,7 @@ import {
   ConfirmDialog,
   Input,
   SectionHeader,
-  Tabs,
+  SegmentedControl,
 } from "../../../design-system";
 import { toast } from "../../../lib/toast";
 import { aiConfigService } from "./aiConfigService";
@@ -268,14 +268,13 @@ export default function AiConfigScreen() {
         }
       />
 
-      <Tabs
+      <SegmentedControl
         items={[
           { id: "features", label: "Funcionalidades", icon: Sparkles },
           { id: "global", label: "Configurações globais", icon: Settings },
         ]}
         value={section}
         onChange={setSection}
-        variant="pill"
         listClassName="flex-nowrap overflow-x-auto"
       />
 

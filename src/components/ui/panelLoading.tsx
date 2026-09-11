@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { LoadingState } from '../../design-system';
+import {
+  LoadingState,
+} from '../../design-system';
 import { cx } from '../../lib/cx';
 import type { AdaptiveLoadingPhase } from '../../hooks/useAdaptiveLoading';
 

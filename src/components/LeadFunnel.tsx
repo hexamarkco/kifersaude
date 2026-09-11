@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { ArrowDownRight, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
-import { SectionHeader, Surface } from '../design-system';
+import {
+  SectionHeader,
+  Surface,
+} from '../design-system';
 import { DASHBOARD_CHART_PALETTE } from '../features/dashboard/shared/dashboardConstants';
 import type { Lead } from '../features/leads';
 

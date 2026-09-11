@@ -4,7 +4,16 @@ import { Calendar, Mail, Phone, Users } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
 import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
-import { ActionSurface, Button, EmptyState, Input, LoadingState, OperationalMetricChip, OperationalStatusDot, Surface } from "../../../design-system";
+import {
+  ActionSurface,
+  Button,
+  EmptyState,
+  Input,
+  LoadingState,
+  OperationalMetricChip,
+  OperationalStatusDot,
+  Surface,
+} from "../../../design-system";
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
 import { toast } from "../../../lib/toast";
 import type { Lead } from "../domain/types";

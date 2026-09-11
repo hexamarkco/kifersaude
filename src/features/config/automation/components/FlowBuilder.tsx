@@ -35,10 +35,15 @@ import type { LeadStatusConfig } from "../../../leads";
 import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import { evaluateSafeFormula } from "../../../../lib/safeFormula";
-import MultiSelectDropdown from "../../../../components/config/MultiSelectDropdown";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
 import { MessageListEditor } from "./MessageListEditor";
-import { Button, Input, IconButton, FilterSelect
+import {
+  Button,
+  Field,
+  Input,
+  IconButton,
+  FilterSelect,
+  MultiSelect,
 } from "../../../../design-system";
 
 type FlowBuilderProps = {
@@ -1208,8 +1213,13 @@ export default function FlowBuilder({
                 {(selectedNode.data.triggerType === "status_changed" ||
                   selectedNode.data.triggerType === "status_duration" ||
                   selectedNode.data.triggerType === "inactivity_duration") && (
-                  <div>
-                    <MultiSelectDropdown
+                  <Field
+                    label="Status do lead"
+                    hint={selectedNode.data.triggerType === "inactivity_duration"
+                      ? "Selecione os status monitorados pela régua"
+                      : "Selecione um ou mais status"}
+                  >
+                    <MultiSelect
                       options={leadStatuses
                         .filter((s) => s.ativo !== false)
                         .map((status) => ({
@@ -1221,14 +1231,9 @@ export default function FlowBuilder({
                         updateSelectedNode({ triggerStatuses: selected })
                       }
                       placeholder="Selecione os status..."
-                      label="Status do lead"
+                      aria-label="Status do lead"
                     />
-                    <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
-                      {selectedNode.data.triggerType === "inactivity_duration"
-                        ? "Selecione os status monitorados pela régua"
-                        : "Selecione um ou mais status"}
-                    </div>
-                  </div>
+                  </Field>
                 )}
 
                 {(selectedNode.data.triggerType === "status_duration" ||

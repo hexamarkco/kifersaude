@@ -20,6 +20,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  IconButton,
   Select,
 } from '../../../design-system';
 
@@ -117,7 +118,7 @@ export function ContractDocumentImportDialog({
           O sistema lê a camada textual dos PDFs e usa IA somente quando faltam dados importantes. Revise tudo antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>
-      <DialogBody className="min-w-0 space-y-5 overflow-x-hidden p-4 sm:p-5">
+      <DialogBody className="min-w-0 space-y-5 overflow-x-hidden">
         {!extraction ? (
           <>
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
@@ -178,14 +179,15 @@ export function ContractDocumentImportDialog({
                   <li key={`${file.name}-${file.lastModified}`} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-3 py-2 text-sm">
                     <span className="min-w-0 truncate text-[var(--text-primary)]">{file.name}</span>
                     <span className="ml-auto shrink-0 text-[var(--text-muted)]">{fileSizeLabel(file.size)}</span>
-                    <button
+                    <IconButton
                       type="button"
-                      className="rounded-[var(--kds-radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                      size="sm"
+                      variant="ghost"
                       aria-label={`Remover ${file.name}`}
                       onClick={() => removeFile(file)}
                     >
-                      <X className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                      <X aria-hidden="true" />
+                    </IconButton>
                   </li>
                 ))}
               </ul>

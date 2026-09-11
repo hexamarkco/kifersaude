@@ -1,7 +1,10 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
-import { Button, Textarea, WorkspaceDialog
+import {
+  Button,
+  Textarea,
+  WorkspaceDialog,
 } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -261,8 +264,7 @@ export default function WhatsAppFollowUpModal({
       onClose={handleClose}
       title="Gerar follow-up"
       description="A IA interpreta a conversa inteira antes de escrever. Ajustes manuais continuam disponíveis quando precisar."
-      size="xl"
-      panelClassName="max-w-[82rem]"
+      size="full"
       footer={(
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-xs leading-5 text-[var(--text-muted)]">

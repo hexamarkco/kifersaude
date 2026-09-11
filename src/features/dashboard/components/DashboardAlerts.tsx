@@ -1,6 +1,9 @@
 import { Calendar } from 'lucide-react';
 
-import { Alert, Button } from '../../../design-system';
+import {
+  Alert,
+  Button,
+} from '../../../design-system';
 
 type DashboardAlertsProps = {
   error: string | null;

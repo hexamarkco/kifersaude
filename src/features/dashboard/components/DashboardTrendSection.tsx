@@ -1,7 +1,10 @@
 import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react';
 
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import { SectionHeader, Surface, FilterSelect
+import {
+  SectionHeader,
+  Surface,
+  FilterSelect,
 } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,

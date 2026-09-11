@@ -36,6 +36,7 @@ import {
   Play,
   Plus,
   Search,
+  Save,
   Settings,
   Share2,
   Sliders as SlidersIcon,
@@ -287,7 +288,7 @@ function ShowcaseContent() {
               <Button variant="tertiary">Filtrar</Button>
               <Button variant="ghost">Ghost</Button>
               <Button variant="danger">Excluir</Button>
-              <Button loading>Salvando</Button>
+              <Button loading><Save />Salvando</Button>
             </div>
           </Item>
 
@@ -367,8 +368,8 @@ function ShowcaseContent() {
               onChange={setSegmentIcon}
               ariaLabel="Modo de visualização"
               items={[
-                { value: 'grid', label: 'Grade', icon: LayoutGrid },
-                { value: 'list', label: 'Lista', icon: List },
+                { id: 'grid', label: 'Grade', icon: LayoutGrid },
+                { id: 'list', label: 'Lista', icon: List },
               ]}
             />
           </Item>
@@ -658,8 +659,7 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Tabs (pill)">
-            <Tabs
-              variant="pill"
+            <SegmentedControl
               items={[
                 { id: 'leads', label: 'Leads' },
                 { id: 'contratos', label: 'Contratos' },
@@ -833,11 +833,8 @@ function ShowcaseContent() {
               Abrir drawer
             </Button>
             <Drawer side="right" open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <DrawerHeader className="flex items-center justify-between">
+              <DrawerHeader onClose={() => setDrawerOpen(false)}>
                 <p className="kds-dialog-title">Detalhes do lead</p>
-                <button type="button" onClick={() => setDrawerOpen(false)} className="text-[var(--text-muted)]">
-                  <X className="h-5 w-5" />
-                </button>
               </DrawerHeader>
               <DrawerBody>
                 <p className="text-sm text-[var(--text-secondary)]">Ana Paula Costa · São Paulo, SP</p>
@@ -853,11 +850,8 @@ function ShowcaseContent() {
               Abrir sheet
             </Button>
             <Drawer side="bottom" open={sheetOpen} onOpenChange={setSheetOpen}>
-              <DrawerHeader className="flex items-center justify-between">
+              <DrawerHeader onClose={() => setSheetOpen(false)}>
                 <p className="kds-dialog-title">Ações rápidas</p>
-                <button type="button" onClick={() => setSheetOpen(false)} className="text-[var(--text-muted)]">
-                  <X className="h-5 w-5" />
-                </button>
               </DrawerHeader>
               <DrawerBody>
                 <p className="text-sm text-[var(--text-secondary)]">Ligar, enviar WhatsApp ou agendar follow-up.</p>
@@ -1328,7 +1322,7 @@ function ShowcaseContent() {
               {['Ana Paula', 'Carlos Silva', 'Fernanda'].map((n) => (
                 <p key={n} className="py-1 text-sm text-[var(--text-secondary)]">{n}</p>
               ))}
-              <div className="absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-gradient-to-t from-[var(--bg-surface)] to-transparent pb-1">
+              <div className="absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-[var(--bg-surface)] pb-1">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--text-muted)]" />
               </div>
             </div>

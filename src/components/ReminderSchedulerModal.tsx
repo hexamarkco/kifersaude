@@ -162,7 +162,7 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="md" className="max-w-lg">
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
       <DialogHeader onClose={onClose}>
         <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription className="flex items-center gap-1.5"><LeadFavoriteBadge favorito={lead.favorito} />{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
       </DialogHeader>

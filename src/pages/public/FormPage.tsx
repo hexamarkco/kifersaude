@@ -8,7 +8,15 @@ import { formsService, type PublicFormSubmitPayload } from '../../lib/formsServi
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../features/public-content';
 import { toast } from '../../lib/toast';
-import { Button, Field, KIFER_THEME_COLORS, getPanelButtonClass, Input, LoadingState, Stepper } from '../../design-system';
+import {
+  Button,
+  Field,
+  KIFER_THEME_COLORS,
+  getPanelButtonClass,
+  Input,
+  LoadingState,
+  Stepper,
+} from '../../design-system';
 
 const DARK_CANVAS_COLOR = KIFER_THEME_COLORS.darkCanvas;
 const LIGHT_CANVAS_COLOR = KIFER_THEME_COLORS.lightCanvas;
@@ -283,14 +291,14 @@ export default function FormPage() {
           </div>
         ) : !form ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <PublicBrandMark className="h-8 w-auto text-[color:var(--text-on-brand)]" />
             </div>
             <p className="text-sm text-[color:var(--text-secondary)]">Este formulário não está disponível.</p>
           </div>
         ) : submitted ? (
           <div className="form-step-in flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <Check className="h-8 w-8 text-[color:var(--text-on-brand)]" />
             </div>
             <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">

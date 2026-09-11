@@ -21,8 +21,8 @@ import {
   Input,
   SectionHeader,
   Switch,
-  Tabs,
   FilterSelect,
+  SegmentedControl,
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
@@ -701,7 +701,7 @@ export default function IntegrationsScreen() {
           title="Integrações"
           description="Configure cada conector por finalidade, sem misturar credenciais, automações e rastreamento."
         />
-        <Tabs
+        <SegmentedControl
           items={[
             { id: "ai", label: "Inteligência artificial", icon: Sparkles },
             { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
@@ -709,7 +709,6 @@ export default function IntegrationsScreen() {
           ]}
           value={activeSection}
           onChange={setActiveSection}
-          variant="pill"
           listClassName="flex-nowrap overflow-x-auto"
         />
 

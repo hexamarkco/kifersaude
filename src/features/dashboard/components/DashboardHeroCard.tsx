@@ -1,6 +1,8 @@
 import { TrendingUp } from 'lucide-react';
 
-import { Surface } from '../../../design-system';
+import {
+  Surface,
+} from '../../../design-system';
 
 export function DashboardHeroCard() {
   return (

@@ -5,7 +5,22 @@ import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Popover, PopoverContent, PopoverTrigger, IconButton
+import {
+  Badge,
+  Button,
+  Checkbox,
+  ConfirmDialog,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  IconButton,
 } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
@@ -1195,7 +1210,7 @@ function WhatsAppGalleryMediaTile({
       <video muted playsInline preload="metadata" className="h-full w-full object-cover">
         <source src={mediaUrl} type={message.media_mime_type || undefined} />
       </video>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-[color:var(--overlay)] via-transparent to-transparent px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-[var(--overlay)] px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
         <span className="inline-flex items-center gap-1.5 truncate">
           <Play className="h-3.5 w-3.5 fill-current" />
           <span className="truncate">{secondaryLabel}</span>
@@ -10149,11 +10164,11 @@ export default function WhatsAppInboxScreen() {
             onOpenChange={(open) => {
               if (!open) handleCloseForwardMessageModal();
             }}
-            size="md"
+            size="sm"
             closeOnEscape={false}
             closeOnOverlay={false}
             aria-label="Encaminhar mensagem"
-            className="comm-whatsapp-overlay max-w-lg"
+            className="comm-whatsapp-overlay"
           >
               <DialogHeader onClose={handleCloseForwardMessageModal}>
                 <div>

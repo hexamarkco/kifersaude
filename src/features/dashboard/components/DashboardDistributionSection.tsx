@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import DonutChart from '../../../components/charts/DonutChart';
-import { Badge, Popover, PopoverContent, PopoverTrigger, SectionHeader, Surface, Tabs } from '../../../design-system';
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  SectionHeader,
+  Surface,
+  SegmentedControl,
+} from '../../../design-system';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
 const VISIBLE_LEGEND_ITEMS = 3;
@@ -127,11 +135,10 @@ export function DashboardDistributionSection({
   return (
     <section data-panel-animate>
       <div className="mb-3 lg:hidden">
-        <Tabs
+        <SegmentedControl
           items={[{ id: 'leads', label: 'Leads por status' }, { id: 'operadoras', label: 'Por operadora' }]}
           value={mobileDistribution}
           onChange={(value) => setMobileDistribution(value as 'leads' | 'operadoras')}
-          variant="pill"
           size="sm"
           listClassName="w-full"
           triggerClassName="flex-1 px-2"

@@ -1,7 +1,12 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-import { OperationalStatusDot, Popover, PopoverContent, PopoverTrigger } from '../design-system';
+import {
+  OperationalStatusDot,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../design-system';
 import { cx } from '../lib/cx';
 import type { LeadStatusConfig } from '../features/leads';
 

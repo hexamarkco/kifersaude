@@ -1159,11 +1159,10 @@ export default function ContractForm({
             Preencher com PDFs
           </Button>
         </DialogHeader>
-        <DialogBody className="p-0">
+        <DialogBody>
         <form
           id="contract-form"
           onSubmit={handleSubmit}
-          className="p-4 sm:p-5"
         >
           <Surface variant="muted" padding="sm" className="mb-4">
             <h4 className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">

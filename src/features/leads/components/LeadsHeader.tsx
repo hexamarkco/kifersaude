@@ -1,6 +1,11 @@
 import { BookOpen, Plus } from "lucide-react";
 
-import { Button, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
+import {
+  Button,
+  PageHeader,
+  getPanelButtonClass,
+  SegmentedControl,
+} from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
@@ -56,11 +61,10 @@ export function LeadsHeader({
       )}
       data-panel-animate
     >
-      <Tabs
+      <SegmentedControl
         items={VIEW_MODE_TABS}
         value={viewMode}
         onChange={onViewModeChange}
-        variant="pill"
         size="sm"
         className="kds-leads-view-tabs w-full md:w-auto"
         listClassName="w-full min-w-[17rem] max-w-full flex-nowrap md:w-auto md:min-w-0"

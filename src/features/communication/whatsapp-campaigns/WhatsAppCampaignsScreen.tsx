@@ -3,7 +3,31 @@ import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, Calend
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip, FilterMultiSelect
+import {
+  ActionSurface,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  ConfirmDialog,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  IconButton,
+  OperationalMetricChip,
+  PageHeader,
+  Select,
+  Stepper,
+  Surface,
+  Textarea,
+  Tooltip,
+  FilterMultiSelect,
 } from '../../../design-system';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -1022,7 +1046,7 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {campaignModalOpen && (
-        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && !saving && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && !saving && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay">
             <DialogHeader onClose={saving ? undefined : closeCampaignModal}>
               <div>
                 <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
@@ -1261,15 +1285,15 @@ export default function WhatsAppCampaignsScreen() {
                                 <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}</span>
                                 {stage.messages.length > 1 && (
                                   <div className="flex items-center gap-0.5">
-                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
-                                      <ChevronUp className="h-3 w-3" />
-                                    </button>
-                                    <button type="button" className="rounded-full p-1 text-[color:var(--panel-text-muted)] hover:bg-[color:var(--panel-surface)] disabled:opacity-30" disabled={messageIndex === stage.messages.length - 1} onClick={() => moveMessageInStage(stageIndex, messageIndex, 1)} aria-label="Mover para baixo">
-                                      <ChevronDown className="h-3 w-3" />
-                                    </button>
-                                    <button type="button" className="rounded-full p-1 text-[color:var(--danger-text)] hover:bg-[color:var(--panel-surface)]" onClick={() => removeMessageFromStage(stageIndex, messageIndex)} aria-label="Remover mensagem">
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
+                                    <IconButton type="button" size="sm" variant="ghost" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
+                                      <ChevronUp />
+                                    </IconButton>
+                                    <IconButton type="button" size="sm" variant="ghost" disabled={messageIndex === stage.messages.length - 1} onClick={() => moveMessageInStage(stageIndex, messageIndex, 1)} aria-label="Mover para baixo">
+                                      <ChevronDown />
+                                    </IconButton>
+                                    <IconButton type="button" size="sm" variant="danger" onClick={() => removeMessageFromStage(stageIndex, messageIndex)} aria-label="Remover mensagem">
+                                      <Trash2 />
+                                    </IconButton>
                                   </div>
                                 )}
                               </div>
@@ -1362,13 +1386,14 @@ export default function WhatsAppCampaignsScreen() {
                             </div>
                           );
                         })}
-                        <button
+                        <Button
                           type="button"
-                          className="flex items-center gap-1 text-xs text-[color:var(--panel-accent-strong)] hover:underline"
+                          size="sm"
+                          variant="text"
                           onClick={() => addMessageToStage(stageIndex)}
                         >
-                          <Plus className="h-3 w-3" /> Adicionar mensagem nesta etapa
-                        </button>
+                          <Plus /> Adicionar mensagem nesta etapa
+                        </Button>
                         <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens desta etapa saem em sequência, sem intervalo entre elas.</p>
                       </div>
                     )}
@@ -1509,7 +1534,7 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {activationPreview && (
-        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="comm-whatsapp-overlay">
             <DialogHeader onClose={closeActivationPreview}>
               <div>
                 <DialogTitle>Revisar antes de ativar</DialogTitle>

@@ -83,9 +83,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         onChange={handleChange}
         className={cx(
           panelInputBaseClass,
-          panelInputSizeClasses[size],
-          hasLeftAdornment && 'kds-input-with-leading',
-          hasRightAdornment && 'kds-input-with-trailing',
+            panelInputSizeClasses[size],
+            hasLeftAdornment && 'kds-input-with-leading',
+            hasRightAdornment && 'kds-input-with-trailing',
+            Boolean(action) && 'kds-input-with-action',
           panelInputStateClasses[resolvedState],
           className,
         )}
@@ -93,7 +94,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       />
       {(suffix || rightSlot || action) && (
         <span
-          className={cx('kds-input-slot kds-input-suffix', Boolean(action) && 'pointer-events-auto')}
+          className={cx('kds-input-slot kds-input-suffix', Boolean(action) && 'kds-input-action pointer-events-auto')}
           aria-hidden={action ? undefined : 'true'}
         >
           {action ?? suffix ?? rightSlot}

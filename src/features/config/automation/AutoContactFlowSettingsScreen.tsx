@@ -81,10 +81,10 @@ import {
   OperationalMetricChip,
   Surface,
   Switch,
-  Tabs,
   FilterSelect,
   IconButton,
   DialogShell,
+  SegmentedControl,
 } from "../../../design-system";
 
 type TemplateDraft = {
@@ -1617,7 +1617,7 @@ export default function AutoContactFlowSettingsScreen() {
                 {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
               </div>
             </div>
-            <Tabs
+            <SegmentedControl
               items={[
                 { id: "flows", label: "Fluxos", icon: ClipboardList },
                 { id: "templates", label: "Templates", icon: MessageCircle },
@@ -1625,7 +1625,6 @@ export default function AutoContactFlowSettingsScreen() {
               ]}
               value={activeWorkspace}
               onChange={setActiveWorkspace}
-              variant="pill"
               className="kds-automation-workspace-tabs"
               listClassName="flex-nowrap overflow-x-auto"
             />
@@ -2020,9 +2019,7 @@ export default function AutoContactFlowSettingsScreen() {
                 <DialogShell
                   isOpen
                   onClose={() => setActiveFlowId(null)}
-                  size="xl"
-                  panelClassName="max-w-6xl 2xl:max-w-7xl"
-                  bodyClassName="p-0"
+                  size="full"
                   showCloseButton={false}
                 >
                   <div className="sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-6">
@@ -2084,9 +2081,8 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                     </div>
 
-                    <Tabs
+                    <SegmentedControl
                       className="mt-5"
-                      variant="pill"
                       value={flowDetailTab}
                       onChange={(next) => {
                         setFlowDetailTab(next);
@@ -3103,7 +3099,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                     </>}
 
                     {flowDetailTab === "test" && showSimulation && (
-                      <div className="space-y-4 rounded-2xl border border-[var(--brand-primary-border)] bg-gradient-to-br from-[color:var(--brand-primary-soft)] via-[color:var(--bg-surface)] to-[color:var(--accent-gold-soft)] p-5 shadow-sm">
+                      <div className="space-y-4 rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
@@ -3614,7 +3610,6 @@ Os horários já consideram a janela do fluxo,
                   : "Editar template"
               }
               size="lg"
-              panelClassName="max-w-3xl"
               footer={
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button

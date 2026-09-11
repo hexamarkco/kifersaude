@@ -1,6 +1,8 @@
 import { lazy } from 'react';
 
-import { AppLoadingScreen } from '../design-system';
+import {
+  AppLoadingScreen,
+} from '../design-system';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
 export const LinksPage = lazy(() => import('../pages/public/LinksPage'));

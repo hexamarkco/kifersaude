@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 
-import { Badge, Button, Card, ConfirmDialog } from "../../../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+} from "../../../../design-system";
 import type { AiFeatureWithConfig, AiFeatureCategory } from "../aiConfigTypes";
 import { AI_FEATURE_LABELS } from "../aiConfigTypes";
 import { getAiFeatureDisplayState } from "../aiFeatureState";

@@ -20,7 +20,20 @@ import LeadStatusManager from "../../../components/config/LeadStatusManager";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
-import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs, Tooltip, type TabItem } from "../../../design-system";
+import {
+  Alert,
+  Badge,
+  Button,
+  Checkbox,
+  Field,
+  Input,
+  SectionHeader,
+  Select,
+  Surface,
+  Tooltip,
+  type TabItem,
+  SegmentedControl,
+} from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -306,7 +319,7 @@ export default function SystemSettingsScreen() {
             </div>
           </div>
           {hasVisibleSections && (
-            <Tabs
+            <SegmentedControl
               items={visibleSections.map(({ id, title, icon }) => ({
                 id,
                 label: title,
@@ -314,7 +327,6 @@ export default function SystemSettingsScreen() {
               }))}
               value={activeVisibleSection ?? "general"}
               onChange={setActiveSection}
-              variant="pill"
               className="mt-5"
               listClassName="flex-nowrap overflow-x-auto"
             />
@@ -551,11 +563,10 @@ export default function SystemSettingsScreen() {
                   <>
                     {leadConfigurationTabs.length > 0 ? (
                       <>
-                        <Tabs
+                        <SegmentedControl
                           items={leadConfigurationTabs}
                           value={activeLeadConfigurationId}
                           onChange={setActiveLeadConfiguration}
-                          variant="pill"
                           listClassName="flex-nowrap overflow-x-auto"
                         />
                         {activeLeadConfigurationId === "status" && <LeadStatusManager />}
@@ -607,11 +618,10 @@ export default function SystemSettingsScreen() {
                 ) : (
                   contractConfigurationTabs.length > 0 ? (
                     <>
-                      <Tabs
+                      <SegmentedControl
                         items={contractConfigurationTabs}
                         value={activeContractConfigurationId}
                         onChange={setActiveContractConfiguration}
-                        variant="pill"
                         listClassName="flex-nowrap overflow-x-auto"
                       />
                       {(() => {

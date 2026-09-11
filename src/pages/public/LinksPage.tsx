@@ -3,7 +3,11 @@ import { ArrowUpRight, BadgeCheck } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
-import { KIFER_THEME_COLORS, getPanelButtonClass, LoadingState } from '../../design-system';
+import {
+  KIFER_THEME_COLORS,
+  getPanelButtonClass,
+  LoadingState,
+} from '../../design-system';
 import { getLinkIcon } from '../../lib/linkIcons';
 import { linksService } from '../../lib/linksService';
 import type { PublicLinkItem, PublicLinkPageSettings } from '../../features/public-content';
@@ -65,7 +69,7 @@ export default function LinksPage() {
           </div>
         ) : !settings ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <PublicBrandMark className="h-8 w-auto text-[color:var(--text-on-brand)]" />
             </div>
             <p className="text-sm text-[color:var(--text-secondary)]">Esta página ainda não está disponível.</p>
@@ -81,14 +85,14 @@ export default function LinksPage() {
                     className="h-20 w-20 rounded-full border border-[color:var(--border-default)] object-cover shadow-[var(--shadow-button)]"
                   />
                 ) : (
-                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
                     <PublicBrandMark className="h-9 w-auto text-[color:var(--text-on-brand)]" />
                   </div>
                 )}
 
                 {settings.is_verified && (
                   <span
-                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] ring-2 ring-[color:var(--bg-canvas)]"
+                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] ring-2 ring-[color:var(--bg-canvas)]"
                     title="Perfil verificado"
                   >
                     <BadgeCheck className="h-4 w-4" />

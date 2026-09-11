@@ -23,7 +23,21 @@ import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaSe
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface, IconButton, FilterSelect
+import {
+  Button,
+  Checkbox,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  Surface,
+  IconButton,
+  FilterSelect,
 } from '../design-system';
 
 type HolderFormProps = {
@@ -464,8 +478,8 @@ export default function HolderForm({
             Cadastre os dados pessoais, de contato e de elegibilidade do titular.
           </DialogDescription>
         </DialogHeader>
-        <DialogBody className="p-0">
-        <form id="holder-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
+        <DialogBody>
+        <form id="holder-form" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
               <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</h4>

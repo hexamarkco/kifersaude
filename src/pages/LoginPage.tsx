@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Alert, Button, Input, Surface } from '../design-system';
+import {
+  Alert,
+  Button,
+  Input,
+  Surface,
+} from '../design-system';
 import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../infrastructure/supabase';
 
 export default function LoginPage() {
@@ -34,7 +39,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm sm:max-w-md">
         <Surface variant="strong" padding="lg" className="backdrop-blur-sm">
           <div className="mb-8 text-center">
-            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <Lock className="h-8 w-8 text-[color:var(--text-on-brand)]" />
             </div>
             <h1 className="mb-2 font-[var(--font-display)] text-3xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</h1>

@@ -29,6 +29,7 @@ export type TabsProps<T extends string> = {
   className?: string;
   listClassName?: string;
   triggerClassName?: string;
+  ariaLabel?: string;
 };
 
 export default function Tabs<T extends string>({
@@ -40,6 +41,7 @@ export default function Tabs<T extends string>({
   className,
   listClassName,
   triggerClassName,
+  ariaLabel,
 }: TabsProps<T>) {
   const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -63,6 +65,7 @@ export default function Tabs<T extends string>({
     <div className={className}>
       <div
         role="tablist"
+        aria-label={ariaLabel}
         aria-orientation="horizontal"
         className={getPanelTabsListClass(variant, listClassName)}
       >

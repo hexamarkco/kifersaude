@@ -1,6 +1,12 @@
 import { CalendarDays, Cake, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
-import { Badge, Button, EmptyState, SectionHeader, Surface, IconButton
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SectionHeader,
+  Surface,
+  IconButton,
 } from '../../../design-system';
 import { getDateKey, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import type {

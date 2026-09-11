@@ -1,5 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
-import { AppLoadingScreen } from '../design-system';
+import {
+  AppLoadingScreen,
+} from '../design-system';
 import LoginPage from '../pages/LoginPage';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {

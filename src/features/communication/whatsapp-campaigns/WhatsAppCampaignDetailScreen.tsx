@@ -3,7 +3,22 @@ import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, 
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Card, EmptyState, IconButton, Input, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, FilterMultiSelect, Pagination
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  Input,
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  FilterMultiSelect,
+  Pagination,
 } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignChanges } from './campaignRealtime';

@@ -9,7 +9,21 @@ import { formatDateForInput } from '../lib/dateUtils';
 import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface, IconButton, FilterSelect
+import {
+  Button,
+  Checkbox,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  Surface,
+  IconButton,
+  FilterSelect,
 } from '../design-system';
 
 type DependentFormProps = {
@@ -234,8 +248,8 @@ export default function DependentForm({
         <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
         <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
       </DialogHeader>
-      <DialogBody className="p-0">
-      <form id="dependent-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
+      <DialogBody>
+      <form id="dependent-form" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
             <FilterSelect

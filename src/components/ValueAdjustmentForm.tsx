@@ -4,7 +4,19 @@ import {
   type ContractValueAdjustment,
 } from '../features/contracts';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
-import { ActionSurface, Alert, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Field, Input, Textarea } from '../design-system';
+import {
+  ActionSurface,
+  Alert,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  Textarea,
+} from '../design-system';
 
 type ValueAdjustmentFormProps = {
   contractId: string;
@@ -70,8 +82,8 @@ export default function ValueAdjustmentForm({
       <DialogHeader onClose={onClose}>
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>
-      <DialogBody className="p-0">
-        <form id="value-adjustment-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
+      <DialogBody>
+        <form id="value-adjustment-form" onSubmit={handleSubmit}>
           {error && (
             <Alert tone="danger" className="mb-4" role="alert">
               {error}

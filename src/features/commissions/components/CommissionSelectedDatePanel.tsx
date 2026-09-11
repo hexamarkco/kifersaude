@@ -1,4 +1,6 @@
-import { Surface } from "../../../design-system";
+import {
+  Surface,
+} from "../../../design-system";
 import { cx } from "../../../lib/cx";
 import {
   formatCommissionCurrency,

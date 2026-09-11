@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Sparkles, XCircle } from 'lucide-react';
 
-import { Alert, Badge, Button, Surface } from '../../../../design-system';
+import {
+  Alert,
+  Badge,
+  Button,
+  Surface,
+} from '../../../../design-system';
 import { whatsappFollowUpService, type CommWhatsAppAttendanceCritique } from '../data';
 
 type WhatsAppAttendanceCritiquePanelProps = {

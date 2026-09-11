@@ -429,24 +429,26 @@ export default function LinksScreen() {
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                      <button
+                      <IconButton
                         type="button"
+                        size="sm"
+                        variant="ghost"
                         onClick={() => void moveLink(index, -1)}
                         disabled={index === 0 || isBusy}
-                        className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30"
                         aria-label="Mover para cima"
                       >
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
-                      <button
+                        <ChevronUp />
+                      </IconButton>
+                      <IconButton
                         type="button"
+                        size="sm"
+                        variant="ghost"
                         onClick={() => void moveLink(index, 1)}
                         disabled={index === links.length - 1 || isBusy}
-                        className="text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30"
                         aria-label="Mover para baixo"
                       >
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
+                        <ChevronDown />
+                      </IconButton>
                     </div>
 
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">

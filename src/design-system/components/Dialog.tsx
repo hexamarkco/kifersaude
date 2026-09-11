@@ -19,9 +19,9 @@ export type DialogProps = HTMLAttributes<HTMLDivElement> & {
 const sizeClasses: Record<DialogSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
-  lg: 'max-w-4xl',
+  lg: 'max-w-3xl',
   xl: 'max-w-6xl',
-  full: 'max-w-[90vw]',
+  full: 'max-w-[90rem]',
 };
 
 let scrollLockCount = 0;
@@ -247,7 +247,7 @@ export type DialogShellProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: Exclude<DialogSize, 'full'>;
+  size?: DialogSize;
   presentation?: DialogPresentation;
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;

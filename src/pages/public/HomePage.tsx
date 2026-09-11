@@ -25,7 +25,10 @@ import {
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
-import { Input, Select } from '../../design-system';
+import {
+  Input,
+  Select,
+} from '../../design-system';
 import {
   loadPublicHomeMetrics,
   submitPublicLead,
@@ -269,7 +272,7 @@ function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, c
         className={`modal-panel modal-panel-animated flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[var(--shadow-modal)]`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 flex items-start justify-between gap-4 [background:var(--brand-primary-gradient)] p-6 text-[color:var(--text-on-brand)]">
+        <div className="sticky top-0 flex items-start justify-between gap-4 bg-[var(--brand-primary)] p-6 text-[color:var(--text-on-brand)]">
           <div>
             <h2 className="text-3xl font-bold">{title}</h2>
             {subtitle ? <p className="mt-1 text-sm opacity-90">{subtitle}</p> : null}
@@ -943,8 +946,8 @@ export default function HomePage() {
 
         .partner-logos-marquee {
           overflow: hidden;
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          -webkit-mask-image: none;
+          mask-image: none;
         }
 
         .partner-logos-track {
@@ -1042,7 +1045,7 @@ export default function HomePage() {
         >
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <a href="#topo" onClick={(event) => handleNavLinkClick(event, 'topo')} className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
                 <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
               </div>
               <span className="text-2xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</span>
@@ -1089,7 +1092,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setShowQuoteModal(true)}
-              className="rounded-full [background:var(--brand-primary-gradient)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] sm:px-6"
+              className="rounded-full bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-hover)] sm:px-6"
             >
               Cotação grátis
             </button>
@@ -1099,7 +1102,7 @@ export default function HomePage() {
 
         <main id="conteudo-principal">
         <section id="topo" className="relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-0 lg:pt-20">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_78%_43%,var(--brand-primary-muted),transparent_36%)]" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[var(--brand-primary-muted)] opacity-20" />
           <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-4">
             <div className="relative z-10 max-w-2xl py-6 sm:py-10 lg:py-16">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)]">
@@ -1124,7 +1127,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] [background:var(--brand-primary-gradient)] px-6 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition duration-200 hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand-primary)]"
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] bg-[var(--brand-primary)] px-6 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand-primary)]"
                 >
                   <MessageCircle aria-hidden="true" className="h-5 w-5" />
                   Quero minha cotação gratuita
@@ -1142,7 +1145,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
-                className="mt-5 inline-flex items-center border-b border-[color:var(--border-default)] pb-1 text-sm font-medium text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--brand-primary)] hover:text-[color:var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--brand-primary)]"
+                className="mt-5 inline-flex min-h-10 items-center border-b border-[color:var(--border-default)] text-sm font-medium text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--brand-primary)] hover:text-[color:var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--brand-primary)]"
               >
                 Já sou cliente e preciso de suporte
                 <ArrowUpRight aria-hidden="true" className="ml-2 h-4 w-4" />
@@ -1157,7 +1160,6 @@ export default function HomePage() {
                 alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
                 width="1728"
                 height="2304"
-                fetchPriority="high"
                 loading="eager"
                 className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:w-full"
               />
@@ -1266,7 +1268,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-6 inline-flex items-center justify-center rounded-full [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
+                    className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--brand-primary)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)]"
                   >
                     {card.ctaLabel}
                     <ChevronRight className="ml-2 h-4 w-4" />
@@ -1294,7 +1296,7 @@ export default function HomePage() {
                 <div key={item.step} className="relative flex flex-col items-center text-center">
                   <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)] ring-8 ring-[var(--bg-surface)]">
                     <item.icon className="h-7 w-7" />
-                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-xs font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
                       {item.step}
                     </span>
                   </div>
@@ -1309,7 +1311,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => scrollToForm()}
-                className="inline-flex items-center justify-center rounded-full [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--brand-primary)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)]"
               >
                 Quero minha cotação gratuita
                 <ChevronRight className="ml-2 h-5 w-5" />
@@ -1434,7 +1436,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
-                    className="flex w-full items-center justify-between gap-5 text-left"
+                    className="flex min-h-12 w-full items-center justify-between gap-5 text-left"
                     aria-expanded={openFaqIndex === index}
                   >
                     <span className="text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
@@ -1458,7 +1460,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="cotacao" className="scroll-mt-32 [background:var(--brand-primary-gradient)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="cotacao" className="scroll-mt-32 bg-[var(--brand-primary)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <Reveal className="text-[color:var(--text-on-brand)]">
               <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80">cotação gratuita</p>
@@ -1488,7 +1490,7 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="w-full rounded-full bg-[var(--brand-primary)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
                   <ChevronRight className="ml-2 inline-block h-5 w-5" />
@@ -1552,7 +1554,7 @@ export default function HomePage() {
                     <MessageCircle className="ml-auto h-5 w-5 text-[color:var(--success)]" />
                   </div>
 
-                  <div className="mt-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--brand-primary-border)] [background:linear-gradient(135deg,var(--brand-primary-soft)_0%,var(--accent-gold-soft)_100%)] px-4 py-3 text-sm leading-relaxed text-[color:var(--text-primary)]">
+                  <div className="mt-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm leading-relaxed text-[color:var(--text-primary)]">
                     Oi! 👋 Me conta sua cidade e o tipo de plano que você procura que eu já trago as opções comparadas.
                     <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-[color:var(--text-muted)]">
                       agora
@@ -1587,7 +1589,7 @@ export default function HomePage() {
             <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full [background:var(--brand-primary-gradient)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-primary)]">
                     <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
                   </div>
                   <span className="text-2xl font-bold">Kifer Saúde</span>
@@ -1668,7 +1670,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-full [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-full bg-[var(--brand-primary)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? 'Enviando cotação...' : 'Enviar cotação via WhatsApp'}
                 <MessageCircle className="ml-2 inline-block h-5 w-5" />

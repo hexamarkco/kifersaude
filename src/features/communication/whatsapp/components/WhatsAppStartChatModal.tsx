@@ -1,7 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
-import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem, WorkspaceDialog
+import {
+  ActionSurface,
+  Badge,
+  Button,
+  Input,
+  Surface,
+  type TabItem,
+  WorkspaceDialog,
+  SegmentedControl,
 } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
@@ -100,12 +108,11 @@ export default function WhatsAppStartChatModal({
       title="Novo chat"
       description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente."
       size="lg"
-      panelClassName="max-w-3xl"
       bodyScrollable={false}
       bodyClassName="flex min-h-0 flex-col"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-5">
-        <Tabs items={SOURCE_TABS} value={source} onChange={setSource} variant="pill" />
+        <SegmentedControl items={SOURCE_TABS} value={source} onChange={setSource} />
 
         {source === 'manual' ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4">

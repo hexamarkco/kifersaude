@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FocusEventHandler, type KeyboardEvent } from 'react';
-import { Textarea, type TextareaSize } from '../../design-system';
+import {
+  Textarea,
+  type TextareaSize,
+} from '../../design-system';
 import type { TemplateVariableSuggestion } from '../../lib/templateVariableSuggestions';
 
 type VariableAutocompleteTextareaProps = {

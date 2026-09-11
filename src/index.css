@@ -49,13 +49,12 @@ html,
   font-family: var(--font-sans, var(--ks-font-body));
 }
 
-.kifer-ds,
-.kifer-ds *:not(.kds-sidebar-badge) {
+.kifer-ds {
   min-width: 0;
 }
 
-.kifer-ds :where(p, span, strong, a, button, label, h1, h2, h3, h4, h5, h6, td, th) {
-  overflow-wrap: anywhere;
+.kifer-ds :where(p, h1, h2, h3, h4, h5, h6, td, th) {
+  overflow-wrap: break-word;
 }
 
 .painel-theme.kifer-ds .panel-page-shell :is(h1, h2, h3, h4) {
@@ -102,9 +101,9 @@ html,
 .modal-theme-host.painel-theme.kifer-ds {
   --app-scrollbar-track: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
   --app-scrollbar-track-hover: color-mix(in srgb, var(--bg-hover) 92%, transparent);
-  --app-scrollbar-thumb: linear-gradient(180deg, var(--brand-primary-hover) 0%, var(--brand-primary-active) 100%);
+  --app-scrollbar-thumb: var(--brand-primary);
   --app-scrollbar-thumb-solid: var(--brand-primary);
-  --app-scrollbar-thumb-hover: linear-gradient(180deg, var(--accent-gold-hover) 0%, var(--brand-primary) 100%);
+  --app-scrollbar-thumb-hover: var(--brand-primary-hover);
   --app-surface-glass: color-mix(in srgb, var(--bg-surface) 88%, transparent);
   --app-surface-glass-strong: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
   --app-surface-inset: color-mix(in srgb, var(--bg-inset) 84%, var(--bg-surface));
@@ -291,9 +290,7 @@ html,
   --comm-emoji-rows: 3;
   border: 1px solid var(--border-strong);
   border-radius: var(--kds-radius-xl);
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 42%),
-    linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-inset) 100%);
+  background: var(--bg-elevated);
   color: var(--text-primary);
   box-shadow: var(--shadow-popover);
 }
@@ -557,7 +554,7 @@ html,
   min-height: 3.75rem;
   align-items: flex-end;
   padding: var(--space-3) var(--space-3) var(--space-2);
-  background: linear-gradient(180deg, transparent 0%, var(--app-overlay) 100%);
+  background: var(--app-overlay);
 }
 
 .comm-media-picker-gif-overlay span,
@@ -597,9 +594,7 @@ html,
 .painel-theme .whatsapp-inbox-shell {
   min-width: 0;
   font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 26%),
-    radial-gradient(circle at bottom right, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent 28%);
+  background: var(--bg-canvas);
 }
 
 .painel-theme .whatsapp-inbox-shell :is(button, input, textarea, select, option) {
@@ -647,7 +642,7 @@ html,
 
 .painel-theme .whatsapp-inbox-sidebar-scroll,
 .painel-theme .whatsapp-inbox-composer-area {
-  background: linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
+  background: var(--bg-surface);
 }
 
 .painel-theme .whatsapp-inbox-search-input,
@@ -663,7 +658,7 @@ html,
 
 .painel-theme .whatsapp-inbox-chat-card {
   border-color: transparent;
-  background: linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
+  background: var(--bg-surface);
   box-shadow: var(--shadow-card);
 }
 
@@ -689,7 +684,7 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-thread-header {
-  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--app-surface-inset) 100%);
+  background: var(--bg-elevated);
 }
 
 .painel-theme .whatsapp-inbox-thread-actions {
@@ -711,10 +706,7 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-messages {
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--brand-primary) 8%, transparent), transparent 24%),
-    radial-gradient(circle at bottom left, color-mix(in srgb, var(--accent-gold) 6%, transparent), transparent 28%),
-    linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
+  background: var(--bg-surface);
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble {
@@ -729,7 +721,7 @@ html,
 
 .painel-theme .whatsapp-inbox-thread .message-bubble-outbound {
   border-color: var(--brand-primary-border);
-  background: linear-gradient(135deg, var(--brand-primary-soft) 0%, var(--accent-gold-soft) 100%);
+  background: var(--brand-primary-soft);
   color: var(--text-primary);
 }
 
@@ -760,11 +752,11 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-audio-card.is-voice {
-  background: linear-gradient(135deg, var(--success-soft) 0%, var(--bg-surface) 100%);
+  background: var(--success-soft);
 }
 
 .painel-theme .whatsapp-inbox-audio-card.is-audio {
-  background: linear-gradient(135deg, var(--warning-soft) 0%, var(--bg-surface) 100%);
+  background: var(--warning-soft);
 }
 
 .painel-theme .whatsapp-inbox-audio-badge.is-voice {
@@ -1186,7 +1178,7 @@ html,
 
 .painel-theme .whatsapp-inbox-voice-timeline.is-recording .whatsapp-inbox-voice-timeline-fill {
   width: 42%;
-  background: linear-gradient(90deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 28%, transparent) 100%);
+  background: var(--danger);
   animation: whatsapp-recording-flow 1.8s ease-in-out infinite;
 }
 
@@ -1241,9 +1233,7 @@ html,
 }
 
 .painel-theme :is(.whatsapp-inbox-media-composer-stage, .whatsapp-inbox-document-composer-stage) {
-  background:
-    radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--text-on-brand) 10%, transparent), transparent 42%),
-    var(--app-contrast-surface);
+  background: var(--app-contrast-surface);
 }
 
 .painel-theme .whatsapp-inbox-media-composer-preview,

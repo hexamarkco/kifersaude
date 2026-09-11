@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
-import { Button, Progress, Stepper, Textarea, WorkspaceDialog
+import {
+  Button,
+  Progress,
+  Stepper,
+  Textarea,
+  WorkspaceDialog,
 } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -493,7 +498,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'sent' && sentSummary) {
     return (
-      <WorkspaceDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]"
+      <WorkspaceDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
@@ -586,7 +591,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'loading') {
     return (
-      <WorkspaceDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
+      <WorkspaceDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
           <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
           <div className="text-center">
@@ -606,8 +611,7 @@ export default function WhatsAppBatchFollowUpModal({
       onClose={handleClose}
       title="Follow-ups em lote"
       description={phase === 'sending' ? '' : 'Cada lead é interpretado individualmente pela IA — selecione, gere e envie de uma vez.'}
-      size="xl"
-      panelClassName="max-w-[90rem]"
+      size="full"
       footer={
         <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Left footer: contextual actions */}

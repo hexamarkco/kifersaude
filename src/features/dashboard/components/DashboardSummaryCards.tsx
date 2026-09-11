@@ -1,6 +1,8 @@
 import { Activity, DollarSign, FileText, Target, Users } from 'lucide-react';
 
-import { KpiCard } from '../../../design-system';
+import {
+  KpiCard,
+} from '../../../design-system';
 
 type DashboardSummaryCardsProps = {
   isObserver: boolean;

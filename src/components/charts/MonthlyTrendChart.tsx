@@ -118,17 +118,6 @@ export default function MonthlyTrendChart({
       </div>
 
       <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
-          <defs>
-            <linearGradient id="monthlyTrendAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-              <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-            </linearGradient>
-            <linearGradient id="monthlyTrendLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={color} stopOpacity="0.72" />
-              <stop offset="100%" stopColor={color} stopOpacity="1" />
-            </linearGradient>
-          </defs>
-
           {chart.points.map((point, index) => (
             <line
               key={`x-grid-${point.label}-${index}`}
@@ -167,11 +156,11 @@ export default function MonthlyTrendChart({
             </g>
           ))}
 
-          <path d={chart.areaPath} fill="url(#monthlyTrendAreaGradient)" />
+          <path d={chart.areaPath} fill={color} fillOpacity="0.12" />
           <path
             d={chart.linePath}
             fill="none"
-            stroke="url(#monthlyTrendLineGradient)"
+            stroke={color}
             strokeWidth="3.5"
             strokeLinecap="round"
             strokeLinejoin="round"

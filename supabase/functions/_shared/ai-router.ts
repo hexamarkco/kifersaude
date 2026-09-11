@@ -149,7 +149,7 @@ export type ResolvedModel = {
 export type AiCallLogContext = {
   featureKey: string;
   aiTask: AiTask;
-  edgeFunction?: string;
+  edgeFunction?: string | null;
   leadId?: string;
   chatId?: string;
   messageId?: string;

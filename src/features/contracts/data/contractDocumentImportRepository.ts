@@ -41,7 +41,7 @@ export async function extractContractDocumentData(input: {
 
   if (error) throw error;
   if (!data?.extraction) {
-    throw new Error(data?.error || 'A IA não retornou dados para preencher o contrato.');
+    throw new Error(data?.error || 'O sistema não retornou dados para preencher o contrato.');
   }
   return data.extraction;
 }

@@ -35,6 +35,7 @@ const profileLabels: Record<ContractDocumentProfile, string> = {
   planium: 'Planium (Hapvida, Leve e similares)',
   qualicorp: 'Qualicorp',
   medsenior: 'MedSênior',
+  porto: 'Porto (orçamento PME)',
 };
 
 const fieldLabels: Record<ContractImportFieldKey, string> = {
@@ -113,7 +114,7 @@ export function ContractDocumentImportDialog({
       <DialogHeader onClose={onClose}>
         <DialogTitle>Preencher a partir de PDFs</DialogTitle>
         <DialogDescription>
-          A IA lê a proposta e sugere dados para este formulário. Revise tudo antes de salvar o contrato.
+          O sistema lê a camada textual dos PDFs e usa IA somente quando faltam dados importantes. Revise tudo antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>
       <DialogBody className="min-w-0 space-y-5 overflow-x-hidden p-4 sm:p-5">
@@ -121,7 +122,7 @@ export function ContractDocumentImportDialog({
           <>
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               <label className="block min-w-0 text-sm font-medium text-[var(--text-primary)]">
-                Perfil do documento
+                Ajuste avançado do perfil (opcional)
                 <Select
                   value={profile}
                   onChange={(event) => setProfile(event.target.value as ContractDocumentProfile)}
@@ -135,7 +136,7 @@ export function ContractDocumentImportDialog({
               </label>
               <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3 text-sm text-[var(--text-secondary)]">
                 <p className="font-medium text-[var(--text-primary)]">Como usar</p>
-                <p className="mt-1">Para Assim/Klini, envie juntos o PDF de empresa e o de titulares. Para Supermed, envie o contrato único.</p>
+                <p className="mt-1">Prefira a detecção automática. Para Assim/Klini, envie juntos o PDF de empresa e o de titulares da mesma proposta.</p>
               </div>
             </div>
 
@@ -193,7 +194,9 @@ export function ContractDocumentImportDialog({
         ) : (
           <div className="space-y-4">
             <Alert tone="success" title={`${extractedFields.length} campos prontos para revisão`}>
-              Perfil identificado: {profileLabels[extraction.profile]}. A aplicação abaixo altera apenas os campos exibidos no formulário; nada é salvo ainda.
+              Perfil identificado: {profileLabels[extraction.profile]}. Processamento: {extraction.metadata?.usedLlm
+                ? extraction.metadata.usedVision ? 'IA com páginas selecionadas' : 'IA com trechos selecionados'
+                : extraction.metadata?.cacheHit ? 'resultado reutilizado do cache' : 'leitura local, sem chamada de IA'}. Nada é salvo ainda.
             </Alert>
             <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)]">
               <dl className="divide-y divide-[var(--border-subtle)]">

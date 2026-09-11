@@ -5,6 +5,7 @@ export const CONTRACT_DOCUMENT_PROFILES = [
   'planium',
   'qualicorp',
   'medsenior',
+  'porto',
 ] as const;
 
 export type ContractDocumentProfile = typeof CONTRACT_DOCUMENT_PROFILES[number];
@@ -52,6 +53,26 @@ export const CONTRACT_HOLDER_IMPORT_FIELD_KEYS = [
 export type ContractHolderImportFieldKey = typeof CONTRACT_HOLDER_IMPORT_FIELD_KEYS[number];
 export type ContractHolderImportFields = Partial<Record<ContractHolderImportFieldKey, string>>;
 
+export type ContractDocumentFamily =
+  | 'hcommerce'
+  | 'planium'
+  | 'qualicorp'
+  | 'supermed'
+  | 'porto'
+  | 'medsenior'
+  | 'generic';
+export type ContractDocumentSupportStatus = 'SUPPORTED_PROFILE' | 'GENERIC_FALLBACK' | 'UNKNOWN';
+export type ContractDocumentRole = 'company' | 'beneficiaries' | 'proposal' | 'contract' | 'quote' | 'unknown';
+export type ContractFieldState = 'resolved' | 'missing' | 'ambiguous' | 'conflicting';
+export type ContractExtractionMethod = 'deterministic' | 'text_parser' | 'llm_text' | 'llm_vision';
+
+export type ContractFieldProvenance = {
+  fileId: string;
+  page: number | null;
+  section: string;
+  method: ContractExtractionMethod;
+};
+
 export type ContractDocumentExtraction = {
   profile: ContractDocumentProfile;
   fields: ContractImportFields;
@@ -60,4 +81,24 @@ export type ContractDocumentExtraction = {
   holderCount: number;
   dependentCount: number;
   warnings: string[];
+  fieldProvenance: Record<string, ContractFieldProvenance>;
+  fieldStates: Record<string, ContractFieldState>;
+  metadata: {
+    documentFamily: ContractDocumentFamily;
+    documentType: string;
+    documentRoles: ContractDocumentRole[];
+    operator: string | null;
+    administrator: string | null;
+    supportStatus: ContractDocumentSupportStatus;
+    bundleComplete: boolean | null;
+    usedLlm: boolean;
+    usedVision: boolean;
+    cacheHit: boolean;
+    sourceDocumentNumbers: {
+      contractNumber: string | null;
+      proposalNumber: string | null;
+      quoteNumber: string | null;
+      studyNumber: string | null;
+    };
+  };
 };

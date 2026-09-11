@@ -20,9 +20,9 @@ type ActionSurfaceProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const paddingClasses: Record<SurfacePadding, string> = {
   none: '',
-  sm: 'p-4',
-  md: 'p-6 sm:p-7',
-  lg: 'p-7 sm:p-8',
+  sm: 'kds-card-padding-sm',
+  md: 'kds-card-padding-md',
+  lg: 'kds-card-padding-lg',
 };
 
 export function Surface({ variant = 'default', padding = 'md', className, children, ...props }: SurfaceProps) {

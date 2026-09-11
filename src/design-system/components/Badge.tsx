@@ -100,9 +100,9 @@ export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  xs: 'px-2 py-0.5 text-[10px]',
-  sm: 'px-2.5 py-1 text-[11px]',
-  md: 'px-3 py-1.5 text-xs',
+  xs: 'kds-badge-xs',
+  sm: 'kds-badge-sm',
+  md: 'kds-badge-md',
 };
 
 const isIconComponent = (icon: BadgeProps['icon']): icon is LucideIcon =>
@@ -119,7 +119,7 @@ export default function Badge({ tone = 'neutral', size = 'sm', icon, className, 
 
   return (
     <span className={cx('kds-badge', `kds-badge-${tone}`, sizeClasses[size], className)} {...props}>
-      {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden="true" /> : (icon as ReactNode)}
+      {Icon ? <Icon aria-hidden="true" /> : (icon as ReactNode)}
       {children}
     </span>
   );

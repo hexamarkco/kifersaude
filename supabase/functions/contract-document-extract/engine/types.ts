@@ -11,10 +11,19 @@ import type {
 
 export type TextQuality = 'good' | 'partial' | 'poor' | 'none';
 
+export type PdfTextItem = {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type PdfPage = {
   page: number;
   text: string;
   characterCount: number;
+  items?: PdfTextItem[];
 };
 
 export type ParsedPdfDocument = {

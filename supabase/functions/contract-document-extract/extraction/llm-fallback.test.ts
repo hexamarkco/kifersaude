@@ -28,6 +28,7 @@ describe('fallback seletivo V2', () => {
     assert.equal(scope.shouldUseLlm, true);
     assert.ok(schema.properties.fields.properties.codigo_contrato);
     assert.ok(schema.properties.fields.properties.produto_plano);
+    assert.equal(JSON.stringify(schema).includes('maxLength'), false);
   });
 
   test('descarta CPF inválido e evidência com página inexistente', () => {

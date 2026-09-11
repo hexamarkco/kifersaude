@@ -66,7 +66,7 @@ export default function Tabs<T extends string>({
                 className: triggerClassName,
               })}
             >
-              {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
+              {Icon && <Icon className="kds-control-icon" aria-hidden="true" />}
               <span>{item.label}</span>
               {typeof item.badge === 'number' && item.badge > 0 && (
                 <span className={panelTabsBadgeClass}>

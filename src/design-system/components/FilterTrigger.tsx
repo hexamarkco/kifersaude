@@ -15,21 +15,21 @@ export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
 };
 
 const triggerPaddingClasses: Record<PanelInputSize, string> = {
-  compact: 'pl-8 pr-8 text-xs',
-  default: 'pl-9 pr-9 text-sm',
-  large: 'pl-10 pr-10 text-base',
+  sm: 'kds-filter-trigger-sm',
+  md: 'kds-filter-trigger-md',
+  lg: 'kds-filter-trigger-lg',
 };
 
 const leadingIconPositionClasses: Record<PanelInputSize, string> = {
-  compact: 'left-2',
-  default: 'left-3',
-  large: 'left-3.5',
+  sm: 'left-2.5',
+  md: 'left-3.5',
+  lg: 'left-4',
 };
 
 const trailingIconPositionClasses: Record<PanelInputSize, string> = {
-  compact: 'right-2',
-  default: 'right-3',
-  large: 'right-3.5',
+  sm: 'right-2.5',
+  md: 'right-3.5',
+  lg: 'right-4',
 };
 
 export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(function FilterTrigger(
@@ -38,7 +38,7 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
     value,
     active = false,
     open = false,
-    size = 'default',
+    size = 'md',
     leadingLabel,
     trailingSlot,
     className,

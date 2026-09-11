@@ -4,8 +4,8 @@ import { sha256 } from './pdf.ts';
 import type { ContractDocumentExtraction } from './domain.ts';
 import type { DocumentClassification, TextQuality } from './engine/types.ts';
 
-export const CONTRACT_PARSER_VERSION = '2.0.0';
-export const CONTRACT_PROMPT_VERSION = '2.0.0';
+export const CONTRACT_PARSER_VERSION = '2.0.1';
+export const CONTRACT_PROMPT_VERSION = '2.0.1';
 
 export const buildExtractionCacheKey = async (params: {
   hashes: string[];

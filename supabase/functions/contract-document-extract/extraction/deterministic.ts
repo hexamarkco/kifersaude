@@ -27,6 +27,13 @@ const comparable = (value: string) => value
   .replace(/[^A-Za-z0-9]+/g, '')
   .toUpperCase();
 
+const searchable = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Za-z0-9]+/g, ' ')
+  .trim()
+  .toUpperCase();
+
 const pageWith = (document: ParsedPdfDocument, pattern: RegExp) => document.pages.find((page) => pattern.test(page.text));
 
 const firstMatch = (value: string, patterns: RegExp[]) => {
@@ -207,6 +214,53 @@ const extractCompany = (output: FieldCandidate[], classification: DocumentClassi
   }
 };
 
+const extractQualicorpSelectedPlan = (
+  output: FieldCandidate[],
+  classification: DocumentClassification,
+) => {
+  if (classification.family !== 'qualicorp') return;
+  for (const page of classification.document.pages) {
+    if (!searchable(page.text).includes('PLANO PRETENDIDO')) continue;
+    const items = page.items ?? [];
+    const selectionMarks = items.filter((item) => searchable(item.text) === 'X' && item.x < 120);
+    for (const mark of selectionMarks) {
+      const rowItems = items.filter((item) => item !== mark && Math.abs(item.y - mark.y) <= 22);
+      const columnText = (minimumOffset: number, maximumOffset = Number.POSITIVE_INFINITY) => searchable(rowItems
+        .filter((item) => item.x >= mark.x + minimumOffset && item.x < mark.x + maximumOffset)
+        .sort((left, right) => right.y - left.y || left.x - right.x)
+        .map((item) => item.text)
+        .join(' '));
+      const productText = columnText(80, 340);
+      const accommodationText = columnText(340, 440);
+      const coverageText = columnText(440);
+      const product = productText.match(/\b(A\d+)\b/)?.[1];
+      if (!product) continue;
+      addCandidate(
+        output,
+        'produto_plano',
+        product,
+        classification,
+        page.page,
+        'PLANO PRETENDIDO — LINHA MARCADA',
+        130,
+      );
+      if (accommodationText.includes('COLETIVA')) {
+        addCandidate(output, 'acomodacao', 'Coletiva', classification, page.page, 'PLANO PRETENDIDO — LINHA MARCADA', 130);
+      } else if (accommodationText.includes('INDIVIDUAL') || accommodationText.includes('PARTICULAR')) {
+        addCandidate(output, 'acomodacao', 'Individual', classification, page.page, 'PLANO PRETENDIDO — LINHA MARCADA', 130);
+      }
+      if (/GRUPO\s+DE\s+MUNICIPIOS/.test(coverageText)) {
+        addCandidate(output, 'abrangencia', 'Grupo de Municípios', classification, page.page, 'PLANO PRETENDIDO — LINHA MARCADA', 130);
+      } else if (coverageText.includes('ESTADUAL')) {
+        addCandidate(output, 'abrangencia', 'Estadual', classification, page.page, 'PLANO PRETENDIDO — LINHA MARCADA', 130);
+      } else if (coverageText.includes('NACIONAL')) {
+        addCandidate(output, 'abrangencia', 'Nacional', classification, page.page, 'PLANO PRETENDIDO — LINHA MARCADA', 130);
+      }
+      return;
+    }
+  }
+};
+
 const fixedFields = (output: FieldCandidate[], classification: DocumentClassification) => {
   if (classification.operator) {
     addCandidate(output, 'operadora', classification.operator, classification, null, 'DETECÇÃO DO DOCUMENTO', 100, 'deterministic');
@@ -254,9 +308,6 @@ const extractContractFields = (output: FieldCandidate[], classification: Documen
       vidas: [/Benefici.rios\s*:?\s*(\d{1,2})\b/i],
     },
     qualicorp: {
-      produto_plano: [/[Xx]\s+(?:\d[\d./-]+\s+)?([A-Z][A-Z0-9 ]{2,80}?(?:COPART|REFER.NCIA)[A-Z0-9 ]*?)(?=\s+(?:Coparticipa..o|Sem coparticipa..o|Ambulatorial|Hospitalar))/i],
-      acomodacao: [/[Xx][\s\S]{0,220}?\b(Coletiva|Individual|Particular)\b/i],
-      abrangencia: [/[Xx][\s\S]{0,300}?\b(Grupo de munic.pios|Estadual|Nacional)\b/i],
       data_inicio: [/In.cio da vig.ncia do benef.cio\s*:?\s*(\d{2}\s*\/\s*\d{2}\s*\/\s*\d{4})/i],
       mensalidade_total: [/Valor total em R\$\s*:?\s*([\d.,]+)/i],
     },
@@ -334,6 +385,7 @@ export const extractDeterministically = (
   for (const classification of classifications) {
     fixedFields(candidates, classification);
     extractContractFields(candidates, classification);
+    extractQualicorpSelectedPlan(candidates, classification);
     extractCompany(candidates, classification);
     extractHolder(candidates, classification);
   }

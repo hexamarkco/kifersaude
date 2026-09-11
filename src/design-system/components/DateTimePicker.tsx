@@ -53,7 +53,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     max,
     id,
     name,
-    size = 'default',
+    size = 'md',
     className,
   },
   ref,
@@ -190,7 +190,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
             className,
           )}
         >
-          <TriggerIcon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+          <TriggerIcon className="kds-control-icon shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
           <span className={cx('min-w-0 flex-1 truncate', !displayLabel && 'text-[var(--text-muted)]')}>
             {displayLabel || placeholder || 'Selecionar'}
           </span>

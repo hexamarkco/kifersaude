@@ -42,7 +42,7 @@ const getOptionsFromChildren = (children: ReactNode): SelectOption[] =>
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   {
-    size = 'default',
+    size = 'md',
     invalid = false,
     state = 'default',
     placeholder,

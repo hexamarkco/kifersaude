@@ -80,3 +80,6 @@ export function ToolbarActions({ className, children, ...props }: ToolbarActions
     </div>
   );
 }
+
+/** Semantic alias for toolbars whose primary purpose is filtering a collection. */
+export const FilterBar = Toolbar;

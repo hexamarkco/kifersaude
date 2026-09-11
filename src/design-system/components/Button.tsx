@@ -4,7 +4,9 @@ import { Loader2 } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import {
   getPanelButtonClass,
+  panelIconButtonSizeClasses,
   panelButtonSpinnerSizeClasses,
+  type ControlSize,
   type PanelButtonSize,
   type PanelButtonVariant,
 } from '../tokens';
@@ -67,12 +69,22 @@ export function ButtonGroup({ className, children, ...props }: ButtonGroupProps)
 
 export const LoadingButton = Button;
 
-export const IconButton = forwardRef<HTMLButtonElement, Omit<ButtonProps, 'size'>>(function IconButton(
-  { variant = 'icon', children, ...props },
+export type IconButtonProps = Omit<ButtonProps, 'size'> & {
+  size?: ControlSize;
+};
+
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { variant = 'icon', size = 'md', children, className, ...props },
   ref,
 ) {
   return (
-    <Button ref={ref} variant={variant} size="icon" {...props}>
+    <Button
+      ref={ref}
+      variant={variant}
+      size={size}
+      className={cx('kds-icon-button shrink-0 p-0', panelIconButtonSizeClasses[size], className)}
+      {...props}
+    >
       {children}
     </Button>
   );

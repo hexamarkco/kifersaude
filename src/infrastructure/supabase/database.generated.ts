@@ -3151,6 +3151,156 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_document_extraction_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          extraction: Json
+          id: string
+          metadata: Json
+          model: string
+          parser_version: string
+          prompt_version: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at?: string
+          extraction: Json
+          id?: string
+          metadata?: Json
+          model: string
+          parser_version: string
+          prompt_version: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          extraction?: Json
+          id?: string
+          metadata?: Json
+          model?: string
+          parser_version?: string
+          prompt_version?: string
+        }
+        Relationships: []
+      }
+      contract_document_extraction_runs: {
+        Row: {
+          administrator: string | null
+          bundle_complete: boolean | null
+          cache_hit: boolean
+          cached_tokens: number | null
+          candidate_pages_count: number
+          created_at: string
+          document_family: string
+          document_roles: string[]
+          document_type: string
+          duration_ms: number
+          estimated_cost_usd: number | null
+          fallback_reason: string | null
+          fields_ambiguous: number
+          fields_conflicting: number
+          fields_missing: number
+          fields_resolved: number
+          id: string
+          input_tokens: number | null
+          model: string | null
+          number_of_files: number
+          operator: string | null
+          output_tokens: number | null
+          pages_sent_to_llm: number
+          parser_version: string
+          prompt_version: string
+          provider: string | null
+          reasoning_tokens: number | null
+          retry_count: number
+          support_status: string
+          text_extraction_success: boolean
+          text_quality: string
+          total_pages: number
+          total_tokens: number | null
+          used_llm: boolean
+          used_vision: boolean
+        }
+        Insert: {
+          administrator?: string | null
+          bundle_complete?: boolean | null
+          cache_hit?: boolean
+          cached_tokens?: number | null
+          candidate_pages_count: number
+          created_at?: string
+          document_family: string
+          document_roles?: string[]
+          document_type: string
+          duration_ms: number
+          estimated_cost_usd?: number | null
+          fallback_reason?: string | null
+          fields_ambiguous?: number
+          fields_conflicting?: number
+          fields_missing?: number
+          fields_resolved?: number
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          number_of_files: number
+          operator?: string | null
+          output_tokens?: number | null
+          pages_sent_to_llm?: number
+          parser_version: string
+          prompt_version: string
+          provider?: string | null
+          reasoning_tokens?: number | null
+          retry_count?: number
+          support_status: string
+          text_extraction_success: boolean
+          text_quality: string
+          total_pages: number
+          total_tokens?: number | null
+          used_llm?: boolean
+          used_vision?: boolean
+        }
+        Update: {
+          administrator?: string | null
+          bundle_complete?: boolean | null
+          cache_hit?: boolean
+          cached_tokens?: number | null
+          candidate_pages_count?: number
+          created_at?: string
+          document_family?: string
+          document_roles?: string[]
+          document_type?: string
+          duration_ms?: number
+          estimated_cost_usd?: number | null
+          fallback_reason?: string | null
+          fields_ambiguous?: number
+          fields_conflicting?: number
+          fields_missing?: number
+          fields_resolved?: number
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          number_of_files?: number
+          operator?: string | null
+          output_tokens?: number | null
+          pages_sent_to_llm?: number
+          parser_version?: string
+          prompt_version?: string
+          provider?: string | null
+          reasoning_tokens?: number | null
+          retry_count?: number
+          support_status?: string
+          text_extraction_success?: boolean
+          text_quality?: string
+          total_pages?: number
+          total_tokens?: number | null
+          used_llm?: boolean
+          used_vision?: boolean
+        }
+        Relationships: []
+      }
       contract_holders: {
         Row: {
           bairro: string | null

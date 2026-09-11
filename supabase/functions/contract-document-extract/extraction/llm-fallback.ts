@@ -71,10 +71,10 @@ const evidenceSchema = (fileIds: string[], maxPage: number) => ({
     {
       type: 'object',
       properties: {
-        value: { type: 'string', maxLength: 500 },
+        value: { type: 'string' },
         file_id: { type: 'string', enum: fileIds },
         page: { type: 'integer', minimum: 1, maximum: Math.max(1, maxPage) },
-        section: { type: 'string', maxLength: 100 },
+        section: { type: 'string' },
       },
       required: ['value', 'file_id', 'page', 'section'],
       additionalProperties: false,
@@ -107,7 +107,7 @@ export const buildLlmFallbackSchema = (
       },
       warnings: {
         type: 'array',
-        items: { type: 'string', maxLength: 240 },
+        items: { type: 'string' },
         maxItems: 6,
       },
     },
@@ -129,6 +129,7 @@ export const buildLlmFallbackPrompt = (params: {
   `Resolva somente estes campos do titular: ${params.holderFields.join(', ') || 'nenhum'}.`,
   'Use null quando não houver evidência explícita. Não deduza, não complete e não copie dados de corretor, supervisor, operadora ou administradora para o titular/empresa.',
   'Qualicorp e Supermed são administradoras; operadora é a entidade de assistência indicada separadamente.',
+  'Em documentos Qualicorp, produto/plano, acomodação e abrangência só podem vir da linha efetivamente marcada com X em PLANO PRETENDIDO. Ignore opções não marcadas e menções genéricas nas condições contratuais. Grupo de Municípios significa abrangência Regional; Coletiva significa acomodação Enfermaria.',
   'Em Porto, número de orçamento/estudo não é número de contrato. O valor do CRM é o Valor total mensal, não subtotal, taxa ou IOF.',
   'Retorne file_id, página e seção reais de cada valor. O schema da API define a resposta.',
   params.vision
@@ -152,7 +153,7 @@ const readEvidence = (value: unknown): LlmEvidenceValue | null => {
     || typeof record.section !== 'string'
   ) return null;
   return {
-    value: record.value.trim(),
+    value: record.value.trim().slice(0, 500),
     file_id: record.file_id,
     page: Math.trunc(record.page),
     section: record.section.trim().slice(0, 100),

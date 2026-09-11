@@ -114,4 +114,10 @@ export function TableCell({ align = 'left', className, children, ...props }: Tab
   );
 }
 
+export type TableActionsProps = HTMLAttributes<HTMLDivElement>;
+
+export function TableActions({ className, children, ...props }: TableActionsProps) {
+  return <div className={cx('kds-table-actions', className)} {...props}>{children}</div>;
+}
+
 export default Table;

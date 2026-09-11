@@ -1,13 +1,13 @@
 export { default as Alert } from './components/Alert';
 export type { AlertProps, AlertTone } from './components/Alert';
-export { PageContainer, PageSection, Toolbar, ToolbarActions, ToolbarSearch } from './components/Application';
+export { FilterBar, PageContainer, PageSection, Toolbar, ToolbarActions, ToolbarSearch } from './components/Application';
 export type { PageContainerProps, PageContainerSize, PageContainerSpacing, PageSectionProps, ToolbarActionsProps, ToolbarProps, ToolbarSearchProps } from './components/Application';
 export { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './components/Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItemProps, BreadcrumbLinkProps, BreadcrumbSeparatorProps } from './components/Breadcrumb';
 export { default as Badge } from './components/Badge';
 export type { BadgeProps, BadgeSize, BadgeTone } from './components/Badge';
 export { ButtonGroup, IconButton, LoadingButton, default as Button } from './components/Button';
-export type { ButtonGroupProps, ButtonProps, ButtonSize, ButtonVariant } from './components/Button';
+export type { ButtonGroupProps, ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './components/Button';
 export {
   ActivityCard,
   CardIcon,
@@ -88,8 +88,9 @@ export {
   TableHead,
   TableHeader,
   TableRow,
+  TableActions,
 } from './components/Table';
-export type { TableProps, TableSize, TableBodyProps, TableCellProps, TableHeadProps, TableHeaderProps, TableRowProps } from './components/Table';
+export type { TableProps, TableSize, TableActionsProps, TableBodyProps, TableCellProps, TableHeadProps, TableHeaderProps, TableRowProps } from './components/Table';
 export { default as Tooltip } from './components/Tooltip';
 export type { TooltipProps, TooltipSide, TooltipSize } from './components/Tooltip';
 export { Toast, ToastProvider, useToast } from './components/Toast';

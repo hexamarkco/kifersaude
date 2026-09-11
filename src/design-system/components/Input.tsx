@@ -29,7 +29,7 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
-    size = 'default',
+    size = 'md',
     invalid = false,
     state = 'default',
     leftIcon: LeftIcon,
@@ -84,8 +84,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         className={cx(
           panelInputBaseClass,
           panelInputSizeClasses[size],
-          hasLeftAdornment && (size === 'compact' ? 'pl-8' : 'pl-10'),
-          hasRightAdornment && (size === 'compact' ? 'pr-8' : 'pr-10'),
+          hasLeftAdornment && 'kds-input-with-leading',
+          hasRightAdornment && 'kds-input-with-trailing',
           panelInputStateClasses[resolvedState],
           className,
         )}

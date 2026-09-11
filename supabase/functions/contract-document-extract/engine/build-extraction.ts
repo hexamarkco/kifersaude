@@ -79,7 +79,13 @@ export const buildContractDocumentExtraction = (params: {
     const source = combinedProvenance[key];
     if (source) {
       fieldProvenance[key] = source;
-      fieldSources[key] = `${source.fileId}, página ${source.page ?? '?'} — ${source.section}`;
+      const sourceDocument = params.classifications.find((item) => item.document.fileId === source.fileId);
+      const sourceLabel = sourceDocument?.role === 'company'
+        ? 'Empresa'
+        : sourceDocument?.role === 'beneficiaries' ? 'Beneficiários' : 'Documento';
+      fieldSources[key] = source.page
+        ? `${sourceLabel}, página ${source.page} — ${source.section}`
+        : `${source.section} — regra determinística do perfil`;
     }
     fieldStates[key] = value ? 'resolved' : params.deterministic.states[key] ?? 'missing';
   }

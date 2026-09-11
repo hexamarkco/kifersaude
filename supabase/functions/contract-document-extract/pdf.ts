@@ -1,7 +1,7 @@
 import { getDocumentProxy } from 'npm:unpdf@1.6.0';
 import { PDFDocument } from 'npm:pdf-lib@1.17.1';
 
-import type { ParsedPdfDocument, PdfPage, TextQuality } from './engine/types.ts';
+import type { ParsedPdfDocument, PdfPage, PdfTextItem, TextQuality } from './engine/types.ts';
 
 const MAX_PAGES_PER_DOCUMENT = 160;
 const MAX_TEXT_CHARS_PER_PAGE = 30_000;
@@ -45,14 +45,36 @@ const extractPageText = async (page: {
 }) => {
   const content = await page.getTextContent();
   let text = '';
+  const positionedItems: PdfTextItem[] = [];
   for (const item of content.items) {
     if (!item || typeof item !== 'object' || !('str' in item)) continue;
     const textItem = item as { str?: unknown; hasEOL?: unknown };
     if (typeof textItem.str !== 'string') continue;
     text += textItem.str;
     text += textItem.hasEOL ? '\n' : ' ';
+    const positioned = item as {
+      str: string;
+      transform?: unknown;
+      width?: unknown;
+      height?: unknown;
+    };
+    if (
+      positioned.str.trim()
+      && Array.isArray(positioned.transform)
+      && positioned.transform.length >= 6
+      && typeof positioned.transform[4] === 'number'
+      && typeof positioned.transform[5] === 'number'
+    ) {
+      positionedItems.push({
+        text: positioned.str,
+        x: positioned.transform[4],
+        y: positioned.transform[5],
+        width: typeof positioned.width === 'number' ? positioned.width : 0,
+        height: typeof positioned.height === 'number' ? positioned.height : 0,
+      });
+    }
   }
-  return normalizeExtractedText(text);
+  return { text: normalizeExtractedText(text), positionedItems };
 };
 
 export const parsePdfDocument = async (
@@ -74,11 +96,12 @@ export const parsePdfDocument = async (
 
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
-      const text = await extractPageText(page);
+      const { text, positionedItems } = await extractPageText(page);
       pages.push({
         page: pageNumber,
         text,
         characterCount: text.replace(/\s/g, '').length,
+        items: positionedItems,
       });
     }
   } catch (error) {

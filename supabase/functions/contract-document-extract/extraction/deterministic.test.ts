@@ -88,6 +88,46 @@ describe('extração determinística V2', () => {
     assert.equal(extraction.fields.razao_social, undefined);
   });
 
+  test('Qualicorp lê plano, acomodação e abrangência somente da linha marcada', () => {
+    const document = syntheticPdf('qualicorp', [
+      `QUALICORP CONTRATO DE ADESÃO ASSIM SAÚDE
+       PLANO PRETENDIDO
+       A40 QC ADESÃO COM COPART PARCIAL Coletiva Grupo de Municípios
+       CONDIÇÕES GERAIS Acomodação Apartamento Abrangência Nacional`,
+    ]);
+    document.pages[0].items = [
+      { text: 'X', x: 56, y: 600, width: 8, height: 10 },
+      { text: 'A40 QC ADESÃO COM', x: 174, y: 606, width: 95, height: 10 },
+      { text: 'COPART PARCIAL', x: 174, y: 594, width: 75, height: 10 },
+      { text: 'Coletiva', x: 437, y: 600, width: 50, height: 10 },
+      { text: 'Grupo de', x: 508, y: 606, width: 45, height: 10 },
+      { text: 'municípios³', x: 508, y: 594, width: 60, height: 10 },
+      { text: 'Apartamento', x: 300, y: 300, width: 70, height: 10 },
+      { text: 'Nacional', x: 400, y: 300, width: 50, height: 10 },
+    ];
+    const classifications = classifyDocuments([document], 'auto');
+    const deterministic = extractDeterministically(classifications);
+    const extraction = buildContractDocumentExtraction({ classifications, deterministic, usedLlm: false, usedVision: false });
+
+    assert.equal(extraction.profile, 'qualicorp');
+    assert.equal(extraction.fields.produto_plano, 'A40');
+    assert.equal(extraction.fields.acomodacao, 'Enfermaria');
+    assert.equal(extraction.fields.abrangencia, 'Regional');
+    assert.match(extraction.fieldSources.produto_plano ?? '', /página 1 — PLANO PRETENDIDO — LINHA MARCADA/);
+  });
+
+  test('Qualicorp não promove menções contratuais sem uma linha visual marcada', () => {
+    const classifications = classifyDocuments([syntheticPdf('qualicorp-sem-layout', [
+      `QUALICORP CONTRATO DE ADESÃO ASSIM SAÚDE PLANO PRETENDIDO
+       CONDIÇÕES GERAIS Acomodação Apartamento Abrangência Nacional`,
+    ])], 'auto');
+    const deterministic = extractDeterministically(classifications);
+
+    assert.equal(deterministic.values.produto_plano, undefined);
+    assert.equal(deterministic.values.acomodacao, undefined);
+    assert.equal(deterministic.values.abrangencia, undefined);
+  });
+
   test('não escolhe um valor quando candidatos de mesma prioridade conflitam', () => {
     const resolved = resolveFieldCandidates([
       { key: 'produto_plano', value: 'Plano A', priority: 90, provenance: { fileId: 'a', page: 1, section: 'PLANO', method: 'text_parser' } },

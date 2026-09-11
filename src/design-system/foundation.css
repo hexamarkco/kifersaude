@@ -748,6 +748,7 @@
 
 .kds-control-icon,
 .kds-button > svg,
+.kds-button .kds-button-content > svg,
 .kds-tab > svg {
   width: var(--kds-control-icon, var(--control-icon-md));
   height: var(--kds-control-icon, var(--control-icon-md));
@@ -795,10 +796,10 @@
 .kds-textarea-md { min-height: 6.75rem; }
 .kds-textarea-lg { min-height: 8.25rem; }
 
-.kds-icon-button {
+.kds-button.kds-icon-button {
   width: var(--kds-control-height);
   min-width: var(--kds-control-height);
-  padding: 0;
+  padding-inline: 0;
 }
 
 .kds-button > span {

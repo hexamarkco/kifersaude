@@ -29,6 +29,7 @@ import {
   SectionHeader,
   Switch,
   Textarea,
+  IconButton,
 } from "../../../design-system";
 import StepEditorDialog, { type StepEditorPayload } from "./StepEditorDialog";
 
@@ -233,9 +234,9 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" size="icon" className="h-9 w-9" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <IconButton variant="secondary"  onClick={onBack} size="sm">
+          <ArrowLeft className="kds-control-icon" />
+        </IconButton>
         <SectionHeader eyebrow="Formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" />
       </div>
 
@@ -244,11 +245,11 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <h3 className="kds-card-title">Configurações</h3>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyLink()}>
-              <Copy className="h-4 w-4" />
+              <Copy className="kds-control-icon" />
               <span>Copiar link</span>
             </Button>
             <Button variant="secondary" size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}>
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="kds-control-icon" />
               <span>Abrir</span>
             </Button>
           </div>
@@ -308,7 +309,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
               label={settings.is_published ? "Publicado" : "Rascunho (não acessível publicamente)"}
             />
             <Button onClick={() => void handleSaveSettings()} loading={savingSettings}>
-              {!savingSettings && <Save className="h-4 w-4" />}
+              {!savingSettings && <Save className="kds-control-icon" />}
               <span>{savingSettings ? "Salvando..." : "Salvar configurações"}</span>
             </Button>
           </div>
@@ -322,7 +323,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
             <p className="kds-card-subtitle">Uma pergunta por tela. A última etapa (contato) é sempre fixa.</p>
           </div>
           <Button onClick={() => setStepDialog({ step: null })}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>Nova pergunta</span>
           </Button>
         </div>
@@ -360,12 +361,12 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <Button variant="secondary" size="sm" disabled={isBusy} onClick={() => setStepDialog({ step })}>
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="kds-control-icon" />
                       <span>Editar</span>
                     </Button>
-                    <Button variant="danger" size="icon" className="h-9 w-9" disabled={isBusy} onClick={() => void handleDeleteStep(step)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <IconButton variant="danger"  disabled={isBusy} size="sm" onClick={() => void handleDeleteStep(step)}>
+                      <Trash2 className="kds-control-icon" />
+                    </IconButton>
                   </div>
                 </Card>
               );
@@ -470,7 +471,7 @@ function ContactStepEditor({ step, busy, onSave }: ContactStepEditorProps) {
         <Input value={description} onChange={(event) => setDescription(event.target.value)} />
       </Field>
       <Button variant="secondary" size="sm" disabled={busy} onClick={() => onSave(title, description)}>
-        <MessageCircle className="h-4 w-4" />
+        <MessageCircle className="kds-control-icon" />
         <span>Salvar</span>
       </Button>
     </div>

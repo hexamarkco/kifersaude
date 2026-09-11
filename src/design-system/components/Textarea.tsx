@@ -1,7 +1,7 @@
 import { forwardRef, type TextareaHTMLAttributes } from 'react';
 
 import { cx } from '../../lib/cx';
-import { panelInputBaseClass, panelInputStateClasses, type PanelInputState } from '../tokens';
+import { panelInputBaseClass, panelInputSizeClasses, panelInputStateClasses, type PanelInputState } from '../tokens';
 
 export type TextareaSize = 'sm' | 'md' | 'lg';
 
@@ -12,9 +12,9 @@ export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 };
 
 const sizeClasses: Record<TextareaSize, string> = {
-  sm: 'min-h-[86px] text-[13px]',
-  md: 'min-h-[108px] text-sm',
-  lg: 'min-h-[132px] text-base',
+  sm: 'kds-textarea-sm',
+  md: 'kds-textarea-md',
+  lg: 'kds-textarea-lg',
 };
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
@@ -30,7 +30,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       className={cx(
         panelInputBaseClass,
         'kds-textarea',
-        'py-2.5',
+        panelInputSizeClasses[size],
         sizeClasses[size],
         panelInputStateClasses[resolvedState],
         className,

@@ -11,6 +11,7 @@ import {
   Input,
   Select,
   Textarea,
+  IconButton,
 } from "../../../../design-system";
 import { toast } from "../../../../lib/toast";
 import { aiConfigService } from "../aiConfigService";
@@ -290,9 +291,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}
             </p>
           </div>
-          <Button variant="icon" size="icon" onClick={onClose} aria-label="Fechar painel">
-            <X className="h-4 w-4" />
-          </Button>
+          <IconButton variant="icon" onClick={onClose} aria-label="Fechar painel" size="md">
+            <X className="kds-control-icon" />
+          </IconButton>
         </DrawerHeader>
 
         {/* Body */}
@@ -458,7 +459,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               value={prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
               rows={10}
-              className="font-mono text-sm"
+              className="font-mono"
               placeholder="Digite o prompt..."
             />
           </Field>
@@ -469,7 +470,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               value={outputInstructions}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setOutputInstructions(e.target.value)}
               rows={6}
-              className="font-mono text-sm"
+              className="font-mono"
               placeholder="Ex: Retorne JSON no formato..."
             />
           </Field>
@@ -545,7 +546,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         {/* Footer */}
         <DrawerFooter className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleResetToDefaults}>
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="kds-control-icon" />
             Restaurar padrão
           </Button>
           <div className="flex items-center gap-2">
@@ -553,7 +554,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {!saving && <Save className="h-4 w-4" />}
+              {!saving && <Save className="kds-control-icon" />}
               {saving ? "Salvando..." : "Criar versão e ativar"}
             </Button>
           </div>

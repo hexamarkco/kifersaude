@@ -4,7 +4,7 @@ import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import { panelInputIconSizeClasses, panelInputSizeClasses, type PanelInputSize } from '../tokens';
 
-export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
+export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'value'> & {
   icon: LucideIcon;
   value: ReactNode;
   active?: boolean;

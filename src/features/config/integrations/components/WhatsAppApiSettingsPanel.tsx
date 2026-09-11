@@ -316,21 +316,21 @@ export default function WhatsAppApiSettingsPanel() {
                     </p>
                   </div>
                   <Button variant="secondary" onClick={handleRefreshHealth} loading={refreshingHealth}>
-                    {!refreshingHealth && <RefreshCcw className="w-4 h-4" />}
+                    {!refreshingHealth && <RefreshCcw className="kds-control-icon" />}
                     Atualizar saude
                   </Button>
                 </div>
 
                 <div className="mt-3 relative">
-                  <Input readOnly value={webhookUrl} size="large" className="font-mono pr-12" />
+                  <Input readOnly value={webhookUrl} size="lg" className="font-mono" />
                   <IconButton
                     variant="icon"
                     aria-label="Copiar webhook"
                     onClick={handleCopyWebhook}
                     disabled={!webhookUrl}
-                    className="absolute right-2 top-1/2 h-11 min-h-11 w-11 min-w-11 -translate-y-1/2 shrink-0"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="kds-control-icon" />
                   </IconButton>
                 </div>
                 {webhookAuthentication === "header" ? (
@@ -422,7 +422,7 @@ export default function WhatsAppApiSettingsPanel() {
 
           <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
             <Button onClick={handleSave} loading={saving}>
-              {!saving && <Save className="w-4 h-4" />}
+              {!saving && <Save className="kds-control-icon" />}
               <span>{saving ? "Salvando..." : "Salvar configuração"}</span>
             </Button>
           </div>

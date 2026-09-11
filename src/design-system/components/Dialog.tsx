@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useId, useRef, type HTMLAttributes } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+export type DialogPresentation = 'standard' | 'workspace';
 
 export type DialogProps = HTMLAttributes<HTMLDivElement> & {
   open: boolean;
@@ -12,6 +13,7 @@ export type DialogProps = HTMLAttributes<HTMLDivElement> & {
   size?: DialogSize;
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
+  presentation?: DialogPresentation;
 };
 
 const sizeClasses: Record<DialogSize, string> = {
@@ -40,6 +42,7 @@ export function Dialog({
   size = 'md',
   closeOnOverlay = true,
   closeOnEscape = true,
+  presentation = 'standard',
   className,
   children,
   ...props
@@ -143,7 +146,7 @@ export function Dialog({
           aria-modal="true"
           aria-labelledby={props['aria-label'] ? undefined : titleId}
           tabIndex={props.tabIndex ?? -1}
-          className={cx('kds-dialog', sizeClasses[size], className)}
+          className={cx('kds-dialog', presentation === 'workspace' && 'kds-dialog-workspace', sizeClasses[size], className)}
           onClick={(e) => e.stopPropagation()}
           {...props}
         >
@@ -179,7 +182,7 @@ export function DialogHeader({
           className="kds-dialog-close"
           aria-label="Fechar"
         >
-          <X className="h-5 w-5" aria-hidden="true" />
+          <X aria-hidden="true" />
         </button>
       )}
     </div>
@@ -235,4 +238,68 @@ export function DialogFooter({ className, children, ...props }: DialogFooterProp
       {children}
     </div>
   );
+}
+
+export type DialogShellProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  size?: Exclude<DialogSize, 'full'>;
+  presentation?: DialogPresentation;
+  closeOnOverlay?: boolean;
+  closeOnEscape?: boolean;
+  showCloseButton?: boolean;
+  panelClassName?: string;
+  bodyClassName?: string;
+  footerClassName?: string;
+  bodyScrollable?: boolean;
+};
+
+/** Canonical composed dialog for flows that do not need custom compound markup. */
+export function DialogShell({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = 'md',
+  presentation = 'standard',
+  closeOnOverlay = true,
+  closeOnEscape = true,
+  showCloseButton = true,
+  panelClassName,
+  bodyClassName,
+  footerClassName,
+  bodyScrollable = true,
+}: DialogShellProps) {
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+      size={size}
+      presentation={presentation}
+      closeOnOverlay={closeOnOverlay}
+      closeOnEscape={closeOnEscape}
+      className={panelClassName}
+    >
+      {(title || description || showCloseButton) && (
+        <DialogHeader onClose={onClose} showCloseButton={showCloseButton}>
+          {title && <DialogTitle>{title}</DialogTitle>}
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
+      )}
+      <DialogBody scrollable={bodyScrollable} className={bodyClassName}>{children}</DialogBody>
+      {footer && <DialogFooter className={footerClassName}>{footer}</DialogFooter>}
+    </Dialog>
+  );
+}
+
+export type WorkspaceDialogProps = Omit<DialogShellProps, 'presentation'>;
+
+export function WorkspaceDialog(props: WorkspaceDialogProps) {
+  return <DialogShell {...props} presentation="workspace" />;
 }

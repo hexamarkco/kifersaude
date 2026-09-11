@@ -10,7 +10,6 @@ import {
 } from '../features/reminders';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
-import FilterSingleSelect from './FilterSingleSelect';
 import { LeadFavoriteBadge } from './LeadFavoriteStar';
 import {
   Alert,
@@ -25,6 +24,7 @@ import {
   Field,
   Input,
   Textarea,
+  FilterSelect,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -195,7 +195,7 @@ export default function ReminderSchedulerModal({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Tipo do lembrete">
-              <FilterSingleSelect
+              <FilterSelect
                 icon={Tag}
                 value={type}
                 onChange={(value) => setType(value as (typeof TYPE_OPTIONS)[number])}
@@ -208,7 +208,7 @@ export default function ReminderSchedulerModal({
               />
             </Field>
             <Field label="Prioridade">
-              <FilterSingleSelect
+              <FilterSelect
                 icon={AlertCircle}
                 value={priority}
                 onChange={(value) => setPriority(value as (typeof PRIORITY_OPTIONS)[number])}

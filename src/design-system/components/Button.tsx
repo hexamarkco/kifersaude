@@ -52,7 +52,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       {...props}
     >
       {loading && <Loader2 className={cx('animate-spin', panelButtonSpinnerSizeClasses[size])} aria-hidden="true" />}
-      {loading && size === 'icon' ? null : children}
+      {children}
     </button>
   );
 });

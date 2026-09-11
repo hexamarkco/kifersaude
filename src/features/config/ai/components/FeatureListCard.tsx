@@ -77,7 +77,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     onClick={() => onEdit(feature)}
                     title="Configurar"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="kds-control-icon" />
                   </Button>
                 )}
                 {!isLegacy && displayConfig && (
@@ -93,9 +93,9 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     title={isActive ? "Desativar" : "Ativar"}
                   >
                     {isActive ? (
-                      <PowerOff className="h-3.5 w-3.5 text-[var(--color-danger)]" />
+                      <PowerOff className="text-[var(--color-danger)]" />
                     ) : (
-                      <Power className="h-3.5 w-3.5 text-[var(--success-text)]" />
+                      <Power className="text-[var(--success-text)]" />
                     )}
                   </Button>
                 )}

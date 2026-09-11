@@ -21,6 +21,86 @@ const patternDefinitions = [
   },
 ];
 
+const canonicalControls = [
+  'Button',
+  'IconButton',
+  'Input',
+  'SearchInput',
+  'Select',
+  'Combobox',
+  'DateTimePicker',
+  'Textarea',
+  'FilterTrigger',
+  'FilterSelect',
+  'FilterMultiSelect',
+  'DateRangeFilter',
+  'Tabs',
+  'SegmentedControl',
+];
+const legacySizePattern = /\bsize=(['"])(?:icon|xs|default|compact|large)\1/;
+const geometryTokenPattern = /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:(?:min-|max-)?h-|(?:p|px|py|pl|pr|pt|pb)-|rounded(?:-|$)|text-(?:xs|sm|base|lg|xl|\[)|leading-(?:none|tight|snug|normal|relaxed|loose|\[)|gap-)/;
+const iconGeometryTokenPattern = /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:min-|max-)?[hw]-(?:\d|\[)/;
+const legacyImportPattern = /from\s+['"][^'"]*(?:components\/Pagination|components\/Filter(?:SingleSelect|MultiSelect|DateRange)|components\/ui\/(?:Input|Textarea|DateTimePicker|ModalShell|ConfirmationModal)|WhatsAppDialog)['"]/g;
+
+const findOpeningTagEnd = (source, start) => {
+  let quote = null;
+  let braces = 0;
+  for (let index = start; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === quote && source[index - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+      continue;
+    }
+    if (char === '{') braces += 1;
+    if (char === '}') braces = Math.max(0, braces - 1);
+    if (char === '>' && braces === 0) return index;
+  }
+  return -1;
+};
+
+const auditCanonicalControls = (source) => {
+  const matches = [];
+  for (const component of canonicalControls) {
+    let cursor = 0;
+    while ((cursor = source.indexOf(`<${component}`, cursor)) >= 0) {
+      const boundary = source[cursor + component.length + 1];
+      if (boundary && /[\w$]/.test(boundary)) {
+        cursor += component.length + 1;
+        continue;
+      }
+      const end = findOpeningTagEnd(source, cursor + component.length + 1);
+      if (end < 0) break;
+      const opening = source.slice(cursor, end + 1);
+      if (legacySizePattern.test(opening)) matches.push({ type: 'legacy-control-size', value: component });
+      for (const classMatch of opening.matchAll(/className=(['"])([^'"]*)\1/g)) {
+        for (const token of classMatch[2].split(/\s+/)) {
+          if (geometryTokenPattern.test(token) || (component === 'IconButton' && /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:min-|max-)?w-/.test(token))) {
+            matches.push({ type: 'primitive-geometry-override', value: `${component}:${token}` });
+          }
+        }
+      }
+
+      if ((component === 'Button' || component === 'IconButton') && !/\/\s*>$/.test(opening)) {
+        const closeStart = source.indexOf(`</${component}>`, end + 1);
+        if (closeStart >= 0) {
+          const body = source.slice(end + 1, closeStart);
+          for (const iconMatch of body.matchAll(/<[A-Z][A-Za-z0-9]*(?:\s[^>]*)?className=(['"])([^'"]*)\1[^>]*\/?\s*>/g)) {
+            for (const token of iconMatch[2].split(/\s+/)) {
+              if (iconGeometryTokenPattern.test(token)) matches.push({ type: 'primitive-icon-override', value: `${component}:${token}` });
+            }
+          }
+        }
+      }
+      cursor = end + 1;
+    }
+  }
+  return matches;
+};
+
 const collectFiles = async (dir) => {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = await Promise.all(
@@ -40,8 +120,17 @@ const collectFiles = async (dir) => {
 const auditFile = async (filePath) => {
   const source = await fs.readFile(filePath, 'utf8');
   const matches = [];
+  const isDesignSystemFile = path.relative(projectRoot, filePath).split(path.sep).includes('design-system');
 
-  for (const definition of patternDefinitions) {
+  if (!isDesignSystemFile) {
+    for (const value of source.match(legacyImportPattern) || []) {
+      matches.push({ type: 'legacy-primitive-import', value });
+    }
+  }
+
+  matches.push(...auditCanonicalControls(source));
+
+  for (const definition of isDesignSystemFile && !includeDesignSystem ? [] : patternDefinitions) {
     const found = source.match(definition.regex) || [];
     for (const value of found) {
       matches.push({ type: definition.label, value });
@@ -57,10 +146,6 @@ const results = [];
 for (const filePath of files) {
   const relativePath = path.relative(projectRoot, filePath);
   const pathParts = relativePath.split(path.sep);
-
-  if (!includeDesignSystem && pathParts.includes('design-system')) {
-    continue;
-  }
 
   const matches = await auditFile(filePath);
   if (matches.length === 0) continue;
@@ -101,3 +186,7 @@ for (const item of results.slice(0, 20)) {
 
   console.log(`- ${relativePath} -> ${item.total} (${typeSummary})`);
 }
+
+console.error('');
+console.error('Visual audit failed. Use Design System tokens/primitives or document a narrowly scoped exception in this script.');
+process.exit(1);

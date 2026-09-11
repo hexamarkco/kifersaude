@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
-import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
+import { Button, Progress, Stepper, Textarea, WorkspaceDialog
+} from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
@@ -9,7 +10,6 @@ import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSeg
 import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../data';
 import { toast } from '../../../../lib/toast';
 import type { BatchFollowUpFinalStatus, BatchFollowUpOpportunityRecommendation } from '../domain/batchFollowUpOutcome';
-import WhatsAppDialog from './WhatsAppDialog';
 import {
   AiContextPanel,
   CONTEXT_REFINEMENT_ACTIONS,
@@ -493,7 +493,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'sent' && sentSummary) {
     return (
-      <WhatsAppDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]"
+      <WorkspaceDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
@@ -578,7 +578,7 @@ export default function WhatsAppBatchFollowUpModal({
             </div>
           </div>
         </div>
-      </WhatsAppDialog>
+      </WorkspaceDialog>
     );
   }
 
@@ -586,7 +586,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'loading') {
     return (
-      <WhatsAppDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
+      <WorkspaceDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
           <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
           <div className="text-center">
@@ -594,14 +594,14 @@ export default function WhatsAppBatchFollowUpModal({
             <p className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</p>
           </div>
         </div>
-      </WhatsAppDialog>
+      </WorkspaceDialog>
     );
   }
 
   // ---- Render: main layout ----
 
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
@@ -632,7 +632,7 @@ export default function WhatsAppBatchFollowUpModal({
                   onClick={() => void handleGenerateAll()}
                   disabled={pendingCount === 0}
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="kds-control-icon" />
                   Gerar {pendingCount} pendente(s)
                 </Button>
                 {readyCount > 0 ? (
@@ -641,7 +641,7 @@ export default function WhatsAppBatchFollowUpModal({
                     size="sm"
                     onClick={() => setConfigOpen((v) => !v)}
                   >
-                    <Settings className="h-4 w-4" />
+                    <Settings className="kds-control-icon" />
                     Configurar IA
                   </Button>
                 ) : null}
@@ -660,7 +660,7 @@ export default function WhatsAppBatchFollowUpModal({
               onClick={() => void handleSendSelected()}
               disabled={readyCount === 0 || phase === 'sending'}
             >
-              {phase === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {phase === 'sending' ? <Loader2 className="animate-spin" /> : <Send className="kds-control-icon" />}
               {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar ${readyCount} selecionado(s)`}
             </Button>
           </div>
@@ -809,7 +809,7 @@ export default function WhatsAppBatchFollowUpModal({
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!)}
                       >
-                        {activeItem.status !== 'generating' && <Sparkles className="h-3.5 w-3.5" />}
+                        {activeItem.status !== 'generating' && <Sparkles className="kds-control-icon" />}
                         {activeItem.generatedText.trim() ? 'Regenerar' : 'Gerar'}
                       </Button>
                     </div>
@@ -929,7 +929,7 @@ export default function WhatsAppBatchFollowUpModal({
                       value={activeItem.generatedText}
                       onChange={(e) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: e.target.value }))}
                       rows={6}
-                      className="min-h-[160px] text-sm leading-6"
+                      className="leading-6"
                       placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
                       disabled={phase !== 'ready' || Boolean(refiningActionId)}
                     />
@@ -1018,7 +1018,7 @@ export default function WhatsAppBatchFollowUpModal({
                       onChange={(val) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { customInstructions: val }))}
                       suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
                       rows={3}
-                      size="compact"
+                      size="sm"
                       placeholder={'Ex.: Não fale de preço, quero descobrir o que está travando.'}
                       disabled={phase !== 'ready' || Boolean(refiningActionId)}
                     />
@@ -1041,7 +1041,7 @@ export default function WhatsAppBatchFollowUpModal({
           )}
         </div>
       </div>
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }
 

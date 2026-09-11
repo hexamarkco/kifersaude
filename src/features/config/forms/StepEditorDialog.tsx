@@ -15,6 +15,7 @@ import {
   Select,
   Switch,
   Textarea,
+  IconButton,
 } from "../../../design-system";
 
 export type StepEditorPayload = {
@@ -210,20 +211,19 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                         className="w-40"
                       />
                     )}
-                    <Button
+                    <IconButton
                       type="button"
                       variant="danger"
-                      size="icon"
-                      className="h-9 w-9 shrink-0"
+                      className="shrink-0"
                       disabled={options.length <= 2}
-                      onClick={() => removeOption(option.id)}
+                      size="sm" onClick={() => removeOption(option.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Trash2 className="kds-control-icon" />
+                    </IconButton>
                   </div>
                 ))}
                 <Button type="button" variant="secondary" size="sm" onClick={addOption}>
-                  <Plus className="h-4 w-4" />
+                  <Plus className="kds-control-icon" />
                   <span>Adicionar opção</span>
                 </Button>
               </div>

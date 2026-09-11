@@ -547,6 +547,11 @@
   gap: 0.5rem;
 }
 
+.kds-dp-nav-button > svg {
+  width: var(--control-icon-sm);
+  height: var(--control-icon-sm);
+}
+
 .kds-op-pagination-controls {
   display: grid;
   width: 100%;

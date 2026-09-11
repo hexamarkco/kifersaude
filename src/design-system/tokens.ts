@@ -24,7 +24,7 @@ export type ControlSize = 'sm' | 'md' | 'lg';
 export type PanelButtonSize = ControlSize;
 
 export const panelButtonBaseClass =
-  'kds-button panel-ui-button inline-flex items-center justify-center gap-2 border focus-visible:outline-none disabled:cursor-not-allowed';
+  'kds-button panel-ui-button inline-flex items-center justify-center border focus-visible:outline-none disabled:cursor-not-allowed';
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary: 'kds-button-primary',
@@ -129,7 +129,7 @@ export type PanelInputSize = ControlSize;
 export type PanelInputState = 'default' | 'error' | 'success';
 
 export const panelInputBaseClass =
-  'kds-input panel-ui-input w-full px-3 shadow-none disabled:cursor-not-allowed';
+  'kds-input panel-ui-input w-full shadow-none disabled:cursor-not-allowed';
 
 export const panelInputStateClasses: Record<PanelInputState | 'valid' | 'invalid', string> = {
   default: 'kds-input-valid',

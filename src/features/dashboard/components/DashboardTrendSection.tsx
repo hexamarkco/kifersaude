@@ -1,8 +1,8 @@
 import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react';
 
-import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import { SectionHeader, Surface } from '../../../design-system';
+import { SectionHeader, Surface, FilterSelect
+} from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
   DASHBOARD_METRIC_COLORS,
@@ -91,7 +91,7 @@ export function DashboardTrendSection({
       />
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <FilterSingleSelect
+        <FilterSelect
           icon={Filter}
           value={periodFilter}
           onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
@@ -103,7 +103,7 @@ export function DashboardTrendSection({
           }))}
         />
 
-        <FilterSingleSelect
+        <FilterSelect
           icon={Clock}
           value={String(chartRangeInMonths)}
           onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}

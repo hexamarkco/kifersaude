@@ -3,7 +3,7 @@ import { act, useState } from 'react';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
 
-import DateTimePicker from '../DateTimePicker';
+import { DateTimePicker } from '../../../design-system';
 import { normalizeYearInput, parseCommittedYearInput } from '../dateTimePickerUtils';
 
 const click = (element: Element | null) => {
@@ -40,9 +40,9 @@ const renderControlledPicker = (
     return (
       <DateTimePicker
         value={value}
-        onChange={(nextValue) => {
-          state.current = nextValue;
-          setValue(nextValue);
+        onChange={(event) => {
+          state.current = event.target.value;
+          setValue(event.target.value);
         }}
         type={type}
         {...extraProps}

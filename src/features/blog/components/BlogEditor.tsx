@@ -2,7 +2,6 @@ import { Image as ImageIcon, Loader, Save, Tag, Upload, X } from "lucide-react";
 import { useMemo, type ChangeEvent } from "react";
 import ReactQuill from "react-quill";
 
-import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import {
   Button,
   Checkbox,
@@ -11,6 +10,8 @@ import {
   PageHeader,
   Surface,
   Textarea,
+  IconButton,
+  FilterSelect,
 } from "../../../design-system";
 import {
   BLOG_CATEGORY_OPTIONS,
@@ -60,15 +61,14 @@ export default function BlogEditor({
         title={editingPost ? "Editar post" : "Novo post"}
         description="Estruture o artigo, a capa e os metadados para publicação."
         actions={(
-          <Button
+          <IconButton
             type="button"
             onClick={onClose}
             variant="icon"
-            size="icon"
             aria-label="Fechar editor"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+           size="md">
+            <X className="kds-control-icon" />
+          </IconButton>
         )}
       />
 
@@ -95,7 +95,7 @@ export default function BlogEditor({
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Categoria *">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Tag}
               value={formData.category}
               onChange={(value) =>
@@ -136,17 +136,16 @@ export default function BlogEditor({
                 />
               </div>
               {formData.cover_image_url && (
-                <Button
+                <IconButton
                   type="button"
                   onClick={() =>
                     window.open(formData.cover_image_url, "_blank")
                   }
                   variant="secondary"
-                  size="icon"
                   aria-label="Abrir imagem de capa"
-                >
-                  <ImageIcon className="h-5 w-5" />
-                </Button>
+                 size="md">
+                  <ImageIcon aria-hidden="true" />
+                </IconButton>
               )}
             </div>
 
@@ -316,7 +315,7 @@ export default function BlogEditor({
             fullWidth
             size="lg"
           >
-            <Save className="h-5 w-5" />
+            <Save className="kds-control-icon" />
             {editingPost ? "Atualizar Post" : "Criar Post"}
           </Button>
           <Button

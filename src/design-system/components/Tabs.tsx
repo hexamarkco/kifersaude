@@ -1,3 +1,4 @@
+import { useRef, type KeyboardEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import {
@@ -40,6 +41,24 @@ export default function Tabs<T extends string>({
   listClassName,
   triggerClassName,
 }: TabsProps<T>) {
+  const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const enabled = items.map((item, itemIndex) => item.disabled ? -1 : itemIndex).filter((itemIndex) => itemIndex >= 0);
+    if (enabled.length === 0) return;
+    const current = Math.max(0, enabled.indexOf(index));
+    const nextIndex = event.key === 'Home'
+      ? enabled[0]
+      : event.key === 'End'
+        ? enabled[enabled.length - 1]
+        : enabled[(current + (event.key === 'ArrowRight' ? 1 : -1) + enabled.length) % enabled.length];
+    const nextItem = items[nextIndex];
+    triggerRefs.current[nextIndex]?.focus();
+    if (nextItem) onChange(nextItem.id);
+  };
+
   return (
     <div className={className}>
       <div
@@ -47,18 +66,21 @@ export default function Tabs<T extends string>({
         aria-orientation="horizontal"
         className={getPanelTabsListClass(variant, listClassName)}
       >
-        {items.map((item) => {
+        {items.map((item, index) => {
           const Icon = item.icon;
           const isActive = item.id === value;
 
           return (
             <button
+              ref={(element) => { triggerRefs.current[index] = element; }}
               key={item.id}
               type="button"
               role="tab"
               aria-selected={isActive}
               disabled={item.disabled}
               onClick={() => onChange(item.id)}
+              onKeyDown={(event) => handleKeyDown(event, index)}
+              tabIndex={isActive ? 0 : -1}
               className={getPanelTabsTriggerClass({
                 variant,
                 isActive,

@@ -15,7 +15,8 @@ import {
 } from "../../../lib/accessControl";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { toast } from "../../../lib/toast";
-import { Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
+import { Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, IconButton
+} from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 
 export default function AccessControlManagerScreen() {
@@ -261,7 +262,7 @@ export default function AccessControlManagerScreen() {
             }}
             className="w-full sm:w-auto"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>Novo perfil</span>
           </Button>
           {(creatingProfile || editingProfileId) && (
@@ -373,22 +374,20 @@ export default function AccessControlManagerScreen() {
                 <div className="flex gap-2">
                   {!profile.is_system && (
                     <>
-                      <Button
+                      <IconButton
                         type="button"
                         variant="icon"
-                        size="icon"
-                        className="h-8 w-8"
+                        
                         title="Editar perfil"
-                        onClick={() => handleStartEdit(profile.id)}
+                        size="sm" onClick={() => handleStartEdit(profile.id)}
                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
+                        <Pencil className="kds-control-icon" />
+                      </IconButton>
+                      <IconButton
                         type="button"
                         variant="icon"
-                        size="icon"
                         title="Excluir perfil"
-                        onClick={async () => {
+                        size="md" onClick={async () => {
                           const confirmed = await requestConfirmation({
                             title: "Excluir perfil",
                             description: `Tem certeza que deseja excluir o perfil "${profile.name}"?`,
@@ -402,8 +401,8 @@ export default function AccessControlManagerScreen() {
                           }
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <Trash2 className="kds-control-icon" />
+                      </IconButton>
                     </>
                   )}
                 </div>

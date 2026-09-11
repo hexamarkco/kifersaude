@@ -186,7 +186,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
           className={cx(
             panelInputBaseClass,
             panelInputSizeClasses[size],
-            'kds-dp-trigger flex items-center gap-2 text-left',
+            'kds-dp-trigger flex items-center text-left',
             className,
           )}
         >
@@ -202,13 +202,13 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
           <div className="kds-dp-calendar">
             <div className="kds-dp-calendar-header">
               <button type="button" onClick={goToPrevMonth} className="kds-dp-nav-button" aria-label="Mes anterior">
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft aria-hidden="true" />
               </button>
               <span className="kds-dp-calendar-title">
                 {MONTH_LABELS_PT[viewMonth - 1]} de {viewYear}
               </span>
               <button type="button" onClick={goToNextMonth} className="kds-dp-nav-button" aria-label="Proximo mes">
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight aria-hidden="true" />
               </button>
             </div>
 

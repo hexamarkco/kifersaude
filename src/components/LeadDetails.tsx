@@ -12,7 +12,6 @@ import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
-import FilterSingleSelect from './FilterSingleSelect';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
   Badge,
@@ -28,6 +27,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  FilterSelect,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -172,7 +172,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               variant="secondary"
               size="sm"
             >
-              <Pencil className="h-4 w-4" aria-hidden="true" />
+              <Pencil className="kds-control-icon" aria-hidden="true" />
               <span className="hidden sm:inline">Editar lead</span>
             </Button>
           )}
@@ -183,7 +183,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               variant="danger"
               size="sm"
             >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              <Trash2 className="kds-control-icon" aria-hidden="true" />
               <span className="hidden sm:inline">Excluir</span>
             </Button>
           )}
@@ -253,7 +253,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>
                         {event.meta && (
-                          <Badge tone="neutral" size="xs">{event.meta}</Badge>
+                          <Badge tone="neutral" size="sm">{event.meta}</Badge>
                         )}
                       </div>
                       {event.description && (
@@ -284,7 +284,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               size="sm"
               className="w-full sm:w-auto"
             >
-              <Plus className="h-4 w-4" aria-hidden="true" />
+              <Plus className="kds-control-icon" aria-hidden="true" />
               <span>Nova interação</span>
             </Button>
           ) : undefined}
@@ -295,7 +295,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
             <form onSubmit={handleAddInteraction}>
               <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Tipo de interação">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={Clock}
                     value={formData.tipo}
                     onChange={(value) => setFormData({ ...formData, tipo: value })}
@@ -311,7 +311,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   />
                 </Field>
                 <Field label="Responsável">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={UserCircle}
                     value={formData.responsavel}
                     onChange={(value) => setFormData({ ...formData, responsavel: value })}

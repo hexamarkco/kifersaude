@@ -78,8 +78,9 @@ import {
   Tabs,
   Textarea,
   type SurfaceVariant,
+  IconButton,
+  FilterSelect,
 } from "../../design-system";
-import FilterSingleSelect from "../../components/FilterSingleSelect";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
 import { LeadFavoriteBadge } from "../../components/LeadFavoriteStar";
@@ -1248,29 +1249,28 @@ export default function AgendaScreen() {
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-1.5">
-                <Button
+                <IconButton
                   onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}
                   variant="soft"
-                  size="icon"
-                  className="h-10 w-10"
+                  
                   title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
                   aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
+                 size="md">
+                  <ExternalLink aria-hidden="true" />
+                </IconButton>
                 {!reminder.lido && (
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido">
-                          {isQuickSchedulingCurrentReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                        <IconButton type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
+                          {isQuickSchedulingCurrentReminder ? <Loader2 className="animate-spin" /> : (
                             <span className="relative inline-flex">
-                              <CalendarPlus className="h-4 w-4" />
-                              <ChevronDown className="absolute -bottom-1 -right-1 h-2.5 w-2.5" />
+                              <CalendarPlus className="kds-control-icon" />
+                              <ChevronDown className="absolute -bottom-1 -right-1" />
                             </span>
                           )}
-                        </Button>
+                        </IconButton>
                       </PopoverTrigger>
                       <PopoverContent aria-label="Selecionar dias para agendar" className="w-36 p-1">
                         <div className="flex flex-col gap-1">
@@ -1285,9 +1285,9 @@ export default function AgendaScreen() {
                               disabled={isQuickSchedulingCurrentReminder}
                               variant="ghost"
                               size="sm"
-                              className="h-auto w-full justify-start px-3 py-2 text-left"
+                              className="w-full justify-start text-left"
                             >
-                              <CalendarPlus className="h-4 w-4" />
+                              <CalendarPlus className="kds-control-icon" />
                               <span>+{days} dia{days > 1 ? "s" : ""}</span>
                             </Button>
                           ))}
@@ -1296,52 +1296,48 @@ export default function AgendaScreen() {
                     </Popover>
                   </>
                 )}
-                <Button
+                <IconButton
                   onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
                   variant={reminder.lido ? "secondary" : "soft"}
-                  size="icon"
-                  className="h-10 w-10"
+                  
                   title={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
                   aria-label={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
+                 size="md">
+                  <Check aria-hidden="true" />
+                </IconButton>
                 {!reminder.lido && (
-                  <Button
+                  <IconButton
                     onClick={handleCardAction(() => setReschedulingReminderId(reminder.id))}
                     variant="secondary"
-                    size="icon"
-                    className="h-10 w-10"
+                    
                     title="Reagendar item"
                     aria-label="Reagendar item"
-                  >
-                    <Calendar className="h-4 w-4" />
-                  </Button>
+                   size="md">
+                    <Calendar aria-hidden="true" />
+                  </IconButton>
                 )}
                 {leadId && (
-                  <Button
+                  <IconButton
                     onClick={handleCardAction(() => handleMarkLeadAsLost(reminder))}
                     variant="danger"
-                    size="icon"
-                    className="h-10 w-10"
+                    
                     title="Marcar lead como perdido e limpar lembretes"
                     aria-label="Marcar lead como perdido e limpar lembretes"
                     disabled={markingLostLeadId === leadId}
                     loading={markingLostLeadId === leadId}
-                  >
-                    {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
-                  </Button>
+                   size="md">
+                    {markingLostLeadId !== leadId && <X aria-hidden="true" />}
+                  </IconButton>
                 )}
-                <Button
+                <IconButton
                   onClick={handleCardAction(() => handleDelete(reminder.id))}
                   variant="danger"
-                  size="icon"
-                  className="h-10 w-10"
+                  
                   title="Excluir item"
                   aria-label="Excluir item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                 size="md">
+                  <Trash2 aria-hidden="true" />
+                </IconButton>
           </div>
         </div>
       </article>
@@ -1369,18 +1365,17 @@ export default function AgendaScreen() {
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
               <div className="flex w-full items-center justify-end gap-2 lg:w-auto">
-                <Button
+                <IconButton
                   onClick={() => setOrganizerOpen(true)}
                   variant="secondary"
-                  size="icon"
-                  className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                  className="shrink-0"
                   aria-label="Organizar agenda"
                   title="Organizar agenda"
-                >
-                  <Sparkles className="h-4 w-4" />
-                </Button>
+                 size="lg">
+                  <Sparkles aria-hidden="true" />
+                </IconButton>
                 <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
-                  <Plus className="h-4 w-4" />
+                  <Plus className="kds-control-icon" />
                   Nova tarefa
                 </Button>
               </div>
@@ -1397,21 +1392,20 @@ export default function AgendaScreen() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   leftIcon={Search}
-                  className="pr-10"
+                  
                 />
                 {searchQuery && (
-                  <Button
+                  <IconButton
                     onClick={() => setSearchQuery("")}
                     variant="icon"
-                    size="icon"
-                    className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2"
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
                     title="Limpar busca"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
+                   size="md" aria-label="Limpar busca">
+                    <X aria-hidden="true" />
+                  </IconButton>
                 )}
             </div>
-            <FilterSingleSelect
+            <FilterSelect
                   icon={Tag}
                   value={typeFilter}
                   onChange={setTypeFilter}
@@ -1419,7 +1413,7 @@ export default function AgendaScreen() {
                   includePlaceholderOption={false}
                   options={typeOptions}
                 />
-            <FilterSingleSelect
+            <FilterSelect
                   icon={AlertCircle}
                   value={priorityFilter}
                   onChange={setPriorityFilter}
@@ -1427,7 +1421,7 @@ export default function AgendaScreen() {
                   includePlaceholderOption={false}
                   options={PRIORITY_OPTIONS}
                 />
-            <FilterSingleSelect
+            <FilterSelect
                   icon={Calendar}
                   value={timeFilter}
                   onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
@@ -1464,7 +1458,7 @@ export default function AgendaScreen() {
                 </Button>
               )}
               {hasActiveFilters > 0 && (
-                <Button
+                <IconButton
                   onClick={() => {
                     setSearchQuery("");
                     setTypeFilter("all");
@@ -1473,13 +1467,12 @@ export default function AgendaScreen() {
                     setStatusFilter("todos");
                   }}
                   variant="ghost"
-                  size="icon"
                   className="kds-agenda-clear-filters shrink-0"
                   aria-label={`Limpar filtros (${hasActiveFilters})`}
                   title={`Limpar filtros (${hasActiveFilters})`}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                 size="md">
+                  <X aria-hidden="true" />
+                </IconButton>
               )}
             </div>
           </div>
@@ -1488,9 +1481,9 @@ export default function AgendaScreen() {
         <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
           <Surface padding="md" className="space-y-4 2xl:sticky 2xl:top-4 2xl:self-start">
             <div className="flex items-center justify-between gap-2">
-                <Button onClick={goToPreviousMonth} variant="icon" size="icon" aria-label="Mes anterior">
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
+                <IconButton onClick={goToPreviousMonth} variant="icon" aria-label="Mes anterior" size="md">
+                  <ChevronLeft className="kds-control-icon" />
+                </IconButton>
                 <div className="text-center">
                   <h3 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
                     {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
@@ -1499,9 +1492,9 @@ export default function AgendaScreen() {
                     {filteredMonthReminders.length} item(ns) com os filtros atuais
                   </p>
                 </div>
-                <Button onClick={goToNextMonth} variant="icon" size="icon" aria-label="Proximo mes">
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
+                <IconButton onClick={goToNextMonth} variant="icon" aria-label="Proximo mes" size="md">
+                  <ChevronRight className="kds-control-icon" />
+                </IconButton>
             </div>
             <div>{renderCalendar()}</div>
             <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
@@ -1595,7 +1588,7 @@ export default function AgendaScreen() {
             description="Ajuste os filtros ou crie uma nova tarefa para voltar a preencher a agenda."
             action={(
               <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
-                <Plus className="h-4 w-4" />
+                <Plus className="kds-control-icon" />
                 Nova tarefa
               </Button>
             )}
@@ -1664,7 +1657,7 @@ export default function AgendaScreen() {
                     value={newTaskDescription}
                     onChange={(event) => setNewTaskDescription(event.target.value)}
                     placeholder="Adicione detalhes da tarefa"
-                    className="min-h-24"
+                    
                     disabled={savingTask}
                   />
                 </Field>
@@ -1674,7 +1667,7 @@ export default function AgendaScreen() {
                   Cancelar
                 </Button>
                 <Button type="submit" variant="primary" size="md" disabled={savingTask} loading={savingTask}>
-                  {!savingTask && <Plus className="h-4 w-4" />}
+                  {!savingTask && <Plus className="kds-control-icon" />}
                   Adicionar
                 </Button>
               </DialogFooter>

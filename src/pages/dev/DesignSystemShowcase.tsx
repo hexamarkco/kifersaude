@@ -110,8 +110,8 @@ import {
   ToastProvider,
   Tooltip,
   useToast,
+  FilterMultiSelect,
 } from '../../design-system';
-import FilterMultiSelect from '../../components/FilterMultiSelect';
 import './design-system-showcase.css';
 
 type Theme = 'light' | 'dark';
@@ -219,10 +219,12 @@ function CatNav() {
 
 const STATUS_DROPDOWN_OPTIONS = [
   { nome: 'Novo', cor: 'var(--brand-primary)' },
-  { nome: 'Contato Inicial', cor: '#d97b3f' },
-  { nome: 'Em Análise', cor: '#c68a4e' },
-  { nome: 'Proposta Enviada', cor: '#b3985e' },
+  { nome: 'Contato Inicial', cor: 'var(--chart-2)' },
+  { nome: 'Em Análise', cor: 'var(--chart-3)' },
+  { nome: 'Proposta Enviada', cor: 'var(--chart-4)' },
 ];
+
+const SHOWCASE_COLORS = ['var(--brand-primary)', 'var(--accent-gold)', 'var(--success)', 'var(--info)', 'var(--text-primary)'];
 
 /* ── Page ─────────────────────────────────────────── */
 
@@ -250,7 +252,7 @@ function ShowcaseContent() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tagsInput, setTagsInput] = useState(['Bradesco Saúde', 'Amil']);
-  const [colorValue, setColorValue] = useState('#e2672e');
+  const [colorValue, setColorValue] = useState(SHOWCASE_COLORS[0]);
   const [otp, setOtp] = useState(['4', '2', '', '', '', '']);
   const [toggleGridPressed, setToggleGridPressed] = useState(true);
   const [selectedTreeOpen, setSelectedTreeOpen] = useState(true);
@@ -285,13 +287,13 @@ function ShowcaseContent() {
           <Item title="Icon Button">
             <div className="flex flex-wrap gap-2">
               <IconButton aria-label="Configurações" variant="secondary">
-                <Settings className="h-4 w-4" />
+                <Settings className="kds-control-icon" />
               </IconButton>
               <IconButton aria-label="Filtrar" variant="tertiary">
-                <SlidersHorizontal className="h-4 w-4" />
+                <SlidersHorizontal className="kds-control-icon" />
               </IconButton>
               <IconButton aria-label="Avançar" variant="primary">
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="kds-control-icon" />
               </IconButton>
             </div>
           </Item>
@@ -406,8 +408,8 @@ function ShowcaseContent() {
               leftIcon={undefined}
               defaultValue="segredo123"
               action={
-                <button type="button" onClick={() => setPasswordVisible((v) => !v)} className="text-[var(--text-muted)]">
-                  {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <button type="button" onClick={() => setPasswordVisible((v) => !v)} >
+                  {passwordVisible ? <EyeOff className="w-4" /> : <Eye className="w-4" />}
                 </button>
               }
             />
@@ -586,7 +588,7 @@ function ShowcaseContent() {
 
           <Item title="Color Picker">
             <div className="flex items-center gap-2">
-              {['#e2672e', '#d4af37', '#256a3f', '#2c5c86', '#18140f'].map((c) => (
+              {SHOWCASE_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => setColorValue(c)}
@@ -600,7 +602,7 @@ function ShowcaseContent() {
           <Item title="Input Group">
             <InputGroup>
               <InputAddon>https://</InputAddon>
-              <Input defaultValue="kifersaude.com.br" className="rounded-l-none" />
+              <Input defaultValue="kifersaude.com.br"  />
             </InputGroup>
           </Item>
 
@@ -627,7 +629,7 @@ function ShowcaseContent() {
                 <span>Leads</span>
                 <span>Contratos</span>
               </div>
-              <Avatar name="Luiza Ramos" size="sm" />
+              <Avatar name="Luiza Ramos" size="xs" />
             </div>
           </Item>
 
@@ -724,7 +726,7 @@ function ShowcaseContent() {
               <PopoverTrigger>
                 <Button variant="secondary">
                   Ações
-                  <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                  <ChevronDown className="ml-1" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-1.5">
@@ -986,7 +988,7 @@ function ShowcaseContent() {
           <Item title="Status Badge">
             <div className="flex flex-wrap gap-2">
               <OperationalStatusBadge statusColor="var(--brand-primary)">Novo</OperationalStatusBadge>
-              <OperationalStatusBadge statusColor="#256a3f">Convertido</OperationalStatusBadge>
+              <OperationalStatusBadge statusColor="var(--success)">Convertido</OperationalStatusBadge>
               <OperationalStatusDot statusColor="var(--brand-primary)" />
             </div>
           </Item>
@@ -1173,7 +1175,7 @@ function ShowcaseContent() {
         <Cat id="media" title="Media" description="Avatares, imagens e mídia.">
           <Item title="Avatar">
             <div className="flex items-center gap-2">
-              <Avatar name="Ana Paula Costa" size="sm" />
+              <Avatar name="Ana Paula Costa" size="xs" />
               <Avatar name="Luiza Ramos" size="md" />
               <Avatar name="Carlos Silva" size="lg" />
             </div>
@@ -1192,7 +1194,7 @@ function ShowcaseContent() {
             <div className="relative inline-block">
               <Avatar name="Luiza Ramos" size="lg" />
               <AvatarBadge>
-                <span className="block h-3 w-3 rounded-full bg-[#3ca65b] ring-2 ring-[var(--bg-surface)]" />
+                <span className="block h-3 w-3 rounded-full bg-[var(--success)] ring-2 ring-[var(--bg-surface)]" />
               </AvatarBadge>
             </div>
           </Item>
@@ -1238,9 +1240,9 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Lightbox">
-            <div className="relative flex h-24 items-center justify-center rounded-2xl bg-black/80">
-              <ImageIcon className="h-5 w-5 text-white/70" />
-              <button className="absolute right-2 top-2 text-white/70">
+            <div className="relative flex h-24 items-center justify-center rounded-2xl bg-[color:var(--overlay)]">
+              <ImageIcon className="h-5 w-5 text-[color:var(--text-inverse)] opacity-70" />
+              <button className="absolute right-2 top-2 text-[color:var(--text-inverse)] opacity-70">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -1303,7 +1305,7 @@ function ShowcaseContent() {
 
           <Item title="Filter Chips">
             <div className="flex flex-wrap gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-white">
+              <span className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-brand)]">
                 Novo
                 <X className="h-3 w-3" />
               </span>
@@ -1380,8 +1382,8 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Code Block / Copy Button">
-            <div className="relative rounded-2xl bg-[#16110c] p-3 font-mono text-xs text-[#f5f0e6]">
-              <button className="absolute right-2 top-2 text-[#a99d89]">
+            <div className="relative rounded-2xl bg-[var(--text-primary)] p-3 font-mono text-xs text-[var(--text-inverse)]">
+              <button className="absolute right-2 top-2 text-[var(--text-muted)]">
                 <Copy className="h-3.5 w-3.5" />
               </button>
               <pre>{`const lead = { nome: 'Ana Paula' };`}</pre>

@@ -1,5 +1,5 @@
-import { Button, Textarea } from '../../../../design-system';
-import WhatsAppDialog from './WhatsAppDialog';
+import { Button, Textarea, WorkspaceDialog
+} from '../../../../design-system';
 
 type WhatsAppEditMessageModalProps = {
   isOpen: boolean;
@@ -23,7 +23,7 @@ export default function WhatsAppEditMessageModal({
   onSubmit,
 }: WhatsAppEditMessageModalProps) {
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={onClose}
       title={title}
@@ -44,11 +44,11 @@ export default function WhatsAppEditMessageModal({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={8}
-        className="text-sm leading-6"
+        className="leading-6"
         placeholder="Digite a nova versão da mensagem"
         disabled={loading}
         autoFocus
       />
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

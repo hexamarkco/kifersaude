@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FocusEventHandler, type KeyboardEvent } from 'react';
-import Textarea, { type TextareaSize } from './Textarea';
+import { Textarea, type TextareaSize } from '../../design-system';
 import type { TemplateVariableSuggestion } from '../../lib/templateVariableSuggestions';
 
 type VariableAutocompleteTextareaProps = {
@@ -20,7 +20,7 @@ export default function VariableAutocompleteTextarea({
   suggestions,
   placeholder,
   rows = 3,
-  size = 'default',
+  size = 'md',
   className,
   disabled = false,
   onBlur,

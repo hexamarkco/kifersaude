@@ -63,9 +63,6 @@ import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import { MessageListEditor } from "./components/MessageListEditor";
-import FilterSingleSelect from "../../../components/FilterSingleSelect";
-import DateTimePicker from "../../../components/ui/DateTimePicker";
-import ModalShell from "../../../components/ui/ModalShell";
 import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
 import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
@@ -85,6 +82,9 @@ import {
   Surface,
   Switch,
   Tabs,
+  FilterSelect,
+  IconButton,
+  DialogShell,
 } from "../../../design-system";
 
 type TemplateDraft = {
@@ -1720,7 +1720,7 @@ export default function AutoContactFlowSettingsScreen() {
                       <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         Fuso horário
                       </label>
-                      <FilterSingleSelect
+                      <FilterSelect
                         icon={Globe2}
                         value={schedulingDraft.timezone}
                         onChange={(value) =>
@@ -1732,7 +1732,7 @@ export default function AutoContactFlowSettingsScreen() {
                         placeholder="Selecione um fuso"
                         includePlaceholderOption={false}
                         options={timezoneOptions}
-                        size="large"
+                        size="lg"
                       />
                     </div>
                   </div>
@@ -1800,7 +1800,7 @@ export default function AutoContactFlowSettingsScreen() {
                               refreshSeconds: Number(event.target.value),
                             }))
                           }
-                          size="large"
+                          size="lg"
                         />
                       </div>
                       <div>
@@ -1852,7 +1852,7 @@ export default function AutoContactFlowSettingsScreen() {
                               retentionDays: Number(event.target.value),
                             }))
                           }
-                          size="large"
+                          size="lg"
                         />
                       </div>
                       <div className="mt-6">
@@ -1909,7 +1909,7 @@ export default function AutoContactFlowSettingsScreen() {
                   </p>
                 </div>
                 <Button onClick={handleAddFlow} variant="secondary" size="sm">
-                  <Plus className="w-4 h-4" />
+                  <Plus className="kds-control-icon" />
                   Novo fluxo
                 </Button>
               </div>
@@ -1930,7 +1930,7 @@ export default function AutoContactFlowSettingsScreen() {
                       placeholder="Buscar fluxo por nome, condição ou tag"
                     />
                     <div>
-                      <FilterSingleSelect
+                      <FilterSelect
                         icon={Tag}
                         value={flowTagFilter}
                         onChange={(value) => setFlowTagFilter(value)}
@@ -2017,7 +2017,7 @@ export default function AutoContactFlowSettingsScreen() {
               )}
 
               {activeFlow && (
-                <ModalShell
+                <DialogShell
                   isOpen
                   onClose={() => setActiveFlowId(null)}
                   size="xl"
@@ -2055,7 +2055,7 @@ export default function AutoContactFlowSettingsScreen() {
                         variant="ghost"
                         size="sm"
                       >
-                        <Timer className="w-4 h-4" />
+                        <Timer className="kds-control-icon" />
                         Testar fluxo
                       </Button>
                       <Button
@@ -2063,7 +2063,7 @@ export default function AutoContactFlowSettingsScreen() {
                         loading={savingFlow}
                         size="sm"
                       >
-                        {!savingFlow && <Save className="w-4 h-4" />}
+                        {!savingFlow && <Save className="kds-control-icon" />}
                         {savingFlow ? "Salvando..." : "Salvar fluxo"}
                       </Button>
                       <Button
@@ -2071,7 +2071,7 @@ export default function AutoContactFlowSettingsScreen() {
                         variant="danger"
                         size="sm"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="kds-control-icon" />
                         Remover fluxo
                       </Button>
                       <Button
@@ -2195,7 +2195,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   startHour: event.target.value,
                                 })
                               }
-                              size="compact"
+                              size="sm"
                             />
                             <span className="text-xs text-[var(--text-subtle)]">
                               até
@@ -2208,7 +2208,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   endHour: event.target.value,
                                 })
                               }
-                              size="compact"
+                              size="sm"
                             />
                           </div>
                         </div>
@@ -2239,7 +2239,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   }
                                   variant={isActive ? "primary" : "secondary"}
                                   size="sm"
-                                  className="h-auto px-3 py-1 text-xs"
+                                  
                                 >
                                   {day.label}
                                 </Button>
@@ -2333,16 +2333,16 @@ export default function AutoContactFlowSettingsScreen() {
                           variant="secondary"
                           size="sm"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="kds-control-icon" />
                           Nova condição
                         </Button>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                         <span>Encerrar quando</span>
                         <div className="w-52">
-                          <FilterSingleSelect
+                          <FilterSelect
                             icon={AlertCircle}
-                            size="compact"
+                            size="sm"
                             value={activeFlow.exitConditionLogic ?? "any"}
                             onChange={(value) =>
                               handleUpdateFlow(activeFlow.id, {
@@ -2380,9 +2380,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   );
                                   return (
                                     <>
-                                      <FilterSingleSelect
+                                      <FilterSelect
                                         icon={AlertCircle}
-                                        size="compact"
+                                        size="sm"
                                         value={condition.field}
                                         onChange={(value) => {
                                           const nextField =
@@ -2422,9 +2422,9 @@ export default function AutoContactFlowSettingsScreen() {
                                         )}
                                       />
                                       {!isEventLeadCreated(condition) && (
-                                        <FilterSingleSelect
+                                        <FilterSelect
                                           icon={AlertCircle}
-                                          size="compact"
+                                          size="sm"
                                           value={condition.operator}
                                           onChange={(value) =>
                                             handleUpdateFlowExitCondition(
@@ -2448,9 +2448,9 @@ export default function AutoContactFlowSettingsScreen() {
                                       )}
                                       {!isEventLeadCreated(condition) &&
                                         (valueOptions ? (
-                                          <FilterSingleSelect
+                                          <FilterSelect
                                             icon={AlertCircle}
-                                            size="compact"
+                                            size="sm"
                                             value={condition.value}
                                             onChange={(value) =>
                                               handleUpdateFlowExitCondition(
@@ -2487,7 +2487,7 @@ export default function AutoContactFlowSettingsScreen() {
                                                 },
                                               )
                                             }
-                                            size="compact"
+                                            size="sm"
                                             placeholder="Digite o valor"
                                           />
                                         ))}
@@ -2531,16 +2531,15 @@ export default function AutoContactFlowSettingsScreen() {
                               className="kds-config-token inline-flex items-center gap-1 bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]"
                             >
                               #{tagItem}
-                              <Button
+                              <IconButton
                                 onClick={() =>
                                   handleRemoveFlowTag(activeFlow.id, tagItem)
                                 }
                                 variant="icon"
-                                size="icon"
-                                className="h-5 w-5 text-[var(--text-subtle)] hover:bg-[color:var(--bg-inset)] hover:text-[var(--text-secondary)]"
-                              >
+                                className="hover:bg-[color:var(--bg-inset)] hover:text-[var(--text-secondary)]"
+                               size="md">
                                 ×
-                              </Button>
+                              </IconButton>
                             </span>
                           ))
                         ) : (
@@ -2565,7 +2564,7 @@ export default function AutoContactFlowSettingsScreen() {
                           variant="secondary"
                           size="sm"
                         >
-                          <Tag className="w-3.5 h-3.5" />
+                          <Tag className="kds-control-icon" />
                           Adicionar
                         </Button>
                       </div>
@@ -2576,7 +2575,7 @@ export default function AutoContactFlowSettingsScreen() {
                         Status final se não houver resposta
                       </label>
                       {showStatusSelect ? (
-                        <FilterSingleSelect
+                        <FilterSelect
                           icon={Tag}
                           value={activeFlow.finalStatus ?? ""}
                           onChange={(value) =>
@@ -2626,7 +2625,7 @@ export default function AutoContactFlowSettingsScreen() {
                             variant="secondary"
                             size="sm"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="kds-control-icon" />
                             Nova etapa
                           </Button>
                         </div>
@@ -2654,14 +2653,14 @@ export default function AutoContactFlowSettingsScreen() {
                                       },
                                     )
                                   }
-                                  size="compact"
+                                  size="sm"
                                 />
                               </div>
                               <div>
                                 <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Unidade
                                 </label>
-                                <FilterSingleSelect
+                                <FilterSelect
                                   icon={Timer}
                                   value={step.delayUnit ?? "hours"}
                                   onChange={(value) =>
@@ -2688,7 +2687,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Tipo de ação
                                 </label>
-                                <FilterSingleSelect
+                                <FilterSelect
                                   icon={Activity}
                                   value={step.actionType ?? "send_message"}
                                   onChange={(value) =>
@@ -2778,7 +2777,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       )
                                     }
                                     rows={3}
-                                    size="compact"
+                                    size="sm"
                                     suggestions={
                                       AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                                     }
@@ -2811,7 +2810,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Prioridade
                                   </label>
-                                  <FilterSingleSelect
+                                  <FilterSelect
                                     icon={AlertCircle}
                                     value={step.taskPriority ?? "normal"}
                                     onChange={(value) =>
@@ -2921,7 +2920,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       )
                                     }
                                     rows={4}
-                                    size="compact"
+                                    size="sm"
                                     suggestions={
                                       AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                                     }
@@ -2957,7 +2956,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                      Método
                                   </label>
-                                  <FilterSingleSelect
+                                  <FilterSelect
                                     icon={Activity}
                                     value={step.webhookMethod ?? "POST"}
                                     onChange={(value) =>
@@ -3011,7 +3010,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                       )
                                     }
                                     rows={4}
-                                    size="compact"
+                                    size="sm"
                                     suggestions={
                                       AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                                     }
@@ -3031,7 +3030,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                   Novo status do lead
                                 </label>
                                 {showStatusSelect ? (
-                                  <FilterSingleSelect
+                                  <FilterSelect
                                     icon={Tag}
                                     value={step.statusToSet ?? ""}
                                     onChange={(value) =>
@@ -3128,11 +3127,11 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                   Início da simulação
                                 </label>
-                                <DateTimePicker
+                                <DesignSystemDateTimePicker
                                   type="datetime-local"
                                   value={simulationInputValue}
-                                  onChange={setSimulationStart}
-                                  triggerClassName="border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)]"
+                                  onChange={(event) => setSimulationStart(event.target.value)}
+                                  className="border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)]"
                                   placeholder="Selecionar início"
                                 />
                               </div>
@@ -3243,7 +3242,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                               <Input
                                 value={testName}
                                 onChange={(event) => setTestName(event.target.value)}
-                                size="compact"
+                                size="sm"
                               />
                             </label>
                             <label className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
@@ -3253,12 +3252,12 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 placeholder="11999999999"
                                 value={testPhone}
                                 onChange={(event) => setTestPhone(event.target.value)}
-                                size="compact"
+                                size="sm"
                               />
                             </label>
-                            <FilterSingleSelect
+                            <FilterSelect
                               icon={MessageCircle}
-                              size="compact"
+                              size="sm"
                               value={testStepId || testableSteps[0]?.id || ""}
                               onChange={setTestStepId}
                               placeholder="Etapa para testar"
@@ -3279,7 +3278,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                               loading={sendingTest}
                               disabled={testableSteps.length === 0 || !testPhone.trim()}
                             >
-                              {!sendingTest && <MessageCircle className="h-4 w-4" />}
+                              {!sendingTest && <MessageCircle className="kds-control-icon" />}
                               Enviar teste
                             </Button>
                           </div>
@@ -3449,7 +3448,7 @@ Os horários já consideram a janela do fluxo,
                       </div>
                     )}
                   </div>
-                </ModalShell>
+                </DialogShell>
               )}
             </Card>
 
@@ -3507,7 +3506,7 @@ Os horários já consideram a janela do fluxo,
                   variant="secondary"
                   size="sm"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="kds-control-icon" />
                   Novo modelo
                 </Button>
               </div>
@@ -3548,18 +3547,17 @@ Os horários já consideram a janela do fluxo,
                               variant="secondary"
                               size="sm"
                             >
-                              <Edit3 className="w-3.5 h-3.5" />
+                              <Edit3 className="kds-control-icon" />
                               Editar
                             </Button>
-                            <Button
+                            <IconButton
                               onClick={() => handleRemoveTemplate(template.id)}
                               variant="danger"
-                              size="icon"
-                              className="h-8 w-8"
+                              
                               title="Remover modelo"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                             size="sm" aria-label="Remover modelo">
+                              <Trash2 aria-hidden="true" />
+                            </IconButton>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -3607,7 +3605,7 @@ Os horários já consideram a janela do fluxo,
             </div>}
           </div>
           {isTemplateModalOpen && templateDraft && (
-            <ModalShell
+            <DialogShell
               isOpen
               onClose={handleCloseTemplateModal}
               title={
@@ -3669,7 +3667,7 @@ Os horários já consideram a janela do fluxo,
                         variant="secondary"
                         size="sm"
                       >
-                        <MessageCircle className="w-3.5 h-3.5" />
+                        <MessageCircle className="kds-control-icon" />
                         Texto
                       </Button>
                       <Button
@@ -3677,7 +3675,7 @@ Os horários já consideram a janela do fluxo,
                         variant="secondary"
                         size="sm"
                       >
-                        <ImageIcon className="w-3.5 h-3.5" />
+                        <ImageIcon className="kds-control-icon" />
                         Imagem
                       </Button>
                       <Button
@@ -3685,7 +3683,7 @@ Os horários já consideram a janela do fluxo,
                         variant="secondary"
                         size="sm"
                       >
-                        <Film className="w-3.5 h-3.5" />
+                        <Film className="kds-control-icon" />
                         Vídeo
                       </Button>
                       <Button
@@ -3693,7 +3691,7 @@ Os horários já consideram a janela do fluxo,
                         variant="secondary"
                         size="sm"
                       >
-                        <Mic className="w-3.5 h-3.5" />
+                        <Mic className="kds-control-icon" />
                         Áudio
                       </Button>
                       <Button
@@ -3701,7 +3699,7 @@ Os horários já consideram a janela do fluxo,
                         variant="secondary"
                         size="sm"
                       >
-                        <File className="w-3.5 h-3.5" />
+                        <File className="kds-control-icon" />
                         Documento
                       </Button>
                     </div>
@@ -3732,9 +3730,9 @@ Os horários já consideram a janela do fluxo,
                                 Mensagem {index + 1}
                               </span>
                               <div className="w-44">
-                                <FilterSingleSelect
+                                <FilterSelect
                                   icon={MessageCircle}
-                                  size="compact"
+                                  size="sm"
                                   value={message.type}
                                   onChange={(value) =>
                                     handleUpdateDraftMessage(message.id, {
@@ -3772,7 +3770,7 @@ Os horários já consideram a janela do fluxo,
                                 })
                               }
                               rows={3}
-                              size="compact"
+                              size="sm"
                               suggestions={
                                 AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                               }
@@ -3792,7 +3790,7 @@ Os horários já consideram a janela do fluxo,
                                       mediaUrl: event.target.value,
                                     })
                                   }
-                                  size="compact"
+                                  size="sm"
                                   placeholder="https://..."
                                 />
                               </div>
@@ -3808,7 +3806,7 @@ Os horários já consideram a janela do fluxo,
                                       caption: event.target.value,
                                     })
                                   }
-                                  size="compact"
+                                  size="sm"
                                   placeholder="Ex.: Guia em PDF, áudio de explicação..."
                                 />
                               </div>
@@ -3825,7 +3823,7 @@ Os horários já consideram a janela do fluxo,
                 Para aplicar mudanças nos fluxos, finalize com "Salvar
                 automação".
               </div>
-            </ModalShell>
+            </DialogShell>
           )}
       </div>
     </PanelAdaptiveLoadingFrame>

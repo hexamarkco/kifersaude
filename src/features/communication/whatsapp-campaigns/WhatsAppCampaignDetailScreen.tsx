@@ -3,9 +3,8 @@ import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, 
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { Badge, Button, Card, EmptyState, IconButton, Input, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
-import FilterMultiSelect from '../../../components/FilterMultiSelect';
-import Pagination from '../../../components/Pagination';
+import { Badge, Button, Card, EmptyState, IconButton, Input, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, FilterMultiSelect, Pagination
+} from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignChanges } from './campaignRealtime';
 import {
@@ -386,10 +385,10 @@ export default function WhatsAppCampaignDetailScreen() {
               </span>
             )}
             <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="kds-control-icon" />
             </IconButton>
             <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="kds-control-icon" />
             </IconButton>
           </div>
         )}
@@ -417,25 +416,25 @@ export default function WhatsAppCampaignDetailScreen() {
               <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                 {['queued', 'running', 'scheduled'].includes(campaign.status) && (
                   <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
-                    {actionLoading !== 'pause' && <PauseCircle className="h-4 w-4" />}
+                    {actionLoading !== 'pause' && <PauseCircle className="kds-control-icon" />}
                     Pausar
                   </Button>
                 )}
                 {campaign.status === 'paused' && (
                   <Button variant="primary" className="w-full sm:w-auto" loading={actionLoading === 'resume'} onClick={() => void runAction('resume')}>
-                    {actionLoading !== 'resume' && <PlayCircle className="h-4 w-4" />}
+                    {actionLoading !== 'resume' && <PlayCircle className="kds-control-icon" />}
                     Retomar
                   </Button>
                 )}
                 {['queued', 'running', 'scheduled', 'paused'].includes(campaign.status) && (
                   <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'process'} onClick={() => void runAction('process')}>
-                    {actionLoading !== 'process' && <Send className="h-4 w-4" />}
+                    {actionLoading !== 'process' && <Send className="kds-control-icon" />}
                     Processar lote
                   </Button>
                 )}
                 {['draft', 'scheduled', 'queued', 'running', 'paused'].includes(campaign.status) && (
                   <Button variant="danger" className="w-full sm:w-auto" loading={actionLoading === 'cancel'} onClick={() => void runAction('cancel')}>
-                    {actionLoading !== 'cancel' && <Ban className="h-4 w-4" />}
+                    {actionLoading !== 'cancel' && <Ban className="kds-control-icon" />}
                     Cancelar
                   </Button>
                 )}

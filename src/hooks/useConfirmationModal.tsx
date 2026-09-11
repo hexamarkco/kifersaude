@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { Alert, ConfirmDialog } from '../design-system';
 
 type ConfirmationOptions = {
   title: string;
@@ -34,21 +34,24 @@ export function useConfirmationModal() {
     setConfirmationState(null);
   }, [confirmationState]);
 
-  const ConfirmationDialog = useMemo(
+  const ConfirmationDialogElement = useMemo(
     () => (
-      <ConfirmationModal
-        isOpen={!!confirmationState}
+      <ConfirmDialog
+        open={!!confirmationState}
+        onOpenChange={(open) => { if (!open) handleCancel(); }}
         title={confirmationState?.title ?? ''}
-        description={confirmationState?.description}
         confirmLabel={confirmationState?.confirmLabel}
         cancelLabel={confirmationState?.cancelLabel}
-        tone={confirmationState?.tone}
-        onCancel={handleCancel}
+        destructive={confirmationState?.tone === 'danger'}
         onConfirm={handleConfirm}
-      />
+      >
+        <Alert tone={confirmationState?.tone === 'danger' ? 'danger' : 'warning'}>
+          {confirmationState?.description ?? 'Essa ação pode impactar os dados atuais. Confirme para continuar.'}
+        </Alert>
+      </ConfirmDialog>
     ),
     [confirmationState, handleCancel, handleConfirm],
   );
 
-  return { requestConfirmation, ConfirmationDialog } as const;
+  return { requestConfirmation, ConfirmationDialog: ConfirmationDialogElement } as const;
 }

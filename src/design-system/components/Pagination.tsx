@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
+import Select from './Select';
 
 export type PaginationProps = {
   currentPage: number;
@@ -8,6 +9,10 @@ export type PaginationProps = {
   onPageChange: (page: number) => void;
   maxVisible?: number;
   className?: string;
+  itemsPerPage?: number;
+  totalItems?: number;
+  pageSizeOptions?: readonly number[];
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
 };
 
 function getPageNumbers(current: number, total: number, maxVisible: number): (number | 'ellipsis')[] {
@@ -36,14 +41,40 @@ export default function Pagination({
   onPageChange,
   maxVisible = 5,
   className,
+  itemsPerPage,
+  totalItems,
+  pageSizeOptions = [10, 25, 50, 100],
+  onItemsPerPageChange,
 }: PaginationProps) {
   const pages = getPageNumbers(currentPage, totalPages, maxVisible);
+  const hasSummary = typeof itemsPerPage === 'number' && typeof totalItems === 'number';
+  const startItem = hasSummary && totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endItem = hasSummary ? Math.min(currentPage * itemsPerPage, totalItems) : 0;
 
   return (
     <nav
       aria-label="Paginacao"
       className={cx('kds-pagination', className)}
     >
+      {hasSummary && (
+        <div className="kds-pagination-summary">
+          {onItemsPerPageChange && (
+            <label className="kds-pagination-page-size">
+              <span>Itens por página</span>
+              <Select
+                size="sm"
+                value={String(itemsPerPage)}
+                onChange={(event) => onItemsPerPageChange(Number(event.target.value))}
+                options={pageSizeOptions.map((option) => ({ value: String(option), label: String(option) }))}
+                aria-label="Itens por página"
+              />
+            </label>
+          )}
+          <PaginationInfo start={startItem} end={endItem} total={totalItems} />
+        </div>
+      )}
+
+      <div className="kds-pagination-controls">
       <button
         type="button"
         onClick={() => onPageChange(currentPage - 1)}
@@ -51,14 +82,14 @@ export default function Pagination({
         className="kds-pagination-button"
         aria-label="Pagina anterior"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft aria-hidden="true" />
       </button>
 
       <div className="kds-pagination-pages">
         {pages.map((page, index) =>
           page === 'ellipsis' ? (
             <span key={`e-${index}`} className="kds-pagination-ellipsis">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal aria-hidden="true" />
             </span>
           ) : (
             <button
@@ -84,8 +115,9 @@ export default function Pagination({
         className="kds-pagination-button"
         aria-label="Próxima página"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight aria-hidden="true" />
       </button>
+      </div>
     </nav>
   );
 }

@@ -36,10 +36,10 @@ import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import { evaluateSafeFormula } from "../../../../lib/safeFormula";
 import MultiSelectDropdown from "../../../../components/config/MultiSelectDropdown";
-import FilterSingleSelect from "../../../../components/FilterSingleSelect";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
 import { MessageListEditor } from "./MessageListEditor";
-import { Button, Input } from "../../../../design-system";
+import { Button, Input, IconButton, FilterSelect
+} from "../../../../design-system";
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -1051,7 +1051,7 @@ export default function FlowBuilder({
               size="sm"
               title="Exportar como imagem"
             >
-              <Download className="h-4 w-4" />
+              <Download className="kds-control-icon" />
               PNG
             </Button>
             <Button
@@ -1061,19 +1061,18 @@ export default function FlowBuilder({
               size="sm"
               title="Exportar detalhes do fluxo em TXT"
             >
-              <Download className="h-4 w-4" />
+              <Download className="kds-control-icon" />
               TXT
             </Button>
-            <Button
+            <IconButton
               onClick={reorganizeLayout}
               variant="secondary"
-              size="icon"
-              className="h-9 w-9"
+              
               title="Reorganizar"
               aria-label="Reorganizar"
-            >
-              <RefreshCcw className="h-4 w-4" />
-            </Button>
+             size="sm">
+              <RefreshCcw className="kds-control-icon" />
+            </IconButton>
           </div>
         </div>
         {totalIssueCount > 0 && (
@@ -1128,7 +1127,7 @@ export default function FlowBuilder({
               variant="danger"
               size="sm"
               fullWidth
-              className="h-auto justify-start rounded-[var(--radius-lg)] border-0 bg-transparent px-3 py-2 text-left shadow-none"
+              className="justify-start border-0 bg-transparent text-left shadow-none"
               onClick={() => handleDeleteNode(contextMenu.nodeId)}
             >
               Excluir bloco
@@ -1164,9 +1163,9 @@ export default function FlowBuilder({
                   <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                     Tipo de gatilho
                   </label>
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={RefreshCcw}
-                    size="compact"
+                    size="sm"
                     value={selectedNode.data.triggerType ?? "lead_created"}
                     onChange={(value) => {
                       const triggerType = value as
@@ -1249,7 +1248,7 @@ export default function FlowBuilder({
                           triggerDurationHours: Number(event.target.value),
                         })
                       }
-                      size="compact"
+                      size="sm"
                     />
                     <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
                       {selectedNode.data.triggerType === "inactivity_duration"
@@ -1266,9 +1265,9 @@ export default function FlowBuilder({
                 <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                   <span>Aplicar quando</span>
                   <div className="w-40">
-                    <FilterSingleSelect
+                    <FilterSelect
                       icon={RefreshCcw}
-                      size="compact"
+                      size="sm"
                       value={selectedNode.data.conditionLogic ?? "all"}
                       onChange={(value) =>
                         updateSelectedNode({
@@ -1294,9 +1293,9 @@ export default function FlowBuilder({
                         key={condition.id}
                           className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-3"
                       >
-                        <FilterSingleSelect
+                        <FilterSelect
                           icon={RefreshCcw}
-                          size="compact"
+                          size="sm"
                           value={condition.field}
                           onChange={(value) => {
                             const nextField =
@@ -1332,9 +1331,9 @@ export default function FlowBuilder({
                             }),
                           )}
                         />
-                        <FilterSingleSelect
+                        <FilterSelect
                           icon={RefreshCcw}
-                          size="compact"
+                          size="sm"
                           value={condition.operator}
                           onChange={(value) => {
                             const nextConditions = [
@@ -1366,9 +1365,9 @@ export default function FlowBuilder({
                         ) : (
                           <>
                             {valueOptions ? (
-                              <FilterSingleSelect
+                              <FilterSelect
                                 icon={RefreshCcw}
-                                size="compact"
+                                size="sm"
                                 value={condition.value}
                                 onChange={(value) => {
                                   const nextConditions = [
@@ -1411,7 +1410,7 @@ export default function FlowBuilder({
                                     conditions: nextConditions,
                                   });
                                 }}
-                                size="compact"
+                                size="sm"
                               />
                             )}
                           </>
@@ -1510,16 +1509,16 @@ export default function FlowBuilder({
                           delayValue: Number(event.target.value),
                         })
                       }
-                      size="compact"
+                      size="sm"
                     />
                   </div>
                   <div>
                     <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Unidade
                     </label>
-                    <FilterSingleSelect
+                    <FilterSelect
                       icon={RefreshCcw}
-                      size="compact"
+                      size="sm"
                       value={selectedNode.data.step?.delayUnit ?? "hours"}
                       onChange={(value) =>
                         updateSelectedStep({
@@ -1568,7 +1567,7 @@ export default function FlowBuilder({
                           delayExpression: event.target.value,
                         })
                       }
-                      size="compact"
+                      size="sm"
                       placeholder="=if(len(lead.telefone)>10, 2, 6)"
                     />
                   )}
@@ -1585,9 +1584,9 @@ export default function FlowBuilder({
                   <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                     Tipo de ação
                   </label>
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={RefreshCcw}
-                    size="compact"
+                    size="sm"
                     value={selectedNode.data.step?.actionType ?? "send_message"}
                     onChange={(value) =>
                       updateSelectedStep({
@@ -1627,9 +1626,9 @@ export default function FlowBuilder({
                     <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Status do lead
                     </label>
-                    <FilterSingleSelect
+                    <FilterSelect
                       icon={RefreshCcw}
-                      size="compact"
+                      size="sm"
                       value={selectedNode.data.step?.statusToSet ?? ""}
                       onChange={(value) =>
                         updateSelectedStep({ statusToSet: value })
@@ -1661,7 +1660,7 @@ export default function FlowBuilder({
                         onChange={(event) =>
                           updateSelectedStep({ taskTitle: event.target.value })
                         }
-                        size="compact"
+                        size="sm"
                       />
                     </div>
                     <div>
@@ -1674,7 +1673,7 @@ export default function FlowBuilder({
                           updateSelectedStep({ taskDescription: value })
                         }
                         rows={3}
-                        size="compact"
+                        size="sm"
                         suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
@@ -1692,16 +1691,16 @@ export default function FlowBuilder({
                               taskDueHours: Number(event.target.value),
                             })
                           }
-                          size="compact"
+                          size="sm"
                         />
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Prioridade
                         </label>
-                        <FilterSingleSelect
+                        <FilterSelect
                           icon={RefreshCcw}
-                          size="compact"
+                          size="sm"
                           value={
                             selectedNode.data.step?.taskPriority ?? "normal"
                           }
@@ -1740,7 +1739,7 @@ export default function FlowBuilder({
                         onChange={(event) =>
                           updateSelectedStep({ emailTo: event.target.value })
                         }
-                        size="compact"
+                        size="sm"
                       />
                     </div>
                     <div>
@@ -1755,7 +1754,7 @@ export default function FlowBuilder({
                             emailSubject: event.target.value,
                           })
                         }
-                        size="compact"
+                        size="sm"
                       />
                     </div>
                     <div>
@@ -1768,7 +1767,7 @@ export default function FlowBuilder({
                           updateSelectedStep({ emailBody: value })
                         }
                         rows={3}
-                        size="compact"
+                        size="sm"
                         suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
@@ -1787,7 +1786,7 @@ export default function FlowBuilder({
                         onChange={(event) =>
                           updateSelectedStep({ webhookUrl: event.target.value })
                         }
-                        size="compact"
+                        size="sm"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -1795,9 +1794,9 @@ export default function FlowBuilder({
                         <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Método
                         </label>
-                        <FilterSingleSelect
+                        <FilterSelect
                           icon={RefreshCcw}
-                          size="compact"
+                          size="sm"
                           value={
                             selectedNode.data.step?.webhookMethod ?? "POST"
                           }
@@ -1829,7 +1828,7 @@ export default function FlowBuilder({
                               webhookHeaders: event.target.value,
                             })
                           }
-                          size="compact"
+                          size="sm"
                         />
                       </div>
                     </div>
@@ -1843,7 +1842,7 @@ export default function FlowBuilder({
                           updateSelectedStep({ webhookBody: value })
                         }
                         rows={3}
-                        size="compact"
+                        size="sm"
                         suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>

@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
-import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
-import DateTimePicker from '../../../../components/ui/DateTimePicker';
+import { Badge, Button, DateTimePicker, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
@@ -328,7 +327,7 @@ export default function WhatsAppLeadDrawer({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</p>
-              {overdue ? <Badge tone="danger" size="xs">Atrasado</Badge> : null}
+              {overdue ? <Badge tone="danger" size="sm">Atrasado</Badge> : null}
             </div>
             <p className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
               <Clock3 className="h-3.5 w-3.5" />
@@ -347,7 +346,7 @@ export default function WhatsAppLeadDrawer({
               loading={isToggling}
               disabled={!canEditAgenda || isRescheduling}
             >
-              {!isToggling && <Check className="h-4 w-4" />}
+              {!isToggling && <Check className="kds-control-icon" />}
               Concluir
             </Button>
             <Button
@@ -356,7 +355,7 @@ export default function WhatsAppLeadDrawer({
               onClick={() => openAgendaReschedule(reminder)}
               disabled={!canEditAgenda || isToggling || isRescheduling}
             >
-              <ArrowUpRight className="h-4 w-4" />
+              <ArrowUpRight className="kds-control-icon" />
               Reagendar
             </Button>
           </div>
@@ -368,7 +367,7 @@ export default function WhatsAppLeadDrawer({
             <DateTimePicker
               type="datetime-local"
               value={agendaRescheduleValue}
-              onChange={setAgendaRescheduleValue}
+              onChange={(event) => setAgendaRescheduleValue(event.target.value)}
               className="mt-2"
               min={minAgendaRescheduleDateTime}
               placeholder="Selecionar nova data"
@@ -429,7 +428,7 @@ export default function WhatsAppLeadDrawer({
                 )}
                 {onUnlinkLead && (
                   <Button variant="secondary" size="sm" onClick={onUnlinkLead}>
-                    <Unlink className="h-4 w-4" />
+                    <Unlink className="kds-control-icon" />
                     Desvincular
                   </Button>
                 )}
@@ -467,7 +466,7 @@ export default function WhatsAppLeadDrawer({
                     <div className="flex flex-wrap items-center gap-2">
                       {agendaLead && canEditAgenda ? (
                         <Button variant="secondary" size="sm" className="min-w-[132px] justify-center" onClick={() => setSchedulerOpen(true)}>
-                          <CalendarPlus className="h-4 w-4" />
+                          <CalendarPlus className="kds-control-icon" />
                           Agendar
                         </Button>
                       ) : null}
@@ -531,7 +530,7 @@ export default function WhatsAppLeadDrawer({
                               <p className={`text-sm font-semibold ${section.toneClassName}`}>{section.title}</p>
                               <p className="text-xs text-[var(--text-muted)]">{section.subtitle}</p>
                             </div>
-                            <Badge tone="neutral" size="xs">{section.items.length}</Badge>
+                            <Badge tone="neutral" size="sm">{section.items.length}</Badge>
                           </div>
 
                           {section.items.length > 0 ? (
@@ -563,7 +562,7 @@ export default function WhatsAppLeadDrawer({
               <div className="space-y-3">
                 {onCreateLead ? (
                   <Button variant="primary" size="sm" className="w-full justify-center" onClick={onCreateLead}>
-                    <Plus className="h-4 w-4" />
+                    <Plus className="kds-control-icon" />
                     Criar novo lead
                   </Button>
                 ) : null}
@@ -590,12 +589,12 @@ export default function WhatsAppLeadDrawer({
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <Badge
                             tone="neutral"
-                            size="xs"
+                            size="sm"
                             style={getStatusColor(suggestedLead.status_nome) ? getBadgeStyle(getStatusColor(suggestedLead.status_nome)!) : undefined}
                           >
                             {suggestedLead.status_nome || 'Sem status'}
                           </Badge>
-                          {suggestedLead.responsavel_label ? <Badge tone="neutral" size="xs">{suggestedLead.responsavel_label}</Badge> : null}
+                          {suggestedLead.responsavel_label ? <Badge tone="neutral" size="sm">{suggestedLead.responsavel_label}</Badge> : null}
                         </div>
                       </div>
                       <Button
@@ -604,7 +603,7 @@ export default function WhatsAppLeadDrawer({
                         onClick={() => onLinkLead(suggestedLead.id)}
                         loading={linkLoadingLeadId === suggestedLead.id}
                       >
-                        {linkLoadingLeadId !== suggestedLead.id && <Link2 className="h-4 w-4" />}
+                        {linkLoadingLeadId !== suggestedLead.id && <Link2 className="kds-control-icon" />}
                         Vincular
                       </Button>
                     </div>
@@ -634,12 +633,12 @@ export default function WhatsAppLeadDrawer({
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             <Badge
                               tone="neutral"
-                              size="xs"
+                              size="sm"
                               style={getStatusColor(lead.status_nome) ? getBadgeStyle(getStatusColor(lead.status_nome)!) : undefined}
                             >
                               {lead.status_nome || 'Sem status'}
                             </Badge>
-                            {lead.responsavel_label ? <Badge tone="neutral" size="xs">{lead.responsavel_label}</Badge> : null}
+                            {lead.responsavel_label ? <Badge tone="neutral" size="sm">{lead.responsavel_label}</Badge> : null}
                           </div>
                         </div>
                         <Button
@@ -648,7 +647,7 @@ export default function WhatsAppLeadDrawer({
                           onClick={() => onLinkLead(lead.id)}
                           loading={linkLoadingLeadId === lead.id}
                         >
-                          {linkLoadingLeadId !== lead.id && <Link2 className="h-4 w-4" />}
+                          {linkLoadingLeadId !== lead.id && <Link2 className="kds-control-icon" />}
                           Vincular
                         </Button>
                       </Surface>

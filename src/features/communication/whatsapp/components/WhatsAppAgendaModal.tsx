@@ -27,10 +27,9 @@ import {
 import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
-import FilterSingleSelect from '../../../../components/FilterSingleSelect';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
-import { Badge, Button, EmptyState, Input, Surface, Textarea } from '../../../../design-system';
-import DateTimePicker from '../../../../components/ui/DateTimePicker';
+import { Badge, Button, DateTimePicker, EmptyState, Input, Surface, Textarea, IconButton, FilterSelect, WorkspaceDialog
+} from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
 import type { PanelTone } from '../../../../design-system';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
@@ -57,7 +56,6 @@ import type { Contract } from '../../../contracts';
 import type { Lead } from '../../../leads';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { toast } from '../../../../lib/toast';
-import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
@@ -1255,24 +1253,23 @@ export default function WhatsAppAgendaModal({
 
           <div className="flex w-full flex-wrap items-center gap-2 min-[400px]:justify-between lg:max-w-[360px] lg:justify-end">
             {onOpenLeadChat && leadId ? (
-              <Button
+              <IconButton
                 onClick={() => void handleOpenReminderChat(reminder)}
                 variant={matchesCurrentLead ? 'primary' : 'secondary'}
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 loading={isOpeningChat}
                 disabled={isOpeningChat}
                 title={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
                 aria-label={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
-              >
-                {!isOpeningChat && <MessageCircle className="h-4 w-4" />}
-              </Button>
+               size="lg">
+                {!isOpeningChat && <MessageCircle aria-hidden="true" />}
+              </IconButton>
             ) : null}
 
             {!reminder.lido && canEdit ? (
               <>
                 <div className="relative">
-                  <Button
+                  <IconButton
                     ref={quickScheduleButtonRef}
                     type="button"
                     onClick={(e) => {
@@ -1296,20 +1293,19 @@ export default function WhatsAppAgendaModal({
                     }}
                     disabled={isQuickSchedulingCurrentReminder}
                     variant="primary"
-                    size="icon"
-                    className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                    className="shrink-0"
                     title="Agendar dias úteis e marcar atual como lido"
                     aria-label="Agendar dias úteis e marcar atual como lido"
-                  >
+                   size="lg">
                     {isQuickSchedulingCurrentReminder ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="animate-spin" />
                     ) : (
                       <span className="relative inline-flex">
-                        <CalendarPlus className="h-4 w-4" />
-                        <ChevronDown className="absolute -bottom-1 -right-1 h-2.5 w-2.5" />
+                        <CalendarPlus aria-hidden="true" />
+                        <ChevronDown className="absolute -bottom-1 -right-1" />
                       </span>
                     )}
-                  </Button>
+                  </IconButton>
                   {quickScheduleDropdown?.reminderId === reminder.id && (
                     <PanelPopoverShell
                       ref={quickScheduleDropdownRef}
@@ -1344,86 +1340,80 @@ export default function WhatsAppAgendaModal({
             ) : null}
 
             {canEdit ? (
-              <Button
+              <IconButton
                 onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
                 variant={reminder.lido ? 'secondary' : 'soft'}
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
                 aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
+               size="lg">
+                <Check aria-hidden="true" />
+              </IconButton>
             ) : null}
 
             {canEdit && leadId ? (
-              <Button
+              <IconButton
                 onClick={() => void handleOpenScheduler(reminder)}
                 variant="secondary"
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title="Novo lembrete"
                 aria-label="Novo lembrete"
-              >
-                <CalendarPlus className="h-4 w-4" />
-              </Button>
+               size="lg">
+                <CalendarPlus aria-hidden="true" />
+              </IconButton>
             ) : null}
 
             {matchesCurrentLead && onGenerateFollowUp ? (
-              <Button
+              <IconButton
                 onClick={() => {
                   onClose();
                   onGenerateFollowUp();
                 }}
                 variant="warning"
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title="Gerar follow-up"
                 aria-label="Gerar follow-up"
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
+               size="lg">
+                <Sparkles aria-hidden="true" />
+              </IconButton>
             ) : null}
 
             {!onOpenLeadChat && hasLeadPhone ? (
-              <Button
+              <IconButton
                 onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
                 variant="soft"
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title="Abrir WhatsApp oficial"
                 aria-label="Abrir WhatsApp oficial"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+               size="lg">
+                <ExternalLink aria-hidden="true" />
+              </IconButton>
             ) : null}
 
             {leadId && canEdit ? (
-              <Button
+              <IconButton
                 onClick={() => void handleMarkLeadAsLost(reminder)}
                 variant="danger"
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title="Marcar lead como perdido e limpar lembretes"
                 aria-label="Marcar lead como perdido e limpar lembretes"
                 disabled={markingLostLeadId === leadId}
                 loading={markingLostLeadId === leadId}
-              >
-                {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
-              </Button>
+               size="lg">
+                {markingLostLeadId !== leadId && <X aria-hidden="true" />}
+              </IconButton>
             ) : null}
 
             {canEdit ? (
-              <Button
+              <IconButton
                 onClick={() => void handleDeleteReminder(reminder)}
                 variant="danger"
-                size="icon"
-                className="h-11 min-h-11 w-11 min-w-11 shrink-0"
+                className="shrink-0"
                 title="Excluir item"
                 aria-label="Excluir item"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+               size="lg">
+                <Trash2 aria-hidden="true" />
+              </IconButton>
             ) : null}
           </div>
         </div>
@@ -1435,7 +1425,7 @@ export default function WhatsAppAgendaModal({
 
   return (
     <>
-      <WhatsAppDialog
+      <WorkspaceDialog
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
@@ -1480,9 +1470,9 @@ export default function WhatsAppAgendaModal({
                 <div className="grid w-full grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
-                      <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
+                      <IconButton variant="secondary"  size="lg" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
+                        <Sparkles className="kds-control-icon" />
+                      </IconButton>
                       {pendingCount !== null && pendingCount > 0 ? (
                         <span className="absolute -right-1.5 -top-1.5 flex min-w-[20px] items-center justify-center rounded-full bg-[var(--warning)] px-1.5 py-0.5 text-[10px] font-bold leading-tight text-[var(--text-on-brand)] shadow-sm">
                           {pendingCount}
@@ -1490,20 +1480,20 @@ export default function WhatsAppAgendaModal({
                       ) : null}
                     </div>
                   ) : null}
-                  <Button onClick={goToPreviousDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Dia anterior">
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
+                  <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="lg">
+                    <ChevronLeft className="kds-control-icon" />
+                  </IconButton>
                   <div className={onSendBatchFollowUps ? "min-w-0 w-full sm:flex-none sm:w-[176px]" : "col-span-2 min-w-0 w-full sm:flex-none sm:w-[176px]"}>
-                    <DateTimePicker type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
+                    <DateTimePicker type="date" value={selectedDateInputValue} onChange={(event) => handleSelectedDateChange(event.target.value)} />
                   </div>
-                  <Button onClick={goToNextDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Próximo dia">
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="col-span-2 h-11 w-full sm:w-auto">
+                  <IconButton onClick={goToNextDay} variant="secondary"  aria-label="Próximo dia" size="lg">
+                    <ChevronRight className="kds-control-icon" />
+                  </IconButton>
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="col-span-2 w-full sm:w-auto">
                     Hoje
                   </Button>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="col-span-2 h-11 w-full sm:w-auto" disabled={!canEdit}>
-                    <Plus className="h-4 w-4" />
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="col-span-2 w-full sm:w-auto" disabled={!canEdit}>
+                    <Plus className="kds-control-icon" />
                     Nova tarefa
                   </Button>
                 </div>
@@ -1519,22 +1509,21 @@ export default function WhatsAppAgendaModal({
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     leftIcon={Search}
-                    className="h-11 pr-10"
+                    
                   />
                   {searchQuery ? (
-                    <Button
+                    <IconButton
                       onClick={() => setSearchQuery('')}
                       variant="icon"
-                      size="icon"
-                      className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2"
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
                       title="Limpar busca"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
+                     size="md" aria-label="Limpar busca">
+                      <X aria-hidden="true" />
+                    </IconButton>
                   ) : null}
                 </div>
 
-                <FilterSingleSelect
+                <FilterSelect
                   icon={Tag}
                   value={typeFilter}
                   onChange={setTypeFilter}
@@ -1544,7 +1533,7 @@ export default function WhatsAppAgendaModal({
                 />
 
                 {currentLead ? (
-                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md" className="h-11">
+                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md" >
                     {onlyCurrentLead ? 'Só chat atual' : 'Filtrar chat atual'}
                   </Button>
                 ) : null}
@@ -1554,15 +1543,15 @@ export default function WhatsAppAgendaModal({
                     onClick={() => setIsDuplicatesModalOpen(true)}
                     variant="warning"
                     size="md"
-                    className="h-11"
+                    
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="kds-control-icon" />
                     {`Duplicados (${duplicateReminderCount})`}
                   </Button>
                 ) : null}
 
                 {hasActiveFilters > 0 ? (
-                  <Button onClick={clearFilters} variant="ghost" size="md" className="h-11">
+                  <Button onClick={clearFilters} variant="ghost" size="md" >
                     Limpar filtros ({hasActiveFilters})
                   </Button>
                 ) : null}
@@ -1674,10 +1663,10 @@ export default function WhatsAppAgendaModal({
             )}
           </div>
         )}
-      </WhatsAppDialog>
+      </WorkspaceDialog>
 
       {isAddTaskModalOpen ? (
-        <WhatsAppDialog
+        <WorkspaceDialog
           isOpen
           onClose={closeAddTaskModal}
           title="Nova tarefa"
@@ -1710,7 +1699,7 @@ export default function WhatsAppAgendaModal({
                 value={newTaskDescription}
                 onChange={(event) => setNewTaskDescription(event.target.value)}
                 placeholder="Adicione detalhes da tarefa"
-                className="min-h-[96px]"
+                
                 disabled={savingTask}
               />
             </div>
@@ -1720,12 +1709,12 @@ export default function WhatsAppAgendaModal({
                 Cancelar
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={savingTask} loading={savingTask}>
-                {!savingTask && <Plus className="h-4 w-4" />}
+                {!savingTask && <Plus className="kds-control-icon" />}
                 Adicionar
               </Button>
             </div>
           </form>
-        </WhatsAppDialog>
+        </WorkspaceDialog>
       ) : null}
 
       {schedulerDraft ? (
@@ -1762,7 +1751,7 @@ export default function WhatsAppAgendaModal({
       ) : null}
 
       {isDuplicatesModalOpen ? (
-        <WhatsAppDialog
+        <WorkspaceDialog
           isOpen
           onClose={() => setIsDuplicatesModalOpen(false)}
           title="Lembretes duplicados"
@@ -1863,7 +1852,7 @@ export default function WhatsAppAgendaModal({
               })}
             </div>
           )}
-        </WhatsAppDialog>
+        </WorkspaceDialog>
       ) : null}
 
       <WhatsAppBatchFollowUpModal

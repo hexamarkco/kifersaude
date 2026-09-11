@@ -90,7 +90,7 @@ export type BadgeTone =
   | 'new'
   | 'beta'
   | 'important';
-export type BadgeSize = 'xs' | 'sm' | 'md';
+export type BadgeSize = 'sm' | 'md' | 'lg';
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   tone?: BadgeTone;
@@ -100,9 +100,9 @@ export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  xs: 'kds-badge-xs',
   sm: 'kds-badge-sm',
   md: 'kds-badge-md',
+  lg: 'kds-badge-lg',
 };
 
 const isIconComponent = (icon: BadgeProps['icon']): icon is LucideIcon =>
@@ -114,7 +114,7 @@ const isIconComponent = (icon: BadgeProps['icon']): icon is LucideIcon =>
     typeof (icon as { render?: unknown }).render === 'function'
   );
 
-export default function Badge({ tone = 'neutral', size = 'sm', icon, className, children, ...props }: BadgeProps) {
+export default function Badge({ tone = 'neutral', size = 'md', icon, className, children, ...props }: BadgeProps) {
   const Icon = isIconComponent(icon) ? icon : null;
 
   return (

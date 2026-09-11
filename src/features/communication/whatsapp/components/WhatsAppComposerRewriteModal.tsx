@@ -1,6 +1,6 @@
-import { Button, Surface, Textarea } from '../../../../design-system';
+import { Button, Surface, Textarea, WorkspaceDialog
+} from '../../../../design-system';
 import type { CommWhatsAppRewriteTone } from '../data';
-import WhatsAppDialog from './WhatsAppDialog';
 
 const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; description: string }> = [
   {
@@ -67,7 +67,7 @@ export default function WhatsAppComposerRewriteModal({
   onApply,
 }: WhatsAppComposerRewriteModalProps) {
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Reescrever mensagem com IA"
@@ -124,7 +124,7 @@ export default function WhatsAppComposerRewriteModal({
               value={customInstructions}
               onChange={(event) => onChangeCustomInstructions(event.target.value)}
               rows={4}
-              className="mt-3 text-sm leading-6"
+              className="mt-3 leading-6"
               placeholder="Adicione instruções extras só para esta reescrita."
               disabled={generating}
             />
@@ -139,7 +139,7 @@ export default function WhatsAppComposerRewriteModal({
               value={sourceValue}
               onChange={(event) => onChangeSourceValue(event.target.value)}
               rows={8}
-              className="mt-3 text-sm leading-6"
+              className="mt-3 leading-6"
               placeholder="Digite a mensagem que você quer reescrever."
               disabled={generating}
             />
@@ -160,13 +160,13 @@ export default function WhatsAppComposerRewriteModal({
               value={value}
               onChange={(event) => onChangeValue(event.target.value)}
               rows={18}
-              className="mt-3 min-h-[360px] text-sm leading-6"
+              className="mt-3 leading-6"
               placeholder="A mensagem reescrita vai aparecer aqui."
               disabled={generating}
             />
           </Surface>
         </div>
       </div>
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

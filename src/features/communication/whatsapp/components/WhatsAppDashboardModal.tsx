@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
-import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem } from '../../../../design-system';
+import { Badge, Button, EmptyState, OperationalMetricChip, Surface, Tabs, type TabItem, WorkspaceDialog
+} from '../../../../design-system';
 import {
   whatsappConversationsRepository,
   whatsappDashboardService,
@@ -10,7 +11,6 @@ import {
   type CommWhatsAppDashboardRecentChat,
 } from '../data';
 import { toast } from '../../../../lib/toast';
-import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppDashboardModalProps = {
   isOpen: boolean;
@@ -361,7 +361,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   }, [loadMetrics, syncingAll]);
 
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Painel WhatsApp"
@@ -380,15 +380,15 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               loading={syncingAll}
               title="Recupera mensagens que a Whapi não entregou por webhook (ex.: durante uma queda de conexão ou assinatura vencida)."
             >
-              {!syncingAll && <RotateCw className="h-4 w-4" />}
+              {!syncingAll && <RotateCw className="kds-control-icon" />}
               Forçar sincronização geral
             </Button>
             <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
-              {!exportingInbox && <Download className="h-4 w-4" />}
+              {!exportingInbox && <Download className="kds-control-icon" />}
               Exportar JSON
             </Button>
             <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}>
-              {!loading && <RefreshCw className="h-4 w-4" />}
+              {!loading && <RefreshCw className="kds-control-icon" />}
               Atualizar
             </Button>
             <Button variant="secondary" onClick={onClose}>Fechar</Button>
@@ -487,17 +487,17 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                         </div>
                       </div>
                       {chat.unreadCount > 0 || chat.manualUnread ? (
-                        <Badge tone="accent" size="xs" className="shrink-0">
+                        <Badge tone="accent" size="sm" className="shrink-0">
                           {chat.unreadCount > 99 ? '99+' : Math.max(chat.unreadCount, 1)}
                         </Badge>
                       ) : null}
                     </div>
                     <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {chat.leadId ? <Badge tone="info" size="xs" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="xs">Sem lead</Badge>}
-                      {chat.isPinned ? <Badge tone="neutral" size="xs">Fixado</Badge> : null}
-                      {chat.isMuted ? <Badge tone="neutral" size="xs">Silenciado</Badge> : null}
-                      {chat.lastMessageStatus ? <Badge tone="neutral" size="xs" icon={SendHorizontal}>{normalizeStatusLabel(chat.lastMessageStatus)}</Badge> : null}
+                      {chat.leadId ? <Badge tone="info" size="sm" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="sm">Sem lead</Badge>}
+                      {chat.isPinned ? <Badge tone="neutral" size="sm">Fixado</Badge> : null}
+                      {chat.isMuted ? <Badge tone="neutral" size="sm">Silenciado</Badge> : null}
+                      {chat.lastMessageStatus ? <Badge tone="neutral" size="sm" icon={SendHorizontal}>{normalizeStatusLabel(chat.lastMessageStatus)}</Badge> : null}
                     </div>
                   </Surface>
                 )) : (
@@ -508,6 +508,6 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           </div>
         </div>
       ) : null}
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

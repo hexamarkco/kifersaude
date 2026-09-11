@@ -10,7 +10,8 @@ import {
 
 import { BlogTabSkeletonList } from "../../../components/ui/panelSkeletons";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
-import { Badge, Button, Input, PageHeader, Surface } from "../../../design-system";
+import { Badge, Button, Input, PageHeader, Surface, IconButton
+} from "../../../design-system";
 import type { AdaptiveLoadingPhase } from "../../../hooks/useAdaptiveLoading";
 import type { BlogPost } from "../shared/blogTypes";
 
@@ -47,7 +48,7 @@ export default function BlogPostsList({
         description="Gerencie artigos publicados no site, rascunhos e metadados de busca."
         actions={(
           <Button type="button" onClick={onCreatePost}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             Novo post
           </Button>
         )}
@@ -134,48 +135,44 @@ export default function BlogPostsList({
                         </div>
 
                         <div className="flex flex-shrink-0 items-center gap-2">
-                          <Button
+                          <IconButton
                             type="button"
                             onClick={() =>
                               window.open(`/blog/${post.slug}`, "_blank")
                             }
                             variant="icon"
-                            size="icon"
                             title="Visualizar"
-                          >
-                            <Eye className="h-5 w-5" />
-                          </Button>
-                          <Button
+                           size="md" aria-label="Visualizar">
+                            <Eye aria-hidden="true" />
+                          </IconButton>
+                          <IconButton
                             type="button"
                             onClick={() => onTogglePublish(post)}
                             variant={post.published ? "success" : "secondary"}
-                            size="icon"
                             title={post.published ? "Despublicar" : "Publicar"}
-                          >
+                           size="md">
                             {post.published ? (
-                              <Eye className="h-5 w-5" />
+                              <Eye aria-hidden="true" />
                             ) : (
-                              <EyeOff className="h-5 w-5" />
+                              <EyeOff aria-hidden="true" />
                             )}
-                          </Button>
-                          <Button
+                          </IconButton>
+                          <IconButton
                             type="button"
                             onClick={() => onEditPost(post)}
                             variant="secondary"
-                            size="icon"
                             title="Editar"
-                          >
-                            <Edit2 className="h-5 w-5" />
-                          </Button>
-                          <Button
+                           size="md" aria-label="Editar">
+                            <Edit2 aria-hidden="true" />
+                          </IconButton>
+                          <IconButton
                             type="button"
                             onClick={() => onDeletePost(post.id)}
                             variant="danger"
-                            size="icon"
                             title="Excluir"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
+                           size="md" aria-label="Excluir">
+                            <Trash2 aria-hidden="true" />
+                          </IconButton>
                         </div>
                       </div>
                     </div>

@@ -51,6 +51,40 @@ describe('classificação documental V2', () => {
     assert.equal(classification.supportStatus, 'GENERIC_FALLBACK');
   });
 
+  test.each([
+    ['SulAmérica', 'SULAMÉRICA DIRETO RIO'],
+    ['Klini Saúde', 'KLINI 300'],
+    ['Assim Saúde', 'ASSIM SAÚDE A40'],
+  ] as const)('Qualicorp preserva a operadora real %s', (expected, product) => {
+    const [classification] = classifyDocuments([
+      syntheticPdf('qualicorp', [`QUALICORP CONTRATO DE ADESÃO PLANO PRETENDIDO ${product}`]),
+    ], 'auto');
+
+    assert.equal(classification.family, 'qualicorp');
+    assert.equal(classification.operator, expected);
+  });
+
+  test('Qualicorp não escolhe arbitrariamente quando há marcas de operadoras diferentes', () => {
+    const [classification] = classifyDocuments([
+      syntheticPdf('qualicorp-conflitante', [
+        'QUALICORP CONTRATO DE ADESÃO PLANO PRETENDIDO SULAMÉRICA referência contratual ASSIM SAÚDE',
+      ]),
+    ], 'auto');
+
+    assert.equal(classification.operator, null);
+  });
+
+  test('Qualicorp usa a identificação inicial quando o nome da operadora não aparece na tabela', () => {
+    const [classification] = classifyDocuments([
+      syntheticPdf('qualicorp-operadora-inicial', [
+        'QUALICORP CONTRATO DE ADESÃO OPERADORA KLINI',
+        'PLANO PRETENDIDO Produto 300 Adesão',
+      ]),
+    ], 'auto');
+
+    assert.equal(classification.operator, 'Klini Saúde');
+  });
+
   test('seleciona páginas por âncoras e exclui páginas apenas contratuais', () => {
     const [classification] = classifyDocuments([syntheticPdf('planium', [
       'CONDIÇÕES GERAIS LEI GERAL DE PROTEÇÃO DE DADOS',

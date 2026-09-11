@@ -109,7 +109,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={() => void handleGenerate()} loading={generating} disabled={!chatId || generating}>
-          {!generating && <Sparkles className="h-4 w-4" />}
+          {!generating && <Sparkles className="kds-control-icon" />}
           Analisar atendimento
         </Button>
       </div>
@@ -222,7 +222,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
                       className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-left text-xs hover:bg-[var(--bg-hover)]"
                     >
                       <span className="text-[var(--text-muted)]">{formatDateTime(item.generatedAt)}</span>
-                      <Badge tone={AVALIACAO_TONE[item.avaliacaoGeral]} size="xs">{AVALIACAO_LABEL[item.avaliacaoGeral]}</Badge>
+                      <Badge tone={AVALIACAO_TONE[item.avaliacaoGeral]} size="sm">{AVALIACAO_LABEL[item.avaliacaoGeral]}</Badge>
                     </button>
                   ))}
                 </div>

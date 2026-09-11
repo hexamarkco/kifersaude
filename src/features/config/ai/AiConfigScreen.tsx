@@ -247,11 +247,11 @@ export default function AiConfigScreen() {
         action={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading || exporting} loading={exporting}>
-              <Download className="h-4 w-4" />
+              <Download className="kds-control-icon" />
               Exportar
             </Button>
             <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
-              <Upload className="h-4 w-4" />
+              <Upload className="kds-control-icon" />
               Importar
             </Button>
             <input

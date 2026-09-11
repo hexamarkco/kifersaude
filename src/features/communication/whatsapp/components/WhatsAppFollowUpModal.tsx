@@ -1,14 +1,14 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
-import { Button, Textarea } from '../../../../design-system';
+import { Button, Textarea, WorkspaceDialog
+} from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../data';
 import { toast } from '../../../../lib/toast';
-import WhatsAppDialog from './WhatsAppDialog';
 import {
   AiContextPanel,
   CONTEXT_REFINEMENT_ACTIONS,
@@ -256,7 +256,7 @@ export default function WhatsAppFollowUpModal({
   };
 
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={handleClose}
       title="Gerar follow-up"
@@ -273,12 +273,12 @@ export default function WhatsAppFollowUpModal({
               Fechar
             </Button>
             <Button variant={value.trim() ? 'secondary' : 'primary'} onClick={() => handleGenerateClick()} loading={generating} disabled={submitting}>
-              {!generating && <Sparkles className="h-4 w-4" />}
+              {!generating && <Sparkles className="kds-control-icon" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
             </Button>
             {currentAction === 'wait' ? (
               <Button variant="secondary" onClick={handleManualSendOverride} loading={generating} disabled={submitting}>
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="kds-control-icon" />
                 Gerar mesmo assim
               </Button>
             ) : null}
@@ -326,7 +326,7 @@ export default function WhatsAppFollowUpModal({
                   onBlur={() => commitCustomInstructions()}
                   suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
                   rows={5}
-                  size="compact"
+                  size="sm"
                   placeholder={
                     'Ex.:\n' +
                     '- Ela me falou por telefone que vai viajar amanhã.\n' +
@@ -354,7 +354,7 @@ export default function WhatsAppFollowUpModal({
                     disabled={generating || submitting || Boolean(refiningActionId)}
                     className={isRecording ? 'animate-pulse' : ''}
                   >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    {isRecording ? <MicOff className="kds-control-icon" /> : <Mic className="kds-control-icon" />}
                     <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
                   </Button>
                 </div>
@@ -412,7 +412,7 @@ export default function WhatsAppFollowUpModal({
               value={value}
               onChange={(event) => onChangeValue(event.target.value)}
               rows={12}
-              className="min-h-[320px] text-sm leading-6"
+              className="leading-6"
               placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
               disabled={generating || submitting || Boolean(refiningActionId)}
             />
@@ -439,7 +439,7 @@ export default function WhatsAppFollowUpModal({
               nextAction={nextAction}
               action={nextAction.type !== 'mark_lost_recommended' && nextAction.suggestedDateTime ? (
                 <Button type="button" variant="primary" size="sm" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
-                  {!schedulingNextAction && <CalendarPlus className="h-4 w-4" />}
+                  {!schedulingNextAction && <CalendarPlus className="kds-control-icon" />}
                   Agendar sugestão
                 </Button>
               ) : null}
@@ -447,6 +447,6 @@ export default function WhatsAppFollowUpModal({
           ) : null}
         </aside>
       </div>
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

@@ -18,6 +18,7 @@ import {
   DialogTitle,
   Field,
   Input,
+  IconButton,
 } from '../../design-system';
 
 type StatusDraft = { nome: string; ordem: string };
@@ -218,7 +219,7 @@ export default function LeadStatusManager() {
         </div>
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
-          <Plus className="h-4 w-4" />
+          <Plus className="kds-control-icon" />
           <span>Novo status</span>
         </Button>
       </div>
@@ -275,12 +276,12 @@ export default function LeadStatusManager() {
                   disabled={isProcessing}
                 />
                 <Button onClick={() => void handleSetDefault(status.id)} variant="secondary" disabled={isProcessing || status.padrao}>
-                  <Star className="h-4 w-4" />
+                  <Star className="kds-control-icon" />
                   <span>Padrão</span>
                 </Button>
-                <Button onClick={() => void handleDelete(status.id)} variant="danger" size="icon" disabled={isProcessing}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <IconButton onClick={() => void handleDelete(status.id)} variant="danger" disabled={isProcessing} size="md">
+                  <Trash2 aria-hidden="true" />
+                </IconButton>
               </div>
             </Card>
           );
@@ -354,7 +355,7 @@ export default function LeadStatusManager() {
             Cancelar
           </Button>
           <Button type="submit" form="lead-status-create-form" disabled={saving}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>
         </DialogFooter>

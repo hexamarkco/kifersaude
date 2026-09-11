@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, FileAudio, FileText, Image, Loader2, Pause, Play, Video } from 'lucide-react';
 
-import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs } from '../../../../design-system';
+import { Badge, Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, EmptyState, Surface, Tabs, IconButton
+} from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import type { CommWhatsAppMessage } from '../domain/types';
 
@@ -66,7 +67,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
       <button type="button" onClick={onOpen} className="h-full w-full text-left">
         {url && message.message_type === 'image' ? <img src={url} alt={message.media_caption || message.media_file_name || 'Imagem da conversa'} className="h-full w-full object-cover" /> : url && message.message_type === 'video' ? <video src={url} className="h-full w-full object-cover" muted /> : <span className="flex h-full items-center justify-center text-[var(--text-muted)]"><Icon className="h-6 w-6" /></span>}
       </button>
-      {message.message_type === 'image' && <Button size="xs" variant="secondary" className="absolute right-2 top-2 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" title="Baixar imagem" aria-label="Baixar imagem" loading={downloading} onClick={() => void downloadImage()}>{!downloading && <Download className="h-3.5 w-3.5" />}</Button>}
+      {message.message_type === 'image' && <Button size="sm" variant="secondary" className="absolute right-2 top-2 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" title="Baixar imagem" aria-label="Baixar imagem" loading={downloading} onClick={() => void downloadImage()}>{!downloading && <Download className="kds-control-icon" />}</Button>}
       {message.message_type === 'video' && <span className="pointer-events-none absolute bottom-2 left-2 inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--overlay)] text-[var(--text-on-brand)]"><Play className="h-3.5 w-3.5 fill-current" /></span>}
     </div>
   );
@@ -106,7 +107,7 @@ function AudioFileRow({ message }: { message: CommWhatsAppMessage }) {
     <div className="flex items-center gap-3">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--bg-surface)] text-[var(--brand-primary)]"><FileAudio className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[var(--text-primary)]">{message.media_file_name || 'Mensagem de voz'}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{new Date(message.message_at).toLocaleDateString('pt-BR')} {formatSize(message.media_size_bytes) ? `· ${formatSize(message.media_size_bytes)}` : ''}</p></div>
-      <Button size="icon" variant="secondary" onClick={togglePlayback} disabled={!url} aria-label={playing ? 'Pausar áudio' : 'Reproduzir áudio'}>{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}</Button>
+      <IconButton variant="secondary" onClick={togglePlayback} disabled={!url} aria-label={playing ? 'Pausar áudio' : 'Reproduzir áudio'} size="md">{playing ? <Pause className="kds-control-icon" /> : <Play className="fill-current" />}</IconButton>
     </div>
     <div className="mt-3 flex items-center gap-2">
       <span className="w-9 text-xs tabular-nums text-[var(--text-muted)]">{formatDuration(currentTime)}</span>
@@ -114,7 +115,7 @@ function AudioFileRow({ message }: { message: CommWhatsAppMessage }) {
       <span className="w-9 text-right text-xs tabular-nums text-[var(--text-muted)]">{formatDuration(duration)}</span>
     </div>
     <div className="mt-3 flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1" aria-label="Velocidade de reprodução">{[1, 1.5, 2].map((value) => <Button key={value} size="xs" variant={speed === value ? 'soft' : 'ghost'} onClick={() => setSpeed(value)} aria-pressed={speed === value}>{String(value).replace('.', ',')}x</Button>)}</div>
+      <div className="flex items-center gap-1" aria-label="Velocidade de reprodução">{[1, 1.5, 2].map((value) => <Button key={value} size="sm" variant={speed === value ? 'soft' : 'ghost'} onClick={() => setSpeed(value)} aria-pressed={speed === value}>{String(value).replace('.', ',')}x</Button>)}</div>
       {url && <a href={url} download={message.media_file_name || `audio-${message.id}`} className="text-xs font-semibold text-[var(--brand-primary)]">Baixar</a>}
     </div>
   </Surface>;
@@ -173,7 +174,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-0.5">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Fotos e vídeos</span>
-                <Badge tone="neutral" size="xs">{visuals.length}</Badge>
+                <Badge tone="neutral" size="sm">{visuals.length}</Badge>
               </div>
               <div className="grid grid-cols-3 gap-2.5">{visuals.map((message) => <FileThumbnail key={message.id} message={message} onOpen={() => onOpenMedia(message)} />)}</div>
             </div>
@@ -182,7 +183,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-0.5">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Documentos e áudios</span>
-                <Badge tone="neutral" size="xs">{files.length}</Badge>
+                <Badge tone="neutral" size="sm">{files.length}</Badge>
               </div>
               <div className="space-y-2">{files.map((message) => {
                 if (message.message_type === 'audio' || message.message_type === 'voice') return <AudioFileRow key={message.id} message={message} />;
@@ -194,7 +195,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
                       <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{message.media_file_name || (message.message_type === 'voice' ? 'Mensagem de voz' : 'Arquivo sem nome')}</p>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">{new Date(message.message_at).toLocaleDateString('pt-BR')} {formatSize(message.media_size_bytes) ? `· ${formatSize(message.media_size_bytes)}` : ''}</p>
                     </div>
-                    <Button size="icon" variant="secondary" title="Abrir ou baixar" aria-label="Abrir ou baixar arquivo" onClick={() => onOpenMedia(message)}><Download className="h-4 w-4" /></Button>
+                    <IconButton variant="secondary" title="Abrir ou baixar" aria-label="Abrir ou baixar arquivo" size="md" onClick={() => onOpenMedia(message)}><Download className="kds-control-icon" /></IconButton>
                   </Surface>
                 );
               })}</div>

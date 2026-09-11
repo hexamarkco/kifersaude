@@ -19,6 +19,7 @@ import {
   LoadingState,
   SectionHeader,
   Switch,
+  IconButton,
 } from "../../../design-system";
 import FormEditorScreen from "./FormEditorScreen";
 
@@ -186,7 +187,7 @@ export default function FormsScreen() {
               setIsCreateModalOpen(true);
             }}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>Novo formulário</span>
           </Button>
         </div>
@@ -235,29 +236,27 @@ export default function FormsScreen() {
                       disabled={isBusy}
                       label={form.is_published ? "Publicado" : "Rascunho"}
                     />
-                    <Button variant="secondary" size="icon" className="h-9 w-9" onClick={() => void handleCopyLink(form)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
+                    <IconButton variant="secondary"  size="sm" onClick={() => void handleCopyLink(form)}>
+                      <Copy className="kds-control-icon" />
+                    </IconButton>
+                    <IconButton
                       variant="secondary"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
+                      
+                      size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
                     >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
+                      <ExternalLink className="kds-control-icon" />
+                    </IconButton>
                     <Button variant="secondary" size="sm" onClick={() => setSelectedFormId(form.id)}>
                       Editar
                     </Button>
-                    <Button
+                    <IconButton
                       variant="danger"
-                      size="icon"
-                      className="h-9 w-9"
+                      
                       disabled={isBusy}
-                      onClick={() => void handleDelete(form)}
+                      size="sm" onClick={() => void handleDelete(form)}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Trash2 className="kds-control-icon" />
+                    </IconButton>
                   </div>
                 </Card>
               );
@@ -313,7 +312,7 @@ export default function FormsScreen() {
             Cancelar
           </Button>
           <Button type="submit" form="form-create-form" disabled={creating}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>{creating ? "Criando" : "Criar"}</span>
           </Button>
         </DialogFooter>

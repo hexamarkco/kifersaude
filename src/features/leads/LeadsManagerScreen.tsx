@@ -46,15 +46,11 @@ import LeadDetails from "../../components/LeadDetails";
 import { LeadFavoriteToggle } from "../../components/LeadFavoriteStar";
 import StatusDropdown from "../../components/StatusDropdown";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
-import Pagination from "../../components/Pagination";
 import { ObserverBanner } from "../../components/ObserverRestriction";
 import { useAuth } from "../../contexts/AuthContext";
 import { convertLocalToUTC, formatDateTimeFullBR } from "../../lib/dateUtils";
 import { toast } from "../../lib/toast";
 import { useConfig } from "../../contexts/ConfigContext";
-import FilterMultiSelect from "../../components/FilterMultiSelect";
-import FilterDateRange from "../../components/FilterDateRange";
-import FilterSingleSelect from "../../components/FilterSingleSelect";
 import {
   Badge,
   Button,
@@ -78,6 +74,11 @@ import {
   Toolbar,
   ToolbarActions,
   ToolbarSearch,
+  IconButton,
+  FilterSelect,
+  FilterMultiSelect,
+  DateRangeFilter,
+  Pagination,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
@@ -1343,13 +1344,13 @@ export default function LeadsManager({
                 aria-label="Limpar filtros"
                 title="Limpar filtros"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className="kds-control-icon" />
                 <span className="kds-mobile-icon-action-label">Limpar</span>
               </Button>
               <Popover>
                 <PopoverTrigger className="inline-flex">
                   <Button type="button" variant="secondary" size="md" className="whitespace-nowrap kds-mobile-icon-action" aria-label="Opções de exportação" title="Exportar">
-                    <Download className="h-4 w-4" />
+                    <Download className="kds-control-icon" />
                     <span className="kds-mobile-icon-action-label">Exportar</span>
                   </Button>
                 </PopoverTrigger>
@@ -1415,7 +1416,7 @@ export default function LeadsManager({
                       <Filter className="w-4 h-4" />
                       Filtros avançados
                       {advancedFilterCount > 0 && (
-                        <Badge tone="accent" size="xs">{advancedFilterCount}</Badge>
+                        <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>
                       )}
                     </h4>
                     <span className="text-xs transition-transform group-open:rotate-180">
@@ -1478,14 +1479,14 @@ export default function LeadsManager({
                     },
                   ].map((dateFilter) => {
                     const { id, ...props } = dateFilter;
-                    return <FilterDateRange key={id} {...props} />;
+                    return <DateRangeFilter key={id} {...props} />;
                   })}
                 </Surface>
               </details>
 
               <Field label="Ordenar por" className="w-full sm:w-auto sm:min-w-[14rem]">
                 <div className="flex items-center gap-2">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={Filter}
                     value={sortField}
                     onChange={(value) => setSortField(value as SortField)}
@@ -1496,11 +1497,10 @@ export default function LeadsManager({
                       label: option.label,
                     }))}
                   />
-                  <Button
+                  <IconButton
                     type="button"
                     variant="secondary"
-                    size="icon"
-                    onClick={() =>
+                    size="md" onClick={() =>
                       setSortDirection((current) => (current === "asc" ? "desc" : "asc"))
                     }
                     title={sortDirection === "asc" ? "Ordem crescente" : "Ordem decrescente"}
@@ -1508,11 +1508,11 @@ export default function LeadsManager({
                     className="shrink-0"
                   >
                     {sortDirection === "asc" ? (
-                      <ArrowUp className="h-4 w-4" />
+                      <ArrowUp className="kds-control-icon" />
                     ) : (
-                      <ArrowDown className="h-4 w-4" />
+                      <ArrowDown className="kds-control-icon" />
                     )}
-                  </Button>
+                  </IconButton>
                 </div>
               </Field>
             </div>
@@ -1595,13 +1595,13 @@ export default function LeadsManager({
 
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="w-full sm:w-44">
-                      <FilterSingleSelect
+                      <FilterSelect
                         icon={Tag}
                         value={bulkStatus}
                         onChange={(value) => setBulkStatus(value)}
                         placeholder="Novo status"
                         includePlaceholderOption={false}
-                        size="compact"
+                        size="sm"
                         disabled={isBulkUpdating}
                         options={[
                           { value: "", label: "Novo status" },
@@ -1613,13 +1613,13 @@ export default function LeadsManager({
                       />
                     </div>
                     <div className="w-full sm:w-44">
-                      <FilterSingleSelect
+                      <FilterSelect
                         icon={UserCircle}
                         value={bulkResponsavel}
                         onChange={(value) => setBulkResponsavel(value)}
                         placeholder="Responsável"
                         includePlaceholderOption={false}
-                        size="compact"
+                        size="sm"
                         disabled={isBulkUpdating}
                         options={[
                           { value: "", label: "Responsável" },
@@ -1634,7 +1634,7 @@ export default function LeadsManager({
                       type="datetime-local"
                       value={bulkProximoRetorno}
                       onChange={(event) => setBulkProximoRetorno(event.target.value)}
-                      size="compact"
+                      size="sm"
                       className="w-full sm:w-52"
                       disabled={isBulkUpdating}
                       placeholder="Próximo retorno"
@@ -1670,7 +1670,7 @@ export default function LeadsManager({
                       variant="secondary"
                       size="sm"
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="kds-control-icon" />
                       <span>Exportar XLSX</span>
                     </Button>
                   </div>
@@ -1760,10 +1760,10 @@ export default function LeadsManager({
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
                           <div className="flex justify-end gap-1">
-                            <Button onClick={() => setSelectedLead(lead)} variant="secondary" size="icon" title="Abrir lead" aria-label="Abrir lead"><MessageCircle className="h-4 w-4" /></Button>
-                            {canEditLeads && <Button onClick={() => openReminderScheduler(lead)} variant="soft" size="icon" title="Agendar lembrete" aria-label="Agendar lembrete"><Bell className="h-4 w-4" /></Button>}
-                            {canEditLeads && <Button onClick={() => handleConvertToContract(lead)} variant="soft" size="icon" title="Converter em contrato" aria-label="Converter em contrato"><FileText className="h-4 w-4" /></Button>}
-                            {canEditLeads && <Button onClick={() => handleDeleteLead(lead)} variant="danger" size="icon" title="Excluir lead" aria-label="Excluir lead"><Trash2 className="h-4 w-4" /></Button>}
+                            <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Abrir lead" aria-label="Abrir lead" size="md"><MessageCircle aria-hidden="true" /></IconButton>
+                            {canEditLeads && <IconButton onClick={() => openReminderScheduler(lead)} variant="soft" title="Agendar lembrete" aria-label="Agendar lembrete" size="md"><Bell aria-hidden="true" /></IconButton>}
+                            {canEditLeads && <IconButton onClick={() => handleConvertToContract(lead)} variant="soft" title="Converter em contrato" aria-label="Converter em contrato" size="md"><FileText aria-hidden="true" /></IconButton>}
+                            {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md"><Trash2 aria-hidden="true" /></IconButton>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1839,17 +1839,16 @@ export default function LeadsManager({
                             </div>
                             {lead.email && (
                               <div className="col-span-2 min-[480px]:col-span-1 flex min-w-0 items-center gap-2">
-                                <Button
+                                <IconButton
                                   type="button"
                                   onClick={() => handleEmailContact(lead)}
                                   variant="icon"
-                                  size="icon"
-                                  className="kds-op-icon-chip h-8 w-8"
+                                  className="kds-op-icon-chip"
                                   title="Enviar e-mail"
                                   aria-label={`Enviar e-mail para ${lead.nome_completo}`}
-                                >
-                                  <Mail className="h-4 w-4" />
-                                </Button>
+                                 size="sm">
+                                  <Mail aria-hidden="true" />
+                                </IconButton>
                                 <span className="min-w-0 truncate">{lead.email}</span>
                               </div>
                             )}
@@ -1909,7 +1908,7 @@ export default function LeadsManager({
                           : "Ver detalhes do lead"
                       }
                     >
-                      <MessageCircle className="h-4 w-4" />
+                      <MessageCircle className="kds-control-icon" />
                       <span className="hidden sm:inline">
                         {canEditLeads ? "Ver/Editar" : "Ver Detalhes"}
                       </span>
@@ -1923,7 +1922,7 @@ export default function LeadsManager({
                           className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                           aria-label="Converter em contrato"
                         >
-                          <FileText className="h-4 w-4" />
+                          <FileText className="kds-control-icon" />
                           <span className="hidden sm:inline">Converter</span>
                         </Button>
                         <Button
@@ -1934,7 +1933,7 @@ export default function LeadsManager({
                           aria-label="Agendar lembrete"
                           type="button"
                         >
-                          <Bell className="h-4 w-4" />
+                          <Bell className="kds-control-icon" />
                           <span className="hidden sm:inline">
                             Agendar lembrete
                           </span>
@@ -1947,7 +1946,7 @@ export default function LeadsManager({
                           aria-label="Excluir lead"
                           type="button"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="kds-control-icon" />
                           <span className="hidden sm:inline">Excluir</span>
                         </Button>
                       </>

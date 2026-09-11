@@ -306,7 +306,7 @@ export default function LeadKanbanBoard({
                           onChange={(event) =>
                             updateWipLimit(column.id, Number(event.target.value))
                           }
-                          size="compact"
+                          size="sm"
                           className="text-right"
                         />
                       </div>

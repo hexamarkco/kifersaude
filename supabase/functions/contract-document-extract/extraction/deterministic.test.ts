@@ -128,6 +128,27 @@ describe('extração determinística V2', () => {
     assert.equal(deterministic.values.abrangencia, undefined);
   });
 
+  test.each([
+    ['A50 QP ADESÃO COM COPART PARCIAL', 'A50'],
+    ['ASSIM PLENUS REFERÊNCIA CA QC', 'ASSIM PLENUS'],
+    ['SULAMÉRICA DIRETO RIO ADESÃO', 'SULAMÉRICA DIRETO RIO'],
+    ['KLINI 300 ADESÃO', 'KLINI 300'],
+  ])('Qualicorp extrai qualquer produto da célula marcada: %s', (cellValue, expected) => {
+    const document = syntheticPdf('qualicorp-produto-variavel', [
+      `QUALICORP CONTRATO DE ADESÃO PLANO PRETENDIDO ${cellValue}`,
+    ]);
+    document.pages[0].items = [
+      { text: 'X', x: 56, y: 600, width: 8, height: 10 },
+      { text: cellValue, x: 174, y: 600, width: 160, height: 10 },
+      { text: 'Coletiva', x: 437, y: 600, width: 50, height: 10 },
+      { text: 'Grupo de Municípios', x: 508, y: 600, width: 115, height: 10 },
+    ];
+    const classifications = classifyDocuments([document], 'auto');
+    const deterministic = extractDeterministically(classifications);
+
+    assert.equal(deterministic.values.produto_plano, expected);
+  });
+
   test('não escolhe um valor quando candidatos de mesma prioridade conflitam', () => {
     const resolved = resolveFieldCandidates([
       { key: 'produto_plano', value: 'Plano A', priority: 90, provenance: { fileId: 'a', page: 1, section: 'PLANO', method: 'text_parser' } },

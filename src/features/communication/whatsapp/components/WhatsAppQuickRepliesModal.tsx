@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Plus, Trash2 } from 'lucide-react';
 
-import { Alert, Button, Input, Surface } from '../../../../design-system';
+import { Alert, Button, Input, Surface, WorkspaceDialog
+} from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { sanitizeWhatsAppQuickReplyShortcut, type WhatsAppQuickReply } from '../domain/quickReplies';
-import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppQuickRepliesModalProps = {
   isOpen: boolean;
@@ -116,7 +116,7 @@ export default function WhatsAppQuickRepliesModal({
   };
 
   return (
-      <WhatsAppDialog
+      <WorkspaceDialog
         isOpen={isOpen}
         onClose={onClose}
         title="Mensagens rápidas"
@@ -149,7 +149,7 @@ export default function WhatsAppQuickRepliesModal({
               </p>
             </div>
             <Button variant="secondary" size="sm" onClick={handleAddQuickReply}>
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="kds-control-icon" />
               Nova
             </Button>
           </div>
@@ -206,7 +206,7 @@ export default function WhatsAppQuickRepliesModal({
                   onClick={() => handleRemoveQuickReply(selectedQuickReply.id)}
                   disabled={draftQuickReplies.length === 0}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="kds-control-icon" />
                   Remover
                 </Button>
               </div>
@@ -226,7 +226,7 @@ export default function WhatsAppQuickRepliesModal({
                     value={selectedQuickReply.name}
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { name: event.target.value })}
                     placeholder="Ex.: Contato inicial"
-                    size="compact"
+                    size="sm"
                   />
                 </div>
                 <div>
@@ -237,9 +237,9 @@ export default function WhatsAppQuickRepliesModal({
                     value={selectedQuickReply.shortcut}
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { shortcut: sanitizeWhatsAppQuickReplyShortcut(event.target.value) })}
                     placeholder="contato-inicial"
-                    size="compact"
+                    size="sm"
                     leftIcon={undefined}
-                    rightSlot={<span className="text-[11px] font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
+                    rightSlot={<span className="font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
                   />
                   <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                     Use letras, números e hífens. Se ficar vazio, o sistema gera a partir do nome.
@@ -256,7 +256,7 @@ export default function WhatsAppQuickRepliesModal({
                   onChange={(value) => handleUpdateQuickReply(selectedQuickReply.id, { text: value })}
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                   rows={10}
-                  size="compact"
+                  size="sm"
                   placeholder="Digite a mensagem. Para inserir variáveis, digite {{"
                 />
               </div>
@@ -268,6 +268,6 @@ export default function WhatsAppQuickRepliesModal({
           )}
         </Surface>
       </div>
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

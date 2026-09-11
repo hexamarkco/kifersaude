@@ -22,9 +22,9 @@ import { formatCep, formatCnpj, formatCpf } from '../lib/inputFormatters';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
-import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface, IconButton, FilterSelect
+} from '../design-system';
 
 type HolderFormProps = {
   contractId: string;
@@ -479,19 +479,18 @@ export default function HolderForm({
                       autoFormat="cpf"
                       value={formData.cpf}
                       onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                      className="pr-11"
+                      
                     />
-                    <Button
+                    <IconButton
                       type="button"
                       onClick={() => void handleConsultarCPF({ force: true })}
                       disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
                       aria-label="Buscar CPF"
                       variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
-                    >
+                      className="absolute right-1 top-1/2 -translate-y-1/2"
+                     size="sm">
                       <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
-                    </Button>
+                    </IconButton>
                   </div>
                 </Field>
 
@@ -544,7 +543,7 @@ export default function HolderForm({
                 </Surface>
 
                 <Field label="Sexo">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={User}
                     value={formData.sexo}
                     onChange={(value) => setFormData({ ...formData, sexo: value })}
@@ -555,7 +554,7 @@ export default function HolderForm({
                 </Field>
 
                 <Field label="Estado Civil">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={User}
                     value={formData.estado_civil}
                     onChange={(value) => setFormData({ ...formData, estado_civil: value })}
@@ -610,18 +609,17 @@ export default function HolderForm({
                       onChange={(e) => handleCepChange(e.target.value)}
                       maxLength={9}
                       placeholder="00000-000"
-                      className="pr-11"
+                      
                     />
-                    <Button
+                    <IconButton
                       type="button"
                       onClick={() => void handleCepSearch()}
                       aria-label="Buscar CEP"
                       variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
-                    >
+                      className="absolute right-1 top-1/2 -translate-y-1/2"
+                     size="sm">
                       <Search className={`h-5 w-5 ${loadingCep ? 'animate-pulse' : ''}`} />
-                    </Button>
+                    </IconButton>
                   </div>
                 </Field>
 
@@ -662,7 +660,7 @@ export default function HolderForm({
                 </Field>
 
                 <Field label="Estado">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={MapPin}
                     value={formData.estado}
                     onChange={handleStateChange}
@@ -681,7 +679,7 @@ export default function HolderForm({
                       : 'Selecione um estado para liberar as cidades.'
                   }
                 >
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={MapPinned}
                     value={formData.cidade}
                     onChange={(value) => setFormData({ ...formData, cidade: value })}

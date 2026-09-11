@@ -3,8 +3,8 @@ import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, Calend
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip } from '../../../design-system';
-import FilterMultiSelect from '../../../components/FilterMultiSelect';
+import { ActionSurface, Badge, Button, Card, Checkbox, ConfirmDialog, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, OperationalMetricChip, PageHeader, Select, Stepper, Surface, Textarea, Tooltip, FilterMultiSelect
+} from '../../../design-system';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignListChanges } from './campaignRealtime';
@@ -891,7 +891,7 @@ export default function WhatsAppCampaignsScreen() {
             <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
             <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
             <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
-              <Plus className="h-4 w-4" />
+              <Plus className="kds-control-icon" />
               Novo disparo
             </Button>
           </div>
@@ -1137,11 +1137,11 @@ export default function WhatsAppCampaignsScreen() {
                   </Select>
                 )}
                 <Button variant="secondary" size="sm" onClick={() => void handleSaveTemplate()}>
-                  <BookmarkPlus className="h-3.5 w-3.5" />
+                  <BookmarkPlus className="kds-control-icon" />
                   Salvar modelo
                 </Button>
                 <Button variant="secondary" size="sm" onClick={addStage}>
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="kds-control-icon" />
                   Adicionar etapa
                 </Button>
               </div>
@@ -1276,7 +1276,7 @@ export default function WhatsAppCampaignsScreen() {
                               <div className="relative">
                                 <Textarea
                                   ref={(element) => { stepTextareaRefs.current[refKey] = element; }}
-                                  size="compact"
+                                  size="sm"
                                   value={message.messageText}
                                   onChange={(event) => {
                                     updateMessage(stageIndex, messageIndex, { messageText: event.target.value });
@@ -1329,7 +1329,7 @@ export default function WhatsAppCampaignsScreen() {
                                         {mediaTypeLabels[message.mediaType || 'document']}: {message.mediaFilename || 'arquivo anexado'}
                                       </Badge>
                                       <Button variant="ghost" size="sm" onClick={() => handleRemoveStepMedia(stageIndex, messageIndex)}>
-                                        <X className="h-3.5 w-3.5" />
+                                        <X className="kds-control-icon" />
                                         Remover mídia
                                       </Button>
                                     </>
@@ -1340,7 +1340,7 @@ export default function WhatsAppCampaignsScreen() {
                                       loading={uploadingKey === refKey}
                                       onClick={() => mediaFileInputRefs.current[refKey]?.click()}
                                     >
-                                      {uploadingKey !== refKey && <Upload className="h-3.5 w-3.5" />}
+                                      {uploadingKey !== refKey && <Upload className="kds-control-icon" />}
                                       Anexar mídia
                                     </Button>
                                   )}
@@ -1350,7 +1350,7 @@ export default function WhatsAppCampaignsScreen() {
                                   <div className="mt-3">
                                     <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versão alternativa da mensagem inicial, sorteada para uma fração dos contatos, para comparar qual converte mais." />}>
                                       <Textarea
-                                        size="compact"
+                                        size="sm"
                                         value={message.variantBMessageText ?? ''}
                                         onChange={(event) => updateMessage(stageIndex, messageIndex, { variantBMessageText: event.target.value })}
                                         placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotação em aberto - posso te ajudar?"
@@ -1426,7 +1426,7 @@ export default function WhatsAppCampaignsScreen() {
                   <Input value={testPhoneNumber} onChange={(event) => setTestPhoneNumber(event.target.value)} placeholder="(11) 99999-9999" />
                 </Field>
                 <Button variant="secondary" loading={sendingTest} onClick={() => void handleSendTest()}>
-                  {!sendingTest && <Send className="h-3.5 w-3.5" />}
+                  {!sendingTest && <Send className="kds-control-icon" />}
                   Enviar mensagem inicial de teste
                 </Button>
               </div>
@@ -1460,7 +1460,7 @@ export default function WhatsAppCampaignsScreen() {
                     key={day.value}
                     type="button"
                     variant={isActive ? 'primary' : 'ghost'}
-                    size="xs"
+                    size="sm"
                     onClick={() => setActiveWeekdays((current) => {
                       const next = current.includes(day.value)
                         ? current.filter((value) => value !== day.value)
@@ -1488,18 +1488,18 @@ export default function WhatsAppCampaignsScreen() {
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {wizardStep > 0 && (
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="kds-control-icon" />
                   Voltar
                 </Button>
               )}
               {wizardStep < campaignWizardSteps.length - 1 ? (
                 <Button className="w-full sm:w-auto" onClick={handleWizardNext}>
                   Próximo
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="kds-control-icon" />
                 </Button>
               ) : (
                 <Button className="w-full sm:w-auto" onClick={() => void handleCreateDraft()} loading={saving}>
-                  {!saving && <Send className="h-4 w-4" />}
+                  {!saving && <Send className="kds-control-icon" />}
                   {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
                 </Button>
               )}
@@ -1602,7 +1602,7 @@ export default function WhatsAppCampaignsScreen() {
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
                 <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
-                  {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="h-4 w-4" />}
+                  {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="kds-control-icon" />}
                   Confirmar ativação
                 </Button>
               </div>
@@ -1651,30 +1651,30 @@ export default function WhatsAppCampaignsScreen() {
                   </div>
                   <div className="kds-campaign-card-actions mt-4 flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => navigate(`/painel/disparos/${campaign.id}`)}>
-                      <Eye className="h-3.5 w-3.5" />
+                      <Eye className="kds-control-icon" />
                       Detalhe
                     </Button>
                     <Button size="sm" variant="ghost" loading={loadingCampaignEdit && campaignActionId === campaign.id} onClick={() => {
                       setCampaignActionId(campaign.id);
                       void openEditCampaignModal(campaign).finally(() => setCampaignActionId(null));
                     }}>
-                      {!(loadingCampaignEdit && campaignActionId === campaign.id) && <Pencil className="h-3.5 w-3.5" />}
+                      {!(loadingCampaignEdit && campaignActionId === campaign.id) && <Pencil className="kds-control-icon" />}
                       Editar
                     </Button>
                     {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
                       <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id && loadingActivationPreview} onClick={() => void openActivationPreview(campaign)}>
-                        {!(campaignActionId === campaign.id && loadingActivationPreview) && <PlayCircle className="h-3.5 w-3.5" />}
+                        {!(campaignActionId === campaign.id && loadingActivationPreview) && <PlayCircle className="kds-control-icon" />}
                         Ativar
                       </Button>
                     )}
                     {['queued', 'running', 'scheduled'].includes(campaign.status) && (
                       <Button size="sm" variant="primary" loading={campaignActionId === campaign.id} onClick={() => void handleProcessCampaign(campaign)}>
-                        {campaignActionId !== campaign.id && <Send className="h-3.5 w-3.5" />}
+                        {campaignActionId !== campaign.id && <Send className="kds-control-icon" />}
                         Processar lote
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => setCampaignPendingDelete(campaign)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="kds-control-icon" />
                       Excluir
                     </Button>
                   </div>

@@ -29,7 +29,6 @@ import { useConfig } from "../contexts/ConfigContext";
 import HolderForm from "./HolderForm";
 import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
-import FilterSingleSelect from "./FilterSingleSelect";
 import {
   Badge,
   Button,
@@ -43,6 +42,8 @@ import {
   Surface,
   Textarea,
   type PanelTone,
+  IconButton,
+  FilterSelect,
 } from "../design-system";
 import { formatDateOnly } from "../lib/dateUtils";
 import { getContractBonusSummary } from "../lib/contractBonus";
@@ -737,7 +738,7 @@ export default function ContractDetails({
             size="sm"
             type="button"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="kds-control-icon" />
             <span className="hidden sm:inline">Excluir</span>
           </Button>
         )}
@@ -1170,7 +1171,7 @@ export default function ContractDetails({
                 }}
                 size="sm"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="kds-control-icon" />
                 <span>Adicionar titular</span>
               </Button>
             )}
@@ -1230,25 +1231,23 @@ export default function ContractDetails({
                     </div>
                     {canEditContracts && (
                       <div className="flex items-center gap-2">
-                        <Button
+                        <IconButton
                           onClick={() => {
                             setEditingHolder(holderItem);
                             setShowHolderForm(true);
                           }}
                            variant="secondary"
-                          size="icon"
                           aria-label={`Editar titular ${holderItem.nome_completo}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
+                         size="md">
+                          <Edit aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
                           onClick={() => handleDeleteHolder(holderItem)}
                           variant="danger"
-                          size="icon"
                           aria-label={`Remover titular ${holderItem.nome_completo}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                         size="md">
+                          <Trash2 aria-hidden="true" />
+                        </IconButton>
                       </div>
                     )}
                   </div>
@@ -1296,7 +1295,7 @@ export default function ContractDetails({
                 }}
                 size="sm"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="kds-control-icon" />
                 <span>Adicionar</span>
               </Button>
             )}
@@ -1327,7 +1326,7 @@ export default function ContractDetails({
                           variant="secondary"
                           size="sm"
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="kds-control-icon" />
                           <span>Adicionar dependente</span>
                         </Button>
                       )}
@@ -1383,28 +1382,26 @@ export default function ContractDetails({
                             </div>
                             {canEditContracts && (
                               <div className="ml-4 flex items-center gap-2">
-                                <Button
+                                <IconButton
                                   onClick={() => {
                                     setEditingDependent(dependent);
                                     setSelectedHolderId(dependent.holder_id);
                                     setShowDependentForm(true);
                                   }}
                                   variant="secondary"
-                                  size="icon"
                                   aria-label={`Editar dependente ${dependent.nome_completo}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
+                                 size="md">
+                                  <Edit aria-hidden="true" />
+                                </IconButton>
+                                <IconButton
                                   onClick={() =>
                                     handleDeleteDependent(dependent.id)
                                   }
                                   variant="danger"
-                                  size="icon"
                                   aria-label={`Remover dependente ${dependent.nome_completo}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                 size="md">
+                                  <Trash2 aria-hidden="true" />
+                                </IconButton>
                               </div>
                             )}
                           </div>
@@ -1515,7 +1512,7 @@ export default function ContractDetails({
                 }}
                 size="sm"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="kds-control-icon" />
                 <span>Nova interação</span>
               </Button>
             )}
@@ -1528,7 +1525,7 @@ export default function ContractDetails({
             >
               <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Tipo de interação">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={MessageCircle}
                     value={interactionData.tipo}
                     onChange={(value) =>
@@ -1546,7 +1543,7 @@ export default function ContractDetails({
                   />
                 </Field>
                 <Field label="Responsável">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={User}
                     value={interactionData.responsavel}
                     onChange={(value) =>
@@ -1637,24 +1634,22 @@ export default function ContractDetails({
                       </span>
                       {canEditContracts && (
                         <div className="flex items-center gap-1">
-                          <Button
+                          <IconButton
                             onClick={() => handleEditInteraction(interaction)}
                           variant="secondary"
-                            size="icon"
                             aria-label={`Editar interação de ${interaction.responsavel}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
+                           size="md">
+                            <Edit aria-hidden="true" />
+                          </IconButton>
+                          <IconButton
                             onClick={() =>
                               handleDeleteInteraction(interaction.id)
                             }
                             variant="danger"
-                            size="icon"
                             aria-label={`Remover interação de ${interaction.responsavel}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                           size="md">
+                            <Trash2 aria-hidden="true" />
+                          </IconButton>
                         </div>
                       )}
                     </div>

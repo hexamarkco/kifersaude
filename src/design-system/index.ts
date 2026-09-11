@@ -31,9 +31,11 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogShell,
   DialogTitle,
+  WorkspaceDialog,
 } from './components/Dialog';
-export type { DialogProps, DialogSize, DialogBodyProps, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogTitleProps } from './components/Dialog';
+export type { DialogProps, DialogPresentation, DialogSize, DialogBodyProps, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogShellProps, DialogTitleProps, WorkspaceDialogProps } from './components/Dialog';
 export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
@@ -46,6 +48,10 @@ export { default as Field } from './components/Field';
 export type { FieldProps } from './components/Field';
 export { InputAddon, InputGroup, SearchInput, default as Input } from './components/Input';
 export type { InputAddonProps, InputGroupProps, InputProps, InputSize, InputState } from './components/Input';
+export { default as Combobox } from './components/Combobox';
+export type { ComboboxProps } from './components/Combobox';
+export { DateRangeFilter, FilterMultiSelect, FilterSelect } from './components/Filters';
+export type { DateRangeFilterProps, FilterMultiSelectProps, FilterSelectProps } from './components/Filters';
 export { AppLoadingScreen, LoadingState, Skeleton } from './components/LoadingState';
 export type { AppLoadingScreenProps, LoadingStateProps, SkeletonProps } from './components/LoadingState';
 export { OperationalMetricChip, OperationalStatusBadge, OperationalStatusDot } from './components/Operational';
@@ -68,6 +74,8 @@ export { ActionSurface, Surface } from './components/Surface';
 export type { SurfacePadding, SurfaceVariant } from './components/Surface';
 export { default as Tabs } from './components/Tabs';
 export type { TabItem, TabsProps, TabsVariant } from './components/Tabs';
+export { default as SegmentedControl } from './components/SegmentedControl';
+export type { SegmentedControlItem, SegmentedControlProps } from './components/SegmentedControl';
 export { default as Textarea } from './components/Textarea';
 export type { TextareaProps, TextareaSize } from './components/Textarea';
 export {

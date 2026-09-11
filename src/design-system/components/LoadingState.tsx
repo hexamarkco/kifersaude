@@ -88,7 +88,7 @@ export function AppLoadingScreen({ className }: AppLoadingScreenProps) {
             description="Verifique sua conexão ou tente novamente em instantes."
           />
           <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="kds-control-icon" />
             <span>Tentar novamente</span>
           </Button>
         </div>

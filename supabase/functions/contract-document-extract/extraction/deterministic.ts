@@ -34,6 +34,11 @@ const searchable = (value: string) => value
   .trim()
   .toUpperCase();
 
+const qualicorpProductName = (value: string) => compact(value)
+  .replace(/[¹²³⁴⁵⁶⁷⁸⁹⁰]+/g, '')
+  .replace(/\s+(?:QC|QP|ADES[ÃA]O|REFER[ÊE]NCIA)\b[\s\S]*$/i, '')
+  .trim();
+
 const pageWith = (document: ParsedPdfDocument, pattern: RegExp) => document.pages.find((page) => pattern.test(page.text));
 
 const firstMatch = (value: string, patterns: RegExp[]) => {
@@ -225,15 +230,14 @@ const extractQualicorpSelectedPlan = (
     const selectionMarks = items.filter((item) => searchable(item.text) === 'X' && item.x < 120);
     for (const mark of selectionMarks) {
       const rowItems = items.filter((item) => item !== mark && Math.abs(item.y - mark.y) <= 22);
-      const columnText = (minimumOffset: number, maximumOffset = Number.POSITIVE_INFINITY) => searchable(rowItems
+      const columnValue = (minimumOffset: number, maximumOffset = Number.POSITIVE_INFINITY) => compact(rowItems
         .filter((item) => item.x >= mark.x + minimumOffset && item.x < mark.x + maximumOffset)
         .sort((left, right) => right.y - left.y || left.x - right.x)
         .map((item) => item.text)
         .join(' '));
-      const productText = columnText(80, 340);
-      const accommodationText = columnText(340, 440);
-      const coverageText = columnText(440);
-      const product = productText.match(/\b(A\d+)\b/)?.[1];
+      const product = qualicorpProductName(columnValue(80, 236));
+      const accommodationText = searchable(columnValue(340, 440));
+      const coverageText = searchable(columnValue(440));
       if (!product) continue;
       addCandidate(
         output,

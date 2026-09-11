@@ -10,7 +10,6 @@ import {
 import { configService } from "../data/configService";
 import type { IntegrationSetting } from "../domain/types";
 import { toast } from "../../../lib/toast";
-import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import { IntegrationsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
@@ -23,6 +22,7 @@ import {
   SectionHeader,
   Switch,
   Tabs,
+  FilterSelect,
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
@@ -774,7 +774,7 @@ export default function IntegrationsScreen() {
                       loading={savingAiProvider[provider]}
                     >
                       {!savingAiProvider[provider] && (
-                        <Save className="w-4 h-4" />
+                        <Save className="kds-control-icon" />
                       )}
                       <span>
                         {savingAiProvider[provider]
@@ -862,7 +862,7 @@ export default function IntegrationsScreen() {
                           <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                             Modelo
                           </label>
-                          <FilterSingleSelect
+                          <FilterSelect
                             icon={Tag}
                             value={routeState.model}
                             onChange={(value) =>
@@ -877,7 +877,7 @@ export default function IntegrationsScreen() {
                             placeholder={modelFieldPlaceholder}
                             includePlaceholderOption={false}
                             options={modelOptions}
-                            size="large"
+                            size="lg"
                             disabled={
                               providerModelsState.loading ||
                               modelOptions.length === 0
@@ -905,7 +905,7 @@ export default function IntegrationsScreen() {
 
               <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button onClick={handleSaveRouting} loading={savingAiRouting}>
-                  {!savingAiRouting && <Save className="w-4 h-4" />}
+                  {!savingAiRouting && <Save className="kds-control-icon" />}
                   <span>
                     {savingAiRouting
                       ? "Salvando..."
@@ -968,7 +968,7 @@ export default function IntegrationsScreen() {
                 fullWidth
                 className="mt-4"
               >
-                {!savingMetaPixel && <Save className="w-4 h-4" />}
+                {!savingMetaPixel && <Save className="kds-control-icon" />}
                 <span>
                   {savingMetaPixel ? "Salvando..." : "Salvar Meta Pixel"}
                 </span>
@@ -1011,7 +1011,7 @@ export default function IntegrationsScreen() {
                 fullWidth
                 className="mt-4"
               >
-                {!savingGtm && <Save className="w-4 h-4" />}
+                {!savingGtm && <Save className="kds-control-icon" />}
                 <span>{savingGtm ? "Salvando..." : "Salvar GTM"}</span>
               </Button>
             </Card>

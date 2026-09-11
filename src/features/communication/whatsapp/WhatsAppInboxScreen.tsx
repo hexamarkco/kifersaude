@@ -5,8 +5,8 @@ import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
-import Input from '../../../components/ui/Input';
-import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Popover, PopoverContent, PopoverTrigger } from '../../../design-system';
+import { Badge, Button, Checkbox, ConfirmDialog, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Popover, PopoverContent, PopoverTrigger, IconButton
+} from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
@@ -1013,10 +1013,10 @@ function RetryMediaButton({
       onClick={onRetry}
       disabled={loading}
       variant="soft"
-      size="xs"
-      className="whatsapp-inbox-retry-button px-3 text-[11px]"
+      size="sm"
+      className="whatsapp-inbox-retry-button"
     >
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
+      {loading ? <Loader2 className="animate-spin" /> : <SendHorizontal className="kds-control-icon" />}
       Reenviar
     </Button>
   );
@@ -1446,7 +1446,7 @@ function WhatsAppMessageBody({
             variant="ghost"
             size="sm"
             onClick={() => setShowOriginalText((current) => !current)}
-            className="h-7 px-2.5 text-[11px] normal-case tracking-normal"
+            className="normal-case tracking-normal"
           >
             {showOriginalText ? 'Ocultar alterações' : 'Ver antes e depois'}
           </Button>
@@ -1837,9 +1837,9 @@ function WhatsAppMessageBody({
               <Button
                 type="button"
                 variant="soft"
-                size="xs"
+                size="sm"
                 onClick={() => onTranscribe(message)}
-                className="px-3 text-[11px]"
+                
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -8499,15 +8499,14 @@ export default function WhatsAppInboxScreen() {
                   {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
                 </p>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    size="icon"
+                  <IconButton
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
                     className="relative shrink-0"
-                    onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
+                    size="md" onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     aria-label="Chats arquivados"
                     title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
                   >
-                    <Archive className="h-4 w-4" />
+                    <Archive className="kds-control-icon" />
                     {archivedChatsCountValue > 0 ? (
                       <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[1.75rem] items-center justify-center whitespace-nowrap rounded-full border px-1.5 text-[10px] font-semibold leading-none" style={{
                         borderColor: 'var(--brand-primary-border)',
@@ -8517,37 +8516,34 @@ export default function WhatsAppInboxScreen() {
                         {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
                       </span>
                     ) : null}
-                  </Button>
-                  <Button
-                    size="icon"
+                  </IconButton>
+                  <IconButton
                     variant="secondary"
                     className="shrink-0"
-                    onClick={() => setWhatsAppAgendaOpen(true)}
+                    size="md" onClick={() => setWhatsAppAgendaOpen(true)}
                     aria-label="Agenda do WhatsApp"
                     title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissão para acessar a agenda'}
                     disabled={!canViewAgenda}
                   >
-                    <CalendarDays className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
+                    <CalendarDays className="kds-control-icon" />
+                  </IconButton>
+                  <IconButton
                     variant="secondary"
                     className="shrink-0"
-                    onClick={() => setWhatsAppDashboardOpen(true)}
+                    size="md" onClick={() => setWhatsAppDashboardOpen(true)}
                     aria-label="Painel WhatsApp"
                     title="Painel WhatsApp"
                   >
-                    <Cog className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
+                    <Cog className="kds-control-icon" />
+                  </IconButton>
+                  <IconButton
                     className="shrink-0"
-                    onClick={() => setStartChatModalOpen(true)}
+                    size="md" onClick={() => setStartChatModalOpen(true)}
                     aria-label="Novo chat"
                     title="Novo chat"
                   >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                    <Plus className="kds-control-icon" />
+                  </IconButton>
                 </div>
               </div>
 
@@ -8577,9 +8573,9 @@ export default function WhatsAppInboxScreen() {
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
                     variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
                     size="sm"
-                    className="h-9 px-3.5 text-xs"
+                    
                   >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <SlidersHorizontal className="kds-control-icon" />
                     Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
                   </Button>
                 </div>
@@ -8800,7 +8796,7 @@ export default function WhatsAppInboxScreen() {
                         />
                       ) : null}
                       {selectedChatWasAutoLinked ? (
-                        <Badge tone="primary" size="xs" className="uppercase tracking-[0.12em]">
+                        <Badge tone="primary" size="sm" className="uppercase tracking-[0.12em]">
                           Auto
                         </Badge>
                       ) : null}
@@ -8816,19 +8812,18 @@ export default function WhatsAppInboxScreen() {
                         </span>
                       ) : null}
                     </div>
-                    <Button
+                    <IconButton
                       ref={threadActionsMenuTriggerRef}
                       type="button"
                       onClick={() => setThreadActionsMenuOpen((current) => !current)}
                       variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
-                      size="icon"
-                      className="h-11 min-h-11 w-11 min-w-11 shrink-0 lg:hidden"
+                      className="shrink-0 lg:hidden"
                       aria-label="Abrir ações da conversa"
                       aria-expanded={threadActionsMenuOpen}
                       title="Ações da conversa"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                     size="lg">
+                      <MoreHorizontal aria-hidden="true" />
+                    </IconButton>
                   </div>
                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
                     <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
@@ -8874,7 +8869,7 @@ export default function WhatsAppInboxScreen() {
                   <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
                     <div className="hidden shrink-0 items-center gap-2 lg:flex">
                     {selectedChat.lead_id ? (
-                      <Button
+                      <IconButton
                         type="button"
                         onClick={() => (
                           selectedChat.autonomous_attendance_status === 'active'
@@ -8882,7 +8877,6 @@ export default function WhatsAppInboxScreen() {
                             : void handleActivateAutonomousAttendance(selectedChat)
                         )}
                         variant="icon"
-                        size="icon"
                         loading={assumingControlChatId === selectedChat.id}
                         aria-label={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
                         title={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
@@ -8892,77 +8886,71 @@ export default function WhatsAppInboxScreen() {
                             ? 'is-active'
                             : 'is-inactive',
                         )}
-                      >
+                       size="md">
                         {selectedChat.autonomous_attendance_status === 'active' ? (
-                          <Pause className="h-4 w-4" />
+                          <Pause aria-hidden="true" />
                         ) : (
-                          <Bot className="h-4 w-4" />
+                          <Bot aria-hidden="true" />
                         )}
-                      </Button>
+                      </IconButton>
                     ) : null}
-                    <Button
+                    <IconButton
                       type="button"
                       onClick={() => setChatFilesOpen(true)}
                       variant={chatFilesOpen ? 'secondary' : 'soft'}
-                      size="icon"
                       aria-label="Ver arquivos desta conversa"
                       title="Arquivos da conversa"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                    <Button
+                     size="md">
+                      <FolderOpen aria-hidden="true" />
+                    </IconButton>
+                    <IconButton
                       type="button"
                       onClick={handleToggleChatMessageSearch}
                       variant={chatMessageSearchOpen ? 'secondary' : 'soft'}
-                      size="icon"
                       aria-label="Pesquisar mensagens neste chat"
                       title="Pesquisar neste chat"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                    <Button
+                     size="md">
+                      <Search className="kds-control-icon" />
+                    </IconButton>
+                    <IconButton
                       type="button"
                       onClick={() => void handleCopyChatTranscript()}
                       variant="soft"
-                      size="icon"
                       aria-label="Copiar conversa formatada"
                       title="Copiar conversa formatada"
                       disabled={copyingTranscript}
-                    >
-                      {copyingTranscript ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                    <Button
+                     size="md">
+                      {copyingTranscript ? <Loader2 className="animate-spin" /> : <Copy aria-hidden="true" />}
+                    </IconButton>
+                    <IconButton
                       type="button"
                       onClick={() => void handleRecoverChatHistory()}
                       variant="soft"
-                      size="icon"
                       aria-label="Recuperar mensagens antigas do chat"
                       title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
                       disabled={Boolean(historyRecoveryDisabledReason)}
-                    >
-                      {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    </Button>
-                    <Button
+                     size="md">
+                      {syncingHistoryChatId === selectedChat.id ? <Loader2 className="animate-spin" /> : <Download aria-hidden="true" />}
+                    </IconButton>
+                    <IconButton
                       type="button"
                       onClick={handleOpenFollowUpModal}
                       variant="soft"
-                      size="icon"
                       aria-label="Gerar follow-up com IA"
                       title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
                       disabled={Boolean(followUpGenerationDisabledReason)}
-                    >
-                      {generatingFollowUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    </Button>
-                    <Button
+                     size="md">
+                      {generatingFollowUp ? <Loader2 className="animate-spin" /> : <Sparkles className="kds-control-icon" />}
+                    </IconButton>
+                    <IconButton
                       type="button"
                       onClick={handleOpenLeadDrawer}
                       variant="soft"
-                      size="icon"
                       aria-label="Abrir informações do lead"
                       title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
-                    >
+                     size="md">
                       <span className="relative inline-flex">
-                        <Info className="h-4 w-4" />
+                        <Info className="kds-control-icon" />
                         {chatAgendaSummary.pendingCount > 0 ? (
                           <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
                             borderColor: 'var(--brand-primary-border)',
@@ -8973,7 +8961,7 @@ export default function WhatsAppInboxScreen() {
                           </span>
                         ) : null}
                       </span>
-                    </Button>
+                    </IconButton>
                     </div>
                   </div>
                 </div>
@@ -8989,7 +8977,7 @@ export default function WhatsAppInboxScreen() {
                         onChange={(event) => setChatMessageSearchDraft(event.target.value)}
                         leftIcon={Search}
                         placeholder="Pesquisar mensagens neste chat"
-                        size="compact"
+                        size="sm"
                         autoComplete="off"
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
@@ -8997,7 +8985,7 @@ export default function WhatsAppInboxScreen() {
                           }
                         }}
                       />
-                      <Button
+                      <IconButton
                         type="button"
                         onClick={() => {
                           setChatMessageSearchDraft('');
@@ -9005,12 +8993,11 @@ export default function WhatsAppInboxScreen() {
                           setChatMessageSearchOpen(false);
                         }}
                         variant="ghost"
-                        size="icon"
                         aria-label="Fechar busca no chat"
                         title="Fechar busca"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                       size="md">
+                        <X aria-hidden="true" />
+                      </IconButton>
                     </div>
 
                     {chatMessageSearch ? (
@@ -9082,13 +9069,13 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => void handleLoadOlderMessages()}
                       disabled={loadingOlderMessages}
                       variant="secondary"
-                      size="xs"
-                      className="whatsapp-inbox-load-older px-3.5 text-[11px]"
+                      size="sm"
+                      className="whatsapp-inbox-load-older"
                     >
                       {loadingOlderMessages ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="animate-spin" />
                       ) : (
-                        <ChevronUp className="h-3.5 w-3.5" />
+                        <ChevronUp className="kds-control-icon" />
                       )}
                       {loadingOlderMessages ? 'Carregando...' : 'Carregar mais'}
                     </Button>
@@ -9782,15 +9769,15 @@ export default function WhatsAppInboxScreen() {
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
-                              <Button type="button" size="xs" className="px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
+                              <Button type="button" size="sm"  onClick={handleApplyReplySuggestion}>
                                 Aplicar
                               </Button>
                             ) : null}
                             <Button
                               type="button"
                               variant="secondary"
-                              size="xs"
-                              className="px-3 text-[11px]"
+                              size="sm"
+                              
                               onClick={() => void handleGenerateReplySuggestion(true)}
                               disabled={replySuggestionLoading}
                             >
@@ -9799,8 +9786,8 @@ export default function WhatsAppInboxScreen() {
                             <Button
                               type="button"
                               variant="ghost"
-                              size="xs"
-                              className="px-3 text-[11px]"
+                              size="sm"
+                              
                               onClick={handleDismissReplySuggestion}
                               disabled={replySuggestionLoading && !replySuggestionText}
                             >
@@ -10025,8 +10012,8 @@ export default function WhatsAppInboxScreen() {
                             <Button
                               type="button"
                               variant="secondary"
-                              size="xs"
-                              className="px-3 text-[11px]"
+                              size="sm"
+                              
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();
@@ -10851,7 +10838,7 @@ export default function WhatsAppInboxScreen() {
                   setLeadResponsavelFilters([]);
                   setAdvancedFiltersOpen(false);
                 }}
-                className="h-auto px-0 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--brand-primary)] hover:bg-transparent hover:text-[var(--brand-primary-hover)]"
+                className="uppercase tracking-[0.12em] hover:bg-transparent hover:text-[var(--brand-primary-hover)]"
               >
                 Limpar filtros
               </Button>

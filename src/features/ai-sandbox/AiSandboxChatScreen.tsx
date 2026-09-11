@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
-import { Badge, Button, EmptyState, Input, LoadingState } from '../../design-system';
+import { Badge, Button, EmptyState, Input, LoadingState, IconButton
+} from '../../design-system';
 import { toast } from '../../lib/toast';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -486,14 +487,14 @@ export default function AiSandboxChatScreen() {
             <p className="text-sm font-semibold">Chat de testes — IA</p>
             <p className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</p>
           </div>
-          <Button variant="text" size="xs" onClick={() => signOut()}>
+          <Button variant="text" size="sm" onClick={() => signOut()}>
             Sair
           </Button>
         </div>
 
         <div className="px-3 pt-3">
           <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation}>
-            <MessageCirclePlus className="mr-1.5 h-4 w-4" />
+            <MessageCirclePlus className="mr-1.5" />
             Nova simulação
           </Button>
         </div>
@@ -611,7 +612,7 @@ export default function AiSandboxChatScreen() {
             <p className="truncate text-sm font-medium">{activeConversation.title}</p>
             {messages.length > 0 && (
               <Button variant="ghost" size="sm" onClick={handleExportChat} title="Exportar conversa">
-                <Download className="h-4 w-4" />
+                <Download className="kds-control-icon" />
               </Button>
             )}
           </div>
@@ -630,7 +631,7 @@ export default function AiSandboxChatScreen() {
                   value={leadNameForApproach}
                   onChange={(event) => setLeadNameForApproach(event.target.value)}
                   placeholder="Nome do lead (opcional)"
-                  size="compact"
+                  size="sm"
                   disabled={startingApproach}
                 />
                 <Button
@@ -639,7 +640,7 @@ export default function AiSandboxChatScreen() {
                   loading={startingApproach}
                   onClick={handleStartWithApproach}
                 >
-                  {!startingApproach && <UserRoundPlus className="mr-1.5 h-4 w-4" />}
+                  {!startingApproach && <UserRoundPlus className="mr-1.5" />}
                   Iniciar abordagem
                 </Button>
               </div>
@@ -743,7 +744,7 @@ export default function AiSandboxChatScreen() {
                     <Clock className="h-3.5 w-3.5" />
                     <span>IA responde em {secondsUntilReply}s (aguardando novas mensagens)</span>
                   </div>
-                  <Button variant="text" size="xs" onClick={handleReplyNow}>
+                  <Button variant="text" size="sm" onClick={handleReplyNow}>
                     Responder agora
                   </Button>
                 </div>
@@ -783,17 +784,16 @@ export default function AiSandboxChatScreen() {
               disabled={sendingDraft}
               className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
             />
-            <Button
+            <IconButton
               variant="primary"
-              size="icon"
               loading={sendingDraft}
               onClick={handleSend}
               disabled={!draft.trim()}
               title="Enviar"
               aria-label="Enviar"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+             size="md">
+              <Send className="kds-control-icon" />
+            </IconButton>
           </div>
         </div>
       </main>

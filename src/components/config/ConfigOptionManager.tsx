@@ -16,6 +16,7 @@ import {
   DialogTitle,
   Field,
   Input,
+  IconButton,
 } from '../../design-system';
 
 type ConfigOptionManagerProps = {
@@ -184,7 +185,7 @@ export default function ConfigOptionManager({
         </div>
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
-          <Plus className="h-4 w-4" />
+          <Plus className="kds-control-icon" />
           <span>Nova opção</span>
         </Button>
       </div>
@@ -234,16 +235,15 @@ export default function ConfigOptionManager({
                   <span>Ativo</span>
                 </label>
 
-                <Button
+                <IconButton
                   onClick={() => void handleDelete(item.id)}
                   variant="danger"
-                  size="icon"
-                  className="h-9 w-9"
+                  
                   title="Remover opção"
                   disabled={isBusy}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                 size="sm" aria-label="Remover opção">
+                  <Trash2 aria-hidden="true" />
+                </IconButton>
               </div>
             </Card>
           );
@@ -298,7 +298,7 @@ export default function ConfigOptionManager({
             Cancelar
           </Button>
           <Button type="submit" form="config-option-create-form" disabled={saving}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>
         </DialogFooter>

@@ -62,7 +62,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                size="large"
+                size="lg"
                 placeholder="seu.usuario"
               />
             </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                size="large"
+                size="lg"
                 placeholder="********"
               />
             </div>
@@ -88,7 +88,7 @@ export default function LoginPage() {
               disabled={loading}
               fullWidth
               size="lg"
-              className="text-base"
+              
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>

@@ -1,7 +1,7 @@
 import { Filter, Target, Users } from 'lucide-react';
 
-import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import { Input, PageHeader } from '../../../design-system';
+import { Input, PageHeader, FilterSelect
+} from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
 
@@ -58,7 +58,7 @@ export function DashboardHeader({
       <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center">
           <div className="min-w-0 xl:w-52">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Filter}
               value={periodFilter}
               onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
@@ -102,7 +102,7 @@ export function DashboardHeader({
           )}
 
           <div className="min-w-0 xl:w-52">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Target}
               value={dashboardOriginFilter}
               onChange={onOriginFilterChange}
@@ -116,7 +116,7 @@ export function DashboardHeader({
           </div>
 
           <div className="min-w-0 xl:w-56">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Users}
               value={dashboardOwnerFilter}
               onChange={onOwnerFilterChange}

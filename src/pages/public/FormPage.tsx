@@ -520,7 +520,7 @@ function GeoStep({ geo, onShare, onSkip }: GeoStepProps) {
       </div>
       <div className="space-y-2.5">
         <Button onClick={onShare} loading={geo.requesting} fullWidth size="lg">
-          {!geo.requesting && <MapPin className="h-4 w-4" />}
+          {!geo.requesting && <MapPin className="kds-control-icon" />}
           <span>{geo.requesting ? 'Solicitando...' : 'Compartilhar localização'}</span>
         </Button>
         <button
@@ -582,7 +582,7 @@ function ContactStep({ step, contact, setContact, submitting, onSubmit }: Contac
       </Field>
 
       <Button type="submit" fullWidth size="lg" loading={submitting}>
-        {!submitting && <ShieldCheck className="h-4 w-4" />}
+        {!submitting && <ShieldCheck className="kds-control-icon" />}
         <span>{submitting ? 'Enviando...' : 'Enviar'}</span>
       </Button>
     </form>

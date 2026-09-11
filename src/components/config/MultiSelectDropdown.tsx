@@ -84,7 +84,7 @@ export default function MultiSelectDropdown({
             variant="text"
             size="sm"
             fullWidth
-            className="justify-start rounded-none border-b border-[var(--border-subtle)]"
+            className="justify-start border-b border-[var(--border-subtle)]"
             onClick={() => {
               onChange([]);
               setIsOpen(false);

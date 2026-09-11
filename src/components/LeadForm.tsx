@@ -34,7 +34,6 @@ import {
   resolveStatusIdByName,
   resolveTipoContratacaoIdByLabel,
 } from '../lib/leadRelations';
-import FilterSingleSelect from './FilterSingleSelect';
 import {
   Button,
   Checkbox,
@@ -49,6 +48,7 @@ import {
   Input,
   Surface,
   Textarea,
+  FilterSelect,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -519,15 +519,15 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 placeholder="00000-000"
                 maxLength={9}
                 action={loadingCep ? (
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Consultando CEP" />
+                  <span className="w-5 animate-spin border-2 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Consultando CEP" />
                 ) : (
                   <button
                     type="button"
                     onClick={() => void handleCepSearch()}
-                    className="text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+                    className="transition-colors hover:text-[var(--brand-primary)]"
                     aria-label="Buscar CEP"
                   >
-                    <Search className="h-5 w-5" />
+                    <Search className="w-5" />
                   </button>
                 )}
               />
@@ -546,7 +546,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
 
           <Field label="Estado">
-            <FilterSingleSelect
+            <FilterSelect
               icon={MapPin}
               value={formData.estado}
               onChange={handleStateChange}
@@ -565,7 +565,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 : 'Selecione um estado para liberar as cidades.'
             }
           >
-            <FilterSingleSelect
+            <FilterSelect
               icon={MapPinned}
               value={formData.cidade}
               onChange={(value) => setFormData((prev) => ({ ...prev, cidade: value }))}
@@ -583,7 +583,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           <Field label="Origem do lead *">
             {activeOrigins.length > 0 ? (
-              <FilterSingleSelect
+              <FilterSelect
                 icon={Compass}
                 value={formData.origem}
                 onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
@@ -616,7 +616,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           <Field label="Tipo de contratação *">
             {tipoContratacaoOptions.length > 0 ? (
-              <FilterSingleSelect
+              <FilterSelect
                 icon={Briefcase}
                 value={formData.tipo_contratacao}
                 onChange={(value) =>
@@ -678,7 +678,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           <Field label="Status *">
             {activeLeadStatuses.length > 0 ? (
-              <FilterSingleSelect
+              <FilterSelect
                 icon={AlertCircle}
                 value={formData.status}
                 onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
@@ -726,7 +726,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           <Field label="Responsável *">
             {responsavelOptions.length > 0 ? (
-              <FilterSingleSelect
+              <FilterSelect
                 icon={UserCircle}
                 value={formData.responsavel}
                 onChange={(value) =>

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
-import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
+import { ActionSurface, Badge, Button, Input, Surface, Tabs, type TabItem, WorkspaceDialog
+} from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
 import type { CommWhatsAppLeadSearchResult } from '../data';
 import type { LeadStatusConfig } from '../../../leads';
 import type { CommWhatsAppPhoneContact } from '../domain/types';
-import WhatsAppDialog from './WhatsAppDialog';
 
 type StartChatSource = 'saved' | 'crm' | 'manual';
 
@@ -94,7 +94,7 @@ export default function WhatsAppStartChatModal({
   }, [source]);
 
   return (
-    <WhatsAppDialog
+    <WorkspaceDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Novo chat"
@@ -121,7 +121,7 @@ export default function WhatsAppStartChatModal({
                 <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
                   <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="w-full sm:w-auto sm:shrink-0">
-                    {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
+                    {!startingKey && <MessageSquarePlus className="kds-control-icon" />}
                     Iniciar chat
                   </Button>
                 </div>
@@ -134,7 +134,7 @@ export default function WhatsAppStartChatModal({
             {source === 'saved' && (
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Contatos salvos</span>
-                <Badge tone="neutral" size="xs">{contactsTotal}</Badge>
+                <Badge tone="neutral" size="sm">{contactsTotal}</Badge>
               </div>
             )}
             <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
@@ -200,12 +200,12 @@ export default function WhatsAppStartChatModal({
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <Badge
                             tone="neutral"
-                            size="xs"
+                            size="sm"
                             style={getStatusColor(lead.status_nome) ? getBadgeStyle(getStatusColor(lead.status_nome)!) : undefined}
                           >
                             {lead.status_nome || 'Sem status'}
                           </Badge>
-                          {lead.responsavel_label ? <Badge tone="neutral" size="xs">{lead.responsavel_label}</Badge> : null}
+                          {lead.responsavel_label ? <Badge tone="neutral" size="sm">{lead.responsavel_label}</Badge> : null}
                         </div>
                       </div>
                       {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
@@ -217,6 +217,6 @@ export default function WhatsAppStartChatModal({
           </div>
         )}
       </div>
-    </WhatsAppDialog>
+    </WorkspaceDialog>
   );
 }

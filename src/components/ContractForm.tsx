@@ -46,7 +46,6 @@ import {
 } from "lucide-react";
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
-import FilterSingleSelect from "./FilterSingleSelect";
 import { LeadFavoriteBadge } from "./LeadFavoriteStar";
 import {
   Alert,
@@ -64,6 +63,8 @@ import {
   Input,
   Surface,
   Textarea,
+  IconButton,
+  FilterSelect,
 } from "../design-system";
 import { configService } from "../features/config";
 import { useConfig } from "../contexts/ConfigContext";
@@ -1154,7 +1155,7 @@ export default function ContractForm({
             className="mt-3"
             onClick={() => setShowDocumentImport(true)}
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="kds-control-icon" />
             Preencher com PDFs
           </Button>
         </DialogHeader>
@@ -1186,7 +1187,7 @@ export default function ContractForm({
               </Field>
 
               <Field label="Lead Vinculado">
-                <FilterSingleSelect
+                <FilterSelect
                   icon={User}
                   value={formData.lead_id}
                   onChange={(value) =>
@@ -1200,7 +1201,7 @@ export default function ContractForm({
 
               <Field label="Status *">
                 {contractStatusOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={AlertCircle}
                     value={formData.status}
                     onChange={(value) =>
@@ -1225,7 +1226,7 @@ export default function ContractForm({
 
               <Field label="Modalidade *">
                 {modalidadeOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={AlertCircle}
                     value={formData.modalidade}
                     onChange={(value) =>
@@ -1261,26 +1262,25 @@ export default function ContractForm({
                             cnpj: formatCnpj(e.target.value),
                           })
                         }
-                        className="pr-10"
+                        
                         inputMode="numeric"
                         maxLength={18}
                       />
-                      <Button
+                      <IconButton
                         type="button"
                         onClick={handleConsultarCNPJ}
                         disabled={cnpjLoading}
                         variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
+                        className="absolute right-1 top-1/2 -translate-y-1/2"
                         aria-label={cnpjLoading ? "Buscando CNPJ" : "Buscar CNPJ na Receita"}
                         title={
                           cnpjLoading ? "Buscando..." : "Buscar na Receita"
                         }
-                      >
+                       size="sm">
                         <Search
                           className={`w-5 h-5 ${cnpjLoading ? "animate-pulse" : ""}`}
                         />
-                      </Button>
+                      </IconButton>
                     </div>
                   </Field>
 
@@ -1319,7 +1319,7 @@ export default function ContractForm({
                           endereco_empresa: e.target.value,
                         })
                       }
-                      size="compact"
+                      size="sm"
                       rows={2}
                       placeholder="Preenchido automaticamente pela consulta do CNPJ"
                     />
@@ -1331,7 +1331,7 @@ export default function ContractForm({
                 label="Operadora *"
                 description="Comissão e bônus serão preenchidos automaticamente"
               >
-                <FilterSingleSelect
+                <FilterSelect
                   icon={Search}
                   value={formData.operadora}
                   onChange={(value) => handleOperadoraChange(value)}
@@ -1354,7 +1354,7 @@ export default function ContractForm({
 
               <Field label="Abrangência">
                 {abrangenciaOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={AlertCircle}
                     value={formData.abrangencia}
                     onChange={(value) =>
@@ -1378,7 +1378,7 @@ export default function ContractForm({
 
               <Field label="Acomodação">
                 {acomodacaoOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={AlertCircle}
                     value={formData.acomodacao}
                     onChange={(value) =>
@@ -1423,7 +1423,7 @@ export default function ContractForm({
               </Field>
 
               <Field label="Mês de reajuste">
-                <FilterSingleSelect
+                <FilterSelect
                   icon={Calendar}
                   value={formData.mes_reajuste}
                   onChange={(value) =>
@@ -1451,7 +1451,7 @@ export default function ContractForm({
 
               <Field label="Carência">
                 {carenciaOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={AlertCircle}
                     value={formData.carencia}
                     onChange={(value) =>
@@ -1503,7 +1503,7 @@ export default function ContractForm({
                       variant="secondary"
                       size="sm"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="kds-control-icon" />
                       <span>Adicionar Ajuste</span>
                     </Button>
                   </div>
@@ -1543,15 +1543,14 @@ export default function ContractForm({
                               </p>
                             </div>
                           </div>
-                          <Button
+                          <IconButton
                             type="button"
                             variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteAdjustment(adj.id)}
+                            size="md" onClick={() => handleDeleteAdjustment(adj.id)}
                             aria-label={`Remover ajuste: ${adj.motivo}`}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            <Trash2 className="kds-control-icon" />
+                          </IconButton>
                         </Surface>
                       ))}
                     </div>
@@ -1687,7 +1686,7 @@ export default function ContractForm({
 
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                     <Field label="Como cobrar">
-                      <FilterSingleSelect
+                      <FilterSelect
                         icon={WalletCards}
                         value={formData.taxa_adesao_tipo}
                         onChange={handleSignupFeeTypeChange}
@@ -1813,7 +1812,7 @@ export default function ContractForm({
                         onClick={handleAddInstallment}
                         size="sm"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="kds-control-icon" />
                         <span>Adicionar parcela</span>
                       </Button>
                     </div>
@@ -1839,15 +1838,14 @@ export default function ContractForm({
                                 <span className="text-sm font-semibold text-[var(--text-primary)]">
                                   Parcela {index + 1}
                                 </span>
-                                <Button
+                                <IconButton
                                   type="button"
                                   onClick={() => handleRemoveInstallment(index)}
                                   variant="ghost"
-                                  size="icon"
                                   aria-label={`Remover parcela ${index + 1}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                 size="md">
+                                  <Trash2 aria-hidden="true" />
+                                </IconButton>
                               </div>
                               <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <Field label="Valor da parcela">
@@ -1997,7 +1995,7 @@ export default function ContractForm({
                       size="sm"
                       onClick={handleAddBonusRow}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="kds-control-icon" />
                       Adicionar faixa
                     </Button>
                   </div>
@@ -2072,7 +2070,7 @@ export default function ContractForm({
                                 onClick={() => handleRemoveBonusRow(row.id)}
                                 disabled={bonusDistribution.length === 1}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="kds-control-icon" />
                               </Button>
                             </div>
                           </Surface>
@@ -2145,7 +2143,7 @@ export default function ContractForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <Field label="Responsável *">
                 {responsavelOptions.length > 0 ? (
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={User}
                     value={formData.responsavel}
                     onChange={(value) =>

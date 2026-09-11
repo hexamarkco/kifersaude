@@ -9,11 +9,11 @@ import {
 
 import {
   Alert,
-  Button,
   OperationalMetricChip,
   PageHeader,
   SectionHeader,
   Surface,
+  IconButton,
 } from "../../design-system";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { CommissionCalendarSkeleton } from "../../components/ui/panelSkeletons";
@@ -158,14 +158,13 @@ export default function CommissionCalendarScreen() {
         <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
           <Surface padding="md" className="space-y-4 2xl:sticky 2xl:top-4 2xl:self-start">
             <div className="flex items-center justify-between gap-2">
-              <Button
+              <IconButton
                 onClick={goToPreviousMonth}
                 variant="icon"
-                size="icon"
                 aria-label="Mes anterior"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
+               size="md">
+                <ChevronLeft className="kds-control-icon" />
+              </IconButton>
 
               <div className="text-center">
                 <h3 className="font-[var(--font-display)] text-lg font-semibold capitalize text-[var(--text-primary)]">
@@ -176,14 +175,13 @@ export default function CommissionCalendarScreen() {
                 </p>
               </div>
 
-              <Button
+              <IconButton
                 onClick={goToNextMonth}
                 variant="icon"
-                size="icon"
                 aria-label="Proximo mes"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+               size="md">
+                <ChevronRight className="kds-control-icon" />
+              </IconButton>
             </div>
 
             <CommissionMonthGrid

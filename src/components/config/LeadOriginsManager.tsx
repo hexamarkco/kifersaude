@@ -16,6 +16,7 @@ import {
   DialogTitle,
   Field,
   Input,
+  IconButton,
 } from '../../design-system';
 
 export default function LeadOriginsManager() {
@@ -147,7 +148,7 @@ export default function LeadOriginsManager() {
         </div>
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
-          <Plus className="h-4 w-4" />
+          <Plus className="kds-control-icon" />
           <span>Nova origem</span>
         </Button>
       </div>
@@ -204,21 +205,21 @@ export default function LeadOriginsManager() {
 
                 {editingId === origin.id ? (
                   <div className="flex items-center space-x-2">
-                    <Button onClick={() => void confirmEditing()} variant="success" size="icon" className="h-9 w-9" disabled={isBusy}>
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={cancelEditing} variant="secondary" size="icon" className="h-9 w-9" disabled={isBusy}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <IconButton onClick={() => void confirmEditing()} variant="success"  disabled={isBusy} size="sm">
+                      <Check aria-hidden="true" />
+                    </IconButton>
+                    <IconButton onClick={cancelEditing} variant="secondary"  disabled={isBusy} size="sm">
+                      <X className="kds-control-icon" />
+                    </IconButton>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Button onClick={() => startEditing(origin.id, origin.nome)} variant="secondary" size="sm" disabled={isBusy}>
                       Editar
                     </Button>
-                    <Button onClick={() => void handleDelete(origin.id)} variant="danger" size="icon" className="h-9 w-9" disabled={isBusy}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <IconButton onClick={() => void handleDelete(origin.id)} variant="danger"  disabled={isBusy} size="sm">
+                      <Trash2 aria-hidden="true" />
+                    </IconButton>
                   </div>
                 )}
               </div>
@@ -275,7 +276,7 @@ export default function LeadOriginsManager() {
             Cancelar
           </Button>
           <Button type="submit" form="lead-origin-create-form" disabled={saving}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>
         </DialogFooter>

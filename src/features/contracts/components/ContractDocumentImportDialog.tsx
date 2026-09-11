@@ -231,14 +231,14 @@ export function ContractDocumentImportDialog({
           <>
             <Button type="button" variant="secondary" onClick={() => setExtraction(null)}>Ler outros PDFs</Button>
             <Button type="button" onClick={() => { onApply(extraction); onClose(); }}>
-              <CheckCircle2 className="h-4 w-4" /> Aplicar ao formulário
+              <CheckCircle2 className="kds-control-icon" /> Aplicar ao formulário
             </Button>
           </>
         ) : (
           <>
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
             <Button type="button" disabled={loading || files.length === 0} onClick={() => void handleExtract()}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {loading ? <Loader2 className="animate-spin" /> : <Sparkles className="kds-control-icon" />}
               {loading ? 'Lendo PDFs...' : 'Ler e sugerir campos'}
             </Button>
           </>

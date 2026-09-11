@@ -156,7 +156,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
         ref={forwardedRef}
         multiple
         className={cx(
-          'kds-select panel-ui-input w-full px-3 disabled:cursor-not-allowed',
+          'kds-select panel-ui-input w-full disabled:cursor-not-allowed',
           panelInputSizeClasses[size],
           panelInputStateClasses[resolvedState],
           className,
@@ -213,7 +213,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           id={id}
           type="button"
           className={cx(
-            'kds-select kds-select-trigger panel-ui-input flex w-full items-center justify-between gap-3 px-3 text-left disabled:cursor-not-allowed',
+            'kds-select kds-select-trigger panel-ui-input flex w-full items-center justify-between text-left disabled:cursor-not-allowed',
             panelInputSizeClasses[size],
             panelInputStateClasses[resolvedState],
             className,
@@ -227,7 +227,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           onKeyDown={handleTriggerKeyDown}
         >
           <span className={cx('min-w-0 flex-1 truncate', !selectedOption && 'text-[var(--text-muted)]')}>{displayValue}</span>
-          <ChevronDown className={cx('h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180')} aria-hidden="true" />
+          <ChevronDown className={cx('kds-control-icon shrink-0 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180')} aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent id={listboxId} className="kds-dropdown-menu max-h-72 w-[min(20rem,calc(100vw-1rem))] overflow-y-auto p-1" role="listbox" aria-label={ariaLabel || placeholder || 'Selecionar opção'}>
@@ -247,7 +247,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
             className={cx('kds-dropdown-option flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50', option.value === resolvedValue && 'is-selected font-medium')}
           >
             <span className="min-w-0 flex-1 truncate">{option.label}</span>
-            {option.value === resolvedValue ? <Check className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}
+            {option.value === resolvedValue ? <Check className="kds-control-icon shrink-0" aria-hidden="true" /> : null}
           </button>
         ))}
         {optionItems.length === 0 ? <p className="px-3 py-4 text-sm text-[var(--text-muted)]">Nenhuma opção disponível.</p> : null}

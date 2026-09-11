@@ -1,6 +1,7 @@
 import { CalendarDays, Cake, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
-import { Badge, Button, EmptyState, SectionHeader, Surface } from '../../../design-system';
+import { Badge, Button, EmptyState, SectionHeader, Surface, IconButton
+} from '../../../design-system';
 import { getDateKey, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import type {
   AgeBand,
@@ -171,16 +172,15 @@ export function DashboardEventsCalendar({
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] xl:items-stretch">
         <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <Button
+            <IconButton
               type="button"
               onClick={() => onCalendarMonthChange(new Date(year, month - 1, 1))}
               variant="icon"
-              size="icon"
-              className="h-8 w-8"
+              
               aria-label="Mês anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+             size="sm">
+              <ChevronLeft aria-hidden="true" />
+            </IconButton>
 
             <div className="min-w-0 text-center">
               <h4 className="flex items-center justify-center gap-2 text-sm font-semibold capitalize leading-tight text-[var(--text-primary)]">
@@ -190,16 +190,15 @@ export function DashboardEventsCalendar({
               <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</p>
             </div>
 
-            <Button
+            <IconButton
               type="button"
               onClick={() => onCalendarMonthChange(new Date(year, month + 1, 1))}
               variant="icon"
-              size="icon"
-              className="h-8 w-8"
+              
               aria-label="Próximo mês"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+             size="sm">
+              <ChevronRight aria-hidden="true" />
+            </IconButton>
           </div>
 
           <div className="mb-3 grid grid-cols-3 gap-1 rounded-full bg-[var(--bg-surface)] p-1">
@@ -310,7 +309,7 @@ function CalendarEventRow({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="accent" size="xs" icon={Sparkles}>Reajuste</Badge>
+              <Badge tone="accent" size="sm" icon={Sparkles}>Reajuste</Badge>
               {adjustment.contract?.codigo_contrato && (
                 <span className="text-xs font-semibold text-[var(--text-secondary)]">{adjustment.contract.codigo_contrato}</span>
               )}
@@ -331,11 +330,11 @@ function CalendarEventRow({
         </div>
 
         <div className="dashboard-event-actions mt-3 flex flex-wrap items-center gap-1.5">
-          <Button type="button" onClick={() => onNavigateToContract(adjustment.contract)} variant="secondary" size="xs">
+          <Button type="button" onClick={() => onNavigateToContract(adjustment.contract)} variant="secondary" size="sm">
             Ver contrato
           </Button>
           {adjustment.contract?.lead_id && (
-            <Button type="button" onClick={() => onNavigateToLead(adjustment.contract?.lead_id)} variant="secondary" size="xs">
+            <Button type="button" onClick={() => onNavigateToLead(adjustment.contract?.lead_id)} variant="secondary" size="sm">
               Abrir lead
             </Button>
           )}
@@ -352,7 +351,7 @@ function CalendarEventRow({
               })
             }
             variant="soft"
-            size="xs"
+            size="sm"
           >
             Criar lembrete
           </Button>
@@ -372,7 +371,7 @@ function CalendarEventRow({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral" size="xs" icon={Cake}>Aniversário</Badge>
+            <Badge tone="neutral" size="sm" icon={Cake}>Aniversário</Badge>
             <span className="text-xs font-semibold text-[var(--text-secondary)]">{birthday.tipo}</span>
           </div>
           <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{birthday.nome}</p>
@@ -394,12 +393,12 @@ function CalendarEventRow({
 
       <div className="dashboard-event-actions mt-3 flex flex-wrap items-center gap-1.5">
         {birthday.contract && (
-          <Button type="button" onClick={() => onNavigateToContract(birthday.contract)} variant="secondary" size="xs">
+          <Button type="button" onClick={() => onNavigateToContract(birthday.contract)} variant="secondary" size="sm">
             Ver contrato
           </Button>
         )}
         {birthday.contract?.lead_id && (
-          <Button type="button" onClick={() => onNavigateToLead(birthday.contract?.lead_id)} variant="secondary" size="xs">
+          <Button type="button" onClick={() => onNavigateToLead(birthday.contract?.lead_id)} variant="secondary" size="sm">
             Abrir lead
           </Button>
         )}
@@ -414,7 +413,7 @@ function CalendarEventRow({
             })
           }
           variant="soft"
-          size="xs"
+          size="sm"
         >
           Criar lembrete
         </Button>

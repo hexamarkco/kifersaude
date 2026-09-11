@@ -3,8 +3,8 @@ import type { Contract } from '../features/contracts';
 import type { ConfigOption } from '../features/config';
 import type { Lead, LeadStatusConfig } from '../features/leads';
 import StatusDropdown from './StatusDropdown';
-import FilterSingleSelect from './FilterSingleSelect';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
+import { FilterSelect } from '../design-system';
 import {
   AlertCircle,
   ClipboardList,
@@ -261,7 +261,7 @@ export default function LeadDetailsPanel({
               <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">Responsável</p>
               {responsavelOptions.length > 0 ? (
                 <div className="mt-1">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={UserCircle}
                     value={safeResponsavelValue}
                     onChange={handleResponsavelChange}

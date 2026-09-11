@@ -520,7 +520,7 @@ function CityAutocompleteField({ id, value, onChange }: CityAutocompleteFieldPro
         onFocus={() => setIsOpen(true)}
         onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
         onKeyDown={handleKeyDown}
-        size="large"
+        size="lg"
         placeholder="Sua cidade no RJ"
       />
       {showSuggestions ? (
@@ -796,7 +796,7 @@ export default function HomePage() {
           required
           value={formData.nome}
           onChange={(event) => setFormData((current) => ({ ...current, nome: event.target.value }))}
-          size="large"
+          size="lg"
           placeholder="Seu nome"
         />
       </div>
@@ -816,7 +816,7 @@ export default function HomePage() {
               telefone: formatPhoneInput(event.target.value),
             }))
           }
-          size="large"
+          size="lg"
           placeholder="(21) 99999-9999"
         />
       </div>
@@ -845,7 +845,7 @@ export default function HomePage() {
               tipoContratacao: event.target.value as ContractKind,
             }))
           }
-          size="large"
+          size="lg"
           options={[
             { value: 'PF', label: 'Pessoa física' },
             { value: 'MEI', label: 'MEI' },
@@ -865,7 +865,7 @@ export default function HomePage() {
           required
           value={formData.numeroVidas}
           onChange={(event) => setFormData((current) => ({ ...current, numeroVidas: event.target.value }))}
-          size="large"
+          size="lg"
           placeholder="Ex: 1, 2, 3"
         />
       </div>
@@ -908,7 +908,7 @@ export default function HomePage() {
             required
             value={formData.idadeTitular}
             onChange={(event) => setFormData((current) => ({ ...current, idadeTitular: event.target.value }))}
-            size="large"
+            size="lg"
             placeholder="Informe a idade"
           />
         </div>

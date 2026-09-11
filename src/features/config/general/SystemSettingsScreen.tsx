@@ -352,7 +352,7 @@ export default function SystemSettingsScreen() {
                     variant="secondary"
                     size="sm"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
+                    <RotateCcw className="kds-control-icon" />
                     Restaurar padrões
                   </Button>
                 </div>
@@ -455,7 +455,7 @@ export default function SystemSettingsScreen() {
                             ),
                           })
                         }
-                        className="h-2 cursor-pointer appearance-none px-0"
+                        className="cursor-pointer appearance-none"
                       />
                     </div>
                   )}
@@ -492,7 +492,7 @@ export default function SystemSettingsScreen() {
                     disabled={saving || !hasPendingGeneralChanges}
                     className="w-full sm:w-auto"
                   >
-                    <Save className="h-4 w-4" />
+                    <Save className="kds-control-icon" />
                     <span>
                       {saving ? "Salvando..." : "Salvar preferências"}
                     </span>

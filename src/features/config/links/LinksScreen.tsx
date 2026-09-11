@@ -35,6 +35,7 @@ import {
   Select,
   Switch,
   Textarea,
+  IconButton,
 } from "../../../design-system";
 
 type LinkFormState = {
@@ -285,7 +286,7 @@ export default function LinksScreen() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyPublicUrl()}>
-              <Copy className="h-4 w-4" />
+              <Copy className="kds-control-icon" />
               <span>{copyLabel}</span>
             </Button>
             <Button
@@ -293,7 +294,7 @@ export default function LinksScreen() {
               size="sm"
               onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="kds-control-icon" />
               <span>Abrir página</span>
             </Button>
           </div>
@@ -336,7 +337,7 @@ export default function LinksScreen() {
                   value={profileForm.avatar_url}
                   onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
                   placeholder="Cole a URL de uma imagem ou envie um arquivo"
-                  size="compact"
+                  size="sm"
                 />
                 <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</p>
               </div>
@@ -383,7 +384,7 @@ export default function LinksScreen() {
             />
           </div>
           <Button onClick={() => void handleSaveProfile()} loading={savingProfile}>
-            {!savingProfile && <Save className="h-4 w-4" />}
+            {!savingProfile && <Save className="kds-control-icon" />}
             <span>{savingProfile ? "Salvando..." : "Salvar perfil"}</span>
           </Button>
         </div>
@@ -403,7 +404,7 @@ export default function LinksScreen() {
               setIsCreateModalOpen(true);
             }}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>Novo link</span>
           </Button>
         </div>
@@ -508,39 +509,36 @@ export default function LinksScreen() {
 
                     {isEditing ? (
                       <div className="flex items-center gap-2">
-                        <Button
+                        <IconButton
                           onClick={() => void confirmEditing()}
                           variant="success"
-                          size="icon"
-                          className="h-9 w-9"
+                          
                           disabled={isBusy}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
+                         size="sm">
+                          <Check aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
                           onClick={cancelEditing}
                           variant="secondary"
-                          size="icon"
-                          className="h-9 w-9"
+                          
                           disabled={isBusy}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                         size="sm">
+                          <X className="kds-control-icon" />
+                        </IconButton>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Button onClick={() => startEditing(link)} variant="secondary" size="sm" disabled={isBusy}>
                           Editar
                         </Button>
-                        <Button
+                        <IconButton
                           onClick={() => void handleDelete(link)}
                           variant="danger"
-                          size="icon"
-                          className="h-9 w-9"
+                          
                           disabled={isBusy}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                         size="sm">
+                          <Trash2 aria-hidden="true" />
+                        </IconButton>
                       </div>
                     )}
                   </div>
@@ -613,7 +611,7 @@ export default function LinksScreen() {
             Cancelar
           </Button>
           <Button type="submit" form="link-create-form" disabled={creating}>
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>{creating ? "Salvando" : "Adicionar"}</span>
           </Button>
         </DialogFooter>

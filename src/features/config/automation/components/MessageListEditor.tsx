@@ -7,8 +7,8 @@ import {
   type AutoContactTemplate,
 } from "../../../../lib/autoContactService";
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/templateVariableSuggestions";
-import FilterSingleSelect from "../../../../components/FilterSingleSelect";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
+import { FilterSelect } from "../../../../design-system";
 
 export type MessageListItem = {
   templateId?: string;
@@ -105,9 +105,9 @@ export function MessageListEditor({
             </div>
 
             <div className="mb-1 flex items-center gap-1">
-              <FilterSingleSelect
+              <FilterSelect
                 icon={RefreshCcw}
-                size="compact"
+                size="sm"
                 value={isTemplate ? "template" : "custom"}
                 onChange={(value) =>
                   updateItem(
@@ -127,9 +127,9 @@ export function MessageListEditor({
             </div>
 
             {isTemplate ? (
-              <FilterSingleSelect
+              <FilterSelect
                 icon={RefreshCcw}
-                size="compact"
+                size="sm"
                 value={item.templateId ?? ""}
                 onChange={(value) => updateItem(index, { templateId: value })}
                 placeholder="Selecione"
@@ -152,7 +152,7 @@ export function MessageListEditor({
                     })
                   }
                   rows={3}
-                  size="compact"
+                  size="sm"
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                 />
                 <div className="mt-1 text-[10px] text-[var(--text-subtle)]">

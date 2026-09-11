@@ -8,9 +8,9 @@ import {
 import { formatDateForInput } from '../lib/dateUtils';
 import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
-import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Surface, IconButton, FilterSelect
+} from '../design-system';
 
 type DependentFormProps = {
   contractId: string;
@@ -238,7 +238,7 @@ export default function DependentForm({
       <form id="dependent-form" onSubmit={handleSubmit} className="p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Users}
               value={formData.holder_id}
               onChange={(value) => setFormData({ ...formData, holder_id: value })}
@@ -259,19 +259,18 @@ export default function DependentForm({
               autoFormat="cpf"
               value={formData.cpf}
               onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              className="pr-11"
+              
               />
-              <Button
+              <IconButton
                 type="button"
                 onClick={() => void handleConsultarCPF({ force: true })}
                 disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
                 aria-label="Buscar CPF"
                 variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
-              >
+                className="absolute right-1 top-1/2 -translate-y-1/2"
+               size="sm">
                 <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
-              </Button>
+              </IconButton>
             </div>
           </Field>
 
@@ -315,7 +314,7 @@ export default function DependentForm({
           </Surface>
 
           <Field label="Relação com titular *">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Users}
               value={formData.relacao}
               onChange={(value) => setFormData({ ...formData, relacao: value })}
@@ -337,7 +336,7 @@ export default function DependentForm({
           </Field>
 
           <Field label="Carencia Individual">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Users}
               value={formData.carencia_individual}
               onChange={(value) => setFormData({ ...formData, carencia_individual: value })}

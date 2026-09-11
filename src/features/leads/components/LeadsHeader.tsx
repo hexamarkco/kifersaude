@@ -49,7 +49,7 @@ export function LeadsHeader({
                 : "Criar novo lead"
             }
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="kds-control-icon" />
             <span>Novo lead</span>
           </Button>
         </div>

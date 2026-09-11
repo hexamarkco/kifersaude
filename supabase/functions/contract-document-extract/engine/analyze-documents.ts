@@ -16,7 +16,8 @@ const documentText = (document: ParsedPdfDocument) => document.pages
   .map((page) => page.text)
   .join('\n');
 
-const detectOperator = (text: string, family: DocumentClassification['family']) => {
+const detectOperator = (document: ParsedPdfDocument, family: DocumentClassification['family']) => {
+  const text = documentText(document);
   const normalized = normalize(text);
   if (family === 'hcommerce') {
     if (/\bKLini\b/i.test(text) || normalized.includes('KLini'.toUpperCase())) return 'Klini Saúde';
@@ -28,10 +29,6 @@ const detectOperator = (text: string, family: DocumentClassification['family']) 
   if (family === 'supermed') {
     if (normalized.includes('OPERADORA AMIL') || normalized.includes(' AMIL ')) return 'Amil';
   }
-  if (family === 'qualicorp') {
-    if (normalized.includes('ASSIM SAUDE') || normalized.includes('OPERADORA ASSIM')) return 'Assim Saúde';
-    if (normalized.includes('OPERADORA AMIL')) return 'Amil';
-  }
   const known = [
     ['SULAMERICA', 'SulAmérica'],
     ['BRADESCO', 'Bradesco Saúde'],
@@ -42,6 +39,24 @@ const detectOperator = (text: string, family: DocumentClassification['family']) 
     ['PORTO SAUDE', 'Porto Saúde'],
     ['MEDSENIOR', 'MedSênior'],
   ] as const;
+  if (family === 'qualicorp') {
+    const planPages = document.pages.filter((page) => normalize(page.text).includes('PLANO PRETENDIDO'));
+    const qualicorpKnown = [
+      [/SULAMERICA/, 'SulAmérica'],
+      [/\bKLINI\b/, 'Klini Saúde'],
+      [/\bAMIL\b/, 'Amil'],
+      [/BRADESCO/, 'Bradesco Saúde'],
+      [/ASSIM PLENUS|ASSIM SAUDE|OPERADORA ASSIM/, 'Assim Saúde'],
+    ] as const;
+    const detectIn = (pages: ParsedPdfDocument['pages']) => {
+      const relevantText = normalize(pages.map((page) => page.text).join('\n'));
+      return qualicorpKnown.filter(([pattern]) => pattern.test(relevantText));
+    };
+    const planMentions = detectIn(planPages);
+    if (planMentions.length > 0) return planMentions.length === 1 ? planMentions[0][1] : null;
+    const initialMentions = detectIn(document.pages.slice(0, 4));
+    return initialMentions.length === 1 ? initialMentions[0][1] : null;
+  }
   return known.find(([token]) => normalized.includes(token))?.[1] ?? null;
 };
 
@@ -105,7 +120,7 @@ export const classifyDocuments = (
   const text = documentText(document);
   const detectedFamily = detectFamily(text);
   const family = familyForOverride(profileOverride) ?? detectedFamily;
-  const operator = detectOperator(text, family);
+  const operator = detectOperator(document, family);
   const supportStatus = family === 'generic'
     ? operator ? 'GENERIC_FALLBACK' : 'UNKNOWN'
     : 'SUPPORTED_PROFILE';

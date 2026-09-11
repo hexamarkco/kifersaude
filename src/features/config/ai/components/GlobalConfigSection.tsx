@@ -71,7 +71,7 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
                 value={val}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
                 rows={6}
-                className="font-mono text-sm"
+                className="font-mono"
                 placeholder={`Digite as ${info.label.toLowerCase()}...`}
               />
             ) : (
@@ -88,7 +88,7 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
                 onClick={() => handleSave(key)}
                 disabled={saving}
               >
-                {!saving && <Save className="h-3.5 w-3.5" />}
+                {!saving && <Save className="kds-control-icon" />}
                 {saving ? "Salvando..." : "Salvar"}
               </Button>
             </div>

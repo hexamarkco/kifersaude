@@ -15,7 +15,6 @@ import {
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
 import { toast } from "../../../lib/toast";
-import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import { UsersSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
@@ -41,6 +40,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  FilterSelect,
+  IconButton,
 } from "../../../design-system";
 import { FALLBACK_PROFILES } from "./shared/usersSettingsConstants";
 import {
@@ -309,7 +310,7 @@ export default function UsersScreen() {
           description="Gerencie contas e os perfis de acesso da equipe."
           action={
             <Button onClick={() => setShowAddUser(true)} variant="primary" className="w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
+              <Plus className="kds-control-icon" />
               <span>Novo usuário</span>
             </Button>
           }
@@ -371,8 +372,8 @@ export default function UsersScreen() {
                         <TableCell className="whitespace-nowrap">{new Date(userProfile.created_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
                           <div className="flex justify-end gap-1">
-                            <Button type="button" onClick={() => startEditingUser(userProfile)} disabled={actionLoading} variant="icon" size="icon" title="Editar usuário" aria-label={`Editar ${userProfile.username}`}><Pencil className="h-4 w-4" /></Button>
-                            {!isCurrentUser && <Button type="button" onClick={() => void handleDeleteUser(userProfile.id)} disabled={actionLoading} variant="danger" size="icon" title="Excluir usuário" aria-label={`Excluir ${userProfile.username}`}><Trash2 className="h-4 w-4" /></Button>}
+                            <IconButton type="button" onClick={() => startEditingUser(userProfile)} disabled={actionLoading} variant="icon" title="Editar usuário" aria-label={`Editar ${userProfile.username}`} size="md"><Pencil aria-hidden="true" /></IconButton>
+                            {!isCurrentUser && <IconButton type="button" onClick={() => void handleDeleteUser(userProfile.id)} disabled={actionLoading} variant="danger" title="Excluir usuário" aria-label={`Excluir ${userProfile.username}`} size="md"><Trash2 aria-hidden="true" /></IconButton>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -426,27 +427,25 @@ export default function UsersScreen() {
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      <Button
+                      <IconButton
                         type="button"
                         onClick={() => startEditingUser(userProfile)}
                         disabled={actionLoading}
                         variant="icon"
-                        size="icon"
-                        className="h-8 w-8"
+                        
                         title="Editar usuário"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                       size="sm" aria-label="Editar usuário">
+                        <Pencil aria-hidden="true" />
+                      </IconButton>
                       {!isCurrentUser ? (
-                        <Button
+                        <IconButton
                           onClick={() => void handleDeleteUser(userProfile.id)}
                           disabled={actionLoading}
                           variant="danger"
-                          size="icon"
                           title="Excluir usuário"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                         size="md" aria-label="Excluir usuário">
+                          <Trash2 aria-hidden="true" />
+                        </IconButton>
                       ) : (
                         <span className="text-sm italic text-[color:var(--text-muted)]">
                           Você
@@ -500,7 +499,7 @@ export default function UsersScreen() {
                 </Field>
 
                 <Field label="Perfil">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={Shield}
                     value={newUserRole}
                     onChange={setNewUserRole}
@@ -563,7 +562,7 @@ export default function UsersScreen() {
                 </Field>
 
                 <Field label="Perfil">
-                  <FilterSingleSelect
+                  <FilterSelect
                     icon={Shield}
                     value={editUserRole}
                     onChange={setEditUserRole}

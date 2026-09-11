@@ -21,8 +21,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
 import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
-import FilterSingleSelect from "../../components/FilterSingleSelect";
-import Pagination from "../../components/Pagination";
 import {
   Badge,
   Button,
@@ -42,6 +40,9 @@ import {
   ToolbarSearch,
   Tooltip,
   type PanelTone,
+  FilterSelect,
+  Pagination,
+  IconButton,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
@@ -490,7 +491,7 @@ export default function ContractsManager({
                 setShowForm(true);
               }}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="kds-control-icon" />
               <span>Novo contrato</span>
             </Button>
           ) : undefined}
@@ -518,7 +519,7 @@ export default function ContractsManager({
                 aria-label="Limpar filtros"
                 title="Limpar filtros"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className="kds-control-icon" />
                 <span className="kds-mobile-icon-action-label">Limpar</span>
               </Button>
               <OperationalMetricChip
@@ -530,7 +531,7 @@ export default function ContractsManager({
           </Toolbar>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <FilterSingleSelect
+            <FilterSelect
               icon={Filter}
               value={filterStatus}
               onChange={(value) => setFilterStatus(value)}
@@ -557,7 +558,7 @@ export default function ContractsManager({
               ]}
             />
 
-            <FilterSingleSelect
+            <FilterSelect
               icon={Users}
               value={filterResponsavel}
               onChange={(value) => setFilterResponsavel(value)}
@@ -572,7 +573,7 @@ export default function ContractsManager({
               ]}
             />
 
-            <FilterSingleSelect
+            <FilterSelect
               icon={FileText}
               value={filterOperadora}
               onChange={(value) => setFilterOperadora(value)}
@@ -587,7 +588,7 @@ export default function ContractsManager({
               ]}
             />
 
-            <FilterSingleSelect
+            <FilterSelect
               icon={Calendar}
               value={dateProximityFilter}
               onChange={(value) =>
@@ -677,8 +678,8 @@ export default function ContractsManager({
                     <TableCell>{contract.responsavel || "Não atribuído"}</TableCell>
                       <TableCell align="right">
                         <div className="flex justify-end gap-1">
-                          <Button onClick={() => setSelectedContract(contract)} variant="secondary" size="icon" title="Abrir contrato" aria-label="Abrir contrato"><Eye className="h-4 w-4" /></Button>
-                          {canEditContracts && <Button onClick={() => handleDeleteContract(contract)} variant="danger" size="icon" title="Excluir contrato" aria-label="Excluir contrato"><Trash2 className="h-4 w-4" /></Button>}
+                          <IconButton onClick={() => setSelectedContract(contract)} variant="secondary" title="Abrir contrato" aria-label="Abrir contrato" size="md"><Eye aria-hidden="true" /></IconButton>
+                          {canEditContracts && <IconButton onClick={() => handleDeleteContract(contract)} variant="danger" title="Excluir contrato" aria-label="Excluir contrato" size="md"><Trash2 aria-hidden="true" /></IconButton>}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -826,7 +827,7 @@ export default function ContractsManager({
                       size="sm"
                       className="w-full sm:w-auto"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="kds-control-icon" />
                       <span>Abrir</span>
                     </Button>
                     {canEditContracts && (
@@ -837,7 +838,7 @@ export default function ContractsManager({
                         className="w-full sm:w-auto"
                         type="button"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="kds-control-icon" />
                         <span>Excluir</span>
                       </Button>
                     )}

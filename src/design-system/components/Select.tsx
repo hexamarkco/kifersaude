@@ -256,13 +256,4 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   );
 });
 
-export type MultiSelectProps = Omit<SelectProps, 'multiple'>;
-
-export const MultiSelect = forwardRef<HTMLSelectElement, MultiSelectProps>(function MultiSelect(
-  { className, ...props },
-  ref,
-) {
-  return <Select ref={ref} multiple className={cx('min-h-[7rem] py-2', className)} {...props} />;
-});
-
 export default Select;

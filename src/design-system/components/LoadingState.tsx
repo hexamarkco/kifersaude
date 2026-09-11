@@ -2,19 +2,22 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import type { ControlSize } from '../tokens';
 import Button from './Button';
 
 export type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   /** Hides the decorative placeholder from assistive technologies by default. */
   label?: string;
+  variant?: 'line' | 'control' | 'avatar' | 'card' | 'table-row';
+  size?: ControlSize;
 };
 
-export function Skeleton({ className, label, ...props }: SkeletonProps) {
+export function Skeleton({ className, label, variant = 'line', size = 'md', ...props }: SkeletonProps) {
   return (
     <div
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cx('kds-skeleton', className)}
+      className={cx('kds-skeleton', `kds-skeleton-${variant}`, `kds-skeleton-${size}`, className)}
       {...props}
     />
   );

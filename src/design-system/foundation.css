@@ -709,6 +709,19 @@
 .kds-card-padding-md { padding: var(--card-padding-md); }
 .kds-card-padding-lg { padding: var(--card-padding-lg); }
 
+.kds-skeleton-control,
+.kds-skeleton-avatar {
+  height: var(--control-height-md);
+}
+
+.kds-skeleton-sm { --kds-skeleton-size: var(--control-height-sm); }
+.kds-skeleton-md { --kds-skeleton-size: var(--control-height-md); }
+.kds-skeleton-lg { --kds-skeleton-size: var(--control-height-lg); }
+.kds-skeleton-control { height: var(--kds-skeleton-size); border-radius: var(--radius-full); }
+.kds-skeleton-avatar { width: var(--kds-skeleton-size); height: var(--kds-skeleton-size); border-radius: var(--radius-full); }
+.kds-skeleton-card { min-height: 10rem; border-radius: var(--radius-xl); }
+.kds-skeleton-table-row { min-height: 3rem; border-radius: var(--radius-lg); }
+
 .kds-control-sm,
 .kds-control-md,
 .kds-control-lg {

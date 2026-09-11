@@ -64,6 +64,7 @@ import {
   ButtonGroup,
   Card,
   Checkbox,
+  Combobox,
   ConfirmDialog,
   DateTimePicker,
   Dialog,
@@ -77,12 +78,15 @@ import {
   DrawerHeader,
   EmptyState,
   Field,
+  FilterBar,
+  FilterSelect,
   IconButton,
   Input,
   InputAddon,
   InputGroup,
   KpiCard,
   LoadingState,
+  MultiSelect,
   OperationalMetricChip,
   OperationalStatusBadge,
   OperationalStatusDot,
@@ -94,6 +98,7 @@ import {
   Radio,
   RadioGroup,
   SearchInput,
+  SegmentedControl,
   Select,
   Skeleton,
   Stepper,
@@ -110,7 +115,6 @@ import {
   ToastProvider,
   Tooltip,
   useToast,
-  FilterMultiSelect,
 } from '../../design-system';
 import './design-system-showcase.css';
 
@@ -240,6 +244,9 @@ function ShowcaseContent() {
   const [rangeLow, setRangeLow] = useState(20);
   const [rangeHigh, setRangeHigh] = useState(70);
   const [segmentIcon, setSegmentIcon] = useState<'grid' | 'list'>('grid');
+  const [comboboxValue, setComboboxValue] = useState('bradesco');
+  const [multiSelectValues, setMultiSelectValues] = useState(['luiza']);
+  const [filterStatus, setFilterStatus] = useState('');
   const [metricTab, setMetricTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [underlineTab, setUnderlineTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -284,6 +291,14 @@ function ShowcaseContent() {
             </div>
           </Item>
 
+          <Item title="Escala canônica sm / md / lg">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm" variant="secondary"><Plus />32 px</Button>
+              <Button size="md" variant="primary"><Plus />40 px</Button>
+              <Button size="lg" variant="secondary"><Plus />48 px</Button>
+            </div>
+          </Item>
+
           <Item title="Icon Button">
             <div className="flex flex-wrap gap-2">
               <IconButton aria-label="Configurações" variant="secondary">
@@ -313,23 +328,14 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Split Button">
-            <div className="flex w-fit overflow-hidden rounded-full border border-[var(--text-primary)]">
-              <button className="bg-[var(--text-primary)] px-5 py-2.5 text-sm font-medium text-[var(--text-inverse)]">
-                Salvar
-              </button>
-              <button
-                aria-label="Mais opções"
-                className="flex items-center justify-center border-l border-[var(--text-inverse)]/20 bg-[var(--text-primary)] px-3 text-[var(--text-inverse)]"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
-            </div>
+            <ButtonGroup>
+              <Button>Salvar</Button>
+              <IconButton aria-label="Mais opções" variant="primary"><ChevronDown /></IconButton>
+            </ButtonGroup>
           </Item>
 
           <Item title="Floating Action Button">
-            <button className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)] shadow-[var(--shadow-modal)]">
-              <Plus className="h-6 w-6" />
-            </button>
+            <IconButton size="lg" variant="primary" aria-label="Adicionar"><Plus /></IconButton>
           </Item>
 
           <Item title="Link">
@@ -341,18 +347,14 @@ function ShowcaseContent() {
 
           <Item title="Toggle Button">
             <div className="flex gap-2">
-              <button
+              <IconButton
                 aria-pressed={toggleGridPressed}
+                aria-label="Salvar lead"
                 onClick={() => setToggleGridPressed((v) => !v)}
-                className={[
-                  'flex h-9 w-9 items-center justify-center rounded-full border transition',
-                  toggleGridPressed
-                    ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--text-inverse)]'
-                    : 'border-[var(--border-strong)] text-[var(--text-secondary)]',
-                ].join(' ')}
+                variant={toggleGridPressed ? 'primary' : 'secondary'}
               >
-                <Bookmark className="h-4 w-4" />
-              </button>
+                <Bookmark />
+              </IconButton>
               <span className="self-center text-xs text-[var(--text-muted)]">
                 {toggleGridPressed ? 'Salvo' : 'Salvar lead'}
               </span>
@@ -360,26 +362,15 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Segmented Control">
-            <div className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
-              <button
-                onClick={() => setSegmentIcon('grid')}
-                className={[
-                  'flex h-9 w-9 items-center justify-center rounded-full transition',
-                  segmentIcon === 'grid' ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-muted)]',
-                ].join(' ')}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setSegmentIcon('list')}
-                className={[
-                  'flex h-9 w-9 items-center justify-center rounded-full transition',
-                  segmentIcon === 'list' ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-muted)]',
-                ].join(' ')}
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
+            <SegmentedControl
+              value={segmentIcon}
+              onChange={setSegmentIcon}
+              ariaLabel="Modo de visualização"
+              items={[
+                { value: 'grid', label: 'Grade', icon: LayoutGrid },
+                { value: 'list', label: 'Lista', icon: List },
+              ]}
+            />
           </Item>
         </Cat>
 
@@ -441,11 +432,10 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Multi Select">
-            <FilterMultiSelect
-              icon={Users}
+            <MultiSelect
               placeholder="Responsáveis"
-              values={['luiza']}
-              onChange={() => {}}
+              values={multiSelectValues}
+              onChange={setMultiSelectValues}
               options={[
                 { value: 'luiza', label: 'Luiza' },
                 { value: 'nick', label: 'Nick' },
@@ -454,14 +444,16 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Combobox">
-            <div className="relative">
-              <Input placeholder="Buscar operadora..." leftIcon={Search} defaultValue="Brad" />
-              <div className="absolute left-0 right-0 top-full z-10 mt-1.5 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]">
-                <div className="rounded-xl bg-[var(--bg-hover)] px-3 py-2 text-sm text-[var(--text-primary)]">
-                  <strong>Brad</strong>esco Saúde
-                </div>
-              </div>
-            </div>
+            <Combobox
+              value={comboboxValue}
+              onChange={setComboboxValue}
+              placeholder="Buscar operadora..."
+              options={[
+                { value: 'bradesco', label: 'Bradesco Saúde' },
+                { value: 'amil', label: 'Amil' },
+                { value: 'sulamerica', label: 'SulAmérica' },
+              ]}
+            />
           </Item>
 
           <Item title="Autocomplete">
@@ -1278,49 +1270,35 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Filter">
-            <button className="flex items-center gap-2 rounded-full bg-[var(--bg-hover)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)]">
-              <Filter className="h-3.5 w-3.5" />
-              Operadora
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+            <FilterSelect
+              icon={Filter}
+              placeholder="Status"
+              value={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { value: 'novo', label: 'Novo' },
+                { value: 'contato', label: 'Contato inicial' },
+              ]}
+            />
           </Item>
 
           <Item title="Filter Bar" span="lg">
-            <div className="flex flex-wrap items-center gap-2">
+            <FilterBar>
               <SearchInput placeholder="Buscar" className="max-w-[14rem]" />
-              <button className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] px-3.5 py-2 text-sm text-[var(--text-secondary)]">
-                Status
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-              <button className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] px-3.5 py-2 text-sm text-[var(--text-secondary)]">
-                Operadora
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-              <button className="ml-auto flex items-center gap-1 text-sm font-medium text-[var(--text-secondary)]">
-                <SlidersIcon className="h-3.5 w-3.5" />
-                Ordenar
-              </button>
-            </div>
+              <FilterSelect icon={Filter} placeholder="Status" value={filterStatus} onChange={setFilterStatus} options={STATUS_DROPDOWN_OPTIONS.map((option) => ({ value: option.nome, label: option.nome }))} />
+              <Button variant="tertiary"><SlidersIcon />Ordenar</Button>
+            </FilterBar>
           </Item>
 
           <Item title="Filter Chips">
             <div className="flex flex-wrap gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-brand)]">
-                Novo
-                <X className="h-3 w-3" />
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
-                Instagram
-                <X className="h-3 w-3" />
-              </span>
+              <Badge tone="primary">Novo</Badge>
+              <Badge tone="neutral">Instagram</Badge>
             </div>
           </Item>
 
           <Item title="Sort">
-            <button className="flex items-center gap-2 rounded-full bg-[var(--bg-hover)] px-4 py-2 text-sm text-[var(--text-secondary)]">
-              <SlidersIcon className="h-3.5 w-3.5" />
-              Mais recentes
-            </button>
+            <Button variant="tertiary"><SlidersIcon />Mais recentes</Button>
           </Item>
         </Cat>
 

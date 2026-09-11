@@ -5,6 +5,10 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// IDs dos tipos de contratação
+const CNPJ_ID = 'd39dd4c5-1bbd-4c35-a9a5-c55849abc434';
+const MEI_ID = '78df932e-3977-4364-9ff0-258060912910';
+
 async function buscarLeadsCNPJ() {
   console.log('🔍 Buscando leads com CNPJ/MEI, 3+ vidas...\n');
 
@@ -18,12 +22,12 @@ async function buscarLeadsCNPJ() {
       email, 
       status, 
       responsavel_id,
-      tipo_contratacao,
+      tipo_contratacao_id,
       observacoes,
       data_criacao,
       ultimo_contato
     `)
-    .in('tipo_contratacao', ['CNPJ', 'MEI']);
+    .in('tipo_contratacao_id', [CNPJ_ID, MEI_ID]);
 
   if (errorLeads) {
     console.error('Erro ao buscar leads:', errorLeads);
@@ -94,8 +98,12 @@ async function buscarLeadsCNPJ() {
       }
     }
 
+    // Determinar tipo
+    const tipo = lead.tipo_contratacao_id === CNPJ_ID ? 'CNPJ' : 'MEI';
+
     leadsComInfo.push({
       ...lead,
+      tipo,
       totalVidas,
       mencionouPorto,
       totalMencoesPorto,
@@ -109,7 +117,7 @@ async function buscarLeadsCNPJ() {
 
   // 4. Exibir resultados
   console.log('═══════════════════════════════════════════════════════════════');
-  console.log('🎯 PRIORIDADE ALTA - CNPJ/MEI + 3+ VIDAS + FALARAM SOBRE PORTO');
+  console.log('🔴 PRIORIDADE ALTA - CNPJ/MEI + 3+ VIDAS + FALARAM SOBRE PORTO');
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   if (alto.length === 0) {
@@ -120,7 +128,7 @@ async function buscarLeadsCNPJ() {
       console.log(`   📞 Telefone: ${lead.telefone}`);
       console.log(`   📧 Email: ${lead.email || 'Não informado'}`);
       console.log(`   📋 Status: ${lead.status}`);
-      console.log(`   🏢 Tipo: ${lead.tipo_contratacao}`);
+      console.log(`   🏢 Tipo: ${lead.tipo}`);
       console.log(`   👥 Vidas: ${lead.totalVidas}`);
       console.log(`   💬 Menções a Porto: ${lead.totalMencoesPorto}`);
       console.log(`   📅 Data Criação: ${lead.data_criacao ? new Date(lead.data_criacao).toLocaleDateString('pt-BR') : 'N/A'}`);
@@ -130,7 +138,7 @@ async function buscarLeadsCNPJ() {
   }
 
   console.log('═══════════════════════════════════════════════════════════════');
-  console.log('📉 PRIORIDADE BAIXA - CNPJ/MEI + 3+ VIDAS + NÃO FALARAM PORTO');
+  console.log('🟡 PRIORIDADE BAIXA - CNPJ/MEI + 3+ VIDAS + NÃO FALARAM PORTO');
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   if (baixo.length === 0) {
@@ -141,7 +149,7 @@ async function buscarLeadsCNPJ() {
       console.log(`   📞 Telefone: ${lead.telefone}`);
       console.log(`   📧 Email: ${lead.email || 'Não informado'}`);
       console.log(`   📋 Status: ${lead.status}`);
-      console.log(`   🏢 Tipo: ${lead.tipo_contratacao}`);
+      console.log(`   🏢 Tipo: ${lead.tipo}`);
       console.log(`   👥 Vidas: ${lead.totalVidas}`);
       console.log(`   📅 Data Criação: ${lead.data_criacao ? new Date(lead.data_criacao).toLocaleDateString('pt-BR') : 'N/A'}`);
       console.log(`   📅 Último Contato: ${lead.ultimo_contato ? new Date(lead.ultimo_contato).toLocaleDateString('pt-BR') : 'N/A'}`);

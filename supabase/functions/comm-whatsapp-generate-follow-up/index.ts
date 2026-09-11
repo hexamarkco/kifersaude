@@ -1403,14 +1403,28 @@ Deno.serve(async (req: Request) => {
       buildValidationRetryInstruction: buildFollowUpStructuralRetryInstruction,
     });
 
+    // ---- Condensed context for validation (avoids re-sending full transcript) ----
+    const VALIDATION_TRANSCRIPT_LIMIT = 8;
+    const recentTranscriptLines = transcriptLines.slice(-VALIDATION_TRANSCRIPT_LIMIT);
+    const condensedValidationContext = [
+      'Lead:', leadContextText,
+      '',
+      temporalFactsText,
+      '',
+      'Últimas mensagens:',
+      recentTranscriptLines.join('\n'),
+      '',
+      'Follow-ups anteriores:',
+      recentFollowUpsText,
+    ].join('\n');
+
     const aiValidationResult = await generateTextForFeature({
       supabaseAdmin,
       featureKey: AI_FEATURES.FOLLOWUP_GENERATE,
       task: 'follow_up_generation',
       systemPrompt: FOLLOW_UP_AI_VALIDATOR_SYSTEM_PROMPT,
       userPrompt: buildFollowUpAiValidationUserPrompt({
-        policy: generationSystemPrompt,
-        context: generationUserPrompt,
+        condensedContext: condensedValidationContext,
         candidate: generationResult.text.trim(),
       }),
       temperature: Math.min(generateConfig?.temperature ?? 0.7, 0.2),

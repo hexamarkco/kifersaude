@@ -41,7 +41,7 @@ async function buscarLeadsCNPJ() {
     return;
   }
 
-  // 2. Para cada lead, verificar: vidas (contrato), menções a Porto
+  // 2. Para cada lead, verificar: vidas, menções a Porto
   const leadsComInfo = [];
 
   for (const lead of leads) {
@@ -53,6 +53,7 @@ async function buscarLeadsCNPJ() {
 
     // Buscar vidas do contrato
     let totalVidas = null;
+    let fonteVidas = 'contrato';
     if (contratos && contratos.length > 0) {
       const contratoComVidas = contratos.find(c => c.vidas && c.vidas > 0);
       if (contratoComVidas) {
@@ -65,10 +66,45 @@ async function buscarLeadsCNPJ() {
       const match = lead.observacoes.match(/(\d+)\s*(vida|vidas|dependente|dependentes|beneficiário|beneficiários)/i);
       if (match) {
         totalVidas = parseInt(match[1]);
+        fonteVidas = 'observações';
       }
     }
 
-    // Se não tem vidas, pular (não atende critério)
+    // Se não tem vidas, buscar nas mensagens
+    if (!totalVidas) {
+      const { data: chats } = await supabase
+        .from('comm_whatsapp_chats')
+        .select('id')
+        .eq('lead_id', lead.id);
+
+      if (chats && chats.length > 0) {
+        const chatIds = chats.map(c => c.id);
+        
+        // Buscar mensagens mencionando vidas
+        const { data: mensagens } = await supabase
+          .from('comm_whatsapp_messages')
+          .select('text_content, media_caption, transcription_text')
+          .in('chat_id', chatIds)
+          .or('text_content.ilike.%vida%,text_content.ilike.%vidas%,text_content.ilike.%dependente%,text_content.ilike.%beneficiário%')
+          .order('message_at', { ascending: false })
+          .limit(15);
+
+        if (mensagens && mensagens.length > 0) {
+          for (const msg of mensagens) {
+            const texto = msg.text_content || msg.media_caption || msg.transcription_text || '';
+            // Procurar padrões como "3 vidas", "4 vidas", etc.
+            const match = texto.match(/(\d+)\s*(vida|vidas|dependente|dependentes|beneficiário|beneficiários)/i);
+            if (match) {
+              totalVidas = parseInt(match[1]);
+              fonteVidas = 'mensagens';
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Se não tem vidas, pular
     if (!totalVidas || totalVidas < 3) {
       continue;
     }
@@ -105,6 +141,7 @@ async function buscarLeadsCNPJ() {
       ...lead,
       tipo,
       totalVidas,
+      fonteVidas,
       mencionouPorto,
       totalMencoesPorto,
       contratos: contratos || []
@@ -129,7 +166,7 @@ async function buscarLeadsCNPJ() {
       console.log(`   📧 Email: ${lead.email || 'Não informado'}`);
       console.log(`   📋 Status: ${lead.status}`);
       console.log(`   🏢 Tipo: ${lead.tipo}`);
-      console.log(`   👥 Vidas: ${lead.totalVidas}`);
+      console.log(`   👥 Vidas: ${lead.totalVidas} (fonte: ${lead.fonteVidas})`);
       console.log(`   💬 Menções a Porto: ${lead.totalMencoesPorto}`);
       console.log(`   📅 Data Criação: ${lead.data_criacao ? new Date(lead.data_criacao).toLocaleDateString('pt-BR') : 'N/A'}`);
       console.log(`   📅 Último Contato: ${lead.ultimo_contato ? new Date(lead.ultimo_contato).toLocaleDateString('pt-BR') : 'N/A'}`);
@@ -150,7 +187,7 @@ async function buscarLeadsCNPJ() {
       console.log(`   📧 Email: ${lead.email || 'Não informado'}`);
       console.log(`   📋 Status: ${lead.status}`);
       console.log(`   🏢 Tipo: ${lead.tipo}`);
-      console.log(`   👥 Vidas: ${lead.totalVidas}`);
+      console.log(`   👥 Vidas: ${lead.totalVidas} (fonte: ${lead.fonteVidas})`);
       console.log(`   📅 Data Criação: ${lead.data_criacao ? new Date(lead.data_criacao).toLocaleDateString('pt-BR') : 'N/A'}`);
       console.log(`   📅 Último Contato: ${lead.ultimo_contato ? new Date(lead.ultimo_contato).toLocaleDateString('pt-BR') : 'N/A'}`);
       console.log('');

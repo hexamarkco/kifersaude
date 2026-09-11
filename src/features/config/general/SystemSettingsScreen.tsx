@@ -362,7 +362,7 @@ export default function SystemSettingsScreen() {
                   <Button
                     onClick={handleRestoreGeneralDefaults}
                     variant="secondary"
-                    size="sm"
+                    size="md"
                   >
                     <RotateCcw className="kds-control-icon" />
                     Restaurar padrões

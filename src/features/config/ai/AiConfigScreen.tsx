@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   ConfirmDialog,
+  IconButton,
   Input,
   SectionHeader,
   SegmentedControl,
@@ -261,9 +262,17 @@ export default function AiConfigScreen() {
               className="hidden"
               onChange={handleImportFile}
             />
-            <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
+            <IconButton
+              variant="ghost"
+              size="sm"
+              onClick={load}
+              disabled={loading}
+              loading={loading}
+              aria-label="Atualizar configurações de IA"
+              title="Atualizar configurações de IA"
+            >
+              <RefreshCw />
+            </IconButton>
           </div>
         }
       />

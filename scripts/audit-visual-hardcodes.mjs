@@ -79,6 +79,12 @@ const auditCanonicalControls = (source) => {
       if (end < 0) break;
       const opening = source.slice(cursor, end + 1);
       if (legacySizePattern.test(opening)) matches.push({ type: 'legacy-control-size', value: component });
+      if (
+        component === 'IconButton'
+        && !/\baria-(?:label|labelledby)=/.test(opening)
+      ) {
+        matches.push({ type: 'unlabelled-icon-button', value: component });
+      }
       for (const classMatch of opening.matchAll(/className=(['"])([^'"]*)\1/g)) {
         for (const token of classMatch[2].split(/\s+/)) {
           if (geometryTokenPattern.test(token) || (component === 'IconButton' && /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:min-|max-)?w-/.test(token))) {
@@ -91,6 +97,13 @@ const auditCanonicalControls = (source) => {
         const closeStart = source.indexOf(`</${component}>`, end + 1);
         if (closeStart >= 0) {
           const body = source.slice(end + 1, closeStart);
+          const normalizedBody = body.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').trim();
+          if (
+            component === 'Button'
+            && /^<[A-Z][A-Za-z0-9.]*(?:\s[^>]*)?\/\s*>$/.test(normalizedBody)
+          ) {
+            matches.push({ type: 'icon-only-button', value: component });
+          }
           for (const iconMatch of body.matchAll(/<[A-Z][A-Za-z0-9]*(?:\s[^>]*)?className=(['"])([^'"]*)\1[^>]*\/?\s*>/g)) {
             for (const token of iconMatch[2].split(/\s+/)) {
               if (iconGeometryTokenPattern.test(token)) matches.push({ type: 'primitive-icon-override', value: `${component}:${token}` });

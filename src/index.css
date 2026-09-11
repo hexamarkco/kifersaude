@@ -87,7 +87,7 @@ html,
     input[type='month'],
     input[type='time'],
     select
-  ):not([class*='h-']):not([class*='min-h-']):not([class*='max-h-']):not(.panel-control-compact) {
+  ):not([class*='h-']):not([class*='min-h-']):not([class*='max-h-']):not(.panel-control-compact):not(.kds-input):not(.kds-select):not(.kds-textarea) {
   min-height: 2.75rem;
 }
 
@@ -1341,6 +1341,7 @@ html,
   }
 
   .painel-theme .whatsapp-inbox-messages {
+    overflow-x: hidden;
     padding-inline: clamp(0.75rem, 3.5vw, 1.25rem);
     padding-block: 0.875rem;
   }
@@ -1626,21 +1627,6 @@ html,
     padding-inline: 1rem !important;
   }
 
-  .painel-theme .kds-button {
-    min-height: 2.75rem;
-  }
-
-  /* Icon actions must stay square when the mobile touch target increases. */
-  .painel-theme .kds-button.kds-button-size-icon {
-    width: 2.75rem;
-    min-width: 2.75rem;
-    height: 2.75rem;
-    min-height: 2.75rem;
-    flex: 0 0 2.75rem;
-    aspect-ratio: 1;
-    padding: 0;
-  }
-
   .painel-theme .kds-button-group,
   .painel-theme .kds-page-actions,
   .painel-theme .kds-dialog-footer,
@@ -1651,8 +1637,22 @@ html,
   .painel-theme .kds-page-actions > *,
   .painel-theme .kds-dialog-footer > *,
   .painel-theme .kds-drawer-footer > * {
-    flex: 1 1 100%;
     justify-content: center;
+  }
+
+  .painel-theme .kds-page-actions > * {
+    flex: 1 1 100%;
+  }
+
+  .painel-theme .kds-dialog-footer > *,
+  .painel-theme .kds-drawer-footer > * {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .painel-theme .kds-drawer-footer {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .painel-theme .kds-op-toolbar-actions,
@@ -1916,14 +1916,14 @@ html,
   }
 
   .kds-header-refresh {
-    flex: 0 0 2.75rem !important;
-    width: 2.75rem !important;
-    min-width: 2.75rem;
+    flex: 0 0 var(--control-height-md) !important;
+    width: var(--control-height-md) !important;
+    min-width: var(--control-height-md);
   }
 
   .kds-mobile-icon-action {
-    width: 2.75rem;
-    min-width: 2.75rem;
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
     padding-inline: 0;
   }
 
@@ -1937,24 +1937,24 @@ html,
   .painel-theme .kds-op-toolbar-actions.kds-leads-toolbar-actions {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: max-content max-content minmax(0, 1fr);
     align-items: center;
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-mobile-icon-action {
-    width: 100%;
-    min-width: 0;
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
     justify-content: center;
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-popover-trigger {
     display: flex;
-    width: 100%;
+    width: var(--control-height-md);
   }
 
   .painel-theme .kds-leads-toolbar-actions > .kds-popover-trigger > .kds-mobile-icon-action {
-    width: 100%;
-    min-width: 0;
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
     justify-content: center;
   }
 
@@ -1964,7 +1964,7 @@ html,
     min-width: 0;
   }
 
-  @media (min-width: 390px) {
+  @media (min-width: 480px) {
     .kds-leads-toolbar-actions .kds-mobile-icon-action-label {
       position: static;
       width: auto;
@@ -1979,18 +1979,23 @@ html,
   .painel-theme .kds-op-toolbar-actions.kds-contracts-toolbar-actions {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: max-content minmax(0, 1fr);
     align-items: center;
   }
 
-  .painel-theme .kds-contracts-toolbar-actions > .kds-mobile-icon-action,
+  .painel-theme .kds-contracts-toolbar-actions > .kds-mobile-icon-action {
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
+    justify-content: center;
+  }
+
   .painel-theme .kds-contracts-toolbar-actions > .kds-toolbar-inline-metric {
     width: 100%;
     min-width: 0;
     justify-content: center;
   }
 
-  @media (min-width: 390px) {
+  @media (min-width: 480px) {
     .kds-contracts-toolbar-actions .kds-mobile-icon-action-label {
       position: static;
       width: auto;
@@ -2008,7 +2013,6 @@ html,
   }
 
   .kds-agenda-filter-actions .kds-button {
-    min-height: 2.75rem;
     padding-inline: 0.75rem;
   }
 
@@ -2019,9 +2023,9 @@ html,
   }
 
   .kds-agenda-filter-actions .kds-agenda-clear-filters {
-    width: 2.75rem;
-    min-width: 2.75rem;
-    flex: 0 0 2.75rem;
+    width: var(--control-height-md);
+    min-width: var(--control-height-md);
+    flex: 0 0 var(--control-height-md);
     padding: 0;
   }
 

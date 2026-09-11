@@ -234,8 +234,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <IconButton variant="secondary"  onClick={onBack} size="sm">
-          <ArrowLeft className="kds-control-icon" />
+        <IconButton variant="secondary" onClick={onBack} size="sm" aria-label="Voltar para formulários" title="Voltar">
+          <ArrowLeft aria-hidden="true" />
         </IconButton>
         <SectionHeader eyebrow="Formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" />
       </div>
@@ -364,8 +364,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                       <Pencil className="kds-control-icon" />
                       <span>Editar</span>
                     </Button>
-                    <IconButton variant="danger"  disabled={isBusy} size="sm" onClick={() => void handleDeleteStep(step)}>
-                      <Trash2 className="kds-control-icon" />
+                    <IconButton variant="danger" disabled={isBusy} size="sm" onClick={() => void handleDeleteStep(step)} aria-label={`Excluir etapa ${step.title}`} title="Excluir etapa">
+                      <Trash2 aria-hidden="true" />
                     </IconButton>
                   </div>
                 </Card>

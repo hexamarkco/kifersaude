@@ -3,9 +3,9 @@ import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 
 import {
   Badge,
-  Button,
   Card,
   ConfirmDialog,
+  IconButton,
 } from "../../../../design-system";
 import type { AiFeatureWithConfig, AiFeatureCategory } from "../aiConfigTypes";
 import { AI_FEATURE_LABELS } from "../aiConfigTypes";
@@ -76,17 +76,18 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                   </Badge>
                 )}
                 {!isLegacy && (
-                  <Button
+                  <IconButton
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(feature)}
                     title="Configurar"
+                    aria-label={`Configurar ${label}`}
                   >
-                    <Pencil className="kds-control-icon" />
-                  </Button>
+                    <Pencil />
+                  </IconButton>
                 )}
                 {!isLegacy && displayConfig && (
-                  <Button
+                  <IconButton
                     variant="ghost"
                     size="sm"
                     onClick={() =>
@@ -96,13 +97,14 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                       })
                     }
                     title={isActive ? "Desativar" : "Ativar"}
+                    aria-label={`${isActive ? "Desativar" : "Ativar"} ${label}`}
                   >
                     {isActive ? (
                       <PowerOff className="text-[var(--color-danger)]" />
                     ) : (
                       <Power className="text-[var(--success-text)]" />
                     )}
-                  </Button>
+                  </IconButton>
                 )}
               </div>
             </div>

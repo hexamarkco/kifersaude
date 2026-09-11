@@ -28,7 +28,7 @@ export function LeadsHeader({
       title="Gestão de leads"
       description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
       actions={(
-        <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:w-auto lg:justify-end">
+        <>
           <a
             href="/api-docs.html"
             target="_blank"
@@ -57,7 +57,7 @@ export function LeadsHeader({
             <Plus className="kds-control-icon" />
             <span>Novo lead</span>
           </Button>
-        </div>
+        </>
       )}
       data-panel-animate
     >

@@ -2062,15 +2062,17 @@ export default function ContractForm({
                             </Surface>
 
                             <div className="flex items-end">
-                              <Button
+                              <IconButton
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveBonusRow(row.id)}
                                 disabled={bonusDistribution.length === 1}
+                                aria-label="Remover faixa de bônus"
+                                title="Remover faixa"
                               >
-                                <Trash2 className="kds-control-icon" />
-                              </Button>
+                                <Trash2 />
+                              </IconButton>
                             </div>
                           </Surface>
                         );

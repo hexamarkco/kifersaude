@@ -485,7 +485,6 @@ export default function ContractsManager({
           description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
           actions={canEditContracts ? (
             <Button
-              className="w-full lg:w-auto"
               onClick={() => {
                 setEditingContract(null);
                 setShowForm(true);
@@ -514,7 +513,7 @@ export default function ContractsManager({
                 type="button"
                 onClick={resetFilters}
                 variant="soft"
-                size="sm"
+                size="md"
                 className="whitespace-nowrap kds-mobile-icon-action"
                 aria-label="Limpar filtros"
                 title="Limpar filtros"

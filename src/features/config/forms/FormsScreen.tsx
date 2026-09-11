@@ -236,26 +236,36 @@ export default function FormsScreen() {
                       disabled={isBusy}
                       label={form.is_published ? "Publicado" : "Rascunho"}
                     />
-                    <IconButton variant="secondary"  size="sm" onClick={() => void handleCopyLink(form)}>
-                      <Copy className="kds-control-icon" />
+                    <IconButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleCopyLink(form)}
+                      aria-label={`Copiar link de ${form.title}`}
+                      title="Copiar link"
+                    >
+                      <Copy />
                     </IconButton>
                     <IconButton
                       variant="secondary"
-                      
-                      size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
+                      size="sm"
+                      onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
+                      aria-label={`Abrir formulário ${form.title}`}
+                      title="Abrir formulário público"
                     >
-                      <ExternalLink className="kds-control-icon" />
+                      <ExternalLink />
                     </IconButton>
                     <Button variant="secondary" size="sm" onClick={() => setSelectedFormId(form.id)}>
                       Editar
                     </Button>
                     <IconButton
                       variant="danger"
-                      
                       disabled={isBusy}
-                      size="sm" onClick={() => void handleDelete(form)}
+                      size="sm"
+                      onClick={() => void handleDelete(form)}
+                      aria-label={`Excluir formulário ${form.title}`}
+                      title="Excluir formulário"
                     >
-                      <Trash2 className="kds-control-icon" />
+                      <Trash2 />
                     </IconButton>
                   </div>
                 </Card>

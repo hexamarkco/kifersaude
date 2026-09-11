@@ -337,7 +337,7 @@ export default function LinksScreen() {
                   value={profileForm.avatar_url}
                   onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
                   placeholder="Cole a URL de uma imagem ou envie um arquivo"
-                  size="sm"
+                  size="md"
                 />
                 <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</p>
               </div>
@@ -514,18 +514,22 @@ export default function LinksScreen() {
                         <IconButton
                           onClick={() => void confirmEditing()}
                           variant="success"
-                          
                           disabled={isBusy}
-                         size="sm">
+                          size="sm"
+                          aria-label={`Salvar alterações em ${link.title}`}
+                          title="Salvar alterações"
+                        >
                           <Check aria-hidden="true" />
                         </IconButton>
                         <IconButton
                           onClick={cancelEditing}
                           variant="secondary"
-                          
                           disabled={isBusy}
-                         size="sm">
-                          <X className="kds-control-icon" />
+                          size="sm"
+                          aria-label={`Cancelar edição de ${link.title}`}
+                          title="Cancelar edição"
+                        >
+                          <X />
                         </IconButton>
                       </div>
                     ) : (
@@ -536,9 +540,11 @@ export default function LinksScreen() {
                         <IconButton
                           onClick={() => void handleDelete(link)}
                           variant="danger"
-                          
                           disabled={isBusy}
-                         size="sm">
+                          size="sm"
+                          aria-label={`Excluir ${link.title}`}
+                          title="Excluir link"
+                        >
                           <Trash2 aria-hidden="true" />
                         </IconButton>
                       </div>

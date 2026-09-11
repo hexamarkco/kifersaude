@@ -391,17 +391,19 @@ export default function AccessControlManagerScreen() {
                       <IconButton
                         type="button"
                         variant="icon"
-                        
                         title="Editar perfil"
-                        size="sm" onClick={() => handleStartEdit(profile.id)}
+                        aria-label={`Editar perfil ${profile.name}`}
+                        size="sm"
+                        onClick={() => handleStartEdit(profile.id)}
                       >
-                        <Pencil className="kds-control-icon" />
+                        <Pencil aria-hidden="true" />
                       </IconButton>
                       <IconButton
                         type="button"
                         variant="icon"
                         title="Excluir perfil"
-                        size="md" onClick={async () => {
+                        aria-label={`Excluir perfil ${profile.name}`}
+                        size="sm" onClick={async () => {
                           const confirmed = await requestConfirmation({
                             title: "Excluir perfil",
                             description: `Tem certeza que deseja excluir o perfil "${profile.name}"?`,
@@ -415,7 +417,7 @@ export default function AccessControlManagerScreen() {
                           }
                         }}
                       >
-                        <Trash2 className="kds-control-icon" />
+                        <Trash2 aria-hidden="true" />
                       </IconButton>
                     </>
                   )}

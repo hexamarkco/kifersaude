@@ -313,16 +313,16 @@ export default function BlogEditor({
             type="button"
             onClick={onSave}
             fullWidth
-            size="lg"
+            size="md"
           >
-            <Save className="kds-control-icon" />
+            <Save aria-hidden="true" />
             {editingPost ? "Atualizar Post" : "Criar Post"}
           </Button>
           <Button
             type="button"
             onClick={onClose}
             variant="secondary"
-            size="lg"
+            size="md"
           >
             Cancelar
           </Button>

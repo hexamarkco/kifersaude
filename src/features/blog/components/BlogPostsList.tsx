@@ -156,7 +156,8 @@ export default function BlogPostsList({
                             onClick={() => onTogglePublish(post)}
                             variant={post.published ? "success" : "secondary"}
                             title={post.published ? "Despublicar" : "Publicar"}
-                           size="md">
+                            aria-label={`${post.published ? "Despublicar" : "Publicar"} ${post.title}`}
+                            size="md">
                             {post.published ? (
                               <Eye aria-hidden="true" />
                             ) : (

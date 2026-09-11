@@ -216,9 +216,12 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                       variant="danger"
                       className="shrink-0"
                       disabled={options.length <= 2}
-                      size="sm" onClick={() => removeOption(option.id)}
+                      size="sm"
+                      onClick={() => removeOption(option.id)}
+                      aria-label={`Remover opção ${option.value || option.id}`}
+                      title="Remover opção"
                     >
-                      <Trash2 className="kds-control-icon" />
+                      <Trash2 aria-hidden="true" />
                     </IconButton>
                   </div>
                 ))}

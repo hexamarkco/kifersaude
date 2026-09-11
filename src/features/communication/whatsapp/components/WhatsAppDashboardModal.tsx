@@ -377,10 +377,10 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       size="xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs text-[var(--text-muted)]">
+          <div className="w-full text-center text-xs text-[var(--text-muted)] sm:w-auto sm:text-left">
             {syncAllProgress ?? exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
             <Button
               variant="secondary"
               onClick={() => void handleSyncAllChats()}

@@ -279,7 +279,7 @@ export default function LeadStatusManager() {
                   <Star className="kds-control-icon" />
                   <span>Padrão</span>
                 </Button>
-                <IconButton onClick={() => void handleDelete(status.id)} variant="danger" disabled={isProcessing} size="md">
+                <IconButton onClick={() => void handleDelete(status.id)} variant="danger" disabled={isProcessing} size="md" aria-label={`Excluir status ${status.nome}`} title="Excluir status">
                   <Trash2 aria-hidden="true" />
                 </IconButton>
               </div>

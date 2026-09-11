@@ -617,9 +617,15 @@ export default function AiSandboxChatScreen() {
           <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-3">
             <p className="truncate text-sm font-medium">{activeConversation.title}</p>
             {messages.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleExportChat} title="Exportar conversa">
-                <Download className="kds-control-icon" />
-              </Button>
+              <IconButton
+                variant="ghost"
+                size="sm"
+                onClick={handleExportChat}
+                title="Exportar conversa"
+                aria-label="Exportar conversa"
+              >
+                <Download />
+              </IconButton>
             )}
           </div>
         )}

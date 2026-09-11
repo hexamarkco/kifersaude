@@ -2533,7 +2533,9 @@ export default function AutoContactFlowSettingsScreen() {
                                 }
                                 variant="icon"
                                 className="hover:bg-[color:var(--bg-inset)] hover:text-[var(--text-secondary)]"
-                               size="md">
+                                size="sm"
+                                aria-label={`Remover tag ${tagItem}`}
+                                title="Remover tag">
                                 ×
                               </IconButton>
                             </span>

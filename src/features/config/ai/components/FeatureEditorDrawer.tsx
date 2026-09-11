@@ -349,7 +349,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             </div>
 
             {modelOverrideEnabled && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                 <Field label="Provedor">
                   <div className="flex h-10 items-center rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)]">
                     OpenAI

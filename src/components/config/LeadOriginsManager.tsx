@@ -205,11 +205,11 @@ export default function LeadOriginsManager() {
 
                 {editingId === origin.id ? (
                   <div className="flex items-center space-x-2">
-                    <IconButton onClick={() => void confirmEditing()} variant="success"  disabled={isBusy} size="sm">
+                    <IconButton onClick={() => void confirmEditing()} variant="success" disabled={isBusy} size="sm" aria-label={`Salvar origem ${origin.nome}`} title="Salvar origem">
                       <Check aria-hidden="true" />
                     </IconButton>
-                    <IconButton onClick={cancelEditing} variant="secondary"  disabled={isBusy} size="sm">
-                      <X className="kds-control-icon" />
+                    <IconButton onClick={cancelEditing} variant="secondary" disabled={isBusy} size="sm" aria-label={`Cancelar edição de ${origin.nome}`} title="Cancelar edição">
+                      <X aria-hidden="true" />
                     </IconButton>
                   </div>
                 ) : (
@@ -217,7 +217,7 @@ export default function LeadOriginsManager() {
                     <Button onClick={() => startEditing(origin.id, origin.nome)} variant="secondary" size="sm" disabled={isBusy}>
                       Editar
                     </Button>
-                    <IconButton onClick={() => void handleDelete(origin.id)} variant="danger"  disabled={isBusy} size="sm">
+                    <IconButton onClick={() => void handleDelete(origin.id)} variant="danger" disabled={isBusy} size="sm" aria-label={`Excluir origem ${origin.nome}`} title="Excluir origem">
                       <Trash2 aria-hidden="true" />
                     </IconButton>
                   </div>

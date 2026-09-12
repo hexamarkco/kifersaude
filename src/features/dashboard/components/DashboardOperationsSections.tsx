@@ -144,3 +144,29 @@ export function DashboardSourcePerformance({ analysis }: Pick<OperationsProps, '
     </Surface>
   );
 }
+
+type AutomationCommandProps = {
+  leads: Lead[];
+  onNavigate: (tab: 'leads' | 'agenda' | 'config', status?: string) => void;
+};
+
+export function DashboardAutomationCommand({ leads, onNavigate }: AutomationCommandProps) {
+  const initialContactCandidates = leads.filter((lead) => lead.status === 'Contato Inicial' && !lead.skip_automation);
+  const blockedCandidates = leads.filter((lead) => lead.status === 'Contato Inicial' && Boolean(lead.skip_automation));
+
+  return (
+    <Surface padding="md" data-panel-animate className="space-y-5" aria-labelledby="dashboard-automation-title">
+      <SectionHeader eyebrow="Orquestração" title="Automações e atendimento que exigem gestão" description="Ação segura: a seleção do fluxo e qualquer agendamento continuam no espaço de Automação." as="h2" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card padding="sm" className="space-y-1"><p className="kds-card-subtitle">Contato Inicial elegível</p><p className="text-2xl font-semibold tabular-nums">{initialContactCandidates.length}</p><p className="text-xs text-[var(--text-muted)]">sem bloqueio de automação</p></Card>
+        <Card padding="sm" className="space-y-1"><p className="kds-card-subtitle">Excluídos de automação</p><p className="text-2xl font-semibold tabular-nums">{blockedCandidates.length}</p><p className="text-xs text-[var(--text-muted)]">requerem tratamento humano</p></Card>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" size="sm" onClick={() => onNavigate('leads', 'Contato Inicial')}>Revisar elegíveis <ArrowRight aria-hidden="true" /></Button>
+        <Button variant="secondary" size="sm" onClick={() => onNavigate('agenda')}>Organizar follow-ups <ArrowRight aria-hidden="true" /></Button>
+        <Button variant="secondary" size="sm" onClick={() => onNavigate('config')}>Revisar fluxos e IA <ArrowRight aria-hidden="true" /></Button>
+      </div>
+      <p className="text-xs text-[var(--text-muted)]">A cobertura e as falhas de execução de jobs permanecem restritas ao backend por segurança. Para expô-las aqui, o sistema precisa de um resumo autorizado, somente leitura.</p>
+    </Surface>
+  );
+}

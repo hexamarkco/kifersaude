@@ -28,6 +28,7 @@ import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import {
   DashboardAttentionQueue,
+  DashboardAutomationCommand,
   DashboardPerformanceOverview,
   DashboardPipelineHealth,
   DashboardSourcePerformance,
@@ -2017,6 +2018,10 @@ export default function DashboardScreen({
     onNavigateToTab?.("leads", { leadIdFilter: leadId });
   };
 
+  const handleAutomationNavigate = (tab: 'leads' | 'agenda' | 'config', status?: string) => {
+    onNavigateToTab?.(tab, status ? { leadsStatusFilter: [status] } : undefined);
+  };
+
   const handleCreateReminderRequest = async (options: ReminderRequest) => {
     if (onCreateReminder) {
       onCreateReminder(options);
@@ -2097,6 +2102,7 @@ export default function DashboardScreen({
           <DashboardPipelineHealth analysis={dashboardOperations} onNavigateToStatus={handleLeadStatusSegmentClick} />
           <DashboardAttentionQueue analysis={dashboardOperations} leadsById={leadsById} onNavigateToLead={handleOpenLeadInList} />
         </div>
+        <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
           <DashboardTrendSection
             selectedMetric={selectedMetric}

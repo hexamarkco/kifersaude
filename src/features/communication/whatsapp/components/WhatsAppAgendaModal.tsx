@@ -26,6 +26,7 @@ import {
 
 import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
+import WhatsAppScheduledMessagesPanel from './WhatsAppScheduledMessagesPanel';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import {
@@ -70,6 +71,7 @@ import { toast } from '../../../../lib/toast';
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  channelId?: string;
   currentLead: CommWhatsAppLeadPanel | null;
   currentLeadContracts: CommWhatsAppLeadContractSummary[];
   canEdit: boolean;
@@ -136,6 +138,7 @@ const parseDateInputValue = (value: string) => {
 export default function WhatsAppAgendaModal({
   isOpen,
   onClose,
+  channelId,
   currentLead,
   currentLeadContracts,
   canEdit,
@@ -176,6 +179,7 @@ export default function WhatsAppAgendaModal({
   const [dedupingGroupKey, setDedupingGroupKey] = useState<string | null>(null);
   const [isDedupingAll, setIsDedupingAll] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isScheduledMessagesOpen, setScheduledMessagesOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
@@ -1489,6 +1493,9 @@ export default function WhatsAppAgendaModal({
                       ) : null}
                     </div>
                   ) : null}
+                  <IconButton variant="secondary" size="lg" onClick={() => setScheduledMessagesOpen(true)} aria-label="Mensagens agendadas" title="Mensagens agendadas">
+                    <Calendar className="kds-control-icon" />
+                  </IconButton>
                   <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="lg">
                     <ChevronLeft className="kds-control-icon" />
                   </IconButton>
@@ -1867,6 +1874,13 @@ export default function WhatsAppAgendaModal({
         onClose={handleCloseBatchModal}
         onSendBatchFollowUps={onSendBatchFollowUps}
       />
+
+      <WhatsAppScheduledMessagesPanel
+        channelId={channelId}
+        isOpen={isScheduledMessagesOpen}
+        onClose={() => setScheduledMessagesOpen(false)}
+      />
+
       {ConfirmationDialog}
     </>
   );

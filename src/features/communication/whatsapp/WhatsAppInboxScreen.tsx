@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -156,6 +156,7 @@ import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
+import WhatsAppScheduleMessageModal from './components/WhatsAppScheduleMessageModal';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
@@ -2036,6 +2037,7 @@ export default function WhatsAppInboxScreen() {
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
   const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
+  const [scheduleMessageModalOpen, setScheduleMessageModalOpen] = useState(false);
   const [startChatQuery, setStartChatQuery] = useState('');
   const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
   const [savedContactsLoading, setSavedContactsLoading] = useState(false);
@@ -10099,7 +10101,19 @@ export default function WhatsAppInboxScreen() {
                       />
                     </div>
 
-                    <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>
+                    <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
+                      {hasSendPayload && selectedChat && (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleMessageModalOpen(true)}
+                          disabled={generatingFollowUp || sending}
+                          className="whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label="Agendar mensagem"
+                          title="Agendar mensagem para envio futuro"
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={handleComposerSubmit}
@@ -10487,6 +10501,21 @@ export default function WhatsAppInboxScreen() {
           onStartFromManual={() => void handleStartChatFromManual()}
           startingKey={startingChatKey}
         />
+
+        {selectedChat && (
+          <WhatsAppScheduleMessageModal
+            isOpen={scheduleMessageModalOpen}
+            onClose={() => setScheduleMessageModalOpen(false)}
+            channelId={selectedChat.channel_id}
+            phoneDigits={selectedChat.phone_digits}
+            leadId={selectedChat.lead_id}
+            initialText={messageDraft}
+            onScheduled={() => {
+              setMessageDraft('');
+              toast.success('Mensagem agendada com sucesso!');
+            }}
+          />
+        )}
 
         <PanelPopoverShell
           ref={reactionPickerRef}

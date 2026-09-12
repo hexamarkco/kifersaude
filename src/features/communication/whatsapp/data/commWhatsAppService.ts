@@ -2463,4 +2463,109 @@ export const commWhatsAppService = {
 
     return mediaObjectUrlCache.get(mediaId) ?? null;
   },
+
+  async scheduleMessage(input: {
+    channelId: string;
+    phoneDigits: string;
+    scheduledAt: string;
+    messageType?: string;
+    textContent?: string | null;
+    mediaUrl?: string | null;
+    mediaMimeType?: string | null;
+    mediaFileName?: string | null;
+    recurrence?: string;
+    recurrenceConfig?: Record<string, unknown>;
+    recurrenceEndsAt?: string | null;
+    leadId?: string | null;
+    contractId?: string | null;
+    label?: string | null;
+    notes?: string | null;
+  }): Promise<string> {
+    const { error, data } = await supabase.rpc('create_scheduled_message', {
+      p_channel_id: input.channelId,
+      p_phone_digits: input.phoneDigits,
+      p_scheduled_at: input.scheduledAt,
+      p_message_type: input.messageType ?? 'text',
+      p_text_content: input.textContent ?? null,
+      p_media_url: input.mediaUrl ?? null,
+      p_media_mime_type: input.mediaMimeType ?? null,
+      p_media_file_name: input.mediaFileName ?? null,
+      p_recurrence: input.recurrence ?? 'none',
+      p_recurrence_config: input.recurrenceConfig ?? {},
+      p_recurrence_ends_at: input.recurrenceEndsAt ?? null,
+      p_lead_id: input.leadId ?? null,
+      p_contract_id: input.contractId ?? null,
+      p_label: input.label ?? null,
+      p_notes: input.notes ?? null,
+      p_max_attempts: 3,
+    });
+
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel agendar a mensagem.'));
+    }
+
+    return data as string;
+  },
+
+  async listScheduledMessages(options?: {
+    channelId?: string;
+    status?: string;
+    createdBy?: string;
+    leadId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Array<Record<string, unknown>>> {
+    let query = supabase
+      .from('comm_whatsapp_scheduled_messages')
+      .select('*')
+      .order('scheduled_at', { ascending: false });
+
+    if (options?.channelId) {
+      query = query.eq('channel_id', options.channelId);
+    }
+    if (options?.status) {
+      query = query.eq('status', options.status);
+    }
+    if (options?.createdBy) {
+      query = query.eq('created_by', options.createdBy);
+    }
+    if (options?.leadId) {
+      query = query.eq('lead_id', options.leadId);
+    }
+
+    const from = options?.offset ?? 0;
+    const to = options?.limit ? from + options.limit - 1 : from + 99;
+
+    const { data, error } = await query.range(from, to);
+
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel listar mensagens agendadas.'));
+    }
+
+    return data ?? [];
+  },
+
+  async cancelScheduledMessage(id: string, reason?: string): Promise<boolean> {
+    const { error, data } = await supabase.rpc('cancel_scheduled_message', {
+      p_message_id: id,
+      p_reason: reason ?? null,
+    });
+
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel cancelar a mensagem agendada.'));
+    }
+
+    return data as boolean;
+  },
+
+  async deleteScheduledMessage(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_scheduled_messages')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel excluir a mensagem agendada.'));
+    }
+  },
 };

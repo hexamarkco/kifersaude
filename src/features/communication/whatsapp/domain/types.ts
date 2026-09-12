@@ -147,3 +147,46 @@ export type WhatsAppWebhookEvent = {
   created_at: string;
 };
 
+export type CommWhatsAppScheduledMessageStatus = 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled' | 'expired';
+export type CommWhatsAppScheduledMessageRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+export type CommWhatsAppScheduledMessageType = 'text' | 'image' | 'video' | 'document' | 'audio' | 'voice';
+
+export type CommWhatsAppScheduledMessage = {
+  id: string;
+  channel_id: string;
+  chat_id: string | null;
+  phone_digits: string;
+  phone_number: string | null;
+  display_name: string | null;
+  message_type: CommWhatsAppScheduledMessageType;
+  text_content: string | null;
+  media_url: string | null;
+  media_mime_type: string | null;
+  media_file_name: string | null;
+  media_size_bytes: number | null;
+  scheduled_at: string;
+  recurrence: CommWhatsAppScheduledMessageRecurrence;
+  recurrence_config: Record<string, unknown>;
+  next_run_at: string | null;
+  recurrence_ends_at: string | null;
+  status: CommWhatsAppScheduledMessageStatus;
+  attempts: number;
+  max_attempts: number;
+  last_attempt_at: string | null;
+  next_retry_at: string | null;
+  error_message: string | null;
+  external_message_id: string | null;
+  delivery_status: string | null;
+  sent_at: string | null;
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
+  created_by: string | null;
+  lead_id: string | null;
+  contract_id: string | null;
+  label: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+

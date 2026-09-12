@@ -1,6 +1,11 @@
 import {
+  BadgeCheck,
+  BedDouble,
+  Briefcase,
+  Clock3,
   FileText,
   ListTree,
+  MapPin,
   Settings,
   ShieldCheck,
   type LucideIcon,
@@ -32,8 +37,15 @@ export type ContractConfigCategory = Extract<
 export type ConfigManagerDefinition<TCategory extends ConfigCategory> = {
   category: TCategory;
   title: string;
+  tabLabel?: string;
+  tabIcon?: LucideIcon;
   description: string;
   placeholder: string;
+  optionLabel?: string;
+  addLabel?: string;
+  createDialogTitle?: string;
+  emptyStateTitle?: string;
+  emptyStateDescription?: string;
   searchTerms: string[];
 };
 
@@ -77,36 +89,71 @@ export const CONTRACT_CONFIG_MANAGERS: ConfigManagerDefinition<ContractConfigCat
   {
     category: "contract_status",
     title: "Status de Contratos",
+    tabLabel: "Status",
+    tabIcon: BadgeCheck,
     description: "Personalize o ciclo de vida dos contratos.",
     placeholder: "Ex: Ativo",
+    optionLabel: "Status do contrato",
+    addLabel: "Adicionar status",
+    createDialogTitle: "Novo status de contrato",
+    emptyStateTitle: "Nenhum status cadastrado",
+    emptyStateDescription: "Adicione os status que serão usados para acompanhar os contratos.",
     searchTerms: ["contrato", "status", "etapas"],
   },
   {
     category: "contract_modalidade",
     title: "Modalidades de Contrato",
+    tabLabel: "Modalidade",
+    tabIcon: Briefcase,
     description: "Cadastre as modalidades aceitas (PF, MEI, Empresarial, etc).",
     placeholder: "Ex: Empresarial",
+    optionLabel: "Modalidade",
+    addLabel: "Adicionar modalidade",
+    createDialogTitle: "Nova modalidade de contrato",
+    emptyStateTitle: "Nenhuma modalidade cadastrada",
+    emptyStateDescription: "Adicione modalidades para disponibilizá-las no cadastro de contratos.",
     searchTerms: ["contrato", "modalidade", "pf", "mei", "empresarial"],
   },
   {
     category: "contract_abrangencia",
     title: "Abrangências",
+    tabLabel: "Abrangência",
+    tabIcon: MapPin,
     description: "Lista de coberturas disponíveis para os contratos.",
     placeholder: "Ex: Nacional",
+    optionLabel: "Abrangência",
+    addLabel: "Adicionar abrangência",
+    createDialogTitle: "Nova abrangência",
+    emptyStateTitle: "Nenhuma abrangência cadastrada",
+    emptyStateDescription: "Adicione as abrangências disponíveis para os contratos.",
     searchTerms: ["contrato", "abrangencia", "cobertura"],
   },
   {
     category: "contract_acomodacao",
     title: "Tipos de acomodação",
+    tabLabel: "Acomodação",
+    tabIcon: BedDouble,
     description: "Defina as opções de acomodação para os planos.",
     placeholder: "Ex: Enfermaria",
+    optionLabel: "Acomodação",
+    addLabel: "Adicionar acomodação",
+    createDialogTitle: "Nova acomodação",
+    emptyStateTitle: "Nenhuma acomodação cadastrada",
+    emptyStateDescription: "Adicione as opções de acomodação oferecidas nos contratos.",
     searchTerms: ["contrato", "acomodacao", "plano"],
   },
   {
     category: "contract_carencia",
     title: "Tipos de carência",
+    tabLabel: "Carência",
+    tabIcon: Clock3,
     description: "Configure as opções de carência disponíveis.",
     placeholder: "Ex: Padrão",
+    optionLabel: "Carência",
+    addLabel: "Adicionar carência",
+    createDialogTitle: "Nova carência",
+    emptyStateTitle: "Nenhuma carência cadastrada",
+    emptyStateDescription: "Adicione as opções de carência utilizadas nos contratos.",
     searchTerms: ["contrato", "carencia", "prazo"],
   },
 ];

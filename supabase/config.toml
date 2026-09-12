@@ -54,3 +54,6 @@ verify_jwt = false
 
 [functions.comm-whatsapp-sync-chat]
 verify_jwt = false
+
+[functions.process-scheduled-messages]
+verify_jwt = false

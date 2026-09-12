@@ -1,4 +1,4 @@
-import { CalendarDays, Cake, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Calendar, Cake, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 import {
   Badge,
@@ -190,7 +190,7 @@ export function DashboardEventsCalendar({
 
             <div className="min-w-0 text-center">
               <h4 className="flex items-center justify-center gap-2 text-sm font-semibold capitalize leading-tight text-[var(--text-primary)]">
-                <CalendarDays className="h-4 w-4 text-[var(--brand-primary)]" strokeWidth={1.75} />
+                <Calendar className="h-4 w-4 text-[var(--brand-primary)]" strokeWidth={1.75} />
                 {calendarMonthLabel}
               </h4>
               <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</p>

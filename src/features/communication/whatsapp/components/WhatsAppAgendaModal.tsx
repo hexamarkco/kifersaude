@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Bell,
   Calendar,
-  CalendarDays,
   CalendarPlus,
   Check,
   CheckCircle2,
@@ -1158,8 +1157,8 @@ export default function WhatsAppAgendaModal({
       Retorno: Bell,
       Tarefa: CheckCircle2,
       'Follow-up': CalendarPlus,
-      Aniversario: CalendarDays,
-      'Aniversário': CalendarDays,
+      Aniversario: Calendar,
+      'Aniversário': Calendar,
       Reajuste: Calendar,
     } as const;
 
@@ -1275,7 +1274,8 @@ export default function WhatsAppAgendaModal({
                 disabled={isOpeningChat}
                 title={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
                 aria-label={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
-               size="lg">
+                size="md"
+              >
                 {!isOpeningChat && <MessageCircle aria-hidden="true" />}
               </IconButton>
             ) : null}
@@ -1310,7 +1310,8 @@ export default function WhatsAppAgendaModal({
                     className="shrink-0"
                     title="Agendar dias úteis e marcar atual como lido"
                     aria-label="Agendar dias úteis e marcar atual como lido"
-                   size="lg">
+                    size="md"
+                  >
                     {isQuickSchedulingCurrentReminder ? (
                       <Loader2 className="animate-spin" />
                     ) : (
@@ -1360,7 +1361,8 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
                 aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-               size="lg">
+                size="md"
+              >
                 <Check aria-hidden="true" />
               </IconButton>
             ) : null}
@@ -1372,7 +1374,8 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title="Novo lembrete"
                 aria-label="Novo lembrete"
-               size="lg">
+                size="md"
+              >
                 <CalendarPlus aria-hidden="true" />
               </IconButton>
             ) : null}
@@ -1387,7 +1390,8 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title="Gerar follow-up"
                 aria-label="Gerar follow-up"
-               size="lg">
+                size="md"
+              >
                 <Sparkles aria-hidden="true" />
               </IconButton>
             ) : null}
@@ -1399,7 +1403,8 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title="Abrir WhatsApp oficial"
                 aria-label="Abrir WhatsApp oficial"
-               size="lg">
+                size="md"
+              >
                 <ExternalLink aria-hidden="true" />
               </IconButton>
             ) : null}
@@ -1413,7 +1418,8 @@ export default function WhatsAppAgendaModal({
                 aria-label="Marcar lead como perdido e limpar lembretes"
                 disabled={markingLostLeadId === leadId}
                 loading={markingLostLeadId === leadId}
-               size="lg">
+                size="md"
+              >
                 {markingLostLeadId !== leadId && <X aria-hidden="true" />}
               </IconButton>
             ) : null}
@@ -1425,7 +1431,8 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title="Excluir item"
                 aria-label="Excluir item"
-               size="lg">
+                size="md"
+              >
                 <Trash2 aria-hidden="true" />
               </IconButton>
             ) : null}

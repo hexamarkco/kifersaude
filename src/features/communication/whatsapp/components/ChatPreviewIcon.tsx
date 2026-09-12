@@ -1,5 +1,5 @@
 import {
-  CalendarDays,
+  Calendar,
   FileAudio,
   FileImage,
   FileText,
@@ -26,7 +26,7 @@ const CHAT_PREVIEW_ICON_CONFIG: Record<ChatPreviewIconType, { label: string; Ico
   contact: { label: 'contato', Icon: UserRound },
   poll: { label: 'enquete', Icon: Vote },
   list: { label: 'lista', Icon: MessageCircle },
-  event: { label: 'evento', Icon: CalendarDays },
+  event: { label: 'evento', Icon: Calendar },
   product: { label: 'produto', Icon: FileImage },
   system: { label: 'sistema', Icon: Info },
   interactive: { label: 'mensagem', Icon: MessageCircle },

@@ -3,7 +3,7 @@ import {
   AlertCircle,
   Briefcase,
   Building2,
-  CalendarDays,
+  Calendar,
   Compass,
   Mail,
   MapPin,
@@ -799,7 +799,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               id="lead-daily-send-limit"
               type="number"
               min={1}
-              leftIcon={CalendarDays}
+              leftIcon={Calendar}
               value={formData.daily_send_limit}
               onChange={(e) =>
                 setFormData((prev) => ({

@@ -4,6 +4,7 @@ import {
   BellRing,
   Clock,
   Globe2,
+  Info,
   Loader2,
   RotateCcw,
   Save,
@@ -33,6 +34,7 @@ import {
   Select,
   Surface,
   Switch,
+  Tabs,
   type TabItem,
   SegmentedControl,
 } from "../../../design-system";
@@ -75,7 +77,7 @@ export default function SystemSettingsScreen() {
     ["contract_status", "contract_modalidade", "contract_abrangencia", "contract_acomodacao", "contract_carencia"] as const,
     "contract_status",
   );
-  const { loading: configLoading, getRoleModulePermission } = useConfig();
+  const { loading: configLoading, getRoleModulePermission, options } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
   const timezoneOptions = useMemo(
     () => [
@@ -260,7 +262,9 @@ export default function SystemSettingsScreen() {
     : leadConfigurationTabs[0]?.id ?? "status";
   const contractConfigurationTabs: TabItem<ContractConfigCategory>[] = visibleContractManagers.map((manager) => ({
     id: manager.category,
-    label: manager.title,
+    label: manager.tabLabel ?? manager.title,
+    icon: manager.tabIcon,
+    badge: options[manager.category]?.length ?? 0,
   }));
   const activeContractConfigurationId = contractConfigurationTabs.some(
     (tab) => tab.id === activeContractConfiguration,
@@ -657,7 +661,7 @@ export default function SystemSettingsScreen() {
           <section id="settings-section-contracts" className="space-y-4">
             <SectionHeader
               title="Configurações de contratos"
-              description="Estados e parâmetros auxiliares usados no cadastro de contratos."
+              description="Organize status, modalidade e condições disponíveis no cadastro de contratos."
             />
 
             {shouldExpandSection("contracts") && (
@@ -673,12 +677,21 @@ export default function SystemSettingsScreen() {
                   </Surface>
                 ) : (
                   contractConfigurationTabs.length > 0 ? (
-                    <>
-                      <SegmentedControl
+                    <div className="space-y-4">
+                      <Surface variant="muted" padding="sm" className="flex items-start gap-3">
+                        <Info className="kds-control-icon mt-0.5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          As opções ativas aparecem nos seletores de contratos. Desative uma opção para ocultá-la sem removê-la desta lista.
+                        </p>
+                      </Surface>
+                      <Tabs
                         items={contractConfigurationTabs}
                         value={activeContractConfigurationId}
                         onChange={setActiveContractConfiguration}
+                        variant="rail"
+                        ariaLabel="Categorias das configurações de contratos"
                         listClassName="flex-nowrap overflow-x-auto"
+                        triggerClassName="shrink-0 whitespace-nowrap"
                       />
                       {(() => {
                         const manager = visibleContractManagers.find(
@@ -690,10 +703,15 @@ export default function SystemSettingsScreen() {
                             title={manager.title}
                             description={manager.description}
                             placeholder={manager.placeholder}
+                            optionLabel={manager.optionLabel}
+                            addLabel={manager.addLabel}
+                            createDialogTitle={manager.createDialogTitle}
+                            emptyStateTitle={manager.emptyStateTitle}
+                            emptyStateDescription={manager.emptyStateDescription}
                           />
                         ) : null;
                       })()}
-                    </>
+                    </div>
                   ) : (
                       <Surface variant="muted" padding="md" className="border-dashed text-center text-sm">
                         Nenhum item de contratos encontrado para "{searchTerm}".

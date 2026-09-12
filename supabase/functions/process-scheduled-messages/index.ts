@@ -255,10 +255,13 @@ async function processBatch(
 
   for (const msg of messages) {
     try {
-      await admin.rpc('advance_scheduled_message', {
+      const { error: advanceSendingErr } = await admin.rpc('advance_scheduled_message', {
         p_message_id: msg.message_id,
         p_new_status: 'sending',
       });
+      if (advanceSendingErr) {
+        throw new Error(`advance_scheduled_message(sending) failed: ${advanceSendingErr.message}`);
+      }
 
       let channelRow = channelCache.get(msg.channel_id);
       if (!channelRow) {
@@ -295,12 +298,15 @@ async function processBatch(
         result = await sendMediaMessage(admin, channelRow, msg, token);
       }
 
-      await admin.rpc('advance_scheduled_message', {
+      const { error: advanceSentErr } = await admin.rpc('advance_scheduled_message', {
         p_message_id: msg.message_id,
         p_new_status: 'sent',
         p_external_message_id: result.externalMessageId,
         p_delivery_status: result.deliveryStatus,
       });
+      if (advanceSentErr) {
+        throw new Error(`advance_scheduled_message(sent) failed: ${advanceSentErr.message}`);
+      }
 
       sent++;
     } catch (err) {
@@ -311,12 +317,15 @@ async function processBatch(
         ? new Date(Date.now() + Math.pow(2, msg.attempts) * 60000).toISOString()
         : null;
 
-      await admin.rpc('advance_scheduled_message', {
+      const { error: advanceFailedErr } = await admin.rpc('advance_scheduled_message', {
         p_message_id: msg.message_id,
         p_new_status: 'failed',
         p_error_message: errorMessage,
         p_next_retry_at: nextRetryAt,
       });
+      if (advanceFailedErr) {
+        console.error(`[process-scheduled] advance_scheduled_message(failed) error: ${advanceFailedErr.message}`);
+      }
 
       failed++;
     }

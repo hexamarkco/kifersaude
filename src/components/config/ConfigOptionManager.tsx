@@ -26,6 +26,11 @@ type ConfigOptionManagerProps = {
   title: string;
   description?: string;
   placeholder?: string;
+  optionLabel?: string;
+  addLabel?: string;
+  createDialogTitle?: string;
+  emptyStateTitle?: string;
+  emptyStateDescription?: string;
 };
 
 type OptionDraft = { label: string; ordem: string };
@@ -35,6 +40,11 @@ export default function ConfigOptionManager({
   title,
   description,
   placeholder,
+  optionLabel = 'Nome da opção',
+  addLabel = 'Adicionar opção',
+  createDialogTitle,
+  emptyStateTitle = 'Nenhuma opção cadastrada',
+  emptyStateDescription = 'Adicione opções para disponibilizá-las nos formulários correspondentes.',
 }: ConfigOptionManagerProps) {
   const { options, refreshCategory } = useConfig();
   const [newLabel, setNewLabel] = useState('');
@@ -192,7 +202,7 @@ export default function ConfigOptionManager({
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving} className="w-full sm:w-auto">
           <Plus className="kds-control-icon" />
-          <span>Adicionar opção</span>
+          <span>{addLabel}</span>
         </Button>
       </div>
 
@@ -204,12 +214,12 @@ export default function ConfigOptionManager({
         <EmptyState
           className="mt-5"
           icon={<ListPlus aria-hidden="true" />}
-          title="Nenhuma opção cadastrada"
-          description="Adicione opções para disponibilizá-las nos formulários de leads."
+          title={emptyStateTitle}
+          description={emptyStateDescription}
           action={(
             <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
               <Plus className="kds-control-icon" />
-              Adicionar primeira opção
+              {addLabel}
             </Button>
           )}
         />
@@ -225,7 +235,7 @@ export default function ConfigOptionManager({
                 padding="md"
                 className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end"
               >
-                <Field label="Nome da opção" htmlFor={`config-option-label-${item.id}`}>
+                <Field label={optionLabel} htmlFor={`config-option-label-${item.id}`}>
                   <Input
                     id={`config-option-label-${item.id}`}
                     type="text"
@@ -295,7 +305,7 @@ export default function ConfigOptionManager({
             setNewLabel('');
           }}
         >
-          <DialogTitle>{`Nova opção${title ? ` - ${title}` : ''}`}</DialogTitle>
+          <DialogTitle>{createDialogTitle ?? `Nova opção${title ? ` - ${title}` : ''}`}</DialogTitle>
           <DialogDescription>Adicione um novo item a esta lista.</DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -306,7 +316,7 @@ export default function ConfigOptionManager({
               void handleCreate();
             }}
           >
-            <Field label="Nome da opção">
+            <Field label={optionLabel}>
               <Input
                 type="text"
                 value={newLabel}

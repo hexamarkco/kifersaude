@@ -1731,7 +1731,7 @@ export default function AutoContactFlowSettingsScreen() {
                         placeholder="Selecione um fuso"
                         includePlaceholderOption={false}
                         options={timezoneOptions}
-                        size="lg"
+                        size="md"
                       />
                     </div>
                   </div>
@@ -1799,7 +1799,7 @@ export default function AutoContactFlowSettingsScreen() {
                               refreshSeconds: Number(event.target.value),
                             }))
                           }
-                          size="lg"
+                          size="md"
                         />
                       </div>
                       <div>
@@ -1851,7 +1851,7 @@ export default function AutoContactFlowSettingsScreen() {
                               retentionDays: Number(event.target.value),
                             }))
                           }
-                          size="lg"
+                          size="md"
                         />
                       </div>
                       <div className="mt-6">

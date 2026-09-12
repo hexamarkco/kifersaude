@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -8545,7 +8545,7 @@ export default function WhatsAppInboxScreen() {
                     title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissão para acessar a agenda'}
                     disabled={!canViewAgenda}
                   >
-                    <CalendarDays className="kds-control-icon" />
+                    <Calendar className="kds-control-icon" />
                   </IconButton>
                   <IconButton
                     variant="ghost"
@@ -8878,7 +8878,7 @@ export default function WhatsAppInboxScreen() {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge
                         tone={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete) ? 'danger' : 'neutral'}
-                        icon={CalendarDays}
+                        icon={Calendar}
                       >
                         <span className="min-w-0 max-w-full truncate">{nextChatReminderSummary}</span>
                       </Badge>

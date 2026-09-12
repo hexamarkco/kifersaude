@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   areSystemPreferencesEqual,
+  CONTRACT_CONFIG_MANAGERS,
   matchesConfigSearch,
   normalizeConfigSearchText,
 } from "../systemSettingsConfig";
@@ -20,6 +21,30 @@ test("matchesConfigSearch compares normalized values", () => {
     true,
   );
   assert.equal(matchesConfigSearch("usuarios", ["Leads", "Contratos"]), false);
+});
+
+test("contract configuration categories expose concise and contextual tab metadata", () => {
+  assert.deepEqual(
+    CONTRACT_CONFIG_MANAGERS.map((manager) => manager.tabLabel),
+    ["Status", "Modalidade", "Abrangência", "Acomodação", "Carência"],
+  );
+  assert.equal(
+    new Set(CONTRACT_CONFIG_MANAGERS.map((manager) => manager.category)).size,
+    CONTRACT_CONFIG_MANAGERS.length,
+  );
+  assert.equal(
+    CONTRACT_CONFIG_MANAGERS.every((manager) =>
+      Boolean(
+        manager.tabIcon &&
+          manager.optionLabel &&
+          manager.addLabel &&
+          manager.createDialogTitle &&
+          manager.emptyStateTitle &&
+          manager.emptyStateDescription,
+      ),
+    ),
+    true,
+  );
 });
 
 test("areSystemPreferencesEqual compares relevant preference fields", () => {

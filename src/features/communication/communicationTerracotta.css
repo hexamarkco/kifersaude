@@ -150,8 +150,118 @@
 }
 
 .comm-terracotta .whatsapp-inbox-composer-action.is-active:hover {
-  background: var(--text-primary);
+  background: var(--brand-primary);
   opacity: 0.9;
+}
+
+/* Composer redesign: pill-shaped textarea */
+.comm-terracotta .whatsapp-inbox-composer-input {
+  border-radius: var(--kds-radius-xl);
+  background: var(--bg-inset);
+  padding: 0.5rem 0.875rem;
+  min-height: 2.5rem;
+  transition: background 140ms ease;
+}
+
+.comm-terracotta .whatsapp-inbox-composer-input:focus {
+  background: var(--bg-elevated);
+}
+
+/* Orange mic button (idle state) */
+.comm-terracotta .whatsapp-inbox-composer-action:not(.is-active):not(:disabled) {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  border-color: transparent;
+}
+
+.comm-terracotta .whatsapp-inbox-composer-action:not(.is-active):not(:disabled):hover {
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+}
+
+/* Orange send button (active state) */
+.comm-terracotta .whatsapp-inbox-composer-action.is-active {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-composer-action.is-active:hover {
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+  opacity: 1;
+}
+
+/* Voice send button orange */
+.comm-terracotta .whatsapp-inbox-voice-send {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  border: none;
+}
+
+.comm-terracotta .whatsapp-inbox-voice-send:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+}
+
+/* Voice composer base */
+.comm-terracotta .whatsapp-inbox-voice-composer {
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+/* Recording state: red left accent */
+.comm-terracotta .whatsapp-inbox-voice-composer.is-recording {
+  border-color: var(--danger-border);
+  background: color-mix(in srgb, var(--danger-soft) 42%, var(--bg-elevated));
+}
+
+/* Voice side actions and play button */
+.comm-terracotta :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play) {
+  border-color: transparent;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.comm-terracotta :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play):hover:not(:disabled) {
+  border-color: var(--border-default);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Play button (preview) uses brand color */
+.comm-terracotta .whatsapp-inbox-voice-play {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+}
+
+.comm-terracotta .whatsapp-inbox-voice-play:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+}
+
+/* Voice send: orange */
+.comm-terracotta .whatsapp-inbox-voice-send {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  border: none;
+}
+
+.comm-terracotta .whatsapp-inbox-voice-send:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+}
+
+/* Voice timeline recording: red fill */
+.comm-terracotta .whatsapp-inbox-voice-timeline.is-recording .whatsapp-inbox-voice-timeline-fill {
+  background: var(--danger);
+}
+
+/* Voice label recording: red text */
+.comm-terracotta .whatsapp-inbox-voice-label.is-recording {
+  color: var(--danger-text);
 }
 
 .comm-terracotta .whatsapp-inbox-ai-toggle.is-inactive {

@@ -23,12 +23,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-blue-100 text-blue-700',
-  sending: 'bg-yellow-100 text-yellow-700',
-  sent: 'bg-green-100 text-green-700',
-  failed: 'bg-red-100 text-red-700',
-  cancelled: 'bg-neutral-100 text-neutral-600',
-  expired: 'bg-neutral-100 text-neutral-600',
+  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
+  sending: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
+  sent: 'bg-[var(--success-soft)] text-[var(--success-text)]',
+  failed: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
+  cancelled: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
+  expired: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -116,30 +116,30 @@ export default function WhatsAppScheduledMessagesPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between border-b px-6 py-4">
+      <div className="bg-[var(--bg-surface)] rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-terracota-500" />
+            <Calendar className="h-5 w-5 text-[var(--brand-primary)]" />
             <div>
-              <h2 className="text-lg font-semibold text-neutral-900">Mensagens Agendadas</h2>
-              <p className="text-sm text-neutral-500">{messages.length} mensagem(ns) encontrada(s)</p>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Mensagens Agendadas</h2>
+              <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) encontrada(s)</p>
             </div>
           </div>
           <IconButton onClick={onClose} aria-label="Fechar">
-            <X className="h-5 w-5" />
+            <X className="kds-control-icon" />
           </IconButton>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-terracota-500" />
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-500">Nenhuma mensagem agendada</p>
-              <p className="text-sm text-neutral-400 mt-1">
+              <Calendar className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
+              <p className="text-[var(--text-muted)]">Nenhuma mensagem agendada</p>
+              <p className="text-sm text-[var(--text-subtle)] mt-1">
                 Use o botão de agendamento no composer para criar uma
               </p>
             </div>
@@ -147,7 +147,7 @@ export default function WhatsAppScheduledMessagesPanel({
             <div className="space-y-6">
               {groupedMessages.upcoming.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-700 mb-3">Próximas</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Próximas</h3>
                   <div className="space-y-2">
                     {groupedMessages.upcoming.map((msg) => (
                       <ScheduledMessageItem
@@ -164,7 +164,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
               {groupedMessages.past.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-700 mb-3">Histórico</h3>
+                  <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Histórico</h3>
                   <div className="space-y-2">
                     {groupedMessages.past.map((msg) => (
                       <ScheduledMessageItem
@@ -197,25 +197,25 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
   const isActive = message.status === 'scheduled' || message.status === 'failed';
 
   return (
-    <div className="rounded-lg border border-neutral-200 p-3 hover:border-neutral-300 transition-colors">
+    <div className="rounded-lg border border-[var(--border-subtle)] p-3 hover:border-[var(--border-default)] transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[message.status] ?? 'bg-neutral-100 text-neutral-600'}`}>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[message.status] ?? 'bg-[var(--bg-inset)] text-[var(--text-muted)]'}`}>
               {STATUS_LABELS[message.status] ?? message.status}
             </span>
             {message.recurrence !== 'none' && (
-              <span className="inline-flex items-center rounded-full bg-purple-100 text-purple-700 px-2 py-0.5 text-xs font-medium">
+              <span className="inline-flex items-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] px-2 py-0.5 text-xs font-medium">
                 {RECURRENCE_LABELS[message.recurrence]}
               </span>
             )}
           </div>
 
-          <p className="text-sm text-neutral-900 truncate">
+          <p className="text-sm text-[var(--text-primary)] truncate">
             {message.text_content ?? '(Mídia)'}
           </p>
 
-          <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500">
+          <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDateTimeFullBR(message.scheduled_at)}
@@ -227,11 +227,11 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
           </div>
 
           {message.label && (
-            <p className="text-xs text-neutral-400 mt-1">{message.label}</p>
+            <p className="text-xs text-[var(--text-subtle)] mt-1">{message.label}</p>
           )}
 
           {message.error_message && (
-            <p className="text-xs text-red-500 mt-1 truncate">{message.error_message}</p>
+            <p className="text-xs text-[var(--danger-text)] mt-1 truncate">{message.error_message}</p>
           )}
         </div>
 
@@ -242,9 +242,8 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
                 onClick={onCancel}
                 disabled={cancelling}
                 aria-label="Cancelar agendamento"
-                className="text-neutral-400 hover:text-red-500"
               >
-                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <X className="kds-control-icon" />}
               </IconButton>
             )}
             {message.status === 'failed' && (
@@ -252,9 +251,8 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
                 onClick={onDelete}
                 disabled={cancelling}
                 aria-label="Excluir mensagem"
-                className="text-neutral-400 hover:text-red-500"
               >
-                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <Trash2 className="kds-control-icon" />}
               </IconButton>
             )}
           </div>

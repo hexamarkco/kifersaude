@@ -174,7 +174,7 @@ export default function WhatsAppScheduleMessageModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Mensagem
           </label>
           <Textarea
@@ -185,8 +185,8 @@ export default function WhatsAppScheduleMessageModal({
             className="w-full"
           />
           {initialMediaUrl && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-neutral-500">
-              <span className="inline-block px-2 py-1 bg-neutral-100 rounded text-xs">
+            <div className="mt-2 flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <span className="inline-block px-2 py-1 bg-[var(--bg-inset)] rounded text-xs">
                 {initialMediaMimeType ?? 'Mídia anexada'}
               </span>
               {initialMediaFileName && (
@@ -197,7 +197,7 @@ export default function WhatsAppScheduleMessageModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             <Calendar className="inline-block w-4 h-4 mr-1" />
             Data e hora do envio
           </label>
@@ -211,7 +211,7 @@ export default function WhatsAppScheduleMessageModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-2">
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
             <Repeat className="inline-block w-4 h-4 mr-1" />
             Recorrência
           </label>
@@ -223,12 +223,12 @@ export default function WhatsAppScheduleMessageModal({
                 onClick={() => setRecurrence(option.value)}
                 className={`p-3 rounded-lg border text-left transition-colors ${
                   recurrence === option.value
-                    ? 'border-terracota-500 bg-terracota-50 text-terracota-700'
-                    : 'border-neutral-200 hover:border-neutral-300 text-neutral-600'
+                    ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+                    : 'border-[var(--border-subtle)] hover:border-[var(--border-default)] text-[var(--text-secondary)]'
                 }`}
               >
                 <div className="text-sm font-medium">{option.label}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{option.description}</div>
+                <div className="text-xs text-[var(--text-muted)] mt-0.5">{option.description}</div>
               </button>
             ))}
           </div>
@@ -236,7 +236,7 @@ export default function WhatsAppScheduleMessageModal({
 
         {recurrence !== 'none' && (
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               <Clock className="inline-block w-4 h-4 mr-1" />
               Repetir até
             </label>
@@ -252,7 +252,7 @@ export default function WhatsAppScheduleMessageModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1">
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Etiqueta (opcional)
           </label>
           <Input
@@ -264,7 +264,7 @@ export default function WhatsAppScheduleMessageModal({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-subtle)]">
           <Button
             variant="ghost"
             onClick={handleClose}
@@ -275,7 +275,6 @@ export default function WhatsAppScheduleMessageModal({
           <Button
             onClick={handleSchedule}
             disabled={!isValid || submitting}
-            className="bg-terracota-500 hover:bg-terracota-600 text-white"
           >
             {submitting ? 'Agendando...' : 'Agendar mensagem'}
           </Button>

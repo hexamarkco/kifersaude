@@ -10102,7 +10102,7 @@ export default function WhatsAppInboxScreen() {
                     </div>
 
                     <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
-                      {hasSendPayload && selectedChat && (
+                      {selectedChat && !voiceRecordingState && (
                         <button
                           type="button"
                           onClick={() => setScheduleMessageModalOpen(true)}

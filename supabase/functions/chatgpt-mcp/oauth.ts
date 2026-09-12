@@ -127,13 +127,6 @@ const parseAuthorizationRequest = (url: URL): { request?: AuthorizationRequest; 
   return { request: { clientId, redirectUri, state, codeChallenge, scope: scopeResult.scope } };
 };
 
-const redirectWithAuthorizationCode = (authorization: AuthorizationRequest, code: string): Response => {
-  const target = new URL(authorization.redirectUri);
-  target.searchParams.set('code', code);
-  target.searchParams.set('state', authorization.state);
-  return new Response(null, { status: 303, headers: { Location: target.toString(), 'Cache-Control': 'no-store' } });
-};
-
 const createAuthorizationCode = async (admin: SupabaseClient, request: AuthorizationRequest, userId: string): Promise<string> => {
   const code = randomToken();
   const expiresAt = new Date(Date.now() + AUTHORIZATION_CODE_LIFETIME_SECONDS * 1000).toISOString();

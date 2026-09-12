@@ -2,9 +2,10 @@
 
 O endpoint `chatgpt-mcp` permite que um chat conectado consulte dados atuais do CRM, contratos, automacoes e historico do WhatsApp. Ele nao oferece qualquer ferramenta de criar, editar ou excluir dados.
 
-## Limites de seguranca
+## Limites de segurança
 
-- O acesso exige `Authorization: Bearer <KIFER_MCP_ACCESS_TOKEN>`.
+- O acesso do ChatGPT exige OAuth com PKCE S256 e uma conta com perfil `admin` no CRM.
+- Tokens de autorização, acesso e renovação são armazenados somente como hashes, têm validade limitada e são invalidados quando a conta deixa de ser administradora.
 - As ferramentas MCP sao anotadas como `readOnlyHint` e nao aceitam SQL, RPC arbitraria ou nomes livres de tabela.
 - O servidor usa uma allowlist de tabelas operacionais, pagina respostas e remove valores de chaves que parecam credenciais.
 - Segredos, configuracoes de integracao, sessao/autenticacao e arquivos brutos de webhook nao sao expostos.
@@ -12,13 +13,16 @@ O endpoint `chatgpt-mcp` permite que um chat conectado consulte dados atuais do 
 
 "Somente leitura" se aplica aos dados de negocio: a unica escrita tecnica e o log de auditoria.
 
-## Publicacao e reativacao
+## Publicação e reativação
 
-1. Aplique a migration do projeto.
-2. Gere um token longo e aleatorio, guarde-o em um cofre de senhas e publique-o como secret. Nunca o grave neste repositorio, em um prompt ou na configuracao do ChatGPT. Exemplo:
+1. Aplique as migrations, publique a function e a página `public/mcp-oauth-authorize.html` junto com o site. A página de autorização é pública, mas só emite um código OAuth depois de validar a sessão de um administrador.
+2. Configure os secrets abaixo no Supabase. A URL de retorno deve ser copiada exatamente do modal do ChatGPT.
 
    ```bash
-   supabase secrets set KIFER_MCP_ACCESS_TOKEN="<token-longo-e-aleatorio>" KIFER_MCP_ACTOR="nick-chatgpt"
+   supabase secrets set \
+     KIFER_MCP_OAUTH_CLIENT_ID="chatgpt-kifer" \
+     KIFER_MCP_OAUTH_REDIRECT_URI="<url-de-retorno-exibida-pelo-chatgpt>" \
+     KIFER_MCP_OAUTH_UI_URL="https://www.kifersaude.com.br/mcp-oauth-authorize.html"
    ```
 
 3. Publique a function:
@@ -27,11 +31,11 @@ O endpoint `chatgpt-mcp` permite que um chat conectado consulte dados atuais do 
    supabase functions deploy chatgpt-mcp --no-verify-jwt
    ```
 
-4. Verifique o handshake sem revelar o token. Uma resposta `200` ao metodo MCP `initialize` confirma que a function e o secret estao ativos.
+4. Verifique os metadados OAuth e o desafio MCP. Uma chamada não autenticada ao MCP deve retornar `401` com `resource_metadata`; o ChatGPT então inicia o OAuth automaticamente.
 
 ## Configuracao no ChatGPT
 
-O endpoint agora oferece OAuth diretamente, com login do proprio CRM. Somente usuarios com o perfil `admin` conseguem autorizar o ChatGPT; a senha e validada pelo Supabase Auth e nunca e enviada ao ChatGPT.
+O endpoint oferece OAuth com login do próprio CRM. Somente usuários com o perfil `admin` conseguem autorizar o ChatGPT; a senha é validada pelo Supabase Auth e nunca é enviada ao ChatGPT.
 
 ```text
 https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp
@@ -59,7 +63,7 @@ Autorizacao: https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/o
 Token: https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/oauth/token
 ```
 
-Depois clique em **Verificar ferramentas**. Uma pagina segura do CRM pedira o seu e-mail/usuario e senha de administrador. Ao concluir, teste somente uma consulta de leitura e publique o plugin apenas para o grupo autorizado.
+Depois clique em **Verificar ferramentas**. A página `www.kifersaude.com.br/mcp-oauth-authorize.html` pedirá o e-mail e a senha da conta administradora. Clique em **Autorizar consultas** e aguarde o retorno automático ao ChatGPT. Então teste somente uma consulta de leitura e publique o plugin apenas para o grupo autorizado.
 
 > A URL de retorno fica vinculada a este plugin do ChatGPT. Nao descarte este rascunho nem crie outro plugin antes de finalizar. Se for necessario recria-lo, atualize tambem o secret `KIFER_MCP_OAUTH_REDIRECT_URI` com a nova URL mostrada pelo ChatGPT e publique a function novamente.
 
@@ -72,4 +76,4 @@ Depois clique em **Verificar ferramentas**. Uma pagina segura do CRM pedira o se
 
 ## Revogacao
 
-Para retirar o acesso imediatamente, substitua `KIFER_MCP_ACCESS_TOKEN` por outro valor (ou remova o secret) e redeploy a function. O token nao deve ser salvo em arquivos versionados, prompts compartilhados ou no banco de dados.
+Para interromper novas conexões, remova `KIFER_MCP_OAUTH_REDIRECT_URI` e publique a function novamente. Para revogar conexões existentes, revogue os tokens OAuth no banco ou retire o perfil `admin` da conta autorizadora; o servidor revalida essa permissão a cada chamada.

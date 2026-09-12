@@ -27,7 +27,7 @@ REVOKE ALL ON TABLE public.comm_whatsapp_worker_tokens FROM PUBLIC, anon, authen
 GRANT SELECT ON TABLE public.comm_whatsapp_worker_tokens TO service_role;
 
 INSERT INTO public.comm_whatsapp_worker_tokens (purpose, token)
-VALUES ('process-scheduled-messages', encode(gen_random_bytes(32), 'hex'))
+VALUES ('process-scheduled-messages', encode(extensions.gen_random_bytes(32), 'hex'))
 ON CONFLICT (purpose) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.poll_scheduled_messages(

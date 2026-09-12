@@ -4,10 +4,10 @@ import {
   AlertTriangle,
   Bell,
   Calendar,
+  CalendarClock,
   CalendarPlus,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -1315,10 +1315,7 @@ export default function WhatsAppAgendaModal({
                     {isQuickSchedulingCurrentReminder ? (
                       <Loader2 className="animate-spin" />
                     ) : (
-                      <span className="relative inline-flex">
-                        <CalendarPlus aria-hidden="true" />
-                        <ChevronDown className="absolute -bottom-1 -right-1" />
-                      </span>
+                      <CalendarClock className="kds-control-icon" aria-hidden="true" />
                     )}
                   </IconButton>
                   {quickScheduleDropdown?.reminderId === reminder.id && (

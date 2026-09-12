@@ -11,10 +11,10 @@ import {
   AlertCircle,
   Bell,
   Calendar,
+  CalendarClock,
   CalendarPlus,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -1265,10 +1265,7 @@ export default function AgendaScreen() {
                       <PopoverTrigger className="inline-flex">
                         <IconButton type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
                           {isQuickSchedulingCurrentReminder ? <Loader2 className="animate-spin" /> : (
-                            <span className="relative inline-flex">
-                              <CalendarPlus className="kds-control-icon" />
-                              <ChevronDown className="absolute -bottom-1 -right-1" />
-                            </span>
+                            <CalendarClock className="kds-control-icon" aria-hidden="true" />
                           )}
                         </IconButton>
                       </PopoverTrigger>
@@ -1371,7 +1368,8 @@ export default function AgendaScreen() {
                   className="shrink-0"
                   aria-label="Organizar agenda"
                   title="Organizar agenda"
-                 size="lg">
+                  size="md"
+                >
                   <Sparkles aria-hidden="true" />
                 </IconButton>
                 <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">

@@ -876,7 +876,7 @@ export default function IntegrationsScreen() {
                             placeholder={modelFieldPlaceholder}
                             includePlaceholderOption={false}
                             options={modelOptions}
-                            size="lg"
+                            size="md"
                             disabled={
                               providerModelsState.loading ||
                               modelOptions.length === 0

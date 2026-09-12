@@ -331,7 +331,7 @@ export default function WhatsAppApiSettingsPanel() {
                   <Input
                     readOnly
                     value={webhookUrl}
-                    size="lg"
+                    size="md"
                     className="font-mono"
                     action={(
                       <IconButton

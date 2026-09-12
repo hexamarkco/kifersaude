@@ -114,7 +114,7 @@
   position: fixed;
   inset: 0;
   background: var(--overlay);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(2px);
 }
 
 .kds-dialog-container {
@@ -1579,11 +1579,6 @@
 .kds-brand-mark {
   background: var(--brand-primary);
   box-shadow: none;
-}
-
-.kds-dialog-backdrop {
-  background: var(--overlay);
-  backdrop-filter: blur(2px);
 }
 
 .kds-dialog {

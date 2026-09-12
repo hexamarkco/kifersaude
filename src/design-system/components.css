@@ -1284,7 +1284,7 @@
 }
 
 .kds-card-icon {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--brand-primary-soft);
   color: var(--brand-primary);
   box-shadow: none;

@@ -678,7 +678,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-accent);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   background: var(--brand-primary-soft);
   color: var(--brand-primary-hover);
   box-shadow: var(--glow-terracotta);

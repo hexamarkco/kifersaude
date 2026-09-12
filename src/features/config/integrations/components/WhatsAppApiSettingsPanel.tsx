@@ -315,23 +315,37 @@ export default function WhatsAppApiSettingsPanel() {
                       {channelPhone ? ` · ${channelPhone}` : ""}
                     </p>
                   </div>
-                  <Button variant="secondary" onClick={handleRefreshHealth} loading={refreshingHealth}>
-                    {!refreshingHealth && <RefreshCcw className="kds-control-icon" />}
-                    Atualizar saude
-                  </Button>
+                  <IconButton
+                    variant="secondary"
+                    size="md"
+                    onClick={handleRefreshHealth}
+                    loading={refreshingHealth}
+                    aria-label="Atualizar saúde do canal"
+                    title="Atualizar saúde do canal"
+                  >
+                    {!refreshingHealth && <RefreshCcw className="kds-control-icon" aria-hidden="true" />}
+                  </IconButton>
                 </div>
 
-                <div className="mt-3 relative">
-                  <Input readOnly value={webhookUrl} size="lg" className="font-mono" />
-                  <IconButton
-                    variant="icon"
-                    aria-label="Copiar webhook"
-                    onClick={handleCopyWebhook}
-                    disabled={!webhookUrl}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0"
-                  >
-                    <Copy className="kds-control-icon" />
-                  </IconButton>
+                <div className="mt-3">
+                  <Input
+                    readOnly
+                    value={webhookUrl}
+                    size="lg"
+                    className="font-mono"
+                    action={(
+                      <IconButton
+                        variant="icon"
+                        size="sm"
+                        aria-label="Copiar webhook"
+                        title="Copiar webhook"
+                        onClick={handleCopyWebhook}
+                        disabled={!webhookUrl}
+                      >
+                        <Copy className="kds-control-icon" aria-hidden="true" />
+                      </IconButton>
+                    )}
+                  />
                 </div>
                 {webhookAuthentication === "header" ? (
                   <p className="mt-2 text-xs text-[var(--text-muted)]">

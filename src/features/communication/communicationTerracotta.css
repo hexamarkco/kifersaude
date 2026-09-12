@@ -378,10 +378,20 @@
   box-shadow: none;
 }
 
-.comm-whatsapp-lead-drawer {
+.kds-drawer.comm-whatsapp-lead-drawer {
+  --kds-drawer-width: 36rem;
   border-color: var(--border-default);
   background: var(--bg-surface);
   box-shadow: var(--shadow-modal);
+}
+
+.comm-whatsapp-lead-drawer .comm-whatsapp-lead-drawer-header {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.comm-whatsapp-lead-drawer .kds-dialog-title {
+  font-size: 1.5rem;
 }
 
 .comm-whatsapp-lead-drawer .kds-drawer-header,
@@ -392,6 +402,21 @@
 
 .comm-whatsapp-lead-drawer .kds-drawer-body {
   background: var(--bg-surface);
+}
+
+.comm-whatsapp-lead-drawer .comm-whatsapp-lead-drawer-tabs .kds-tabs-list {
+  width: 100%;
+}
+
+.comm-whatsapp-lead-drawer .comm-whatsapp-lead-link-state {
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+@media (max-width: 639px) {
+  .comm-whatsapp-lead-drawer .kds-dialog-title {
+    font-size: 1.25rem;
+  }
 }
 
 .panel-glass-panel.comm-whatsapp-popover {

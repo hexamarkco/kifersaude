@@ -14,7 +14,7 @@ import {
   Card,
   ConfirmDialog,
   IconButton,
-  Input,
+  SearchInput,
   SectionHeader,
   SegmentedControl,
 } from "../../../design-system";
@@ -290,7 +290,7 @@ export default function AiConfigScreen() {
       {section === "features" && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <Input
+            <SearchInput
               placeholder="Buscar funcionalidade..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

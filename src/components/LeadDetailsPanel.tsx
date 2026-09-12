@@ -5,7 +5,10 @@ import type { Lead, LeadStatusConfig } from '../features/leads';
 import StatusDropdown from './StatusDropdown';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
+  Avatar,
+  Button,
   FilterSelect,
+  IconButton,
 } from '../design-system';
 import {
   AlertCircle,
@@ -80,7 +83,7 @@ export default function LeadDetailsPanel({
   }, [lead?.id, lead?.favorito]);
 
   const rootClassName = useMemo(() => {
-    const base = 'border border-[var(--border-default)] bg-[var(--bg-surface)] rounded-xl flex flex-col';
+    const base = 'flex flex-col overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)]';
     return className ? `${base} ${className}` : base;
   }, [className]);
 
@@ -200,67 +203,74 @@ export default function LeadDetailsPanel({
 
   return (
     <aside className={rootClassName}>
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-inset)] px-5 py-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Lead selecionado
-          </p>
-          <h3 className="mt-1 flex items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
-            <LeadFavoriteToggle leadId={lead.id} favorito={favorito} size="sm" onToggled={setFavorito} />
-            {lead.nome_completo || 'Lead sem nome'}
-          </h3>
-          {lead.telefone && (
-            <p className="text-xs text-[var(--text-muted)]">{lead.telefone}</p>
-          )}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              Lead vinculado
+            </p>
+            <h3 className="mt-0.5 flex min-w-0 items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
+              <LeadFavoriteToggle leadId={lead.id} favorito={favorito} size="sm" onToggled={setFavorito} />
+              <span className="truncate">{lead.nome_completo || 'Lead sem nome'}</span>
+            </h3>
+            {lead.telefone && (
+              <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {onViewLead && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onViewLead}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="kds-control-icon" />
               Ver completo
-            </button>
+            </Button>
           )}
           {!disabled && onEditLead && (
-            <button
-              type="button"
+            <IconButton
+              variant="secondary"
+              size="sm"
               onClick={onEditLead}
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--brand-primary-hover)]"
+              aria-label="Editar lead"
+              title="Editar lead"
             >
-              <Edit3 className="h-4 w-4" />
-              Editar
-            </button>
+              <Edit3 className="kds-control-icon" aria-hidden="true" />
+            </IconButton>
           )}
         </div>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
         <section>
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <ClipboardList className="h-4 w-4" />
-            <span>Status e responsável</span>
+            <h4>Status e responsável</h4>
           </div>
-          <div className="space-y-3">
-            {statusOptions.length > 0 ? (
-              <StatusDropdown
-                currentStatus={lead.status_value ?? ''}
-                leadId={lead.id}
-                statusOptions={statusOptions}
-                onStatusChange={onStatusChange}
-                disabled={disabled}
-              />
-            ) : (
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">Status:</span>{' '}
-                {lead.status_nome ?? 'Status não informado'}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Status</p>
+              <div className="mt-1 flex min-h-[var(--control-height-md)] items-center">
+                {statusOptions.length > 0 ? (
+                  <StatusDropdown
+                    currentStatus={lead.status_value ?? ''}
+                    leadId={lead.id}
+                    statusOptions={statusOptions}
+                    onStatusChange={onStatusChange}
+                    disabled={disabled}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                    {lead.status_nome ?? 'Status não informado'}
+                  </div>
+                )}
               </div>
-            )}
-
+            </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">Responsável</p>
+              <p className="text-xs font-medium text-[var(--text-muted)]">Responsável</p>
               {responsavelOptions.length > 0 ? (
                 <div className="mt-1">
                   <FilterSelect
@@ -292,9 +302,9 @@ export default function LeadDetailsPanel({
         </section>
 
         <section>
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <StickyNote className="h-4 w-4" />
-            <span>Observações</span>
+            <h4>Observações</h4>
           </div>
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 text-sm text-[var(--text-secondary)]">
             {observations || 'Nenhuma observação registrada para este lead.'}
@@ -302,9 +312,9 @@ export default function LeadDetailsPanel({
         </section>
 
         <section>
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <FileText className="h-4 w-4" />
-            <span>Contratos</span>
+            <h4>Contratos</h4>
           </div>
           {renderContracts()}
         </section>

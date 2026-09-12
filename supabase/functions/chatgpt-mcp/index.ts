@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { authenticateOAuthAccessToken, getMcpOAuthChallenge, handleOAuthRoute } from './oauth.ts';
 
 /**
  * Endpoint MCP remoto para consultas no Kifer Saude.
@@ -167,10 +168,11 @@ const assertReadableTable = (value: unknown): string => {
 async function writeAuditLog(params: {
   supabase: SupabaseClient;
   toolName: string;
+  actor?: string;
   resourceName?: string | null;
   requestSummary?: Record<string, unknown>;
 }) {
-  const actor = text(Deno.env.get('KIFER_MCP_ACTOR')) || 'chatgpt-mcp-admin';
+  const actor = params.actor || text(Deno.env.get('KIFER_MCP_ACTOR')) || 'chatgpt-mcp-admin';
   const { error } = await params.supabase.from('chatgpt_mcp_audit_log').insert({
     actor,
     tool_name: params.toolName,
@@ -421,7 +423,7 @@ const tools = [
   },
 ];
 
-async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown) {
+async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   let output: unknown;
   let resourceName: string | null = null;
@@ -459,6 +461,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
   await writeAuditLog({
     supabase,
     toolName: name,
+    actor,
     resourceName,
     requestSummary: { argument_keys: Object.keys(args).sort(), filter_count: Array.isArray(args.filters) ? args.filters.length : 0 },
   });
@@ -466,21 +469,29 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
 }
 
 Deno.serve(async (request: Request) => {
+  const oauthResponse = await handleOAuthRoute(request);
+  if (oauthResponse) return oauthResponse;
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return new Response('Metodo nao permitido', { status: 405, headers: { ...jsonHeaders, Allow: 'POST, OPTIONS' } });
 
   const configuredToken = Deno.env.get('KIFER_MCP_ACCESS_TOKEN') || '';
-  if (!configuredToken) {
-    console.error('[chatgpt-mcp] KIFER_MCP_ACCESS_TOKEN nao configurado');
-    return new Response('Servico MCP indisponivel.', { status: 503, headers: jsonHeaders });
+  const legacyAuthenticated = Boolean(configuredToken) && equalTokens(getBearerToken(request), configuredToken);
+  let actor = text(Deno.env.get('KIFER_MCP_ACTOR')) || 'chatgpt-mcp-admin';
+  if (!legacyAuthenticated) {
+    try {
+      const oauthPrincipal = await authenticateOAuthAccessToken(request);
+      if (oauthPrincipal) actor = oauthPrincipal.actor;
+      else {
+        return new Response('Nao autenticado.', {
+          status: 401,
+          headers: { ...jsonHeaders, 'WWW-Authenticate': getMcpOAuthChallenge(request) },
+        });
+      }
+    } catch (error) {
+      console.error('[chatgpt-mcp] falha ao validar OAuth:', error instanceof Error ? error.message : error);
+      return new Response('Servico MCP indisponivel.', { status: 503, headers: jsonHeaders });
+    }
   }
-  if (!equalTokens(getBearerToken(request), configuredToken)) {
-    return new Response('Nao autenticado.', {
-      status: 401,
-      headers: { ...jsonHeaders, 'WWW-Authenticate': 'Bearer realm="Kifer Saude MCP"' },
-    });
-  }
-
   let rpc: JsonRpcRequest;
   try {
     rpc = (await request.json()) as JsonRpcRequest;
@@ -505,7 +516,7 @@ Deno.serve(async (request: Request) => {
   const toolName = text(rpc.params?.name);
   try {
     const supabase = getSupabaseAdmin();
-    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments);
+    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor);
     return resultResponse(rpc.id, toolResult);
   } catch (error) {
     console.error('[chatgpt-mcp] erro em tools/call', { toolName, error: error instanceof Error ? error.message : error });

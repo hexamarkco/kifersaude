@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  SearchInput,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -8568,11 +8569,10 @@ export default function WhatsAppInboxScreen() {
                 </ButtonGroup>
               </div>
 
-              <Input
+              <SearchInput
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Buscar por nome ou telefone"
-                leftIcon={Search}
                 className="whatsapp-inbox-search-input"
               />
 
@@ -8992,11 +8992,10 @@ export default function WhatsAppInboxScreen() {
                 <div className="border-b bg-[var(--bg-elevated)] px-5 py-3">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
-                      <Input
+                      <SearchInput
                         ref={chatMessageSearchInputRef}
                         value={chatMessageSearchDraft}
                         onChange={(event) => setChatMessageSearchDraft(event.target.value)}
-                        leftIcon={Search}
                         placeholder="Pesquisar mensagens neste chat"
                         size="sm"
                         autoComplete="off"
@@ -10203,7 +10202,7 @@ export default function WhatsAppInboxScreen() {
                 </div>
               </DialogHeader>
               <DialogBody className="space-y-3">
-                <Input
+                <SearchInput
                   value={forwardSearch}
                   onChange={(event) => setForwardSearch(event.target.value)}
                   placeholder="Buscar conversa"

@@ -74,6 +74,46 @@ const createAdminClient = () => {
   });
 };
 
+async function secureTokenEquals(provided: string, expected: string): Promise<boolean> {
+  if (!provided || !expected) return false;
+
+  const encoder = new TextEncoder();
+  const [providedHash, expectedHash] = await Promise.all([
+    crypto.subtle.digest('SHA-256', encoder.encode(provided)),
+    crypto.subtle.digest('SHA-256', encoder.encode(expected)),
+  ]);
+  const providedBytes = new Uint8Array(providedHash);
+  const expectedBytes = new Uint8Array(expectedHash);
+  let difference = providedBytes.length ^ expectedBytes.length;
+
+  for (let index = 0; index < Math.min(providedBytes.length, expectedBytes.length); index += 1) {
+    difference |= providedBytes[index] ^ expectedBytes[index];
+  }
+
+  return difference === 0;
+}
+
+async function isScheduledWorkerRequest(
+  req: Request,
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<boolean> {
+  const providedToken = req.headers.get('x-scheduled-worker-token')?.trim() ?? '';
+  if (!providedToken) return false;
+
+  const { data, error } = await admin
+    .from('comm_whatsapp_worker_tokens')
+    .select('token')
+    .eq('purpose', 'process-scheduled-messages')
+    .maybeSingle();
+
+  if (error || !data?.token) {
+    console.error('[process-scheduled] could not validate cron token', error?.message ?? 'token missing');
+    return false;
+  }
+
+  return secureTokenEquals(providedToken, data.token);
+}
+
 async function sendTextMessage(
   admin: ReturnType<typeof createAdminClient>,
   channelRow: { id: string; phone_number: string | null },
@@ -255,14 +295,6 @@ async function processBatch(
 
   for (const msg of messages) {
     try {
-      const { error: advanceSendingErr } = await admin.rpc('advance_scheduled_message', {
-        p_message_id: msg.message_id,
-        p_new_status: 'sending',
-      });
-      if (advanceSendingErr) {
-        throw new Error(`advance_scheduled_message(sending) failed: ${advanceSendingErr.message}`);
-      }
-
       let channelRow = channelCache.get(msg.channel_id);
       if (!channelRow) {
         const { data: ch } = await admin
@@ -341,7 +373,10 @@ Deno.serve(async (req): Promise<Response> => {
 
   try {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    if (!isServiceRoleRequest(req, serviceRoleKey)) {
+    const admin = createAdminClient();
+    const isAuthorized = isServiceRoleRequest(req, serviceRoleKey)
+      || await isScheduledWorkerRequest(req, admin);
+    if (!isAuthorized) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: jsonHeaders,
@@ -359,7 +394,6 @@ Deno.serve(async (req): Promise<Response> => {
       });
     }
 
-    const admin = createAdminClient();
     const result = await processBatch(admin, limit);
 
     return new Response(JSON.stringify(result), {

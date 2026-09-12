@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { GitBranch, Share2 } from "lucide-react";
 import {
   AlertCircle,
   BellRing,
@@ -248,11 +249,12 @@ export default function SystemSettingsScreen() {
     | "origins"
     | `manager:${LeadConfigCategory}`;
   const leadConfigurationTabs: TabItem<LeadConfigurationTabId>[] = [
-    ...(showLeadStatusManager ? [{ id: "status" as const, label: "Funil" }] : []),
-    ...(showLeadOriginsManager ? [{ id: "origins" as const, label: "Origens" }] : []),
+    ...(showLeadStatusManager ? [{ id: "status" as const, label: "Funil", icon: GitBranch }] : []),
+    ...(showLeadOriginsManager ? [{ id: "origins" as const, label: "Origens", icon: Share2 }] : []),
     ...visibleLeadManagers.map((manager) => ({
       id: `manager:${manager.category}` as const,
       label: manager.title,
+      icon: manager.tabIcon,
     })),
   ];
   const activeLeadConfigurationId = leadConfigurationTabs.some(
@@ -623,11 +625,15 @@ export default function SystemSettingsScreen() {
                   <>
                     {leadConfigurationTabs.length > 0 ? (
                       <>
-                        <SegmentedControl
+                        <Tabs
                           items={leadConfigurationTabs}
                           value={activeLeadConfigurationId}
                           onChange={setActiveLeadConfiguration}
+                          variant="pill"
+                          size="md"
+                          ariaLabel="Categorias das configurações de leads"
                           listClassName="flex-nowrap overflow-x-auto"
+                          triggerClassName="shrink-0 whitespace-nowrap"
                         />
                         {activeLeadConfigurationId === "status" && <LeadStatusManager />}
                         {activeLeadConfigurationId === "origins" && <LeadOriginsManager />}
@@ -688,7 +694,8 @@ export default function SystemSettingsScreen() {
                         items={contractConfigurationTabs}
                         value={activeContractConfigurationId}
                         onChange={setActiveContractConfiguration}
-                        variant="rail"
+                        variant="pill"
+                        size="md"
                         ariaLabel="Categorias das configurações de contratos"
                         listClassName="flex-nowrap overflow-x-auto"
                         triggerClassName="shrink-0 whitespace-nowrap"

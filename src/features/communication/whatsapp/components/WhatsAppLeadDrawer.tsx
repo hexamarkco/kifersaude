@@ -13,10 +13,10 @@ import {
   DrawerBody,
   DrawerHeader,
   EmptyState,
-  Input,
+  SearchInput,
   Surface,
+  Tabs,
   type TabItem,
-  SegmentedControl,
 } from '../../../../design-system';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
@@ -37,10 +37,10 @@ import type { Contract } from '../../../contracts';
 import type { LeadStatusConfig } from '../../../leads';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 
-type LeadDrawerTab = 'crm' | 'critique';
+type LeadDrawerTab = 'info' | 'critique';
 
 const LEAD_DRAWER_TABS: TabItem<LeadDrawerTab>[] = [
-  { id: 'crm', label: 'CRM' },
+  { id: 'info', label: 'Dados do lead' },
   { id: 'critique', label: 'Análise do atendimento', icon: Sparkles },
 ];
 
@@ -129,10 +129,10 @@ export default function WhatsAppLeadDrawer({
   canViewAgenda,
   canEditAgenda,
 }: WhatsAppLeadDrawerProps) {
-  const [activeTab, setActiveTab] = useState<LeadDrawerTab>('crm');
+  const [activeTab, setActiveTab] = useState<LeadDrawerTab>('info');
 
   useEffect(() => {
-    setActiveTab('crm');
+    setActiveTab('info');
   }, [chatId, isOpen]);
 
   const getStatusColor = useCallback(
@@ -409,19 +409,23 @@ export default function WhatsAppLeadDrawer({
         open={isOpen}
         onOpenChange={(open) => !open && onClose()}
         side="right"
-        size="sm"
+        size="md"
         className="comm-whatsapp-lead-drawer"
       >
-        <DrawerHeader onClose={onClose}>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">CRM do chat</p>
-          <DialogTitle>{chatDisplayName}</DialogTitle>
+        <DrawerHeader onClose={onClose} className="comm-whatsapp-lead-drawer-header">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">Info do chat</p>
+          <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</p>
         </DrawerHeader>
         <DrawerBody className="overflow-y-auto">
-          <SegmentedControl
+          <Tabs
             items={LEAD_DRAWER_TABS}
             value={activeTab}
             onChange={setActiveTab}
-            className="mb-4"
+            variant="pill"
+            size="sm"
+            ariaLabel="Seções de informações do chat"
+            className="comm-whatsapp-lead-drawer-tabs mb-5"
           />
 
           {activeTab === 'critique' ? (
@@ -429,24 +433,33 @@ export default function WhatsAppLeadDrawer({
           ) : loading ? (
             <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Carregando dados do CRM...
+              Carregando informações do chat...
             </div>
           ) : linkedLead ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-end gap-2">
-                {autoLinked && (
-                  <Badge tone="accent" icon={Sparkles}>Vinculado automaticamente</Badge>
-                )}
+            <div className="space-y-5">
+              <Surface variant="muted" padding="sm" className="comm-whatsapp-lead-link-state flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+                    <Link2 className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">Lead vinculado</p>
+                    <p className="text-xs text-[var(--text-muted)]">Informações comerciais desta conversa</p>
+                  </div>
+                  {autoLinked && (
+                    <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge>
+                  )}
+                </div>
                 {onUnlinkLead && (
-                  <Button variant="secondary" size="sm" onClick={onUnlinkLead}>
+                  <Button variant="secondary" size="sm" onClick={onUnlinkLead} className="shrink-0">
                     <Unlink className="kds-control-icon" />
                     Desvincular
                   </Button>
                 )}
-              </div>
+              </Surface>
 
               <LeadDetailsPanel
-                className="whatsapp-lead-drawer-panel min-h-[min(520px,calc(100dvh-12rem))] rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
+                className="whatsapp-lead-drawer-panel rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
                 lead={{ ...linkedLead, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}
@@ -461,8 +474,8 @@ export default function WhatsAppLeadDrawer({
 
               {canViewAgenda ? (
                 <Surface variant="muted" padding="sm" className="sm:p-5">
-                  <div className="space-y-4">
-                    <div className="min-w-0">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                         Agenda do chat
                       </p>
@@ -474,7 +487,7 @@ export default function WhatsAppLeadDrawer({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                       {agendaLead && canEditAgenda ? (
                         <Button variant="secondary" size="sm" className="min-w-[132px] justify-center" onClick={() => setSchedulerOpen(true)}>
                           <CalendarPlus className="kds-control-icon" />
@@ -578,7 +591,7 @@ export default function WhatsAppLeadDrawer({
                   </Button>
                 ) : null}
 
-                <Input
+                <SearchInput
                   value={searchQuery}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => onSearchQueryChange(event.target.value)}
                   placeholder="Buscar lead por nome ou telefone"

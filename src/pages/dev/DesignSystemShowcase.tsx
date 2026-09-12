@@ -26,7 +26,6 @@ import {
   ListOrdered,
   Loader2,
   Mail,
-  MapPin,
   MessageCircle,
   Minus,
   Moon,
@@ -459,7 +458,7 @@ function ShowcaseContent() {
 
           <Item title="Autocomplete">
             <div className="relative">
-              <Input placeholder="Buscar cidade..." leftIcon={MapPin} defaultValue="São" />
+              <SearchInput placeholder="Buscar cidade..." defaultValue="São" />
               <div className="absolute left-0 right-0 top-full z-10 mt-1.5 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]">
                 <div className="rounded-xl px-3 py-2 text-sm text-[var(--text-secondary)]"><strong className="text-[var(--text-primary)]">São</strong> Paulo, SP</div>
                 <div className="rounded-xl px-3 py-2 text-sm text-[var(--text-secondary)]"><strong className="text-[var(--text-primary)]">São</strong> Bernardo, SP</div>

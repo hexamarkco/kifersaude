@@ -8,6 +8,7 @@ import {
   MapPin,
   Settings,
   ShieldCheck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,6 +72,7 @@ export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition<LeadConfigCategory>[]
   {
     category: "lead_tipo_contratacao",
     title: "Tipos de contratação",
+    tabIcon: Briefcase,
     description: "Defina as opções disponíveis ao cadastrar leads e contratos.",
     placeholder: "Ex: Pessoa Física",
     searchTerms: ["lead", "tipos", "contratacao", "cadastro"],
@@ -78,6 +80,7 @@ export const LEAD_CONFIG_MANAGERS: ConfigManagerDefinition<LeadConfigCategory>[]
   {
     category: "lead_responsavel",
     title: "Responsáveis pelos leads",
+    tabIcon: Users,
     description:
       "Configure a lista de responsáveis disponíveis para atribuição.",
     placeholder: "Ex: Maria",

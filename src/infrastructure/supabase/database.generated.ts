@@ -1047,6 +1047,99 @@ export type Database = {
         }
         Relationships: []
       }
+      chatgpt_mcp_oauth_access_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          revoked_at: string | null
+          scope: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at: string
+          revoked_at?: string | null
+          scope: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          revoked_at?: string | null
+          scope?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chatgpt_mcp_oauth_authorization_codes: {
+        Row: {
+          client_id: string
+          code_challenge: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          redirect_uri: string
+          scope: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code_challenge: string
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          redirect_uri: string
+          scope: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code_challenge?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          redirect_uri?: string
+          scope?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chatgpt_mcp_oauth_refresh_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          revoked_at: string | null
+          scope: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at: string
+          revoked_at?: string | null
+          scope: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          revoked_at?: string | null
+          scope?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comm_follow_up_audit_log: {
         Row: {
           approved_schedule_date: string | null
@@ -2993,6 +3086,159 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_scheduled_messages: {
+        Row: {
+          attempts: number
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          channel_id: string
+          chat_id: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          delivery_status: string | null
+          display_name: string | null
+          error_message: string | null
+          external_message_id: string | null
+          id: string
+          label: string | null
+          last_attempt_at: string | null
+          lead_id: string | null
+          max_attempts: number
+          media_file_name: string | null
+          media_mime_type: string | null
+          media_size_bytes: number | null
+          media_url: string | null
+          message_type: string
+          metadata: Json
+          next_retry_at: string | null
+          next_run_at: string | null
+          notes: string | null
+          phone_digits: string
+          phone_number: string | null
+          recurrence: string
+          recurrence_config: Json
+          recurrence_ends_at: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          text_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          channel_id: string
+          chat_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_status?: string | null
+          display_name?: string | null
+          error_message?: string | null
+          external_message_id?: string | null
+          id?: string
+          label?: string | null
+          last_attempt_at?: string | null
+          lead_id?: string | null
+          max_attempts?: number
+          media_file_name?: string | null
+          media_mime_type?: string | null
+          media_size_bytes?: number | null
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json
+          next_retry_at?: string | null
+          next_run_at?: string | null
+          notes?: string | null
+          phone_digits: string
+          phone_number?: string | null
+          recurrence?: string
+          recurrence_config?: Json
+          recurrence_ends_at?: string | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          text_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          channel_id?: string
+          chat_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_status?: string | null
+          display_name?: string | null
+          error_message?: string | null
+          external_message_id?: string | null
+          id?: string
+          label?: string | null
+          last_attempt_at?: string | null
+          lead_id?: string | null
+          max_attempts?: number
+          media_file_name?: string | null
+          media_mime_type?: string | null
+          media_size_bytes?: number | null
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json
+          next_retry_at?: string | null
+          next_run_at?: string | null
+          notes?: string | null
+          phone_digits?: string
+          phone_number?: string | null
+          recurrence?: string
+          recurrence_config?: Json
+          recurrence_ends_at?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          text_content?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_send_requests: {
         Row: {
           channel_id: string
@@ -4912,6 +5158,22 @@ export type Database = {
       }
     }
     Functions: {
+      advance_scheduled_message: {
+        Args: {
+          p_delivery_status?: string
+          p_error_message?: string
+          p_external_message_id?: string
+          p_message_id: string
+          p_new_status: string
+          p_next_retry_at?: string
+        }
+        Returns: {
+          message_id: string
+          new_status: string
+          next_run_at: string
+          old_status: string
+        }[]
+      }
       advance_step_dispatch: {
         Args: {
           p_delivery_status?: string
@@ -5012,6 +5274,10 @@ export type Database = {
       cancel_future_pending_dispatches: {
         Args: { p_after_step_index: number; p_target_id: string }
         Returns: number
+      }
+      cancel_scheduled_message: {
+        Args: { p_message_id: string; p_reason?: string }
+        Returns: boolean
       }
       canonicalize_cotador_hospital_network_entries: {
         Args: { entries: Json }
@@ -6193,6 +6459,27 @@ export type Database = {
         }
         Returns: string
       }
+      create_scheduled_message: {
+        Args: {
+          p_channel_id: string
+          p_contract_id?: string
+          p_label?: string
+          p_lead_id?: string
+          p_max_attempts?: number
+          p_media_file_name?: string
+          p_media_mime_type?: string
+          p_media_url?: string
+          p_message_type?: string
+          p_notes?: string
+          p_phone_digits: string
+          p_recurrence?: string
+          p_recurrence_config?: Json
+          p_recurrence_ends_at?: string
+          p_scheduled_at: string
+          p_text_content?: string
+        }
+        Returns: string
+      }
       current_user_access_role: { Args: never; Returns: string }
       current_user_can_edit_any_module: {
         Args: { module_ids: string[] }
@@ -6298,6 +6585,27 @@ export type Database = {
       }
       normalize_cpf: { Args: { value: string }; Returns: string }
       normalize_person_name: { Args: { value: string }; Returns: string }
+      poll_scheduled_messages: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          attempts: number
+          channel_id: string
+          chat_id: string
+          display_name: string
+          max_attempts: number
+          media_file_name: string
+          media_mime_type: string
+          media_url: string
+          message_id: string
+          message_type: string
+          phone_digits: string
+          phone_number: string
+          recurrence: string
+          recurrence_config: Json
+          scheduled_at: string
+          text_content: string
+        }[]
+      }
       prepare_ai_autonomous_attendance_reply: {
         Args: { p_chat_id: string; p_lead_id: string }
         Returns: {

@@ -74,8 +74,10 @@ import {
 import {
   ActionSurface,
   Alert,
+  Badge,
   Button,
   Card,
+  CardIcon,
   DateTimePicker as DesignSystemDateTimePicker,
   Input,
   OperationalMetricChip,
@@ -1631,248 +1633,204 @@ export default function AutoContactFlowSettingsScreen() {
           </div>
 
           {activeWorkspace === "operation" && (
-          <div>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Visão geral
-                </h3>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Acompanhe o volume de fluxos, etapas e envios automáticos.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-6 gap-2 lg:grid-cols-5">
-              <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={metrics.totalFlows} label="fluxos" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
-              <OperationalMetricChip icon={<Timer className="h-3.5 w-3.5" />} value={metrics.totalSteps} label="etapas" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
-              <OperationalMetricChip icon={<Tag className="h-3.5 w-3.5" />} value={metrics.taggedFlows} label="com tags" className="col-span-2 min-w-0 justify-center lg:col-span-1" />
-              <OperationalMetricChip icon={<Activity className="h-3.5 w-3.5" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="atualizado" className="col-span-3 min-w-0 justify-center lg:col-span-1" />
-              <OperationalMetricChip icon={<AlarmClock className="h-3.5 w-3.5" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} className="col-span-3 min-w-0 justify-center lg:col-span-1" />
-            </div>
-
-            <div className="mt-8">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                    Configurações globais
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    Controle o envio automático, o fuso horário e a
-                    observabilidade do sistema.
-                  </p>
-                </div>
-                <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                  {autoSaveState === "saving" ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        autoSaveState === "error"
-                          ? "bg-[var(--danger-border)]"
-                          : autoSaveState === "saved"
-                            ? "bg-[color:var(--brand-primary)]"
-                            : "bg-[color:var(--border-default)]"
-                      }`}
-                    />
-                  )}
-                  <span>
-                    {autoSaveState === "saving"
-                      ? "Salvando..."
-                      : autoSaveState === "saved"
-                        ? "Salvo automaticamente"
-                        : autoSaveState === "error"
-                          ? "Erro ao salvar"
-                          : "Autosave ativo"}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <Card variant="muted" padding="sm" className="space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
-                    <ShieldCheck className="w-5 h-5" />
-                    Automação
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)]">
-                        Ativar automação
-                      </p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        Controla o envio automático dos fluxos configurados.
-                      </p>
+            <section className="space-y-6" aria-labelledby="automation-operation-heading">
+              <Card padding="md" className="space-y-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <CardIcon>
+                      <Activity className="h-5 w-5" aria-hidden="true" />
+                    </CardIcon>
+                    <div className="min-w-0">
+                      <p className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</p>
+                      <h3 id="automation-operation-heading" className="kds-card-title mt-1">Visão geral da operação</h3>
+                      <p className="kds-card-subtitle mt-1">Volume dos fluxos e atividade recente das automações.</p>
                     </div>
-                    <Switch
-                      checked={autoSendEnabled}
-                      onChange={(event) =>
-                        setAutoSendEnabled(event.target.checked)
-                      }
-                    />
                   </div>
-                </Card>
-                <Card variant="muted" padding="sm" className="space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
-                    <AlarmClock className="w-5 h-5" />
-                    Agendamento avançado
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Badge tone={autoSendEnabled ? "success" : "neutral"} size="sm" icon={ShieldCheck}>
+                      {autoSendEnabled ? "Envios automáticos ativos" : "Envios automáticos pausados"}
+                    </Badge>
+                    <Badge
+                      tone={autoSaveState === "error" ? "danger" : autoSaveState === "saved" ? "success" : "neutral"}
+                      size="sm"
+                      icon={autoSaveState === "saving" ? <Loader2 className="kds-control-icon animate-spin" /> : autoSaveState === "error" ? AlertCircle : Save}
+                    >
+                      {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
+                    </Badge>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                        Fuso horário
-                      </label>
-                      <FilterSelect
-                        icon={Globe2}
-                        value={schedulingDraft.timezone}
-                        onChange={(value) =>
-                          setSchedulingDraft((previous) => ({
-                            ...previous,
-                            timezone: value,
-                          }))
-                        }
-                        placeholder="Selecione um fuso"
-                        includePlaceholderOption={false}
-                        options={timezoneOptions}
-                        size="md"
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                  <OperationalMetricChip icon={<BarChart3 className="h-4 w-4" />} value={metrics.totalFlows} label="fluxos" className="w-full justify-start" />
+                  <OperationalMetricChip icon={<Timer className="h-4 w-4" />} value={metrics.totalSteps} label="etapas" className="w-full justify-start" />
+                  <OperationalMetricChip icon={<Tag className="h-4 w-4" />} value={metrics.taggedFlows} label="com tags" tone="accent" className="w-full justify-start" />
+                  <OperationalMetricChip icon={<Activity className="h-4 w-4" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="última atualização" tone="info" className="w-full justify-start" />
+                  <OperationalMetricChip icon={<AlarmClock className="h-4 w-4" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} className="w-full justify-start" />
+                </div>
+                {dailyAutomationError && (
+                  <Alert tone="warning" className="items-center">
+                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{dailyAutomationError}</span>
+                  </Alert>
+                )}
+              </Card>
+
+              <section className="space-y-4" aria-labelledby="automation-global-settings-heading">
+                <div>
+                  <p className="kds-op-section-label">Preferências da operação</p>
+                  <h3 id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3 mt-1">Configurações globais</h3>
+                  <p className="kds-section-description mt-1">Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos.</p>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <Card padding="md" className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <CardIcon>
+                        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                      </CardIcon>
+                      <div>
+                        <h4 className="kds-card-title">Envio automático</h4>
+                        <p className="kds-card-subtitle mt-1">Pausa ou libera o processamento dos fluxos ativos.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Ativar automação</p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">A alteração é salva automaticamente.</p>
+                      </div>
+                      <Switch
+                        checked={autoSendEnabled}
+                        onChange={(event) => setAutoSendEnabled(event.target.checked)}
+                        aria-label="Ativar envio automático dos fluxos"
                       />
                     </div>
-                  </div>
-                  <p className="text-[11px] text-[var(--text-subtle)]">
-                    A janela diária, os dias permitidos e o limite diário são
-                    definidos em cada fluxo.
-                  </p>
-                  <div className="space-y-1">
-                    <Switch
-                      checked={schedulingDraft.skipHolidays}
-                      onChange={(event) =>
-                        setSchedulingDraft((previous) => ({
-                          ...previous,
-                          skipHolidays: event.target.checked,
-                        }))
-                      }
-                      label="Pausar envios em feriados nacionais e estaduais"
-                    />
-                    <p className="text-[11px] text-[var(--text-subtle)]">
-                      O sistema considera automaticamente os feriados oficiais e
-                      respeita datas extras configuradas manualmente.
-                    </p>
-                  </div>
-                </Card>
+                  </Card>
 
-                <Card variant="muted" padding="sm" className="space-y-4 lg:col-span-2">
-                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
-                    <ClipboardList className="w-5 h-5" />
-                    Observabilidade e auditoria
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-4">
+                  <Card padding="md" className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      <CardIcon tone="gold">
+                        <AlarmClock className="h-5 w-5" aria-hidden="true" />
+                      </CardIcon>
                       <div>
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                          Monitoramento em tempo real
+                        <h4 className="kds-card-title">Agendamento avançado</h4>
+                        <p className="kds-card-subtitle mt-1">Fuso horário e regras globais para dias não úteis.</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Fuso horário</label>
+                        <FilterSelect
+                          icon={Globe2}
+                          value={schedulingDraft.timezone}
+                          onChange={(value) => setSchedulingDraft((previous) => ({ ...previous, timezone: value }))}
+                          placeholder="Selecione um fuso"
+                          includePlaceholderOption={false}
+                          options={timezoneOptions}
+                          size="md"
+                        />
+                      </div>
+                      <div className="flex min-w-0 items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[var(--text-primary)]">Pausar em feriados</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">Feriados oficiais e datas extras.</p>
                         </div>
-                        <p className="text-xs text-[var(--text-muted)]">
-                          Atualiza o painel automaticamente com status das
-                          execuções.
-                        </p>
+                        <Switch
+                          checked={schedulingDraft.skipHolidays}
+                          onChange={(event) => setSchedulingDraft((previous) => ({ ...previous, skipHolidays: event.target.checked }))}
+                          aria-label="Pausar envios em feriados nacionais e estaduais"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs leading-5 text-[var(--text-muted)]">A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.</p>
+                  </Card>
+                </div>
+              </section>
+
+              <Card padding="md" className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <CardIcon>
+                    <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                  </CardIcon>
+                  <div>
+                    <h4 className="kds-card-title">Observabilidade e auditoria</h4>
+                    <p className="kds-card-subtitle mt-1">Defina a frequência do monitoramento e a retenção dos registros.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <section className="space-y-4 xl:border-r xl:border-[var(--border-subtle)] xl:pr-6" aria-labelledby="automation-monitoring-heading">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h5 id="automation-monitoring-heading" className="text-sm font-semibold text-[var(--text-primary)]">Monitoramento em tempo real</h5>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Atualiza o painel com o status das execuções.</p>
                       </div>
                       <Switch
                         checked={monitoringDraft.realtimeEnabled}
-                        onChange={(event) =>
-                          setMonitoringDraft((previous) => ({
-                            ...previous,
-                            realtimeEnabled: event.target.checked,
-                          }))
-                        }
-                        className="mt-1"
+                        onChange={(event) => setMonitoringDraft((previous) => ({ ...previous, realtimeEnabled: event.target.checked }))}
+                        aria-label="Ativar monitoramento em tempo real"
                       />
                     </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                          Atualização (segundos)
-                        </label>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Atualização (segundos)</label>
                         <Input
                           type="number"
                           min={5}
                           value={monitoringDraft.refreshSeconds}
-                          onChange={(event) =>
-                            setMonitoringDraft((previous) => ({
-                              ...previous,
-                              refreshSeconds: Number(event.target.value),
-                            }))
-                          }
+                          onChange={(event) => setMonitoringDraft((previous) => ({ ...previous, refreshSeconds: Number(event.target.value) }))}
                           size="md"
+                          aria-label="Intervalo de atualização em segundos"
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                          Última atualização
-                        </label>
-                        <div className="px-3 py-2 border border-[var(--border-subtle)] rounded-lg text-sm text-[var(--text-secondary)] bg-[color:var(--bg-elevated)]">
-                          {lastRefreshAt.toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
+                      <div className="min-w-0">
+                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Última atualização</label>
+                        <output className="flex min-h-[var(--control-height-md)] items-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 text-sm text-[var(--text-secondary)]">
+                          {lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </output>
                       </div>
                     </div>
-                  </div>
-                  <div className="border-t border-[var(--border-subtle)] pt-4 space-y-3">
+                  </section>
+
+                  <section className="space-y-4" aria-labelledby="automation-logging-heading">
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                          Logs estruturados e auditoria
-                        </div>
-                        <p className="text-xs text-[var(--text-muted)]">
-                          Registre eventos, payloads e ações por usuário.
-                        </p>
+                      <div className="min-w-0">
+                        <h5 id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Logs estruturados e auditoria</h5>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Registre eventos e ações para análise operacional.</p>
                       </div>
                       <Switch
                         checked={loggingDraft.enabled}
-                        onChange={(event) =>
-                          setLoggingDraft((previous) => ({
-                            ...previous,
-                            enabled: event.target.checked,
-                          }))
-                        }
-                        className="mt-1"
+                        onChange={(event) => setLoggingDraft((previous) => ({ ...previous, enabled: event.target.checked }))}
+                        aria-label="Ativar logs estruturados e auditoria"
                       />
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                          Retenção (dias)
-                        </label>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Retenção (dias)</label>
                         <Input
                           type="number"
                           min={7}
                           value={loggingDraft.retentionDays}
-                          onChange={(event) =>
-                            setLoggingDraft((previous) => ({
-                              ...previous,
-                              retentionDays: Number(event.target.value),
-                            }))
-                          }
+                          onChange={(event) => setLoggingDraft((previous) => ({ ...previous, retentionDays: Number(event.target.value) }))}
                           size="md"
+                          aria-label="Período de retenção dos logs em dias"
                         />
                       </div>
-                      <div className="mt-6">
-                        <Switch
-                          checked={loggingDraft.includePayloads}
-                          onChange={(event) =>
-                            setLoggingDraft((previous) => ({
-                              ...previous,
-                              includePayloads: event.target.checked,
-                            }))
-                          }
-                          label="Salvar payloads completos"
-                        />
+                      <div className="flex min-w-0 items-center rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2 sm:mt-6">
+                        <div className="min-w-0">
+                          <Switch
+                            checked={loggingDraft.includePayloads}
+                            onChange={(event) => setLoggingDraft((previous) => ({ ...previous, includePayloads: event.target.checked }))}
+                            label="Salvar payloads completos"
+                            aria-label="Salvar payloads completos nos logs"
+                          />
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">Inclui o conteúdo integral dos eventos.</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-
+                  </section>
+                </div>
+              </Card>
+            </section>
           )}
 
           {activeWorkspace === "flows" && <>

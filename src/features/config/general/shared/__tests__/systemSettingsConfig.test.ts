@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   areSystemPreferencesEqual,
   CONTRACT_CONFIG_MANAGERS,
+  LEAD_CONFIG_MANAGERS,
   matchesConfigSearch,
   normalizeConfigSearchText,
 } from "../systemSettingsConfig";
@@ -43,6 +44,14 @@ test("contract configuration categories expose concise and contextual tab metada
           manager.emptyStateDescription,
       ),
     ),
+    true,
+  );
+});
+
+test("lead configuration managers define icons for their tabs", () => {
+  assert.equal(LEAD_CONFIG_MANAGERS.length > 0, true);
+  assert.equal(
+    LEAD_CONFIG_MANAGERS.every((manager) => Boolean(manager.tabIcon)),
     true,
   );
 });

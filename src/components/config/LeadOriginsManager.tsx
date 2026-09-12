@@ -185,11 +185,11 @@ export default function LeadOriginsManager() {
             return (
               <Card key={origin.id} variant="muted" padding="md" className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)_auto] xl:items-center">
-                  <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex min-w-0 items-center justify-center gap-3">
                     <CardIcon>
                       <Share2 className="h-4 w-4" aria-hidden="true" />
                     </CardIcon>
-                    <div className="min-w-0 flex-1">
+                    <div className={`min-w-0 ${isEditing ? 'flex-1' : 'w-fit max-w-full'}`}>
                       {isEditing ? (
                         <Field label="Nome da origem">
                           <Input

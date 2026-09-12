@@ -12,11 +12,17 @@ import type { Dependent, Holder } from '../shared/dashboardTypes';
 export type DashboardSnapshot = {
   leads: Lead[];
   contracts: Contract[];
-  holders: Holder[];
-  dependents: Dependent[];
+};
+
+export type DashboardDecisionSnapshot = {
   reminders: Reminder[];
   interactions: Interaction[];
   statusHistory: LeadStatusHistory[];
+};
+
+export type DashboardCalendarSnapshot = {
+  holders: Holder[];
+  dependents: Dependent[];
 };
 
 export type DashboardRealtimePayload<T> = {
@@ -38,7 +44,7 @@ export type DashboardReminderSummary = Pick<
 >;
 
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
-  const [leads, contracts, holders, dependents, reminders, interactions, statusHistory] = await Promise.all([
+  const [leads, contracts] = await Promise.all([
     fetchAllPages<Lead>(async (from, to) => databaseClient
       .from('leads')
       .select('*')
@@ -51,16 +57,13 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
       .order('created_at', { ascending: false })
       .range(from, to)
       .overrideTypes<Contract[], { merge: false }>()),
-    fetchAllPages<Holder>(async (from, to) => databaseClient
-      .from('contract_holders')
-      .select('*')
-      .range(from, to)
-      .overrideTypes<Holder[], { merge: false }>()),
-    fetchAllPages<Dependent>(async (from, to) => databaseClient
-      .from('dependents')
-      .select('*')
-      .range(from, to)
-      .overrideTypes<Dependent[], { merge: false }>()),
+  ]);
+
+  return { leads, contracts };
+}
+
+export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecisionSnapshot> {
+  const [reminders, interactions, statusHistory] = await Promise.all([
     fetchAllPages<Reminder>(async (from, to) => databaseClient
       .from('reminders')
       .select('*')
@@ -81,7 +84,24 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
       .overrideTypes<LeadStatusHistory[], { merge: false }>()),
   ]);
 
-  return { leads, contracts, holders, dependents, reminders, interactions, statusHistory };
+  return { reminders, interactions, statusHistory };
+}
+
+export async function loadDashboardCalendarSnapshot(): Promise<DashboardCalendarSnapshot> {
+  const [holders, dependents] = await Promise.all([
+    fetchAllPages<Holder>(async (from, to) => databaseClient
+      .from('contract_holders')
+      .select('*')
+      .range(from, to)
+      .overrideTypes<Holder[], { merge: false }>()),
+    fetchAllPages<Dependent>(async (from, to) => databaseClient
+      .from('dependents')
+      .select('*')
+      .range(from, to)
+      .overrideTypes<Dependent[], { merge: false }>()),
+  ]);
+
+  return { holders, dependents };
 }
 
 export function subscribeToDashboardLeads(

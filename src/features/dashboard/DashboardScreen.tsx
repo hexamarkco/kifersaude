@@ -21,6 +21,7 @@ import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { DashboardPageSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { Button, SectionHeader, Surface } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -60,6 +61,8 @@ import {
   insertDashboardReminders,
   listDashboardReminderContractIds,
   listDashboardRemindersInRange,
+  loadDashboardCalendarSnapshot,
+  loadDashboardDecisionSnapshot,
   loadDashboardSnapshot,
   subscribeToDashboardContracts,
   subscribeToDashboardLeads,
@@ -95,6 +98,7 @@ export default function DashboardScreen({
     "leads" | "contratos" | "comissoes"
   >("leads");
   const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
+  const [showSupportingAnalysis, setShowSupportingAnalysis] = useState(false);
   const dashboardRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const isInitialLoadRef = useRef(true);
@@ -454,11 +458,6 @@ export default function DashboardScreen({
       const {
         leads: leadsData,
         contracts: contractsData,
-        holders: holdersData,
-        dependents: dependentsData,
-        reminders: remindersData,
-        interactions: interactionsData,
-        statusHistory: statusHistoryData,
       } = await loadDashboardSnapshot();
 
       const mappedLeads = (leadsData || [])
@@ -486,11 +485,16 @@ export default function DashboardScreen({
       }
 
       setContracts(contractsData || []);
-      setHolders(holdersData || []);
-      setDependents(dependentsData || []);
-      setReminders(remindersData || []);
-      setInteractions(interactionsData || []);
-      setStatusHistory(statusHistoryData || []);
+
+      void loadDashboardDecisionSnapshot()
+        .then(({ reminders, interactions, statusHistory }) => {
+          setReminders(reminders);
+          setInteractions(interactions);
+          setStatusHistory(statusHistory);
+        })
+        .catch((decisionError: unknown) => {
+          console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
+        });
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       const message =
@@ -760,6 +764,27 @@ export default function DashboardScreen({
       setSelectedContract(refreshed);
     }
   }, [contracts, selectedContract]);
+
+  useEffect(() => {
+    if (!showSupportingAnalysis || (holders.length > 0 || dependents.length > 0)) {
+      return;
+    }
+
+    let cancelled = false;
+    void loadDashboardCalendarSnapshot()
+      .then(({ holders: loadedHolders, dependents: loadedDependents }) => {
+        if (cancelled) return;
+        setHolders(loadedHolders);
+        setDependents(loadedDependents);
+      })
+      .catch((calendarError: unknown) => {
+        console.error("Erro ao carregar os detalhes de calendário do dashboard:", calendarError);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dependents.length, holders.length, showSupportingAnalysis]);
 
   useEffect(() => {
     if (!selectedLead) return;
@@ -1883,6 +1908,10 @@ export default function DashboardScreen({
   );
 
   useEffect(() => {
+    if (!showSupportingAnalysis) {
+      return;
+    }
+
     const todayKey = new Date().toISOString().split("T")[0];
 
     if (lastBirthdayReminderSync.current === todayKey) {
@@ -1898,9 +1927,13 @@ export default function DashboardScreen({
       .catch((error) => {
         console.error("Erro ao processar lembretes de aniversário:", error);
       });
-  }, [ensureBirthdayRemindersForToday]);
+  }, [ensureBirthdayRemindersForToday, showSupportingAnalysis]);
 
   useEffect(() => {
+    if (!showSupportingAnalysis) {
+      return;
+    }
+
     const todayKey = new Date().toISOString().split("T")[0];
 
     if (lastAdjustmentReminderSync.current === todayKey) {
@@ -1916,7 +1949,7 @@ export default function DashboardScreen({
       .catch((error) => {
         console.error("Erro ao processar lembretes de reajuste:", error);
       });
-  }, [ensureAdjustmentReminders]);
+  }, [ensureAdjustmentReminders, showSupportingAnalysis]);
 
   const donutChartData = useMemo(
     () =>
@@ -2102,7 +2135,6 @@ export default function DashboardScreen({
           <DashboardPipelineHealth analysis={dashboardOperations} onNavigateToStatus={handleLeadStatusSegmentClick} />
           <DashboardAttentionQueue analysis={dashboardOperations} leadsById={leadsById} onNavigateToLead={handleOpenLeadInList} />
         </div>
-        <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
           <DashboardTrendSection
             selectedMetric={selectedMetric}
@@ -2117,34 +2149,48 @@ export default function DashboardScreen({
           />
           <DashboardSourcePerformance analysis={dashboardOperations} />
         </div>
-        <DashboardDistributionSection
-          leadStatusData={leadStatusData}
-          donutChartData={donutChartData}
-          operadoraChartData={operadoraChartData}
-          onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
-          onOperadoraSegmentClick={handleOperadoraSegmentClick}
-        />
-
-        {!isObserver && (
-          <DashboardEventsCalendar
-            calendarMonth={calendarMonth}
-            calendarMonthLabel={calendarMonthLabel}
-            calendarMonthEventCount={calendarMonthEventCount}
-            calendarEventsByDate={calendarEventsByDate}
-            calendarView={calendarView}
-            calendarViewEvents={calendarViewEvents}
-            calendarViewLabel={calendarViewLabel}
-            selectedCalendarKey={selectedCalendarKey}
-            selectedCalendarDate={selectedCalendarDate}
-            ageBands={ageBands}
-            holderByContractId={holderByContractId}
-            onCalendarMonthChange={setCalendarMonth}
-            onCalendarViewChange={setCalendarView}
-            onSelectedCalendarDateChange={setSelectedCalendarDate}
-            onNavigateToContract={handleNavigateToContract}
-            onNavigateToLead={handleNavigateToLead}
-            onCreateReminder={handleCreateReminderRequest}
+        <Surface padding="sm" data-panel-animate>
+          <SectionHeader
+            eyebrow="Aprofundar"
+            title="Análises e operação complementar"
+            description="Distribuição detalhada, automações e calendário ficam disponíveis sem competir com as prioridades da operação."
+            action={<Button variant="secondary" size="sm" onClick={() => setShowSupportingAnalysis((current) => !current)}>{showSupportingAnalysis ? 'Ocultar detalhes' : 'Ver detalhes'}</Button>}
           />
+        </Surface>
+
+        {showSupportingAnalysis && (
+          <div className="space-y-6">
+            <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
+            <DashboardDistributionSection
+              leadStatusData={leadStatusData}
+              donutChartData={donutChartData}
+              operadoraChartData={operadoraChartData}
+              onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
+              onOperadoraSegmentClick={handleOperadoraSegmentClick}
+            />
+
+            {!isObserver && (
+              <DashboardEventsCalendar
+                calendarMonth={calendarMonth}
+                calendarMonthLabel={calendarMonthLabel}
+                calendarMonthEventCount={calendarMonthEventCount}
+                calendarEventsByDate={calendarEventsByDate}
+                calendarView={calendarView}
+                calendarViewEvents={calendarViewEvents}
+                calendarViewLabel={calendarViewLabel}
+                selectedCalendarKey={selectedCalendarKey}
+                selectedCalendarDate={selectedCalendarDate}
+                ageBands={ageBands}
+                holderByContractId={holderByContractId}
+                onCalendarMonthChange={setCalendarMonth}
+                onCalendarViewChange={setCalendarView}
+                onSelectedCalendarDateChange={setSelectedCalendarDate}
+                onNavigateToContract={handleNavigateToContract}
+                onNavigateToLead={handleNavigateToLead}
+                onCreateReminder={handleCreateReminderRequest}
+              />
+            )}
+          </div>
         )}
         {selectedContract && (
           <ContractDetails

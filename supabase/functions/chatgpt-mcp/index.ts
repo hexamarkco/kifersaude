@@ -1,13 +1,13 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authenticateOAuthAccessToken, getMcpOAuthChallenge, handleOAuthRoute } from './oauth.ts';
+import { executeMcpWriteAction } from './write-actions.ts';
 
 /**
  * Endpoint MCP remoto para consultas no Kifer Saude.
  *
- * Ele nao aceita SQL, RPC arbitraria ou qualquer metodo de escrita. Mesmo que
- * o cliente MCP seja comprometido, as unicas operacoes possiveis sao as
- * ferramentas declaradas abaixo, sempre em tabelas operacionais explicitamente
- * permitidas e paginadas.
+ * Nao aceita SQL, RPC arbitraria ou escrita generica. As poucas acoes de
+ * escrita sao ferramentas comerciais fechadas, auditadas e explicitamente
+ * declaradas abaixo.
  */
 
 const MCP_PROTOCOL_VERSION = '2025-03-26';
@@ -421,10 +421,46 @@ const tools = [
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
+  {
+    name: 'kifer_send_whatsapp_message',
+    description: 'Envia uma mensagem de WhatsApp para uma conversa existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o envio. Esta ação tem efeito externo real e aceita apenas chat_id existente.',
+    inputSchema: { type: 'object', required: ['chat_id', 'message', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string' }, message: { type: 'string', minLength: 1, maxLength: 4096 }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_create_reminder',
+    description: 'Cria um lembrete associado a um lead existente. Use quando o usuário pedir para lembrar, agendar retorno ou registrar uma próxima ação. Esta ação altera dados reais.',
+    inputSchema: { type: 'object', required: ['lead_id', 'tipo', 'titulo', 'data_lembrete', 'prioridade'], additionalProperties: false, properties: { lead_id: { type: 'string' }, contract_id: { type: 'string' }, tipo: { type: 'string', minLength: 1, maxLength: 160 }, titulo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', maxLength: 4000 }, data_lembrete: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_update_lead_status',
+    description: 'Atualiza o status comercial de um lead existente para um status ativo configurado no CRM. Use somente quando o usuário pedir explicitamente uma alteração de status. Esta ação altera dados reais.',
+    inputSchema: { type: 'object', required: ['lead_id', 'status'], additionalProperties: false, properties: { lead_id: { type: 'string' }, status: { type: 'string', minLength: 1, maxLength: 160 }, observacao: { type: 'string', maxLength: 4000 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_create_interaction',
+    description: 'Registra uma interação ou observação no histórico comercial de um lead. Use somente quando o usuário pedir para registrar a informação. Esta ação altera dados reais.',
+    inputSchema: { type: 'object', required: ['lead_id', 'tipo', 'descricao'], additionalProperties: false, properties: { lead_id: { type: 'string' }, contract_id: { type: 'string' }, tipo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', minLength: 1, maxLength: 4000 }, responsavel: { type: 'string', maxLength: 160 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_set_next_follow_up',
+    description: 'Agenda o próximo retorno de um lead criando um lembrete, que é a fonte de verdade de próximos retornos do CRM. Use somente quando o usuário pedir explicitamente para agendar retorno. Esta ação altera dados reais.',
+    inputSchema: { type: 'object', required: ['lead_id', 'proximo_retorno'], additionalProperties: false, properties: { lead_id: { type: 'string' }, proximo_retorno: { type: 'string', format: 'date-time' }, observacao: { type: 'string', maxLength: 4000 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
 ];
 
-async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string) {
+async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
+  const writeAction = new Set(['kifer_send_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up']);
+  if (writeAction.has(name)) {
+    if (!actorId) return toToolResult({ success: false, error_code: 'UNAUTHORIZED', message: 'Ações de escrita exigem uma conexão OAuth de administrador.' });
+    const result = await executeMcpWriteAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId } });
+    return toToolResult(result);
+  }
   let output: unknown;
   let resourceName: string | null = null;
 
@@ -477,10 +513,14 @@ Deno.serve(async (request: Request) => {
   const configuredToken = Deno.env.get('KIFER_MCP_ACCESS_TOKEN') || '';
   const legacyAuthenticated = Boolean(configuredToken) && equalTokens(getBearerToken(request), configuredToken);
   let actor = text(Deno.env.get('KIFER_MCP_ACTOR')) || 'chatgpt-mcp-admin';
+  let actorId: string | null = null;
   if (!legacyAuthenticated) {
     try {
       const oauthPrincipal = await authenticateOAuthAccessToken(request);
-      if (oauthPrincipal) actor = oauthPrincipal.actor;
+      if (oauthPrincipal) {
+        actor = oauthPrincipal.actor;
+        actorId = oauthPrincipal.userId;
+      }
       else {
         return new Response('Nao autenticado.', {
           status: 401,
@@ -506,8 +546,8 @@ Deno.serve(async (request: Request) => {
     return resultResponse(rpc.id, {
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: 'kifer-saude-readonly', version: '1.0.0' },
-      instructions: 'Servidor do Kifer Saude estritamente para leitura. Nunca afirme que alterou dados; nenhuma ferramenta deste servidor possui permissao de escrita.',
+      serverInfo: { name: 'kifer-saude-crm', version: '1.1.0' },
+      instructions: 'Servidor do Kifer Saude orientado a leitura, com poucas ações comerciais de escrita explicitamente declaradas. Nunca use nem sugira SQL, RPC ou requisições arbitrárias. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário.',
     });
   }
   if (rpc.method === 'tools/list') return resultResponse(rpc.id, { tools });
@@ -516,7 +556,7 @@ Deno.serve(async (request: Request) => {
   const toolName = text(rpc.params?.name);
   try {
     const supabase = getSupabaseAdmin();
-    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor);
+    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor, actorId);
     return resultResponse(rpc.id, toolResult);
   } catch (error) {
     console.error('[chatgpt-mcp] erro em tools/call', { toolName, error: error instanceof Error ? error.message : error });

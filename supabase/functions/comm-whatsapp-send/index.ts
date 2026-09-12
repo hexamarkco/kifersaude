@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser, type AuthorizedDashboardUser } from '../_shared/dashboard-auth.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import { isPlausibleMediaSignature } from '../_shared/file-signature.ts';
 import {
@@ -67,6 +67,8 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const SEND_RATE_LIMIT_SCOPE = 'comm-whatsapp-send';
 const SEND_RATE_LIMIT_MAX_REQUESTS = 60;
 const SEND_RATE_LIMIT_WINDOW_SECONDS = 60;
+const MCP_INTERNAL_SECRET_HEADER = 'X-Kifer-MCP-Internal-Secret';
+const MCP_INTERNAL_ACTOR_HEADER = 'X-Kifer-MCP-Actor-Id';
 // Mesmo teto já usado para download de mídia inbound (MAX_WHAPI_MEDIA_RESPONSE_BYTES).
 const MAX_OUTBOUND_MEDIA_UPLOAD_BYTES = 32 * 1024 * 1024;
 const MEDIA_SIGNATURE_SAMPLE_BYTES = 16;
@@ -80,6 +82,21 @@ const createAdminClient = () => {
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
+};
+
+const equalSecrets = (received: string, expected: string) => {
+  if (!received || !expected || received.length !== expected.length) return false;
+  let result = 0;
+  for (let index = 0; index < received.length; index += 1) result |= received.charCodeAt(index) ^ expected.charCodeAt(index);
+  return result === 0;
+};
+
+const resolveMcpInternalActor = (req: Request): AuthorizedDashboardUser | null => {
+  const expectedSecret = Deno.env.get('KIFER_MCP_WHATSAPP_INTERNAL_SECRET')?.trim() || '';
+  const receivedSecret = req.headers.get(MCP_INTERNAL_SECRET_HEADER)?.trim() || '';
+  const actorId = req.headers.get(MCP_INTERNAL_ACTOR_HEADER)?.trim() || '';
+  if (!equalSecrets(receivedSecret, expectedSecret) || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(actorId)) return null;
+  return { userId: actorId, profileId: actorId, role: 'admin', canViewModule: true, canEditModule: true };
 };
 
 const normalizeMediaKind = (value: string, mimeType: string): MediaSendKind => {
@@ -520,14 +537,17 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
     supabaseAdmin = createAdminClient();
 
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'edit',
-    });
+    const internalActor = resolveMcpInternalActor(req);
+    const authResult = internalActor
+      ? { authorized: true as const, user: internalActor }
+      : await authorizeDashboardUser({
+          req,
+          supabaseUrl,
+          supabaseAnonKey,
+          supabaseAdmin,
+          module: COMM_WHATSAPP_MODULE,
+          requiredPermission: 'edit',
+        });
 
     if (!authResult.authorized) {
       return new Response(JSON.stringify(authResult.body), {
@@ -539,8 +559,8 @@ Deno.serve(async (req: Request) => {
     const withinRateLimit = await checkCommWhatsAppActionRateLimit(
       supabaseAdmin,
       authResult.user.userId,
-      SEND_RATE_LIMIT_SCOPE,
-      SEND_RATE_LIMIT_MAX_REQUESTS,
+      internalActor ? 'chatgpt-mcp-whatsapp-send' : SEND_RATE_LIMIT_SCOPE,
+      internalActor ? 12 : SEND_RATE_LIMIT_MAX_REQUESTS,
       SEND_RATE_LIMIT_WINDOW_SECONDS,
     );
     if (!withinRateLimit) {

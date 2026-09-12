@@ -1,17 +1,29 @@
-# Kifer Saude no ChatGPT (somente leitura)
+# Kifer Saude no ChatGPT
 
-O endpoint `chatgpt-mcp` permite que um chat conectado consulte dados atuais do CRM, contratos, automacoes e historico do WhatsApp. Ele nao oferece qualquer ferramenta de criar, editar ou excluir dados.
+O endpoint `chatgpt-mcp` permite consultar dados atuais do CRM e executar poucas ações comerciais explicitamente autorizadas. Ele não oferece SQL, RPC, atualização genérica de tabelas nem exclusões.
 
 ## Limites de segurança
 
 - O acesso do ChatGPT exige OAuth com PKCE S256 e uma conta com perfil `admin` no CRM.
 - Tokens de autorização, acesso e renovação são armazenados somente como hashes, têm validade limitada e são invalidados quando a conta deixa de ser administradora.
-- As ferramentas MCP sao anotadas como `readOnlyHint` e nao aceitam SQL, RPC arbitraria ou nomes livres de tabela.
+- As ferramentas de leitura continuam anotadas como `readOnlyHint`. As ações de escrita são schemas fechados, com validação de entidades, auditoria e OAuth de administrador.
 - O servidor usa uma allowlist de tabelas operacionais, pagina respostas e remove valores de chaves que parecam credenciais.
 - Segredos, configuracoes de integracao, sessao/autenticacao e arquivos brutos de webhook nao sao expostos.
-- Cada consulta e registrada em `chatgpt_mcp_audit_log`, sem armazenar o conteudo retornado ou o termo pesquisado.
+- Cada consulta é registrada em `chatgpt_mcp_audit_log`; cada ação comercial é registrada em `mcp_action_audit_log`, com payload sanitizado e resultado.
 
-"Somente leitura" se aplica aos dados de negocio: a unica escrita tecnica e o log de auditoria.
+As ações de escrita exigem OAuth de administrador. O token legado do MCP permanece compatível apenas com as ferramentas de leitura.
+
+## Ferramentas de ação
+
+| Tool | Schema fechado | Efeito |
+| --- | --- | --- |
+| `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia uma mensagem de texto para uma conversa existente; usa o mesmo provider, persistência, idempotência e rate limit do Inbox. |
+| `kifer_create_reminder` | `lead_id`, `contract_id?`, `tipo`, `titulo`, `descricao?`, `data_lembrete`, `prioridade` | Cria lembrete e sincroniza `leads.proximo_retorno` a partir do próximo lembrete aberto. |
+| `kifer_update_lead_status` | `lead_id`, `status`, `observacao?` | Aceita somente status ativos de `lead_status_config`, registra interação e histórico. |
+| `kifer_create_interaction` | `lead_id`, `contract_id?`, `tipo`, `descricao`, `responsavel?` | Registra observação no histórico comercial. |
+| `kifer_set_next_follow_up` | `lead_id`, `proximo_retorno`, `observacao?` | Cria um lembrete de retorno; não cria uma segunda fonte de verdade. |
+
+O envio de WhatsApp requer `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar uma segunda mensagem.
 
 ## Publicação e reativação
 
@@ -29,7 +41,10 @@ O endpoint `chatgpt-mcp` permite que um chat conectado consulte dados atuais do 
 
    ```bash
    supabase functions deploy chatgpt-mcp --no-verify-jwt
+   supabase functions deploy comm-whatsapp-send
    ```
+
+   Defina também `KIFER_MCP_WHATSAPP_INTERNAL_SECRET` como secret nas duas functions. É uma credencial servidor-a-servidor: nunca use o prefixo `VITE_`, nunca a exponha no navegador e nunca a inclua no ChatGPT.
 
 4. Verifique os metadados OAuth e o desafio MCP. Uma chamada não autenticada ao MCP deve retornar `401` com `resource_metadata`; o ChatGPT então inicia o OAuth automaticamente.
 
@@ -46,7 +61,7 @@ Preencha o modal do ChatGPT assim:
 | Campo | Valor |
 | --- | --- |
 | Nome | `CRM Kifer Saude` |
-| Descricao | `Consultas somente leitura ao CRM Kifer Saude.` |
+| Descricao | `Consultas e ações comerciais controladas no CRM Kifer Saude.` |
 | Conexao | `URL do servidor` |
 | URL | `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp` |
 | Autenticacao | `OAuth` |

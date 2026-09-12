@@ -57,7 +57,6 @@ import {
   Checkbox,
   DateTimePicker,
   EmptyState,
-  Field,
   Input,
   OperationalMetricChip,
   OperationalStatusBadge,
@@ -1484,7 +1483,8 @@ export default function LeadsManager({
                 </Surface>
               </details>
 
-              <Field label="Ordenar por" className="kds-leads-sort-field">
+              <div className="kds-leads-sort-field" role="group" aria-label="Ordenação dos leads">
+                <span className="kds-leads-sort-label">Ordenar por</span>
                 <div className="flex items-center gap-2">
                   <FilterSelect
                     icon={Filter}
@@ -1514,7 +1514,7 @@ export default function LeadsManager({
                     )}
                   </IconButton>
                 </div>
-              </Field>
+              </div>
             </div>
           </div>
         </Surface>

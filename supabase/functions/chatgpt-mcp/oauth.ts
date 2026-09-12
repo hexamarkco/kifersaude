@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
 
 const FUNCTION_PATH = '/functions/v1/chatgpt-mcp';
 const AUTHORIZE_PATH = '/oauth/authorize';
+const AUTHORIZE_COMPLETE_PATH = '/oauth/authorize/complete';
 const TOKEN_PATH = '/oauth/token';
 const OAUTH_METADATA_PATH = '/.well-known/oauth-authorization-server';
 const RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
@@ -49,6 +50,7 @@ const tokenError = (error: string, description: string, status = 400) =>
 const oauthConfig = () => ({
   clientId: text(Deno.env.get('KIFER_MCP_OAUTH_CLIENT_ID')) || 'chatgpt-kifer',
   redirectUri: text(Deno.env.get('KIFER_MCP_OAUTH_REDIRECT_URI')),
+  authorizationUiUrl: text(Deno.env.get('KIFER_MCP_OAUTH_UI_URL')),
 });
 
 // A plataforma termina TLS antes de entregar a requisicao ao runtime Deno;
@@ -125,66 +127,11 @@ const parseAuthorizationRequest = (url: URL): { request?: AuthorizationRequest; 
   return { request: { clientId, redirectUri, state, codeChallenge, scope: scopeResult.scope } };
 };
 
-const escapeHtml = (value: string): string =>
-  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-
-const loginPage = (request: AuthorizationRequest, csrfToken: string, error = ''): Response => {
-  const hidden = (name: string, value: string) => `<input type="hidden" name="${name}" value="${escapeHtml(value)}">`;
-  const errorHtml = error ? `<p role="alert" class="error">${escapeHtml(error)}</p>` : '';
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Autorizar CRM Kifer Saude</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f7f2eb;color:#2e201b;margin:0;min-height:100vh;display:grid;place-items:center}.card{background:#fffaf5;border:1px solid #dfcec0;border-radius:12px;padding:28px;max-width:390px;box-shadow:0 8px 30px #3d24151a}h1{font-size:21px;margin:0 0 10px}p{line-height:1.45}.error{background:#fce8e3;color:#8a2917;padding:10px;border-radius:6px}label{display:block;font-weight:600;font-size:14px;margin:16px 0 6px}input{box-sizing:border-box;width:100%;padding:10px;border:1px solid #bca999;border-radius:6px;font:inherit}button{width:100%;margin-top:22px;padding:11px;border:0;border-radius:6px;background:#a64c26;color:#fff;font:inherit;font-weight:700;cursor:pointer}.note{font-size:12px;color:#705c50}</style></head><body><main class="card"><h1>Conectar CRM Kifer Saude</h1><p>Entre com sua conta <strong>administradora</strong> do CRM para autorizar consultas somente leitura pelo ChatGPT.</p>${errorHtml}<form method="post" autocomplete="off">${hidden('client_id', request.clientId)}${hidden('redirect_uri', request.redirectUri)}${hidden('state', request.state)}${hidden('code_challenge', request.codeChallenge)}${hidden('scope', request.scope)}${hidden('csrf_token', csrfToken)}<label for="username">E-mail ou usuario</label><input id="username" name="username" required autocomplete="username"><label for="password">Senha</label><input id="password" name="password" type="password" required autocomplete="current-password"><button type="submit">Autorizar consultas</button></form><p class="note">A senha e validada apenas pelo Supabase Auth e nao e enviada ao ChatGPT.</p></main></body></html>`;
-  return new Response(html, {
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
-};
-
-const getCookie = (request: Request, name: string): string => {
-  const prefix = `${name}=`;
-  return (request.headers.get('Cookie') || '').split(';').map((item) => item.trim()).find((item) => item.startsWith(prefix))?.slice(prefix.length) || '';
-};
-
-const setCsrfCookie = (response: Response, csrfToken: string): Response => {
-  const headers = new Headers(response.headers);
-  headers.set('Set-Cookie', `kifer_mcp_oauth_csrf=${csrfToken}; HttpOnly; Secure; SameSite=Lax; Path=${FUNCTION_PATH}${AUTHORIZE_PATH}; Max-Age=600`);
-  return new Response(response.body, { status: response.status, headers });
-};
-
-const newLoginPage = (request: AuthorizationRequest, error = ''): Response => {
-  const csrfToken = randomToken(24);
-  return setCsrfCookie(loginPage(request, csrfToken, error), csrfToken);
-};
-
 const redirectWithAuthorizationCode = (authorization: AuthorizationRequest, code: string): Response => {
   const target = new URL(authorization.redirectUri);
   target.searchParams.set('code', code);
   target.searchParams.set('state', authorization.state);
   return new Response(null, { status: 303, headers: { Location: target.toString(), 'Cache-Control': 'no-store' } });
-};
-
-const resolveEmail = async (admin: SupabaseClient, username: string): Promise<string | null> => {
-  if (username.includes('@')) return username;
-  const { data, error } = await admin.from('user_profiles').select('email').eq('username', username).maybeSingle();
-  if (error) throw new Error(`Falha ao localizar usuario: ${error.message}`);
-  return text(data?.email) || null;
-};
-
-const signInAdmin = async (admin: SupabaseClient, username: string, password: string): Promise<{ id: string } | null> => {
-  const email = await resolveEmail(admin, username);
-  const supabaseUrl = text(Deno.env.get('SUPABASE_URL'));
-  const publishableKey = text(Deno.env.get('SUPABASE_ANON_KEY')) || text(Deno.env.get('SUPABASE_PUBLISHABLE_KEY'));
-  if (!email || !supabaseUrl || !publishableKey) return null;
-  const authClient = createClient(supabaseUrl, publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
-  if (error || !data.user) return null;
-  const { data: profile, error: profileError } = await admin.from('user_profiles').select('id,role').eq('id', data.user.id).maybeSingle();
-  if (profileError) throw new Error(`Falha ao validar perfil: ${profileError.message}`);
-  return profile?.role === 'admin' ? { id: data.user.id } : null;
 };
 
 const createAuthorizationCode = async (admin: SupabaseClient, request: AuthorizationRequest, userId: string): Promise<string> => {
@@ -201,34 +148,63 @@ const createAuthorizationCode = async (admin: SupabaseClient, request: Authoriza
 const authorizeGet = (request: Request): Response => {
   const parsed = parseAuthorizationRequest(new URL(request.url));
   if (!parsed.request) return new Response(parsed.error || 'Solicitacao OAuth invalida.', { status: 400, headers: { 'Cache-Control': 'no-store' } });
-  return newLoginPage(parsed.request);
+  const authorizationUiUrl = oauthConfig().authorizationUiUrl;
+  if (!authorizationUiUrl) return new Response('OAuth ainda nao foi configurado no servidor.', { status: 503, headers: { 'Cache-Control': 'no-store' } });
+  const destination = new URL(authorizationUiUrl);
+  destination.searchParams.set('client_id', parsed.request.clientId);
+  destination.searchParams.set('redirect_uri', parsed.request.redirectUri);
+  destination.searchParams.set('state', parsed.request.state);
+  destination.searchParams.set('code_challenge', parsed.request.codeChallenge);
+  destination.searchParams.set('scope', parsed.request.scope);
+  return new Response(null, { status: 303, headers: { Location: destination.toString(), 'Cache-Control': 'no-store' } });
 };
 
-const authorizePost = async (request: Request): Promise<Response> => {
-  const form = await request.formData();
-  const requestUrl = new URL(request.url);
+const parseAuthorizationPayload = (payload: unknown): { request?: AuthorizationRequest; error?: string } => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { error: 'Solicitacao OAuth invalida.' };
+  const values = payload as Record<string, unknown>;
+  const url = new URL('https://oauth.invalid');
   for (const field of ['client_id', 'redirect_uri', 'state', 'code_challenge', 'scope']) {
-    const value = text(form.get(field));
-    if (value) requestUrl.searchParams.set(field, value);
+    const value = text(values[field]);
+    if (value) url.searchParams.set(field, value);
   }
-  requestUrl.searchParams.set('response_type', 'code');
-  requestUrl.searchParams.set('code_challenge_method', 'S256');
-  const parsed = parseAuthorizationRequest(requestUrl);
-  if (!parsed.request) return new Response(parsed.error || 'Solicitacao OAuth invalida.', { status: 400, headers: { 'Cache-Control': 'no-store' } });
-  if (!equalStrings(text(form.get('csrf_token')), getCookie(request, 'kifer_mcp_oauth_csrf'))) {
-    return newLoginPage(parsed.request, 'A sessao expirou. Tente novamente.');
-  }
-  const username = text(form.get('username'));
-  const password = typeof form.get('password') === 'string' ? String(form.get('password')) : '';
-  if (!username || !password) return newLoginPage(parsed.request, 'Informe usuario e senha.');
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('code_challenge_method', 'S256');
+  return parseAuthorizationRequest(url);
+};
+
+const completeAuthorization = async (request: Request): Promise<Response> => {
+  if (request.method !== 'POST') return json({ error: 'Use POST para concluir a autorizacao.' }, 405);
+  let payload: unknown;
   try {
-    const user = await signInAdmin(getAdmin(), username, password);
-    if (!user) return newLoginPage(parsed.request, 'Credenciais invalidas ou sem permissao de administrador.');
-    return redirectWithAuthorizationCode(parsed.request, await createAuthorizationCode(getAdmin(), parsed.request, user.id));
-  } catch (error) {
-    console.error('[chatgpt-mcp] falha na autorizacao OAuth:', error instanceof Error ? error.message : error);
-    return newLoginPage(parsed.request, 'Nao foi possivel autorizar agora. Tente novamente.');
+    payload = await request.json();
+  } catch {
+    return json({ error: 'Corpo JSON invalido.' }, 400);
   }
+  const parsed = parseAuthorizationPayload(payload);
+  if (!parsed.request) return json({ error: parsed.error || 'Solicitacao OAuth invalida.' }, 400);
+  const bearer = (request.headers.get('Authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || '';
+  if (!bearer) return json({ error: 'Faca login como administrador para continuar.' }, 401);
+  try {
+    const admin = getAdmin();
+    const { data, error } = await admin.auth.getUser(bearer);
+    if (error || !data.user) return json({ error: 'Sua sessao expirou. Faca login novamente.' }, 401);
+    if (!(await ensureActiveAdmin(admin, data.user.id))) return json({ error: 'Esta conta nao possui permissao de administrador.' }, 403);
+    const code = await createAuthorizationCode(admin, parsed.request, data.user.id);
+    const callback = new URL(parsed.request.redirectUri);
+    callback.searchParams.set('code', code);
+    callback.searchParams.set('state', parsed.request.state);
+    return json({ redirect_to: callback.toString() });
+  } catch (error) {
+    console.error('[chatgpt-mcp] falha ao concluir autorizacao OAuth:', error instanceof Error ? error.message : error);
+    return json({ error: 'Nao foi possivel autorizar agora. Tente novamente.' }, 500);
+  }
+};
+
+const clientConfigEndpoint = (): Response => {
+  const supabaseUrl = text(Deno.env.get('SUPABASE_URL'));
+  const anonKey = text(Deno.env.get('SUPABASE_ANON_KEY')) || text(Deno.env.get('SUPABASE_PUBLISHABLE_KEY'));
+  if (!supabaseUrl || !anonKey) return json({ error: 'Configuracao publica do Supabase indisponivel.' }, 503);
+  return json({ supabase_url: supabaseUrl, anon_key: anonKey });
 };
 
 const issueTokens = async (admin: SupabaseClient, record: OAuthTokenRecord): Promise<Record<string, unknown>> => {
@@ -322,7 +298,9 @@ export async function handleOAuthRoute(request: Request): Promise<Response | nul
   if (route === RESOURCE_METADATA_PATH && request.method === 'GET') {
     return json({ resource: baseUrl, authorization_servers: [baseUrl], scopes_supported: [...ALLOWED_SCOPES], bearer_methods_supported: ['header'] });
   }
-  if (route === AUTHORIZE_PATH) return request.method === 'GET' ? authorizeGet(request) : request.method === 'POST' ? await authorizePost(request) : new Response('Metodo nao permitido', { status: 405 });
+  if (route === AUTHORIZE_PATH) return request.method === 'GET' ? authorizeGet(request) : new Response('Metodo nao permitido', { status: 405 });
+  if (route === AUTHORIZE_COMPLETE_PATH) return completeAuthorization(request);
+  if (route === '/oauth/client-config' && request.method === 'GET') return clientConfigEndpoint();
   if (route === TOKEN_PATH) return tokenEndpoint(request);
   return null;
 }

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Autorizar CRM Kifer Saúde</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; }
+      body { background: #f7f2eb; color: #2e201b; display: grid; margin: 0; min-height: 100vh; place-items: center; }
+      main { background: #fffaf5; border: 1px solid #dfcec0; border-radius: 12px; box-shadow: 0 8px 30px #3d24151a; box-sizing: border-box; max-width: 420px; padding: 28px; width: calc(100% - 32px); }
+      h1 { font-size: 22px; margin: 0 0 10px; } p { line-height: 1.45; } label { display: block; font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+      input, button { box-sizing: border-box; font: inherit; width: 100%; } input { border: 1px solid #bca999; border-radius: 6px; padding: 11px; }
+      button { background: #a64c26; border: 0; border-radius: 6px; color: #fff; cursor: pointer; font-weight: 700; margin-top: 22px; padding: 11px; }
+      button:disabled { cursor: wait; opacity: .65; } .hidden { display: none; } .error { background: #fce8e3; border-radius: 6px; color: #8a2917; margin: 16px 0 0; padding: 10px; }
+      .note { color: #705c50; font-size: 12px; } .access { background: #edf7ee; border-radius: 6px; color: #285e32; padding: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Conectar CRM Kifer Saúde</h1>
+      <p>Entre com uma conta <strong>administradora</strong> do CRM para autorizar consultas somente leitura pelo ChatGPT.</p>
+      <p id="error" class="error hidden" role="alert"></p>
+      <form id="login-form" autocomplete="on">
+        <label for="email">E-mail da conta administradora</label>
+        <input id="email" name="email" type="email" required autocomplete="username">
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password">
+        <button id="login-button" type="submit">Entrar</button>
+      </form>
+      <section id="consent" class="hidden">
+        <p class="access">O ChatGPT poderá consultar dados do CRM. Ele não poderá criar, alterar ou excluir informações.</p>
+        <button id="authorize-button" type="button">Autorizar consultas</button>
+      </section>
+      <p class="note">Sua senha é validada pelo Supabase Auth e nunca é enviada ao ChatGPT.</p>
+    </main>
+    <script>
+      const functionBase = 'https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp';
+      const fields = ['client_id', 'redirect_uri', 'state', 'code_challenge', 'scope'];
+      const params = Object.fromEntries(fields.map((field) => [field, new URLSearchParams(location.search).get(field) || '']));
+      const errorElement = document.getElementById('error');
+      const loginForm = document.getElementById('login-form');
+      const loginButton = document.getElementById('login-button');
+      const consent = document.getElementById('consent');
+      const authorizeButton = document.getElementById('authorize-button');
+      let config;
+      let accessToken;
+      const showError = (message) => { errorElement.textContent = message; errorElement.classList.remove('hidden'); };
+      const clearError = () => { errorElement.textContent = ''; errorElement.classList.add('hidden'); };
+
+      async function getConfig() {
+        const response = await fetch(`${functionBase}/oauth/client-config`);
+        if (!response.ok) throw new Error('Não foi possível abrir a conexão segura do CRM.');
+        config = await response.json();
+      }
+
+      async function login(event) {
+        event.preventDefault();
+        clearError();
+        if (fields.some((field) => !params[field])) return showError('Esta solicitação expirou. Volte ao ChatGPT e tente novamente.');
+        loginButton.disabled = true;
+        loginButton.textContent = 'Entrando…';
+        try {
+          if (!config) await getConfig();
+          const response = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { apikey: config.anon_key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: document.getElementById('email').value.trim(), password: document.getElementById('password').value }),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.access_token) throw new Error('E-mail ou senha inválidos. Verifique suas credenciais e tente novamente.');
+          accessToken = result.access_token;
+          loginForm.classList.add('hidden');
+          consent.classList.remove('hidden');
+        } catch (error) {
+          showError(error instanceof Error ? error.message : 'Não foi possível entrar agora.');
+        } finally {
+          loginButton.disabled = false;
+          loginButton.textContent = 'Entrar';
+        }
+      }
+
+      async function authorize() {
+        clearError();
+        authorizeButton.disabled = true;
+        authorizeButton.textContent = 'Autorizando…';
+        try {
+          const response = await fetch(`${functionBase}/oauth/authorize/complete`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.redirect_to) throw new Error(result.error || 'Não foi possível autorizar agora.');
+          location.assign(result.redirect_to);
+        } catch (error) {
+          showError(error instanceof Error ? error.message : 'Não foi possível autorizar agora.');
+          authorizeButton.disabled = false;
+          authorizeButton.textContent = 'Autorizar consultas';
+        }
+      }
+
+      loginForm.addEventListener('submit', login);
+      authorizeButton.addEventListener('click', authorize);
+      getConfig().catch(() => showError('Não foi possível abrir a conexão segura do CRM.'));
+    </script>
+  </body>
+</html>

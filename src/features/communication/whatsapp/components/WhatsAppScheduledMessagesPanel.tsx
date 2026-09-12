@@ -115,7 +115,7 @@ export default function WhatsAppScheduledMessagesPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)]">
       <div className="bg-[var(--bg-surface)] rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-[var(--border-subtle)]">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">

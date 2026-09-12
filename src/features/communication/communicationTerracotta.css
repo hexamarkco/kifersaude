@@ -142,6 +142,22 @@
   color: var(--brand-primary);
 }
 
+.comm-terracotta .whatsapp-inbox-action-group,
+.comm-terracotta .whatsapp-inbox-composer-button-group {
+  border-color: var(--border-default);
+  background: var(--bg-surface-muted);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-action-group .kds-button-ghost {
+  background: transparent;
+}
+
+.comm-terracotta .whatsapp-inbox-composer-button-group .whatsapp-inbox-composer-icon {
+  border-color: transparent;
+  background: transparent;
+}
+
 .comm-terracotta .whatsapp-inbox-composer-action.is-active {
   border-color: var(--text-primary);
   background: var(--text-primary);

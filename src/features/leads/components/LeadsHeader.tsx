@@ -33,12 +33,11 @@ export function LeadsHeader({
             href="/api-docs.html"
             target="_blank"
             rel="noopener noreferrer"
-            variant="text"
-            size="sm"
-            className="h-auto min-h-0 w-auto px-0 py-1 text-sm"
+            variant="secondary"
+            size="md"
             title="Abrir documentacao da API"
           >
-            <BookOpen className="h-3.5 w-3.5" />
+            <BookOpen className="kds-control-icon" />
             <span>API Docs</span>
           </LinkButton>
           <Button
@@ -65,8 +64,8 @@ export function LeadsHeader({
         onChange={onViewModeChange}
         size="sm"
         className="kds-leads-view-tabs"
-        listClassName="min-w-[17rem] max-w-full flex-nowrap md:min-w-0"
-        triggerClassName="min-w-0 flex-1 whitespace-nowrap px-3 md:flex-initial md:px-4"
+        listClassName="max-w-full flex-nowrap overflow-x-auto"
+        triggerClassName="whitespace-nowrap px-3 md:px-4"
       />
     </PageHeader>
   );

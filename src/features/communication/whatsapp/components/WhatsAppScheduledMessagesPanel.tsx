@@ -9,6 +9,7 @@ import type { CommWhatsAppScheduledMessage } from '../domain/types';
 
 type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
+  phoneDigits?: string;
   isOpen: boolean;
   onClose: () => void;
   onScheduleNew?: () => void;
@@ -41,6 +42,7 @@ const RECURRENCE_LABELS: Record<string, string> = {
 
 export default function WhatsAppScheduledMessagesPanel({
   channelId,
+  phoneDigits,
   isOpen,
   onClose,
   onScheduleNew,
@@ -49,21 +51,28 @@ export default function WhatsAppScheduledMessagesPanel({
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const isFiltered = Boolean(phoneDigits);
+
   const loadMessages = useCallback(async () => {
     if (!isOpen || !channelId) return;
     setLoading(true);
     try {
       const data = await commWhatsAppService.listScheduledMessages({
         channelId,
-        limit: 50,
+        limit: 100,
       });
-      setMessages(data as unknown as CommWhatsAppScheduledMessage[]);
+      const allMessages = data as unknown as CommWhatsAppScheduledMessage[];
+      setMessages(
+        phoneDigits
+          ? allMessages.filter((m) => m.phone_digits === phoneDigits)
+          : allMessages,
+      );
     } catch (error) {
       console.error('[ScheduledMessagesPanel] error loading', error);
     } finally {
       setLoading(false);
     }
-  }, [channelId, isOpen]);
+  }, [channelId, phoneDigits, isOpen]);
 
   useEffect(() => {
     void loadMessages();
@@ -117,13 +126,15 @@ export default function WhatsAppScheduledMessagesPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)]">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[var(--overlay)]">
       <div className="bg-[var(--bg-surface)] rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-[var(--border-subtle)]">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">
             <Calendar className="kds-control-icon text-[var(--brand-primary)]" />
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Mensagens Agendadas</h2>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
+              </h2>
               <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) encontrada(s)</p>
             </div>
           </div>

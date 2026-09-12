@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  BellRing,
   Clock,
-  Info,
+  Globe2,
+  Loader2,
   RotateCcw,
   Save,
   Search,
+  ShieldCheck,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -24,13 +27,12 @@ import {
   Alert,
   Badge,
   Button,
-  Checkbox,
   Field,
   Input,
   SectionHeader,
   Select,
   Surface,
-  Tooltip,
+  Switch,
   type TabItem,
   SegmentedControl,
 } from "../../../design-system";
@@ -342,23 +344,14 @@ export default function SystemSettingsScreen() {
         )}
 
         {showGeneralSection && shouldExpandSection("general") && (
-          <section id="settings-section-general" className="space-y-4">
+          <section id="settings-section-general" className="space-y-5">
             <SectionHeader
+              eyebrow="Configuração do sistema"
               title="Preferências do sistema"
-              description="Notificações, formato de data, fuso horário e tempo de sessão."
-            />
-
-            {shouldExpandSection("general") && (
-              <Surface variant="muted" padding="md">
-                <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="inline-flex items-center gap-2">
-                    <Badge tone={hasPendingGeneralChanges ? "gold" : "success"}>
-                    {hasPendingGeneralChanges
-                      ? "Alterações pendentes"
-                      : "Sem alterações pendentes"}
-                    </Badge>
-                  </div>
-
+              description="Defina como datas, sessões e notificações se comportam no CRM."
+              className="items-center"
+              action={(
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                   <Button
                     onClick={handleRestoreGeneralDefaults}
                     variant="secondary"
@@ -368,9 +361,25 @@ export default function SystemSettingsScreen() {
                     Restaurar padrões
                   </Button>
                 </div>
+              )}
+            />
 
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                  <Field label="Formato de data">
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+              <Surface padding="md" className="xl:col-span-7">
+                <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+                    <Globe2 className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Localização e formato</h3>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Escolha a forma de exibir datas e o horário de referência do sistema.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <Field label="Formato de data" hint="Usado nas datas exibidas no CRM.">
                     <Select
                       value={settings.date_format}
                       onChange={(event) =>
@@ -385,35 +394,9 @@ export default function SystemSettingsScreen() {
                   </Field>
 
                   <Field
-                    label={(
-                      <span className="inline-flex items-center gap-1.5">
-                        Tempo de sessão (minutos)
-                        <Tooltip content="Padrão recomendado: 480 minutos (8 horas)." size="sm">
-                          <Info
-                            className="h-3.5 w-3.5 cursor-help text-[var(--text-muted)]"
-                            aria-label="Ver recomendação de tempo de sessão"
-                            tabIndex={0}
-                          />
-                        </Tooltip>
-                      </span>
-                    )}
+                    label="Fuso horário do sistema"
+                    hint="Referência para follow-ups com IA e outras rotinas locais."
                   >
-                    <Input
-                      type="number"
-                      min="30"
-                      max="1440"
-                      value={settings.session_timeout_minutes}
-                      onChange={(event) =>
-                        setSettings({
-                          ...settings,
-                          session_timeout_minutes:
-                            Number.parseInt(event.target.value, 10) || 480,
-                        })
-                      }
-                    />
-                  </Field>
-
-                  <Field label="Fuso horário do sistema" description="Usado como referência para prompts de follow-up com IA e demais rotinas que dependem do horário local.">
                     <Select
                       value={settings.timezone}
                       onChange={(event) =>
@@ -422,63 +405,125 @@ export default function SystemSettingsScreen() {
                       options={timezoneOptions}
                     />
                   </Field>
+                </div>
+              </Surface>
 
-                  <div className="lg:col-span-2">
-                    <label className="flex cursor-pointer items-center space-x-3">
-                      <Checkbox
-                        checked={settings.notification_sound_enabled}
-                        onChange={(event) =>
-                          setSettings({
-                            ...settings,
-                            notification_sound_enabled: event.target.checked,
-                          })
-                        }
-                      />
-                      <div className="flex items-center space-x-2">
-                        {settings.notification_sound_enabled ? (
-                          <Volume2 className="h-5 w-5 text-[color:var(--brand-primary)]" />
-                        ) : (
-                          <VolumeX className="h-5 w-5 text-[color:var(--text-muted)]" />
-                        )}
-                        <span className="text-sm font-medium text-[color:var(--text-primary)]">
-                          Ativar sons de notificação
-                        </span>
-                      </div>
-                    </label>
+              <Surface padding="md" className="xl:col-span-5">
+                <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-muted)] text-[var(--text-secondary)]">
+                    <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Sessão e acesso</h3>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Ajuste o período de sessão para este ambiente.
+                    </p>
                   </div>
+                </div>
 
-                  {settings.notification_sound_enabled && (
-                    <div className="lg:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-[color:var(--text-primary)]">
-                        Volume das notificações:{" "}
-                        {Math.round(settings.notification_volume * 100)}%
-                      </label>
-                      <Input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={settings.notification_volume}
-                        onChange={(event) =>
-                          setSettings({
-                            ...settings,
-                            notification_volume: Number.parseFloat(
-                              event.target.value,
-                            ),
-                          })
-                        }
-                        className="cursor-pointer appearance-none"
-                      />
+                <Field
+                  label="Tempo de sessão (minutos)"
+                  hint="Padrão recomendado: 480 minutos (8 horas). Limite de 30 a 1.440 minutos."
+                >
+                  <Input
+                    type="number"
+                    min="30"
+                    max="1440"
+                    value={settings.session_timeout_minutes}
+                    onChange={(event) =>
+                      setSettings({
+                        ...settings,
+                        session_timeout_minutes:
+                          Number.parseInt(event.target.value, 10) || 480,
+                      })
+                    }
+                  />
+                </Field>
+              </Surface>
+
+              <Surface padding="md" className="xl:col-span-12">
+                <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-gold-border)] bg-[var(--accent-gold-soft)] text-[var(--accent-gold-hover)]">
+                    <BellRing className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Notificações</h3>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Controle o som e a frequência de verificação.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-secondary)]">
+                      {settings.notification_sound_enabled ? (
+                        <Volume2 className="h-5 w-5" aria-hidden="true" />
+                      ) : (
+                        <VolumeX className="h-5 w-5" aria-hidden="true" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <p id="notification-sound-title" className="text-sm font-semibold text-[var(--text-primary)]">
+                        Sons de notificação
+                      </p>
+                      <p id="notification-sound-description" className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                        Reproduzir um alerta sonoro quando houver notificações.
+                      </p>
                     </div>
-                  )}
+                  </div>
+                  <Switch
+                    checked={settings.notification_sound_enabled}
+                    onChange={(event) =>
+                      setSettings({
+                        ...settings,
+                        notification_sound_enabled: event.target.checked,
+                      })
+                    }
+                    aria-labelledby="notification-sound-title"
+                    aria-describedby="notification-sound-description"
+                  />
+                </div>
 
-                  <div className="lg:col-span-2">
-                    <label className="mb-2 flex items-center space-x-2 text-sm font-medium text-[color:var(--text-primary)]">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        Intervalo de verificação de notificações (segundos)
+                <div className="mt-5 grid grid-cols-1 gap-5 border-t border-[var(--border-subtle)] pt-5 lg:grid-cols-2">
+                  <Field
+                    label={(
+                      <span className="flex items-center justify-between gap-3">
+                        <span>Volume das notificações</span>
+                        <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                          {Math.round(settings.notification_volume * 100)}%
+                        </span>
                       </span>
-                    </label>
+                    )}
+                    hint="Ajuste o volume do alerta sonoro; 0% é silencioso e 100% é o máximo."
+                    disabled={!settings.notification_sound_enabled}
+                  >
+                    <Input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={settings.notification_volume}
+                      disabled={!settings.notification_sound_enabled}
+                      onChange={(event) =>
+                        setSettings({
+                          ...settings,
+                          notification_volume: Number.parseFloat(event.target.value),
+                        })
+                      }
+                      className="cursor-pointer"
+                    />
+                  </Field>
+
+                  <Field
+                    label={(
+                      <span className="inline-flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+                        Intervalo de verificação (segundos)
+                      </span>
+                    )}
+                    hint="Padrão recomendado: 30 segundos."
+                  >
                     <Input
                       type="number"
                       min="10"
@@ -492,26 +537,37 @@ export default function SystemSettingsScreen() {
                         })
                       }
                     />
-                    <p className="mt-1 text-xs text-[color:var(--text-muted)]">
-                      Recomendado: 30 segundos.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-end">
-                  <Button
-                    onClick={handleSave}
-                    disabled={saving || !hasPendingGeneralChanges}
-                    className="w-full sm:w-auto"
-                  >
-                    <Save className="kds-control-icon" />
-                    <span>
-                      {saving ? "Salvando..." : "Salvar preferências"}
-                    </span>
-                  </Button>
+                  </Field>
                 </div>
               </Surface>
-            )}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-2">
+                <Badge tone={hasPendingGeneralChanges ? "gold" : "success"}>
+                  {hasPendingGeneralChanges ? "Não salvo" : "Salvo"}
+                </Badge>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {hasPendingGeneralChanges
+                    ? "Salve para aplicar suas alterações."
+                    : "Suas preferências estão atualizadas."}
+                </p>
+              </div>
+              <Button
+                onClick={handleSave}
+                disabled={saving || !hasPendingGeneralChanges}
+                aria-busy={saving}
+                className="w-full sm:w-auto"
+                size="md"
+              >
+                {saving ? (
+                  <Loader2 className="kds-control-icon animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="kds-control-icon" aria-hidden="true" />
+                )}
+                {saving ? "Salvando..." : "Salvar preferências"}
+              </Button>
+            </div>
           </section>
         )}
 

@@ -8,6 +8,7 @@ import '../communicationTerracotta.css';
 import {
   Badge,
   Button,
+  ButtonGroup,
   Checkbox,
   ConfirmDialog,
   Dialog,
@@ -8517,9 +8518,9 @@ export default function WhatsAppInboxScreen() {
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
                 </p>
-                <div className="flex shrink-0 items-center gap-2">
+                <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
                   <IconButton
-                    variant={archivedSectionOpen ? 'soft' : 'secondary'}
+                    variant={archivedSectionOpen ? 'soft' : 'ghost'}
                     className="relative shrink-0"
                     size="md" onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     aria-label="Chats arquivados"
@@ -8537,7 +8538,7 @@ export default function WhatsAppInboxScreen() {
                     ) : null}
                   </IconButton>
                   <IconButton
-                    variant="secondary"
+                    variant="ghost"
                     className="shrink-0"
                     size="md" onClick={() => setWhatsAppAgendaOpen(true)}
                     aria-label="Agenda do WhatsApp"
@@ -8547,7 +8548,7 @@ export default function WhatsAppInboxScreen() {
                     <CalendarDays className="kds-control-icon" />
                   </IconButton>
                   <IconButton
-                    variant="secondary"
+                    variant="ghost"
                     className="shrink-0"
                     size="md" onClick={() => setWhatsAppDashboardOpen(true)}
                     aria-label="Painel WhatsApp"
@@ -8556,6 +8557,7 @@ export default function WhatsAppInboxScreen() {
                     <Cog className="kds-control-icon" />
                   </IconButton>
                   <IconButton
+                    variant="ghost"
                     className="shrink-0"
                     size="md" onClick={() => setStartChatModalOpen(true)}
                     aria-label="Novo chat"
@@ -8563,7 +8565,7 @@ export default function WhatsAppInboxScreen() {
                   >
                     <Plus className="kds-control-icon" />
                   </IconButton>
-                </div>
+                </ButtonGroup>
               </div>
 
               <Input
@@ -8886,7 +8888,7 @@ export default function WhatsAppInboxScreen() {
                 </div>
                 <div className="hidden min-w-0 shrink-0 items-start lg:flex lg:justify-end">
                   <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
-                    <div className="hidden shrink-0 items-center gap-2 lg:flex">
+                    <ButtonGroup className="whatsapp-inbox-action-group" role="group" aria-label="Ações da conversa">
                     {selectedChat.lead_id ? (
                       <IconButton
                         type="button"
@@ -8916,7 +8918,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={() => setChatFilesOpen(true)}
-                      variant={chatFilesOpen ? 'secondary' : 'soft'}
+                      variant={chatFilesOpen ? 'secondary' : 'ghost'}
                       aria-label="Ver arquivos desta conversa"
                       title="Arquivos da conversa"
                      size="md">
@@ -8925,7 +8927,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={handleToggleChatMessageSearch}
-                      variant={chatMessageSearchOpen ? 'secondary' : 'soft'}
+                      variant={chatMessageSearchOpen ? 'secondary' : 'ghost'}
                       aria-label="Pesquisar mensagens neste chat"
                       title="Pesquisar neste chat"
                      size="md">
@@ -8934,7 +8936,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={() => void handleCopyChatTranscript()}
-                      variant="soft"
+                      variant="ghost"
                       aria-label="Copiar conversa formatada"
                       title="Copiar conversa formatada"
                       disabled={copyingTranscript}
@@ -8944,7 +8946,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={() => void handleRecoverChatHistory()}
-                      variant="soft"
+                      variant="ghost"
                       aria-label="Recuperar mensagens antigas do chat"
                       title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
                       disabled={Boolean(historyRecoveryDisabledReason)}
@@ -8954,7 +8956,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={handleOpenFollowUpModal}
-                      variant="soft"
+                      variant="ghost"
                       aria-label="Gerar follow-up com IA"
                       title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
                       disabled={Boolean(followUpGenerationDisabledReason)}
@@ -8964,7 +8966,7 @@ export default function WhatsAppInboxScreen() {
                     <IconButton
                       type="button"
                       onClick={handleOpenLeadDrawer}
-                      variant="soft"
+                      variant="ghost"
                       aria-label="Abrir informações do lead"
                       title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
                      size="md">
@@ -8981,7 +8983,7 @@ export default function WhatsAppInboxScreen() {
                         ) : null}
                       </span>
                     </IconButton>
-                    </div>
+                    </ButtonGroup>
                   </div>
                 </div>
               </div>
@@ -9818,7 +9820,11 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   ) : null}
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                    <div className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                    <ButtonGroup
+                      className={cx('whatsapp-inbox-composer-button-group relative shrink-0', isComposerExpanded ? 'self-end' : 'self-center')}
+                      role="group"
+                      aria-label="Ações de composição da mensagem"
+                    >
                       <Popover open={attachmentMenuOpen} onOpenChange={setAttachmentMenuOpen}>
                         <PopoverTrigger
                           onClick={() => {
@@ -9826,15 +9832,16 @@ export default function WhatsAppInboxScreen() {
                             setMediaDrawerOpen(false);
                           }}
                         >
-                          <button
-                            type="button"
+                          <IconButton
+                            variant="ghost"
+                            size="md"
                             disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
-                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
+                            className={cx('whatsapp-inbox-composer-icon', attachmentMenuOpen && 'is-open')}
                             aria-label="Anexar"
                             aria-expanded={attachmentMenuOpen}
                           >
-                            <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
-                          </button>
+                            <Plus className={cx('kds-control-icon transition', attachmentMenuOpen && 'rotate-45')} />
+                          </IconButton>
                         </PopoverTrigger>
                         <PopoverContent
                           side="top"
@@ -9874,18 +9881,19 @@ export default function WhatsAppInboxScreen() {
                           </button>
                         </PopoverContent>
                       </Popover>
-                        <button
-                          type="button"
+                        <IconButton
+                          variant="ghost"
+                          size="md"
                           ref={mediaDrawerTriggerRef}
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                        aria-label="Emoji, GIF e figurinha"
+                          className={cx('whatsapp-inbox-composer-icon', mediaDrawerOpen && 'is-open')}
+                          aria-label="Emoji, GIF e figurinha"
                           aria-expanded={mediaDrawerOpen}
                           title="Emoji, GIF e figurinha"
-                      >
-                        <Smile className="h-5 w-5" />
-                      </button>
+                        >
+                          <Smile className="kds-control-icon" />
+                        </IconButton>
 
                       <Popover open={composerAiMenuOpen} onOpenChange={setComposerAiMenuOpen}>
                         <PopoverTrigger
@@ -9894,17 +9902,18 @@ export default function WhatsAppInboxScreen() {
                             setMediaDrawerOpen(false);
                           }}
                         >
-                          <button
-                            type="button"
+                          <IconButton
+                            variant="ghost"
+                            size="md"
                             disabled={(Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)) || rewritingComposer}
-                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || rewritingComposer || replySuggestionText ? 'is-open' : ''}`}
+                            className={cx('whatsapp-inbox-composer-icon', (composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || rewritingComposer || replySuggestionText) && 'is-open')}
                             aria-label={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
                             aria-expanded={composerAiMenuOpen}
                             aria-busy={rewritingComposer || replySuggestionLoading}
                             title={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
                           >
-                            {replySuggestionLoading || rewritingComposer ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                          </button>
+                            {replySuggestionLoading || rewritingComposer ? <Loader2 className="kds-control-icon animate-spin" /> : <Sparkles className="kds-control-icon" />}
+                          </IconButton>
                         </PopoverTrigger>
                         <PopoverContent
                           side="top"
@@ -10020,18 +10029,19 @@ export default function WhatsAppInboxScreen() {
                         </PopoverContent>
                       </Popover>
                       {selectedChat && voiceRecordingState === 'idle' && (
-                        <button
-                          type="button"
+                        <IconButton
+                          variant="ghost"
+                          size="md"
                           onClick={() => setScheduledMessagesPanelOpen(true)}
                           disabled={generatingFollowUp || sending}
-                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="whatsapp-inbox-composer-icon"
                           aria-label="Agendar mensagem"
                           title="Agendar mensagem para envio futuro"
                         >
-                          <Calendar className="h-5 w-5" />
-                        </button>
+                          <Calendar className="kds-control-icon" />
+                        </IconButton>
                       )}
-                    </div>
+                    </ButtonGroup>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
@@ -10515,7 +10525,6 @@ export default function WhatsAppInboxScreen() {
             onScheduled={() => {
               setMessageDraft('');
               setScheduledMessagesPanelOpen(false);
-              toast.success('Mensagem agendada com sucesso!');
             }}
           />
         )}
@@ -10523,6 +10532,7 @@ export default function WhatsAppInboxScreen() {
         {selectedChat && (
           <WhatsAppScheduledMessagesPanel
             channelId={selectedChat.channel_id}
+            phoneDigits={selectedChat.phone_digits}
             isOpen={scheduledMessagesPanelOpen}
             onClose={() => setScheduledMessagesPanelOpen(false)}
             onScheduleNew={() => setScheduleMessageModalOpen(true)}

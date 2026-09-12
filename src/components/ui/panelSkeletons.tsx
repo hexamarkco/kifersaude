@@ -627,23 +627,70 @@ export function TodoCalendarSkeleton() {
 export function SystemSettingsSkeleton() {
   return (
     <div className="space-y-6">
-      <PanelCard className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton variant="avatar" className="h-10 w-10" />
-          <Skeleton className="h-7 w-52" />
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="space-y-2">
+          <Skeleton variant="line" className="h-3 w-40" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton variant="line" className="h-4 w-80 max-w-full" />
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={`system-field-${index}`} className="space-y-2">
-              <Skeleton variant="line" className="h-4 w-40" />
-              <Skeleton className="h-10 w-full rounded-lg" />
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-40 rounded-full" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <PanelCard className="space-y-4 xl:col-span-7">
+          <div className="flex items-center gap-3">
+            <Skeleton variant="avatar" className="h-11 w-11" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton variant="line" className="h-4 w-64 max-w-full" />
             </div>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Skeleton className="h-10 w-44 rounded-lg" />
-        </div>
-      </PanelCard>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={`system-location-field-${index}`} className="space-y-2">
+                <Skeleton variant="line" className="h-4 w-40" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton variant="line" className="h-3 w-48" />
+              </div>
+            ))}
+          </div>
+        </PanelCard>
+        <PanelCard className="space-y-4 xl:col-span-5">
+          <div className="flex items-center gap-3">
+            <Skeleton variant="avatar" className="h-11 w-11" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton variant="line" className="h-4 w-52 max-w-full" />
+            </div>
+          </div>
+          <Skeleton variant="line" className="h-4 w-44" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton variant="line" className="h-3 w-64 max-w-full" />
+        </PanelCard>
+        <PanelCard className="space-y-4 xl:col-span-12">
+          <div className="flex items-center gap-3">
+            <Skeleton variant="avatar" className="h-11 w-11" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton variant="line" className="h-4 w-56 max-w-full" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t pt-4">
+            <Skeleton className="h-10 w-64 max-w-full" />
+            <Skeleton className="h-6 w-12 rounded-full" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 border-t pt-4 lg:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={`system-notification-field-${index}`} className="space-y-2">
+                <Skeleton variant="line" className="h-4 w-48" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton variant="line" className="h-3 w-40" />
+              </div>
+            ))}
+          </div>
+        </PanelCard>
+      </div>
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, index) => (
           <PanelCard key={`system-module-${index}`}>

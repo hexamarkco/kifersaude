@@ -1,22 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ListPlus, Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService, type ConfigCategory } from '../../features/config/data/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { toast } from '../../lib/toast';
 import {
+  Badge,
   Button,
   Card,
-  Checkbox,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  EmptyState,
   Field,
   Input,
   IconButton,
+  Switch,
 } from '../../design-system';
 
 type ConfigOptionManagerProps = {
@@ -177,32 +179,53 @@ export default function ConfigOptionManager({
   };
 
   return (
-    <Card padding="lg">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+    <Card padding="md">
+      <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h3 className="kds-card-title">{title}</h3>
-          {description && <p className="kds-card-subtitle">{description}</p>}
+          {description && <p className="kds-card-subtitle mt-1">{description}</p>}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge tone="neutral">{items.length} {items.length === 1 ? 'opção' : 'opções'}</Badge>
+            <Badge tone="success">{items.filter((item) => item.ativo).length} ativas</Badge>
+          </div>
         </div>
 
-        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving} className="w-full sm:w-auto">
           <Plus className="kds-control-icon" />
-          <span>Nova opção</span>
+          <span>Adicionar opção</span>
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {items.map((item) => {
-          const isBusy = busyId === item.id;
+      <p className="mt-4 text-xs text-[var(--text-secondary)]">
+        Nome e ordem são salvos automaticamente ao sair do campo.
+      </p>
 
-          return (
-            <Card
-              key={item.id}
-              variant="muted"
-              padding="sm"
-              className="flex flex-col space-y-3 md:flex-row md:items-center md:space-x-3 md:space-y-0"
-            >
-              <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
-                <Field label="Rótulo" htmlFor={`config-option-label-${item.id}`}>
+      {items.length === 0 ? (
+        <EmptyState
+          className="mt-5"
+          icon={<ListPlus aria-hidden="true" />}
+          title="Nenhuma opção cadastrada"
+          description="Adicione opções para disponibilizá-las nos formulários de leads."
+          action={(
+            <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+              <Plus className="kds-control-icon" />
+              Adicionar primeira opção
+            </Button>
+          )}
+        />
+      ) : (
+        <div className="mt-5 space-y-3">
+          {items.map((item) => {
+            const isBusy = busyId === item.id;
+
+            return (
+              <Card
+                key={item.id}
+                variant="muted"
+                padding="md"
+                className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end"
+              >
+                <Field label="Nome da opção" htmlFor={`config-option-label-${item.id}`}>
                   <Input
                     id={`config-option-label-${item.id}`}
                     type="text"
@@ -217,38 +240,45 @@ export default function ConfigOptionManager({
                   <Input
                     id={`config-option-order-${item.id}`}
                     type="number"
+                    min="0"
                     value={drafts[item.id]?.ordem ?? String(item.ordem)}
                     onChange={(event) => updateDraft(item.id, { ordem: event.target.value })}
                     onBlur={() => void handleOrderBlur(item.id, item.ordem)}
                     disabled={isBusy}
                   />
                 </Field>
-              </div>
 
-              <div className="flex items-center space-x-3">
-                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
-                  <Checkbox
-                    checked={item.ativo}
-                    onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
+                <div className="flex items-center justify-between gap-3 xl:justify-end">
+                  <div className="flex min-h-14 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 xl:min-w-40">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{item.ativo ? 'Ativa' : 'Inativa'}</p>
+                      <p className="text-xs text-[var(--text-secondary)]">Disponibilidade</p>
+                    </div>
+                    <Switch
+                      size="sm"
+                      checked={item.ativo}
+                      onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
+                      disabled={isBusy}
+                      aria-label={`${item.ativo ? 'Desativar' : 'Ativar'} opção ${item.label}`}
+                    />
+                  </div>
+
+                  <IconButton
+                    onClick={() => void handleDelete(item.id)}
+                    variant="danger"
+                    title="Remover opção"
                     disabled={isBusy}
-                  />
-                  <span>Ativo</span>
-                </label>
-
-                <IconButton
-                  onClick={() => void handleDelete(item.id)}
-                  variant="danger"
-                  
-                  title="Remover opção"
-                  disabled={isBusy}
-                 size="sm" aria-label="Remover opção">
-                  <Trash2 aria-hidden="true" />
-                </IconButton>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                    size="md"
+                    aria-label={`Remover opção ${item.label}`}
+                  >
+                    <Trash2 className="kds-control-icon" aria-hidden="true" />
+                  </IconButton>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
       <Dialog
         open={isCreateModalOpen}
         onOpenChange={(open) => {

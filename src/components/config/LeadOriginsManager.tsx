@@ -1,22 +1,26 @@
 import { useState } from 'react';
-import { Check, Plus, Trash2, X } from 'lucide-react';
+import { Check, Pencil, Plus, Share2, Trash2, X } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../features/config/data/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { toast } from '../../lib/toast';
 import {
   Button,
+  Badge,
+  ButtonGroup,
   Card,
-  Checkbox,
+  CardIcon,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  EmptyState,
   Field,
   Input,
   IconButton,
+  Switch,
 } from '../../design-system';
 
 export default function LeadOriginsManager() {
@@ -140,93 +144,155 @@ export default function LeadOriginsManager() {
   };
 
   return (
-    <Card padding="lg">
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h3 className="kds-card-title">Origens de Leads</h3>
-          <p className="kds-card-subtitle">Gerencie todos os canais de entrada de leads.</p>
+    <Card padding="md">
+      <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="kds-card-title">Canais de entrada</h3>
+          <p className="kds-card-subtitle mt-1">
+            Gerencie onde os leads são captados e o que cada perfil pode visualizar.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge tone="neutral">{leadOrigins.length} {leadOrigins.length === 1 ? 'origem' : 'origens'}</Badge>
+            <Badge tone="success">{leadOrigins.filter((origin) => origin.ativo).length} ativas</Badge>
+          </div>
         </div>
 
-        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving} className="w-full sm:w-auto">
           <Plus className="kds-control-icon" />
-          <span>Nova origem</span>
+          <span>Adicionar origem</span>
         </Button>
       </div>
 
-      <div className="space-y-3">
-        {leadOrigins.map((origin) => {
-          const isBusy = busyId === origin.id;
+      {leadOrigins.length === 0 ? (
+        <EmptyState
+          className="mt-5"
+          icon={<Share2 aria-hidden="true" />}
+          title="Nenhum canal cadastrado"
+          description="Adicione uma origem para identificar de onde os leads chegam."
+          action={(
+            <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
+              <Plus className="kds-control-icon" />
+              Adicionar primeira origem
+            </Button>
+          )}
+        />
+      ) : (
+        <div className="mt-5 space-y-3">
+          {leadOrigins.map((origin) => {
+            const isBusy = busyId === origin.id;
+            const isEditing = editingId === origin.id;
 
-          return (
-            <Card
-              key={origin.id}
-              variant="muted"
-              padding="sm"
-              className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-            >
-              <div className="flex-1">
-                {editingId === origin.id ? (
-                  <Input
-                    type="text"
-                    value={editingName}
-                    onChange={(event) => setEditingName(event.target.value)}
-                    disabled={isBusy}
-                  />
-                ) : (
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{origin.nome}</p>
-                )}
+            return (
+              <Card key={origin.id} variant="muted" padding="md" className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)_auto] xl:items-center">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <CardIcon>
+                      <Share2 className="h-4 w-4" aria-hidden="true" />
+                    </CardIcon>
+                    <div className="min-w-0 flex-1">
+                      {isEditing ? (
+                        <Field label="Nome da origem">
+                          <Input
+                            type="text"
+                            value={editingName}
+                            onChange={(event) => setEditingName(event.target.value)}
+                            disabled={isBusy}
+                          />
+                        </Field>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-semibold text-[var(--text-primary)]">{origin.nome}</h4>
+                          <Badge tone={origin.ativo ? 'success' : 'neutral'}>
+                            {origin.ativo ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                <div className="mt-1 flex flex-col gap-1">
-                  <p className="text-xs text-[var(--text-secondary)]">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    {origin.visivel_para_observadores ? 'Visível para observadores' : 'Oculto para observadores'}
-                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="flex min-h-14 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">Origem ativa</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Disponível no cadastro</p>
+                      </div>
+                      <Switch
+                        size="sm"
+                        checked={origin.ativo}
+                        onChange={(event) => void handleToggleAtivo(origin.id, event.target.checked)}
+                        disabled={isBusy}
+                        aria-label={`${origin.ativo ? 'Desativar' : 'Ativar'} origem ${origin.nome}`}
+                      />
+                    </div>
+                    <div className="flex min-h-14 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">Observadores</p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          {origin.visivel_para_observadores ? 'Podem visualizar' : 'Visibilidade restrita'}
+                        </p>
+                      </div>
+                      <Switch
+                        size="sm"
+                        checked={origin.visivel_para_observadores}
+                        onChange={(event) => void handleToggleObserverVisibility(origin.id, event.target.checked)}
+                        disabled={isBusy}
+                        aria-label={`${origin.visivel_para_observadores ? 'Ocultar' : 'Exibir'} ${origin.nome} para observadores`}
+                      />
+                    </div>
+                  </div>
+
+                  {isEditing ? (
+                    <ButtonGroup role="group" aria-label={`Salvar ou cancelar edição de ${origin.nome}`}>
+                      <IconButton
+                        onClick={() => void confirmEditing()}
+                        variant="success"
+                        disabled={isBusy}
+                        size="md"
+                        aria-label={`Salvar origem ${origin.nome}`}
+                        title="Salvar origem"
+                      >
+                        <Check className="kds-control-icon" aria-hidden="true" />
+                      </IconButton>
+                      <IconButton
+                        onClick={cancelEditing}
+                        variant="secondary"
+                        disabled={isBusy}
+                        size="md"
+                        aria-label={`Cancelar edição de ${origin.nome}`}
+                        title="Cancelar edição"
+                      >
+                        <X className="kds-control-icon" aria-hidden="true" />
+                      </IconButton>
+                    </ButtonGroup>
+                  ) : (
+                    <div className="flex items-center gap-2 xl:justify-end">
+                      <Button
+                        onClick={() => startEditing(origin.id, origin.nome)}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isBusy}
+                      >
+                        <Pencil className="kds-control-icon" />
+                        Editar
+                      </Button>
+                      <IconButton
+                        onClick={() => void handleDelete(origin.id)}
+                        variant="danger"
+                        disabled={isBusy}
+                        size="md"
+                        aria-label={`Excluir origem ${origin.nome}`}
+                        title="Excluir origem"
+                      >
+                        <Trash2 className="kds-control-icon" aria-hidden="true" />
+                      </IconButton>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
-                  <Checkbox
-                    checked={origin.ativo}
-                    onChange={(event) => void handleToggleAtivo(origin.id, event.target.checked)}
-                    disabled={isBusy}
-                  />
-                  <span>Ativo</span>
-                </label>
-
-                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
-                  <Checkbox
-                    checked={origin.visivel_para_observadores}
-                    onChange={(event) => void handleToggleObserverVisibility(origin.id, event.target.checked)}
-                    disabled={isBusy}
-                  />
-                  <span>Visível para observadores</span>
-                </label>
-
-                {editingId === origin.id ? (
-                  <div className="flex items-center space-x-2">
-                    <IconButton onClick={() => void confirmEditing()} variant="success" disabled={isBusy} size="sm" aria-label={`Salvar origem ${origin.nome}`} title="Salvar origem">
-                      <Check aria-hidden="true" />
-                    </IconButton>
-                    <IconButton onClick={cancelEditing} variant="secondary" disabled={isBusy} size="sm" aria-label={`Cancelar edição de ${origin.nome}`} title="Cancelar edição">
-                      <X aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Button onClick={() => startEditing(origin.id, origin.nome)} variant="secondary" size="sm" disabled={isBusy}>
-                      Editar
-                    </Button>
-                    <IconButton onClick={() => void handleDelete(origin.id)} variant="danger" disabled={isBusy} size="sm" aria-label={`Excluir origem ${origin.nome}`} title="Excluir origem">
-                      <Trash2 aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
       <Dialog
         open={isCreateModalOpen}
         onOpenChange={(open) => {

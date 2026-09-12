@@ -76,16 +76,15 @@ const createAdminClient = () => {
 
 async function sendTextMessage(
   admin: ReturnType<typeof createAdminClient>,
-  channelRow: { id: string; whapi_token: string | null; phone_number: string | null },
+  channelRow: { id: string; phone_number: string | null },
   msg: ScheduledMessageRow,
+  token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
   const chatId = normalizeWhapiChatId(msg.phone_digits);
-  const token = sanitizeWhapiToken(channelRow.whapi_token);
 
   const body = {
-    chatId,
-    text: msg.text_content ?? '',
-    type: 'text',
+    to: chatId,
+    body: msg.text_content ?? '',
     clientRequestId: `scheduled:${msg.message_id}`,
   };
 
@@ -99,8 +98,9 @@ async function sendTextMessage(
   });
 
   if (!response.ok) {
-    const error = await parseWhapiError(response);
-    throw new Error(`Whapi text send failed: ${error}`);
+    const body = await response.text();
+    console.error(`[process-scheduled] Whapi text error ${response.status}: ${body}`);
+    throw new Error(`Whapi text send failed: ${parseWhapiError(body)}`);
   }
 
   const payload = await readResponsePayload(response);
@@ -116,16 +116,33 @@ async function sendTextMessage(
 
   await persistCommWhatsAppMessage(admin, {
     channelId: channelRow.id,
-    chatId: route.chatId,
+    externalChatId: chatId,
+    phoneNumber: msg.phone_digits,
+    displayName: msg.display_name ?? msg.phone_digits,
+    pushName: null,
+    lastMessageText: msg.text_content ?? null,
+    lastMessageDirection: 'outbound',
+    lastMessageAt: getNowIso(),
+    incrementUnread: false,
+    externalMessageId,
     direction: 'outbound',
     messageType: 'text',
-    textContent: msg.text_content ?? null,
-    externalMessageId,
     deliveryStatus,
-    externalChatId: chatId,
-    phoneDigits: msg.phone_digits,
-    messageAt: getNowIso(),
-    clientRequestId: `scheduled:${msg.message_id}`,
+    textContent: msg.text_content ?? null,
+    createdBy: null,
+    source: 'scheduled',
+    senderName: null,
+    senderPhone: null,
+    statusUpdatedAt: null,
+    errorMessage: null,
+    mediaId: null,
+    mediaUrl: null,
+    mediaMimeType: null,
+    mediaFileName: null,
+    mediaSizeBytes: null,
+    mediaDurationSeconds: null,
+    mediaCaption: null,
+    metadata: {},
   });
 
   return { externalMessageId, deliveryStatus };
@@ -133,11 +150,11 @@ async function sendTextMessage(
 
 async function sendMediaMessage(
   admin: ReturnType<typeof createAdminClient>,
-  channelRow: { id: string; whapi_token: string | null; phone_number: string | null },
+  channelRow: { id: string; phone_number: string | null },
   msg: ScheduledMessageRow,
+  token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
   const chatId = normalizeWhapiChatId(msg.phone_digits);
-  const token = sanitizeWhapiToken(channelRow.whapi_token);
 
   const mediaKind = (msg.message_type === 'voice' ? 'audio' : msg.message_type) as 'image' | 'video' | 'document' | 'audio';
 
@@ -148,7 +165,7 @@ async function sendMediaMessage(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      chatId,
+      to: chatId,
       mediaUrl: msg.media_url,
       caption: msg.text_content ?? undefined,
       fileName: msg.media_file_name ?? undefined,
@@ -158,8 +175,9 @@ async function sendMediaMessage(
   });
 
   if (!response.ok) {
-    const error = await parseWhapiError(response);
-    throw new Error(`Whapi media send failed: ${error}`);
+    const body = await response.text();
+    console.error(`[process-scheduled] Whapi media error ${response.status}: ${body}`);
+    throw new Error(`Whapi media send failed: ${parseWhapiError(body)}`);
   }
 
   const payload = await readResponsePayload(response);
@@ -175,19 +193,33 @@ async function sendMediaMessage(
 
   await persistCommWhatsAppMessage(admin, {
     channelId: channelRow.id,
-    chatId: route.chatId,
+    externalChatId: chatId,
+    phoneNumber: msg.phone_digits,
+    displayName: msg.display_name ?? msg.phone_digits,
+    pushName: null,
+    lastMessageText: msg.text_content ?? null,
+    lastMessageDirection: 'outbound',
+    lastMessageAt: getNowIso(),
+    incrementUnread: false,
+    externalMessageId,
     direction: 'outbound',
     messageType: msg.message_type,
-    textContent: msg.text_content ?? null,
-    externalMessageId,
     deliveryStatus,
-    externalChatId: chatId,
-    phoneDigits: msg.phone_digits,
-    messageAt: getNowIso(),
-    clientRequestId: `scheduled:${msg.message_id}`,
-    mediaUrl: msg.media_url,
-    mediaMimeType: msg.media_mime_type,
-    mediaFileName: msg.media_file_name,
+    textContent: msg.text_content ?? null,
+    createdBy: null,
+    source: 'scheduled',
+    senderName: null,
+    senderPhone: null,
+    statusUpdatedAt: null,
+    errorMessage: null,
+    mediaId: null,
+    mediaUrl: msg.media_url ?? null,
+    mediaMimeType: msg.media_mime_type ?? null,
+    mediaFileName: msg.media_file_name ?? null,
+    mediaSizeBytes: null,
+    mediaDurationSeconds: null,
+    mediaCaption: msg.text_content ?? null,
+    metadata: {},
   });
 
   return { externalMessageId, deliveryStatus };
@@ -209,10 +241,17 @@ async function processBatch(
     return { processed: 0, sent: 0, failed: 0, errors: [] };
   }
 
-  const channelCache = new Map<string, { id: string; whapi_token: string | null; phone_number: string | null }>();
+  const channelCache = new Map<string, { id: string; phone_number: string | null }>();
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
+
+  const settings = await ensureCommWhatsAppSettings(admin);
+  const rawToken = Deno.env.get('WHAPI_TOKEN') || '';
+  const token = sanitizeWhapiToken(rawToken);
+  if (!token) {
+    throw new Error('Token do WhatsApp não configurado.');
+  }
 
   for (const msg of messages) {
     try {
@@ -225,7 +264,7 @@ async function processBatch(
       if (!channelRow) {
         const { data: ch } = await admin
           .from('comm_whatsapp_channels')
-          .select('id, whapi_token, phone_number')
+          .select('id, phone_number')
           .eq('id', msg.channel_id)
           .single();
 
@@ -239,24 +278,21 @@ async function processBatch(
         throw new Error(`Channel ${msg.channel_id} not found`);
       }
 
-      await ensureCommWhatsAppSettings(admin);
-      await ensurePrimaryChannel(admin);
-
       let result: { externalMessageId: string; deliveryStatus: string };
 
       if (msg.message_type === 'text') {
         const segments = splitMessageSegments(msg.text_content ?? '');
         if (segments.length <= 1) {
-          result = await sendTextMessage(admin, channelRow, msg);
+          result = await sendTextMessage(admin, channelRow, msg, token);
         } else {
           let lastResult = { externalMessageId: '', deliveryStatus: '' };
           for (const segment of segments) {
-            lastResult = await sendTextMessage(admin, channelRow, { ...msg, text_content: segment });
+            lastResult = await sendTextMessage(admin, channelRow, { ...msg, text_content: segment }, token);
           }
           result = lastResult;
         }
       } else {
-        result = await sendMediaMessage(admin, channelRow, msg);
+        result = await sendMediaMessage(admin, channelRow, msg, token);
       }
 
       await admin.rpc('advance_scheduled_message', {
@@ -295,7 +331,8 @@ Deno.serve(async (req): Promise<Response> => {
   }
 
   try {
-    if (!isServiceRoleRequest(req)) {
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    if (!isServiceRoleRequest(req, serviceRoleKey)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: jsonHeaders,

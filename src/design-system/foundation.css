@@ -936,11 +936,15 @@
 
 .kds-button-group {
   display: inline-flex;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--brand-primary-border);
   border-radius: var(--radius-full);
   background: var(--bg-inset);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.kds-button-group > .kds-popover-trigger {
+  display: flex;
 }
 
 .kds-button-group .kds-button {
@@ -949,8 +953,30 @@
   box-shadow: none;
 }
 
-.kds-button-group .kds-button + .kds-button {
-  border-left: 1px solid var(--brand-primary-border);
+.kds-button-group .kds-button-ghost,
+.kds-button-group .kds-button-icon {
+  background: transparent;
+}
+
+.kds-button-group > * + * {
+  border-left: 1px solid var(--border-default);
+}
+
+.kds-button-group > .kds-button:first-child,
+.kds-button-group > .kds-popover-trigger:first-child > .kds-button {
+  border-top-left-radius: var(--radius-full);
+  border-bottom-left-radius: var(--radius-full);
+}
+
+.kds-button-group > .kds-button:last-child,
+.kds-button-group > .kds-popover-trigger:last-child > .kds-button {
+  border-top-right-radius: var(--radius-full);
+  border-bottom-right-radius: var(--radius-full);
+}
+
+.kds-button-group .kds-button:focus-visible {
+  position: relative;
+  z-index: 1;
 }
 
 .kds-input-shell {

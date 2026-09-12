@@ -481,6 +481,33 @@
   min-width: min(100%, 14rem);
 }
 
+.kds-leads-view-tabs .kds-tabs-list {
+  flex-wrap: nowrap;
+}
+
+.kds-leads-view-tabs .kds-tab {
+  flex: 1 0 auto;
+  min-width: max-content;
+  gap: var(--space-2);
+}
+
+.kds-leads-view-tabs .kds-tab > span {
+  min-width: max-content;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+@media (min-width: 768px) {
+  .kds-leads-view-tabs .kds-tabs-list {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .kds-leads-view-tabs .kds-tab {
+    flex: 0 0 auto;
+  }
+}
+
 .kds-op-disclosure-content {
   border-radius: var(--radius-lg);
 }

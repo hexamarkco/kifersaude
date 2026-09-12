@@ -52,6 +52,15 @@ type ProcessRequestBody = {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const MAX_BATCH_SIZE = 10;
 
+function splitMessageSegments(text: string): string[] {
+  const normalized = text.replace(/\r\n/g, '\n').trim();
+  if (!normalized) return [];
+  return normalized
+    .split(/\n\s*---\s*\n/g)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -236,7 +245,16 @@ async function processBatch(
       let result: { externalMessageId: string; deliveryStatus: string };
 
       if (msg.message_type === 'text') {
-        result = await sendTextMessage(admin, channelRow, msg);
+        const segments = splitMessageSegments(msg.text_content ?? '');
+        if (segments.length <= 1) {
+          result = await sendTextMessage(admin, channelRow, msg);
+        } else {
+          let lastResult = { externalMessageId: '', deliveryStatus: '' };
+          for (const segment of segments) {
+            lastResult = await sendTextMessage(admin, channelRow, { ...msg, text_content: segment });
+          }
+          result = lastResult;
+        }
       } else {
         result = await sendMediaMessage(admin, channelRow, msg);
       }

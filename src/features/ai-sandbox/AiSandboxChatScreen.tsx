@@ -486,8 +486,8 @@ export default function AiSandboxChatScreen() {
   };
 
   return (
-    <div className="painel-theme kifer-ds flex h-screen w-full bg-[var(--bg-canvas)] text-[var(--text-primary)]">
-      <aside className="flex w-72 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+    <div className="painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
+      <aside className="flex h-[34dvh] w-full shrink-0 flex-col border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] md:h-auto md:w-72 md:border-b-0 md:border-r">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4">
           <div>
             <p className="text-sm font-semibold">Chat de testes — IA</p>
@@ -612,9 +612,9 @@ export default function AiSandboxChatScreen() {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         {activeConversation && (
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-3">
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-3 sm:px-6">
             <p className="truncate text-sm font-medium">{activeConversation.title}</p>
             {messages.length > 0 && (
               <IconButton
@@ -630,7 +630,7 @@ export default function AiSandboxChatScreen() {
           </div>
         )}
         {!activeConversationId && messages.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center px-6">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-4 sm:px-6">
             <div className="w-full max-w-sm">
               <EmptyState
                 icon={<Sparkles className="h-6 w-6" />}

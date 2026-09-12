@@ -9,6 +9,19 @@
   --ks-font-body: 'Inter', sans-serif;
 }
 
+.public-brand-button {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
+}
+
+.public-brand-button:hover:not(:disabled) {
+  border-color: var(--brand-primary-hover);
+  background: var(--brand-primary-hover);
+  color: var(--text-on-brand);
+}
+
 html,
 * {
   scrollbar-color: var(--app-scrollbar-thumb-solid, currentColor) var(--app-scrollbar-track, transparent);

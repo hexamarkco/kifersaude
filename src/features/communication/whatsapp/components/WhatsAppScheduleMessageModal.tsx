@@ -1,13 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Repeat } from 'lucide-react';
+import { Calendar, Clock, MessageSquare, Repeat } from 'lucide-react';
 
 import {
   Button,
+  DateTimePicker,
   Input,
   Textarea,
   WorkspaceDialog,
 } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
+import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService } from '../data';
 import type { CommWhatsAppScheduledMessageRecurrence, CommWhatsAppScheduledMessageType } from '../domain/types';
 
@@ -90,6 +92,13 @@ export default function WhatsAppScheduleMessageModal({
   const hasContent = useMemo(() => {
     return text.trim().length > 0 || Boolean(initialMediaUrl);
   }, [text, initialMediaUrl]);
+
+  const messageSegments = useMemo(() => {
+    if (!text.trim()) return [];
+    return splitWhatsAppMessageSegments(text);
+  }, [text]);
+
+  const segmentCount = messageSegments.length;
 
   const scheduledAtIso = useMemo(() => {
     if (!scheduledAt) return null;
@@ -194,6 +203,31 @@ export default function WhatsAppScheduleMessageModal({
               )}
             </div>
           )}
+          {segmentCount > 1 && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2">
+              <MessageSquare className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+              <span className="text-sm text-[var(--brand-primary)]">
+                <strong>{segmentCount} mensagens</strong> serão enviadas em sequência
+              </span>
+            </div>
+          )}
+          {segmentCount > 1 && (
+            <div className="mt-2 space-y-1.5">
+              {messageSegments.map((segment, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2"
+                >
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[10px] font-bold text-[var(--text-muted)]">
+                    {index + 1}
+                  </span>
+                  <p className="min-w-0 flex-1 text-xs leading-5 text-[var(--text-secondary)] line-clamp-2">
+                    {segment}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -201,7 +235,7 @@ export default function WhatsAppScheduleMessageModal({
             <Calendar className="inline-block w-4 h-4 mr-1" />
             Data e hora do envio
           </label>
-          <Input
+          <DateTimePicker
             type="datetime-local"
             value={scheduledAt}
             onChange={(e) => setScheduledAt(e.target.value)}
@@ -240,7 +274,7 @@ export default function WhatsAppScheduleMessageModal({
               <Clock className="inline-block w-4 h-4 mr-1" />
               Repetir até
             </label>
-            <Input
+            <DateTimePicker
               type="datetime-local"
               value={recurrenceEndsAt}
               onChange={(e) => setRecurrenceEndsAt(e.target.value)}

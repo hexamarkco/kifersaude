@@ -26,6 +26,7 @@ import {
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import {
+  Button,
   Input,
   Select,
 } from '../../design-system';
@@ -1487,14 +1488,17 @@ export default function HomePage() {
               <form onSubmit={handleSubmit} className="rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] p-8 text-[color:var(--text-primary)] shadow-[var(--shadow-modal)] md:p-10">
                 <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="w-full rounded-full bg-[var(--brand-primary)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                  loading={submitting}
+                  fullWidth
+                  size="lg"
+                  className="public-brand-button"
                 >
-                  {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
-                  <ChevronRight className="ml-2 inline-block h-5 w-5" />
-                </button>
+                  <span className="hidden sm:inline">Quero minha cotação personalizada agora</span>
+                  <span className="sm:hidden">Quero minha cotação</span>
+                  <ChevronRight aria-hidden="true" />
+                </Button>
 
                 <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
               </form>
@@ -1667,14 +1671,16 @@ export default function HomePage() {
             <form onSubmit={handleSubmit}>
               <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={submitting}
-                className="w-full rounded-full bg-[var(--brand-primary)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                loading={submitting}
+                fullWidth
+                size="lg"
+                className="public-brand-button"
               >
-                {submitting ? 'Enviando cotação...' : 'Enviar cotação via WhatsApp'}
-                <MessageCircle className="ml-2 inline-block h-5 w-5" />
-              </button>
+                Enviar cotação via WhatsApp
+                <MessageCircle aria-hidden="true" />
+              </Button>
 
               <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Resposta em até 10 minutos</p>
             </form>

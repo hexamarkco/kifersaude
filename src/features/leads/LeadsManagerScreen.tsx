@@ -1578,14 +1578,24 @@ export default function LeadsManager({
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <Surface variant="muted" padding="sm">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="kds-op-bulk-title shrink-0">
+                <Surface variant="muted" padding="md" className="kds-leads-bulk-panel">
+                  <div className="kds-leads-bulk-header">
+                    <span className="kds-op-bulk-title">
                       {selectedLeadIds.length} lead(s) selecionado(s)
                     </span>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      disabled={isBulkUpdating}
+                      className="kds-leads-bulk-clear"
+                    >
+                      Limpar seleção
+                    </button>
+                  </div>
 
-                    <div className="flex flex-1 flex-wrap items-center gap-2">
-                      <div className="min-w-[11rem] flex-1 sm:flex-initial sm:w-44">
+                  <div className="kds-leads-bulk-body">
+                    <div className="kds-leads-bulk-controls">
+                      <div className="kds-leads-bulk-control">
                         <FilterSelect
                           icon={Tag}
                           value={bulkStatus}
@@ -1603,7 +1613,7 @@ export default function LeadsManager({
                           ]}
                         />
                       </div>
-                      <div className="min-w-[11rem] flex-1 sm:flex-initial sm:w-44">
+                      <div className="kds-leads-bulk-control">
                         <FilterSelect
                           icon={UserCircle}
                           value={bulkResponsavel}
@@ -1626,12 +1636,14 @@ export default function LeadsManager({
                         value={bulkProximoRetorno}
                         onChange={(event) => setBulkProximoRetorno(event.target.value)}
                         size="sm"
-                        className="min-w-[13rem] flex-1 sm:flex-initial sm:w-52"
+                        className="kds-leads-bulk-date"
                         disabled={isBulkUpdating}
                         placeholder="Próximo retorno"
                       />
 
-                      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                    </div>
+
+                    <div className="kds-leads-bulk-actions">
                         <Button
                           type="button"
                           onClick={handleBulkStatusApply}
@@ -1663,17 +1675,7 @@ export default function LeadsManager({
                           <Download className="kds-control-icon" />
                           <span>Exportar XLSX</span>
                         </Button>
-                      </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={clearSelection}
-                      disabled={isBulkUpdating}
-                      className="shrink-0 text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Limpar seleção
-                    </button>
                   </div>
                 </Surface>
             )}
@@ -1681,7 +1683,7 @@ export default function LeadsManager({
               <Table size="sm" stickyHeader>
                 <TableHeader>
                   <TableRow>
-                    {canSelectLeads && <TableHead className="w-10" aria-label="Selecionar" />}
+                    {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}
                     <TableHead>Lead</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Origem e tipo</TableHead>
@@ -1713,7 +1715,7 @@ export default function LeadsManager({
                         className="align-middle"
                       >
                         {canSelectLeads && (
-                          <TableCell>
+                          <TableCell align="center" className="w-12 align-middle">
                             <Checkbox
                               checked={selectedLeadIdsSet.has(lead.id)}
                               onChange={() => toggleLeadSelection(lead.id)}

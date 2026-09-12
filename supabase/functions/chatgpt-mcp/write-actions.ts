@@ -13,7 +13,9 @@ export type McpWriteResult = { success: boolean; [key: string]: unknown };
 type ActionErrorCode =
   | 'UNAUTHORIZED' | 'LEAD_NOT_FOUND' | 'CHAT_NOT_FOUND' | 'CONTRACT_NOT_FOUND'
   | 'INVALID_STATUS' | 'MESSAGE_EMPTY' | 'MESSAGE_TOO_LONG' | 'RATE_LIMITED'
-  | 'DUPLICATE_REQUEST' | 'PROVIDER_ERROR' | 'INVALID_INPUT' | 'INTERNAL_ERROR';
+  | 'DUPLICATE_REQUEST' | 'PROVIDER_ERROR' | 'INVALID_INPUT' | 'INTERNAL_ERROR'
+  | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'JOB_ALREADY_EXECUTED'
+  | 'INVALID_ASSIGNEE';
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const safeUuid = (value: unknown) => UUID.test(text(value));
@@ -29,6 +31,96 @@ const parseDate = (value: unknown): string | null => {
   const raw = text(value);
   const timestamp = Date.parse(raw);
   return raw && Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const boundedInteger = (value: unknown, minimum: number, maximum: number): number | null => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
+};
+
+const validHour = (value: unknown): string | null => {
+  const raw = text(value);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(raw) ? raw : null;
+};
+
+const validWeekdays = (value: unknown): number[] | null => {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 7) return null;
+  const days = value.map((item) => boundedInteger(item, 0, 6));
+  return days.every((item): item is number => item !== null) && new Set(days).size === days.length
+    ? [...days].sort((a, b) => a - b)
+    : null;
+};
+
+type AutomationSettings = Record<string, unknown> & {
+  enabled?: boolean;
+  autoSend?: boolean;
+  flows?: unknown[];
+  scheduling?: Record<string, unknown>;
+};
+
+const automationSettings = (value: unknown): AutomationSettings | null => {
+  if (!isRecord(value)) return null;
+  return value as AutomationSettings;
+};
+
+const flowRecord = (value: unknown): Record<string, unknown> | null => isRecord(value) ? value : null;
+
+const flowView = (flow: Record<string, unknown>) => {
+  const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord) : [];
+  const scheduling = isRecord(flow.scheduling) ? flow.scheduling : {};
+  return {
+    id: text(flow.id),
+    nome: text(flow.name),
+    ativo: flow.ativo !== false,
+    trigger_type: text(flow.triggerType),
+    trigger_statuses: Array.isArray(flow.triggerStatuses) ? flow.triggerStatuses.map(text).filter(Boolean) : [],
+    trigger_duration_hours: typeof flow.triggerDurationHours === 'number' ? flow.triggerDurationHours : null,
+    steps: steps.map((step, index) => ({
+      id: text(step.id) || `step-${index + 1}`,
+      ordem: index,
+      action_type: text(step.actionType),
+      delay_value: typeof step.delayValue === 'number' ? step.delayValue : null,
+      delay_unit: text(step.delayUnit),
+      enabled: step.enabled !== false,
+    })),
+    scheduling: {
+      start_hour: text(scheduling.startHour) || null,
+      end_hour: text(scheduling.endHour) || null,
+      allowed_weekdays: Array.isArray(scheduling.allowedWeekdays) ? scheduling.allowedWeekdays : null,
+      daily_send_limit: typeof scheduling.dailySendLimit === 'number' ? scheduling.dailySendLimit : null,
+    },
+  };
+};
+
+async function loadAutomationIntegration(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('integration_settings')
+    .select('id,settings,updated_at')
+    .eq('slug', 'whatsapp_auto_contact')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+const automationSettingsView = (settings: AutomationSettings) => {
+  const scheduling = isRecord(settings.scheduling) ? settings.scheduling : {};
+  return {
+    enabled: settings.enabled !== false,
+    auto_send: settings.autoSend !== false,
+    scheduling: {
+      timezone: text(scheduling.timezone) || 'America/Sao_Paulo',
+      start_hour: text(scheduling.startHour) || '08:00',
+      end_hour: text(scheduling.endHour) || '19:00',
+      allowed_weekdays: Array.isArray(scheduling.allowedWeekdays) ? scheduling.allowedWeekdays : [1, 2, 3, 4, 5],
+      daily_send_limit: typeof scheduling.dailySendLimit === 'number' ? scheduling.dailySendLimit : null,
+    },
+    monitoring: isRecord(settings.monitoring)
+      ? { refresh_seconds: boundedInteger(settings.monitoring.refreshSeconds, 5, 3600), realtime_enabled: settings.monitoring.realtimeEnabled !== false }
+      : null,
+  };
 };
 
 async function audit(params: {

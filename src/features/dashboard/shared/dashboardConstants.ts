@@ -8,7 +8,10 @@ export const DASHBOARD_METRIC_TABS: TabItem<DashboardMetric>[] = [
 ];
 
 export const DASHBOARD_PERIOD_OPTIONS = [
+  { value: '7d', label: 'Últimos 7 dias' },
+  { value: '30d', label: 'Últimos 30 dias' },
   { value: 'mes-atual', label: 'Mês atual' },
+  { value: 'mes-anterior', label: 'Mês anterior' },
   { value: 'todo-periodo', label: 'Todo o período' },
   { value: 'personalizado', label: 'Personalizado' },
 ] as const;

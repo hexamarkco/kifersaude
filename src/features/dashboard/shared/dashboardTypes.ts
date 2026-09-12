@@ -1,5 +1,7 @@
 import type { Contract } from '../../contracts';
-import type { Lead } from '../../leads';
+import type { Lead, LeadStatusConfig } from '../../leads';
+import type { Interaction } from '../../activity';
+import type { Reminder } from '../../reminders';
 import type { TabNavigationOptions } from '../../../types/navigation';
 
 export type Holder = {
@@ -32,7 +34,13 @@ export type DashboardProps = {
 };
 
 export type DashboardMetric = 'leads' | 'contratos' | 'comissoes';
-export type DashboardPeriodFilter = 'mes-atual' | 'todo-periodo' | 'personalizado';
+export type DashboardPeriodFilter =
+  | '7d'
+  | '30d'
+  | 'mes-atual'
+  | 'mes-anterior'
+  | 'todo-periodo'
+  | 'personalizado';
 export type DashboardChartRange = 6 | 12;
 export type DashboardCalendarView = 'day' | 'week' | 'month';
 
@@ -104,3 +112,78 @@ export type DashboardContractNavigationHandler = (contract?: Contract | null) =>
 export type DashboardReminderRequestHandler = (options: ReminderRequest) => void | Promise<void>;
 
 export type DashboardSelectedLead = Lead | null;
+
+export type DashboardDateRange = {
+  start: Date;
+  end: Date;
+  label: string;
+};
+
+export type DashboardAttentionKind =
+  | 'overdue-follow-up'
+  | 'missing-next-step'
+  | 'stale-activity'
+  | 'close-ready';
+
+export type DashboardAttentionItem = {
+  kind: DashboardAttentionKind;
+  title: string;
+  description: string;
+  count: number;
+  leadIds: string[];
+  tone: 'danger' | 'warning' | 'info' | 'success';
+};
+
+export type DashboardStageHealth = {
+  status: string;
+  count: number;
+  share: number;
+  averageDays: number;
+};
+
+export type DashboardSourcePerformance = {
+  origin: string;
+  leads: number;
+  contracts: number;
+  conversion: number | null;
+};
+
+export type DashboardOperationsAnalysis = {
+  currentRange: DashboardDateRange | null;
+  comparisonRange: DashboardDateRange | null;
+  leadsCreated: number;
+  leadsCreatedPrevious: number | null;
+  contractsCreated: number;
+  contractsCreatedPrevious: number | null;
+  won: number;
+  wonPrevious: number | null;
+  lost: number;
+  lostPrevious: number | null;
+  conversion: number | null;
+  conversionPrevious: number | null;
+  activePipeline: number;
+  activeContracts: number;
+  averageCycleDays: number | null;
+  stageHealth: DashboardStageHealth[];
+  bottleneck: DashboardStageHealth | null;
+  attention: DashboardAttentionItem[];
+  sourcePerformance: DashboardSourcePerformance[];
+  dataCoverage: {
+    statusHistory: boolean;
+    interactions: boolean;
+    reminders: boolean;
+  };
+};
+
+export type DashboardOperationsInput = {
+  leads: Lead[];
+  contracts: Contract[];
+  reminders: Reminder[];
+  interactions: Interaction[];
+  statusHistory: import('../../leads').LeadStatusHistory[];
+  leadStatuses: LeadStatusConfig[];
+  periodFilter: DashboardPeriodFilter;
+  customStartDate: string;
+  customEndDate: string;
+  now?: Date;
+};

@@ -10,16 +10,11 @@ import {
   SAO_PAULO_TIMEZONE,
 } from "../../lib/dateUtils";
 import { useAuth } from "../../contexts/AuthContext";
-import LeadFunnel from "../../components/LeadFunnel";
 import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
-import {
-  calculateConversionRate,
-  getLeadStatusDistribution,
-  getOperadoraDistribution,
-} from "../../lib/analytics";
+import { getLeadStatusDistribution, getOperadoraDistribution } from "../../lib/analytics";
 import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
@@ -29,10 +24,14 @@ import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
-import { DashboardHeroCard } from "./components/DashboardHeroCard";
 import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
-import { DashboardSummaryCards } from "./components/DashboardSummaryCards";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
+import {
+  DashboardAttentionQueue,
+  DashboardPerformanceOverview,
+  DashboardPipelineHealth,
+  DashboardSourcePerformance,
+} from "./components/DashboardOperationsSections";
 import {
   DASHBOARD_CHART_PALETTE,
   mapOperadoraChartData,
@@ -53,7 +52,9 @@ import type {
   Dependent,
   Holder,
   ReminderRequest,
+  DashboardPeriodFilter,
 } from "./shared/dashboardTypes";
+import { buildDashboardOperationsAnalysis } from "./domain/dashboardOperations";
 import {
   insertDashboardReminders,
   listDashboardReminderContractIds,
@@ -80,6 +81,9 @@ export default function DashboardScreen({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
+  const [reminders, setReminders] = useState<import('../reminders').Reminder[]>([]);
+  const [interactions, setInteractions] = useState<import('../activity').Interaction[]>([]);
+  const [statusHistory, setStatusHistory] = useState<import('../leads').LeadStatusHistory[]>([]);
   const [hiddenLeadIdsForObserver, setHiddenLeadIdsForObserver] = useState<
     Set<string>
   >(new Set());
@@ -102,20 +106,18 @@ export default function DashboardScreen({
     revealDistance,
     ease,
   } = usePanelMotion();
-  const [periodFilter, setPeriodFilter] = useState<
-    "mes-atual" | "todo-periodo" | "personalizado"
-  >(() => {
+  const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>(() => {
     const urlValue = searchParams.get("periodFilter");
-    const validValues = ["mes-atual", "todo-periodo", "personalizado"];
+    const validValues: DashboardPeriodFilter[] = ["7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
 
-    if (urlValue && validValues.includes(urlValue)) {
-      return urlValue as "mes-atual" | "todo-periodo" | "personalizado";
+    if (urlValue && validValues.some((value) => value === urlValue)) {
+      return urlValue as DashboardPeriodFilter;
     }
 
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("dashboardPeriodFilter");
-      if (stored && validValues.includes(stored)) {
-        return stored as "mes-atual" | "todo-periodo" | "personalizado";
+      if (stored && validValues.some((value) => value === stored)) {
+        return stored as DashboardPeriodFilter;
       }
     }
 
@@ -184,16 +186,16 @@ export default function DashboardScreen({
   const loadingUi = useAdaptiveLoading(loading);
   const resolvePeriodFilter = useCallback(() => {
     const urlValue = searchParams.get("periodFilter");
-    const validValues = ["mes-atual", "todo-periodo", "personalizado"];
+    const validValues: DashboardPeriodFilter[] = ["7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
 
-    if (urlValue && validValues.includes(urlValue)) {
-      return urlValue as "mes-atual" | "todo-periodo" | "personalizado";
+    if (urlValue && validValues.some((value) => value === urlValue)) {
+      return urlValue as DashboardPeriodFilter;
     }
 
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("dashboardPeriodFilter");
-      if (stored && validValues.includes(stored)) {
-        return stored as "mes-atual" | "todo-periodo" | "personalizado";
+      if (stored && validValues.some((value) => value === stored)) {
+        return stored as DashboardPeriodFilter;
       }
     }
 
@@ -224,7 +226,7 @@ export default function DashboardScreen({
 
   const persistFilters = useCallback(
     (
-      nextPeriod: "mes-atual" | "todo-periodo" | "personalizado" = periodFilter,
+      nextPeriod: DashboardPeriodFilter = periodFilter,
       nextStart: string = customStartDate,
       nextEnd: string = customEndDate,
       nextOrigin: string = dashboardOriginFilter,
@@ -237,9 +239,16 @@ export default function DashboardScreen({
       }
 
       const params = new URLSearchParams(searchParams);
-      params.delete("periodFilter");
-      params.delete("customStartDate");
-      params.delete("customEndDate");
+      params.set("periodFilter", nextPeriod);
+      if (nextPeriod === "personalizado") {
+        if (nextStart) params.set("customStartDate", nextStart);
+        else params.delete("customStartDate");
+        if (nextEnd) params.set("customEndDate", nextEnd);
+        else params.delete("customEndDate");
+      } else {
+        params.delete("customStartDate");
+        params.delete("customEndDate");
+      }
 
       if (nextOrigin) {
         params.set("dashboardOrigin", nextOrigin);
@@ -446,6 +455,9 @@ export default function DashboardScreen({
         contracts: contractsData,
         holders: holdersData,
         dependents: dependentsData,
+        reminders: remindersData,
+        interactions: interactionsData,
+        statusHistory: statusHistoryData,
       } = await loadDashboardSnapshot();
 
       const mappedLeads = (leadsData || [])
@@ -475,6 +487,9 @@ export default function DashboardScreen({
       setContracts(contractsData || []);
       setHolders(holdersData || []);
       setDependents(dependentsData || []);
+      setReminders(remindersData || []);
+      setInteractions(interactionsData || []);
+      setStatusHistory(statusHistoryData || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       const message =
@@ -879,23 +894,20 @@ export default function DashboardScreen({
     sectionStagger,
   ]);
 
-  const getStartOfMonth = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  };
-
   const isCustomPeriodValid =
     periodFilter !== "personalizado" ||
     (customStartDate.length === 10 &&
       customEndDate.length === 10 &&
       validateDashboardDate(customStartDate) &&
-      validateDashboardDate(customEndDate));
+      validateDashboardDate(customEndDate) &&
+      parseDashboardDateString(customStartDate) <= parseDashboardDateString(customEndDate));
   const isEffectiveCustomPeriodValid =
     deferredPeriodFilter !== "personalizado" ||
     (deferredCustomStartDate.length === 10 &&
       deferredCustomEndDate.length === 10 &&
       validateDashboardDate(deferredCustomStartDate) &&
-      validateDashboardDate(deferredCustomEndDate));
+      validateDashboardDate(deferredCustomEndDate) &&
+      parseDashboardDateString(deferredCustomStartDate) <= parseDashboardDateString(deferredCustomEndDate));
 
   const filterByPeriod = useCallback(<T,>(items: T[], getDate: (item: T) => Date | null): T[] => {
     if (deferredPeriodFilter === "todo-periodo") return items;
@@ -916,22 +928,34 @@ export default function DashboardScreen({
       });
     }
 
-    const startOfMonth = getStartOfMonth();
+    const now = new Date();
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+    let start: Date;
+    let end = endOfToday;
+
+    if (deferredPeriodFilter === "7d") {
+      start = new Date(now);
+      start.setDate(start.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else if (deferredPeriodFilter === "30d") {
+      start = new Date(now);
+      start.setDate(start.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
+    } else if (deferredPeriodFilter === "mes-anterior") {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
     return items.filter((item) => {
       const itemDate = getDate(item);
       if (!itemDate) return true;
-      return itemDate >= startOfMonth;
+      return itemDate >= start && itemDate <= end;
     });
   }, [deferredCustomEndDate, deferredCustomStartDate, deferredPeriodFilter, isEffectiveCustomPeriodValid]);
-
-  const periodFilteredLeads = useMemo(
-    () =>
-      filterByPeriod(leads, (lead) => {
-        const dateValue = lead.data_criacao || lead.created_at;
-        return parseDashboardDateValue(dateValue);
-      }),
-    [filterByPeriod, leads],
-  );
 
   const visibleLeadOrigins = useMemo(
     () =>
@@ -948,9 +972,9 @@ export default function DashboardScreen({
     [options.lead_responsavel],
   );
 
-  const filteredLeads = useMemo(
+  const dashboardScopedLeads = useMemo(
     () =>
-      periodFilteredLeads.filter((lead) => {
+      leads.filter((lead) => {
         if (
           deferredDashboardOriginFilter &&
           lead.origem !== deferredDashboardOriginFilter
@@ -970,8 +994,13 @@ export default function DashboardScreen({
     [
       deferredDashboardOriginFilter,
       deferredDashboardOwnerFilter,
-      periodFilteredLeads,
+      leads,
     ],
+  );
+
+  const filteredLeads = useMemo(
+    () => filterByPeriod(dashboardScopedLeads, (lead) => parseDashboardDateValue(lead.data_criacao || lead.created_at)),
+    [dashboardScopedLeads, filterByPeriod],
   );
 
   const activeLeadStatusNameSet = useMemo(
@@ -1032,6 +1061,33 @@ export default function DashboardScreen({
     });
   }, [dashboardScopedContracts, filterByPeriod]);
 
+  const dashboardOperations = useMemo(
+    () =>
+      buildDashboardOperationsAnalysis({
+        leads: dashboardScopedLeads,
+        contracts: dashboardScopedContracts,
+        reminders: reminders.filter((reminder) => !reminder.lead_id || leadsById.has(reminder.lead_id)),
+        interactions: interactions.filter((interaction) => !interaction.lead_id || leadsById.has(interaction.lead_id)),
+        statusHistory: statusHistory.filter((history) => leadsById.has(history.lead_id)),
+        leadStatuses,
+        periodFilter: deferredPeriodFilter,
+        customStartDate: deferredCustomStartDate,
+        customEndDate: deferredCustomEndDate,
+      }),
+    [
+      dashboardScopedContracts,
+      dashboardScopedLeads,
+      deferredCustomEndDate,
+      deferredCustomStartDate,
+      deferredPeriodFilter,
+      interactions,
+      leadStatuses,
+      leadsById,
+      reminders,
+      statusHistory,
+    ],
+  );
+
   const calendarScopedContractIds = useMemo(
     () => new Set(dashboardScopedContracts.map((contract) => contract.id)),
     [dashboardScopedContracts],
@@ -1059,12 +1115,6 @@ export default function DashboardScreen({
     [calendarHolders],
   );
 
-  const totalLeads = activeLeads.length;
-  const leadsAtivos = activeLeads.filter(
-    (lead) => !["Fechado", "Perdido"].includes(lead.status ?? ""),
-  ).length;
-
-  const contratosAtivos = filteredContracts.filter((c) => c.status === "Ativo");
   const calendarActiveContracts = useMemo(
     () =>
       dashboardScopedContracts.filter(
@@ -1072,19 +1122,6 @@ export default function DashboardScreen({
       ),
     [dashboardScopedContracts],
   );
-  const comissaoTotal = contratosAtivos.reduce(
-    (sum, c) => sum + (c.comissao_prevista || 0),
-    0,
-  );
-
-  const mensalidadeTotal = contratosAtivos.reduce(
-    (sum, c) => sum + (c.mensalidade_total || 0),
-    0,
-  );
-
-  const ticketMedio =
-    contratosAtivos.length > 0 ? mensalidadeTotal / contratosAtivos.length : 0;
-
   const addVariationToSeries = useCallback(
     (series: { label: string; value: number; date: Date }[]) =>
       series.map((point, index) => {
@@ -1106,17 +1143,17 @@ export default function DashboardScreen({
   const monthlyLeadSeries = useMemo(
     () =>
       addVariationToSeries(
-        aggregateDashboardMonthlyTotals(filteredLeads, (lead) =>
+        aggregateDashboardMonthlyTotals(dashboardScopedLeads, (lead) =>
           parseDashboardDateValue(lead.data_criacao || lead.created_at),
         ),
       ),
-    [addVariationToSeries, filteredLeads],
+    [addVariationToSeries, dashboardScopedLeads],
   );
 
   const monthlyContractSeries = useMemo(
     () =>
       addVariationToSeries(
-        aggregateDashboardMonthlyTotals(filteredContracts, (contract) =>
+        aggregateDashboardMonthlyTotals(dashboardScopedContracts, (contract) =>
           parseDashboardDateValue(
             contract.data_inicio ||
               contract.previsao_recebimento_comissao ||
@@ -1124,14 +1161,14 @@ export default function DashboardScreen({
           ),
         ),
       ),
-    [addVariationToSeries, filteredContracts],
+    [addVariationToSeries, dashboardScopedContracts],
   );
 
   const monthlyCommissionSeries = useMemo(
     () =>
       addVariationToSeries(
         aggregateDashboardMonthlyTotals(
-          filteredContracts,
+          dashboardScopedContracts,
           (contract) =>
             parseDashboardDateValue(
               contract.data_inicio ||
@@ -1141,7 +1178,7 @@ export default function DashboardScreen({
           (contract) => contract.comissao_prevista || 0,
         ),
       ),
-    [addVariationToSeries, filteredContracts],
+    [addVariationToSeries, dashboardScopedContracts],
   );
 
   const selectedMonthlySeries = useMemo(() => {
@@ -1183,11 +1220,6 @@ export default function DashboardScreen({
       return { ...point, variation };
     });
   }, [chartRangeInMonths, selectedMonthlySeries]);
-
-  const conversionRate = calculateConversionRate(
-    activeLeads,
-    filteredContracts,
-  );
 
   const leadStatusData = getLeadStatusDistribution(
     activeLeads.filter(
@@ -1945,7 +1977,7 @@ export default function DashboardScreen({
   };
 
   const handleDashboardPeriodFilterChange = (
-    nextPeriod: "mes-atual" | "todo-periodo" | "personalizado",
+    nextPeriod: DashboardPeriodFilter,
   ) => {
     setPeriodFilter(nextPeriod);
 
@@ -1979,6 +2011,10 @@ export default function DashboardScreen({
     if (!leadId) return;
     const lead = leads.find((item) => item.id === leadId) || null;
     setSelectedLead(lead);
+  };
+
+  const handleOpenLeadInList = (leadId: string) => {
+    onNavigateToTab?.("leads", { leadIdFilter: leadId });
   };
 
   const handleCreateReminderRequest = async (options: ReminderRequest) => {
@@ -2056,18 +2092,13 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
-        <DashboardSummaryCards
-          isObserver={isObserver}
-          leadsAtivos={leadsAtivos}
-          totalLeads={totalLeads}
-          contratosAtivosCount={contratosAtivos.length}
-          comissaoTotal={comissaoTotal}
-          conversionRate={conversionRate}
-          ticketMedio={ticketMedio}
-        />
+        <DashboardPerformanceOverview analysis={dashboardOperations} />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
+          <DashboardPipelineHealth analysis={dashboardOperations} onNavigateToStatus={handleLeadStatusSegmentClick} />
+          <DashboardAttentionQueue analysis={dashboardOperations} leadsById={leadsById} onNavigateToLead={handleOpenLeadInList} />
+        </div>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
           <DashboardTrendSection
-            periodFilter={periodFilter}
             selectedMetric={selectedMetric}
             chartRangeInMonths={chartRangeInMonths}
             displayedMonthlySeries={displayedMonthlySeries}
@@ -2075,12 +2106,10 @@ export default function DashboardScreen({
             previousMonthlyPoint={previousMonthlyPoint}
             highestMonthlyPoint={highestMonthlyPoint}
             averageMonthlyValue={averageMonthlyValue}
-            onPeriodFilterChange={handleDashboardPeriodFilterChange}
             onSelectedMetricChange={setSelectedMetric}
             onChartRangeChange={setChartRangeInMonths}
           />
-
-          <LeadFunnel leads={activeLeads} />
+          <DashboardSourcePerformance analysis={dashboardOperations} />
         </div>
         <DashboardDistributionSection
           leadStatusData={leadStatusData}
@@ -2111,8 +2140,6 @@ export default function DashboardScreen({
             onCreateReminder={handleCreateReminderRequest}
           />
         )}
-        <DashboardHeroCard />
-
         {selectedContract && (
           <ContractDetails
             contract={selectedContract}

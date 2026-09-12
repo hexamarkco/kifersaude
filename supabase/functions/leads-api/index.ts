@@ -29,6 +29,7 @@ import {
   toZonedDate,
   type AutoContactSchedulingSettings,
 } from './domain/scheduling.ts';
+import { resolveContinuationTriggerMessageAt } from './domain/inactivity-continuation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -2542,12 +2543,16 @@ async function scheduleNextFlowStep({
   const nextStep = flow.steps[completedJob.step_order + 1];
   if (!nextStep) return null;
 
-  const { data: existing } = await supabase
+  const existingStepQuery = supabase
     .from('auto_contact_flow_jobs')
     .select('id')
     .eq('lead_id', completedJob.lead_id)
     .eq('flow_id', flow.id)
-    .eq('step_order', completedJob.step_order + 1)
+    .eq('step_order', completedJob.step_order + 1);
+  const enrollmentScopedQuery = completedJob.enrollment_id
+    ? existingStepQuery.eq('enrollment_id', completedJob.enrollment_id)
+    : existingStepQuery.is('enrollment_id', null);
+  const { data: existing } = await enrollmentScopedQuery
     .limit(1)
     .maybeSingle();
   if (existing) return null;
@@ -2599,6 +2604,12 @@ async function scheduleNextFlowStep({
   if (nextStep.actionType === 'send_message' && Array.isArray(nextStep.messages) && nextStep.messages.length > 0) {
     finalActionPayload.messages = nextStep.messages;
   }
+  const continuationTriggerMessageAt = resolveContinuationTriggerMessageAt({
+    triggerType: flow.triggerType,
+    actionType: completedJob.action_type,
+    completedAt: new Date(),
+    inheritedTriggerMessageAt: completedJob.trigger_message_at ?? null,
+  });
 
   await supabase.from('auto_contact_flow_jobs').insert({
     lead_id: completedJob.lead_id,
@@ -2615,7 +2626,7 @@ async function scheduleNextFlowStep({
     status: 'pending',
     enrollment_id: completedJob.enrollment_id ?? null,
     trigger_message_id: completedJob.trigger_message_id ?? null,
-    trigger_message_at: completedJob.trigger_message_at ?? null,
+    trigger_message_at: continuationTriggerMessageAt,
   });
 
   return scheduledAt;

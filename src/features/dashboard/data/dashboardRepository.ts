@@ -4,7 +4,9 @@ import {
   type Database,
 } from '../../../infrastructure/supabase';
 import type { Contract } from '../../contracts';
-import type { Lead } from '../../leads';
+import type { Interaction } from '../../activity';
+import type { Lead, LeadStatusHistory } from '../../leads';
+import type { Reminder } from '../../reminders';
 import type { Dependent, Holder } from '../shared/dashboardTypes';
 
 export type DashboardSnapshot = {
@@ -12,6 +14,9 @@ export type DashboardSnapshot = {
   contracts: Contract[];
   holders: Holder[];
   dependents: Dependent[];
+  reminders: Reminder[];
+  interactions: Interaction[];
+  statusHistory: LeadStatusHistory[];
 };
 
 export type DashboardRealtimePayload<T> = {
@@ -33,7 +38,7 @@ export type DashboardReminderSummary = Pick<
 >;
 
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
-  const [leads, contracts, holders, dependents] = await Promise.all([
+  const [leads, contracts, holders, dependents, reminders, interactions, statusHistory] = await Promise.all([
     fetchAllPages<Lead>(async (from, to) => databaseClient
       .from('leads')
       .select('*')
@@ -56,9 +61,27 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
       .select('*')
       .range(from, to)
       .overrideTypes<Dependent[], { merge: false }>()),
+    fetchAllPages<Reminder>(async (from, to) => databaseClient
+      .from('reminders')
+      .select('*')
+      .order('data_lembrete', { ascending: false })
+      .range(from, to)
+      .overrideTypes<Reminder[], { merge: false }>()),
+    fetchAllPages<Interaction>(async (from, to) => databaseClient
+      .from('interactions')
+      .select('*')
+      .order('data_interacao', { ascending: false })
+      .range(from, to)
+      .overrideTypes<Interaction[], { merge: false }>()),
+    fetchAllPages<LeadStatusHistory>(async (from, to) => databaseClient
+      .from('lead_status_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, to)
+      .overrideTypes<LeadStatusHistory[], { merge: false }>()),
   ]);
 
-  return { leads, contracts, holders, dependents };
+  return { leads, contracts, holders, dependents, reminders, interactions, statusHistory };
 }
 
 export function subscribeToDashboardLeads(

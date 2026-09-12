@@ -1,27 +1,25 @@
-import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react';
+import { BadgePercent, Calendar, Clock, TrendingUp } from 'lucide-react';
 
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
 import {
   SectionHeader,
   Surface,
   FilterSelect,
+  SegmentedControl,
 } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
   DASHBOARD_METRIC_COLORS,
   DASHBOARD_METRIC_TABS,
-  DASHBOARD_PERIOD_OPTIONS,
 } from '../shared/dashboardConstants';
 import { formatDashboardMetricValue, resolveDashboardVariationTone } from '../shared/dashboardUtils';
 import type {
   DashboardChartRange,
   DashboardMetric,
   DashboardMonthlyPoint,
-  DashboardPeriodFilter,
 } from '../shared/dashboardTypes';
 
 type DashboardTrendSectionProps = {
-  periodFilter: DashboardPeriodFilter;
   selectedMetric: DashboardMetric;
   chartRangeInMonths: DashboardChartRange;
   displayedMonthlySeries: DashboardMonthlyPoint[];
@@ -29,13 +27,11 @@ type DashboardTrendSectionProps = {
   previousMonthlyPoint?: DashboardMonthlyPoint;
   highestMonthlyPoint?: DashboardMonthlyPoint;
   averageMonthlyValue: number;
-  onPeriodFilterChange: (value: DashboardPeriodFilter) => void;
   onSelectedMetricChange: (value: DashboardMetric) => void;
   onChartRangeChange: (value: DashboardChartRange) => void;
 };
 
 export function DashboardTrendSection({
-  periodFilter,
   selectedMetric,
   chartRangeInMonths,
   displayedMonthlySeries,
@@ -43,7 +39,6 @@ export function DashboardTrendSection({
   previousMonthlyPoint,
   highestMonthlyPoint,
   averageMonthlyValue,
-  onPeriodFilterChange,
   onSelectedMetricChange,
   onChartRangeChange,
 }: DashboardTrendSectionProps) {
@@ -90,22 +85,10 @@ export function DashboardTrendSection({
       <SectionHeader
         eyebrow="Analytics"
         title="Evolução mensal"
-        description="Tendência por mês considerando o período selecionado e os filtros atuais."
+        description="Histórico mensal respeitando origem e responsável selecionados."
       />
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <FilterSelect
-          icon={Filter}
-          value={periodFilter}
-          onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-          placeholder="Mês atual"
-          includePlaceholderOption={false}
-          options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
-            value: option.value,
-            label: option.label,
-          }))}
-        />
-
+      <div className="mt-4 flex justify-end">
         <FilterSelect
           icon={Clock}
           value={String(chartRangeInMonths)}
@@ -119,22 +102,13 @@ export function DashboardTrendSection({
         />
       </div>
 
-      <div className="mt-2 flex items-center gap-1 rounded-full bg-[var(--bg-hover)] p-1">
-        {DASHBOARD_METRIC_TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSelectedMetricChange(item.id)}
-            className={
-              item.id === selectedMetric
-                ? 'flex-1 whitespace-nowrap rounded-full bg-[var(--text-primary)] px-3.5 py-2 text-xs font-medium text-[var(--text-inverse)] transition'
-                : 'flex-1 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] transition'
-            }
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        className="mt-2 w-fit max-w-full"
+        aria-label="Métrica da evolução mensal"
+        items={DASHBOARD_METRIC_TABS}
+        value={selectedMetric}
+        onChange={onSelectedMetricChange}
+      />
 
       <div className="mt-4">
         <MonthlyTrendChart

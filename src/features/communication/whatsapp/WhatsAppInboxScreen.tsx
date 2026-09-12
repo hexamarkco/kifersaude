@@ -10017,6 +10017,18 @@ export default function WhatsAppInboxScreen() {
                           </div>
                         </PopoverContent>
                       </Popover>
+                      {selectedChat && voiceRecordingState === 'idle' && (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleMessageModalOpen(true)}
+                          disabled={generatingFollowUp || sending}
+                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label="Agendar mensagem"
+                          title="Agendar mensagem para envio futuro"
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
@@ -10102,18 +10114,6 @@ export default function WhatsAppInboxScreen() {
                     </div>
 
                     <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
-                      {selectedChat && voiceRecordingState === 'idle' && (
-                        <button
-                          type="button"
-                          onClick={() => setScheduleMessageModalOpen(true)}
-                          disabled={generatingFollowUp || sending}
-                          className="whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label="Agendar mensagem"
-                          title="Agendar mensagem para envio futuro"
-                        >
-                          <Calendar className="h-5 w-5" />
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={handleComposerSubmit}

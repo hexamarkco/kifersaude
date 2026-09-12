@@ -1368,7 +1368,7 @@ export default function LeadsManager({
           </Toolbar>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="kds-leads-filter-grid">
               {[
                 {
                   id: "status",
@@ -1408,9 +1408,9 @@ export default function LeadsManager({
               })}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <details className="group relative w-full sm:w-auto">
-                <summary className="cursor-pointer list-none">
+            <div className="kds-leads-filter-secondary">
+              <details className="kds-leads-advanced-filters group">
+                <summary className="kds-leads-advanced-summary cursor-pointer list-none">
                   <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between gap-3 px-4 py-2 transition-colors sm:inline-flex sm:justify-start">
                     <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                       <Filter className="w-4 h-4" />
@@ -1424,7 +1424,7 @@ export default function LeadsManager({
                     </span>
                   </Surface>
                 </summary>
-                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 grid w-full max-w-full grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+                <Surface variant="muted" padding="none" className="kds-op-disclosure-content kds-leads-advanced-panel mt-3 grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
                   {[
                     {
                       id: "tags",
@@ -1484,7 +1484,7 @@ export default function LeadsManager({
                 </Surface>
               </details>
 
-              <Field label="Ordenar por" className="w-full sm:w-auto sm:min-w-[14rem]">
+              <Field label="Ordenar por" className="kds-leads-sort-field">
                 <div className="flex items-center gap-2">
                   <FilterSelect
                     icon={Filter}
@@ -1578,101 +1578,102 @@ export default function LeadsManager({
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <Surface variant="muted" padding="sm" className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="kds-op-bulk-title">
+                <Surface variant="muted" padding="sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="kds-op-bulk-title shrink-0">
                       {selectedLeadIds.length} lead(s) selecionado(s)
                     </span>
+
+                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                      <div className="min-w-[11rem] flex-1 sm:flex-initial sm:w-44">
+                        <FilterSelect
+                          icon={Tag}
+                          value={bulkStatus}
+                          onChange={(value) => setBulkStatus(value)}
+                          placeholder="Novo status"
+                          includePlaceholderOption={false}
+                          size="sm"
+                          disabled={isBulkUpdating}
+                          options={[
+                            { value: "", label: "Novo status" },
+                            ...activeLeadStatuses.map((status) => ({
+                              value: status.nome,
+                              label: status.nome,
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <div className="min-w-[11rem] flex-1 sm:flex-initial sm:w-44">
+                        <FilterSelect
+                          icon={UserCircle}
+                          value={bulkResponsavel}
+                          onChange={(value) => setBulkResponsavel(value)}
+                          placeholder="Responsável"
+                          includePlaceholderOption={false}
+                          size="sm"
+                          disabled={isBulkUpdating}
+                          options={[
+                            { value: "", label: "Responsável" },
+                            ...responsavelOptions.map((option) => ({
+                              value: option.value,
+                              label: option.label,
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <DateTimePicker
+                        type="datetime-local"
+                        value={bulkProximoRetorno}
+                        onChange={(event) => setBulkProximoRetorno(event.target.value)}
+                        size="sm"
+                        className="min-w-[13rem] flex-1 sm:flex-initial sm:w-52"
+                        disabled={isBulkUpdating}
+                        placeholder="Próximo retorno"
+                      />
+
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                        <Button
+                          type="button"
+                          onClick={handleBulkStatusApply}
+                          disabled={!bulkStatus || isBulkUpdating}
+                          variant="primary"
+                          size="sm"
+                        >
+                          {isBulkUpdating ? "Atualizando..." : "Aplicar status"}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleBulkDetailsApply}
+                          disabled={
+                            isBulkUpdating ||
+                            (!bulkResponsavel && !bulkProximoRetorno)
+                          }
+                          variant="soft"
+                          size="sm"
+                        >
+                          {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleExportSelectedLeads}
+                          disabled={isBulkUpdating}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          <Download className="kds-control-icon" />
+                          <span>Exportar XLSX</span>
+                        </Button>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
                       onClick={clearSelection}
                       disabled={isBulkUpdating}
-                      className="text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="shrink-0 text-xs font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Limpar seleção
                     </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="w-full sm:w-44">
-                      <FilterSelect
-                        icon={Tag}
-                        value={bulkStatus}
-                        onChange={(value) => setBulkStatus(value)}
-                        placeholder="Novo status"
-                        includePlaceholderOption={false}
-                        size="sm"
-                        disabled={isBulkUpdating}
-                        options={[
-                          { value: "", label: "Novo status" },
-                          ...activeLeadStatuses.map((status) => ({
-                            value: status.nome,
-                            label: status.nome,
-                          })),
-                        ]}
-                      />
-                    </div>
-                    <div className="w-full sm:w-44">
-                      <FilterSelect
-                        icon={UserCircle}
-                        value={bulkResponsavel}
-                        onChange={(value) => setBulkResponsavel(value)}
-                        placeholder="Responsável"
-                        includePlaceholderOption={false}
-                        size="sm"
-                        disabled={isBulkUpdating}
-                        options={[
-                          { value: "", label: "Responsável" },
-                          ...responsavelOptions.map((option) => ({
-                            value: option.value,
-                            label: option.label,
-                          })),
-                        ]}
-                      />
-                    </div>
-                    <DateTimePicker
-                      type="datetime-local"
-                      value={bulkProximoRetorno}
-                      onChange={(event) => setBulkProximoRetorno(event.target.value)}
-                      size="sm"
-                      className="w-full sm:w-52"
-                      disabled={isBulkUpdating}
-                      placeholder="Próximo retorno"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      onClick={handleBulkStatusApply}
-                      disabled={!bulkStatus || isBulkUpdating}
-                      variant="primary"
-                      size="sm"
-                    >
-                      {isBulkUpdating ? "Atualizando..." : "Aplicar status"}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleBulkDetailsApply}
-                      disabled={
-                        isBulkUpdating ||
-                        (!bulkResponsavel && !bulkProximoRetorno)
-                      }
-                      variant="soft"
-                      size="sm"
-                    >
-                      {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleExportSelectedLeads}
-                      disabled={isBulkUpdating}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      <Download className="kds-control-icon" />
-                      <span>Exportar XLSX</span>
-                    </Button>
                   </div>
                 </Surface>
             )}

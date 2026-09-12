@@ -157,6 +157,7 @@ import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 import WhatsAppScheduleMessageModal from './components/WhatsAppScheduleMessageModal';
+import WhatsAppScheduledMessagesPanel from './components/WhatsAppScheduledMessagesPanel';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
@@ -10513,8 +10514,18 @@ export default function WhatsAppInboxScreen() {
             initialText={messageDraft}
             onScheduled={() => {
               setMessageDraft('');
+              setScheduledMessagesPanelOpen(false);
               toast.success('Mensagem agendada com sucesso!');
             }}
+          />
+        )}
+
+        {selectedChat && (
+          <WhatsAppScheduledMessagesPanel
+            channelId={selectedChat.channel_id}
+            isOpen={scheduledMessagesPanelOpen}
+            onClose={() => setScheduledMessagesPanelOpen(false)}
+            onScheduleNew={() => setScheduleMessageModalOpen(true)}
           />
         )}
 

@@ -227,6 +227,39 @@
   box-shadow: var(--shadow-card);
 }
 
+.kds-agenda-status-switcher {
+  width: 100%;
+  min-width: 0;
+}
+
+.kds-agenda-status-switcher .kds-tabs-list {
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.kds-agenda-status-switcher .kds-tab {
+  flex: 0 0 auto;
+  gap: var(--space-2);
+}
+
+.kds-agenda-status-switcher .kds-tab > span {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+@media (min-width: 1024px) {
+  .kds-agenda-status-switcher {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .kds-agenda-status-switcher .kds-tabs-list {
+    width: fit-content;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+}
+
 .kds-calendar-grid {
   width: 100%;
   min-width: 0;
@@ -402,6 +435,50 @@
 .kds-op-disclosure-trigger {
   border-radius: var(--radius-full);
   color: var(--text-secondary);
+}
+
+.kds-leads-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 20rem));
+  justify-content: start;
+  gap: var(--space-3);
+}
+
+.kds-leads-filter-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.kds-leads-advanced-filters {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.kds-leads-advanced-filters[open] {
+  flex: 1 1 38rem;
+  width: auto;
+  max-width: 56rem;
+}
+
+.kds-leads-advanced-summary {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.kds-leads-advanced-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 56rem;
+}
+
+.kds-leads-sort-field {
+  flex: 0 1 17.5rem;
+  width: 17.5rem;
+  min-width: min(100%, 14rem);
 }
 
 .kds-op-disclosure-content {
@@ -604,6 +681,36 @@
 }
 
 @media (max-width: 767px) {
+  .kds-leads-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kds-leads-filter-secondary {
+    flex-direction: column;
+  }
+
+  .kds-leads-advanced-filters,
+  .kds-leads-advanced-filters[open] {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .kds-leads-advanced-summary {
+    width: 100%;
+  }
+
+  .kds-leads-advanced-panel {
+    max-width: 100%;
+  }
+
+  .kds-leads-sort-field {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .kds-op-pagination {
     grid-template-columns: minmax(0, 1fr);
     padding: 0.625rem;

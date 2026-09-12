@@ -1294,6 +1294,25 @@
   min-width: 0;
 }
 
+/* Leads view switcher fills narrow screens, but stays content-sized on desktop. */
+.kds-leads-view-tabs {
+  width: 100%;
+}
+
+.kds-leads-view-tabs .kds-tabs-list {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .kds-leads-view-tabs {
+    width: fit-content;
+  }
+
+  .kds-leads-view-tabs .kds-tabs-list {
+    width: fit-content;
+  }
+}
+
 .kds-tabs-list-underline {
   gap: var(--space-6);
   border-bottom: 1px solid var(--border-strong);

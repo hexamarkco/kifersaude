@@ -40,6 +40,8 @@ export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
 export type { FilterTriggerProps } from './components/FilterTrigger';
+export { LinkButton } from './components/LinkButton';
+export type { LinkButtonProps } from './components/LinkButton';
 export { Drawer, DrawerBody, DrawerFooter, DrawerHeader } from './components/Drawer';
 export type { DrawerProps, DrawerSide, DrawerSize, DrawerBodyProps, DrawerFooterProps, DrawerHeaderProps } from './components/Drawer';
 export { default as DateTimePicker } from './components/DateTimePicker';

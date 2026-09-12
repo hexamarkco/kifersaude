@@ -1439,8 +1439,9 @@ export default function AgendaScreen() {
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
+              className="kds-agenda-status-switcher"
               listClassName="flex-nowrap overflow-x-auto pb-1"
-              triggerClassName="min-w-[7.5rem] shrink-0 whitespace-nowrap"
+              triggerClassName="whitespace-nowrap"
             />
             <div className="kds-agenda-filter-actions flex flex-nowrap items-center gap-2">
               <Button onClick={goToToday} variant="secondary" size="md" className="shrink-0 whitespace-nowrap">Hoje</Button>

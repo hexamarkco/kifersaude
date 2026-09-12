@@ -2,8 +2,8 @@ import { BookOpen, Plus } from "lucide-react";
 
 import {
   Button,
+  LinkButton,
   PageHeader,
-  getPanelButtonClass,
   SegmentedControl,
 } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
@@ -29,20 +29,18 @@ export function LeadsHeader({
       description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
       actions={(
         <>
-          <a
+          <LinkButton
             href="/api-docs.html"
             target="_blank"
             rel="noopener noreferrer"
-            className={getPanelButtonClass({
-              variant: "text",
-              size: "sm",
-              className: "h-auto min-h-0 w-auto px-0 py-1 text-sm",
-            })}
+            variant="text"
+            size="sm"
+            className="h-auto min-h-0 w-auto px-0 py-1 text-sm"
             title="Abrir documentacao da API"
           >
             <BookOpen className="h-3.5 w-3.5" />
             <span>API Docs</span>
-          </a>
+          </LinkButton>
           <Button
             type="button"
             onClick={onCreateLead}
@@ -66,8 +64,8 @@ export function LeadsHeader({
         value={viewMode}
         onChange={onViewModeChange}
         size="sm"
-        className="kds-leads-view-tabs w-full md:w-auto"
-        listClassName="w-full min-w-[17rem] max-w-full flex-nowrap md:w-auto md:min-w-0"
+        className="kds-leads-view-tabs"
+        listClassName="min-w-[17rem] max-w-full flex-nowrap md:min-w-0"
         triggerClassName="min-w-0 flex-1 whitespace-nowrap px-3 md:flex-initial md:px-4"
       />
     </PageHeader>

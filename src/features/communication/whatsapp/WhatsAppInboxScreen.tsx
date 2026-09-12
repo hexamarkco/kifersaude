@@ -2038,6 +2038,7 @@ export default function WhatsAppInboxScreen() {
   const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
   const [scheduleMessageModalOpen, setScheduleMessageModalOpen] = useState(false);
+  const [scheduledMessagesPanelOpen, setScheduledMessagesPanelOpen] = useState(false);
   const [startChatQuery, setStartChatQuery] = useState('');
   const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
   const [savedContactsLoading, setSavedContactsLoading] = useState(false);
@@ -10020,7 +10021,7 @@ export default function WhatsAppInboxScreen() {
                       {selectedChat && voiceRecordingState === 'idle' && (
                         <button
                           type="button"
-                          onClick={() => setScheduleMessageModalOpen(true)}
+                          onClick={() => setScheduledMessagesPanelOpen(true)}
                           disabled={generatingFollowUp || sending}
                           className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                           aria-label="Agendar mensagem"

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, Loader2, Trash2, X } from 'lucide-react';
+import { Calendar, Clock, Loader2, Plus, Trash2, X } from 'lucide-react';
 
-import { IconButton } from '../../../../design-system';
+import { Button, IconButton } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
@@ -11,6 +11,7 @@ type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
   isOpen: boolean;
   onClose: () => void;
+  onScheduleNew?: () => void;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,6 +43,7 @@ export default function WhatsAppScheduledMessagesPanel({
   channelId,
   isOpen,
   onClose,
+  onScheduleNew,
 }: WhatsAppScheduledMessagesPanelProps) {
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,9 +127,17 @@ export default function WhatsAppScheduledMessagesPanel({
               <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) encontrada(s)</p>
             </div>
           </div>
-          <IconButton onClick={onClose} aria-label="Fechar">
-            <X className="kds-control-icon" />
-          </IconButton>
+          <div className="flex items-center gap-2">
+            {onScheduleNew && (
+              <Button onClick={onScheduleNew} size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Agendar nova
+              </Button>
+            )}
+            <IconButton onClick={onClose} aria-label="Fechar">
+              <X className="kds-control-icon" />
+            </IconButton>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -139,9 +149,15 @@ export default function WhatsAppScheduledMessagesPanel({
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
               <p className="text-[var(--text-muted)]">Nenhuma mensagem agendada</p>
-              <p className="text-sm text-[var(--text-subtle)] mt-1">
-                Use o botão de agendamento no composer para criar uma
+              <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
+                Agende mensagens para envio automático
               </p>
+              {onScheduleNew && (
+                <Button onClick={onScheduleNew} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agendar nova mensagem
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-6">

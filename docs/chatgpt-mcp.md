@@ -33,6 +33,11 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_list_reminders` / `kifer_update_reminder` | filtros fechados / campos fechados | Consulta ou altera lembretes sem acesso genérico à tabela. |
 | `kifer_complete_reminder` / `kifer_cancel_reminder` | `reminder_id` | Conclui ou cancela sem exclusão física, preservando auditoria e a sincronização do próximo retorno. |
 | `kifer_get_next_follow_up` | `lead_id` | Retorna o próximo lembrete pendente de retorno/follow-up. |
+| `kifer_bulk_cancel_automation_jobs` | filtros fechados de fila | Cancela logicamente no máximo 100 jobs pendentes, preservando histórico e retornando itens ignorados/erros. |
+| `kifer_create_followup_flow` | gatilho e janela comercial fechados | Cria um fluxo vazio; não aceita URLs, webhooks ou configurações técnicas. |
+| `kifer_create_followup_step` | ação comercial permitida e configuração fechada | Adiciona somente texto, alteração de status, criação de tarefa ou ativação de atendimento autônomo. |
+| `kifer_update_followup_step_message` | `flow_id`, `step_id`, `message` | Troca exclusivamente o texto de uma etapa `send_message`. |
+| `kifer_clone_followup_flow` | fluxo de origem e sobrescritas fechadas | Copia fluxo e etapas com novos IDs; bloqueia etapas destrutivas, webhook e e-mail. |
 
 O envio de WhatsApp requer `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar uma segunda mensagem.
 

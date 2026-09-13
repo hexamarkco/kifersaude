@@ -15,7 +15,12 @@ type ActionErrorCode =
   | 'INVALID_STATUS' | 'MESSAGE_EMPTY' | 'MESSAGE_TOO_LONG' | 'RATE_LIMITED'
   | 'DUPLICATE_REQUEST' | 'PROVIDER_ERROR' | 'INVALID_INPUT' | 'INTERNAL_ERROR'
   | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'JOB_ALREADY_EXECUTED'
-  | 'INVALID_ASSIGNEE';
+  | 'INVALID_ASSIGNEE' | 'LIMIT_EXCEEDED';
+
+const FLOW_TRIGGER_TYPES = new Set(['lead_created', 'status_changed', 'status_duration', 'inactivity_duration']);
+const STEP_ACTION_TYPES = new Set(['send_message', 'update_status', 'create_task', 'activate_autonomous_service']);
+const DELAY_UNITS = new Set(['seconds', 'minutes', 'hours', 'days']);
+const MAX_BULK_CANCEL_JOBS = 100;
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const safeUuid = (value: unknown) => UUID.test(text(value));
@@ -120,6 +125,52 @@ const automationSettingsView = (settings: AutomationSettings) => {
     monitoring: isRecord(settings.monitoring)
       ? { refresh_seconds: boundedInteger(settings.monitoring.refreshSeconds, 5, 3600), realtime_enabled: settings.monitoring.realtimeEnabled !== false }
       : null,
+  };
+};
+
+const validateFlowFields = async (supabase: SupabaseClient, params: Record<string, unknown>, fallback?: Record<string, unknown>): Promise<{ flow?: Record<string, unknown>; error?: McpWriteResult }> => {
+  const name = text(params.nome ?? fallback?.name).slice(0, MAX_SHORT_TEXT_LENGTH);
+  const active = params.ativo === undefined ? fallback?.ativo !== false : params.ativo;
+  const triggerType = text(params.trigger_type ?? fallback?.triggerType);
+  const triggerStatuses = Array.isArray(params.trigger_statuses)
+    ? params.trigger_statuses.map(text).filter(Boolean)
+    : Array.isArray(fallback?.triggerStatuses) ? fallback.triggerStatuses.map(text).filter(Boolean) : [];
+  const duration = params.trigger_duration_hours === undefined
+    ? boundedInteger(fallback?.triggerDurationHours, 0, 8760) ?? 0
+    : boundedInteger(params.trigger_duration_hours, 0, 8760);
+  const schedulingFallback = isRecord(fallback?.scheduling) ? fallback.scheduling : {};
+  const startHour = validHour(params.start_hour ?? schedulingFallback.startHour);
+  const endHour = validHour(params.end_hour ?? schedulingFallback.endHour);
+  const weekdays = params.allowed_weekdays === undefined
+    ? validWeekdays(schedulingFallback.allowedWeekdays) ?? [1, 2, 3, 4, 5]
+    : validWeekdays(params.allowed_weekdays);
+  const dailyLimitRaw = params.daily_send_limit === undefined ? schedulingFallback.dailySendLimit ?? null : params.daily_send_limit;
+  const dailyLimit = dailyLimitRaw === null ? null : boundedInteger(dailyLimitRaw, 1, 1000);
+  if (!name || typeof active !== 'boolean' || !FLOW_TRIGGER_TYPES.has(triggerType) || duration === null || !startHour || !endHour || !weekdays || (dailyLimitRaw !== null && dailyLimit === null)) {
+    return { error: errorResult('INVALID_INPUT', 'Dados do fluxo inválidos: nome, ativação, gatilho, duração, horários, dias e limite devem respeitar o schema.') };
+  }
+  if (startHour >= endHour) return { error: errorResult('INVALID_INPUT', 'start_hour deve ser anterior a end_hour.') };
+  if ((triggerType === 'status_changed' || triggerType === 'status_duration' || triggerType === 'inactivity_duration') && triggerStatuses.length === 0) {
+    return { error: errorResult('INVALID_INPUT', 'Este tipo de gatilho exige pelo menos um status comercial.') };
+  }
+  if ((triggerType === 'status_duration' || triggerType === 'inactivity_duration') && duration < 1) {
+    return { error: errorResult('INVALID_INPUT', 'Fluxos por duração exigem trigger_duration_hours de pelo menos 1 hora.') };
+  }
+  if (triggerStatuses.length > 20 || new Set(triggerStatuses).size !== triggerStatuses.length) return { error: errorResult('INVALID_INPUT', 'trigger_statuses deve conter até 20 status distintos.') };
+  if (triggerStatuses.length > 0) {
+    const { data, error } = await supabase.from('lead_status_config').select('nome,ativo').in('nome', triggerStatuses);
+    if (error || !data || data.length !== triggerStatuses.length || data.some((status) => status.ativo === false)) return { error: errorResult('INVALID_STATUS', 'Um ou mais status de gatilho não existem ou estão inativos.') };
+  }
+  return {
+    flow: {
+      name,
+      ativo: active,
+      triggerType,
+      triggerStatus: triggerStatuses[0] ?? '',
+      triggerStatuses,
+      triggerDurationHours: duration,
+      scheduling: { startHour, endHour, allowedWeekdays: weekdays, dailySendLimit: dailyLimit },
+    },
   };
 };
 
@@ -474,6 +525,154 @@ async function changeAutomationJob(supabase: SupabaseClient, params: Record<stri
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível reprocessar o job.') : { success: true, job_id: jobId, status: 'pending', scheduled_at: requested };
 }
 
+async function bulkCancelAutomationJobs(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id);
+  const status = text(params.status);
+  const stepId = text(params.step_id);
+  const scheduledBefore = params.scheduled_before === undefined ? null : parseDate(params.scheduled_before);
+  const scheduledAfter = params.scheduled_after === undefined ? null : parseDate(params.scheduled_after);
+  if (!flowId && !status && !stepId && params.scheduled_before === undefined && params.scheduled_after === undefined) {
+    return errorResult('INVALID_INPUT', 'Informe ao menos um filtro para evitar cancelamento acidental da fila inteira.');
+  }
+  if ((params.scheduled_before !== undefined && !scheduledBefore) || (params.scheduled_after !== undefined && !scheduledAfter)) return errorResult('INVALID_INPUT', 'Os filtros de data devem ser datetimes válidos.');
+  if (scheduledBefore && scheduledAfter && scheduledAfter > scheduledBefore) return errorResult('INVALID_INPUT', 'scheduled_after deve ser anterior a scheduled_before.');
+  let query = supabase.from('auto_contact_flow_jobs').select('id,status');
+  if (flowId) query = query.eq('flow_id', flowId);
+  if (status) query = query.eq('status', status);
+  if (stepId) query = query.eq('step_id', stepId);
+  if (scheduledBefore) query = query.lte('scheduled_at', scheduledBefore);
+  if (scheduledAfter) query = query.gte('scheduled_at', scheduledAfter);
+  const { data, error } = await query.limit(MAX_BULK_CANCEL_JOBS + 1);
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar os jobs para cancelamento.');
+  if ((data?.length ?? 0) > MAX_BULK_CANCEL_JOBS) return errorResult('LIMIT_EXCEEDED', `A seleção ultrapassa o limite de ${MAX_BULK_CANCEL_JOBS} jobs por chamada.`);
+  const rows = data ?? [];
+  const pendingIds = rows.filter((job) => job.status === 'pending').map((job) => job.id);
+  const skipped = rows.filter((job) => job.status !== 'pending').map((job) => ({ job_id: job.id, reason: 'Somente jobs pending podem ser cancelados.' }));
+  if (pendingIds.length === 0) return { success: true, matched: rows.length, cancelled: 0, skipped, errors: [] };
+  const reason = text(params.observacao).slice(0, MAX_DESCRIPTION_LENGTH) || 'Cancelamento em lote via ChatGPT.';
+  const { data: cancelledRows, error: updateError } = await supabase.from('auto_contact_flow_jobs').update({ status: 'skipped', last_error: reason }).in('id', pendingIds).eq('status', 'pending').select('id');
+  if (updateError) return { success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível cancelar os jobs pendentes.', matched: rows.length, cancelled: 0, skipped, errors: [{ message: updateError.message }] };
+  const cancelledIds = new Set((cancelledRows ?? []).map((job) => job.id));
+  const errors = pendingIds.filter((id) => !cancelledIds.has(id)).map((jobId) => ({ job_id: jobId, message: 'O job mudou de estado antes do cancelamento.' }));
+  return { success: true, matched: rows.length, cancelled: cancelledIds.size, skipped, errors };
+}
+
+async function createFollowUpFlow(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const integration = await loadAutomationIntegration(supabase);
+  const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
+  const validated = await validateFlowFields(supabase, params);
+  if (validated.error || !validated.flow) return validated.error ?? errorResult('INVALID_INPUT', 'Dados do fluxo inválidos.');
+  if (settings.flows.map(flowRecord).some((flow) => flow && text(flow.name).toLocaleLowerCase() === text(validated.flow?.name).toLocaleLowerCase())) return errorResult('CONFLICT', 'Já existe um fluxo com este nome.');
+  const flow = { id: crypto.randomUUID(), ...validated.flow, steps: [] as Record<string, unknown>[] };
+  const updated = { ...settings, flows: [...settings.flows, flow] };
+  const { error } = await supabase.from('integration_settings').update({ settings: updated, updated_at: new Date().toISOString() }).eq('id', integration.id);
+  return error ? errorResult('INTERNAL_ERROR', 'Não foi possível criar o fluxo.') : { success: true, flow: flowView(flow) };
+}
+
+async function resolveStepActionConfiguration(supabase: SupabaseClient, actionType: string, value: unknown): Promise<{ configuration?: Record<string, unknown>; error?: McpWriteResult }> {
+  const config = isRecord(value) ? value : {};
+  if (actionType === 'send_message') {
+    if (Object.keys(config).some((key) => key !== 'message')) return { error: errorResult('NOT_ALLOWED', 'send_message aceita somente o texto comercial da mensagem.') };
+    const message = text(config.message);
+    if (!message) return { error: errorResult('INVALID_INPUT', 'A etapa send_message exige uma mensagem não vazia.') };
+    if (message.length > MAX_MESSAGE_LENGTH) return { error: errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`) };
+    return { configuration: { messageSource: 'custom', customMessage: { type: 'text', text: message } } };
+  }
+  if (actionType === 'update_status') {
+    if (Object.keys(config).some((key) => key !== 'status')) return { error: errorResult('NOT_ALLOWED', 'update_status aceita somente um status comercial válido.') };
+    const statusName = text(config.status);
+    const { data, error } = await supabase.from('lead_status_config').select('nome,ativo').ilike('nome', statusName).maybeSingle();
+    if (error || !data || data.ativo === false) return { error: errorResult('INVALID_STATUS', 'O status não existe ou está inativo.') };
+    return { configuration: { statusToSet: data.nome } };
+  }
+  if (actionType === 'create_task') {
+    if (Object.keys(config).some((key) => !['title', 'description', 'priority', 'due_hours'].includes(key))) return { error: errorResult('NOT_ALLOWED', 'create_task aceita somente título, descrição, prioridade e prazo.') };
+    const title = text(config.title).slice(0, MAX_SHORT_TEXT_LENGTH);
+    const description = text(config.description).slice(0, MAX_DESCRIPTION_LENGTH);
+    const priority = text(config.priority) || 'normal';
+    const dueHours = config.due_hours === undefined ? null : boundedInteger(config.due_hours, 0, 8760);
+    if (!title || !PRIORITIES.has(priority) || (config.due_hours !== undefined && dueHours === null)) return { error: errorResult('INVALID_INPUT', 'create_task exige título, prioridade válida e prazo entre 0 e 8760 horas.') };
+    return { configuration: { taskTitle: title, taskDescription: description, taskPriority: priority, taskDueHours: dueHours } };
+  }
+  if (actionType === 'activate_autonomous_service') {
+    if (Object.keys(config).length > 0) return { error: errorResult('NOT_ALLOWED', 'activate_autonomous_service não aceita configuração adicional.') };
+    return { configuration: {} };
+  }
+  return { error: errorResult('NOT_ALLOWED', 'Este tipo de ação não é permitido para criação via MCP.') };
+}
+
+async function createFollowUpStep(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id);
+  const order = boundedInteger(params.ordem, 0, 100);
+  const actionType = text(params.action_type);
+  const delayValue = boundedInteger(params.delay_value, 0, 3650);
+  const delayUnit = text(params.delay_unit);
+  const enabled = params.enabled;
+  if (!flowId || order === null || !STEP_ACTION_TYPES.has(actionType) || delayValue === null || !DELAY_UNITS.has(delayUnit) || typeof enabled !== 'boolean') return errorResult('INVALID_INPUT', 'flow_id, ordem, action_type, delay, unidade e enabled são obrigatórios e devem ser válidos.');
+  const integration = await loadAutomationIntegration(supabase); const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
+  const index = settings.flows.findIndex((flow) => flowRecord(flow)?.id === flowId); const flow = flowRecord(settings.flows[index]);
+  if (!flow) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
+  const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord).map((step) => ({ ...step })) : [];
+  if (order > steps.length) return errorResult('INVALID_INPUT', 'ordem deve estar entre 0 e a próxima posição disponível.');
+  if (order < steps.length) {
+    const { count, error } = await supabase.from('auto_contact_flow_jobs').select('id', { count: 'exact', head: true }).eq('flow_id', flowId).in('status', ['pending', 'processing']);
+    if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível verificar jobs ativos do fluxo.');
+    if ((count ?? 0) > 0) return errorResult('CONFLICT', 'Não é possível inserir uma etapa no meio de um fluxo com jobs ativos. Adicione ao final ou pause/remova os jobs primeiro.');
+  }
+  const action = await resolveStepActionConfiguration(supabase, actionType, params.action_config);
+  if (action.error || !action.configuration) return action.error ?? errorResult('INVALID_INPUT', 'Configuração da ação inválida.');
+  const step = { id: crypto.randomUUID(), delayValue, delayUnit, actionType, enabled, ...action.configuration };
+  steps.splice(order, 0, step);
+  const nextFlow = { ...flow, steps }; const flows = [...settings.flows]; flows[index] = nextFlow;
+  const { error } = await supabase.from('integration_settings').update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() }).eq('id', integration.id);
+  return error ? errorResult('INTERNAL_ERROR', 'Não foi possível criar a etapa.') : { success: true, flow_id: flowId, step: flowView(nextFlow).steps[order] };
+}
+
+async function updateFollowUpStepMessage(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id); const stepId = text(params.step_id); const message = text(params.message);
+  if (!flowId || !stepId || !message) return errorResult('INVALID_INPUT', 'flow_id, step_id e message são obrigatórios.');
+  if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
+  const integration = await loadAutomationIntegration(supabase); const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
+  const index = settings.flows.findIndex((flow) => flowRecord(flow)?.id === flowId); const flow = flowRecord(settings.flows[index]);
+  if (!flow) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
+  const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord).map((step) => ({ ...step })) : [];
+  const step = steps.find((candidate) => text(candidate.id) === stepId);
+  if (!step) return errorResult('NOT_FOUND', 'Etapa não encontrada.');
+  if (text(step.actionType) !== 'send_message') return errorResult('NOT_ALLOWED', 'Somente etapas send_message podem ter o texto alterado.');
+  step.messageSource = 'custom';
+  step.customMessage = { type: 'text', text: message };
+  delete step.templateId;
+  delete step.messages;
+  const nextFlow = { ...flow, steps }; const flows = [...settings.flows]; flows[index] = nextFlow;
+  const { error } = await supabase.from('integration_settings').update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() }).eq('id', integration.id);
+  return error ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar a mensagem da etapa.') : { success: true, flow_id: flowId, step_id: stepId, message };
+}
+
+async function cloneFollowUpFlow(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const sourceFlowId = text(params.source_flow_id); const overrides = isRecord(params.overrides) ? params.overrides : {};
+  const allowed = new Set(['nome', 'ativo', 'trigger_type', 'trigger_statuses', 'trigger_duration_hours', 'start_hour', 'end_hour', 'allowed_weekdays', 'daily_send_limit']);
+  if (!sourceFlowId || Object.keys(overrides).some((key) => !allowed.has(key))) return errorResult('INVALID_INPUT', 'source_flow_id e overrides com campos permitidos são obrigatórios.');
+  if (!text(overrides.nome)) return errorResult('INVALID_INPUT', 'O clone exige um novo nome.');
+  const integration = await loadAutomationIntegration(supabase); const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
+  const source = settings.flows.map(flowRecord).find((flow) => flow?.id === sourceFlowId) ?? null;
+  if (!source) return errorResult('NOT_FOUND', 'Fluxo de origem não encontrado.');
+  const validated = await validateFlowFields(supabase, overrides, source);
+  if (validated.error || !validated.flow) return validated.error ?? errorResult('INVALID_INPUT', 'Dados do clone inválidos.');
+  if (settings.flows.map(flowRecord).some((flow) => flow && text(flow.name).toLocaleLowerCase() === text(validated.flow?.name).toLocaleLowerCase())) return errorResult('CONFLICT', 'Já existe um fluxo com este nome.');
+  const sourceSteps = Array.isArray(source.steps) ? source.steps.filter(isRecord) : [];
+  if (sourceSteps.some((step) => !STEP_ACTION_TYPES.has(text(step.actionType)))) return errorResult('NOT_ALLOWED', 'O fluxo de origem possui uma etapa que não é permitida para clonagem via MCP.');
+  const steps = sourceSteps.map((step) => ({ ...step, id: crypto.randomUUID() }));
+  const flow = { ...source, ...validated.flow, id: crypto.randomUUID(), steps };
+  delete flow.flowGraph;
+  const updated = { ...settings, flows: [...settings.flows, flow] };
+  const { error } = await supabase.from('integration_settings').update({ settings: updated, updated_at: new Date().toISOString() }).eq('id', integration.id);
+  return error ? errorResult('INTERNAL_ERROR', 'Não foi possível clonar o fluxo.') : { success: true, source_flow_id: sourceFlowId, flow: flowView(flow) };
+}
+
 const pageParams = (params: Record<string, unknown>) => {
   const page = boundedInteger(params.page ?? 1, 1, 10_000) ?? 1;
   const pageSize = boundedInteger(params.page_size ?? 20, 1, 50) ?? 20;
@@ -575,6 +774,11 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_cancel_reminder') { actionType = 'reminder_cancel'; result = await updateReminderAction(supabase, args, 'cancel'); }
     else if (toolName === 'kifer_cancel_automation_job') { actionType = 'automation_job_cancel'; result = await changeAutomationJob(supabase, args, 'cancel'); }
     else if (toolName === 'kifer_retry_automation_job') { actionType = 'automation_job_retry'; result = await changeAutomationJob(supabase, args, 'retry'); }
+    else if (toolName === 'kifer_bulk_cancel_automation_jobs') { actionType = 'automation_jobs_bulk_cancel'; result = await bulkCancelAutomationJobs(supabase, args); }
+    else if (toolName === 'kifer_create_followup_flow') { actionType = 'followup_flow_create'; result = await createFollowUpFlow(supabase, args); }
+    else if (toolName === 'kifer_create_followup_step') { actionType = 'followup_step_create'; result = await createFollowUpStep(supabase, args); }
+    else if (toolName === 'kifer_update_followup_step_message') { actionType = 'followup_step_message_update'; result = await updateFollowUpStepMessage(supabase, args); }
+    else if (toolName === 'kifer_clone_followup_flow') { actionType = 'followup_flow_clone'; result = await cloneFollowUpFlow(supabase, args); }
     else return null;
   } catch (error) {
     result = errorResult('INTERNAL_ERROR', error instanceof Error ? error.message : 'Falha inesperada ao executar a ação.');

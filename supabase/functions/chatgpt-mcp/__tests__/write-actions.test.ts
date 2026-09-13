@@ -217,3 +217,69 @@ test('lista somente campos operacionais de jobs de automação', async () => {
   assert.equal(result?.success, true);
   assert.deepEqual(result?.jobs, [{ id: 'job-1', status: 'pending', flow_id: 'flow-1' }]);
 });
+
+test('exige filtro no cancelamento em lote para proteger a fila inteira', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_bulk_cancel_automation_jobs',
+    arguments: {},
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('rejeita criação de fluxo por duração sem status de gatilho', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [] } } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_followup_flow',
+    arguments: {
+      nome: 'Inatividade', ativo: true, trigger_type: 'inactivity_duration', trigger_statuses: [],
+      trigger_duration_hours: 48, start_hour: '08:00', end_hour: '18:00', allowed_weekdays: [1, 2, 3, 4, 5], daily_send_limit: 20,
+    },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('não permite criar etapa com ação destrutiva do motor', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_followup_step',
+    arguments: { flow_id: 'flow-1', ordem: 0, action_type: 'delete_lead', delay_value: 1, delay_unit: 'days', enabled: true, action_config: {} },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('não atualiza mensagem de etapa quando o novo texto é vazio', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_followup_step_message',
+    arguments: { flow_id: 'flow-1', step_id: 'step-1', message: ' ' },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('exige novo nome ao clonar fluxo', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_clone_followup_flow',
+    arguments: { source_flow_id: 'flow-1', overrides: {} },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+});

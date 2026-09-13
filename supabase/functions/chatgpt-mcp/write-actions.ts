@@ -205,7 +205,7 @@ async function audit(params: {
 }
 
 async function existingLead(supabase: SupabaseClient, leadId: string) {
-  const { data, error } = await supabase.from('leads').select('id,status,status_id,responsavel').eq('id', leadId).maybeSingle();
+  const { data, error } = await supabase.from('leads').select('id,status,status_id,responsavel_id').eq('id', leadId).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -306,6 +306,102 @@ async function sendWhatsAppMessage(supabase: SupabaseClient, params: Record<stri
   const externalMessageId = text(body.messageId);
   const { data: persisted } = externalMessageId ? await supabase.from('comm_whatsapp_messages').select('id,message_at,delivery_status').eq('chat_id', chatId).eq('external_message_id', externalMessageId).maybeSingle() : { data: null };
   return { success: true, duplicate: body.duplicate === true, message_id: persisted?.id || null, external_message_id: externalMessageId || null, chat_id: chatId, delivery_status: text(body.status) || persisted?.delivery_status || 'queued', sent_at: persisted?.message_at || new Date().toISOString() };
+}
+
+async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  const chatId = text(params.chat_id);
+  const message = text(params.message);
+  const scheduledAt = parseDate(params.scheduled_at);
+  const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
+  if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
+  if (!message) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
+  if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
+  if (!clientRequestId) return errorResult('INVALID_INPUT', 'client_request_id é obrigatório para impedir agendamentos duplicados.');
+  if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000) {
+    return errorResult('INVALID_INPUT', 'scheduled_at deve ser uma data futura de pelo menos um minuto.');
+  }
+  if (Date.parse(scheduledAt) > Date.now() + 366 * 24 * 60 * 60 * 1_000) {
+    return errorResult('INVALID_INPUT', 'scheduled_at não pode ultrapassar 366 dias a partir de agora.');
+  }
+
+  const { data: chat, error: chatError } = await supabase
+    .from('comm_whatsapp_chats')
+    .select('id,channel_id,phone_digits,phone_number,display_name,lead_id,deleted_at')
+    .eq('id', chatId)
+    .maybeSingle();
+  if (chatError || !chat || chat.deleted_at || !chat.channel_id || !chat.phone_digits) {
+    return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada, removida ou sem canal associado.');
+  }
+
+  const lookupExisting = async () => await supabase
+    .from('comm_whatsapp_scheduled_messages')
+    .select('id,chat_id,lead_id,scheduled_at,status,mcp_client_request_id')
+    .eq('channel_id', chat.channel_id)
+    .eq('mcp_client_request_id', clientRequestId)
+    .maybeSingle();
+  const existing = await lookupExisting();
+  if (existing.error) return errorResult('INTERNAL_ERROR', 'Não foi possível verificar a duplicidade do agendamento.');
+  if (existing.data) {
+    return {
+      success: true,
+      duplicate: true,
+      scheduled_message_id: existing.data.id,
+      chat_id: existing.data.chat_id,
+      lead_id: existing.data.lead_id,
+      scheduled_at: existing.data.scheduled_at,
+      status: existing.data.status,
+      client_request_id: clientRequestId,
+    };
+  }
+
+  const { data: scheduled, error: insertError } = await supabase
+    .from('comm_whatsapp_scheduled_messages')
+    .insert({
+      channel_id: chat.channel_id,
+      chat_id: chat.id,
+      phone_digits: chat.phone_digits,
+      phone_number: chat.phone_number || chat.phone_digits,
+      display_name: chat.display_name || chat.phone_number || chat.phone_digits,
+      message_type: 'text',
+      text_content: message,
+      scheduled_at: scheduledAt,
+      recurrence: 'none',
+      lead_id: chat.lead_id || null,
+      created_by: actor.actorId,
+      mcp_client_request_id: clientRequestId,
+      metadata: { source: 'chatgpt_mcp', client_request_id: clientRequestId },
+    })
+    .select('id,chat_id,lead_id,scheduled_at,status,mcp_client_request_id')
+    .maybeSingle();
+  if (insertError) {
+    if (text((insertError as { code?: unknown }).code) === '23505') {
+      const concurrent = await lookupExisting();
+      if (!concurrent.error && concurrent.data) {
+        return {
+          success: true,
+          duplicate: true,
+          scheduled_message_id: concurrent.data.id,
+          chat_id: concurrent.data.chat_id,
+          lead_id: concurrent.data.lead_id,
+          scheduled_at: concurrent.data.scheduled_at,
+          status: concurrent.data.status,
+          client_request_id: clientRequestId,
+        };
+      }
+    }
+    return errorResult('INTERNAL_ERROR', 'Não foi possível agendar a mensagem de WhatsApp.');
+  }
+  if (!scheduled) return errorResult('INTERNAL_ERROR', 'Não foi possível confirmar o agendamento da mensagem.');
+  return {
+    success: true,
+    duplicate: false,
+    scheduled_message_id: scheduled.id,
+    chat_id: scheduled.chat_id,
+    lead_id: scheduled.lead_id,
+    scheduled_at: scheduled.scheduled_at,
+    status: scheduled.status,
+    client_request_id: clientRequestId,
+  };
 }
 
 async function updateAutomationSettings(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
@@ -758,6 +854,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   const clientRequestId = text(args.client_request_id) || null;
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
+    else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_create_reminder') { actionType = 'reminder_create'; result = await createReminder(supabase, args, actor); }
     else if (toolName === 'kifer_update_lead_status') { actionType = 'lead_status_update'; result = await updateLeadStatus(supabase, args, actor); }
     else if (toolName === 'kifer_create_interaction') { actionType = 'interaction_create'; result = await createInteraction(supabase, args, actor); }

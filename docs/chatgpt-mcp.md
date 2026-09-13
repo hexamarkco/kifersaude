@@ -18,6 +18,7 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | Tool | Schema fechado | Efeito |
 | --- | --- | --- |
 | `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia uma mensagem de texto para uma conversa existente; usa o mesmo provider, persistência, idempotência e rate limit do Inbox. |
+| `kifer_schedule_whatsapp_message` | `chat_id`, `message`, `scheduled_at`, `client_request_id` | Programa uma única mensagem de texto para uma conversa existente. Usa a fila nativa do Inbox; não aceita telefone, mídia ou recorrência. |
 | `kifer_create_reminder` | `lead_id`, `contract_id?`, `tipo`, `titulo`, `descricao?`, `data_lembrete`, `prioridade` | Cria lembrete e sincroniza `leads.proximo_retorno` a partir do próximo lembrete aberto. |
 | `kifer_update_lead_status` | `lead_id`, `status`, `observacao?` | Aceita somente status ativos de `lead_status_config`, registra interação e histórico. |
 | `kifer_create_interaction` | `lead_id`, `contract_id?`, `tipo`, `descricao`, `responsavel?` | Registra observação no histórico comercial. |
@@ -39,13 +40,13 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_update_followup_step_message` | `flow_id`, `step_id`, `message` | Troca exclusivamente o texto de uma etapa `send_message`. |
 | `kifer_clone_followup_flow` | fluxo de origem e sobrescritas fechadas | Copia fluxo e etapas com novos IDs; bloqueia etapas destrutivas, webhook e e-mail. |
 
-O envio de WhatsApp requer `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar uma segunda mensagem.
+O envio e o agendamento de WhatsApp exigem `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar ou programar uma segunda mensagem.
 
 Tags, motivos estruturados de perda, contratos, documentos, mídia e campanhas não foram expostos por esta ampliação: o esquema atual não possui uma tabela de tags/motivos e a API MCP não deve aceitar arquivos ou URLs arbitrárias. Essas áreas exigem um modelo de dados e um fluxo de upload próprios antes de serem autorizadas.
 
 ## Migration adicional
 
-Além da migration de auditoria MCP, aplique `20260912233141_add_mcp_reminder_cancellation.sql`. Ela acrescenta os marcadores de cancelamento ao lembrete para distinguir corretamente um retorno concluído de um retorno cancelado, sem exclusão física.
+Além da migration de auditoria MCP, aplique `20260912233141_add_mcp_reminder_cancellation.sql` e `20260913015722_add_mcp_scheduled_message_idempotency.sql`. A segunda acrescenta uma chave de idempotência apenas às mensagens programadas pelo MCP, sem alterar os agendamentos já existentes do Inbox.
 
 ## Publicação e reativação
 

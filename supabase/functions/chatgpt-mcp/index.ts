@@ -243,9 +243,9 @@ async function searchOperationalData(supabase: SupabaseClient, params: Record<st
   const pattern = `%${query.replace(/[%_]/g, '\\$&')}%`;
 
   const [leadByName, leadByPhone, leadByEmail, chatsByName, chatsByPhone] = await Promise.all([
-    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel,updated_at').ilike('nome_completo', pattern).limit(limit),
-    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel,updated_at').ilike('telefone', pattern).limit(limit),
-    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel,updated_at').ilike('email', pattern).limit(limit),
+    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel_id,updated_at').ilike('nome_completo', pattern).limit(limit),
+    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel_id,updated_at').ilike('telefone', pattern).limit(limit),
+    supabase.from('leads').select('id,nome_completo,telefone,email,status,cidade,responsavel_id,updated_at').ilike('email', pattern).limit(limit),
     supabase.from('comm_whatsapp_chats').select('id,lead_id,display_name,phone_number,last_message_text,last_message_at,unread_count,status').ilike('display_name', pattern).limit(limit),
     supabase.from('comm_whatsapp_chats').select('id,lead_id,display_name,phone_number,last_message_text,last_message_at,unread_count,status').ilike('phone_number', pattern).limit(limit),
   ]);
@@ -457,6 +457,12 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_schedule_whatsapp_message',
+    description: 'Agenda uma única mensagem de texto para uma conversa de WhatsApp existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o agendamento. Esta ação altera dados reais; o envio será feito pela fila nativa do Inbox no horário agendado.',
+    inputSchema: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente, nunca um telefone.' }, message: { type: 'string', minLength: 1, maxLength: 4096 }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: 'kifer_create_reminder',
     description: 'Cria um lembrete associado a um lead existente. Use quando o usuário pedir para lembrar, agendar retorno ou registrar uma próxima ação. Esta ação altera dados reais.',
     inputSchema: { type: 'object', required: ['lead_id', 'tipo', 'titulo', 'data_lembrete', 'prioridade'], additionalProperties: false, properties: { lead_id: { type: 'string' }, contract_id: { type: 'string' }, tipo: { type: 'string', minLength: 1, maxLength: 160 }, titulo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', maxLength: 4000 }, data_lembrete: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] } } },
@@ -485,7 +491,7 @@ const tools = [
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_schedule_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',

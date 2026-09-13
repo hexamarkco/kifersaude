@@ -97,6 +97,20 @@
   box-shadow: none;
 }
 
+/* Direction is set on the row as well as the bubble so media, grouped messages
+   and search results retain WhatsApp-style anchoring. */
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-row-inbound > .relative {
+  margin-right: auto;
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-row-outbound > .relative {
+  margin-left: auto;
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-row-system > .relative {
+  margin-inline: auto;
+}
+
 .comm-terracotta .whatsapp-inbox-audio-native-card {
   border-color: var(--border-subtle);
   background: var(--bg-elevated);

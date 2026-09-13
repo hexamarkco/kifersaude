@@ -359,6 +359,18 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
   return 'message-bubble message-bubble-inbound mr-auto';
 };
 
+const getMessageRowClasses = (direction: CommWhatsAppMessage['direction']) => {
+  if (direction === 'outbound') {
+    return 'message-bubble-row-outbound justify-end';
+  }
+
+  if (direction === 'system') {
+    return 'message-bubble-row-system justify-center';
+  }
+
+  return 'message-bubble-row-inbound justify-start';
+};
+
 const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
 const AUDIO_PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
 
@@ -1240,7 +1252,7 @@ function WhatsAppMediaGroupBody({
   const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
 
   return (
-    <div className="grid grid-cols-2 gap-1.5">
+    <div className="grid w-[13.75rem] max-w-full grid-cols-2 gap-1.5">
       {visibleMessages.map((message, index) => {
         const isWideHero = messages.length === 3 && index === 0;
         const overlayLabel = hiddenCount > 0 && index === visibleMessages.length - 1 ? `+${hiddenCount}` : undefined;
@@ -1709,12 +1721,12 @@ function WhatsAppMessageBody({
             onClick={() => onOpenImage(message.id)}
             className={isSticker
               ? 'block w-fit max-w-[180px] overflow-hidden rounded-2xl border border-transparent bg-transparent text-left transition hover:border-current/15'
-              : 'whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left'}
+              : 'whatsapp-inbox-image-card block w-[13.75rem] max-w-full overflow-hidden rounded-2xl border text-left'}
           >
             <img
               src={mediaUrl}
               alt={altLabel}
-              className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'max-h-[280px] w-full object-cover'}
+              className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'h-[11rem] w-full object-cover'}
               loading="lazy"
             />
             {!isSticker ? (
@@ -1743,21 +1755,26 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {deletedBannerNode}
         {quotePreviewNode}
-        <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
+        <button
+          type="button"
+          onClick={() => onOpenImage(message.id)}
+          className="whatsapp-inbox-image-card block w-[13.75rem] max-w-full overflow-hidden rounded-2xl border text-left"
+          aria-label={`Abrir ${message.media_file_name || 'vídeo'}`}
+        >
           {mediaUrl ? (
-            <video controls preload="metadata" className="max-h-[320px] w-full bg-[var(--overlay)] object-contain">
+            <video muted playsInline preload="metadata" className="h-[11rem] w-full bg-[var(--overlay)] object-cover">
               <source src={mediaUrl} type={message.media_mime_type || undefined} />
             </video>
           ) : (
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80">
+            <div className="flex h-[11rem] items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80">
               {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
             </div>
           )}
           <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
               <span className="truncate font-medium">{message.media_file_name || 'Video'}</span>
-              <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
+              <span className="shrink-0 opacity-80">Toque para abrir</span>
             </div>
-          </div>
+          </button>
           {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
           {editInfoNode}
         </div>
@@ -9154,7 +9171,7 @@ export default function WhatsAppInboxScreen() {
                               }
                             }
                           }}
-                          className={`message-bubble-row flex w-full ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
+                          className={`message-bubble-row flex w-full ${getMessageRowClasses(lastMessage.direction)}`}
                         >
                           <div className="relative max-w-[82%] pb-2">
                             <div className={`rounded-[var(--kds-radius-lg)] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
@@ -9183,7 +9200,7 @@ export default function WhatsAppInboxScreen() {
                     const showReplyForwardActions = canReplyOrForwardMessage(message);
 
                     return (
-                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
+                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`}>
                         <div
                           ref={(node) => {
                             if (node) {

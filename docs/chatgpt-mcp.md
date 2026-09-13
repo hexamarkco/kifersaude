@@ -22,8 +22,25 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_update_lead_status` | `lead_id`, `status`, `observacao?` | Aceita somente status ativos de `lead_status_config`, registra interação e histórico. |
 | `kifer_create_interaction` | `lead_id`, `contract_id?`, `tipo`, `descricao`, `responsavel?` | Registra observação no histórico comercial. |
 | `kifer_set_next_follow_up` | `lead_id`, `proximo_retorno`, `observacao?` | Cria um lembrete de retorno; não cria uma segunda fonte de verdade. |
+| `kifer_list_automation_jobs` / `kifer_get_automation_job` | filtros fechados / `job_id` | Consulta a fila de automação sem expor payloads internos. |
+| `kifer_cancel_automation_job` / `kifer_retry_automation_job` | `job_id`, agendamento opcional | Cancela pendentes ou reagenda jobs falhos/ignorados; jobs concluídos não podem ser repetidos. |
+| `kifer_get_automation_settings` / `kifer_update_automation_settings` | schema fechado de operação | Consulta ou altera somente horários, dias, limite diário, estado e refresh permitidos. |
+| `kifer_list_followup_flows` / `kifer_get_followup_flow` | opcional / `flow_id` | Consulta a configuração operacional dos fluxos, sem templates ou URLs internas. |
+| `kifer_update_followup_flow` / `kifer_pause_followup_flow` / `kifer_resume_followup_flow` | `flow_id` e campos fechados | Ajusta somente ativação, horários, limites, status-gatilho e delay de etapas existentes. |
+| `kifer_enqueue_lead_followup` / `kifer_remove_lead_from_followup` | `lead_id`, `flow_id` | Adiciona um lead sem duplicar job ativo ou cancela jobs futuros pendentes do fluxo. |
+| `kifer_update_lead` | `lead_id`, dados comerciais fechados | Atualiza somente cadastro comercial explicitamente autorizado. |
+| `kifer_list_lead_statuses` | sem parâmetros | Lista status comerciais ativos e válidos. |
+| `kifer_list_reminders` / `kifer_update_reminder` | filtros fechados / campos fechados | Consulta ou altera lembretes sem acesso genérico à tabela. |
+| `kifer_complete_reminder` / `kifer_cancel_reminder` | `reminder_id` | Conclui ou cancela sem exclusão física, preservando auditoria e a sincronização do próximo retorno. |
+| `kifer_get_next_follow_up` | `lead_id` | Retorna o próximo lembrete pendente de retorno/follow-up. |
 
 O envio de WhatsApp requer `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar uma segunda mensagem.
+
+Tags, motivos estruturados de perda, contratos, documentos, mídia e campanhas não foram expostos por esta ampliação: o esquema atual não possui uma tabela de tags/motivos e a API MCP não deve aceitar arquivos ou URLs arbitrárias. Essas áreas exigem um modelo de dados e um fluxo de upload próprios antes de serem autorizadas.
+
+## Migration adicional
+
+Além da migration de auditoria MCP, aplique `20260912233141_add_mcp_reminder_cancellation.sql`. Ela acrescenta os marcadores de cancelamento ao lembrete para distinguir corretamente um retorno concluído de um retorno cancelado, sem exclusão física.
 
 ## Publicação e reativação
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test, vi } from 'vitest';
 
-import { executeMcpWriteAction } from '../write-actions';
+import { executeMcpCommercialReadAction, executeMcpWriteAction } from '../write-actions';
 
 const actor = { actor: 'chatgpt:admin@kifer.test', actorId: '11111111-1111-1111-1111-111111111111' };
 
@@ -15,8 +15,13 @@ const query = (result: Result = {}) => {
     eq: () => builder,
     ilike: () => builder,
     gte: () => builder,
+    lte: () => builder,
+    in: () => builder,
+    not: () => builder,
+    is: () => builder,
     order: () => builder,
     limit: () => builder,
+    range: async () => ({ data: result.data ?? [], error: result.error ?? null, count: Array.isArray(result.data) ? result.data.length : null }),
     maybeSingle: async () => ({ data: result.data ?? null, error: result.error ?? null }),
   };
   return builder;
@@ -154,4 +159,61 @@ test('retorna o resultado original quando o fluxo normal informa duplicidade', a
   assert.equal(result?.duplicate, true);
   assert.equal(result?.message_id, 'message-1');
   assert.equal(result?.external_message_id, 'provider-message-1');
+});
+
+test('recusa alteração de automação com campo fora da allowlist', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { enabled: true, autoSend: true, scheduling: {} } } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_automation_settings',
+    arguments: { settings: { webhook_url: 'https://invalid.example' } },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'NOT_ALLOWED');
+});
+
+test('não permite reprocessar job de automação já concluído', async () => {
+  const supabase = client({
+    auto_contact_flow_jobs: { data: { id: actor.actorId, status: 'completed', attempts: 1, scheduled_at: '2026-09-12T12:00:00.000Z' } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_retry_automation_job',
+    arguments: { job_id: actor.actorId },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'JOB_ALREADY_EXECUTED');
+});
+
+test('recusa edição de lead com coluna fora do schema fechado', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_lead',
+    arguments: { lead_id: actor.actorId, changes: { role: 'admin' } },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'NOT_ALLOWED');
+  assert.deepEqual(supabase.calls, ['mcp_action_audit_log']);
+});
+
+test('lista somente campos operacionais de jobs de automação', async () => {
+  const supabase = client({
+    auto_contact_flow_jobs: { data: [{ id: 'job-1', status: 'pending', flow_id: 'flow-1' }] },
+  });
+  const result = await executeMcpCommercialReadAction({
+    supabase: supabase as never,
+    toolName: 'kifer_list_automation_jobs',
+    arguments: { status: 'pending' },
+  });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual(result?.jobs, [{ id: 'job-1', status: 'pending', flow_id: 'flow-1' }]);
 });

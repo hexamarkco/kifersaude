@@ -346,7 +346,7 @@ export default function AgendaScreen() {
         return next;
       });
     } catch (syncError) {
-      console.error("Erro ao sincronizar proximo retorno do lead:", syncError);
+      console.error("Erro ao sincronizar proximo follow-up do lead:", syncError);
     }
   };
 

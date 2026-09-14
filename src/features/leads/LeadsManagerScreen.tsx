@@ -723,7 +723,7 @@ export default function LeadsManager({
   const contentSectionDescription =
     viewMode === "kanban"
       ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
-      : "Analise cada lead com contexto, próximos retornos e ações rápidas no mesmo fluxo.";
+      : "Analise cada lead com contexto, próximos follow-ups e ações rápidas no mesmo fluxo.";
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -808,7 +808,7 @@ export default function LeadsManager({
           "Tipo de contratação",
           "Responsável",
           "Cidade",
-          "Próximo retorno",
+          "Próximo follow-up",
           "Último contato",
           "Criado em",
           "Tags",
@@ -1469,7 +1469,7 @@ export default function LeadsManager({
                     {
                       id: "proximo-retorno",
                       icon: Bell,
-                      label: "Próximo retorno",
+                      label: "Próximo follow-up",
                       fromValue: filterProximoRetornoFrom,
                       toValue: filterProximoRetornoTo,
                       onFromChange: setFilterProximoRetornoFrom,
@@ -1638,7 +1638,7 @@ export default function LeadsManager({
                         size="sm"
                         className="kds-leads-bulk-date"
                         disabled={isBulkUpdating}
-                        placeholder="Próximo retorno"
+                        placeholder="Próximo follow-up"
                       />
 
                     </div>
@@ -1688,7 +1688,7 @@ export default function LeadsManager({
                     <TableHead>Status</TableHead>
                     <TableHead>Origem e tipo</TableHead>
                     <TableHead>Responsável</TableHead>
-                    <TableHead>Próximo retorno</TableHead>
+                    <TableHead>Próximo follow-up</TableHead>
                     <TableHead>Criado em</TableHead>
                     <TableHead align="right">Ações</TableHead>
                   </TableRow>
@@ -1758,7 +1758,7 @@ export default function LeadsManager({
                         <TableCell>
                           {nextReminder ? (
                             <span className="font-medium text-[var(--accent-gold-hover)]">{formatDateTimeFullBR(nextReminder)}</span>
-                          ) : <span className="text-[var(--text-muted)]">Sem retorno</span>}
+                          ) : <span className="text-[var(--text-muted)]">Sem follow-up</span>}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
@@ -1886,7 +1886,7 @@ export default function LeadsManager({
                             <div className="kds-op-lead-accent mt-2.5 flex items-center space-x-2 text-sm">
                               <Calendar className="h-4 w-4" />
                               <span className="kds-op-lead-accent font-medium">
-                                Retorno{" "}
+                                Follow-up{" "}
                                 {formatDateTimeFullBR(
                                   nextReminderByLeadId.get(lead.id) ?? "",
                                 )}

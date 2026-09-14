@@ -61,7 +61,7 @@ const SUGGESTIONS: Record<string, { title: string; actions: string[] }> = {
     actions: [
       'Registrar motivo da perda para análise',
       'Manter contato educacional (enviar dicas, novidades)',
-      'Agendar retorno em 3-6 meses',
+      'Agendar follow-up em 3-6 meses',
       'Pedir feedback sobre o atendimento',
     ],
   },

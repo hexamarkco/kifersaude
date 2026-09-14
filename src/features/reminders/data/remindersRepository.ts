@@ -27,6 +27,12 @@ const normalizeReminder = (reminder: Reminder): Reminder => ({
   titulo: normalizeReminderTitle(reminder.titulo),
 });
 
+const normalizeReminderPatch = (patch: ReminderPatch) => ({
+  ...patch,
+  ...(typeof patch.tipo === 'string' ? { tipo: normalizeReminderType(patch.tipo) } : {}),
+  ...(typeof patch.titulo === 'string' ? { titulo: normalizeReminderTitle(patch.titulo) } : {}),
+});
+
 const batchesOf = <T>(items: T[], size = 100): T[][] => {
   const result: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -124,9 +130,10 @@ export async function updateReminder(
   reminderId: string,
   patch: ReminderPatch,
 ): Promise<void> {
+  const normalizedPatch = normalizeReminderPatch(patch);
   const { error } = await databaseClient
     .from('reminders')
-    .update(patch)
+    .update(normalizedPatch)
     .eq('id', reminderId);
   if (error) {
     throw error;
@@ -137,9 +144,10 @@ export async function updateReminders(
   reminderIds: string[],
   patch: ReminderPatch,
 ): Promise<void> {
+  const normalizedPatch = normalizeReminderPatch(patch);
   const { error } = await databaseClient
     .from('reminders')
-    .update(patch)
+    .update(normalizedPatch)
     .in('id', reminderIds);
   if (error) {
     throw error;
@@ -246,9 +254,9 @@ export function subscribeToReminderChanges(
       (payload: RealtimePostgresChangesPayload<Reminder>) => {
         onChange({
           eventType: payload.eventType,
-          current: payload.eventType === 'DELETE' ? null : payload.new,
+          current: payload.eventType === 'DELETE' ? null : normalizeReminder(payload.new),
           previous:
-            payload.eventType === 'DELETE' ? payload.old as Reminder : null,
+            payload.eventType === 'DELETE' ? normalizeReminder(payload.old as Reminder) : null,
         });
       },
     )

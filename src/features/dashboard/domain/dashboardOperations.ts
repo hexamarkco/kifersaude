@@ -175,8 +175,8 @@ export const buildDashboardOperationsAnalysis = ({
   const lastOpenStatus = orderedStatuses.length > 0 ? orderedStatuses[orderedStatuses.length - 1].nome : undefined;
   const closeReady = lastOpenStatus ? openLeads.filter((lead) => lead.status === lastOpenStatus) : [];
   const attention: DashboardAttentionItem[] = [];
-  if (overdue.length > 0) attention.push({ kind: 'overdue-follow-up', title: 'Retornos vencidos', description: 'Leads com próximo retorno já ultrapassado.', count: overdue.length, leadIds: overdue.slice(0, 5).map((lead) => lead.id), tone: 'danger' });
-  if (missingNextStep.length > 0) attention.push({ kind: 'missing-next-step', title: 'Sem próximo passo', description: 'Leads ativos sem retorno ou lembrete pendente.', count: missingNextStep.length, leadIds: missingNextStep.slice(0, 5).map((lead) => lead.id), tone: 'warning' });
+  if (overdue.length > 0) attention.push({ kind: 'overdue-follow-up', title: 'Follow-ups vencidos', description: 'Leads com próximo follow-up já ultrapassado.', count: overdue.length, leadIds: overdue.slice(0, 5).map((lead) => lead.id), tone: 'danger' });
+  if (missingNextStep.length > 0) attention.push({ kind: 'missing-next-step', title: 'Sem próximo passo', description: 'Leads ativos sem follow-up ou lembrete pendente.', count: missingNextStep.length, leadIds: missingNextStep.slice(0, 5).map((lead) => lead.id), tone: 'warning' });
   if (noRecentActivity.length > 0) attention.push({ kind: 'stale-activity', title: 'Sem atividade recente', description: 'Sem contato registrado nos últimos 7 dias.', count: noRecentActivity.length, leadIds: noRecentActivity.slice(0, 5).map((lead) => lead.id), tone: 'warning' });
   if (closeReady.length > 0) attention.push({ kind: 'close-ready', title: 'Próximos do fechamento', description: `Leads na última etapa ativa (${lastOpenStatus}).`, count: closeReady.length, leadIds: closeReady.slice(0, 5).map((lead) => lead.id), tone: 'success' });
 

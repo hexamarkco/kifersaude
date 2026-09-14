@@ -119,7 +119,7 @@ export async function scheduleInboxFollowUp(input: {
   const result = input.generationId
     ? await databaseClient.rpc('schedule_follow_up_reminder_v2', {
         p_lead_id: input.leadId,
-        p_title: input.title,
+        p_title: normalizeReminderTitle(input.title),
         p_description: input.description,
         p_due_at: input.dueAt,
         p_priority: input.priority,
@@ -128,7 +128,7 @@ export async function scheduleInboxFollowUp(input: {
       } as unknown as Database['public']['Functions']['schedule_follow_up_reminder_v2']['Args'])
     : await databaseClient.rpc('schedule_follow_up_reminder', {
         p_lead_id: input.leadId,
-        p_title: input.title,
+        p_title: normalizeReminderTitle(input.title),
         p_description: input.description,
         p_due_at: input.dueAt,
         p_priority: input.priority,

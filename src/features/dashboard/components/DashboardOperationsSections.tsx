@@ -107,7 +107,7 @@ export function DashboardPipelineHealth({ analysis, onNavigateToStatus }: Pick<O
 export function DashboardAttentionQueue({ analysis, leadsById, onNavigateToLead }: Pick<OperationsProps, 'analysis' | 'leadsById' | 'onNavigateToLead'>) {
   return (
     <Surface padding="md" data-panel-animate className="space-y-5" aria-labelledby="dashboard-attention-title">
-      <SectionHeader eyebrow="Ação recomendada" title="Fila que merece atenção agora" description="Prioridades calculadas com retornos, lembretes, interações e estágio atual." as="h2" />
+      <SectionHeader eyebrow="Ação recomendada" title="Fila que merece atenção agora" description="Prioridades calculadas com follow-ups, lembretes, interações e estágio atual." as="h2" />
       {analysis.attention.length ? (
         <div className="space-y-3">
           {analysis.attention.map((item) => {
@@ -127,7 +127,7 @@ export function DashboardAttentionQueue({ analysis, leadsById, onNavigateToLead 
           })}
         </div>
       ) : (
-        <EmptyState icon={<CheckCircle2 aria-hidden="true" />} title="Nenhuma prioridade crítica" description="Não encontramos retornos vencidos, leads sem próximo passo ou atividade parada na base atual." className="py-8" />
+        <EmptyState icon={<CheckCircle2 aria-hidden="true" />} title="Nenhuma prioridade crítica" description="Não encontramos follow-ups vencidos, leads sem próximo passo ou atividade parada na base atual." className="py-8" />
       )}
       {(!analysis.dataCoverage.interactions || !analysis.dataCoverage.reminders) && (
         <p className="text-xs text-[var(--text-muted)]">A leitura usa os registros disponíveis. Itens sem interação ou lembrete histórico aparecem como prioridade até que a operação registre esses dados.</p>

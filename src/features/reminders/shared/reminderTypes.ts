@@ -18,8 +18,8 @@ export const normalizeReminderType = (type: string) =>
 export const normalizeReminderTitle = (title: string) =>
   title
     .replace(/^retomar contato\s*:/iu, "Follow-up:")
-    .replace(/^retorno agendado\s*:/iu, "Follow-up agendado:")
-    .replace(/^retomar follow-up de whatsapp$/iu, "Follow-up de WhatsApp");
+    .replace(/^(?:retorno|follow[ -]?up) agendado\s*:/iu, "Follow-up:")
+    .replace(/^(?:retomar )?follow[ -]?up de whatsapp$/iu, "Follow-up");
 
 export type ManualReminderPrompt = {
   lead: Lead;

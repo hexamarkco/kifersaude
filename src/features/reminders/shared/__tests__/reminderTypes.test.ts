@@ -15,6 +15,9 @@ test('normalizes legacy commercial reminder labels to Follow-up', () => {
 
 test('normalizes system-generated legacy follow-up titles', () => {
   assert.equal(normalizeReminderTitle('Retomar contato: Ana'), 'Follow-up: Ana');
-  assert.equal(normalizeReminderTitle('Retorno agendado: Ana'), 'Follow-up agendado: Ana');
-  assert.equal(normalizeReminderTitle('Retomar follow-up de WhatsApp'), 'Follow-up de WhatsApp');
+  assert.equal(normalizeReminderTitle('Retorno agendado: Ana'), 'Follow-up: Ana');
+  assert.equal(normalizeReminderTitle('Follow-up agendado: Ana'), 'Follow-up: Ana');
+  assert.equal(normalizeReminderTitle('Retomar follow-up de WhatsApp'), 'Follow-up');
+  assert.equal(normalizeReminderTitle('Follow-up de WhatsApp'), 'Follow-up');
+  assert.equal(normalizeReminderTitle('Follow up de WhatsApp'), 'Follow-up');
 });

@@ -459,7 +459,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
       <DialogHeader onClose={onClose}>
         <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
         <DialogDescription>
-          {lead ? 'Atualize os dados comerciais e o próximo retorno.' : 'Registre o contato e defina o primeiro acompanhamento.'}
+          {lead ? 'Atualize os dados comerciais e o próximo follow-up.' : 'Registre o contato e defina o primeiro acompanhamento.'}
         </DialogDescription>
       </DialogHeader>
       <DialogBody>
@@ -776,7 +776,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Próximo retorno">
+          <Field label="Próximo follow-up">
             <DateTimePicker
               type="datetime-local"
               value={formData.proximo_retorno}

@@ -341,8 +341,8 @@ export async function upsertLeadFollowUpReminder(input: {
 
   const values = {
     tipo: 'Follow-up',
-    titulo: `Follow-up agendado: ${input.leadName}`,
-    descricao: `Follow-up agendado para ${input.leadName}. Telefone: ${input.phone}`,
+    titulo: `Follow-up: ${input.leadName}`,
+    descricao: `Follow-up para ${input.leadName}. Telefone: ${input.phone}`,
     data_lembrete: input.remindAt,
     prioridade: 'alta',
   };

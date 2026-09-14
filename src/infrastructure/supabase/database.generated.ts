@@ -3089,6 +3089,7 @@ export type Database = {
       comm_whatsapp_scheduled_messages: {
         Row: {
           attempts: number
+          cancel_on_inbound_message: boolean
           cancelled_at: string | null
           cancelled_reason: string | null
           channel_id: string
@@ -3105,6 +3106,7 @@ export type Database = {
           last_attempt_at: string | null
           lead_id: string | null
           max_attempts: number
+          mcp_client_request_id: string | null
           media_file_name: string | null
           media_mime_type: string | null
           media_size_bytes: number | null
@@ -3127,6 +3129,7 @@ export type Database = {
         }
         Insert: {
           attempts?: number
+          cancel_on_inbound_message?: boolean
           cancelled_at?: string | null
           cancelled_reason?: string | null
           channel_id: string
@@ -3143,6 +3146,7 @@ export type Database = {
           last_attempt_at?: string | null
           lead_id?: string | null
           max_attempts?: number
+          mcp_client_request_id?: string | null
           media_file_name?: string | null
           media_mime_type?: string | null
           media_size_bytes?: number | null
@@ -3165,6 +3169,7 @@ export type Database = {
         }
         Update: {
           attempts?: number
+          cancel_on_inbound_message?: boolean
           cancelled_at?: string | null
           cancelled_reason?: string | null
           channel_id?: string
@@ -3181,6 +3186,7 @@ export type Database = {
           last_attempt_at?: string | null
           lead_id?: string | null
           max_attempts?: number
+          mcp_client_request_id?: string | null
           media_file_name?: string | null
           media_mime_type?: string | null
           media_size_bytes?: number | null
@@ -3288,6 +3294,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      comm_whatsapp_worker_tokens: {
+        Row: {
+          created_at: string
+          purpose: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          purpose: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          purpose?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       contract_abrangencias: {
         Row: {
@@ -4400,6 +4427,82 @@ export type Database = {
           },
         ]
       }
+      mcp_action_audit_log: {
+        Row: {
+          action_type: string
+          actor: string
+          actor_id: string | null
+          chat_id: string | null
+          client_request_id: string | null
+          contract_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          request_payload: Json
+          result_payload: Json
+          source: string
+          success: boolean
+          tool_name: string
+        }
+        Insert: {
+          action_type: string
+          actor: string
+          actor_id?: string | null
+          chat_id?: string | null
+          client_request_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          request_payload?: Json
+          result_payload?: Json
+          source?: string
+          success: boolean
+          tool_name: string
+        }
+        Update: {
+          action_type?: string
+          actor?: string
+          actor_id?: string | null
+          chat_id?: string | null
+          client_request_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          request_payload?: Json
+          result_payload?: Json
+          source?: string
+          success?: boolean
+          tool_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_action_audit_log_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_action_audit_log_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_action_audit_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operadoras: {
         Row: {
           ativo: boolean | null
@@ -4809,6 +4912,9 @@ export type Database = {
         Row: {
           anexos: Json | null
           ano: number | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           concluido_em: string | null
           contract_id: string | null
           created_at: string | null
@@ -4841,6 +4947,9 @@ export type Database = {
         Insert: {
           anexos?: Json | null
           ano?: number | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           concluido_em?: string | null
           contract_id?: string | null
           created_at?: string | null
@@ -4873,6 +4982,9 @@ export type Database = {
         Update: {
           anexos?: Json | null
           ano?: number | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           concluido_em?: string | null
           contract_id?: string | null
           created_at?: string | null
@@ -6461,6 +6573,7 @@ export type Database = {
       }
       create_scheduled_message: {
         Args: {
+          p_cancel_on_inbound_message?: boolean
           p_channel_id: string
           p_contract_id?: string
           p_label?: string
@@ -6574,6 +6687,7 @@ export type Database = {
       invoke_comm_whatsapp_campaign_worker: { Args: never; Returns: number }
       invoke_comm_whatsapp_enrichment_worker: { Args: never; Returns: number }
       invoke_process_pending_leads: { Args: never; Returns: number }
+      invoke_scheduled_messages_worker: { Args: never; Returns: number }
       is_leap_year: { Args: { year_value: number }; Returns: boolean }
       normalize_comm_whatsapp_chat_id: {
         Args: { value: string }

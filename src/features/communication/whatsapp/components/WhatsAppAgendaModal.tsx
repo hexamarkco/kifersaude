@@ -434,7 +434,7 @@ export default function WhatsAppAgendaModal({
         return next;
       });
     } catch (syncError) {
-      console.error('[WhatsAppAgendaModal] erro ao sincronizar proximo retorno:', syncError);
+      console.error('[WhatsAppAgendaModal] erro ao sincronizar proximo follow-up:', syncError);
     }
   }, []);
 

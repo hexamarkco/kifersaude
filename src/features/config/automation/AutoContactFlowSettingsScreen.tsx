@@ -725,7 +725,7 @@ export default function AutoContactFlowSettingsScreen() {
     data_criacao: "Data de criação",
     lead_criado: "Lead criado",
     ultimo_contato: "Último contato",
-    proximo_retorno: "Próximo retorno",
+    proximo_retorno: "Próximo follow-up",
     lead_created: "Evento",
   };
   const conditionFieldOptions = Object.entries(conditionFieldLabels).filter(
@@ -2558,7 +2558,7 @@ export default function AutoContactFlowSettingsScreen() {
                               finalStatus: event.target.value,
                             })
                           }
-                          placeholder="Ex.: Sem retorno"
+                          placeholder="Ex.: Sem follow-up"
                         />
                       )}
                     </div>

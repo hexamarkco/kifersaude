@@ -26,7 +26,7 @@ export function LeadsHeader({
     <PageHeader
       eyebrow="Operação comercial"
       title="Gestão de leads"
-      description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
+      description="Acompanhe a carteira, priorize follow-ups e mantenha o funil em ritmo constante."
       actions={(
         <>
           <LinkButton

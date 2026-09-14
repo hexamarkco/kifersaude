@@ -15,14 +15,20 @@ type ActionErrorCode =
   | 'INVALID_STATUS' | 'MESSAGE_EMPTY' | 'MESSAGE_TOO_LONG' | 'RATE_LIMITED'
   | 'DUPLICATE_REQUEST' | 'PROVIDER_ERROR' | 'INVALID_INPUT' | 'INTERNAL_ERROR'
   | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'JOB_ALREADY_EXECUTED'
-  | 'INVALID_ASSIGNEE' | 'LIMIT_EXCEEDED';
+  | 'INVALID_ASSIGNEE' | 'LIMIT_EXCEEDED' | 'SCHEDULE_NOT_FOUND'
+  | 'SCHEDULE_NOT_EDITABLE' | 'MESSAGE_ALREADY_SENT' | 'INVALID_SCHEDULE_TIME';
 
 const FLOW_TRIGGER_TYPES = new Set(['lead_created', 'status_changed', 'status_duration', 'inactivity_duration']);
 const STEP_ACTION_TYPES = new Set(['send_message', 'update_status', 'create_task', 'activate_autonomous_service']);
 const DELAY_UNITS = new Set(['seconds', 'minutes', 'hours', 'days']);
 const MAX_BULK_CANCEL_JOBS = 100;
+const MAX_BULK_SCHEDULED_MESSAGES = 50;
+const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
+const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
+const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,scheduled_at,status,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+const rawString = (value: unknown) => typeof value === 'string' ? value : '';
 const safeUuid = (value: unknown) => UUID.test(text(value));
 const sanitize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sanitize);
@@ -36,6 +42,11 @@ const parseDate = (value: unknown): string | null => {
   const raw = text(value);
   const timestamp = Date.parse(raw);
   return raw && Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+};
+
+const messagePartsCount = (message: string) => {
+  const normalized = message.replace(/\r\n/g, '\n').trim();
+  return normalized ? normalized.split(/\n\s*---\s*\n/g).filter(Boolean).length : 0;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -310,11 +321,11 @@ async function sendWhatsAppMessage(supabase: SupabaseClient, params: Record<stri
 
 async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
   const chatId = text(params.chat_id);
-  const message = text(params.message);
+  const message = rawString(params.message);
   const scheduledAt = parseDate(params.scheduled_at);
   const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
   if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
-  if (!message) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
+  if (!message.trim()) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
   if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
   if (!clientRequestId) return errorResult('INVALID_INPUT', 'client_request_id é obrigatório para impedir agendamentos duplicados.');
   if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000) {
@@ -337,6 +348,7 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
     .from('comm_whatsapp_scheduled_messages')
     .select('id,chat_id,lead_id,scheduled_at,status,mcp_client_request_id')
     .eq('channel_id', chat.channel_id)
+    .eq('chat_id', chat.id)
     .eq('mcp_client_request_id', clientRequestId)
     .maybeSingle();
   const existing = await lookupExisting();

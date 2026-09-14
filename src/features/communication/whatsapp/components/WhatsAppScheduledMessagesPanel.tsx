@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Calendar, Clock, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 
-import { Button, Dialog, DialogBody, IconButton } from '../../../../design-system';
+import { Button, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
-import type { CommWhatsAppScheduledMessage } from '../domain/types';
+import type { CommWhatsAppScheduledMessage, CommWhatsAppScheduledMessageStatus } from '../domain/types';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
 type WhatsAppScheduledMessagesPanelProps = {
@@ -43,6 +43,22 @@ const RECURRENCE_LABELS: Record<string, string> = {
 
 const SCHEDULED_MESSAGES_PAGE_SIZE = 100;
 
+type ScheduledMessagesView = 'upcoming' | 'attention' | 'history' | 'all';
+
+const VIEW_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppScheduledMessageStatus[]> = {
+  upcoming: ['scheduled', 'sending'],
+  attention: ['failed'],
+  history: ['sent', 'cancelled', 'expired'],
+  all: ['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired'],
+};
+
+function normalizeSearchTerm(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
 export default function WhatsAppScheduledMessagesPanel({
   channelId,
   phoneDigits,
@@ -54,6 +70,8 @@ export default function WhatsAppScheduledMessagesPanel({
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
+  const [activeView, setActiveView] = useState<ScheduledMessagesView>('upcoming');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isFiltered = Boolean(phoneDigits);
 
@@ -121,22 +139,54 @@ export default function WhatsAppScheduledMessagesPanel({
     }
   }, [loadMessages]);
 
-  const groupedMessages = useMemo(() => {
-    const now = new Date();
-    const upcoming: CommWhatsAppScheduledMessage[] = [];
-    const past: CommWhatsAppScheduledMessage[] = [];
+  const viewCounts = useMemo(() => {
+    const counts: Record<ScheduledMessagesView, number> = {
+      upcoming: 0,
+      attention: 0,
+      history: 0,
+      all: messages.length,
+    };
 
-    for (const msg of messages) {
-      const scheduledDate = new Date(msg.scheduled_at);
-      if (scheduledDate >= now || msg.status === 'scheduled' || msg.status === 'sending') {
-        upcoming.push(msg);
-      } else {
-        past.push(msg);
-      }
+    for (const message of messages) {
+      if (VIEW_STATUSES.upcoming.includes(message.status)) counts.upcoming += 1;
+      if (VIEW_STATUSES.attention.includes(message.status)) counts.attention += 1;
+      if (VIEW_STATUSES.history.includes(message.status)) counts.history += 1;
     }
 
-    return { upcoming, past };
+    return counts;
   }, [messages]);
+
+  const viewTabs: TabItem<ScheduledMessagesView>[] = useMemo(() => [
+    { id: 'upcoming', label: 'Próximas', badge: viewCounts.upcoming },
+    { id: 'attention', label: 'Atenção', badge: viewCounts.attention },
+    { id: 'history', label: 'Histórico', badge: viewCounts.history },
+    { id: 'all', label: 'Todas', badge: viewCounts.all },
+  ], [viewCounts]);
+
+  const visibleMessages = useMemo(() => {
+    const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
+    const allowedStatuses = VIEW_STATUSES[activeView];
+
+    return messages
+      .filter((message) => {
+        if (!allowedStatuses.includes(message.status)) return false;
+        if (!normalizedQuery) return true;
+
+        return normalizeSearchTerm([
+          message.text_content,
+          message.display_name,
+          message.phone_number,
+          message.phone_digits,
+          message.label,
+          STATUS_LABELS[message.status],
+        ].filter(Boolean).join(' ')).includes(normalizedQuery);
+      })
+      .sort((first, second) => {
+        const firstDate = new Date(first.next_run_at ?? first.scheduled_at).getTime();
+        const secondDate = new Date(second.next_run_at ?? second.scheduled_at).getTime();
+        return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
+      });
+  }, [activeView, messages, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -172,7 +222,7 @@ export default function WhatsAppScheduledMessagesPanel({
           </div>
         </div>
 
-      <DialogBody className="px-6 py-4">
+      <DialogBody className="space-y-4 px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
@@ -192,43 +242,57 @@ export default function WhatsAppScheduledMessagesPanel({
               )}
             </div>
           ) : (
-            <div className="space-y-6">
-              {groupedMessages.upcoming.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Próximas</h3>
-                  <div className="space-y-2">
-                    {groupedMessages.upcoming.map((msg) => (
-                      <ScheduledMessageItem
-                        key={msg.id}
-                        message={msg}
-                        cancelling={cancellingId === msg.id}
-                        onEdit={() => setEditingMessage(msg)}
-                        onCancel={() => void handleCancel(msg.id)}
-                        onDelete={() => void handleDelete(msg.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+            <>
+              <Tabs
+                items={viewTabs}
+                value={activeView}
+                onChange={setActiveView}
+                variant="pill"
+                size="sm"
+                ariaLabel="Filtrar mensagens agendadas por situação"
+                listClassName="overflow-x-auto"
+              />
 
-              {groupedMessages.past.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Histórico</h3>
-                  <div className="space-y-2">
-                    {groupedMessages.past.map((msg) => (
-                      <ScheduledMessageItem
-                        key={msg.id}
-                        message={msg}
-                        cancelling={cancellingId === msg.id}
-                        onEdit={() => setEditingMessage(msg)}
-                        onCancel={() => void handleCancel(msg.id)}
-                        onDelete={() => void handleDelete(msg.id)}
-                      />
-                    ))}
-                  </div>
+              <Input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                leftIcon={Search}
+                placeholder="Buscar por mensagem, contato ou etiqueta..."
+                aria-label="Buscar mensagens agendadas"
+              />
+
+              <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+                <span>{visibleMessages.length} resultado(s) nesta visão</span>
+                {searchQuery ? <span>Filtro aplicado</span> : null}
+              </div>
+
+              {visibleMessages.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-4 py-10 text-center">
+                  <p className="text-sm font-medium text-[var(--text-secondary)]">
+                    Nenhuma mensagem nesta visão
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    {searchQuery
+                      ? 'Tente outro termo de busca ou consulte outra aba.'
+                      : 'Quando houver mensagens nesta situação, elas aparecerão aqui.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {visibleMessages.map((message) => (
+                    <ScheduledMessageItem
+                      key={message.id}
+                      message={message}
+                      cancelling={cancellingId === message.id}
+                      onEdit={() => setEditingMessage(message)}
+                      onCancel={() => void handleCancel(message.id)}
+                      onDelete={() => void handleDelete(message.id)}
+                    />
+                  ))}
                 </div>
               )}
-            </div>
+            </>
           )}
       </DialogBody>
       </Dialog>

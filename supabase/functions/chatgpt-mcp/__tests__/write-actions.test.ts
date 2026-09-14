@@ -398,6 +398,197 @@ test('retorna o resultado original quando o fluxo normal informa duplicidade', a
   assert.equal(result?.external_message_id, 'provider-message-1');
 });
 
+const mcpInboxChannel = { id: '22222222-2222-2222-2222-222222222222' };
+const mcpInboxChat = {
+  id: '33333333-3333-3333-3333-333333333333',
+  channel_id: mcpInboxChannel.id,
+  external_chat_id: '5521979949423@s.whatsapp.net',
+  phone_number: '5521979949423',
+  phone_digits: '5521979949423',
+  display_name: 'Aline',
+  lead_id: null,
+  deleted_at: null,
+  merged_into_chat_id: null,
+};
+
+test('cria conversa no Inbox quando o telefone ainda não possui chat', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel },
+    leads: { data: [] },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_get_or_create_whatsapp_chat',
+    arguments: { phone: '21979949423' },
+    actor,
+  });
+
+  assert.deepEqual(result, {
+    success: true,
+    created: true,
+    chat_id: mcpInboxChat.id,
+    lead_id: null,
+    lead_match: 'not_found',
+    chat: { id: mcpInboxChat.id, phone: '5521979949423', lead_id: null },
+  });
+  const created = supabase.writes.find((write) => write.table === 'comm_whatsapp_chats' && write.operation === 'insert');
+  assert.equal((created?.value as { external_chat_id?: string }).external_chat_id, '5521979949423@s.whatsapp.net');
+  assert.ok(!supabase.calls.includes('comm_whatsapp_messages'));
+});
+
+test('retorna a conversa existente sem criar outra', async () => {
+  const existing = { ...mcpInboxChat, lead_id: actor.actorId };
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel },
+    leads: { data: [] },
+    comm_whatsapp_chats: { data: existing },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_get_or_create_whatsapp_chat',
+    arguments: { phone: '5521979949423' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.created, false);
+  assert.equal(result?.chat_id, existing.id);
+  assert.equal(supabase.writes.filter((write) => write.table === 'comm_whatsapp_chats' && write.operation === 'insert').length, 0);
+});
+
+test('duas chamadas consecutivas devolvem o mesmo chat e não duplicam a criação', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: [{ data: mcpInboxChannel }, { data: mcpInboxChannel }],
+    leads: [{ data: [] }, { data: [] }],
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }, { data: mcpInboxChat }],
+    mcp_action_audit_log: {},
+  });
+  const first = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423' }, actor });
+  const second = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423' }, actor });
+
+  assert.equal(first?.chat_id, mcpInboxChat.id);
+  assert.equal(second?.chat_id, mcpInboxChat.id);
+  assert.equal(second?.created, false);
+  assert.equal(supabase.writes.filter((write) => write.table === 'comm_whatsapp_chats' && write.operation === 'insert').length, 1);
+});
+
+test('normaliza telefone mascarado para a identidade canônica do Inbox', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: [] },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }], mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '(21) 97994-9423' }, actor });
+
+  assert.equal((result?.chat as { phone?: string }).phone, '5521979949423');
+});
+
+test('normaliza telefone fornecido com +55', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: [] },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }], mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '+5521979949423' }, actor });
+
+  assert.equal((result?.chat as { phone?: string }).phone, '5521979949423');
+});
+
+test('associa o chat ao lead quando o telefone informado é compatível', async () => {
+  const lead = { id: actor.actorId, nome_completo: 'Aline', telefone: '+55 (21) 97994-9423' };
+  const createdChat = { ...mcpInboxChat, lead_id: lead.id };
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: lead },
+    comm_whatsapp_chats: [{ data: null }, { data: createdChat }], mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423', lead_id: lead.id }, actor });
+
+  assert.equal(result?.lead_id, lead.id);
+  const created = supabase.writes.find((write) => write.table === 'comm_whatsapp_chats' && write.operation === 'insert');
+  assert.equal((created?.value as { lead_id?: string }).lead_id, lead.id);
+});
+
+test('bloqueia vínculo quando o telefone informado diverge do telefone do lead', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel },
+    leads: { data: { id: actor.actorId, nome_completo: 'Aline', telefone: '21988887777' } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423', lead_id: actor.actorId }, actor });
+
+  assert.equal(result?.error_code, 'PHONE_LEAD_MISMATCH');
+  assert.ok(!supabase.calls.includes('comm_whatsapp_chats'));
+});
+
+test('cria somente a conversa quando não há lead correspondente', async () => {
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: [] },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }], mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423' }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.lead_id, null);
+  assert.equal(result?.lead_match, 'not_found');
+});
+
+test('não associa automaticamente quando existem vários leads para o mesmo telefone', async () => {
+  const leads = [
+    { id: actor.actorId, nome_completo: 'Aline 1', telefone: '5521979949423' },
+    { id: '44444444-4444-4444-4444-444444444444', nome_completo: 'Aline 2', telefone: '5521979949423' },
+  ];
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: leads },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }], mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423' }, actor });
+
+  assert.equal(result?.lead_id, null);
+  assert.equal(result?.lead_match, 'ambiguous');
+  const created = supabase.writes.find((write) => write.table === 'comm_whatsapp_chats' && write.operation === 'insert');
+  assert.equal((created?.value as { lead_id?: string | null }).lead_id, null);
+});
+
+test('a criação de chat não chama o fluxo de envio de WhatsApp', async () => {
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  const supabase = client({
+    comm_whatsapp_channels: { data: mcpInboxChannel }, leads: { data: [] },
+    comm_whatsapp_chats: [{ data: null }, { data: mcpInboxChat }], mcp_action_audit_log: {},
+  });
+  await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_get_or_create_whatsapp_chat', arguments: { phone: '21979949423' }, actor });
+
+  assert.equal(fetchMock.mock.calls.length, 0);
+  assert.ok(!supabase.calls.includes('comm_whatsapp_messages'));
+});
+
+test('o chat retornado pode ser usado pelo envio normal de WhatsApp', async () => {
+  stubMcpSendEnvironment();
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true, messageId: 'provider-1', status: 'queued' }), { status: 202 })));
+  const supabase = client({
+    comm_whatsapp_chats: { data: { ...mcpInboxChat, deleted_at: null } },
+    comm_whatsapp_messages: { data: { id: 'message-1', message_at: '2026-09-14T12:00:00.000Z', delivery_status: 'queued' } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_send_whatsapp_message', arguments: { chat_id: mcpInboxChat.id, message: 'Olá', client_request_id: 'chat-create-send-1' }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.chat_id, mcpInboxChat.id);
+});
+
+test('o chat retornado pode ser usado pelo agendamento normal de WhatsApp', async () => {
+  const supabase = client({
+    comm_whatsapp_chats: { data: { ...mcpInboxChat, deleted_at: null } },
+    comm_whatsapp_scheduled_messages: [{ data: null }, { data: { id: 'scheduled-chat-create', chat_id: mcpInboxChat.id, lead_id: null, scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_schedule_whatsapp_message', arguments: { chat_id: mcpInboxChat.id, message: 'Olá', scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'chat-create-schedule-1' }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.chat_id, mcpInboxChat.id);
+});
+
 test('recusa alteração de automação com campo fora da allowlist', async () => {
   const supabase = client({
     integration_settings: { data: { id: 'integration-1', settings: { enabled: true, autoSend: true, scheduling: {} } } },

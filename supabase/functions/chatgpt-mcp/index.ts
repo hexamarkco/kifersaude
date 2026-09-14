@@ -457,6 +457,12 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_get_or_create_whatsapp_chat',
+    description: 'Cria ou retorna uma conversa de WhatsApp do Inbox a partir de um telefone brasileiro. Se já existir uma conversa para o telefone normalizado, retorna a existente sem duplicar. Não envia nem agenda mensagens e não cria leads. Use para obter chat_id antes de um envio ou agendamento solicitado explicitamente pelo usuário. Esta ação pode criar uma conversa real e associá-la com segurança a um lead compatível.',
+    inputSchema: { type: 'object', required: ['phone'], additionalProperties: false, properties: { phone: { type: 'string', minLength: 10, maxLength: 32, description: 'Telefone brasileiro com DDD; aceita máscara, +55 ou somente dígitos.' }, lead_id: { type: 'string', description: 'Opcional. Só será associado se existir e o telefone cadastrado for compatível.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: 'kifer_schedule_whatsapp_message',
     description: 'Agenda uma única mensagem de texto para uma conversa de WhatsApp existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o agendamento. Esta ação altera dados reais; chat_id é obrigatório e telefone não o substitui. Preserva literalmente quebras de linha e --- para o Inbox separar no envio. client_request_id torna retries idempotentes.',
     inputSchema: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente, nunca um telefone.' }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal. Não remova nem altere --- ou quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601, preferencialmente com offset, por exemplo -03:00.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
@@ -527,7 +533,7 @@ const tools = [
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_get_or_create_whatsapp_chat', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',

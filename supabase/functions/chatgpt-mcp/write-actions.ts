@@ -1,4 +1,10 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import {
+  buildWhapiDirectChatId,
+  formatPhoneLabel,
+  getCommWhatsAppPhoneLookupKeys,
+  normalizeCommWhatsAppPhone,
+} from '../_shared/comm-whatsapp/identity.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
 const MAX_SHORT_TEXT_LENGTH = 160;
@@ -16,7 +22,8 @@ type ActionErrorCode =
   | 'DUPLICATE_REQUEST' | 'PROVIDER_ERROR' | 'INVALID_INPUT' | 'INTERNAL_ERROR'
   | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'JOB_ALREADY_EXECUTED'
   | 'INVALID_ASSIGNEE' | 'LIMIT_EXCEEDED' | 'SCHEDULE_NOT_FOUND'
-  | 'SCHEDULE_NOT_EDITABLE' | 'MESSAGE_ALREADY_SENT' | 'INVALID_SCHEDULE_TIME';
+  | 'SCHEDULE_NOT_EDITABLE' | 'MESSAGE_ALREADY_SENT' | 'INVALID_SCHEDULE_TIME'
+  | 'PHONE_LEAD_MISMATCH';
 
 const FLOW_TRIGGER_TYPES = new Set(['lead_created', 'status_changed', 'status_duration', 'inactivity_duration']);
 const STEP_ACTION_TYPES = new Set(['send_message', 'update_status', 'create_task', 'activate_autonomous_service']);
@@ -27,6 +34,7 @@ const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'fai
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
 const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,scheduled_at,status,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
 const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up', 'Retorno']);
+const MCP_WHATSAPP_CHAT_SELECT = 'id,channel_id,external_chat_id,phone_number,phone_digits,display_name,lead_id,lead_link_source,deleted_at,merged_into_chat_id,created_at,updated_at';
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const rawString = (value: unknown) => typeof value === 'string' ? value : '';
@@ -327,6 +335,188 @@ async function sendWhatsAppMessage(supabase: SupabaseClient, params: Record<stri
   const externalMessageId = text(body.messageId);
   const { data: persisted } = externalMessageId ? await supabase.from('comm_whatsapp_messages').select('id,message_at,delivery_status').eq('chat_id', chatId).eq('external_message_id', externalMessageId).maybeSingle() : { data: null };
   return { success: true, duplicate: body.duplicate === true, message_id: persisted?.id || null, external_message_id: externalMessageId || null, chat_id: chatId, delivery_status: text(body.status) || persisted?.delivery_status || 'queued', sent_at: persisted?.message_at || new Date().toISOString() };
+}
+
+type McpWhatsAppChat = {
+  id: string;
+  channel_id: string;
+  external_chat_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string;
+  lead_id: string | null;
+  deleted_at: string | null;
+  merged_into_chat_id: string | null;
+};
+
+type McpLeadPhone = { id: string; nome_completo: string | null; telefone: string | null };
+
+const normalizedBrazilWhatsAppPhone = (value: unknown) => {
+  const normalized = normalizeCommWhatsAppPhone(value);
+  return /^55\d{10,11}$/.test(normalized) ? normalized : '';
+};
+
+const chatView = (chat: McpWhatsAppChat, normalizedPhone: string) => ({
+  id: chat.id,
+  phone: normalizedBrazilWhatsAppPhone(chat.phone_digits || chat.phone_number) || normalizedPhone,
+  lead_id: safeUuid(chat.lead_id) ? chat.lead_id : null,
+});
+
+async function findActiveWhatsAppChat(
+  supabase: SupabaseClient,
+  channelId: string,
+  phone: string,
+): Promise<McpWhatsAppChat | null> {
+  const phoneKeys = getCommWhatsAppPhoneLookupKeys(phone);
+  const { data, error } = await supabase
+    .from('comm_whatsapp_chats')
+    .select(MCP_WHATSAPP_CHAT_SELECT)
+    .eq('channel_id', channelId)
+    .in('phone_digits', phoneKeys)
+    .is('deleted_at', null)
+    .is('merged_into_chat_id', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as McpWhatsAppChat | null;
+}
+
+async function resolveLeadForWhatsAppChat(
+  supabase: SupabaseClient,
+  normalizedPhone: string,
+  suppliedLeadId: string,
+): Promise<{ lead: McpLeadPhone | null; leadMatch: 'matched' | 'not_found' | 'ambiguous'; error?: McpWriteResult }> {
+  if (suppliedLeadId) {
+    if (!safeUuid(suppliedLeadId)) return { lead: null, leadMatch: 'not_found', error: errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.') };
+    const { data, error } = await supabase
+      .from('leads')
+      .select('id,nome_completo,telefone')
+      .eq('id', suppliedLeadId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const lead = data as McpLeadPhone | null;
+    if (!lead) return { lead: null, leadMatch: 'not_found', error: errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.') };
+    if (normalizedBrazilWhatsAppPhone(lead.telefone) !== normalizedPhone) {
+      return { lead: null, leadMatch: 'not_found', error: errorResult('PHONE_LEAD_MISMATCH', 'O telefone informado não corresponde ao telefone do lead.') };
+    }
+    return { lead, leadMatch: 'matched' };
+  }
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('id,nome_completo,telefone')
+    .in('telefone', getCommWhatsAppPhoneLookupKeys(normalizedPhone))
+    .range(0, 2);
+  if (error) throw new Error(error.message);
+  const candidates = (Array.isArray(data) ? data : [])
+    .filter((lead): lead is McpLeadPhone => normalizedBrazilWhatsAppPhone((lead as McpLeadPhone).telefone) === normalizedPhone);
+  if (candidates.length === 1) return { lead: candidates[0], leadMatch: 'matched' };
+  return { lead: null, leadMatch: candidates.length > 1 ? 'ambiguous' : 'not_found' };
+}
+
+async function getOrCreateWhatsAppChat(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  const normalizedPhone = normalizedBrazilWhatsAppPhone(params.phone);
+  const suppliedLeadId = text(params.lead_id);
+  if (!normalizedPhone) return errorResult('INVALID_INPUT', 'Informe um telefone brasileiro válido, com DDD e número.');
+
+  const { data: channel, error: channelError } = await supabase
+    .from('comm_whatsapp_channels')
+    .select('id')
+    .eq('slug', 'primary')
+    .maybeSingle();
+  if (channelError || !channel?.id) return errorResult('INTERNAL_ERROR', 'Canal principal do WhatsApp não está disponível.');
+
+  const resolvedLead = await resolveLeadForWhatsAppChat(supabase, normalizedPhone, suppliedLeadId);
+  if (resolvedLead.error) return resolvedLead.error;
+
+  const linkChatIfSafe = async (chat: McpWhatsAppChat) => {
+    if (!resolvedLead.lead || chat.lead_id === resolvedLead.lead.id) return chat;
+    if (chat.lead_id) {
+      if (suppliedLeadId) throw new Error('PHONE_LEAD_MISMATCH');
+      return chat;
+    }
+    const { data, error } = await supabase
+      .from('comm_whatsapp_chats')
+      .update({
+        lead_id: resolvedLead.lead.id,
+        lead_link_source: suppliedLeadId ? 'crm_start' : 'auto_phone',
+        lead_linked_at: new Date().toISOString(),
+        lead_linked_by: actor.actorId,
+      })
+      .eq('id', chat.id)
+      .is('deleted_at', null)
+      .is('merged_into_chat_id', null)
+      .select(MCP_WHATSAPP_CHAT_SELECT)
+      .maybeSingle();
+    if (error || !data) throw new Error(error?.message || 'Não foi possível associar a conversa ao lead.');
+    return data as McpWhatsAppChat;
+  };
+
+  let existing = await findActiveWhatsAppChat(supabase, channel.id, normalizedPhone);
+  if (existing) {
+    try {
+      existing = await linkChatIfSafe(existing);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'PHONE_LEAD_MISMATCH') {
+        return errorResult('PHONE_LEAD_MISMATCH', 'A conversa existente já está vinculada a outro lead.');
+      }
+      throw error;
+    }
+    return {
+      success: true,
+      created: false,
+      chat_id: existing.id,
+      lead_id: safeUuid(existing.lead_id) ? existing.lead_id : null,
+      lead_match: existing.lead_id ? 'matched' : resolvedLead.leadMatch,
+      chat: chatView(existing, normalizedPhone),
+    };
+  }
+
+  const externalChatId = buildWhapiDirectChatId(normalizedPhone);
+  const { data: created, error: createError } = await supabase
+    .from('comm_whatsapp_chats')
+    .insert({
+      channel_id: channel.id,
+      external_chat_id: externalChatId,
+      phone_number: normalizedPhone,
+      phone_digits: normalizedPhone,
+      display_name: text(resolvedLead.lead?.nome_completo) || formatPhoneLabel(normalizedPhone),
+      lead_id: resolvedLead.lead?.id || null,
+      lead_link_source: resolvedLead.lead ? (suppliedLeadId ? 'crm_start' : 'auto_phone') : null,
+      lead_linked_at: resolvedLead.lead ? new Date().toISOString() : null,
+      lead_linked_by: resolvedLead.lead ? actor.actorId : null,
+      last_message_direction: 'system',
+      unread_count: 0,
+      status: 'open',
+    })
+    .select(MCP_WHATSAPP_CHAT_SELECT)
+    .maybeSingle();
+
+  if (createError || !created) {
+    const concurrentChat = await findActiveWhatsAppChat(supabase, channel.id, normalizedPhone);
+    if (concurrentChat) {
+      return {
+        success: true,
+        created: false,
+        chat_id: concurrentChat.id,
+        lead_id: safeUuid(concurrentChat.lead_id) ? concurrentChat.lead_id : null,
+        lead_match: concurrentChat.lead_id ? 'matched' : resolvedLead.leadMatch,
+        chat: chatView(concurrentChat, normalizedPhone),
+      };
+    }
+    return errorResult('INTERNAL_ERROR', 'Não foi possível criar a conversa no Inbox.');
+  }
+
+  const chat = created as McpWhatsAppChat;
+  return {
+    success: true,
+    created: true,
+    chat_id: chat.id,
+    lead_id: safeUuid(chat.lead_id) ? chat.lead_id : null,
+    lead_match: resolvedLead.leadMatch,
+    chat: chatView(chat, normalizedPhone),
+  };
 }
 
 async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
@@ -1179,6 +1369,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   const clientRequestId = text(args.client_request_id) || null;
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
+    else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_bulk_schedule_whatsapp_messages') { actionType = 'whatsapp_schedule_bulk'; result = await bulkScheduleWhatsAppMessages(supabase, args, actor); }
     else if (toolName === 'kifer_update_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_update'; result = await updateScheduledWhatsAppMessage(supabase, args); }

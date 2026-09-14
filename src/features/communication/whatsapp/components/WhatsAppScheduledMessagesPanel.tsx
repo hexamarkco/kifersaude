@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Loader2, Plus, Trash2, X } from 'lucide-react';
 
-import { Button, IconButton } from '../../../../design-system';
+import { Button, Dialog, DialogBody, IconButton } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
@@ -40,6 +40,8 @@ const RECURRENCE_LABELS: Record<string, string> = {
   monthly: 'Mensal',
 };
 
+const SCHEDULED_MESSAGES_PAGE_SIZE = 100;
+
 export default function WhatsAppScheduledMessagesPanel({
   channelId,
   phoneDigits,
@@ -54,14 +56,25 @@ export default function WhatsAppScheduledMessagesPanel({
   const isFiltered = Boolean(phoneDigits);
 
   const loadMessages = useCallback(async () => {
-    if (!isOpen || !channelId) return;
+    if (!isOpen) return;
     setLoading(true);
     try {
-      const data = await commWhatsAppService.listScheduledMessages({
-        channelId,
-        limit: 100,
-      });
-      const allMessages = data as unknown as CommWhatsAppScheduledMessage[];
+      const allMessages: CommWhatsAppScheduledMessage[] = [];
+      let offset = 0;
+
+      while (true) {
+        const data = await commWhatsAppService.listScheduledMessages({
+          ...(channelId ? { channelId } : {}),
+          limit: SCHEDULED_MESSAGES_PAGE_SIZE,
+          offset,
+        });
+        const page = data as unknown as CommWhatsAppScheduledMessage[];
+        allMessages.push(...page);
+
+        if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;
+        offset += page.length;
+      }
+
       setMessages(
         phoneDigits
           ? allMessages.filter((m) => m.phone_digits === phoneDigits)
@@ -126,9 +139,14 @@ export default function WhatsAppScheduledMessagesPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[var(--overlay)]">
-      <div className="bg-[var(--bg-surface)] rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-[var(--border-subtle)]">
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+      size="md"
+    >
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">
             <Calendar className="kds-control-icon text-[var(--brand-primary)]" />
             <div>
@@ -151,7 +169,7 @@ export default function WhatsAppScheduledMessagesPanel({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+      <DialogBody className="px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
@@ -207,9 +225,8 @@ export default function WhatsAppScheduledMessagesPanel({
               )}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }
 

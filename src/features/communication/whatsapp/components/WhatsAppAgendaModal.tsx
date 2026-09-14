@@ -70,7 +70,6 @@ import { toast } from '../../../../lib/toast';
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  channelId?: string;
   currentLead: CommWhatsAppLeadPanel | null;
   currentLeadContracts: CommWhatsAppLeadContractSummary[];
   canEdit: boolean;
@@ -137,7 +136,6 @@ const parseDateInputValue = (value: string) => {
 export default function WhatsAppAgendaModal({
   isOpen,
   onClose,
-  channelId,
   currentLead,
   currentLeadContracts,
   canEdit,
@@ -1880,7 +1878,6 @@ export default function WhatsAppAgendaModal({
       />
 
       <WhatsAppScheduledMessagesPanel
-        channelId={channelId}
         isOpen={isScheduledMessagesOpen}
         onClose={() => setScheduledMessagesOpen(false)}
       />

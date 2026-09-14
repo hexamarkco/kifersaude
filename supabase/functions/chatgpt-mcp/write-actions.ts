@@ -32,7 +32,7 @@ const MAX_BULK_CANCEL_JOBS = 100;
 const MAX_BULK_SCHEDULED_MESSAGES = 50;
 const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
-const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,scheduled_at,status,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
+const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
 const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up', 'Retorno']);
 const MCP_WHATSAPP_CHAT_SELECT = 'id,channel_id,external_chat_id,phone_number,phone_digits,display_name,lead_id,lead_link_source,deleted_at,merged_into_chat_id,created_at,updated_at';
 
@@ -520,20 +520,45 @@ async function getOrCreateWhatsAppChat(supabase: SupabaseClient, params: Record<
 }
 
 async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
-  const chatId = text(params.chat_id);
+  const suppliedChatId = text(params.chat_id);
+  const suppliedLeadId = text(params.lead_id);
   const message = rawString(params.message);
   const scheduledAt = parseDate(params.scheduled_at);
   const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
-  if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
+  const cancelOnInboundMessage = params.cancel_on_inbound_message === undefined ? false : params.cancel_on_inbound_message;
+  if ((suppliedChatId && suppliedLeadId) || (!suppliedChatId && !suppliedLeadId)) {
+    return errorResult('INVALID_INPUT', 'Informe exatamente um de chat_id ou lead_id para agendar a mensagem.');
+  }
   if (!message.trim()) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
   if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
   if (!clientRequestId) return errorResult('INVALID_INPUT', 'client_request_id é obrigatório para impedir agendamentos duplicados.');
+  if (typeof cancelOnInboundMessage !== 'boolean') return errorResult('INVALID_INPUT', 'cancel_on_inbound_message deve ser booleano.');
   if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000) {
     return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at deve ser uma data futura de pelo menos um minuto.');
   }
   if (Date.parse(scheduledAt) > Date.now() + 366 * 24 * 60 * 60 * 1_000) {
     return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at não pode ultrapassar 366 dias a partir de agora.');
   }
+
+  let chatId = suppliedChatId;
+  if (suppliedLeadId) {
+    if (!safeUuid(suppliedLeadId)) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .select('id,telefone')
+      .eq('id', suppliedLeadId)
+      .maybeSingle();
+    if (leadError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o lead para agendar a mensagem.');
+    if (!lead) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+    const leadPhone = normalizedBrazilWhatsAppPhone((lead as McpLeadPhone).telefone);
+    if (!leadPhone) return errorResult('INVALID_INPUT', 'O lead não possui telefone brasileiro válido para criar uma conversa do WhatsApp.');
+
+    const chatResult = await getOrCreateWhatsAppChat(supabase, { phone: leadPhone, lead_id: suppliedLeadId }, actor);
+    if (!chatResult.success) return chatResult;
+    chatId = text(chatResult.chat_id);
+  }
+
+  if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
 
   const { data: chat, error: chatError } = await supabase
     .from('comm_whatsapp_chats')
@@ -546,7 +571,7 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
 
   const lookupExisting = async () => await supabase
     .from('comm_whatsapp_scheduled_messages')
-    .select('id,chat_id,lead_id,scheduled_at,status,mcp_client_request_id')
+    .select('id,chat_id,lead_id,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id')
     .eq('channel_id', chat.channel_id)
     .eq('chat_id', chat.id)
     .eq('mcp_client_request_id', clientRequestId)
@@ -562,6 +587,7 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
       lead_id: existing.data.lead_id,
       scheduled_at: existing.data.scheduled_at,
       status: existing.data.status,
+      cancel_on_inbound_message: existing.data.cancel_on_inbound_message === true,
       client_request_id: clientRequestId,
     };
   }
@@ -578,12 +604,13 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
       text_content: message,
       scheduled_at: scheduledAt,
       recurrence: 'none',
+      cancel_on_inbound_message: cancelOnInboundMessage,
       lead_id: chat.lead_id || null,
       created_by: actor.actorId,
       mcp_client_request_id: clientRequestId,
       metadata: { source: 'chatgpt_mcp', client_request_id: clientRequestId },
     })
-    .select('id,chat_id,lead_id,scheduled_at,status,mcp_client_request_id')
+    .select('id,chat_id,lead_id,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id')
     .maybeSingle();
   if (insertError) {
     if (text((insertError as { code?: unknown }).code) === '23505') {
@@ -597,6 +624,7 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
           lead_id: concurrent.data.lead_id,
           scheduled_at: concurrent.data.scheduled_at,
           status: concurrent.data.status,
+          cancel_on_inbound_message: concurrent.data.cancel_on_inbound_message === true,
           client_request_id: clientRequestId,
         };
       }
@@ -612,6 +640,7 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
     lead_id: scheduled.lead_id,
     scheduled_at: scheduled.scheduled_at,
     status: scheduled.status,
+    cancel_on_inbound_message: scheduled.cancel_on_inbound_message === true,
     client_request_id: clientRequestId,
   };
 }
@@ -630,6 +659,7 @@ const scheduledMessageView = (row: Record<string, unknown>, leadName: string | n
     scheduled_at_utc: scheduledAt,
     timezone: 'America/Sao_Paulo',
     status: text(row.status) || null,
+    cancel_on_inbound_message: row.cancel_on_inbound_message === true,
     client_request_id: text(row.mcp_client_request_id) || null,
     created_at: parseDate(row.created_at),
     updated_at: parseDate(row.updated_at),
@@ -822,8 +852,8 @@ async function updateScheduledWhatsAppMessage(supabase: SupabaseClient, params: 
   const scheduledMessageId = text(params.scheduled_message_id);
   const changes = isRecord(params.changes) ? params.changes : null;
   if (!safeUuid(scheduledMessageId) || !changes) return errorResult('INVALID_INPUT', 'scheduled_message_id e changes são obrigatórios.');
-  if (Object.keys(changes).length === 0) return errorResult('INVALID_INPUT', 'Informe ao menos message ou scheduled_at.');
-  if (Object.keys(changes).some((key) => key !== 'message' && key !== 'scheduled_at')) return errorResult('NOT_ALLOWED', 'A ferramenta permite alterar somente message e scheduled_at.');
+  if (Object.keys(changes).length === 0) return errorResult('INVALID_INPUT', 'Informe ao menos message, scheduled_at ou cancel_on_inbound_message.');
+  if (Object.keys(changes).some((key) => key !== 'message' && key !== 'scheduled_at' && key !== 'cancel_on_inbound_message')) return errorResult('NOT_ALLOWED', 'A ferramenta permite alterar somente message, scheduled_at e cancel_on_inbound_message.');
   const current = await getScheduledMessageRow(supabase, scheduledMessageId);
   if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Agendamento de WhatsApp não encontrado.');
   const mutationError = scheduledMessageMutationError(current.row, 'update');
@@ -841,6 +871,10 @@ async function updateScheduledWhatsAppMessage(supabase: SupabaseClient, params: 
       return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at deve estar entre um minuto e 366 dias no futuro, em ISO 8601.');
     }
     updates.scheduled_at = scheduledAt;
+  }
+  if ('cancel_on_inbound_message' in changes) {
+    if (typeof changes.cancel_on_inbound_message !== 'boolean') return errorResult('INVALID_INPUT', 'cancel_on_inbound_message deve ser booleano.');
+    updates.cancel_on_inbound_message = changes.cancel_on_inbound_message;
   }
   const { data, error } = await supabase
     .from('comm_whatsapp_scheduled_messages')

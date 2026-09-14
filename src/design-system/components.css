@@ -148,6 +148,10 @@
   max-height: calc(100dvh - 2rem);
 }
 
+.kds-dialog-fixed-height {
+  height: min(44rem, calc(100dvh - 2rem));
+}
+
 .kds-dialog-header {
   display: flex;
   align-items: flex-start;

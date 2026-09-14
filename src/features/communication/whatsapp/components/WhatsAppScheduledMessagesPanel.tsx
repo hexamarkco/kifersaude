@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 
-import { Button, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
+import { Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
@@ -59,6 +59,29 @@ function normalizeSearchTerm(value: string): string {
     .toLocaleLowerCase('pt-BR');
 }
 
+function getDateRangeBoundary(value: string, boundary: 'start' | 'end'): number {
+  const time = new Date(`${value}T${boundary === 'start' ? '00:00:00.000' : '23:59:59.999'}`).getTime();
+  return Number.isNaN(time) ? Number.NaN : time;
+}
+
+function getScheduleTimingLabel(value: string): string {
+  const scheduledAt = new Date(value);
+  if (Number.isNaN(scheduledAt.getTime())) return 'Data indisponível';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const scheduledDay = new Date(scheduledAt);
+  scheduledDay.setHours(0, 0, 0, 0);
+  const differenceInDays = Math.round((scheduledDay.getTime() - today.getTime()) / 86_400_000);
+  const time = scheduledAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  if (differenceInDays === 0) return `Hoje às ${time}`;
+  if (differenceInDays === 1) return `Amanhã às ${time}`;
+  if (differenceInDays === -1) return `Ontem às ${time}`;
+  if (differenceInDays > 1) return `Em ${differenceInDays} dias, às ${time}`;
+  return `Há ${Math.abs(differenceInDays)} dias, às ${time}`;
+}
+
 export default function WhatsAppScheduledMessagesPanel({
   channelId,
   phoneDigits,
@@ -72,6 +95,8 @@ export default function WhatsAppScheduledMessagesPanel({
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
   const [activeView, setActiveView] = useState<ScheduledMessagesView>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const isFiltered = Boolean(phoneDigits);
 
@@ -166,10 +191,15 @@ export default function WhatsAppScheduledMessagesPanel({
   const visibleMessages = useMemo(() => {
     const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
     const allowedStatuses = VIEW_STATUSES[activeView];
+    const startDateTime = startDate ? getDateRangeBoundary(startDate, 'start') : null;
+    const endDateTime = endDate ? getDateRangeBoundary(endDate, 'end') : null;
 
     return messages
       .filter((message) => {
         if (!allowedStatuses.includes(message.status)) return false;
+        const scheduleTime = new Date(message.next_run_at ?? message.scheduled_at).getTime();
+        if (startDateTime !== null && scheduleTime < startDateTime) return false;
+        if (endDateTime !== null && scheduleTime > endDateTime) return false;
         if (!normalizedQuery) return true;
 
         return normalizeSearchTerm([
@@ -186,19 +216,22 @@ export default function WhatsAppScheduledMessagesPanel({
         const secondDate = new Date(second.next_run_at ?? second.scheduled_at).getTime();
         return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
       });
-  }, [activeView, messages, searchQuery]);
+  }, [activeView, endDate, messages, searchQuery, startDate]);
+
+  const hasListFilters = Boolean(searchQuery || startDate || endDate);
 
   if (!isOpen) return null;
 
   return (
     <>
       <Dialog
-      open={isOpen}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
-      size="md"
-    >
+        open={isOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onClose();
+        }}
+        size="lg"
+        className="kds-dialog-fixed-height"
+      >
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">
             <Calendar className="kds-control-icon text-[var(--brand-primary)]" />
@@ -253,18 +286,60 @@ export default function WhatsAppScheduledMessagesPanel({
                 listClassName="overflow-x-auto"
               />
 
-              <Input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                leftIcon={Search}
-                placeholder="Buscar por mensagem, contato ou etiqueta..."
-                aria-label="Buscar mensagens agendadas"
-              />
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
+                <Input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  leftIcon={Search}
+                  placeholder="Buscar por mensagem, contato ou etiqueta..."
+                  aria-label="Buscar mensagens agendadas"
+                />
+                <div className="space-y-1">
+                  <label htmlFor="scheduled-messages-start-date" className="text-xs font-medium text-[var(--text-muted)]">
+                    A partir de
+                  </label>
+                  <DateTimePicker
+                    id="scheduled-messages-start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    max={endDate || undefined}
+                    placeholder="Qualquer data"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="scheduled-messages-end-date" className="text-xs font-medium text-[var(--text-muted)]">
+                    Até
+                  </label>
+                  <DateTimePicker
+                    id="scheduled-messages-end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    min={startDate || undefined}
+                    placeholder="Qualquer data"
+                  />
+                </div>
+                {hasListFilters ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="self-end"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                  >
+                    Limpar
+                  </Button>
+                ) : null}
+              </div>
 
               <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
                 <span>{visibleMessages.length} resultado(s) nesta visão</span>
-                {searchQuery ? <span>Filtro aplicado</span> : null}
+                {hasListFilters ? <span>Filtro aplicado</span> : null}
               </div>
 
               {visibleMessages.length === 0 ? (
@@ -273,7 +348,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     Nenhuma mensagem nesta visão
                   </p>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {searchQuery
+                    {hasListFilters
                       ? 'Tente outro termo de busca ou consulte outra aba.'
                       : 'Quando houver mensagens nesta situação, elas aparecerão aqui.'}
                   </p>
@@ -327,6 +402,7 @@ type ScheduledMessageItemProps = {
 
 function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete }: ScheduledMessageItemProps) {
   const isActive = message.status === 'scheduled' || message.status === 'failed';
+  const scheduledAt = message.next_run_at ?? message.scheduled_at;
 
   return (
     <div className="rounded-lg border border-[var(--border-subtle)] p-3 hover:border-[var(--border-default)] transition-colors">
@@ -347,11 +423,12 @@ function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete 
             {message.text_content ?? '(Mídia)'}
           </p>
 
-          <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+            <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
               <Clock className="kds-control-icon" />
-              {formatDateTimeFullBR(message.next_run_at ?? message.scheduled_at)}
+              {getScheduleTimingLabel(scheduledAt)}
             </span>
+            <span>{formatDateTimeFullBR(scheduledAt)}</span>
             <span>{formatCommWhatsAppPhoneLabel(message.phone_digits)}</span>
             {message.display_name && message.display_name !== message.phone_number && (
               <span className="truncate">{message.display_name}</span>

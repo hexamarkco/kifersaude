@@ -12,7 +12,11 @@ import {
 import { toast } from '../../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService } from '../data';
-import type { CommWhatsAppScheduledMessageRecurrence, CommWhatsAppScheduledMessageType } from '../domain/types';
+import type {
+  CommWhatsAppScheduledMessage,
+  CommWhatsAppScheduledMessageRecurrence,
+  CommWhatsAppScheduledMessageType,
+} from '../domain/types';
 
 type WhatsAppScheduleMessageModalProps = {
   isOpen: boolean;
@@ -26,6 +30,7 @@ type WhatsAppScheduleMessageModalProps = {
   initialMediaMimeType?: string | null;
   initialMediaFileName?: string | null;
   initialMessageType?: CommWhatsAppScheduledMessageType;
+  scheduledMessage?: CommWhatsAppScheduledMessage;
   onScheduled?: () => void;
 };
 
@@ -70,30 +75,36 @@ export default function WhatsAppScheduleMessageModal({
   initialMediaMimeType,
   initialMediaFileName,
   initialMessageType,
+  scheduledMessage,
   onScheduled,
 }: WhatsAppScheduleMessageModalProps) {
-  const [text, setText] = useState(initialText ?? '');
-  const [scheduledAt, setScheduledAt] = useState(getDefaultScheduledAt);
-  const [recurrence, setRecurrence] = useState<CommWhatsAppScheduledMessageRecurrence>('none');
-  const [recurrenceEndsAt, setRecurrenceEndsAt] = useState('');
-  const [label, setLabel] = useState('');
-  const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(false);
+  const mediaUrl = scheduledMessage?.media_url ?? initialMediaUrl ?? null;
+  const mediaMimeType = scheduledMessage?.media_mime_type ?? initialMediaMimeType ?? null;
+  const mediaFileName = scheduledMessage?.media_file_name ?? initialMediaFileName ?? null;
+  const messageType = scheduledMessage?.message_type ?? initialMessageType ?? (mediaUrl
+    ? mediaMimeType?.startsWith('image/')
+      ? 'image'
+      : mediaMimeType?.startsWith('video/')
+        ? 'video'
+        : mediaMimeType?.startsWith('audio/')
+          ? 'audio'
+          : 'document'
+    : 'text');
+  const [text, setText] = useState(scheduledMessage?.text_content ?? initialText ?? '');
+  const [scheduledAt, setScheduledAt] = useState(
+    scheduledMessage ? formatDateTimeLocal(new Date(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at)) : getDefaultScheduledAt,
+  );
+  const [recurrence, setRecurrence] = useState<CommWhatsAppScheduledMessageRecurrence>(scheduledMessage?.recurrence ?? 'none');
+  const [recurrenceEndsAt, setRecurrenceEndsAt] = useState(
+    scheduledMessage?.recurrence_ends_at ? formatDateTimeLocal(new Date(scheduledMessage.recurrence_ends_at)) : '',
+  );
+  const [label, setLabel] = useState(scheduledMessage?.label ?? '');
+  const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(scheduledMessage?.cancel_on_inbound_message ?? false);
   const [submitting, setSubmitting] = useState(false);
 
-  const messageType: CommWhatsAppScheduledMessageType = useMemo(() => {
-    if (initialMessageType) return initialMessageType;
-    if (initialMediaUrl) {
-      if (initialMediaMimeType?.startsWith('image/')) return 'image';
-      if (initialMediaMimeType?.startsWith('video/')) return 'video';
-      if (initialMediaMimeType?.startsWith('audio/')) return 'audio';
-      return 'document';
-    }
-    return 'text';
-  }, [initialMessageType, initialMediaUrl, initialMediaMimeType]);
-
   const hasContent = useMemo(() => {
-    return text.trim().length > 0 || Boolean(initialMediaUrl);
-  }, [text, initialMediaUrl]);
+    return text.trim().length > 0 || Boolean(mediaUrl);
+  }, [text, mediaUrl]);
 
   const messageSegments = useMemo(() => {
     if (!text.trim()) return [];
@@ -125,24 +136,41 @@ export default function WhatsAppScheduleMessageModal({
 
     setSubmitting(true);
     try {
-      await commWhatsAppService.scheduleMessage({
-        channelId,
-        phoneDigits,
-        scheduledAt: scheduledAtIso!,
-        messageType,
-        textContent: text.trim() || null,
-        mediaUrl: initialMediaUrl ?? null,
-        mediaMimeType: initialMediaMimeType ?? null,
-        mediaFileName: initialMediaFileName ?? null,
-        recurrence,
-        recurrenceEndsAt: recurrenceEndsAtIso,
-        leadId,
-        contractId,
-        label: label.trim() || null,
-        cancelOnInboundMessage,
-      });
+      if (scheduledMessage) {
+        await commWhatsAppService.updateScheduledMessage(scheduledMessage.id, {
+          scheduledAt: scheduledAtIso!,
+          messageType,
+          textContent: text.trim() || null,
+          mediaUrl,
+          mediaMimeType,
+          mediaFileName,
+          recurrence,
+          recurrenceConfig: recurrence === 'none' ? {} : scheduledMessage.recurrence_config,
+          recurrenceEndsAt: recurrenceEndsAtIso,
+          label: label.trim() || null,
+          cancelOnInboundMessage,
+        });
+        toast.success('Mensagem agendada atualizada!');
+      } else {
+        await commWhatsAppService.scheduleMessage({
+          channelId,
+          phoneDigits,
+          scheduledAt: scheduledAtIso!,
+          messageType,
+          textContent: text.trim() || null,
+          mediaUrl,
+          mediaMimeType,
+          mediaFileName,
+          recurrence,
+          recurrenceEndsAt: recurrenceEndsAtIso,
+          leadId,
+          contractId,
+          label: label.trim() || null,
+          cancelOnInboundMessage,
+        });
+        toast.success('Mensagem agendada com sucesso!');
+      }
 
-      toast.success('Mensagem agendada com sucesso!');
       onScheduled?.();
       onClose();
     } catch (error) {
@@ -159,15 +187,16 @@ export default function WhatsAppScheduleMessageModal({
     scheduledAtIso,
     messageType,
     text,
-    initialMediaUrl,
-    initialMediaMimeType,
-    initialMediaFileName,
+    mediaUrl,
+    mediaMimeType,
+    mediaFileName,
     recurrence,
     recurrenceEndsAtIso,
     leadId,
     contractId,
     label,
     cancelOnInboundMessage,
+    scheduledMessage,
     onScheduled,
     onClose,
   ]);
@@ -181,8 +210,8 @@ export default function WhatsAppScheduleMessageModal({
     <WorkspaceDialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Agendar mensagem"
-      description="Configure quando a mensagem deve ser enviada automaticamente."
+      title={scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}
+      description={scheduledMessage ? 'Atualize o conteúdo ou a programação do envio automático.' : 'Configure quando a mensagem deve ser enviada automaticamente.'}
       size="md"
     >
       <div className="space-y-4">
@@ -197,13 +226,13 @@ export default function WhatsAppScheduleMessageModal({
             rows={3}
             className="w-full"
           />
-          {initialMediaUrl && (
+          {mediaUrl && (
             <div className="mt-2 flex items-center gap-2 text-sm text-[var(--text-muted)]">
               <span className="inline-block px-2 py-1 bg-[var(--bg-inset)] rounded text-xs">
-                {initialMediaMimeType ?? 'Mídia anexada'}
+                {mediaMimeType ?? 'Mídia anexada'}
               </span>
-              {initialMediaFileName && (
-                <span className="truncate">{initialMediaFileName}</span>
+              {mediaFileName && (
+                <span className="truncate">{mediaFileName}</span>
               )}
             </div>
           )}
@@ -331,7 +360,7 @@ export default function WhatsAppScheduleMessageModal({
             onClick={handleSchedule}
             disabled={!isValid || submitting}
           >
-            {submitting ? 'Agendando...' : 'Agendar mensagem'}
+            {submitting ? (scheduledMessage ? 'Salvando...' : 'Agendando...') : (scheduledMessage ? 'Salvar alterações' : 'Agendar mensagem')}
           </Button>
         </div>
       </div>

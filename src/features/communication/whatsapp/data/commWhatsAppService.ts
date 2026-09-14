@@ -2547,6 +2547,48 @@ export const commWhatsAppService = {
     return data ?? [];
   },
 
+  async updateScheduledMessage(id: string, input: {
+    scheduledAt: string;
+    messageType: string;
+    textContent: string | null;
+    mediaUrl: string | null;
+    mediaMimeType: string | null;
+    mediaFileName: string | null;
+    recurrence: string;
+    recurrenceConfig: Record<string, unknown>;
+    recurrenceEndsAt: string | null;
+    label: string | null;
+    cancelOnInboundMessage: boolean;
+  }): Promise<void> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_scheduled_messages')
+      .update({
+        scheduled_at: input.scheduledAt,
+        message_type: input.messageType,
+        text_content: input.textContent,
+        media_url: input.mediaUrl,
+        media_mime_type: input.mediaMimeType,
+        media_file_name: input.mediaFileName,
+        recurrence: input.recurrence,
+        recurrence_config: input.recurrenceConfig,
+        recurrence_ends_at: input.recurrence === 'none' ? null : input.recurrenceEndsAt,
+        next_run_at: input.recurrence === 'none' ? null : input.scheduledAt,
+        label: input.label,
+        cancel_on_inbound_message: input.cancelOnInboundMessage,
+      })
+      .eq('id', id)
+      .eq('status', 'scheduled')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel atualizar a mensagem agendada.'));
+    }
+    if (!data) {
+      throw new Error('Esta mensagem não está mais disponível para edição.');
+    }
+  },
+
   async cancelScheduledMessage(id: string, reason?: string): Promise<boolean> {
     const { error, data } = await supabase.rpc('cancel_scheduled_message', {
       p_message_id: id,

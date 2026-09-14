@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Calendar, Clock, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 import { Button, Dialog, DialogBody, IconButton } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
 import type { CommWhatsAppScheduledMessage } from '../domain/types';
+import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
 type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
@@ -52,6 +53,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
 
   const isFiltered = Boolean(phoneDigits);
 
@@ -139,7 +141,8 @@ export default function WhatsAppScheduledMessagesPanel({
   if (!isOpen) return null;
 
   return (
-    <Dialog
+    <>
+      <Dialog
       open={isOpen}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
@@ -199,6 +202,7 @@ export default function WhatsAppScheduledMessagesPanel({
                         key={msg.id}
                         message={msg}
                         cancelling={cancellingId === msg.id}
+                        onEdit={() => setEditingMessage(msg)}
                         onCancel={() => void handleCancel(msg.id)}
                         onDelete={() => void handleDelete(msg.id)}
                       />
@@ -216,6 +220,7 @@ export default function WhatsAppScheduledMessagesPanel({
                         key={msg.id}
                         message={msg}
                         cancelling={cancellingId === msg.id}
+                        onEdit={() => setEditingMessage(msg)}
                         onCancel={() => void handleCancel(msg.id)}
                         onDelete={() => void handleDelete(msg.id)}
                       />
@@ -226,18 +231,37 @@ export default function WhatsAppScheduledMessagesPanel({
             </div>
           )}
       </DialogBody>
-    </Dialog>
+      </Dialog>
+
+      {editingMessage ? (
+        <WhatsAppScheduleMessageModal
+          key={editingMessage.id}
+          isOpen
+          onClose={() => setEditingMessage(null)}
+          channelId={editingMessage.channel_id}
+          phoneDigits={editingMessage.phone_digits}
+          leadId={editingMessage.lead_id}
+          contractId={editingMessage.contract_id}
+          scheduledMessage={editingMessage}
+          onScheduled={() => {
+            setEditingMessage(null);
+            void loadMessages();
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
 type ScheduledMessageItemProps = {
   message: CommWhatsAppScheduledMessage;
   cancelling: boolean;
+  onEdit: () => void;
   onCancel: () => void;
   onDelete: () => void;
 };
 
-function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: ScheduledMessageItemProps) {
+function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete }: ScheduledMessageItemProps) {
   const isActive = message.status === 'scheduled' || message.status === 'failed';
 
   return (
@@ -262,7 +286,7 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
           <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
             <span className="flex items-center gap-1">
               <Clock className="kds-control-icon" />
-              {formatDateTimeFullBR(message.scheduled_at)}
+              {formatDateTimeFullBR(message.next_run_at ?? message.scheduled_at)}
             </span>
             <span>{formatCommWhatsAppPhoneLabel(message.phone_digits)}</span>
             {message.display_name && message.display_name !== message.phone_number && (
@@ -281,6 +305,16 @@ function ScheduledMessageItem({ message, cancelling, onCancel, onDelete }: Sched
 
         {isActive && (
           <div className="flex items-center gap-1 shrink-0">
+            {message.status === 'scheduled' && (
+              <IconButton
+                onClick={onEdit}
+                disabled={cancelling}
+                aria-label="Editar mensagem agendada"
+                title="Editar mensagem agendada"
+              >
+                <Pencil className="kds-control-icon" />
+              </IconButton>
+            )}
             {message.status === 'scheduled' && (
               <IconButton
                 onClick={onCancel}

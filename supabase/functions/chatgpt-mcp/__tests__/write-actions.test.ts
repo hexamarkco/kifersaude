@@ -6,15 +6,16 @@ import { executeMcpCommercialReadAction, executeMcpWriteAction } from '../write-
 const actor = { actor: 'chatgpt:admin@kifer.test', actorId: '11111111-1111-1111-1111-111111111111' };
 
 type Result = { data?: unknown; error?: unknown };
+type Write = { table: string; operation: 'insert' | 'update'; value: unknown };
 
-const query = (result: Result = {}, selections?: string[]) => {
+const query = (table: string, result: Result = {}, selections?: string[], writes?: Write[]) => {
   const builder = {
     select: (columns?: string) => {
       if (columns) selections?.push(columns);
       return builder;
     },
-    insert: () => builder,
-    update: () => builder,
+    insert: (value: unknown) => { writes?.push({ table, operation: 'insert', value }); return builder; },
+    update: (value: unknown) => { writes?.push({ table, operation: 'update', value }); return builder; },
     eq: () => builder,
     ilike: () => builder,
     gte: () => builder,
@@ -33,17 +34,19 @@ const query = (result: Result = {}, selections?: string[]) => {
 const client = (handlers: Record<string, Result | Result[]>) => {
   const calls: string[] = [];
   const selections: string[] = [];
+  const writes: Write[] = [];
   const counts = new Map<string, number>();
   return {
     calls,
     selections,
+    writes,
     from: (table: string) => {
       calls.push(table);
       const index = counts.get(table) ?? 0;
       counts.set(table, index + 1);
       const configured = handlers[table];
       const result = Array.isArray(configured) ? configured[index] : configured;
-      return query(result, selections);
+      return query(table, result, selections, writes);
     },
   };
 };
@@ -197,8 +200,161 @@ test('recusa agendamento muito próximo para evitar disparo imediato acidental',
     actor,
   });
 
-  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.equal(result?.error_code, 'INVALID_SCHEDULE_TIME');
   assert.deepEqual(supabase.calls, ['mcp_action_audit_log']);
+});
+
+test('preserva literalmente delimitadores, acentos, emoji e offset no agendamento', async () => {
+  const message = 'Oi, Rafaella! 😊\n\n---\n\nConseguiu analisar a proposta?';
+  const supabase = client({
+    comm_whatsapp_chats: { data: { id: actor.actorId, channel_id: '22222222-2222-2222-2222-222222222222', phone_digits: '5511999999999', deleted_at: null } },
+    comm_whatsapp_scheduled_messages: [{ data: null }, { data: { id: 'scheduled-raw', chat_id: actor.actorId, lead_id: null, scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message, scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'raw-message-1' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  const inserted = supabase.writes.find((write) => write.operation === 'insert' && write.table === 'comm_whatsapp_scheduled_messages');
+  assert.equal((inserted?.value as { text_content?: string }).text_content, message);
+  assert.equal((inserted?.value as { scheduled_at?: string }).scheduled_at, '2026-10-01T13:00:00.000Z');
+});
+
+test('lista agendamentos por lead e período mantendo o texto e a contagem de partes', async () => {
+  const supabase = client({
+    comm_whatsapp_scheduled_messages: { data: [{ id: 'scheduled-1', chat_id: actor.actorId, lead_id: '33333333-3333-3333-3333-333333333333', text_content: 'Olá\n---\nTudo bem?', scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled', mcp_client_request_id: 'request-1', created_at: '2026-09-30T13:00:00.000Z', updated_at: '2026-09-30T13:00:00.000Z', sent_at: null, cancelled_at: null, error_message: null, cancelled_reason: null, delivery_status: null }] },
+    leads: { data: [{ id: '33333333-3333-3333-3333-333333333333', nome_completo: 'Larissa' }] },
+  });
+  const result = await executeMcpCommercialReadAction({
+    supabase: supabase as never,
+    toolName: 'kifer_list_scheduled_whatsapp_messages',
+    arguments: { lead_id: '33333333-3333-3333-3333-333333333333', data_inicial: '2026-10-01T00:00:00-03:00', data_final: '2026-10-01T23:59:59-03:00' },
+  });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual(result?.scheduled_messages, [{ scheduled_message_id: 'scheduled-1', chat_id: actor.actorId, lead_id: '33333333-3333-3333-3333-333333333333', lead_name: 'Larissa', message: 'Olá\n---\nTudo bem?', message_parts_count: 2, scheduled_at: '2026-10-01T13:00:00.000Z', scheduled_at_utc: '2026-10-01T13:00:00.000Z', timezone: 'America/Sao_Paulo', status: 'scheduled', client_request_id: 'request-1', created_at: '2026-09-30T13:00:00.000Z', updated_at: '2026-09-30T13:00:00.000Z', sent_at: null, cancelled_at: null, last_error: null, cancellation_reason: null, delivery_status: null }]);
+});
+
+test('consulta um agendamento específico pelo id', async () => {
+  const supabase = client({
+    comm_whatsapp_scheduled_messages: { data: { id: 'scheduled-1', chat_id: actor.actorId, lead_id: null, text_content: 'Olá 😊', scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled', mcp_client_request_id: 'request-1', created_at: '2026-09-30T13:00:00.000Z', updated_at: '2026-09-30T13:00:00.000Z' } },
+  });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_get_scheduled_whatsapp_message', arguments: { scheduled_message_id: actor.actorId } });
+
+  assert.equal(result?.success, true);
+  assert.equal((result?.scheduled_message as { message?: string }).message, 'Olá 😊');
+});
+
+test('audita follow-ups comerciais duplicados e sem mensagem agendada sem alterar dados', async () => {
+  const supabase = client({
+    reminders: { data: [
+      { id: 'reminder-1', lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', lido: false, cancelled_at: null },
+      { id: 'reminder-2', lead_id: actor.actorId, tipo: 'Retorno', titulo: 'Retornar', data_lembrete: '2026-10-02T13:00:00.000Z', lido: false, cancelled_at: null },
+    ] },
+    comm_whatsapp_scheduled_messages: { data: [] },
+    leads: { data: [{ id: actor.actorId, nome_completo: 'Larissa', status: 'Proposta Enviada', arquivado: false }] },
+  });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_get_commercial_followup_audit', arguments: { lead_id: actor.actorId } });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual((result?.issues as Array<{ code: string }>).map((issue) => issue.code), ['MULTIPLE_COMMERCIAL_FOLLOW_UPS', 'FOLLOW_UP_WITHOUT_SCHEDULED_MESSAGE']);
+  assert.deepEqual(supabase.writes, []);
+});
+
+test('edita texto e horário somente em agendamento pendente sem criar outro registro', async () => {
+  const current = { id: actor.actorId, chat_id: '22222222-2222-2222-2222-222222222222', lead_id: null, text_content: 'Texto antigo', scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled', created_at: '2026-09-30T13:00:00.000Z', updated_at: '2026-09-30T13:00:00.000Z' };
+  const updated = { ...current, text_content: 'Novo\n---\nTexto', scheduled_at: '2026-10-02T13:00:00.000Z', updated_at: '2026-09-30T14:00:00.000Z' };
+  const supabase = client({ comm_whatsapp_scheduled_messages: [{ data: current }, { data: updated }], mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_scheduled_whatsapp_message',
+    arguments: { scheduled_message_id: actor.actorId, changes: { message: 'Novo\n---\nTexto', scheduled_at: '2026-10-02T10:00:00-03:00' } },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual(supabase.writes.filter((write) => write.table === 'comm_whatsapp_scheduled_messages').map((write) => write.operation), ['update']);
+  assert.deepEqual(supabase.writes[0]?.value, { text_content: 'Novo\n---\nTexto', scheduled_at: '2026-10-02T13:00:00.000Z' });
+});
+
+test('recusa edição e cancelamento de uma mensagem já enviada', async () => {
+  const sent = { id: actor.actorId, chat_id: null, lead_id: null, text_content: 'Já enviada', scheduled_at: '2026-10-01T13:00:00.000Z', status: 'sent' };
+  const updateClient = client({ comm_whatsapp_scheduled_messages: { data: sent }, mcp_action_audit_log: {} });
+  const update = await executeMcpWriteAction({ supabase: updateClient as never, toolName: 'kifer_update_scheduled_whatsapp_message', arguments: { scheduled_message_id: actor.actorId, changes: { message: 'Novo texto' } }, actor });
+  const cancelClient = client({ comm_whatsapp_scheduled_messages: { data: sent }, mcp_action_audit_log: {} });
+  const cancel = await executeMcpWriteAction({ supabase: cancelClient as never, toolName: 'kifer_cancel_scheduled_whatsapp_message', arguments: { scheduled_message_id: actor.actorId }, actor });
+
+  assert.equal(update?.error_code, 'MESSAGE_ALREADY_SENT');
+  assert.equal(cancel?.error_code, 'MESSAGE_ALREADY_SENT');
+});
+
+test('cancela logicamente e torna retry de cancelamento idempotente', async () => {
+  const current = { id: actor.actorId, chat_id: '22222222-2222-2222-2222-222222222222', lead_id: null, text_content: 'Pendente', scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled' };
+  const cancelled = { ...current, status: 'cancelled', cancelled_at: '2026-09-30T14:00:00.000Z', cancelled_reason: 'Sem necessidade' };
+  const cancelClient = client({ comm_whatsapp_scheduled_messages: [{ data: current }, { data: cancelled }], mcp_action_audit_log: {} });
+  const cancel = await executeMcpWriteAction({ supabase: cancelClient as never, toolName: 'kifer_cancel_scheduled_whatsapp_message', arguments: { scheduled_message_id: actor.actorId, observacao: 'Sem necessidade' }, actor });
+  const retryClient = client({ comm_whatsapp_scheduled_messages: { data: cancelled }, mcp_action_audit_log: {} });
+  const retry = await executeMcpWriteAction({ supabase: retryClient as never, toolName: 'kifer_cancel_scheduled_whatsapp_message', arguments: { scheduled_message_id: actor.actorId }, actor });
+
+  assert.equal(cancel?.success, true);
+  assert.equal(cancel?.duplicate, false);
+  assert.equal(retry?.success, true);
+  assert.equal(retry?.duplicate, true);
+});
+
+test('processa lote parcialmente bem-sucedido sem impedir os demais itens', async () => {
+  const supabase = client({
+    comm_whatsapp_chats: [{ data: { id: actor.actorId, channel_id: '22222222-2222-2222-2222-222222222222', phone_digits: '5511999999999', deleted_at: null } }, { data: null }],
+    comm_whatsapp_scheduled_messages: [{ data: null }, { data: { id: 'scheduled-1', chat_id: actor.actorId, lead_id: null, scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_bulk_schedule_whatsapp_messages',
+    arguments: { items: [
+      { chat_id: actor.actorId, message: 'Olá', scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'bulk-1' },
+      { chat_id: '22222222-2222-2222-2222-222222222222', message: 'Olá', scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'bulk-2' },
+    ] },
+    actor,
+  });
+
+  assert.deepEqual({ scheduled: result?.scheduled, duplicates: result?.duplicates, failed: result?.failed }, { scheduled: 1, duplicates: 0, failed: 1 });
+});
+
+test('recusa chat inexistente, texto vazio, texto longo e horário passado ao agendar', async () => {
+  const past = await executeMcpWriteAction({
+    supabase: client({ mcp_action_audit_log: {} }) as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message: 'Olá', scheduled_at: '2020-01-01T10:00:00-03:00', client_request_id: 'past-1' },
+    actor,
+  });
+  const empty = await executeMcpWriteAction({
+    supabase: client({ mcp_action_audit_log: {} }) as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message: '   ', scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'empty-1' },
+    actor,
+  });
+  const long = await executeMcpWriteAction({
+    supabase: client({ mcp_action_audit_log: {} }) as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message: 'a'.repeat(4097), scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'long-1' },
+    actor,
+  });
+  const missingChat = await executeMcpWriteAction({
+    supabase: client({ comm_whatsapp_chats: { data: null }, mcp_action_audit_log: {} }) as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message: 'Olá', scheduled_at: '2026-10-01T10:00:00-03:00', client_request_id: 'chat-1' },
+    actor,
+  });
+
+  assert.equal(past?.error_code, 'INVALID_SCHEDULE_TIME');
+  assert.equal(empty?.error_code, 'MESSAGE_EMPTY');
+  assert.equal(long?.error_code, 'MESSAGE_TOO_LONG');
+  assert.equal(missingChat?.error_code, 'CHAT_NOT_FOUND');
 });
 
 const stubMcpSendEnvironment = () => {

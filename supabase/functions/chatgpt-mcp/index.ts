@@ -458,8 +458,44 @@ const tools = [
   },
   {
     name: 'kifer_schedule_whatsapp_message',
-    description: 'Agenda uma única mensagem de texto para uma conversa de WhatsApp existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o agendamento. Esta ação altera dados reais; o envio será feito pela fila nativa do Inbox no horário agendado.',
-    inputSchema: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente, nunca um telefone.' }, message: { type: 'string', minLength: 1, maxLength: 4096 }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
+    description: 'Agenda uma única mensagem de texto para uma conversa de WhatsApp existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o agendamento. Esta ação altera dados reais; chat_id é obrigatório e telefone não o substitui. Preserva literalmente quebras de linha e --- para o Inbox separar no envio. client_request_id torna retries idempotentes.',
+    inputSchema: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente, nunca um telefone.' }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal. Não remova nem altere --- ou quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601, preferencialmente com offset, por exemplo -03:00.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_list_scheduled_whatsapp_messages',
+    description: 'Lista agendamentos existentes da fila nativa do Inbox. Use para conferir texto, status, horário e erros antes ou depois do envio. Somente leitura; o texto é retornado literalmente, inclusive --- e quebras de linha.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { lead_id: { type: 'string' }, chat_id: { type: 'string' }, status: { type: 'string', enum: ['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired'] }, data_inicial: { type: 'string', format: 'date-time' }, data_final: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', maxLength: 128 }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 100, default: 20 }, order_by: { type: 'string', enum: ['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status'], default: 'scheduled_at' }, ascending: { type: 'boolean', default: false } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_scheduled_whatsapp_message',
+    description: 'Consulta um agendamento específico da fila nativa do Inbox pelo ID. Use para auditar o texto exato, horário, status e erro seguro de uma única mensagem. Somente leitura.',
+    inputSchema: { type: 'object', required: ['scheduled_message_id'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_commercial_followup_audit',
+    description: 'Audita follow-ups comerciais sem alterar dados. Detecta lembretes comerciais duplicados ou vencidos, ausência de mensagem agendada, mensagens falhas/duplicadas, horários antes das 10h de Brasília e leads perdidos ou arquivados. Não corrige nada; a checagem de família/contato principal ainda não está disponível porque o modelo atual não possui uma oportunidade familiar explícita.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { data: { type: 'string', format: 'date-time', description: 'Restringe reminder e agendamento a esta data.' }, status_do_lead: { type: 'string', maxLength: 160 }, lead_id: { type: 'string' }, somente_problemas: { type: 'boolean', default: true } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_update_scheduled_whatsapp_message',
+    description: 'Altera texto e/ou horário de uma mensagem agendada existente. Use somente quando o usuário solicitar explicitamente a edição. Esta ação altera dados reais e só funciona enquanto o status for scheduled; não cria uma nova mensagem. O texto é preservado literalmente, inclusive --- e quebras de linha.',
+    inputSchema: { type: 'object', required: ['scheduled_message_id', 'changes'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal; preserve --- e quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura ISO 8601, preferencialmente com offset.' } } } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_cancel_scheduled_whatsapp_message',
+    description: 'Cancela logicamente uma mensagem agendada, preservando seu histórico. Use somente quando o usuário solicitar explicitamente o cancelamento. Esta ação altera dados reais, é idempotente e não cancela mensagens já enviadas.',
+    inputSchema: { type: 'object', required: ['scheduled_message_id'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' }, observacao: { type: 'string', maxLength: 4000 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_bulk_schedule_whatsapp_messages',
+    description: 'Agenda entre 1 e 50 mensagens para conversas existentes do CRM. Use somente quando o usuário solicitar explicitamente vários agendamentos. Esta ação altera dados reais: cada item é independente, não é all-or-nothing, exige chat_id (nunca telefone) e client_request_id próprio. Preserva literalmente --- e quebras de linha.',
+    inputSchema: { type: 'object', required: ['items'], additionalProperties: false, properties: { items: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string' }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal; preserve --- e quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 } } } } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -491,7 +527,7 @@ const tools = [
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_schedule_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',

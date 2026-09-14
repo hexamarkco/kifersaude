@@ -169,6 +169,7 @@ export type CommWhatsAppScheduledMessage = {
   recurrence_config: Record<string, unknown>;
   next_run_at: string | null;
   recurrence_ends_at: string | null;
+  cancel_on_inbound_message: boolean;
   status: CommWhatsAppScheduledMessageStatus;
   attempts: number;
   max_attempts: number;
@@ -189,4 +190,3 @@ export type CommWhatsAppScheduledMessage = {
   created_at: string;
   updated_at: string;
 };
-

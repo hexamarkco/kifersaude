@@ -14,6 +14,31 @@ import type {
 } from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
+type CreateScheduledMessageArgs = {
+  p_channel_id: string;
+  p_phone_digits: string;
+  p_scheduled_at: string;
+  p_message_type: string;
+  p_text_content: string | null;
+  p_media_url: string | null;
+  p_media_mime_type: string | null;
+  p_media_file_name: string | null;
+  p_recurrence: string;
+  p_recurrence_config: Record<string, unknown>;
+  p_recurrence_ends_at: string | null;
+  p_lead_id: string | null;
+  p_contract_id: string | null;
+  p_label: string | null;
+  p_notes: string | null;
+  p_max_attempts: number;
+  p_cancel_on_inbound_message: boolean;
+};
+
+type CreateScheduledMessageRpc = (
+  functionName: 'create_scheduled_message',
+  args: CreateScheduledMessageArgs,
+) => ReturnType<typeof supabase.rpc>;
+
 export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 
 export type CommWhatsAppOperationalState = {
@@ -2480,8 +2505,9 @@ export const commWhatsAppService = {
     contractId?: string | null;
     label?: string | null;
     notes?: string | null;
+    cancelOnInboundMessage?: boolean;
   }): Promise<string> {
-    const { error, data } = await supabase.rpc('create_scheduled_message', {
+    const args: CreateScheduledMessageArgs = {
       p_channel_id: input.channelId,
       p_phone_digits: input.phoneDigits,
       p_scheduled_at: input.scheduledAt,
@@ -2498,7 +2524,11 @@ export const commWhatsAppService = {
       p_label: input.label ?? null,
       p_notes: input.notes ?? null,
       p_max_attempts: 3,
-    });
+      p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? false,
+    };
+    // The generated database types are refreshed after the migration is deployed.
+    const createScheduledMessage = supabase.rpc as unknown as CreateScheduledMessageRpc;
+    const { error, data } = await createScheduledMessage('create_scheduled_message', args);
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel agendar a mensagem.'));

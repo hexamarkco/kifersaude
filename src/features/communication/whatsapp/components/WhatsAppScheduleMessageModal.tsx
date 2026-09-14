@@ -3,6 +3,7 @@ import { Calendar, Clock, MessageSquare, Repeat } from 'lucide-react';
 
 import {
   Button,
+  Checkbox,
   DateTimePicker,
   Input,
   Textarea,
@@ -76,6 +77,7 @@ export default function WhatsAppScheduleMessageModal({
   const [recurrence, setRecurrence] = useState<CommWhatsAppScheduledMessageRecurrence>('none');
   const [recurrenceEndsAt, setRecurrenceEndsAt] = useState('');
   const [label, setLabel] = useState('');
+  const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const messageType: CommWhatsAppScheduledMessageType = useMemo(() => {
@@ -137,6 +139,7 @@ export default function WhatsAppScheduleMessageModal({
         leadId,
         contractId,
         label: label.trim() || null,
+        cancelOnInboundMessage,
       });
 
       toast.success('Mensagem agendada com sucesso!');
@@ -164,6 +167,7 @@ export default function WhatsAppScheduleMessageModal({
     leadId,
     contractId,
     label,
+    cancelOnInboundMessage,
     onScheduled,
     onClose,
   ]);
@@ -243,6 +247,23 @@ export default function WhatsAppScheduleMessageModal({
             className="w-full"
           />
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+          <Checkbox
+            checked={cancelOnInboundMessage}
+            onChange={(event) => setCancelOnInboundMessage(event.target.checked)}
+            className="mt-0.5"
+            aria-label="Cancelar se o contato responder antes do envio"
+          />
+          <span>
+            <span className="block text-sm font-medium text-[var(--text-primary)]">
+              Cancelar se o contato responder antes do envio
+            </span>
+            <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">
+              A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
+            </span>
+          </span>
+        </label>
 
         <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">

@@ -22,6 +22,7 @@ export type ScheduledMessage = {
   recurrence_config: Record<string, unknown>;
   next_run_at: string | null;
   recurrence_ends_at: string | null;
+  cancel_on_inbound_message: boolean;
   status: ScheduledMessageStatus;
   attempts: number;
   max_attempts: number;
@@ -60,6 +61,7 @@ export type CreateScheduledMessageInput = {
   label?: string | null;
   notes?: string | null;
   maxAttempts?: number;
+  cancelOnInboundMessage?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +85,7 @@ export async function createScheduledMessage(input: CreateScheduledMessageInput)
     p_label: input.label ?? null,
     p_notes: input.notes ?? null,
     p_max_attempts: input.maxAttempts ?? 3,
+    p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? false,
   });
 
   if (error) throw error;

@@ -10,6 +10,12 @@ set "SUPABASE_BIN="
 set "SUPABASE_LABEL="
 set "SUPABASE_USE_NPX=0"
 set "NPX_BIN="
+set "FORCE_DEPLOY=0"
+set "NO_PAUSE=0"
+for %%A in (%*) do (
+  if /I "%%~A"=="--all" set "FORCE_DEPLOY=1"
+  if /I "%%~A"=="--no-pause" set "NO_PAUSE=1"
+)
 
 if exist "%~dp0node_modules\.bin\supabase.cmd" (
   set "SUPABASE_BIN=%~dp0node_modules\.bin\supabase.cmd"
@@ -104,10 +110,32 @@ if not defined PROJECT_REF (
   goto :end
 )
 
+if defined SUPABASE_ACCESS_TOKEN (
+  echo Validando o token configurado...
+  if "!SUPABASE_USE_NPX!"=="1" (
+    call "!NPX_BIN!" --yes supabase projects list --output json >nul 2>nul
+  ) else (
+    call "!SUPABASE_BIN!" projects list --output json >nul 2>nul
+  )
+  if errorlevel 1 (
+    echo [AVISO] O token em supabase.local.ini nao e valido. Usando a sessao salva da CLI.
+    set "SUPABASE_ACCESS_TOKEN="
+  )
+)
+
 if not defined SUPABASE_ACCESS_TOKEN (
-  echo [ERRO] SUPABASE_ACCESS_TOKEN nao definido em supabase.local.ini
-  set "EXIT_CODE=1"
-  goto :end
+  echo Validando a sessao salva da CLI...
+  if "!SUPABASE_USE_NPX!"=="1" (
+    call "!NPX_BIN!" --yes supabase projects list --output json >nul 2>nul
+  ) else (
+    call "!SUPABASE_BIN!" projects list --output json >nul 2>nul
+  )
+  if errorlevel 1 (
+    echo [ERRO] Nao foi possivel autenticar no Supabase.
+    echo Execute "supabase login" e conclua o login no navegador, ou atualize SUPABASE_ACCESS_TOKEN em supabase.local.ini.
+    set "EXIT_CODE=1"
+    goto :end
+  )
 )
 
 echo === Link do projeto: %PROJECT_REF% ===
@@ -129,6 +157,8 @@ if errorlevel 1 (
   set "EXIT_CODE=1"
   goto :end
 )
+
+if "!FORCE_DEPLOY!"=="1" echo Modo de redeploy completo ativado.
 
 if not exist "supabase\functions" (
   echo [ERRO] Pasta supabase\functions nao encontrada.
@@ -196,7 +226,7 @@ for /d %%D in ("supabase\functions\*") do (
 
     call set "PREVIOUS_HASH=%%STATE_!FUNCTION_NAME!%%"
 
-    if defined SHOULD_DEPLOY if defined PREVIOUS_HASH if /I "!PREVIOUS_HASH!"=="!CURRENT_HASH!" (
+    if defined SHOULD_DEPLOY if "!FORCE_DEPLOY!"=="0" if defined PREVIOUS_HASH if /I "!PREVIOUS_HASH!"=="!CURRENT_HASH!" (
       set "SHOULD_DEPLOY="
       set /a SKIPPED+=1
       echo.
@@ -251,7 +281,7 @@ if !FAIL! GTR 0 set "EXIT_CODE=1"
 echo.
 echo Finalizado.
 
-if /I "%~1"=="--no-pause" goto :finish
+if "!NO_PAUSE!"=="1" goto :finish
 echo.
 pause
 
@@ -263,7 +293,7 @@ setlocal
 set "TARGET_DIR=%~1"
 set "HASH_VALUE="
 
-for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "$dir = Get-Item -LiteralPath '%~1'; $files = Get-ChildItem -LiteralPath $dir.FullName -File -Recurse | Sort-Object FullName; $payload = if ($files) { [string]::Join([char]10, ($files | ForEach-Object { $relative = $_.FullName.Substring($dir.FullName.Length).TrimStart('\\'); $fileHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); '{0}|{1}' -f $relative.Replace('\\','/'), $fileHash })) } else { '' }; $bytes = [Text.Encoding]::UTF8.GetBytes($payload); $stream = New-Object IO.MemoryStream(,$bytes); try { (Get-FileHash -InputStream $stream -Algorithm SHA256).Hash.ToLowerInvariant() } finally { $stream.Dispose() }"`) do (
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "$dir = Get-Item -LiteralPath '%~1'; $files = Get-ChildItem -LiteralPath $dir.FullName -File -Recurse | Sort-Object FullName; $sha256 = [Security.Cryptography.SHA256]::Create(); try { $payload = if ($files) { [string]::Join([char]10, ($files | ForEach-Object { $relative = $_.FullName.Substring($dir.FullName.Length).TrimStart('\\'); $stream = [IO.File]::OpenRead($_.FullName); try { $fileHash = [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $stream.Dispose() }; '{0}|{1}' -f $relative.Replace('\\','/'), $fileHash })) } else { '' }; $bytes = [Text.Encoding]::UTF8.GetBytes($payload); [BitConverter]::ToString($sha256.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant() } finally { $sha256.Dispose() }"`) do (
   set "HASH_VALUE=%%H"
 )
 

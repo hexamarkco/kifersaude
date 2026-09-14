@@ -229,7 +229,7 @@ export default function WhatsAppScheduledMessagesPanel({
         onOpenChange={(nextOpen) => {
           if (!nextOpen) onClose();
         }}
-        size="lg"
+        size="wide"
         className="kds-dialog-fixed-height"
       >
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">

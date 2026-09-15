@@ -5,10 +5,11 @@ import { executeMcpCommercialReadAction, executeMcpWriteAction } from '../write-
 
 const actor = { actor: 'chatgpt:admin@kifer.test', actorId: '11111111-1111-1111-1111-111111111111' };
 
-type Result = { data?: unknown; error?: unknown };
+type Result = { data?: unknown; error?: unknown; count?: number | null };
 type Write = { table: string; operation: 'insert' | 'update'; value: unknown };
+type Filter = { table: string; operator: string; column?: string; value?: unknown };
 
-const query = (table: string, result: Result = {}, selections?: string[], writes?: Write[]) => {
+const query = (table: string, result: Result = {}, selections?: string[], writes?: Write[], filters?: Filter[]) => {
   const builder = {
     select: (columns?: string) => {
       if (columns) selections?.push(columns);
@@ -16,17 +17,20 @@ const query = (table: string, result: Result = {}, selections?: string[], writes
     },
     insert: (value: unknown) => { writes?.push({ table, operation: 'insert', value }); return builder; },
     update: (value: unknown) => { writes?.push({ table, operation: 'update', value }); return builder; },
-    eq: () => builder,
-    ilike: () => builder,
-    gte: () => builder,
-    lte: () => builder,
-    in: () => builder,
-    not: () => builder,
-    is: () => builder,
+    eq: (column: string, value: unknown) => { filters?.push({ table, operator: 'eq', column, value }); return builder; },
+    neq: (column: string, value: unknown) => { filters?.push({ table, operator: 'neq', column, value }); return builder; },
+    ilike: (column: string, value: unknown) => { filters?.push({ table, operator: 'ilike', column, value }); return builder; },
+    gte: (column: string, value: unknown) => { filters?.push({ table, operator: 'gte', column, value }); return builder; },
+    lte: (column: string, value: unknown) => { filters?.push({ table, operator: 'lte', column, value }); return builder; },
+    in: (column: string, value: unknown) => { filters?.push({ table, operator: 'in', column, value }); return builder; },
+    not: (column: string, operator: string, value: unknown) => { filters?.push({ table, operator: `not.${operator}`, column, value }); return builder; },
+    is: (column: string, value: unknown) => { filters?.push({ table, operator: 'is', column, value }); return builder; },
+    or: (value: string) => { filters?.push({ table, operator: 'or', value }); return builder; },
     order: () => builder,
     limit: () => builder,
-    range: async () => ({ data: result.data ?? [], error: result.error ?? null, count: Array.isArray(result.data) ? result.data.length : null }),
+    range: async () => ({ data: result.data ?? [], error: result.error ?? null, count: result.count ?? (Array.isArray(result.data) ? result.data.length : null) }),
     maybeSingle: async () => ({ data: result.data ?? null, error: result.error ?? null }),
+    then: (resolve: (value: { data: unknown; error: unknown; count: number | null }) => unknown) => Promise.resolve({ data: result.data ?? null, error: result.error ?? null, count: result.count ?? (Array.isArray(result.data) ? result.data.length : null) }).then(resolve),
   };
   return builder;
 };
@@ -35,18 +39,20 @@ const client = (handlers: Record<string, Result | Result[]>) => {
   const calls: string[] = [];
   const selections: string[] = [];
   const writes: Write[] = [];
+  const filters: Filter[] = [];
   const counts = new Map<string, number>();
   return {
     calls,
     selections,
     writes,
+    filters,
     from: (table: string) => {
       calls.push(table);
       const index = counts.get(table) ?? 0;
       counts.set(table, index + 1);
       const configured = handlers[table];
       const result = Array.isArray(configured) ? configured[index] : configured;
-      return query(table, result, selections, writes);
+      return query(table, result, selections, writes, filters);
     },
   };
 };
@@ -240,6 +246,71 @@ test('lista agendamentos por lead e período mantendo o texto e a contagem de pa
 
   assert.equal(result?.success, true);
   assert.deepEqual(result?.scheduled_messages, [{ scheduled_message_id: 'scheduled-1', chat_id: actor.actorId, lead_id: '33333333-3333-3333-3333-333333333333', lead_name: 'Larissa', message: 'Olá\n---\nTudo bem?', message_parts_count: 2, scheduled_at: '2026-10-01T13:00:00.000Z', scheduled_at_utc: '2026-10-01T13:00:00.000Z', timezone: 'America/Sao_Paulo', status: 'scheduled', cancel_on_inbound_message: false, client_request_id: 'request-1', created_at: '2026-09-30T13:00:00.000Z', updated_at: '2026-09-30T13:00:00.000Z', sent_at: null, cancelled_at: null, last_error: null, cancellation_reason: null, delivery_status: null }]);
+});
+
+test('lista leads sem chat por anti-join da FK e retorna o total real além da página', async () => {
+  const supabase = client({
+    leads: {
+      data: [{ id: actor.actorId, nome_completo: 'Lead Perdido', telefone: '21979949423', email: 'lead@kifer.test', status: 'Perdido', cidade: 'Rio de Janeiro', estado: 'RJ', data_criacao: '2026-01-01T12:00:00.000Z', created_at: '2026-01-01T12:00:00.000Z', ultimo_contato: '2026-02-01T12:00:00.000Z', ultima_tentativa_reativacao: null, numero_tentativas_reativacao: 0, reativacao_habilitada: true, arquivado: false }],
+      count: 1234,
+    },
+  });
+  const result = await executeMcpCommercialReadAction({
+    supabase: supabase as never,
+    toolName: 'kifer_list_leads_without_whatsapp_chat',
+    arguments: { status: 'Perdido', reativacao_habilitada: true, tem_telefone: true, page: 1, page_size: 100 },
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.total, 1234);
+  assert.equal(result?.has_more, true);
+  assert.equal((result?.leads as Array<{ id: string }>)[0]?.id, actor.actorId);
+  assert.ok(supabase.selections.some((selection) => selection.includes('linked_chats:comm_whatsapp_chats!comm_whatsapp_chats_lead_id_fkey()')));
+  assert.ok(supabase.filters.some((filter) => filter.table === 'leads' && filter.operator === 'is' && filter.column === 'linked_chats' && filter.value === null));
+  assert.ok(supabase.filters.some((filter) => filter.operator === 'eq' && filter.column === 'status' && filter.value === 'Perdido'));
+  assert.ok(supabase.filters.some((filter) => filter.operator === 'eq' && filter.column === 'reativacao_habilitada' && filter.value === true));
+  assert.ok(supabase.filters.some((filter) => filter.operator === 'neq' && filter.column === 'telefone' && filter.value === ''));
+  assert.deepEqual(supabase.writes, []);
+});
+
+test('conta leads sem chat com a mesma regra de FK sem carregar uma página de resultados', async () => {
+  const supabase = client({ leads: { data: [], count: 87 } });
+  const result = await executeMcpCommercialReadAction({
+    supabase: supabase as never,
+    toolName: 'kifer_count_leads_without_whatsapp_chat',
+    arguments: { status: 'Perdido', reativacao_habilitada: true, tem_telefone: true },
+  });
+
+  assert.deepEqual(result, {
+    success: true,
+    total: 87,
+    filters_applied: {
+      status: 'Perdido', reativacao_habilitada: true, arquivado: null, tem_telefone: true,
+      ultima_tentativa_reativacao_is_null: null, data_criacao_de: null, data_criacao_ate: null,
+      ultimo_contato_de: null, ultimo_contato_ate: null,
+    },
+  });
+  assert.ok(supabase.filters.some((filter) => filter.operator === 'is' && filter.column === 'linked_chats' && filter.value === null));
+  assert.deepEqual(supabase.writes, []);
+});
+
+test('diagnostica chat não vinculado pelo telefone sem excluir nem vincular o lead', async () => {
+  const supabase = client({
+    leads: { data: [{ id: actor.actorId, nome_completo: 'Lead sem vínculo', telefone: '21979949423', email: null, status: 'Perdido', cidade: null, estado: null, data_criacao: null, created_at: '2026-01-01T12:00:00.000Z', ultimo_contato: null, ultima_tentativa_reativacao: null, numero_tentativas_reativacao: 0, reativacao_habilitada: true, arquivado: false }], count: 1 },
+    comm_whatsapp_chats: { data: [{ id: '22222222-2222-2222-2222-222222222222', phone_digits: '5521979949423' }] },
+  });
+  const result = await executeMcpCommercialReadAction({
+    supabase: supabase as never,
+    toolName: 'kifer_list_leads_without_whatsapp_chat',
+    arguments: { include_phone_chat_diagnostic: true },
+  });
+  const lead = (result?.leads as Array<Record<string, unknown>>)[0];
+
+  assert.equal(lead.unlinked_chat_same_phone, true);
+  assert.equal(lead.unlinked_chat_id, '22222222-2222-2222-2222-222222222222');
+  assert.equal(lead.linked_chat_exists, false);
+  assert.ok(supabase.filters.some((filter) => filter.table === 'comm_whatsapp_chats' && filter.operator === 'is' && filter.column === 'lead_id' && filter.value === null));
+  assert.deepEqual(supabase.writes, []);
 });
 
 test('consulta um agendamento específico pelo id', async () => {

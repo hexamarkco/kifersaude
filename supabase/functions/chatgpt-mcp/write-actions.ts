@@ -1321,11 +1321,192 @@ const pageParams = (params: Record<string, unknown>) => {
   return { page, pageSize, from: (page - 1) * pageSize };
 };
 
+const LEADS_WITHOUT_CHAT_ORDER_FIELDS = new Set(['created_at', 'ultimo_contato', 'nome_completo']);
+const LEADS_WITHOUT_CHAT_SELECT = 'id,nome_completo,telefone,email,status,cidade,estado,data_criacao,created_at,ultimo_contato,ultima_tentativa_reativacao,numero_tentativas_reativacao,reativacao_habilitada,arquivado,linked_chats:comm_whatsapp_chats!comm_whatsapp_chats_lead_id_fkey()';
+
+type LeadsWithoutChatFilters = {
+  status: string | null;
+  reactivationEnabled: boolean | null;
+  archived: boolean | null;
+  hasPhone: boolean | null;
+  reactivationAttemptIsNull: boolean | null;
+  createdFrom: string | null;
+  createdTo: string | null;
+  lastContactFrom: string | null;
+  lastContactTo: string | null;
+};
+
+const optionalBoolean = (value: unknown): boolean | null | undefined =>
+  value === undefined ? undefined : typeof value === 'boolean' ? value : null;
+
+function leadsWithoutChatFilters(params: Record<string, unknown>): { filters?: LeadsWithoutChatFilters; error?: McpWriteResult } {
+  const status = text(params.status).slice(0, MAX_SHORT_TEXT_LENGTH) || null;
+  const reactivationEnabled = optionalBoolean(params.reativacao_habilitada);
+  const archived = optionalBoolean(params.arquivado);
+  const hasPhone = optionalBoolean(params.tem_telefone);
+  const reactivationAttemptIsNull = optionalBoolean(params.ultima_tentativa_reativacao_is_null);
+  if ([reactivationEnabled, archived, hasPhone, reactivationAttemptIsNull].some((value) => value === null)) {
+    return { error: errorResult('INVALID_INPUT', 'Os filtros booleanos devem ser true ou false.') };
+  }
+  const parseOptionalDate = (value: unknown, label: string) => {
+    if (value === undefined) return { value: null as string | null };
+    const parsed = parseDate(value);
+    return parsed ? { value: parsed } : { error: errorResult('INVALID_INPUT', `${label} deve ser uma data ISO 8601 válida.`) };
+  };
+  const createdFrom = parseOptionalDate(params.data_criacao_de, 'data_criacao_de');
+  const createdTo = parseOptionalDate(params.data_criacao_ate, 'data_criacao_ate');
+  const lastContactFrom = parseOptionalDate(params.ultimo_contato_de, 'ultimo_contato_de');
+  const lastContactTo = parseOptionalDate(params.ultimo_contato_ate, 'ultimo_contato_ate');
+  const dateError = createdFrom.error || createdTo.error || lastContactFrom.error || lastContactTo.error;
+  if (dateError) return { error: dateError };
+  if (createdFrom.value && createdTo.value && createdFrom.value > createdTo.value) return { error: errorResult('INVALID_INPUT', 'data_criacao_de não pode ser posterior a data_criacao_ate.') };
+  if (lastContactFrom.value && lastContactTo.value && lastContactFrom.value > lastContactTo.value) return { error: errorResult('INVALID_INPUT', 'ultimo_contato_de não pode ser posterior a ultimo_contato_ate.') };
+  return {
+    filters: {
+      status,
+      reactivationEnabled: reactivationEnabled ?? null,
+      archived: archived ?? null,
+      hasPhone: hasPhone ?? null,
+      reactivationAttemptIsNull: reactivationAttemptIsNull ?? null,
+      createdFrom: createdFrom.value,
+      createdTo: createdTo.value,
+      lastContactFrom: lastContactFrom.value,
+      lastContactTo: lastContactTo.value,
+    },
+  };
+}
+
+const leadsWithoutChatFiltersView = (filters: LeadsWithoutChatFilters) => ({
+  status: filters.status,
+  reativacao_habilitada: filters.reactivationEnabled,
+  arquivado: filters.archived,
+  tem_telefone: filters.hasPhone,
+  ultima_tentativa_reativacao_is_null: filters.reactivationAttemptIsNull,
+  data_criacao_de: filters.createdFrom,
+  data_criacao_ate: filters.createdTo,
+  ultimo_contato_de: filters.lastContactFrom,
+  ultimo_contato_ate: filters.lastContactTo,
+});
+
+const leadsWithoutChatView = (lead: Record<string, unknown>) => ({
+  id: text(lead.id),
+  nome_completo: text(lead.nome_completo),
+  telefone: text(lead.telefone) || null,
+  email: text(lead.email) || null,
+  status: text(lead.status),
+  cidade: text(lead.cidade) || null,
+  estado: text(lead.estado) || null,
+  data_criacao: parseDate(lead.data_criacao) || parseDate(lead.created_at),
+  ultimo_contato: parseDate(lead.ultimo_contato),
+  ultima_tentativa_reativacao: parseDate(lead.ultima_tentativa_reativacao),
+  numero_tentativas_reativacao: typeof lead.numero_tentativas_reativacao === 'number' ? lead.numero_tentativas_reativacao : 0,
+  reativacao_habilitada: lead.reativacao_habilitada === true,
+  arquivado: lead.arquivado === true,
+});
+
+async function withUnlinkedPhoneChatDiagnostic(supabase: SupabaseClient, leads: Array<Record<string, unknown>>) {
+  const phoneKeys = [...new Set(leads.flatMap((lead) => getCommWhatsAppPhoneLookupKeys(lead.telefone)))];
+  if (phoneKeys.length === 0) return new Map<string, { id: string; phone_digits: string }>();
+  const { data, error } = await supabase
+    .from('comm_whatsapp_chats')
+    .select('id,phone_digits')
+    .is('lead_id', null)
+    .in('phone_digits', phoneKeys);
+  if (error) throw new Error(error.message);
+  const chatsByPhone = new Map<string, { id: string; phone_digits: string }>();
+  for (const chat of (data ?? []) as Array<Record<string, unknown>>) {
+    const phone = normalizedBrazilWhatsAppPhone(chat.phone_digits);
+    if (!phone) continue;
+    const chatView = { id: text(chat.id), phone_digits: phone };
+    for (const key of getCommWhatsAppPhoneLookupKeys(phone)) {
+      if (!chatsByPhone.has(key)) chatsByPhone.set(key, chatView);
+    }
+  }
+  return chatsByPhone;
+}
+
+async function listLeadsWithoutWhatsAppChat(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const validated = leadsWithoutChatFilters(params);
+  if (validated.error || !validated.filters) return validated.error ?? errorResult('INVALID_INPUT', 'Filtros inválidos.');
+  const page = boundedInteger(params.page ?? 1, 1, 10_000);
+  const pageSize = boundedInteger(params.page_size ?? 20, 1, 100);
+  if (page === null || pageSize === null) return errorResult('INVALID_INPUT', 'page deve ser positivo e page_size deve estar entre 1 e 100.');
+  const order = LEADS_WITHOUT_CHAT_ORDER_FIELDS.has(text(params.order_by)) ? text(params.order_by) : 'created_at';
+  const includeDiagnostic = params.include_phone_chat_diagnostic === true;
+  if (params.include_phone_chat_diagnostic !== undefined && typeof params.include_phone_chat_diagnostic !== 'boolean') {
+    return errorResult('INVALID_INPUT', 'include_phone_chat_diagnostic deve ser booleano.');
+  }
+  const from = (page - 1) * pageSize;
+  let query = supabase
+    .from('leads')
+    .select(LEADS_WITHOUT_CHAT_SELECT, { count: 'exact' })
+    .is('linked_chats', null);
+  if (validated.filters.status) query = query.eq('status', validated.filters.status);
+  if (validated.filters.reactivationEnabled !== null) query = query.eq('reativacao_habilitada', validated.filters.reactivationEnabled);
+  if (validated.filters.archived !== null) query = query.eq('arquivado', validated.filters.archived);
+  if (validated.filters.hasPhone === true) query = query.not('telefone', 'is', null).neq('telefone', '');
+  if (validated.filters.hasPhone === false) query = query.or('telefone.is.null,telefone.eq.');
+  if (validated.filters.reactivationAttemptIsNull === true) query = query.is('ultima_tentativa_reativacao', null);
+  if (validated.filters.reactivationAttemptIsNull === false) query = query.not('ultima_tentativa_reativacao', 'is', null);
+  if (validated.filters.createdFrom) query = query.gte('data_criacao', validated.filters.createdFrom);
+  if (validated.filters.createdTo) query = query.lte('data_criacao', validated.filters.createdTo);
+  if (validated.filters.lastContactFrom) query = query.gte('ultimo_contato', validated.filters.lastContactFrom);
+  if (validated.filters.lastContactTo) query = query.lte('ultimo_contato', validated.filters.lastContactTo);
+  const { data, error, count } = await query.order(order, { ascending: params.ascending === true }).range(from, from + pageSize - 1);
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível listar leads sem chat de WhatsApp vinculado.');
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const diagnosticByPhone = includeDiagnostic ? await withUnlinkedPhoneChatDiagnostic(supabase, rows) : null;
+  const leads = rows.map((lead) => {
+    const base = leadsWithoutChatView(lead);
+    if (!diagnosticByPhone) return base;
+    const chat = getCommWhatsAppPhoneLookupKeys(lead.telefone)
+      .map((phone) => diagnosticByPhone.get(phone))
+      .find((candidate) => Boolean(candidate));
+    return { ...base, linked_chat_exists: false, unlinked_chat_same_phone: Boolean(chat), unlinked_chat_id: chat?.id ?? null };
+  });
+  const total = count ?? 0;
+  return {
+    success: true,
+    total,
+    page,
+    page_size: pageSize,
+    has_more: from + leads.length < total,
+    filters_applied: { ...leadsWithoutChatFiltersView(validated.filters), include_phone_chat_diagnostic: includeDiagnostic },
+    leads,
+  };
+}
+
+async function countLeadsWithoutWhatsAppChat(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const validated = leadsWithoutChatFilters(params);
+  if (validated.error || !validated.filters) return validated.error ?? errorResult('INVALID_INPUT', 'Filtros inválidos.');
+  let query = supabase
+    .from('leads')
+    .select('id,linked_chats:comm_whatsapp_chats!comm_whatsapp_chats_lead_id_fkey()', { count: 'exact', head: true })
+    .is('linked_chats', null);
+  if (validated.filters.status) query = query.eq('status', validated.filters.status);
+  if (validated.filters.reactivationEnabled !== null) query = query.eq('reativacao_habilitada', validated.filters.reactivationEnabled);
+  if (validated.filters.archived !== null) query = query.eq('arquivado', validated.filters.archived);
+  if (validated.filters.hasPhone === true) query = query.not('telefone', 'is', null).neq('telefone', '');
+  if (validated.filters.hasPhone === false) query = query.or('telefone.is.null,telefone.eq.');
+  if (validated.filters.reactivationAttemptIsNull === true) query = query.is('ultima_tentativa_reativacao', null);
+  if (validated.filters.reactivationAttemptIsNull === false) query = query.not('ultima_tentativa_reativacao', 'is', null);
+  if (validated.filters.createdFrom) query = query.gte('data_criacao', validated.filters.createdFrom);
+  if (validated.filters.createdTo) query = query.lte('data_criacao', validated.filters.createdTo);
+  if (validated.filters.lastContactFrom) query = query.gte('ultimo_contato', validated.filters.lastContactFrom);
+  if (validated.filters.lastContactTo) query = query.lte('ultimo_contato', validated.filters.lastContactTo);
+  const { error, count } = await query;
+  return error
+    ? errorResult('INTERNAL_ERROR', 'Não foi possível contar leads sem chat de WhatsApp vinculado.')
+    : { success: true, total: count ?? 0, filters_applied: leadsWithoutChatFiltersView(validated.filters) };
+}
+
 export async function executeMcpCommercialReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown> }): Promise<Record<string, unknown> | null> {
   const { supabase, toolName, arguments: args } = params;
   if (toolName === 'kifer_list_scheduled_whatsapp_messages') return listScheduledWhatsAppMessages(supabase, args);
   if (toolName === 'kifer_get_scheduled_whatsapp_message') return getScheduledWhatsAppMessage(supabase, args);
   if (toolName === 'kifer_get_commercial_followup_audit') return getCommercialFollowUpAudit(supabase, args);
+  if (toolName === 'kifer_list_leads_without_whatsapp_chat') return listLeadsWithoutWhatsAppChat(supabase, args);
+  if (toolName === 'kifer_count_leads_without_whatsapp_chat') return countLeadsWithoutWhatsAppChat(supabase, args);
   if (toolName === 'kifer_list_automation_jobs') {
     const { page, pageSize, from } = pageParams(args);
     let query = supabase.from('auto_contact_flow_jobs').select('id,lead_id,flow_id,step_id,step_order,action_type,status,attempts,last_error,scheduled_at,created_at,updated_at,enrollment_id,trigger_message_at', { count: 'exact' });

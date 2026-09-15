@@ -46,7 +46,9 @@ export function normalizeOpportunityRecords(value: unknown): { opportunities: Op
       primary_contact_lead_id: text(item.primary_contact_lead_id) || null,
       member_lead_ids: memberIds,
       member_count: memberCount,
-      members_truncated: item.members_truncated === true || memberCount > memberIds.length,
+      // members_truncated describes the display-oriented `members` array. The
+      // separate member_lead_ids array is complete unless its count proves otherwise.
+      members_truncated: memberCount > memberIds.length,
     }];
   });
   return { opportunities, truncated: response.opportunities_truncated === true };

@@ -8,6 +8,7 @@ import { MCP_CONTRACT_DOCUMENT_TOOLS, MCP_CONTRACT_DOCUMENT_TOOL_NAMES } from '.
 import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES } from './contact-permission-actions.ts';
 import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
 import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from './media-read-action.ts';
+import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
 
 /**
@@ -590,6 +591,7 @@ const tools = [
   ...MCP_CONTRACT_DOCUMENT_TOOLS,
   ...MCP_CONTACT_PERMISSION_TOOLS,
   ...MCP_INBOX_TOOLS,
+  ...MCP_IDENTITY_CONFLICT_TOOLS,
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
@@ -622,6 +624,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name !== 'kifer_list_documents' && name !== 'kifer_get_document'),
     ...MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
     ...MCP_INBOX_WRITE_TOOL_NAMES,
+    ...MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {

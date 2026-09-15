@@ -20,6 +20,19 @@ const contractFields = [
   'razao_social', 'nome_fantasia', 'endereco_empresa',
 ] as const;
 const contractFieldSet = new Set<string>(contractFields);
+const commissionFields = [
+  'comissao_prevista', 'comissao_multiplicador', 'comissao_recebimento_adiantado', 'comissao_parcelas',
+  'previsao_recebimento_comissao', 'previsao_pagamento_bonificacao', 'vidas_elegiveis_bonus',
+  'bonus_por_vida_configuracoes', 'bonus_por_vida_valor', 'bonus_por_vida_aplicado',
+] as const;
+const commissionFieldSet = new Set<string>(commissionFields);
+const staleWriteRpcNames = new Set([
+  'mcp_update_contract',
+  'mcp_update_contract_holder',
+  'mcp_update_contract_dependent',
+  'mcp_remove_contract_holder',
+  'mcp_remove_contract_dependent',
+]);
 const holderFields = [
   'nome_completo', 'cpf', 'rg', 'data_nascimento', 'sexo', 'estado_civil', 'telefone', 'email', 'cep', 'endereco',
   'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cns', 'cnpj', 'razao_social', 'nome_fantasia',
@@ -110,7 +123,7 @@ const dependentProperties = {
 } as const;
 
 export const MCP_CONTRACT_WRITE_TOOL_NAMES = [
-  'kifer_create_contract', 'kifer_update_contract', 'kifer_create_contract_holder', 'kifer_update_contract_holder',
+  'kifer_create_contract', 'kifer_update_contract', 'kifer_update_contract_commission', 'kifer_create_contract_holder', 'kifer_update_contract_holder',
   'kifer_remove_contract_holder', 'kifer_create_dependent', 'kifer_update_dependent', 'kifer_remove_dependent',
   'kifer_create_contract_bundle', 'kifer_create_contract_value_adjustment',
 ] as const;
@@ -137,6 +150,12 @@ export const MCP_CONTRACT_TOOLS = [
     name: 'kifer_update_contract',
     description: 'Atualiza apenas os campos permitidos do contrato. expected_updated_at obrigatório; o banco valida catálogos e regras comerciais. OAuth admin obrigatório.',
     inputSchema: { type: 'object', required: ['contract_id', 'expected_updated_at', 'changes'], additionalProperties: false, properties: { contract_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' }, changes: changesSchema(contractProperties) } },
+    annotations: writeAnnotation,
+  },
+  {
+    name: 'kifer_update_contract_commission',
+    description: 'Atualiza somente os campos de comissão e bonificação modelados no contrato, respeitando regras de parcelas, adiantamento e bônus por vida da tela de contratos. Exige expected_updated_at, auditoria e OAuth admin; não registra pagamentos ou estornos.',
+    inputSchema: { type: 'object', required: ['contract_id', 'expected_updated_at', 'changes'], additionalProperties: false, properties: { contract_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' }, changes: changesSchema(Object.fromEntries(commissionFields.map((field) => [field, contractProperties[field]]))) } },
     annotations: writeAnnotation,
   },
   {
@@ -197,6 +216,11 @@ export const MCP_CONTRACT_TOOLS = [
 
 const invalid = (message: string): ActionResult => ({ success: false, error_code: 'INVALID_INPUT', message });
 const internal = (): ActionResult => ({ success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível executar a alteração do contrato.' });
+const staleWrite = (): ActionResult => ({
+  success: false,
+  error_code: 'CONFLICT',
+  message: 'O registro foi alterado desde a última leitura. Recarregue os dados e tente novamente.',
+});
 const validTimestamp = (value: unknown) => Boolean(text(value)) && Number.isFinite(Date.parse(text(value)));
 const validRequestId = (value: unknown) => REQUEST_ID.test(text(value));
 
@@ -208,7 +232,7 @@ function allowedObject(value: unknown, allowed: Set<string>, label: string, allo
 
 async function callRpc(supabase: SupabaseClient, name: string, parameters: Record<string, unknown>): Promise<ActionResult> {
   const { data, error } = await supabase.rpc(name, parameters);
-  if (error) return internal();
+  if (error) return error.code === '40001' && staleWriteRpcNames.has(name) ? staleWrite() : internal();
   if (!isRecord(data)) return internal();
   if (data.success === false) return data as ActionResult;
   return { success: true, ...data };
@@ -252,9 +276,9 @@ export async function executeMcpContractWriteAction(params: {
     });
   }
 
-  if (toolName === 'kifer_update_contract') {
+  if (toolName === 'kifer_update_contract' || toolName === 'kifer_update_contract_commission') {
     if (!UUID.test(contractId) || !validTimestamp(args.expected_updated_at)) return invalid('contract_id e expected_updated_at válidos são obrigatórios.');
-    const patch = allowedObject(args.changes, contractFieldSet, 'changes');
+    const patch = allowedObject(args.changes, toolName === 'kifer_update_contract_commission' ? commissionFieldSet : contractFieldSet, 'changes');
     if (!isRecord(patch) || patch.success === false) return patch as ActionError;
     return callRpc(supabase, 'mcp_update_contract', { p_actor_user_id: actor.actorId, p_contract_id: contractId, p_expected_updated_at: text(args.expected_updated_at), p_patch: patch });
   }

@@ -95,6 +95,8 @@ export type WhapiSendTextOpts = {
   replyAuthorPhone?: string;
 };
 
+export type WhapiBeforeAttempt = () => void | Promise<void>;
+
 export type WhapiPagination = {
   count?: number;
   offset?: number;
@@ -105,8 +107,8 @@ export type WhapiPagination = {
 export type WhapiClient = {
   health(): Promise<Response>;
   limits(): Promise<Response>;
-  sendText(chatId: string, text: string, opts?: WhapiSendTextOpts): Promise<Response>;
-  sendMedia(kind: string, body: BodyInit | FormData, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
+  sendText(chatId: string, text: string, opts?: WhapiSendTextOpts, beforeAttempt?: WhapiBeforeAttempt): Promise<Response>;
+  sendMedia(kind: string, body: BodyInit | FormData, headers: Record<string, string>, timeoutMs?: number, beforeAttempt?: WhapiBeforeAttempt): Promise<Response>;
   uploadMedia(body: FormData, timeoutMs?: number): Promise<Response>;
   fetchMessage(messageId: string): Promise<Response>;
   fetchChatMessages(chatId: string, pagination?: WhapiPagination): Promise<Response>;
@@ -121,7 +123,7 @@ export type WhapiClient = {
   sendReaction(messageId: string, chatId: string, emoji: string | null): Promise<Response>;
   starMessage(messageId: string, starred: boolean): Promise<Response>;
   get(url: string, timeoutMs?: number): Promise<Response>;
-  post(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
+  post(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number, beforeAttempt?: WhapiBeforeAttempt): Promise<Response>;
   del(url: string, timeoutMs?: number): Promise<Response>;
   put(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
 };
@@ -131,8 +133,9 @@ function whapiRetryFetch(
   init: RequestInit,
   timeoutMs = DEFAULT_WHAPI_REQUEST_TIMEOUT_MS,
   retries = DEFAULT_WHAPI_RETRY_COUNT,
+  beforeAttempt?: WhapiBeforeAttempt,
 ): Promise<Response> {
-  return whapiRetryFetchImpl(url, init, timeoutMs, retries);
+  return whapiRetryFetchImpl(url, init, timeoutMs, retries, beforeAttempt);
 }
 
 async function whapiRetryFetchImpl(
@@ -140,12 +143,22 @@ async function whapiRetryFetchImpl(
   init: RequestInit,
   timeoutMs: number,
   retries: number,
+  beforeAttempt?: WhapiBeforeAttempt,
 ): Promise<Response> {
-  let response = await fetchWhapiWithTimeout(url, init, timeoutMs);
+  const fetchAttempt = async () => {
+    // Opt-in preflight for outbound POSTs; health/read and existing unguarded
+    // send paths keep their current behavior.
+    if (beforeAttempt && init.method?.toUpperCase() === 'POST') {
+      await beforeAttempt();
+    }
+    return fetchWhapiWithTimeout(url, init, timeoutMs);
+  };
+
+  let response = await fetchAttempt();
 
   for (let attempt = 0; attempt < retries && response.status >= 429; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, DEFAULT_WHAPI_RETRY_DELAY_MS * (attempt + 1)));
-    response = await fetchWhapiWithTimeout(url, init, timeoutMs);
+    response = await fetchAttempt();
   }
 
   return response;
@@ -163,7 +176,7 @@ export const createWhapiClient = (token: string): WhapiClient => {
 
     limits: () => whapiRetryFetch(`${WHAPI_BASE_URL}/limits`, { headers: authHeaders }),
 
-    sendText: (chatId, text, opts) => whapiRetryFetch(
+    sendText: (chatId, text, opts, beforeAttempt) => whapiRetryFetch(
       `${WHAPI_BASE_URL}/messages/text`,
       {
         method: 'POST',
@@ -181,12 +194,17 @@ export const createWhapiClient = (token: string): WhapiClient => {
           } : {}),
         }),
       },
+      DEFAULT_WHAPI_REQUEST_TIMEOUT_MS,
+      DEFAULT_WHAPI_RETRY_COUNT,
+      beforeAttempt,
     ),
 
-    sendMedia: (kind, body, extraHeaders, timeoutMs) => whapiRetryFetch(
+    sendMedia: (kind, body, extraHeaders, timeoutMs, beforeAttempt) => whapiRetryFetch(
       `${WHAPI_BASE_URL}/messages/${kind}`,
       { method: 'POST', headers: { ...authHeaders, ...extraHeaders }, body },
       timeoutMs,
+      DEFAULT_WHAPI_RETRY_COUNT,
+      beforeAttempt,
     ),
 
     uploadMedia: (body, timeoutMs) => whapiRetryFetch(
@@ -297,10 +315,12 @@ export const createWhapiClient = (token: string): WhapiClient => {
     ),
 
     get: (url, timeoutMs) => whapiRetryFetch(url, { headers: authHeaders }, timeoutMs),
-    post: (url, body, extraHeaders, timeoutMs) => whapiRetryFetch(
+    post: (url, body, extraHeaders, timeoutMs, beforeAttempt) => whapiRetryFetch(
       url,
       { method: 'POST', headers: { ...authHeaders, ...extraHeaders }, body },
       timeoutMs,
+      DEFAULT_WHAPI_RETRY_COUNT,
+      beforeAttempt,
     ),
     del: (url, timeoutMs) => whapiRetryFetch(url, { method: 'DELETE', headers: authHeaders }, timeoutMs),
     put: (url, body, extraHeaders, timeoutMs) => whapiRetryFetch(

@@ -4,6 +4,7 @@ import {
   assertContactPermissionForSend,
   ContactPermissionBlockedError,
   ContactPermissionCheckError,
+  resolveContactPermissionSendScope,
   type ContactPermissionSendScope,
 } from '../_shared/contact-permissions.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
@@ -401,15 +402,15 @@ Deno.serve(async (req: Request) => {
       return buildDuplicateRetryResponse(retryRequest.row);
     }
 
-    const storedPermissionScope = retryTarget.metadata.contact_permission_scope;
-    const sendPurposeScope: ContactPermissionSendScope = storedPermissionScope === 'commercial'
-      || storedPermissionScope === 'service_reply'
-      || storedPermissionScope === 'transactional'
-      ? storedPermissionScope
-      : ['campaign', 'scheduled', 'mcp'].includes(retryTarget.source)
-        ? 'commercial'
-        : 'service_reply';
-    await assertContactPermissionForSend(supabaseAdmin, retryTarget.phone_number, sendPurposeScope);
+    const sendPurposeScope: ContactPermissionSendScope = resolveContactPermissionSendScope(
+      retryTarget.metadata.contact_permission_scope,
+      retryTarget.source,
+    );
+    const assertSendPermission = () => assertContactPermissionForSend(
+      supabaseAdmin,
+      retryTarget.phone_number,
+      sendPurposeScope,
+    );
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
     const whapi = createWhapiClient(token);
@@ -423,6 +424,7 @@ Deno.serve(async (req: Request) => {
       }),
       { 'Content-Type': 'application/json' },
       30_000,
+      assertSendPermission,
     );
 
     const whapiPayload = await readResponsePayload(response);

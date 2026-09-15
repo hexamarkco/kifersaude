@@ -69,6 +69,9 @@ const mapRpcError = (error: { code?: string; message?: string } | null): ActionR
   if (error?.message?.includes('MCP_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD')) {
     return { success: false, error_code: 'IDEMPOTENCY_CONFLICT', message: 'client_request_id já foi usado com outros dados; gere uma nova chave.' };
   }
+  if (error?.message?.includes('MCP_IDENTITY_CONFLICT_RESOLUTION_REQUIRED')) {
+    return { success: false, error_code: 'REQUIRES_REVIEW', status: 'requires_review', message: 'Consulte kifer_get_identity_conflict e use kifer_resolve_identity_conflict com um candidato persistido.' };
+  }
   if (error?.code === '40001') {
     return { success: false, error_code: 'CONFLICT', message: 'A solicitação entrou em conflito; recarregue a conversa e tente novamente com uma nova chave.' };
   }
@@ -162,7 +165,7 @@ const CHAT_ACTION_SCHEMAS = [
   },
   {
     name: 'kifer_link_chat_to_lead',
-    description: 'Vincula manualmente uma conversa a um lead. Isso resolve somente conflitos automáticos de associação lead ambígua/conflitante, como a Inbox; não mescla chats. Exige expected_updated_at e client_request_id; OAuth admin obrigatório.',
+    description: 'Vincula manualmente uma conversa a um lead quando não há conflito de identidade de associação aberto. Se houver conflito, use kifer_resolve_identity_conflict com um candidato persistido. Não mescla chats. Exige expected_updated_at e client_request_id; OAuth admin obrigatório.',
     inputSchema: {
       type: 'object', required: ['chat_id', 'lead_id', 'expected_updated_at', 'client_request_id'], additionalProperties: false,
       properties: {

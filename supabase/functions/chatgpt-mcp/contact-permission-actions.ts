@@ -93,6 +93,9 @@ async function callPermissionRpc(
     if (errorText.includes('CONTACT_PERMISSION_BULK_LIMIT')) {
       return invalid('O lote deve conter de 1 a 50 alterações.');
     }
+    if (errorText.includes('CONTACT_PERMISSION_LEAD_ENDPOINT_MISMATCH')) {
+      return invalid('lead_id deve ser um lead ativo com telefone/e-mail igual ao endpoint normalizado.');
+    }
     return internal();
   }
   if (!isRecord(data) || typeof data.success !== 'boolean') return internal();

@@ -16,12 +16,14 @@ import {
   MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
 } from './contact-permission-actions.ts';
 import { executeMcpInboxAction, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
+import { executeMcpIdentityConflictResolution, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { executeMcpWhatsAppMediaReadAction } from './media-read-action.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
 const MAX_SHORT_TEXT_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 4_000;
+const FOLLOW_UP_AUDIT_READ_LIMIT = 1_000;
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const PRIORITIES = new Set(['baixa', 'normal', 'alta']);
 const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64|signed[_-]?url|temporary[_-]?url)/i;
@@ -958,13 +960,13 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
   const dayEnd = dayStart ? new Date(`${dayStart}T23:59:59.999Z`).toISOString() : null;
   let reminderQuery = supabase
     .from('reminders')
-    .select('id,lead_id,tipo,titulo,data_lembrete,lido,cancelled_at')
+    .select('id,lead_id,tipo,titulo,data_lembrete,lido,cancelled_at', { count: 'exact' })
     .in('tipo', [...COMMERCIAL_FOLLOW_UP_TYPES])
     .eq('lido', false)
     .is('cancelled_at', null);
   let scheduledQuery = supabase
     .from('comm_whatsapp_scheduled_messages')
-    .select('id,lead_id,chat_id,text_content,scheduled_at,status,error_message')
+    .select('id,lead_id,chat_id,text_content,scheduled_at,status,error_message', { count: 'exact' })
     .in('status', ['scheduled', 'sending', 'failed']);
   if (leadId) {
     reminderQuery = reminderQuery.eq('lead_id', leadId);
@@ -975,12 +977,19 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
     scheduledQuery = scheduledQuery.gte('scheduled_at', dayStart).lte('scheduled_at', dayEnd);
   }
   const [reminderResult, scheduleResult] = await Promise.all([
-    reminderQuery.order('data_lembrete', { ascending: true }).range(0, 999),
-    scheduledQuery.order('scheduled_at', { ascending: true }).range(0, 999),
+    reminderQuery.order('data_lembrete', { ascending: true }).range(0, FOLLOW_UP_AUDIT_READ_LIMIT - 1),
+    scheduledQuery.order('scheduled_at', { ascending: true }).range(0, FOLLOW_UP_AUDIT_READ_LIMIT - 1),
   ]);
   if (reminderResult.error || scheduleResult.error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar os dados de auditoria comercial.');
   const reminders = (reminderResult.data ?? []) as Array<Record<string, unknown>>;
   const schedules = (scheduleResult.data ?? []) as Array<Record<string, unknown>>;
+  const followUpAuditCoverageReasons: string[] = [];
+  if (reminderResult.count !== null && reminderResult.count !== undefined && reminderResult.count > FOLLOW_UP_AUDIT_READ_LIMIT) {
+    followUpAuditCoverageReasons.push('reminder_limit_exceeded');
+  }
+  if (scheduleResult.count !== null && scheduleResult.count !== undefined && scheduleResult.count > FOLLOW_UP_AUDIT_READ_LIMIT) {
+    followUpAuditCoverageReasons.push('schedule_limit_exceeded');
+  }
   const involvedLeadIds = [...new Set([...reminders, ...schedules].map((row) => text(row.lead_id)).filter(safeUuid))];
   const leadResult = involvedLeadIds.length > 0
     ? await supabase.from('leads').select('id,nome_completo,status,arquivado').in('id', involvedLeadIds).range(0, involvedLeadIds.length - 1)
@@ -1062,6 +1071,7 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
     }
   }
   const uniqueOpportunityCoverageReasons = [...new Set(opportunityCoverageReasons)];
+  const uniqueFollowUpAuditCoverageReasons = [...new Set([...followUpAuditCoverageReasons, ...uniqueOpportunityCoverageReasons])];
   issues.push(...auditOpportunityFollowUps({
     opportunities: [...opportunitiesById.values()],
     reminders: filteredReminders,
@@ -1083,6 +1093,8 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
     issues: issues.slice(0, 500),
     issues_truncated: issues.length > 500,
     ...(allFollowUps ? { follow_ups: allFollowUps } : {}),
+    follow_up_audit_coverage_available: uniqueFollowUpAuditCoverageReasons.length === 0,
+    follow_up_audit_coverage_incomplete_reasons: uniqueFollowUpAuditCoverageReasons,
     opportunity_checks_available: uniqueOpportunityCoverageReasons.length === 0,
     opportunity_checks_incomplete_reasons: uniqueOpportunityCoverageReasons,
     opportunities_considered: opportunitiesById.size,
@@ -2056,8 +2068,39 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
   if (toolName === 'kifer_get_identity_conflict') {
     const conflictId = text(args.conflict_id);
     if (!safeUuid(conflictId)) return errorResult('INVALID_INPUT', 'conflict_id inválido.');
-    const { data, error } = await supabase.from('comm_whatsapp_identity_conflicts').select('id,channel_id,chat_id,conflict_type,status,created_at,updated_at,resolved_at,resolved_by').eq('id', conflictId).maybeSingle();
-    return error ? errorResult('INTERNAL_ERROR', 'Não foi possível consultar o conflito de identidade.') : !data ? errorResult('NOT_FOUND', 'Conflito de identidade não encontrado.') : { success: true, conflict: data, details_available: false };
+    const { data, error } = await supabase.from('comm_whatsapp_identity_conflicts')
+      .select('id,channel_id,chat_id,conflict_type,status,created_at,updated_at,resolved_at,resolved_by,details')
+      .eq('id', conflictId).maybeSingle();
+    if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o conflito de identidade.');
+    if (!data) return errorResult('NOT_FOUND', 'Conflito de identidade não encontrado.');
+    const details = data.details && typeof data.details === 'object' && !Array.isArray(data.details)
+      ? data.details as Record<string, unknown>
+      : {};
+    const persistedCandidates = data.conflict_type === 'lead_ambiguous'
+      ? Array.isArray(details.candidate_lead_ids) ? details.candidate_lead_ids : []
+      : data.conflict_type === 'lead_conflict'
+        ? [details.winner_previous_lead_id, details.loser_previous_lead_id]
+        : [];
+    const candidateLeadIds = [...new Set(persistedCandidates.filter(safeUuid))].slice(0, 20);
+    const { data: chat, error: chatError } = data.chat_id
+      ? await supabase.from('comm_whatsapp_chats').select('updated_at').eq('id', data.chat_id).maybeSingle()
+      : { data: null, error: null };
+    const conflict = {
+      id: data.id,
+      channel_id: data.channel_id,
+      chat_id: data.chat_id,
+      conflict_type: data.conflict_type,
+      status: data.status,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      resolved_at: data.resolved_at,
+      resolved_by: data.resolved_by,
+      expected_chat_updated_at: !chatError && chat && typeof chat.updated_at === 'string' ? chat.updated_at : null,
+      resolution_candidate_lead_ids: candidateLeadIds,
+      resolution_requires_review: !['lead_ambiguous', 'lead_conflict'].includes(data.conflict_type)
+        || candidateLeadIds.length === 0,
+    };
+    return { success: true, conflict, details_available: true };
   }
   if (toolName === 'kifer_list_scheduled_whatsapp_messages') return listScheduledWhatsAppMessages(supabase, args);
   if (toolName === 'kifer_get_scheduled_whatsapp_message') return getScheduledWhatsAppMessage(supabase, args);
@@ -2164,6 +2207,10 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if ((MCP_INBOX_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-inbox';
       result = await executeMcpInboxAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = 'identity-conflict-resolution';
+      result = await executeMcpIdentityConflictResolution({ supabase, toolName, arguments: args, actorId: actor.actorId });
     }
     else if ((MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-contact-permission';

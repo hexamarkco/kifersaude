@@ -38,6 +38,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Arquivos novos de lead/contrato/titular/dependente ficam em `contract-documents-private`, bucket privado de 20 MiB com allowlist PDF/JPEG/PNG/WebP. Metadados continuam polimórficos, mas RPCs validam a existência do alvo e triggers bloqueiam órfãos até a limpeza do Storage terminar. MCP recebe links assinados de 120 segundos.
 - A tabela legada `documents` preserva linhas e URLs existentes e permanece leitura somente no MCP. Novos documentos não são gravados nela.
 - O financeiro modela somente ajustes de acréscimo/desconto em `contract_value_adjustments`; não existe ledger de pagamentos/chargebacks/bonificações que autorize inferir tools de registro desses eventos.
+- `kifer_update_contract_commission` altera apenas os campos de comissão e bônus já existentes no formulário; pagamento, chargeback e pagamento de bônus continuam sem tool porque não há ledger correspondente.
 
 ## Permissão de contato
 
@@ -49,7 +50,9 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 - Identidade canônica é resolvida antes de buscar/criar chat. Variantes de telefone e chats mesclados sempre persistem no UUID canônico.
 - Alterações MCP de estado/link da Inbox passam por RPCs estreitas, com ator OAuth admin revalidado no banco, lock do chat canônico, `expected_updated_at`, idempotência e auditoria; não se escrevem tabelas do Inbox diretamente pelo dispatcher MCP.
+- `kifer_resolve_identity_conflict` só resolve `lead_ambiguous` e `lead_conflict` escolhendo um lead entre os IDs candidatos persistidos. Exige as versões atuais do conflito e do chat. Conflitos de identificadores externos retornam `requires_review` até que uma RPC revalide a identidade no provider.
 - Link/deslink manual de chat não mescla nem exclui chats. Conflitos de identificadores externos sem evidência round-trip persistida permanecem para revisão; nenhum ID fornecido pelo cliente é aceito como prova de identidade.
+- Merge de leads permanece pendente: as referências por FK têm políticas de exclusão distintas, existem colisões em índices únicos e documentos privados prendem metadados e caminho do Storage ao UUID original.
 - Nome de perfil/push name de `GET /contacts/{ContactID}` tem prioridade sobre `chat_name` de eventos.
 - Persistência com `external_message_id` deve manter o caminho de `INSERT ... ON CONFLICT DO NOTHING`; nunca substituir por apenas SELECT/UPDATE.
 - Deduplicação e `message_at > archived_at` protegem contra ecos. Mensagem inbound ou outbound nova desarquiva o chat, salvo regra de silenciamento; soft-delete reabre com inbound real posterior.

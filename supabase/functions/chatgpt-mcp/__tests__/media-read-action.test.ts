@@ -11,15 +11,9 @@ const mediaId = 'whapi-media_123-abc=';
 const signedUrl = `https://project.supabase.co/storage/v1/object/sign/comm-whatsapp-media/${mediaId}?token=short-lived`;
 
 const makeQuery = (response: { data: unknown; error: unknown }) => {
-  type Query = {
-    select(columns: string): Query;
-    eq(column: string, value: string): Query;
-    maybeSingle(): Promise<{ data: unknown; error: unknown }>;
-  };
-  let query: Query;
-  query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
+  const query = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue(response),
   };
   return query;
@@ -42,6 +36,7 @@ const makeSupabase = (options: {
       message_type: 'image',
       media_id: mediaId,
       media_mime_type: 'image/jpeg',
+      media_file_name: 'proposta.png',
       media_url: 'https://permanent-provider.example/raw',
     },
     error: options.messageError ?? null,
@@ -75,6 +70,7 @@ describe('MCP WhatsApp media read action', () => {
         message_id: messageId,
         message_type: 'image',
         mime_type: 'image/jpeg',
+        file_name: 'proposta.png',
         signed_url: signedUrl,
         signed_url_expires_in: 120,
       },

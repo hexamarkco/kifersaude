@@ -12,7 +12,7 @@ type Filter = { table: string; operator: string; column?: string; value?: unknow
 
 const query = (table: string, result: Result = {}, selections?: string[], writes?: Write[], filters?: Filter[]) => {
   const builder = {
-    select: (columns?: string) => {
+    select: (columns?: string, _options?: { count?: 'exact' | 'planned' | 'estimated' }) => {
       if (columns) selections?.push(columns);
       return builder;
     },
@@ -544,6 +544,40 @@ test('audita follow-ups comerciais duplicados e sem mensagem agendada sem altera
   assert.equal(result?.success, true);
   assert.deepEqual((result?.issues as Array<{ code: string }>).map((issue) => issue.code), ['MULTIPLE_COMMERCIAL_FOLLOW_UPS', 'FOLLOW_UP_WITHOUT_SCHEDULED_MESSAGE']);
   assert.deepEqual(supabase.writes, []);
+});
+
+test('sinaliza cobertura incompleta quando a auditoria ultrapassa o limite de reminders ou agendamentos', async () => {
+  const reminders = Array.from({ length: 1_000 }, (_, index) => ({
+    id: `reminder-${index}`,
+    lead_id: actor.actorId,
+    tipo: 'Follow-up',
+    titulo: `Ligar ${index}`,
+    data_lembrete: '2026-10-01T13:00:00.000Z',
+    lido: false,
+    cancelled_at: null,
+  }));
+  const schedules = Array.from({ length: 1_000 }, (_, index) => ({
+    id: `schedule-${index}`,
+    lead_id: actor.actorId,
+    chat_id: null,
+    text_content: `Mensagem ${index}`,
+    scheduled_at: '2026-10-01T13:00:00.000Z',
+    status: 'scheduled',
+    error_message: null,
+  }));
+  const base = client({
+    reminders: { data: reminders, count: 1_001 },
+    comm_whatsapp_scheduled_messages: { data: schedules, count: 1_002 },
+    leads: { data: [{ id: actor.actorId, nome_completo: 'Larissa', status: 'Proposta Enviada', arquivado: false }] },
+  });
+  const supabase = {
+    ...base,
+    rpc: async () => ({ data: { success: true, opportunities: [], opportunities_truncated: false }, error: null }),
+  };
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_get_commercial_followup_audit', arguments: { lead_id: actor.actorId }, actorId: actor.actorId });
+
+  assert.equal(result?.follow_up_audit_coverage_available, false);
+  assert.deepEqual(result?.follow_up_audit_coverage_incomplete_reasons, ['reminder_limit_exceeded', 'schedule_limit_exceeded']);
 });
 
 test('edita texto e horário somente em agendamento pendente sem criar outro registro', async () => {

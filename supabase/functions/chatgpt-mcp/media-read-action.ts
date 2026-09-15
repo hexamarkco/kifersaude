@@ -61,7 +61,7 @@ export async function executeMcpWhatsAppMediaReadAction(params: {
 
   const { data: message, error: messageError } = await supabase
     .from('comm_whatsapp_messages')
-    .select('id,chat_id,direction,message_type,media_id,media_mime_type')
+    .select('id,chat_id,direction,message_type,media_id,media_mime_type,media_file_name')
     .eq('id', messageId)
     .eq('chat_id', chatId)
     .maybeSingle();
@@ -91,17 +91,34 @@ export async function executeMcpWhatsAppMediaReadAction(params: {
     return internal();
   }
   const expectedPrefix = `/storage/v1/object/sign/${MEDIA_BUCKET}/`;
+  let signedMediaPath = '';
+  try {
+    signedMediaPath = decodeURIComponent(signedUrl.pathname.slice(expectedPrefix.length));
+  } catch {
+    return internal();
+  }
   if (signedUrl.protocol !== 'https:'
-    || signedUrl.pathname !== `${expectedPrefix}${mediaId}`
+    || !signedUrl.pathname.startsWith(expectedPrefix)
+    || signedMediaPath !== mediaId
     || !signedUrl.searchParams.get('token')) return internal();
 
   const mimeType = text(message.media_mime_type).split(';', 1)[0]?.trim() || '';
+  const fileName = text(message.media_file_name)
+    .split('')
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code >= 0x20 && (code < 0x7f || code > 0x9f);
+    })
+    .join('')
+    .replace(/[\\/]/g, '_')
+    .slice(0, 255);
   return {
     success: true,
     media: {
       message_id: messageId,
       message_type: text(message.message_type).toLowerCase(),
       mime_type: MIME_TYPE.test(mimeType) ? mimeType : 'application/octet-stream',
+      file_name: fileName || null,
       signed_url: signedUrl.toString(),
       signed_url_expires_in: SIGNED_URL_TTL_SECONDS,
     },

@@ -4,7 +4,6 @@ import {
   assertContactPermissionForSend,
   ContactPermissionBlockedError,
   ContactPermissionCheckError,
-  type ContactPermissionSendScope,
 } from '../_shared/contact-permissions.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import { isPlausibleMediaSignature } from '../_shared/file-signature.ts';
@@ -741,7 +740,10 @@ Deno.serve(async (req: Request) => {
     }
     chatRoute = dispatchRoute;
     chatId = dispatchRoute.externalChatId;
-    const sendPurposeScope: ContactPermissionSendScope = internalActor ? 'commercial' : 'service_reply';
+    // Manual Inbox messages may contain sales outreach. Until the UI provides
+    // an explicit, auditable service-reply classification, all manual sends
+    // follow the commercial policy so opt-outs cannot be bypassed silently.
+    const sendPurposeScope = 'commercial' as const;
     const assertSendAllowed = () => assertContactPermissionForSend(
       supabaseAdmin!,
       dispatchRoute.phoneNumber || extractPhoneFromChatId(chatId),

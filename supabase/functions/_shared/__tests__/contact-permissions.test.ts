@@ -5,6 +5,7 @@ import {
   assertContactPermissionForSend,
   ContactPermissionBlockedError,
   ContactPermissionCheckError,
+  resolveContactPermissionSendScope,
   type ContactPermissionRpcClient,
 } from '../contact-permissions';
 
@@ -77,4 +78,12 @@ test('keeps service replies separate from commercial follow-up scope', async () 
   await assertContactPermissionForSend(client, '5521999991234', 'service_reply');
 
   assert.equal(calls[0]?.params.p_purpose_scope, 'service_reply');
+});
+
+test('classifies manual and historical messages as commercial unless a trusted scope was stored', () => {
+  assert.equal(resolveContactPermissionSendScope(undefined, 'api'), 'commercial');
+  assert.equal(resolveContactPermissionSendScope(undefined, 'mcp'), 'commercial');
+  assert.equal(resolveContactPermissionSendScope(undefined, 'unknown'), 'commercial');
+  assert.equal(resolveContactPermissionSendScope('service_reply', 'ai_autonomous'), 'service_reply');
+  assert.equal(resolveContactPermissionSendScope('transactional', 'api'), 'transactional');
 });

@@ -100,6 +100,10 @@ export const MCP_CONTRACT_DOCUMENT_TOOLS = [
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+const hasControlCharacter = (value: string): boolean => Array.from(value).some((character) => {
+  const code = character.charCodeAt(0);
+  return code <= 0x1f || code === 0x7f;
+});
 const validTimestamp = (value: unknown) => Boolean(text(value)) && Number.isFinite(Date.parse(text(value)));
 const invalid = (message: string): ActionResult => ({ success: false, error_code: 'INVALID_INPUT', message });
 const internal = (): ActionResult => ({ success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível executar a operação de documentos.' });
@@ -284,7 +288,7 @@ async function uploadDocument(supabase: SupabaseClient, actorId: string, args: A
   const fileName = text(args.nome_arquivo);
   const mimeType = text(args.mime_type).toLowerCase();
   if (!REQUEST_ID.test(requestId) || !ENTITY_TYPES.has(entityType) || !UUID.test(entityId)) return invalid('client_request_id, entity_type e entity_id válidos são obrigatórios.');
-  if (!documentType || documentType.length > 80 || !fileName || fileName.length > 255 || /[\x00-\x1f\x7f]/.test(fileName)) return invalid('tipo_documento ou nome_arquivo inválidos.');
+  if (!documentType || documentType.length > 80 || !fileName || fileName.length > 255 || hasControlCharacter(fileName)) return invalid('tipo_documento ou nome_arquivo inválidos.');
   const extension = MIME_EXTENSIONS.get(mimeType);
   if (!extension) return invalid('mime_type não permitido.');
   const decoded = decodeDocumentBase64(args.content_base64, mimeType);
@@ -341,7 +345,7 @@ async function updateDocument(supabase: SupabaseClient, actorId: string, args: A
   const documentType = text(args.tipo_documento);
   const fileName = text(args.nome_arquivo);
   if (!REQUEST_ID.test(requestId) || !UUID.test(documentId) || !validTimestamp(expectedUpdatedAt)) return invalid('client_request_id, document_id e expected_updated_at válidos são obrigatórios.');
-  if (!documentType || documentType.length > 80 || !fileName || fileName.length > 255 || /[\x00-\x1f\x7f]/.test(fileName)) return invalid('tipo_documento ou nome_arquivo inválidos.');
+  if (!documentType || documentType.length > 80 || !fileName || fileName.length > 255 || hasControlCharacter(fileName)) return invalid('tipo_documento ou nome_arquivo inválidos.');
   const result = await callDocumentRpc(supabase, 'mcp_contract_document_update_metadata', {
     p_actor_user_id: actorId,
     p_client_request_id: requestId,

@@ -158,7 +158,9 @@ WITH legacy_permissions AS (
       'source_chat_id', legacy.source_chat_id,
       'source_message_id', legacy.source_message_id,
       'ai_suggestion_id', legacy.ai_suggestion_id,
-      'ai_suggestion_intent', suggestion.intent
+      'ai_suggestion_intent', suggestion.intent,
+      'legacy_lead_id', legacy.lead_id,
+      'lead_match_ambiguous', CASE WHEN contact_match.lead_match_ambiguous THEN true END
     )) AS evidence,
     COALESCE(legacy.updated_at, legacy.created_at, now()) AS decision_at,
     legacy.id AS legacy_id
@@ -166,7 +168,14 @@ WITH legacy_permissions AS (
   LEFT JOIN public.comm_whatsapp_ai_intent_suggestions AS suggestion
     ON suggestion.id = legacy.ai_suggestion_id
   LEFT JOIN LATERAL public._resolve_contact_permission_lead(
-    'whatsapp', regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g'), NULL
+    'whatsapp',
+    regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g'),
+    CASE WHEN EXISTS (
+      SELECT 1 FROM public.leads AS candidate
+      WHERE candidate.id = legacy.lead_id
+        AND COALESCE(candidate.arquivado, false) = false
+        AND regexp_replace(COALESCE(candidate.telefone, ''), '[^0-9]', '', 'g') = regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g')
+    ) THEN legacy.lead_id ELSE NULL END
   ) AS contact_match ON true
   WHERE length(regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g')) BETWEEN 3 AND 320
 ), latest_legacy_permission AS (
@@ -223,7 +232,9 @@ SELECT
     'source_chat_id', legacy.source_chat_id,
     'source_message_id', legacy.source_message_id,
     'ai_suggestion_id', legacy.ai_suggestion_id,
-    'ai_suggestion_intent', suggestion.intent
+    'ai_suggestion_intent', suggestion.intent,
+    'legacy_lead_id', legacy.lead_id,
+    'lead_match_ambiguous', CASE WHEN contact_match.lead_match_ambiguous THEN true END
   )),
   'legacy_backfill',
   COALESCE(legacy.updated_at, legacy.created_at, now())
@@ -231,7 +242,14 @@ FROM public.comm_whatsapp_opt_outs AS legacy
 LEFT JOIN public.comm_whatsapp_ai_intent_suggestions AS suggestion
   ON suggestion.id = legacy.ai_suggestion_id
 LEFT JOIN LATERAL public._resolve_contact_permission_lead(
-  'whatsapp', regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g'), NULL
+  'whatsapp',
+  regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g'),
+  CASE WHEN EXISTS (
+    SELECT 1 FROM public.leads AS candidate
+    WHERE candidate.id = legacy.lead_id
+      AND COALESCE(candidate.arquivado, false) = false
+      AND regexp_replace(COALESCE(candidate.telefone, ''), '[^0-9]', '', 'g') = regexp_replace(COALESCE(legacy.phone_digits, ''), '[^0-9]', '', 'g')
+  ) THEN legacy.lead_id ELSE NULL END
 ) AS contact_match ON true
 JOIN public.contact_permission_policies AS policy
   ON policy.channel = 'whatsapp'
@@ -255,12 +273,14 @@ DECLARE
   v_evidence jsonb;
   v_policy_id uuid;
   v_lead_id uuid;
+  v_lead_input uuid;
   v_lead_match_ambiguous boolean;
   v_old_lead_id uuid;
   v_old_lead_match_ambiguous boolean;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     v_endpoint := regexp_replace(COALESCE(OLD.phone_digits, ''), '[^0-9]', '', 'g');
+    v_lead_input := OLD.lead_id;
     v_state := 'unknown';
     v_source := 'legacy_sync';
     v_actor := COALESCE(auth.uid(), OLD.created_by);
@@ -268,10 +288,12 @@ BEGIN
     v_evidence := jsonb_strip_nulls(jsonb_build_object(
       'legacy_opt_out_id', OLD.id,
       'legacy_source', OLD.source,
-      'legacy_deleted', true
+      'legacy_deleted', true,
+      'legacy_lead_id', OLD.lead_id
     ));
   ELSE
     v_endpoint := regexp_replace(COALESCE(NEW.phone_digits, ''), '[^0-9]', '', 'g');
+    v_lead_input := NEW.lead_id;
     SELECT suggestion.intent INTO v_suggestion_intent
     FROM public.comm_whatsapp_ai_intent_suggestions AS suggestion
     WHERE suggestion.id = NEW.ai_suggestion_id;
@@ -290,13 +312,14 @@ BEGIN
       'source_chat_id', NEW.source_chat_id,
       'source_message_id', NEW.source_message_id,
       'ai_suggestion_id', NEW.ai_suggestion_id,
-      'ai_suggestion_intent', v_suggestion_intent
+      'ai_suggestion_intent', v_suggestion_intent,
+      'legacy_lead_id', NEW.lead_id
     ));
   END IF;
 
   SELECT match.lead_id, match.lead_match_ambiguous
     INTO v_lead_id, v_lead_match_ambiguous
-  FROM public._resolve_contact_permission_lead('whatsapp', v_endpoint, NULL) AS match;
+  FROM public._resolve_contact_permission_lead('whatsapp', v_endpoint, v_lead_input) AS match;
   IF v_lead_match_ambiguous THEN
     v_evidence := v_evidence || jsonb_build_object('lead_match_ambiguous', true);
   END IF;
@@ -344,7 +367,7 @@ BEGIN
     SELECT match.lead_id, match.lead_match_ambiguous
       INTO v_old_lead_id, v_old_lead_match_ambiguous
     FROM public._resolve_contact_permission_lead(
-      'whatsapp', regexp_replace(COALESCE(OLD.phone_digits, ''), '[^0-9]', '', 'g'), NULL
+      'whatsapp', regexp_replace(COALESCE(OLD.phone_digits, ''), '[^0-9]', '', 'g'), OLD.lead_id
     ) AS match;
     UPDATE public.contact_permission_policies
     SET state = 'unknown', source = 'legacy_sync',
@@ -355,6 +378,8 @@ BEGIN
         evidence = jsonb_strip_nulls(jsonb_build_object(
           'legacy_opt_out_id', NEW.id,
           'legacy_phone_changed', true,
+          'legacy_lead_id', OLD.lead_id,
+          'resolved_lead_id', v_old_lead_id,
           'lead_match_ambiguous', CASE WHEN v_old_lead_match_ambiguous THEN true END
         )),
         decision_at = now(), updated_at = now()
@@ -373,7 +398,13 @@ BEGIN
         'commercial', v_old_lead_id, v_old_lead_match_ambiguous, 'unknown', 'legacy_sync',
         'Telefone alterado no registro legado; estado histórico preservado.',
         COALESCE(auth.uid(), NEW.created_by),
-        jsonb_build_object('legacy_opt_out_id', NEW.id, 'legacy_phone_changed', true),
+        jsonb_build_object(
+          'legacy_opt_out_id', NEW.id,
+          'legacy_phone_changed', true,
+          'legacy_lead_id', OLD.lead_id,
+          'resolved_lead_id', v_old_lead_id,
+          'lead_match_ambiguous', v_old_lead_match_ambiguous
+        ),
         'legacy_endpoint_changed'
       );
     END IF;
@@ -548,7 +579,10 @@ AS $$
 DECLARE
   v_policy public.contact_permission_policies%ROWTYPE;
   v_now timestamptz := clock_timestamp();
+  v_evidence jsonb;
 BEGIN
+  v_evidence := COALESCE(p_evidence, '{}'::jsonb)
+    || jsonb_build_object('lead_id_at_decision', p_lead_id, 'lead_match_ambiguous', COALESCE(p_lead_match_ambiguous, false));
   INSERT INTO public.contact_permission_policies AS policy (
     channel, endpoint_normalized, purpose_scope, lead_id, lead_match_ambiguous,
     state, source,
@@ -557,7 +591,7 @@ BEGIN
     p_channel, p_endpoint_normalized, p_purpose_scope,
     p_lead_id, COALESCE(p_lead_match_ambiguous, false), p_state, 'mcp',
     NULLIF(btrim(COALESCE(p_reason, '')), ''), p_actor_user_id,
-    COALESCE(p_evidence, '{}'::jsonb), v_now, v_now
+    v_evidence, v_now, v_now
   )
   ON CONFLICT (channel, endpoint_normalized, purpose_scope)
   DO UPDATE SET
@@ -569,7 +603,7 @@ BEGIN
     actor_user_id = EXCLUDED.actor_user_id,
     evidence = EXCLUDED.evidence,
     decision_at = EXCLUDED.decision_at,
-    updated_at = EXCLUDED.updated_at
+    updated_at = GREATEST(EXCLUDED.updated_at, policy.updated_at + interval '1 microsecond')
   RETURNING policy.* INTO v_policy;
 
   INSERT INTO public.contact_permission_events (
@@ -595,7 +629,8 @@ BEGIN
     'reason', v_policy.reason,
     'actor_user_id', v_policy.actor_user_id,
     'evidence', v_policy.evidence,
-    'decision_at', v_policy.decision_at
+    'decision_at', v_policy.decision_at,
+    'updated_at', v_policy.updated_at
   );
 END;
 $$;
@@ -674,9 +709,9 @@ BEGIN
     'actor_user_id', policy.actor_user_id,
     'evidence', policy.evidence,
     'decision_at', policy.decision_at,
-    'updated_at', policy.updated_at
-    , 'lead_id', policy.lead_id
-    , 'lead_match_ambiguous', policy.lead_match_ambiguous
+    'updated_at', policy.updated_at,
+    'lead_id', policy.lead_id,
+    'lead_match_ambiguous', policy.lead_match_ambiguous
   ) ORDER BY policy.purpose_scope), '[]'::jsonb)
   INTO v_policies
   FROM public.contact_permission_policies AS policy
@@ -987,6 +1022,21 @@ LANGUAGE plpgsql
 SET search_path = public, pg_temp
 AS $$
 BEGIN
+  -- FK cleanup may detach a deleted lead, policy, or auth user. The original
+  -- IDs remain in evidence, and no decision fields may be changed.
+  IF TG_OP = 'UPDATE'
+    AND (to_jsonb(OLD) - ARRAY['lead_id', 'policy_id', 'actor_user_id'])
+      = (to_jsonb(NEW) - ARRAY['lead_id', 'policy_id', 'actor_user_id'])
+    AND (OLD.lead_id IS NOT DISTINCT FROM NEW.lead_id OR (OLD.lead_id IS NOT NULL AND NEW.lead_id IS NULL))
+    AND (OLD.policy_id IS NOT DISTINCT FROM NEW.policy_id OR (OLD.policy_id IS NOT NULL AND NEW.policy_id IS NULL))
+    AND (OLD.actor_user_id IS NOT DISTINCT FROM NEW.actor_user_id OR (OLD.actor_user_id IS NOT NULL AND NEW.actor_user_id IS NULL))
+    AND (
+      (OLD.lead_id IS NOT NULL AND NEW.lead_id IS NULL)
+      OR (OLD.policy_id IS NOT NULL AND NEW.policy_id IS NULL)
+      OR (OLD.actor_user_id IS NOT NULL AND NEW.actor_user_id IS NULL)
+    ) THEN
+    RETURN NEW;
+  END IF;
   RAISE EXCEPTION 'CONTACT_PERMISSION_AUDIT_APPEND_ONLY' USING ERRCODE = '42501';
 END;
 $$;
@@ -1000,6 +1050,9 @@ REVOKE ALL ON FUNCTION public._resolve_contact_permission_lead(text, text, uuid)
 REVOKE ALL ON FUNCTION public._upsert_contact_permission_policy(text, text, text, uuid, boolean, text, text, uuid, jsonb, text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public._begin_contact_permission_request(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.reject_contact_permission_event_mutation() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.mcp_get_contact_permission(uuid, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mcp_set_contact_permission(uuid, text, text, text, text, text, text, jsonb, uuid, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mcp_bulk_set_contact_permission(uuid, text, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.mcp_get_contact_permission(uuid, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mcp_set_contact_permission(uuid, text, text, text, text, text, text, jsonb, uuid, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mcp_bulk_set_contact_permission(uuid, text, jsonb) TO service_role;

@@ -2,6 +2,15 @@ import { normalizeCommWhatsAppPhone } from './comm-whatsapp/identity.ts';
 
 export type ContactPermissionSendScope = 'commercial' | 'service_reply' | 'transactional';
 
+export function resolveContactPermissionSendScope(storedScope: unknown, source: unknown): ContactPermissionSendScope {
+  if (storedScope === 'commercial' || storedScope === 'service_reply' || storedScope === 'transactional') {
+    return storedScope;
+  }
+  // Only the autonomous responder is a known service-reply producer. Manual
+  // and historical messages without explicit metadata default to commercial.
+  return source === 'ai_autonomous' ? 'service_reply' : 'commercial';
+}
+
 type RpcError = { message?: string } | null;
 
 export type ContactPermissionRpcClient = {

@@ -1068,15 +1068,17 @@ async function sendCampaignTestMessage(
   }
 
   const dispatchChatId = chatRoute?.externalChatId || chatId;
-  await assertContactPermissionForSend(
+  const sendPhoneNumber = chatRoute?.phoneNumber || phoneDigits;
+  const assertSendPermission = () => assertContactPermissionForSend(
     supabaseAdmin,
-    chatRoute?.phoneNumber || phoneDigits,
+    sendPhoneNumber,
     'commercial',
   );
+  await assertSendPermission();
   const whapi = createWhapiClient(token);
   const response = step.media_url
-    ? await sendCampaignMedia(token, dispatchChatId, step, text)
-    : await whapi.sendText(dispatchChatId, text);
+    ? await sendCampaignMedia(token, dispatchChatId, step, text, assertSendPermission)
+    : await whapi.sendText(dispatchChatId, text, undefined, assertSendPermission);
   const payload = await readResponsePayload(response);
 
   if (!response.ok || (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload as Record<string, unknown>).sent === false)) {
@@ -1909,10 +1911,11 @@ async function executeStageBurst(params: {
     let response: Response;
     let payload: unknown;
     try {
-      await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+      const assertSendPermission = () => assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+      await assertSendPermission();
       response = step.media_url
-        ? await sendCampaignMedia(params.token, chatId, step, text)
-        : await whapi.sendText(chatId, text);
+        ? await sendCampaignMedia(params.token, chatId, step, text, assertSendPermission)
+        : await whapi.sendText(chatId, text, undefined, assertSendPermission);
       payload = await readResponsePayload(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
@@ -2437,6 +2440,7 @@ async function sendCampaignMedia(
   chatId: string,
   step: Pick<CampaignStepRow, 'media_url' | 'media_type' | 'media_filename'>,
   caption: string,
+  beforeAttempt: () => Promise<void>,
 ): Promise<Response> {
   if (!step.media_url || !step.media_type) {
     throw new Error('Etapa sem midia valida configurada.');
@@ -2461,6 +2465,7 @@ async function sendCampaignMedia(
   if (step.media_type === 'document') form.append('filename', fileName);
   if (caption) form.append('caption', caption);
 
+  await beforeAttempt();
   return fetch(`${WHAPI_BASE_URL}/messages/${step.media_type}`, {
     method: 'POST',
     headers: {
@@ -3038,11 +3043,12 @@ async function sendTarget(params: {
   let response: Response;
   let payload: unknown;
   try {
-    await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+    const assertSendPermission = () => assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+    await assertSendPermission();
     const whapi = createWhapiClient(params.token);
     response = step.media_url
-      ? await sendCampaignMedia(params.token, chatId, step, text)
-      : await whapi.sendText(chatId, text);
+      ? await sendCampaignMedia(params.token, chatId, step, text, assertSendPermission)
+      : await whapi.sendText(chatId, text, undefined, assertSendPermission);
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';

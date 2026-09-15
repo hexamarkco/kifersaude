@@ -22,6 +22,20 @@ describe('opportunity follow-up audit', () => {
     expect(normalized.opportunities[0]?.members_truncated).toBe(true);
   });
 
+  it('does not treat the display members cap as truncated member lead IDs when all IDs are present', () => {
+    const normalized = normalizeOpportunityRecords({
+      opportunities: [{
+        id: opportunityId,
+        status: 'open',
+        member_count: 2,
+        member_lead_ids: [primary, familyMember],
+        members_truncated: true,
+      }],
+    });
+
+    expect(normalized.opportunities[0]?.members_truncated).toBe(false);
+  });
+
   it('detects equivalent follow-ups, non-primary scheduling, and conflicting next returns', () => {
     const normalized = normalizeOpportunityRecords({
       opportunities: [{

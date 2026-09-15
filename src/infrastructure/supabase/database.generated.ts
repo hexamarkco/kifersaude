@@ -3377,6 +3377,161 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_permission_events: {
+        Row: {
+          actor_user_id: string | null
+          channel: string
+          endpoint_normalized: string
+          event_type: string
+          evidence: Json
+          id: string
+          lead_id: string | null
+          lead_match_ambiguous: boolean
+          occurred_at: string
+          policy_id: string | null
+          purpose_scope: string
+          reason: string | null
+          source: string
+          state: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          channel: string
+          endpoint_normalized: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          lead_id?: string | null
+          lead_match_ambiguous?: boolean
+          occurred_at?: string
+          policy_id?: string | null
+          purpose_scope: string
+          reason?: string | null
+          source: string
+          state: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          channel?: string
+          endpoint_normalized?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          lead_id?: string | null
+          lead_match_ambiguous?: boolean
+          occurred_at?: string
+          policy_id?: string | null
+          purpose_scope?: string
+          reason?: string | null
+          source?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_permission_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_permission_events_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "contact_permission_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_permission_mutation_requests: {
+        Row: {
+          actor_id: string
+          client_request_id: string
+          completed_at: string | null
+          created_at: string
+          payload_hash: string
+          result: Json | null
+          tool_name: string
+        }
+        Insert: {
+          actor_id: string
+          client_request_id: string
+          completed_at?: string | null
+          created_at?: string
+          payload_hash: string
+          result?: Json | null
+          tool_name: string
+        }
+        Update: {
+          actor_id?: string
+          client_request_id?: string
+          completed_at?: string | null
+          created_at?: string
+          payload_hash?: string
+          result?: Json | null
+          tool_name?: string
+        }
+        Relationships: []
+      }
+      contact_permission_policies: {
+        Row: {
+          actor_user_id: string | null
+          channel: string
+          created_at: string
+          decision_at: string
+          endpoint_normalized: string
+          evidence: Json
+          id: string
+          lead_id: string | null
+          lead_match_ambiguous: boolean
+          purpose_scope: string
+          reason: string | null
+          source: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          channel: string
+          created_at?: string
+          decision_at?: string
+          endpoint_normalized: string
+          evidence?: Json
+          id?: string
+          lead_id?: string | null
+          lead_match_ambiguous?: boolean
+          purpose_scope: string
+          reason?: string | null
+          source: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          channel?: string
+          created_at?: string
+          decision_at?: string
+          endpoint_normalized?: string
+          evidence?: Json
+          id?: string
+          lead_id?: string | null
+          lead_match_ambiguous?: boolean
+          purpose_scope?: string
+          reason?: string | null
+          source?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_permission_policies_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_abrangencias: {
         Row: {
           ativo: boolean | null
@@ -4564,6 +4719,284 @@ export type Database = {
           },
         ]
       }
+      mcp_comm_whatsapp_action_audit: {
+        Row: {
+          actor_id: string
+          after_state: Json | null
+          before_state: Json | null
+          chat_id: string | null
+          client_request_id: string
+          completed_at: string | null
+          created_at: string
+          operation: string
+          request_fingerprint: string
+          requested_chat_id: string
+          result_payload: Json | null
+        }
+        Insert: {
+          actor_id: string
+          after_state?: Json | null
+          before_state?: Json | null
+          chat_id?: string | null
+          client_request_id: string
+          completed_at?: string | null
+          created_at?: string
+          operation: string
+          request_fingerprint: string
+          requested_chat_id: string
+          result_payload?: Json | null
+        }
+        Update: {
+          actor_id?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          chat_id?: string | null
+          client_request_id?: string
+          completed_at?: string | null
+          created_at?: string
+          operation?: string
+          request_fingerprint?: string
+          requested_chat_id?: string
+          result_payload?: Json | null
+        }
+        Relationships: []
+      }
+      mcp_contract_document_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          changed_fields: string[]
+          client_request_id: string
+          created_at: string
+          document_id: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          changed_fields?: string[]
+          client_request_id: string
+          created_at?: string
+          document_id?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          changed_fields?: string[]
+          client_request_id?: string
+          created_at?: string
+          document_id?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      mcp_contract_document_requests: {
+        Row: {
+          actor_id: string
+          client_request_id: string
+          created_at: string
+          document_id: string | null
+          operation: string
+          request_fingerprint: string
+        }
+        Insert: {
+          actor_id: string
+          client_request_id: string
+          created_at?: string
+          document_id?: string | null
+          operation: string
+          request_fingerprint: string
+        }
+        Update: {
+          actor_id?: string
+          client_request_id?: string
+          created_at?: string
+          document_id?: string | null
+          operation?: string
+          request_fingerprint?: string
+        }
+        Relationships: []
+      }
+      mcp_contract_mutation_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          changed_fields: string[]
+          client_request_id: string | null
+          contract_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          changed_fields?: string[]
+          client_request_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          changed_fields?: string[]
+          client_request_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      mcp_contract_write_requests: {
+        Row: {
+          actor_id: string
+          client_request_id: string
+          created_at: string
+          operation: string
+          request_fingerprint: string
+          result_payload: Json | null
+        }
+        Insert: {
+          actor_id: string
+          client_request_id: string
+          created_at?: string
+          operation: string
+          request_fingerprint: string
+          result_payload?: Json | null
+        }
+        Update: {
+          actor_id?: string
+          client_request_id?: string
+          created_at?: string
+          operation?: string
+          request_fingerprint?: string
+          result_payload?: Json | null
+        }
+        Relationships: []
+      }
+      mcp_opportunity_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          changed_fields: string[]
+          client_request_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          opportunity_id: string
+          related_lead_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          changed_fields?: string[]
+          client_request_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          opportunity_id: string
+          related_lead_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          changed_fields?: string[]
+          client_request_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          opportunity_id?: string
+          related_lead_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_opportunity_audit_log_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_opportunity_audit_log_related_lead_id_fkey"
+            columns: ["related_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_opportunity_requests: {
+        Row: {
+          actor_id: string
+          client_request_id: string
+          created_at: string
+          opportunity_id: string | null
+          request_signature: string
+        }
+        Insert: {
+          actor_id: string
+          client_request_id: string
+          created_at?: string
+          opportunity_id?: string | null
+          request_signature: string
+        }
+        Update: {
+          actor_id?: string
+          client_request_id?: string
+          created_at?: string
+          opportunity_id?: string | null
+          request_signature?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_opportunity_requests_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_whatsapp_identity_resolution_requests: {
+        Row: {
+          actor_id: string
+          client_request_id: string
+          completed_at: string | null
+          created_at: string
+          request_fingerprint: string
+          result_payload: Json | null
+        }
+        Insert: {
+          actor_id: string
+          client_request_id: string
+          completed_at?: string | null
+          created_at?: string
+          request_fingerprint: string
+          result_payload?: Json | null
+        }
+        Update: {
+          actor_id?: string
+          client_request_id?: string
+          completed_at?: string | null
+          created_at?: string
+          request_fingerprint?: string
+          result_payload?: Json | null
+        }
+        Relationships: []
+      }
       operadoras: {
         Row: {
           ativo: boolean | null
@@ -4600,6 +5033,184 @@ export type Database = {
           observacoes?: string | null
           prazo_recebimento_dias?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      opportunities: {
+        Row: {
+          archived: boolean
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          origem: string | null
+          primary_contact_lead_id: string | null
+          responsavel: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          origem?: string | null
+          primary_contact_lead_id?: string | null
+          responsavel?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origem?: string | null
+          primary_contact_lead_id?: string | null
+          responsavel?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_origem_fkey"
+            columns: ["origem"]
+            isOneToOne: false
+            referencedRelation: "lead_origens"
+            referencedColumns: ["nome"]
+          },
+          {
+            foreignKeyName: "opportunities_primary_contact_lead_id_fkey"
+            columns: ["primary_contact_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_responsavel_fkey"
+            columns: ["responsavel"]
+            isOneToOne: false
+            referencedRelation: "lead_responsaveis"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
+      opportunity_leads: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          id: string
+          lead_id: string
+          member_role: string
+          opportunity_id: string
+          removed_at: string | null
+          removed_by: string | null
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          lead_id: string
+          member_role?: string
+          opportunity_id: string
+          removed_at?: string | null
+          removed_by?: string | null
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          lead_id?: string
+          member_role?: string
+          opportunity_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_leads_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_leads_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      private_contract_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          mime_type: string
+          nome_arquivo: string
+          sha256_hex: string
+          storage_bucket_id: string
+          storage_cleanup_completed_at: string | null
+          storage_object_path: string
+          tamanho_bytes: number
+          tipo_documento: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          mime_type: string
+          nome_arquivo: string
+          sha256_hex: string
+          storage_bucket_id?: string
+          storage_cleanup_completed_at?: string | null
+          storage_object_path: string
+          tamanho_bytes: number
+          tipo_documento: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          mime_type?: string
+          nome_arquivo?: string
+          sha256_hex?: string
+          storage_bucket_id?: string
+          storage_cleanup_completed_at?: string | null
+          storage_object_path?: string
+          tamanho_bytes?: number
+          tipo_documento?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -5331,6 +5942,285 @@ export type Database = {
       }
     }
     Functions: {
+      _assert_contact_permission_admin: {
+        Args: { p_actor_user_id: string }
+        Returns: undefined
+      }
+      _begin_contact_permission_request: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_payload: Json
+          p_tool_name: string
+        }
+        Returns: Json
+      }
+      _mcp_assert_active_contract_admin: {
+        Args: { p_actor_user_id: string }
+        Returns: undefined
+      }
+      _mcp_assert_contract_payload_keys: {
+        Args: {
+          p_allowed_keys: string[]
+          p_payload: Json
+          p_required_keys?: string[]
+        }
+        Returns: undefined
+      }
+      _mcp_begin_contract_write_request: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_operation: string
+          p_signature: Json
+        }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_assert_active_admin: {
+        Args: { p_actor_user_id: string }
+        Returns: undefined
+      }
+      _mcp_comm_whatsapp_begin_action: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_operation: string
+          p_requested_chat_id: string
+          p_signature: Json
+        }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_chat_state: {
+        Args: { p_chat_id: string }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_complete_action: {
+        Args: {
+          p_actor_user_id: string
+          p_after_state: Json
+          p_before_state: Json
+          p_chat_id: string
+          p_client_request_id: string
+          p_result: Json
+        }
+        Returns: undefined
+      }
+      _mcp_comm_whatsapp_mark_chat_read: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_last_seen_message_at: string
+          p_last_seen_message_id: string
+        }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_mutate_chat_flag: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_flag: string
+          p_value: boolean
+        }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_mutate_chat_lead: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_lead_id: string
+          p_link: boolean
+        }
+        Returns: Json
+      }
+      _mcp_complete_contract_write_request: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_operation: string
+          p_result: Json
+        }
+        Returns: undefined
+      }
+      _mcp_contract_document_assert_entity: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: undefined
+      }
+      _mcp_contract_document_claim_request: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_operation: string
+          p_signature: Json
+        }
+        Returns: {
+          document_id: string
+          is_replay: boolean
+        }[]
+      }
+      _mcp_contract_document_snapshot: {
+        Args: { p_document_id: string; p_include_deleted?: boolean }
+        Returns: Json
+      }
+      _mcp_insert_contract: {
+        Args: { p_payload: Json }
+        Returns: {
+          abrangencia: string | null
+          acomodacao: string | null
+          bonus_por_vida_aplicado: boolean | null
+          bonus_por_vida_configuracoes: Json | null
+          bonus_por_vida_valor: number | null
+          carencia: string | null
+          cnpj: string | null
+          codigo_contrato: string
+          comissao_multiplicador: number | null
+          comissao_parcelas: Json | null
+          comissao_prevista: number | null
+          comissao_recebimento_adiantado: boolean | null
+          created_at: string | null
+          data_inicio: string | null
+          data_renovacao: string | null
+          endereco_empresa: string | null
+          id: string
+          lead_id: string | null
+          mensalidade_total: number | null
+          mes_reajuste: number | null
+          modalidade: string
+          nome_fantasia: string | null
+          observacoes_internas: string | null
+          operadora: string
+          previsao_pagamento_bonificacao: string | null
+          previsao_recebimento_comissao: string | null
+          produto_plano: string
+          razao_social: string | null
+          responsavel: string
+          status: string
+          taxa_adesao_percentual: number | null
+          taxa_adesao_tipo: string | null
+          taxa_adesao_valor: number | null
+          updated_at: string | null
+          vidas: number | null
+          vidas_elegiveis_bonus: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _mcp_insert_dependent: {
+        Args: { p_contract_id: string; p_holder_id: string; p_payload: Json }
+        Returns: {
+          bonus_por_vida_aplicado: boolean | null
+          carencia_individual: string | null
+          contract_id: string
+          cpf: string | null
+          created_at: string | null
+          data_nascimento: string
+          elegibilidade: string | null
+          holder_id: string
+          id: string
+          nome_completo: string
+          relacao: string
+          updated_at: string | null
+          valor_individual: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dependents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _mcp_insert_holder: {
+        Args: { p_contract_id: string; p_payload: Json }
+        Returns: {
+          bairro: string | null
+          bonus_por_vida_aplicado: boolean | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          cns: string | null
+          complemento: string | null
+          contract_id: string
+          cpf: string
+          created_at: string | null
+          data_abertura_cnpj: string | null
+          data_nascimento: string
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          estado_civil: string | null
+          id: string
+          nome_completo: string
+          nome_fantasia: string | null
+          numero: string | null
+          percentual_societario: number | null
+          razao_social: string | null
+          rg: string | null
+          sexo: string | null
+          telefone: string
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_holders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _mcp_log_contract_document_read: {
+        Args: { p_action: string; p_actor_user_id: string; p_document: Json }
+        Returns: undefined
+      }
+      _mcp_validate_contract_row: {
+        Args: { p_previous?: Json; p_row: Json }
+        Returns: undefined
+      }
+      _mcp_validate_dependent_payload: {
+        Args: { p_payload: Json }
+        Returns: undefined
+      }
+      _mcp_validate_holder_payload: {
+        Args: { p_payload: Json; p_require_required_fields?: boolean }
+        Returns: undefined
+      }
+      _normalize_contact_permission_endpoint: {
+        Args: { p_channel: string; p_endpoint: string }
+        Returns: string
+      }
+      _resolve_contact_permission_lead: {
+        Args: {
+          p_channel: string
+          p_endpoint_normalized: string
+          p_lead_id?: string
+        }
+        Returns: {
+          lead_id: string
+          lead_match_ambiguous: boolean
+        }[]
+      }
+      _upsert_contact_permission_policy: {
+        Args: {
+          p_actor_user_id: string
+          p_channel: string
+          p_endpoint_normalized: string
+          p_event_type: string
+          p_evidence: Json
+          p_lead_id: string
+          p_lead_match_ambiguous: boolean
+          p_purpose_scope: string
+          p_reason: string
+          p_state: string
+        }
+        Returns: Json
+      }
       advance_scheduled_message: {
         Args: {
           p_delivery_status?: string
@@ -5469,6 +6359,14 @@ export type Database = {
       check_auto_contact_inactivity_triggers: {
         Args: never
         Returns: undefined
+      }
+      check_contact_permission_for_send: {
+        Args: {
+          p_channel: string
+          p_endpoint_normalized: string
+          p_purpose_scope: string
+        }
+        Returns: Json
       }
       check_lead_created_backlog_triggers: { Args: never; Returns: undefined }
       check_status_duration_triggers: { Args: never; Returns: undefined }
@@ -6760,6 +7658,356 @@ export type Database = {
       invoke_process_pending_leads: { Args: never; Returns: number }
       invoke_scheduled_messages_worker: { Args: never; Returns: number }
       is_leap_year: { Args: { year_value: number }; Returns: boolean }
+      mcp_add_lead_to_opportunity: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_lead_id: string
+          p_member_role?: string
+          p_opportunity_id: string
+        }
+        Returns: Json
+      }
+      mcp_archive_opportunity: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_opportunity_id: string
+        }
+        Returns: Json
+      }
+      mcp_bulk_set_contact_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_changes: Json
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_link_chat_lead: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_lead_id: string
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_mark_chat_read: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_last_seen_message_at: string
+          p_last_seen_message_id: string
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_set_chat_archived: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_is_archived: boolean
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_set_chat_muted: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_is_muted: boolean
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_set_chat_pinned: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_is_pinned: boolean
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_set_chat_unread: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_is_unread: boolean
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_unlink_chat_lead: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+        }
+        Returns: Json
+      }
+      mcp_contract_document_create_metadata: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_entity_id: string
+          p_entity_type: string
+          p_mime_type: string
+          p_nome_arquivo: string
+          p_sha256_hex: string
+          p_storage_object_path: string
+          p_tamanho_bytes: number
+          p_tipo_documento: string
+        }
+        Returns: Json
+      }
+      mcp_contract_document_delete_metadata: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_document_id: string
+          p_expected_updated_at: string
+        }
+        Returns: Json
+      }
+      mcp_contract_document_finalize_cleanup: {
+        Args: {
+          p_actor_user_id: string
+          p_delete_client_request_id: string
+          p_document_id: string
+        }
+        Returns: Json
+      }
+      mcp_contract_document_get: {
+        Args: { p_actor_user_id: string; p_document_id: string }
+        Returns: Json
+      }
+      mcp_contract_document_update_metadata: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_document_id: string
+          p_expected_updated_at: string
+          p_nome_arquivo: string
+          p_tipo_documento: string
+        }
+        Returns: Json
+      }
+      mcp_contract_documents_list: {
+        Args: {
+          p_actor_user_id: string
+          p_before_created_at?: string
+          p_before_document_id?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      mcp_create_contract: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
+      mcp_create_contract_bundle: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract: Json
+          p_dependents?: Json
+          p_holder: Json
+        }
+        Returns: Json
+      }
+      mcp_create_contract_dependent: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id: string
+          p_holder_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
+      mcp_create_contract_holder: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
+      mcp_create_contract_value_adjustment: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id: string
+          p_motivo: string
+          p_tipo: string
+          p_valor: number
+        }
+        Returns: Json
+      }
+      mcp_create_opportunity: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_member_lead_ids?: string[]
+          p_name: string
+          p_notes?: string
+          p_origem?: string
+          p_primary_contact_lead_id?: string
+          p_responsavel?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      mcp_get_contact_permission: {
+        Args: { p_actor_user_id: string; p_channel: string; p_endpoint: string }
+        Returns: Json
+      }
+      mcp_get_opportunities_for_leads: {
+        Args: { p_actor_user_id: string; p_lead_ids: string[] }
+        Returns: Json
+      }
+      mcp_get_opportunity: {
+        Args: { p_actor_user_id: string; p_opportunity_id: string }
+        Returns: Json
+      }
+      mcp_get_opportunity_360: {
+        Args: { p_actor_user_id: string; p_opportunity_id: string }
+        Returns: Json
+      }
+      mcp_opportunity_assert_active_admin: {
+        Args: { p_actor_user_id: string }
+        Returns: undefined
+      }
+      mcp_opportunity_audit: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_changed_fields?: string[]
+          p_client_request_id?: string
+          p_metadata?: Json
+          p_opportunity_id: string
+          p_related_lead_id?: string
+        }
+        Returns: undefined
+      }
+      mcp_opportunity_snapshot: {
+        Args: { p_include_members?: boolean; p_opportunity_id: string }
+        Returns: Json
+      }
+      mcp_remove_contract_dependent: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_dependent_id: string
+          p_expected_updated_at: string
+        }
+        Returns: Json
+      }
+      mcp_remove_contract_holder: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_holder_id: string
+        }
+        Returns: Json
+      }
+      mcp_remove_lead_from_opportunity: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_lead_id: string
+          p_opportunity_id: string
+        }
+        Returns: Json
+      }
+      mcp_resolve_whatsapp_identity_conflict: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_conflict_id: string
+          p_expected_chat_updated_at: string
+          p_expected_conflict_updated_at: string
+          p_lead_id: string
+        }
+        Returns: Json
+      }
+      mcp_set_contact_permission: {
+        Args: {
+          p_actor_user_id: string
+          p_channel: string
+          p_client_request_id: string
+          p_endpoint: string
+          p_evidence?: Json
+          p_expected_updated_at?: string
+          p_lead_id?: string
+          p_purpose_scope: string
+          p_reason?: string
+          p_state: string
+        }
+        Returns: Json
+      }
+      mcp_set_opportunity_primary_contact: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_opportunity_id: string
+          p_primary_contact_lead_id: string
+        }
+        Returns: Json
+      }
+      mcp_update_contract: {
+        Args: {
+          p_actor_user_id: string
+          p_contract_id: string
+          p_expected_updated_at: string
+          p_patch: Json
+        }
+        Returns: Json
+      }
+      mcp_update_contract_dependent: {
+        Args: {
+          p_actor_user_id: string
+          p_dependent_id: string
+          p_expected_updated_at: string
+          p_patch: Json
+        }
+        Returns: Json
+      }
+      mcp_update_contract_holder: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_holder_id: string
+          p_patch: Json
+        }
+        Returns: Json
+      }
+      mcp_update_opportunity: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_updated_at: string
+          p_opportunity_id: string
+          p_patch: Json
+        }
+        Returns: Json
+      }
       normalize_comm_whatsapp_chat_id: {
         Args: { value: string }
         Returns: string

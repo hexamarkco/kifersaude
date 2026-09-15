@@ -14,6 +14,17 @@ const MCP_PROTOCOL_VERSION = '2025-03-26';
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 const MAX_TEXT_RESPONSE_LENGTH = 40_000;
+const SCHEDULED_MEDIA_REFERENCE_SCHEMA = {
+  type: 'object',
+  required: ['storage_path', 'message_type', 'mime_type', 'file_name'],
+  additionalProperties: false,
+  properties: {
+    storage_path: { type: 'string', description: 'Referência opaca retornada por kifer_upload_scheduled_whatsapp_media; nunca informe URL ou caminho inventado.' },
+    message_type: { type: 'string', enum: ['image', 'video', 'document', 'audio'] },
+    mime_type: { type: 'string', maxLength: 160 },
+    file_name: { type: 'string', maxLength: 255 },
+  },
+} as const;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -463,9 +474,15 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_upload_scheduled_whatsapp_media',
+    description: 'Armazena de forma privada um único anexo para uma mensagem de WhatsApp agendada e devolve uma referência segura para usar em kifer_schedule_whatsapp_message ou kifer_update_scheduled_whatsapp_message. Use somente quando o usuário solicitar explicitamente anexar uma imagem, vídeo, áudio ou documento real. Não envia nem agenda a mensagem por si só; content_base64 nunca é persistido em auditoria. client_request_id torna retries idempotentes.',
+    inputSchema: { type: 'object', required: ['file_name', 'mime_type', 'content_base64', 'client_request_id'], additionalProperties: false, properties: { file_name: { type: 'string', minLength: 1, maxLength: 255 }, mime_type: { type: 'string', minLength: 1, maxLength: 160 }, content_base64: { type: 'string', minLength: 1, description: 'Conteúdo binário em base64. Máximo de 20 MB decodificado.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: 'kifer_schedule_whatsapp_message',
-    description: 'Agenda uma única mensagem de texto no WhatsApp. Use somente quando o usuário solicitar explicitamente o agendamento; altera dados reais. Informe chat_id para uma conversa existente, ou lead_id para o backend usar o telefone cadastrado do lead e criar/reutilizar com segurança a conversa canônica do Inbox. Nunca informe os dois e telefone não substitui esses IDs. Preserva literalmente quebras de linha e --- para o Inbox separar no envio. Defina cancel_on_inbound_message como true somente se o usuário pedir para cancelar o agendamento caso o contato responda antes do envio. client_request_id torna retries idempotentes.',
-    inputSchema: { type: 'object', required: ['message', 'scheduled_at', 'client_request_id'], anyOf: [{ required: ['chat_id'] }, { required: ['lead_id'] }], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente do Inbox. Informe chat_id ou lead_id, nunca ambos.' }, lead_id: { type: 'string', description: 'ID de um lead existente. O backend usará somente o telefone cadastrado para criar ou reutilizar o chat do Inbox.' }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal. Não remova nem altere --- ou quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601, preferencialmente com offset, por exemplo -03:00.' }, cancel_on_inbound_message: { type: 'boolean', default: false, description: 'Quando true, o Inbox cancela este agendamento se o contato responder antes do envio.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
+    description: 'Agenda uma única mensagem de WhatsApp, com texto, anexo ou ambos. Use somente quando o usuário solicitar explicitamente o agendamento; altera dados reais. Informe chat_id para uma conversa existente, ou lead_id para o backend usar o telefone cadastrado do lead e criar/reutilizar com segurança a conversa canônica do Inbox. Nunca informe os dois e telefone não substitui esses IDs. Para anexos, envie somente a referência retornada por kifer_upload_scheduled_whatsapp_media; URLs externas não são aceitas. Preserva literalmente quebras de linha e --- para o Inbox separar no envio. Defina cancel_on_inbound_message como true somente se o usuário pedir para cancelar o agendamento caso o contato responda antes do envio. client_request_id torna retries idempotentes.',
+    inputSchema: { type: 'object', required: ['scheduled_at', 'client_request_id'], anyOf: [{ required: ['chat_id'] }, { required: ['lead_id'] }], additionalProperties: false, properties: { chat_id: { type: 'string', description: 'ID de uma conversa existente do Inbox. Informe chat_id ou lead_id, nunca ambos.' }, lead_id: { type: 'string', description: 'ID de um lead existente. O backend usará somente o telefone cadastrado do lead e criará/reutilizará o chat do Inbox.' }, message: { type: 'string', maxLength: 4096, description: 'Texto literal opcional se houver media. Não remova nem altere --- ou quebras de linha.' }, media: SCHEDULED_MEDIA_REFERENCE_SCHEMA, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura em ISO 8601, preferencialmente com offset, por exemplo -03:00.' }, cancel_on_inbound_message: { type: 'boolean', default: false, description: 'Quando true, o Inbox cancela este agendamento se o contato responder antes do envio.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -500,8 +517,8 @@ const tools = [
   },
   {
     name: 'kifer_update_scheduled_whatsapp_message',
-    description: 'Altera texto, horário e/ou a regra de cancelar caso o contato responda de uma mensagem agendada existente. Use somente quando o usuário solicitar explicitamente a edição. Esta ação altera dados reais e só funciona enquanto o status for scheduled; não cria uma nova mensagem. O texto é preservado literalmente, inclusive --- e quebras de linha.',
-    inputSchema: { type: 'object', required: ['scheduled_message_id', 'changes'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal; preserve --- e quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura ISO 8601, preferencialmente com offset.' }, cancel_on_inbound_message: { type: 'boolean', description: 'Quando true, o Inbox cancela o agendamento se o contato responder antes do envio.' } } } } },
+    description: 'Altera texto, anexo, horário e/ou a regra de cancelar caso o contato responda de uma mensagem agendada existente. Use somente quando o usuário solicitar explicitamente a edição. Esta ação altera dados reais e só funciona enquanto o status for scheduled; não cria uma nova mensagem. Para trocar ou adicionar um anexo, informe somente a referência devolvida por kifer_upload_scheduled_whatsapp_media. Use remove_media para remover o anexo e mantenha texto não vazio. O texto é preservado literalmente, inclusive --- e quebras de linha.',
+    inputSchema: { type: 'object', required: ['scheduled_message_id', 'changes'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { message: { type: 'string', maxLength: 4096, description: 'Texto literal; preserve --- e quebras de linha.' }, media: SCHEDULED_MEDIA_REFERENCE_SCHEMA, remove_media: { type: 'boolean', description: 'Remove somente o anexo atual. Só use se a mensagem tiver texto não vazio.' }, scheduled_at: { type: 'string', format: 'date-time', description: 'Data e hora futura ISO 8601, preferencialmente com offset.' }, cancel_on_inbound_message: { type: 'boolean', description: 'Quando true, o Inbox cancela o agendamento se o contato responder antes do envio.' } } } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -512,8 +529,8 @@ const tools = [
   },
   {
     name: 'kifer_bulk_schedule_whatsapp_messages',
-    description: 'Agenda entre 1 e 50 mensagens para conversas existentes do CRM. Use somente quando o usuário solicitar explicitamente vários agendamentos. Esta ação altera dados reais: cada item é independente, não é all-or-nothing, exige chat_id (nunca telefone) e client_request_id próprio. Preserva literalmente --- e quebras de linha. cancel_on_inbound_message é individual e só deve ser true mediante pedido explícito para cancelar se o contato responder antes do envio.',
-    inputSchema: { type: 'object', required: ['items'], additionalProperties: false, properties: { items: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'object', required: ['chat_id', 'message', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string' }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal; preserve --- e quebras de linha.' }, scheduled_at: { type: 'string', format: 'date-time' }, cancel_on_inbound_message: { type: 'boolean', default: false, description: 'Cancela somente este item se o contato responder antes do envio.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 } } } } } },
+    description: 'Agenda entre 1 e 50 mensagens para conversas existentes do CRM, com texto, anexo ou ambos. Use somente quando o usuário solicitar explicitamente vários agendamentos. Esta ação altera dados reais: cada item é independente, não é all-or-nothing, exige chat_id (nunca telefone) e client_request_id próprio. Cada media deve ser uma referência retornada por kifer_upload_scheduled_whatsapp_media; URLs externas não são aceitas. Preserva literalmente --- e quebras de linha. cancel_on_inbound_message é individual e só deve ser true mediante pedido explícito para cancelar se o contato responder antes do envio.',
+    inputSchema: { type: 'object', required: ['items'], additionalProperties: false, properties: { items: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'object', required: ['chat_id', 'scheduled_at', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string' }, message: { type: 'string', maxLength: 4096, description: 'Texto literal opcional se houver media; preserve --- e quebras de linha.' }, media: SCHEDULED_MEDIA_REFERENCE_SCHEMA, scheduled_at: { type: 'string', format: 'date-time' }, cancel_on_inbound_message: { type: 'boolean', default: false, description: 'Cancela somente este item se o contato responder antes do envio.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 } } } } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -545,7 +562,7 @@ const tools = [
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_get_or_create_whatsapp_chat', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',

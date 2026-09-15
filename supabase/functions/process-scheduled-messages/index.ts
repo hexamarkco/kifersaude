@@ -51,6 +51,8 @@ type ProcessRequestBody = {
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const MAX_BATCH_SIZE = 10;
+const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
+const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
 
 function splitMessageSegments(text: string): string[] {
   const normalized = text.replace(/\r\n/g, '\n').trim();
@@ -195,6 +197,18 @@ async function sendMediaMessage(
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
   const chatId = normalizeWhapiChatId(msg.phone_digits);
+  let mediaUrl = msg.media_url;
+  const storagePath = mediaUrl?.startsWith(SCHEDULED_MEDIA_URL_PREFIX)
+    ? mediaUrl.slice(SCHEDULED_MEDIA_URL_PREFIX.length)
+    : '';
+  if (storagePath) {
+    const { data: signedMedia, error: signedMediaError } = await admin.storage
+      .from(SCHEDULED_MEDIA_BUCKET)
+      .createSignedUrl(storagePath, 60 * 60);
+    if (signedMediaError || !signedMedia?.signedUrl) throw new Error('O anexo agendado não está disponível.');
+    mediaUrl = signedMedia.signedUrl;
+  }
+  if (!mediaUrl) throw new Error('A mensagem agendada não possui mídia disponível.');
 
   const mediaKind = (msg.message_type === 'voice' ? 'audio' : msg.message_type) as 'image' | 'video' | 'document' | 'audio';
 
@@ -206,7 +220,7 @@ async function sendMediaMessage(
     },
     body: JSON.stringify({
       to: chatId,
-      mediaUrl: msg.media_url,
+      mediaUrl,
       caption: msg.text_content ?? undefined,
       fileName: msg.media_file_name ?? undefined,
       mimeType: msg.media_mime_type ?? undefined,

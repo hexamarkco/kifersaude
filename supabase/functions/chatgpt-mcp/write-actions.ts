@@ -11,7 +11,7 @@ const MAX_SHORT_TEXT_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 4_000;
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const PRIORITIES = new Set(['baixa', 'normal', 'alta']);
-const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key)/i;
+const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64)/i;
 
 export type McpWriteActor = { actor: string; actorId: string };
 export type McpWriteResult = { success: boolean; [key: string]: unknown };
@@ -23,7 +23,7 @@ type ActionErrorCode =
   | 'NOT_FOUND' | 'CONFLICT' | 'NOT_ALLOWED' | 'JOB_ALREADY_EXECUTED'
   | 'INVALID_ASSIGNEE' | 'LIMIT_EXCEEDED' | 'SCHEDULE_NOT_FOUND'
   | 'SCHEDULE_NOT_EDITABLE' | 'MESSAGE_ALREADY_SENT' | 'INVALID_SCHEDULE_TIME'
-  | 'PHONE_LEAD_MISMATCH';
+  | 'PHONE_LEAD_MISMATCH' | 'INVALID_MEDIA' | 'MEDIA_TOO_LARGE' | 'MEDIA_NOT_FOUND';
 
 const FLOW_TRIGGER_TYPES = new Set(['lead_created', 'status_changed', 'status_duration', 'inactivity_duration']);
 const STEP_ACTION_TYPES = new Set(['send_message', 'update_status', 'create_task', 'activate_autonomous_service']);
@@ -32,9 +32,23 @@ const MAX_BULK_CANCEL_JOBS = 100;
 const MAX_BULK_SCHEDULED_MESSAGES = 50;
 const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
-const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
+const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,message_type,media_url,media_mime_type,media_file_name,media_size_bytes,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
 const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up', 'Retorno']);
 const MCP_WHATSAPP_CHAT_SELECT = 'id,channel_id,external_chat_id,phone_number,phone_digits,display_name,lead_id,lead_link_source,deleted_at,merged_into_chat_id,created_at,updated_at';
+const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
+const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
+const MAX_SCHEDULED_MEDIA_BYTES = 20 * 1024 * 1024;
+const SCHEDULED_MEDIA_TYPES = new Set(['image', 'video', 'document', 'audio']);
+const ALLOWED_SCHEDULED_MEDIA_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv',
+]);
 
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const rawString = (value: unknown) => typeof value === 'string' ? value : '';
@@ -69,6 +83,34 @@ const isBeforeCommercialFollowUpHour = (value: unknown) => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+type ScheduledMedia = {
+  storagePath: string;
+  messageType: 'image' | 'video' | 'document' | 'audio';
+  mimeType: string;
+  fileName: string;
+};
+
+const mediaTypeForMime = (mimeType: string): ScheduledMedia['messageType'] | null => {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  return ALLOWED_SCHEDULED_MEDIA_MIME_TYPES.has(mimeType) ? 'document' : null;
+};
+
+const scheduledMediaFromParams = (value: unknown, actor: McpWriteActor): { media: ScheduledMedia | null; error: McpWriteResult | null } => {
+  if (value === undefined) return { media: null, error: null };
+  if (!isRecord(value)) return { media: null, error: errorResult('INVALID_MEDIA', 'media deve ser um anexo previamente enviado pela ferramenta de upload do MCP.') };
+  const storagePath = text(value.storage_path);
+  const mimeType = text(value.mime_type).toLowerCase();
+  const fileName = rawString(value.file_name).trim();
+  const messageType = text(value.message_type);
+  const expectedType = mediaTypeForMime(mimeType);
+  if (!storagePath.startsWith(`mcp/${actor.actorId}/`) || !mimeType || !fileName || fileName.length > 255 || !expectedType || !SCHEDULED_MEDIA_TYPES.has(messageType) || messageType !== expectedType) {
+    return { media: null, error: errorResult('INVALID_MEDIA', 'O anexo é inválido, não pertence ao usuário autenticado ou possui tipo não permitido.') };
+  }
+  return { media: { storagePath, mimeType, fileName, messageType: expectedType }, error: null };
+};
 
 const boundedInteger = (value: unknown, minimum: number, maximum: number): number | null => {
   const parsed = Number(value);
@@ -519,6 +561,58 @@ async function getOrCreateWhatsAppChat(supabase: SupabaseClient, params: Record<
   };
 }
 
+async function ensureScheduledMediaExists(supabase: SupabaseClient, media: ScheduledMedia): Promise<McpWriteResult | null> {
+  const { data, error } = await supabase.storage
+    .from(SCHEDULED_MEDIA_BUCKET)
+    .createSignedUrl(media.storagePath, 60);
+  return error || !data?.signedUrl
+    ? errorResult('MEDIA_NOT_FOUND', 'O anexo enviado ao MCP não está mais disponível.')
+    : null;
+}
+
+async function uploadScheduledWhatsAppMedia(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  const contentBase64 = rawString(params.content_base64).replace(/^data:[^;,]+;base64,/i, '');
+  const mimeType = text(params.mime_type).toLowerCase();
+  const fileName = rawString(params.file_name).trim();
+  const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
+  const messageType = mediaTypeForMime(mimeType);
+  if (!contentBase64 || !mimeType || !fileName || !clientRequestId || !messageType || !ALLOWED_SCHEDULED_MEDIA_MIME_TYPES.has(mimeType)) {
+    return errorResult('INVALID_MEDIA', 'Informe arquivo base64, nome, MIME permitido e client_request_id para anexar a mídia.');
+  }
+  if (fileName.length > 255) return errorResult('INVALID_MEDIA', 'O nome do arquivo excede 255 caracteres.');
+  if (Math.ceil(contentBase64.length * 0.75) > MAX_SCHEDULED_MEDIA_BYTES) {
+    return errorResult('MEDIA_TOO_LARGE', `O anexo excede o limite de ${MAX_SCHEDULED_MEDIA_BYTES / (1024 * 1024)} MB.`);
+  }
+  let bytes: Uint8Array;
+  try {
+    const binary = atob(contentBase64);
+    bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  } catch {
+    return errorResult('INVALID_MEDIA', 'content_base64 não contém um arquivo base64 válido.');
+  }
+  if (bytes.byteLength === 0) return errorResult('INVALID_MEDIA', 'O arquivo anexado está vazio.');
+  if (bytes.byteLength > MAX_SCHEDULED_MEDIA_BYTES) return errorResult('MEDIA_TOO_LARGE', `O anexo excede o limite de ${MAX_SCHEDULED_MEDIA_BYTES / (1024 * 1024)} MB.`);
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '') || 'anexo';
+  const storagePath = `mcp/${actor.actorId}/${clientRequestId}-${safeFileName}`;
+  const { error } = await supabase.storage
+    .from(SCHEDULED_MEDIA_BUCKET)
+    .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+  const conflict = error && (String((error as { statusCode?: unknown }).statusCode) === '409' || /already exists/i.test(error.message));
+  if (error && !conflict) return errorResult('INTERNAL_ERROR', 'Não foi possível armazenar o anexo para o agendamento.');
+  return {
+    success: true,
+    duplicate: Boolean(conflict),
+    media: {
+      storage_path: storagePath,
+      message_type: messageType,
+      mime_type: mimeType,
+      file_name: fileName,
+      size_bytes: bytes.byteLength,
+    },
+    client_request_id: clientRequestId,
+  };
+}
+
 async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
   const suppliedChatId = text(params.chat_id);
   const suppliedLeadId = text(params.lead_id);
@@ -526,10 +620,13 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
   const scheduledAt = parseDate(params.scheduled_at);
   const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
   const cancelOnInboundMessage = params.cancel_on_inbound_message === undefined ? false : params.cancel_on_inbound_message;
+  const parsedMedia = scheduledMediaFromParams(params.media, actor);
   if ((suppliedChatId && suppliedLeadId) || (!suppliedChatId && !suppliedLeadId)) {
     return errorResult('INVALID_INPUT', 'Informe exatamente um de chat_id ou lead_id para agendar a mensagem.');
   }
-  if (!message.trim()) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
+  if (parsedMedia.error) return parsedMedia.error;
+  const media = parsedMedia.media;
+  if (!message.trim() && !media) return errorResult('MESSAGE_EMPTY', 'Informe uma mensagem ou um anexo.');
   if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
   if (!clientRequestId) return errorResult('INVALID_INPUT', 'client_request_id é obrigatório para impedir agendamentos duplicados.');
   if (typeof cancelOnInboundMessage !== 'boolean') return errorResult('INVALID_INPUT', 'cancel_on_inbound_message deve ser booleano.');
@@ -538,6 +635,10 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
   }
   if (Date.parse(scheduledAt) > Date.now() + 366 * 24 * 60 * 60 * 1_000) {
     return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at não pode ultrapassar 366 dias a partir de agora.');
+  }
+  if (media) {
+    const mediaError = await ensureScheduledMediaExists(supabase, media);
+    if (mediaError) return mediaError;
   }
 
   let chatId = suppliedChatId;
@@ -600,8 +701,11 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
       phone_digits: chat.phone_digits,
       phone_number: chat.phone_number || chat.phone_digits,
       display_name: chat.display_name || chat.phone_number || chat.phone_digits,
-      message_type: 'text',
-      text_content: message,
+      message_type: media?.messageType ?? 'text',
+      text_content: message || null,
+      media_url: media ? `${SCHEDULED_MEDIA_URL_PREFIX}${media.storagePath}` : null,
+      media_mime_type: media?.mimeType ?? null,
+      media_file_name: media?.fileName ?? null,
       scheduled_at: scheduledAt,
       recurrence: 'none',
       cancel_on_inbound_message: cancelOnInboundMessage,
@@ -648,6 +752,9 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
 const scheduledMessageView = (row: Record<string, unknown>, leadName: string | null = null) => {
   const scheduledAt = parseDate(row.scheduled_at);
   const message = rawString(row.text_content);
+  const storagePath = rawString(row.media_url).startsWith(SCHEDULED_MEDIA_URL_PREFIX)
+    ? rawString(row.media_url).slice(SCHEDULED_MEDIA_URL_PREFIX.length)
+    : null;
   return {
     scheduled_message_id: text(row.id),
     chat_id: text(row.chat_id) || null,
@@ -655,6 +762,17 @@ const scheduledMessageView = (row: Record<string, unknown>, leadName: string | n
     lead_name: leadName,
     message,
     message_parts_count: messagePartsCount(message),
+    ...(row.media_url
+      ? { media: {
+        attached: true,
+        message_type: text(row.message_type) || 'document',
+        mime_type: text(row.media_mime_type) || null,
+        file_name: text(row.media_file_name) || null,
+        size_bytes: typeof row.media_size_bytes === 'number' ? row.media_size_bytes : null,
+        storage_path: storagePath,
+        managed_by_mcp: storagePath !== null,
+      } }
+      : {}),
     scheduled_at: scheduledAt,
     scheduled_at_utc: scheduledAt,
     timezone: 'America/Sao_Paulo',
@@ -848,23 +966,43 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
   };
 }
 
-async function updateScheduledWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+async function updateScheduledWhatsAppMessage(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
   const scheduledMessageId = text(params.scheduled_message_id);
   const changes = isRecord(params.changes) ? params.changes : null;
   if (!safeUuid(scheduledMessageId) || !changes) return errorResult('INVALID_INPUT', 'scheduled_message_id e changes são obrigatórios.');
-  if (Object.keys(changes).length === 0) return errorResult('INVALID_INPUT', 'Informe ao menos message, scheduled_at ou cancel_on_inbound_message.');
-  if (Object.keys(changes).some((key) => key !== 'message' && key !== 'scheduled_at' && key !== 'cancel_on_inbound_message')) return errorResult('NOT_ALLOWED', 'A ferramenta permite alterar somente message, scheduled_at e cancel_on_inbound_message.');
+  if (Object.keys(changes).length === 0) return errorResult('INVALID_INPUT', 'Informe ao menos message, media, remove_media, scheduled_at ou cancel_on_inbound_message.');
+  if (Object.keys(changes).some((key) => key !== 'message' && key !== 'media' && key !== 'remove_media' && key !== 'scheduled_at' && key !== 'cancel_on_inbound_message')) return errorResult('NOT_ALLOWED', 'A ferramenta permite alterar somente message, media, remove_media, scheduled_at e cancel_on_inbound_message.');
   const current = await getScheduledMessageRow(supabase, scheduledMessageId);
   if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Agendamento de WhatsApp não encontrado.');
   const mutationError = scheduledMessageMutationError(current.row, 'update');
   if (mutationError) return mutationError;
+  if (changes.remove_media === true && changes.media !== undefined) return errorResult('INVALID_MEDIA', 'Informe media para substituir o anexo ou remove_media para removê-lo, não ambos.');
+  if (changes.remove_media !== undefined && typeof changes.remove_media !== 'boolean') return errorResult('INVALID_INPUT', 'remove_media deve ser booleano.');
   const updates: Record<string, unknown> = {};
+  const parsedMedia = scheduledMediaFromParams(changes.media, actor);
+  if (parsedMedia.error) return parsedMedia.error;
+  if (parsedMedia.media) {
+    const mediaError = await ensureScheduledMediaExists(supabase, parsedMedia.media);
+    if (mediaError) return mediaError;
+    updates.message_type = parsedMedia.media.messageType;
+    updates.media_url = `${SCHEDULED_MEDIA_URL_PREFIX}${parsedMedia.media.storagePath}`;
+    updates.media_mime_type = parsedMedia.media.mimeType;
+    updates.media_file_name = parsedMedia.media.fileName;
+  }
+  if (changes.remove_media === true) {
+    updates.message_type = 'text';
+    updates.media_url = null;
+    updates.media_mime_type = null;
+    updates.media_file_name = null;
+  }
   if ('message' in changes) {
     const message = rawString(changes.message);
-    if (!message.trim()) return errorResult('MESSAGE_EMPTY', 'A mensagem não pode estar vazia.');
     if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
     updates.text_content = message;
   }
+  const resultingText = 'message' in changes ? rawString(changes.message) : rawString(current.row.text_content);
+  const resultingMedia = parsedMedia.media !== null || (changes.remove_media !== true && Boolean(current.row.media_url));
+  if (!resultingText.trim() && !resultingMedia) return errorResult('MESSAGE_EMPTY', 'Informe uma mensagem ou mantenha um anexo.');
   if ('scheduled_at' in changes) {
     const scheduledAt = parseDate(changes.scheduled_at);
     if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000 || Date.parse(scheduledAt) > Date.now() + 366 * 24 * 60 * 60 * 1_000) {
@@ -1585,9 +1723,10 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
+    else if (toolName === 'kifer_upload_scheduled_whatsapp_media') { actionType = 'whatsapp_schedule_media_upload'; result = await uploadScheduledWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_bulk_schedule_whatsapp_messages') { actionType = 'whatsapp_schedule_bulk'; result = await bulkScheduleWhatsAppMessages(supabase, args, actor); }
-    else if (toolName === 'kifer_update_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_update'; result = await updateScheduledWhatsAppMessage(supabase, args); }
+    else if (toolName === 'kifer_update_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_update'; result = await updateScheduledWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_cancel_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_cancel'; result = await cancelScheduledWhatsAppMessage(supabase, args); }
     else if (toolName === 'kifer_create_reminder') { actionType = 'reminder_create'; result = await createReminder(supabase, args, actor); }
     else if (toolName === 'kifer_update_lead_status') { actionType = 'lead_status_update'; result = await updateLeadStatus(supabase, args, actor); }

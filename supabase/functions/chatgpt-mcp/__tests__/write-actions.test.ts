@@ -54,6 +54,12 @@ const client = (handlers: Record<string, Result | Result[]>) => {
       const result = Array.isArray(configured) ? configured[index] : configured;
       return query(table, result, selections, writes, filters);
     },
+    storage: {
+      from: () => ({
+        createSignedUrl: async () => ({ data: { signedUrl: 'https://storage.test/signed-media' }, error: null }),
+        upload: async () => ({ data: { path: 'mcp/test/anexo.pdf' }, error: null }),
+      }),
+    },
   };
 };
 
@@ -179,6 +185,45 @@ test('agenda uma mensagem de texto na fila nativa a partir de uma conversa exist
   });
   const inserted = supabase.writes.find((write) => write.operation === 'insert' && write.table === 'comm_whatsapp_scheduled_messages');
   assert.equal((inserted?.value as { cancel_on_inbound_message?: boolean }).cancel_on_inbound_message, true);
+});
+
+test('agenda um documento privado sem exigir texto e sem aceitar URL externa', async () => {
+  const supabase = client({
+    comm_whatsapp_chats: { data: { id: actor.actorId, channel_id: '22222222-2222-2222-2222-222222222222', phone_digits: '5511999999999', phone_number: '+55 11 99999-9999', display_name: 'Larissa', lead_id: null, deleted_at: null } },
+    comm_whatsapp_scheduled_messages: [{ data: null }, { data: { id: 'scheduled-media-1', chat_id: actor.actorId, lead_id: null, scheduled_at: '2026-10-01T13:00:00.000Z', status: 'scheduled' } }],
+    mcp_action_audit_log: {},
+  });
+  const media = { storage_path: `mcp/${actor.actorId}/proposal-1-proposta.pdf`, message_type: 'document', mime_type: 'application/pdf', file_name: 'proposta.pdf' };
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_schedule_whatsapp_message',
+    arguments: { chat_id: actor.actorId, message: '', media, scheduled_at: '2026-10-01T13:00:00.000Z', client_request_id: 'schedule-media-1' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  const inserted = supabase.writes.find((write) => write.operation === 'insert' && write.table === 'comm_whatsapp_scheduled_messages');
+  const insertedValue = inserted?.value as Record<string, unknown>;
+  assert.equal(insertedValue.message_type, 'document');
+  assert.equal(insertedValue.text_content, null);
+  assert.equal(insertedValue.media_url, `storage://comm-whatsapp-scheduled-media/${media.storage_path}`);
+  assert.equal(insertedValue.media_mime_type, 'application/pdf');
+  assert.equal(insertedValue.media_file_name, 'proposta.pdf');
+});
+
+test('envia anexo MCP privado e não grava o base64 na auditoria', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_upload_scheduled_whatsapp_media',
+    arguments: { file_name: 'proposta.pdf', mime_type: 'application/pdf', content_base64: 'AQID', client_request_id: 'upload-media-1' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal((result?.media as { storage_path?: string }).storage_path, `mcp/${actor.actorId}/upload-media-1-proposta.pdf`);
+  const audit = supabase.writes.find((write) => write.table === 'mcp_action_audit_log');
+  assert.equal(((audit?.value as { request_payload?: { content_base64?: string } }).request_payload?.content_base64), '[REDACTED]');
 });
 
 test('retorna o agendamento anterior para a mesma chave idempotente', async () => {

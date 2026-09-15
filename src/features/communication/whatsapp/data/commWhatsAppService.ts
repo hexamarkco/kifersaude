@@ -16,6 +16,48 @@ import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
 export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 
+const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
+const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
+const MAX_SCHEDULED_MEDIA_BYTES = 20 * 1024 * 1024;
+const SCHEDULED_MEDIA_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv',
+]);
+
+type ScheduledMediaUpload = {
+  url: string;
+  type: 'image' | 'video' | 'document' | 'audio';
+  mimeType: string;
+  filename: string;
+  sizeBytes: number;
+};
+
+function scheduledMediaUploadDescriptor(file: File): Omit<ScheduledMediaUpload, 'url' | 'sizeBytes' | 'filename'> {
+  const declaredMimeType = file.type.trim().toLowerCase();
+  const extension = file.name.split('.').pop()?.trim().toLowerCase() ?? '';
+  const inferredMimeType = new Map([
+    ['jpg', 'image/jpeg'], ['jpeg', 'image/jpeg'], ['png', 'image/png'], ['webp', 'image/webp'], ['gif', 'image/gif'],
+    ['mp4', 'video/mp4'], ['mov', 'video/quicktime'], ['webm', 'video/webm'],
+    ['mp3', 'audio/mpeg'], ['ogg', 'audio/ogg'], ['wav', 'audio/wav'], ['m4a', 'audio/mp4'],
+    ['pdf', 'application/pdf'], ['doc', 'application/msword'], ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    ['xls', 'application/vnd.ms-excel'], ['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    ['txt', 'text/plain'], ['csv', 'text/csv'],
+  ]).get(extension) ?? '';
+  const mimeType = SCHEDULED_MEDIA_MIME_TYPES.has(declaredMimeType) ? declaredMimeType : inferredMimeType;
+  if (!SCHEDULED_MEDIA_MIME_TYPES.has(mimeType)) {
+    throw new Error('Formato não suportado. Anexe imagem, vídeo, áudio, PDF ou documento Office.');
+  }
+  if (mimeType.startsWith('image/')) return { type: 'image', mimeType };
+  if (mimeType.startsWith('video/')) return { type: 'video', mimeType };
+  if (mimeType.startsWith('audio/')) return { type: 'audio', mimeType };
+  return { type: 'document', mimeType };
+}
+
 export type CommWhatsAppOperationalState = {
   channel: CommWhatsAppChannel | null;
   configEnabled: boolean;
@@ -2462,6 +2504,31 @@ export const commWhatsAppService = {
     }
 
     return mediaObjectUrlCache.get(mediaId) ?? null;
+  },
+
+  async uploadScheduledMessageMedia(file: File): Promise<ScheduledMediaUpload> {
+    if (file.size <= 0 || file.size > MAX_SCHEDULED_MEDIA_BYTES) {
+      throw new Error('O anexo deve ter entre 1 byte e 20 MB.');
+    }
+    const descriptor = scheduledMediaUploadDescriptor(file);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      throw new Error('Sua sessão expirou. Entre novamente para anexar a mídia.');
+    }
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'arquivo';
+    const path = `ui/${userData.user.id}/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from(SCHEDULED_MEDIA_BUCKET)
+      .upload(path, file, { contentType: descriptor.mimeType, upsert: false });
+    if (uploadError) {
+      throw new Error(await getSupabaseErrorMessage(uploadError, 'Não foi possível enviar o anexo da mensagem agendada.'));
+    }
+    return {
+      ...descriptor,
+      url: `${SCHEDULED_MEDIA_URL_PREFIX}${path}`,
+      filename: file.name,
+      sizeBytes: file.size,
+    };
   },
 
   async scheduleMessage(input: {

@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Calendar, Clock, MessageSquare, Repeat } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
+import { Calendar, Clock, MessageSquare, Repeat, Upload, X } from 'lucide-react';
 
 import {
   Button,
   Checkbox,
   DateTimePicker,
+  IconButton,
   Input,
   Textarea,
   WorkspaceDialog,
@@ -38,6 +39,13 @@ type RecurrenceOption = {
   value: CommWhatsAppScheduledMessageRecurrence;
   label: string;
   description: string;
+};
+
+type ScheduledAttachment = {
+  url: string;
+  mimeType: string;
+  filename: string;
+  type: CommWhatsAppScheduledMessageType;
 };
 
 const RECURRENCE_OPTIONS: RecurrenceOption[] = [
@@ -78,19 +86,22 @@ export default function WhatsAppScheduleMessageModal({
   scheduledMessage,
   onScheduled,
 }: WhatsAppScheduleMessageModalProps) {
-  const mediaUrl = scheduledMessage?.media_url ?? initialMediaUrl ?? null;
-  const mediaMimeType = scheduledMessage?.media_mime_type ?? initialMediaMimeType ?? null;
-  const mediaFileName = scheduledMessage?.media_file_name ?? initialMediaFileName ?? null;
-  const messageType = scheduledMessage?.message_type ?? initialMessageType ?? (mediaUrl
-    ? mediaMimeType?.startsWith('image/')
-      ? 'image'
-      : mediaMimeType?.startsWith('video/')
-        ? 'video'
-        : mediaMimeType?.startsWith('audio/')
-          ? 'audio'
-          : 'document'
-    : 'text');
+  const initialAttachment: ScheduledAttachment | null = (scheduledMessage?.media_url ?? initialMediaUrl)
+    ? {
+      url: scheduledMessage?.media_url ?? initialMediaUrl ?? '',
+      mimeType: scheduledMessage?.media_mime_type ?? initialMediaMimeType ?? 'application/octet-stream',
+      filename: scheduledMessage?.media_file_name ?? initialMediaFileName ?? 'Anexo',
+      type: scheduledMessage?.message_type ?? initialMessageType ?? 'document',
+    }
+    : null;
   const [text, setText] = useState(scheduledMessage?.text_content ?? initialText ?? '');
+  const [attachment, setAttachment] = useState<ScheduledAttachment | null>(initialAttachment);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaUrl = attachment?.url ?? null;
+  const mediaMimeType = attachment?.mimeType ?? null;
+  const mediaFileName = attachment?.filename ?? null;
+  const messageType: CommWhatsAppScheduledMessageType = attachment?.type ?? 'text';
   const [scheduledAt, setScheduledAt] = useState(
     scheduledMessage ? formatDateTimeLocal(new Date(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at)) : getDefaultScheduledAt,
   );
@@ -206,6 +217,27 @@ export default function WhatsAppScheduleMessageModal({
     onClose();
   }, [submitting, onClose]);
 
+  const handleAttachmentChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const [file] = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (!file || uploadingAttachment || submitting) return;
+    setUploadingAttachment(true);
+    try {
+      const uploaded = await commWhatsAppService.uploadScheduledMessageMedia(file);
+      setAttachment({
+        url: uploaded.url,
+        mimeType: uploaded.mimeType,
+        filename: uploaded.filename,
+        type: uploaded.type,
+      });
+      toast.success('Anexo adicionado ao agendamento.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível anexar o arquivo.');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }, [submitting, uploadingAttachment]);
+
   return (
     <WorkspaceDialog
       isOpen={isOpen}
@@ -215,6 +247,13 @@ export default function WhatsAppScheduleMessageModal({
       size="md"
     >
       <div className="space-y-4">
+        <input
+          ref={attachmentInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+          onChange={(event) => void handleAttachmentChange(event)}
+        />
         <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Mensagem
@@ -234,8 +273,28 @@ export default function WhatsAppScheduleMessageModal({
               {mediaFileName && (
                 <span className="truncate">{mediaFileName}</span>
               )}
+              <IconButton
+                type="button"
+                aria-label="Remover anexo"
+                disabled={submitting || uploadingAttachment}
+                onClick={() => setAttachment(null)}
+              >
+                <X className="kds-control-icon" />
+              </IconButton>
             </div>
           )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            loading={uploadingAttachment}
+            disabled={submitting}
+            onClick={() => attachmentInputRef.current?.click()}
+          >
+            {!uploadingAttachment && <Upload className="kds-control-icon" />}
+            {attachment ? 'Substituir anexo' : 'Anexar mídia ou documento'}
+          </Button>
           {segmentCount > 1 && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2">
               <MessageSquare className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />

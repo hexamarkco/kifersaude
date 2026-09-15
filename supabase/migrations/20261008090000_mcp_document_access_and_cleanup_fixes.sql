@@ -237,6 +237,10 @@ BEGIN
      WHERE document.entity_type = 'dependent'
        AND document.entity_id = v_dependent.id
        AND (document.deleted_at IS NULL OR document.storage_cleanup_completed_at IS NULL)
+  ) OR EXISTS (
+    SELECT 1 FROM public.documents AS legacy_document
+     WHERE legacy_document.entity_type = 'dependent'
+       AND legacy_document.entity_id = v_dependent.id
   ) THEN
     RAISE EXCEPTION 'MCP_DEPENDENT_HAS_DOCUMENT_HISTORY' USING ERRCODE = '23503';
   END IF;
@@ -291,6 +295,11 @@ BEGIN
         WHERE document.entity_type = 'contract_holder'
           AND document.entity_id = v_holder.id
           AND (document.deleted_at IS NULL OR document.storage_cleanup_completed_at IS NULL)
+     )
+     OR EXISTS (
+       SELECT 1 FROM public.documents AS legacy_document
+        WHERE legacy_document.entity_type = 'holder'
+          AND legacy_document.entity_id = v_holder.id
      ) THEN
     RAISE EXCEPTION 'MCP_HOLDER_HAS_DEPENDENTS_OR_DOCUMENT_HISTORY' USING ERRCODE = '23503';
   END IF;
@@ -317,8 +326,8 @@ COMMENT ON FUNCTION public.mcp_contract_documents_list(uuid, text, uuid, integer
 COMMENT ON FUNCTION public.mcp_contract_document_get(uuid, uuid) IS
   'MCP-only active-admin document lookup; audits access before Edge Function signs a private object URL.';
 COMMENT ON FUNCTION public.mcp_remove_contract_holder(uuid, uuid, timestamptz, text) IS
-  'Removes a holder only when no dependents or active/uncleaned private document metadata references it; preserves audit and requires optimistic concurrency.';
+  'Removes a holder only when no dependents or private/legacy document references remain; preserves audit and requires optimistic concurrency.';
 COMMENT ON FUNCTION public.mcp_remove_contract_dependent(uuid, uuid, timestamptz, text) IS
-  'Removes a dependent only when no active/uncleaned private document metadata references it; preserves audit and requires optimistic concurrency.';
+  'Removes a dependent only when no private/legacy document references remain; preserves audit and requires optimistic concurrency.';
 
 COMMIT;

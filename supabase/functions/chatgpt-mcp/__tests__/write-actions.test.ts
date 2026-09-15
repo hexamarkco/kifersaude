@@ -183,16 +183,23 @@ test('altera status de contrato configurado com controle de concorrência', asyn
     contracts: [
       { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Ativo', updated_at: updatedAt } },
       { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Suspenso', updated_at: '2026-09-15T11:00:00.000Z' } },
+      { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Suspenso', updated_at: '2026-09-15T11:00:00.000Z' } },
     ],
     contract_status_config: { data: { value: 'Suspenso', ativo: true } },
     mcp_action_audit_log: {},
   });
   const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_contract_status', arguments: { contract_id: contractId, status: 'Suspenso', expected_updated_at: updatedAt }, actor });
+  const repeatedWithOldVersion = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_contract_status', arguments: { contract_id: contractId, status: 'Suspenso', expected_updated_at: updatedAt }, actor });
 
   assert.equal(result?.success, true);
   assert.equal(result?.status_anterior, 'Ativo');
   assert.equal(result?.status_novo, 'Suspenso');
-  assert.deepEqual(supabase.writes.find((write) => write.table === 'contracts')?.value, { status: 'Suspenso' });
+  assert.equal(repeatedWithOldVersion?.error_code, 'CONFLICT');
+  const contractUpdate = supabase.writes.find((write) => write.table === 'contracts')?.value as { status?: string; updated_at?: string };
+  assert.equal(contractUpdate.status, 'Suspenso');
+  assert.ok(contractUpdate.updated_at);
+  assert.ok(Date.parse(contractUpdate.updated_at) > Date.parse(updatedAt));
+  assert.equal(supabase.writes.filter((write) => write.table === 'contracts').length, 1);
   assert.ok(supabase.filters.some((filter) => filter.table === 'contracts' && filter.column === 'updated_at' && filter.value === updatedAt));
 });
 

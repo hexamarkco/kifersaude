@@ -1322,7 +1322,8 @@ async function updateContractStatus(supabase: SupabaseClient, params: Record<str
   if (['Cancelado', 'Encerrado'].includes(text(current.status))) return errorResult('NOT_ALLOWED', 'Contratos cancelados ou encerrados não podem ser reabertos ou alterados para outro estado.');
   const { data: configuredStatus, error: statusError } = await supabase.from('contract_status_config').select('value,ativo').eq('value', statusName).maybeSingle();
   if (statusError || !configuredStatus || configuredStatus.ativo === false) return errorResult('INVALID_STATUS', 'Status de contrato inexistente ou inativo.');
-  const updateQuery = supabase.from('contracts').update({ status: configuredStatus.value }).eq('id', contractId).eq('updated_at', current.updated_at);
+  const updatedAt = new Date(Math.max(Date.now(), Date.parse(text(current.updated_at)) + 1)).toISOString();
+  const updateQuery = supabase.from('contracts').update({ status: configuredStatus.value, updated_at: updatedAt }).eq('id', contractId).eq('updated_at', current.updated_at);
   const { data, error } = await updateQuery.select('id,codigo_contrato,status,updated_at').maybeSingle();
   return error || !data
     ? errorResult('CONFLICT', 'O contrato mudou durante a atualização. Recarregue e tente novamente.')

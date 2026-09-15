@@ -287,14 +287,19 @@ export default function WhatsAppScheduledMessagesPanel({
               />
 
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
-                <Input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  leftIcon={Search}
-                  placeholder="Buscar por mensagem, contato ou etiqueta..."
-                  aria-label="Buscar mensagens agendadas"
-                />
+                <div className="space-y-1">
+                  <label htmlFor="scheduled-messages-search" className="text-xs font-medium text-[var(--text-muted)]">
+                    Buscar
+                  </label>
+                  <Input
+                    id="scheduled-messages-search"
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    leftIcon={Search}
+                    placeholder="Mensagem, contato ou etiqueta..."
+                  />
+                </div>
                 <div className="space-y-1">
                   <label htmlFor="scheduled-messages-start-date" className="text-xs font-medium text-[var(--text-muted)]">
                     A partir de

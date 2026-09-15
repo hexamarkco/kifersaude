@@ -30,6 +30,10 @@ import {
   type AutoContactSchedulingSettings,
 } from './domain/scheduling.ts';
 import { resolveContinuationTriggerMessageAt } from './domain/inactivity-continuation.ts';
+import {
+  isAutoContactFlowOutputMessage,
+  LEGACY_AUTO_CONTACT_FLOW_MESSAGE_MATCH_WINDOW_MS,
+} from './domain/inactivity-flow-enrollment.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -2269,7 +2273,7 @@ async function getLatestChatMessageAt({
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
-  direction?: 'inbound';
+  direction?: 'inbound' | 'outbound';
   visibleOnly?: boolean;
 }): Promise<string | null> {
   const { data: chats, error: chatsError } = await supabase
@@ -2302,6 +2306,54 @@ async function getLatestChatMessageAt({
   for (const msg of messages) {
     if (isMessageVisible(msg) && typeof msg.message_at === 'string') {
       return msg.message_at;
+    }
+  }
+
+  return null;
+}
+
+async function getLatestVisibleChatMessageContext({
+  supabase,
+  leadId,
+  direction,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  leadId: string;
+  direction: 'outbound';
+}): Promise<{
+  id: string;
+  message_at: string;
+  source: string | null;
+  metadata: unknown;
+} | null> {
+  const { data: chats, error: chatsError } = await supabase
+    .from('comm_whatsapp_chats')
+    .select('id')
+    .eq('lead_id', leadId)
+    .is('merged_into_chat_id', null);
+
+  if (chatsError || !chats?.length) return null;
+
+  const { data: messages } = await supabase
+    .from('comm_whatsapp_messages')
+    .select('id, message_at, text_content, media_caption, message_type, source, metadata')
+    .in('chat_id', chats.map((chat) => chat.id))
+    .eq('direction', direction)
+    .order('message_at', { ascending: false })
+    .limit(50);
+
+  for (const message of messages ?? []) {
+    if (
+      isMessageVisible(message)
+      && typeof message.id === 'string'
+      && typeof message.message_at === 'string'
+    ) {
+      return {
+        id: message.id,
+        message_at: message.message_at,
+        source: typeof message.source === 'string' ? message.source : null,
+        metadata: message.metadata,
+      };
     }
   }
 
@@ -3008,6 +3060,7 @@ async function processFlowJobs({
               lead: leadWithRelations,
               contentType: messagePayload.contentType,
               content: messagePayload.content,
+              automationFlowId: flow.id,
             });
           }
         } else {
@@ -3053,6 +3106,7 @@ async function processFlowJobs({
             lead: leadWithRelations,
             contentType: messagePayload.contentType,
             content: messagePayload.content,
+            automationFlowId: flow.id,
           });
 
           if (messageIndex < messagePayloads.length - 1) {
@@ -3509,11 +3563,13 @@ async function sendAutoContactMessage({
   lead,
   contentType,
   content,
+  automationFlowId,
 }: {
   supabase: ReturnType<typeof createClient>;
   lead: any;
   contentType: FlowMessageType;
   content: string | { url: string; caption?: string; filename?: string };
+  automationFlowId?: string;
 }): Promise<void> {
   const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
   if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
@@ -3665,7 +3721,12 @@ async function sendAutoContactMessage({
       mediaSizeBytes: null,
       mediaDurationSeconds: null,
       mediaCaption: media?.caption ?? null,
-      metadata: { provider: 'whapi', automation: 'auto_contact', lead_id: lead?.id ?? null },
+      metadata: {
+        provider: 'whapi',
+        automation: 'auto_contact',
+        lead_id: lead?.id ?? null,
+        ...(automationFlowId ? { automation_flow_id: automationFlowId } : {}),
+      },
     });
   } catch (error) {
     // The message was accepted by Whapi; avoid retrying it solely because local history failed.
@@ -4359,6 +4420,7 @@ Deno.serve(async (req: Request) => {
         }
 
         let effectiveTriggerAt: string | null = inactivityStartedAt;
+        let latestOutboundMessageId: string | null = null;
 
         if (targetFlow.triggerType === 'inactivity_duration') {
           if (triggerStatuses.length === 0) {
@@ -4378,7 +4440,13 @@ Deno.serve(async (req: Request) => {
           // Enrollment-based: check that the last visible message is outbound
           // and no inbound has arrived after the trigger message.
           const latestInboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'inbound', visibleOnly: true });
-          const latestOutboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'outbound', visibleOnly: true });
+          const latestOutboundMessage = await getLatestVisibleChatMessageContext({
+            supabase,
+            leadId,
+            direction: 'outbound',
+          });
+          const latestOutboundAt = latestOutboundMessage?.message_at ?? null;
+          latestOutboundMessageId = latestOutboundMessage?.id ?? null;
 
           // If no outbound exists, or inbound is newer than outbound, skip
           if (!latestOutboundAt || (latestInboundAt && isAfter(latestInboundAt, latestOutboundAt))) {
@@ -4388,12 +4456,67 @@ Deno.serve(async (req: Request) => {
             });
           }
 
-          // The trigger timestamp must be the last outbound (not an old one)
-          // If inactivityStartedAt (from cron) is older than latestOutboundAt,
-          // the cron used a stale reference — use the fresher one
-          effectiveTriggerAt = isAfter(latestOutboundAt, inactivityStartedAt)
-            ? latestOutboundAt
-            : inactivityStartedAt;
+          // Rebase on the latest outbound in case the operator sent a newer
+          // message after the scanner selected its trigger.
+          effectiveTriggerAt = latestOutboundAt;
+
+          const inactivityThresholdAt = new Date(
+            new Date(effectiveTriggerAt).getTime()
+              + Math.max(1, Number(targetFlow.triggerDurationHours) || 24) * 3600000,
+          );
+          if (inactivityThresholdAt.getTime() > Date.now()) {
+            return new Response(JSON.stringify({
+              success: true,
+              skipped: true,
+              reason: 'inactivity_window_restarted',
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          const outboundMetadata = latestOutboundMessage?.metadata;
+          const metadataFlowId = outboundMetadata && typeof outboundMetadata === 'object' && !Array.isArray(outboundMetadata)
+            ? (outboundMetadata as Record<string, unknown>).automation_flow_id
+            : null;
+          let completedSendJobAt: string | null = null;
+
+          if (latestOutboundMessage?.source === 'auto_contact' && !(typeof metadataFlowId === 'string' && metadataFlowId.trim())) {
+            const messageTimestamp = new Date(latestOutboundAt).getTime();
+            const windowStart = new Date(messageTimestamp - LEGACY_AUTO_CONTACT_FLOW_MESSAGE_MATCH_WINDOW_MS).toISOString();
+            const windowEnd = new Date(messageTimestamp + LEGACY_AUTO_CONTACT_FLOW_MESSAGE_MATCH_WINDOW_MS).toISOString();
+            const { data: legacyCompletedJob, error: legacyCompletedJobError } = await supabase
+              .from('auto_contact_flow_jobs')
+              .select('updated_at')
+              .eq('lead_id', leadId)
+              .eq('flow_id', targetFlow.id)
+              .eq('action_type', 'send_message')
+              .eq('status', 'completed')
+              .gte('updated_at', windowStart)
+              .lte('updated_at', windowEnd)
+              .order('updated_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (legacyCompletedJobError) throw legacyCompletedJobError;
+            completedSendJobAt = legacyCompletedJob?.updated_at ?? null;
+          }
+
+          if (latestOutboundMessage && isAutoContactFlowOutputMessage({
+            source: latestOutboundMessage.source,
+            metadata: latestOutboundMessage.metadata,
+            messageAt: latestOutboundMessage.message_at,
+            completedSendJobAt,
+          }, targetFlow.id)) {
+            return new Response(JSON.stringify({
+              success: true,
+              skipped: true,
+              reason: 'flow_output_cannot_restart_same_flow',
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
 
           // Dedup: check if an active enrollment already exists for this trigger
           const { data: existingEnrollment } = await supabase
@@ -4446,11 +4569,11 @@ Deno.serve(async (req: Request) => {
         }
 
         const runtimeContext = buildFlowRuntimeContext(targetFlow, mappedLead) ?? {};
-        if (inactivityStartedAt) runtimeContext.inactivity_started_at = inactivityStartedAt;
+        if (effectiveTriggerAt) runtimeContext.inactivity_started_at = effectiveTriggerAt;
 
-        const anchorAt = inactivityStartedAt
+        const anchorAt = effectiveTriggerAt
           ? new Date(
-              new Date(inactivityStartedAt).getTime() +
+              new Date(effectiveTriggerAt).getTime() +
                 Math.max(1, Number(targetFlow.triggerDurationHours) || 24) * 3600000,
             )
           : new Date();
@@ -4460,7 +4583,7 @@ Deno.serve(async (req: Request) => {
           ? crypto.randomUUID()
           : undefined;
         const enrollmentTriggerMsgId = targetFlow.triggerType === 'inactivity_duration'
-          ? (triggerMessageId ?? undefined)
+          ? (latestOutboundMessageId ?? triggerMessageId ?? undefined)
           : undefined;
         // Use effectiveTriggerAt (not raw inactivityStartedAt) so dedup matches what's stored
         const triggerMessageAt = targetFlow.triggerType === 'inactivity_duration'

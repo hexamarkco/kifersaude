@@ -5,6 +5,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 ## Automações de leads
 
 - Execução é sequencial: somente a primeira etapa é criada inicialmente; a seguinte nasce após a conclusão real da anterior e respeita delay/janela.
+- Mensagem outbound produzida por um fluxo de inatividade não abre outro enrollment do mesmo fluxo. As etapas permanecem no enrollment atual; inbound do cliente, saída do status de gatilho ou cancelamento explícito encerram a régua.
 - A primeira etapa de inatividade ancora em `inactivity_started_at + triggerDurationHours`. Spread determinístico vale para backlog real e excesso de cap, nunca para a abordagem `lead_created`.
 - `step.messages[]` representa um pacote ordenado de mensagens na mesma etapa. Não existe modo `together`.
 - `settings.autoSend=false` pausa globalmente; cada fluxo também possui `ativo`. Jobs pendentes de fluxo inativo viram `skipped`, sem envio.

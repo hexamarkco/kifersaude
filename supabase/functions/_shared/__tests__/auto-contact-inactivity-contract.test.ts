@@ -7,6 +7,10 @@ const migrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260915151927_prevent_auto_contact_flow_self_reentry.sql'),
   'utf8',
 );
+const cutoverRepairMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260915153939_repair_auto_contact_inactivity_cutover_config_lookup.sql'),
+  'utf8',
+);
 const leadsApiSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/leads-api/index.ts'),
   'utf8',
@@ -22,6 +26,13 @@ test('the inactivity scanner ignores the same flow own outbound and still honors
   assert.match(migrationSource, /trigger_message_id', v_lead\.outbound_msg_id/);
   assert.doesNotMatch(migrationSource, /j3\.status = 'completed'/);
   assert.match(migrationSource, /eligibleLeads', v_elegible/);
+});
+
+test('cutover lookups use the persisted system configuration key and value columns', () => {
+  assert.match(cutoverRepairMigrationSource, /config_value::text/);
+  assert.match(cutoverRepairMigrationSource, /config_key = ''inactivity_enrollment_cutover_at''/);
+  assert.match(cutoverRepairMigrationSource, /public\.automation_flows_health\(\)/);
+  assert.match(cutoverRepairMigrationSource, /public\.check_auto_contact_inactivity_triggers\(\)/);
 });
 
 test('flow messages carry their origin and the edge entry point blocks self-reenrollment', () => {

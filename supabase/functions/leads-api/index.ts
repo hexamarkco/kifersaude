@@ -2,6 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
+  assertContactPermissionForSend,
+  ContactPermissionBlockedError,
+  ContactPermissionCheckError,
+} from '../_shared/contact-permissions.ts';
+import {
   ensurePrimaryChannel,
   extractWhapiMessageId,
   fetchWhapiWithTimeout,
@@ -1281,12 +1286,16 @@ const applyInvalidNumberAction = async ({
 };
 
 async function sendWhatsappMessages({
+  supabase,
   endpoint,
   chatId,
+  phoneNumber,
   messages,
 }: {
+  supabase: ReturnType<typeof createClient>;
   endpoint: string;
   chatId: string;
+  phoneNumber: string;
   messages: string[];
 }): Promise<void> {
   const token = getWhapiToken();
@@ -1295,6 +1304,7 @@ async function sendWhatsappMessages({
   }
 
   for (const content of messages) {
+    await assertContactPermissionForSend(supabase, phoneNumber, 'commercial');
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -3635,6 +3645,11 @@ async function sendAutoContactMessage({
   chatRoute = dispatchRoute;
   chatId = dispatchRoute.externalChatId;
   body.to = chatId;
+  await assertContactPermissionForSend(
+    supabase,
+    dispatchRoute.phoneNumber || whapiPhone,
+    'commercial',
+  );
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), WHAPI_REQUEST_TIMEOUT_MS);
@@ -4817,7 +4832,13 @@ Deno.serve(async (req: Request) => {
           externalChatId: requestedChatId,
         });
         const chatId = chatRoute.externalChatId;
-        await sendWhatsappMessages({ endpoint, chatId, messages });
+        await sendWhatsappMessages({
+          supabase,
+          endpoint,
+          chatId,
+          phoneNumber: chatRoute.phoneNumber || '',
+          messages,
+        });
         logWithContext('Envio manual de automação concluído', { chatId });
 
         return new Response(JSON.stringify({ success: true }), {
@@ -4828,7 +4849,9 @@ Deno.serve(async (req: Request) => {
         console.error('Erro ao enviar automação manual', error);
         const message = error instanceof Error ? error.message : 'Não foi possível enviar a automação manual.';
         return new Response(JSON.stringify({ success: false, error: message }), {
-          status: 502,
+          status: error instanceof ContactPermissionBlockedError ? 409
+            : error instanceof ContactPermissionCheckError ? 503
+              : 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-const supabase = createClient('https://eaxvvhamkmovkoqssahj.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVheHZ2aGFta21vdmtvcXNzYWhqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTgzMTY3MywiZXhwIjoyMDc3NDA3NjczfQ.RpbKiLFtqXGrWAP1oI6UxHS7B184DAebAMEDAnbn3V8');
+const supabase = createClient('https://eaxvvhamkmovkoqssahj.supabase.co', 'process.env.SUPABASE_SERVICE_ROLE_KEY');
 
 const { data: lines } = await supabase.rpc('audit_get_source', { p_name: 'audit_classify_single_lead' });
 const fullSource = lines?.map(l => l.line).join('\n') || '';

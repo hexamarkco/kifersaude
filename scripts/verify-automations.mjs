@@ -57,7 +57,7 @@ function fail(message, details = "") {
 async function main() {
   const env = loadEnv();
   const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const serviceKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceKey) {
     fail("VITE_SUPABASE_URL/VITE_SUPABASE_SERVICE_ROLE_KEY nao encontrados (.env.local)");

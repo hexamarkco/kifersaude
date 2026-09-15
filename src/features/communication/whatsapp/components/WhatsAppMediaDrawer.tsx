@@ -22,6 +22,7 @@ import {
   SegmentedControl,
 } from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
+import { tenorMediaRepository, type TenorMediaItem } from '../data';
 
 type DrawerMode = 'emoji' | 'gif' | 'sticker';
 
@@ -30,15 +31,6 @@ type MediaDrawerPosition = {
   left: number;
   width?: number;
   maxHeight?: number;
-};
-
-type TenorMediaItem = {
-  id: string;
-  title: string;
-  previewUrl: string;
-  sendUrl: string;
-  mimeType: string;
-  sendKind: 'image' | 'video';
 };
 
 type EmojiItem = {
@@ -73,8 +65,6 @@ type WhatsAppMediaDrawerProps = {
   onSendMedia: (item: TenorMediaItem) => Promise<void>;
 };
 
-const TENOR_API_KEY = 'AIzaSyC-P6_qz3FzCoXGLk6tgitZo4jEJ5mLzD8';
-const TENOR_CLIENT_KEY = 'tenor_web';
 const RECENT_EMOJIS_STORAGE_KEY = 'comm.whatsapp.media-drawer.recent-emojis.v1';
 const MAX_RECENT_EMOJIS = 18;
 
@@ -266,78 +256,6 @@ const buildEmojiLookup = () => {
 
 const EMOJI_LOOKUP = buildEmojiLookup();
 
-const buildTenorSearchUrl = (query: string, mode: 'gif' | 'sticker') => {
-  const params = new URLSearchParams({
-    q: query,
-    key: TENOR_API_KEY,
-    client_key: TENOR_CLIENT_KEY,
-    limit: '24',
-    locale: 'pt_BR',
-    country: 'BR',
-    media_filter: 'basic',
-    contentfilter: 'medium',
-  });
-
-  if (mode === 'sticker') {
-    params.set('searchfilter', 'sticker');
-  }
-
-  return `https://tenor.googleapis.com/v2/search?${params.toString()}`;
-};
-
-const mapTenorResult = (raw: Record<string, unknown>, mode: 'gif' | 'sticker'): TenorMediaItem | null => {
-  const mediaFormats = raw.media_formats as Record<string, Record<string, unknown>> | undefined;
-  if (!mediaFormats) {
-    return null;
-  }
-
-  if (mode === 'gif') {
-    const previewUrl = String(mediaFormats.tinygifpreview?.url ?? mediaFormats.gifpreview?.url ?? '').trim();
-    const sendUrl = String(mediaFormats.mp4?.url ?? mediaFormats.loopedmp4?.url ?? '').trim();
-    if (!previewUrl || !sendUrl) {
-      return null;
-    }
-
-    return {
-      id: String(raw.id ?? sendUrl),
-      title: String(raw.h1_title ?? raw.content_description ?? raw.title ?? 'GIF'),
-      previewUrl,
-      sendUrl,
-      mimeType: 'video/mp4',
-      sendKind: 'video',
-    };
-  }
-
-  const previewUrl = String(
-    mediaFormats.tinywebppreview_transparent?.url
-    ?? mediaFormats.webppreview_transparent?.url
-    ?? mediaFormats.tinygifpreview?.url
-    ?? mediaFormats.gifpreview?.url
-    ?? '',
-  ).trim();
-  const sendUrl = String(
-    mediaFormats.webp_transparent?.url
-    ?? mediaFormats.webp?.url
-    ?? mediaFormats.gif_transparent?.url
-    ?? mediaFormats.gif?.url
-    ?? '',
-  ).trim();
-  if (!previewUrl || !sendUrl) {
-    return null;
-  }
-
-  const mimeType = sendUrl.endsWith('.webp') ? 'image/webp' : 'image/gif';
-
-  return {
-    id: String(raw.id ?? sendUrl),
-    title: String(raw.h1_title ?? raw.content_description ?? raw.title ?? 'Figurinha'),
-    previewUrl,
-    sendUrl,
-    mimeType,
-    sendKind: 'image',
-  };
-};
-
 export default function WhatsAppMediaDrawer({
   isOpen,
   position,
@@ -394,44 +312,26 @@ export default function WhatsAppMediaDrawer({
     const shortcuts = MEDIA_SHORTCUTS[mode];
     const activeShortcut = shortcuts.find((item) => item.id === activeShortcutId) ?? shortcuts[0];
     const effectiveQuery = searchQuery.trim() || activeShortcut.term;
-    const controller = new AbortController();
+    let active = true;
 
     setMediaLoading(true);
     setMediaError(null);
 
-    void fetch(buildTenorSearchUrl(effectiveQuery, mode), {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('Não foi possível consultar a biblioteca de GIFs e figurinhas.');
-        }
-
-        const payload = (await response.json()) as { results?: Array<Record<string, unknown>> };
-        const nextItems = Array.isArray(payload.results)
-          ? payload.results
-              .map((item) => mapTenorResult(item, mode))
-              .filter((item): item is TenorMediaItem => item !== null)
-          : [];
-
-        setMediaItems(nextItems);
+    void tenorMediaRepository.search(effectiveQuery, mode)
+      .then((items) => {
+        if (active) setMediaItems(items);
       })
       .catch((error) => {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
-        }
-
+        if (!active) return;
         console.error('[WhatsAppMediaDrawer] erro ao carregar mídia', error);
         setMediaError(error instanceof Error ? error.message : 'Não foi possível carregar a biblioteca agora.');
         setMediaItems([]);
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setMediaLoading(false);
-        }
+        if (active) setMediaLoading(false);
       });
 
-    return () => controller.abort();
+    return () => { active = false; };
   }, [activeShortcutId, isOpen, mode, searchQuery]);
 
   const emojiSearchResults = useMemo(() => {

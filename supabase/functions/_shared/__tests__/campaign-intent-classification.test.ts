@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import {
   deriveCampaignRecommendedAction as deriveRecommendedAction,
+  isExplicitWrongRecipientReply,
   mapCampaignPermissionToLegacyIntent as mapContactPermissionToLegacyIntent,
   normalizeCampaignIntentClassification as normalizeClassification,
 } from '../campaign-intent-classification';
@@ -14,16 +15,16 @@ test('deriveRecommendedAction: OPT_OUT_EXPLICITO → suggest_block_whatsapp_camp
   assert.equal(deriveRecommendedAction('OPT_OUT_EXPLICITO'), 'suggest_block_whatsapp_campaigns');
 });
 
-test('deriveRecommendedAction: NUMERO_ERRADO → suggest_block_whatsapp_campaigns', () => {
-  assert.equal(deriveRecommendedAction('NUMERO_ERRADO'), 'suggest_block_whatsapp_campaigns');
+test('deriveRecommendedAction: NUMERO_ERRADO → review (not a consent opt-out)', () => {
+  assert.equal(deriveRecommendedAction('NUMERO_ERRADO'), 'review');
 });
 
-test('deriveRecommendedAction: DESTINATARIO_INCORRETO → suggest_block_whatsapp_campaigns', () => {
-  assert.equal(deriveRecommendedAction('DESTINATARIO_INCORRETO'), 'suggest_block_whatsapp_campaigns');
+test('deriveRecommendedAction: DESTINATARIO_INCORRETO → review (not a consent opt-out)', () => {
+  assert.equal(deriveRecommendedAction('DESTINATARIO_INCORRETO'), 'review');
 });
 
-test('deriveRecommendedAction: RECLAMACAO_CONTATO → suggest_block_whatsapp_campaigns', () => {
-  assert.equal(deriveRecommendedAction('RECLAMACAO_CONTATO'), 'suggest_block_whatsapp_campaigns');
+test('deriveRecommendedAction: RECLAMACAO_CONTATO → review until consent is explicit', () => {
+  assert.equal(deriveRecommendedAction('RECLAMACAO_CONTATO'), 'review');
 });
 
 test('deriveRecommendedAction: AMBIGUO → review', () => {
@@ -32,6 +33,12 @@ test('deriveRecommendedAction: AMBIGUO → review', () => {
 
 test('deriveRecommendedAction: NENHUM_SINAL → keep_active', () => {
   assert.equal(deriveRecommendedAction('NENHUM_SINAL'), 'keep_active');
+});
+
+test('identifica texto de destinatário incorreto sem converter em opt-out', () => {
+  assert.equal(isExplicitWrongRecipientReply('Número errado'), true);
+  assert.equal(isExplicitWrongRecipientReply('Não sou o Carlos'), true);
+  assert.equal(isExplicitWrongRecipientReply('Não tenho interesse'), false);
 });
 
 // ============================================================

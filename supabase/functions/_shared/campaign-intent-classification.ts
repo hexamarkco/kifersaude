@@ -56,16 +56,28 @@ export function deriveCampaignRecommendedAction(
 ): CampaignIntentClassification['recommended_action'] {
   switch (contactPermission) {
     case 'OPT_OUT_EXPLICITO':
+      return 'suggest_block_whatsapp_campaigns';
     case 'NUMERO_ERRADO':
     case 'DESTINATARIO_INCORRETO':
     case 'RECLAMACAO_CONTATO':
-      return 'suggest_block_whatsapp_campaigns';
     case 'AMBIGUO':
       return 'review';
     case 'NENHUM_SINAL':
     default:
       return 'keep_active';
   }
+}
+
+export function isExplicitWrongRecipientReply(messageText: string | null | undefined): boolean {
+  if (!messageText) return false;
+  const normalized = messageText
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  return /\b(numero errado|contato errado|pessoa errada|destinatario errado|nao sou (?:o|a|um|uma)? ?[a-z]+|nao conheco (?:o|a|esse|essa)? ?[a-z]+|esse (?:numero|telefone) nao (?:e|pertence) (?:do|da|de)? ?[a-z]*)\b/.test(normalized);
 }
 
 export function mapCampaignPermissionToLegacyIntent(

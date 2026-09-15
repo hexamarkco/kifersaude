@@ -1,5 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import {
+  assertContactPermissionForSend,
+  ContactPermissionBlockedError,
+  ContactPermissionCheckError,
+  type ContactPermissionSendScope,
+} from '../_shared/contact-permissions.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import {
   COMM_WHATSAPP_MODULE,
@@ -54,6 +60,8 @@ type RetryTargetRow = {
   media_mime_type: string | null;
   media_size_bytes: number | null;
   media_duration_seconds: number | null;
+  source: string;
+  metadata: Record<string, unknown>;
 };
 
 const jsonHeaders = {
@@ -228,6 +236,7 @@ Deno.serve(async (req: Request) => {
   }
 
   let retryDispatched = false;
+  let retryRequestId: string | null = null;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -289,6 +298,8 @@ Deno.serve(async (req: Request) => {
           media_mime_type,
           media_size_bytes,
           media_duration_seconds,
+          source,
+          metadata,
           comm_whatsapp_chats!inner (
             external_chat_id,
             phone_number,
@@ -327,6 +338,12 @@ Deno.serve(async (req: Request) => {
       media_mime_type: toTrimmedString((target as Record<string, unknown>).media_mime_type) || null,
       media_size_bytes: Number((target as Record<string, unknown>).media_size_bytes) || null,
       media_duration_seconds: Number((target as Record<string, unknown>).media_duration_seconds) || null,
+      source: toTrimmedString((target as Record<string, unknown>).source),
+      metadata: (target as Record<string, unknown>).metadata
+        && typeof (target as Record<string, unknown>).metadata === 'object'
+        && !Array.isArray((target as Record<string, unknown>).metadata)
+        ? (target as Record<string, unknown>).metadata as Record<string, unknown>
+        : {},
     };
 
     if (!retryTarget.external_chat_id || !retryTarget.media_id) {
@@ -378,10 +395,21 @@ Deno.serve(async (req: Request) => {
       clientRequestId,
       messageId,
     });
+    retryRequestId = retryRequest.row?.id ?? null;
 
     if (!retryRequest.reserved) {
       return buildDuplicateRetryResponse(retryRequest.row);
     }
+
+    const storedPermissionScope = retryTarget.metadata.contact_permission_scope;
+    const sendPurposeScope: ContactPermissionSendScope = storedPermissionScope === 'commercial'
+      || storedPermissionScope === 'service_reply'
+      || storedPermissionScope === 'transactional'
+      ? storedPermissionScope
+      : ['campaign', 'scheduled', 'mcp'].includes(retryTarget.source)
+        ? 'commercial'
+        : 'service_reply';
+    await assertContactPermissionForSend(supabaseAdmin, retryTarget.phone_number, sendPurposeScope);
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
     const whapi = createWhapiClient(token);
@@ -447,6 +475,7 @@ Deno.serve(async (req: Request) => {
       metadata: {
         provider: 'whapi',
         retry_of: retryTarget.id,
+        contact_permission_scope: sendPurposeScope,
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       },
     });
@@ -466,6 +495,15 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('[comm-whatsapp-retry-message] erro inesperado', error);
+    if (error instanceof ContactPermissionBlockedError || error instanceof ContactPermissionCheckError) {
+      if (retryRequestId) {
+        await failRetryRequest(supabaseAdmin, retryRequestId, error.message);
+      }
+      return new Response(JSON.stringify({ error: error.message, code: error.code, ambiguous: false }), {
+        status: error instanceof ContactPermissionBlockedError ? 409 : 503,
+        headers: jsonHeaders,
+      });
+    }
     // Se ja tinhamos chamado a Whapi quando a excecao ocorreu, nao ha garantia
     // de que o reenvio nao chegou ao destinatario - sinalizamos como ambiguo.
     return new Response(

@@ -1,5 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, type AuthorizedDashboardUser } from '../_shared/dashboard-auth.ts';
+import {
+  assertContactPermissionForSend,
+  ContactPermissionBlockedError,
+  ContactPermissionCheckError,
+  type ContactPermissionSendScope,
+} from '../_shared/contact-permissions.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import { isPlausibleMediaSignature } from '../_shared/file-signature.ts';
 import {
@@ -395,6 +401,7 @@ async function sendAudioLikeWhapi(params: {
   waveform: string;
   file: File;
   quotedMessageId?: string;
+  assertSendAllowed: () => Promise<void>;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const cleanMimeType = stripMimeParameters(params.file.type || 'audio/webm');
   const bytes = new Uint8Array(await params.file.arrayBuffer());
@@ -420,6 +427,7 @@ async function sendAudioLikeWhapi(params: {
   buildWhapiFormData(formData);
   formData.append('media', freshFile, freshFile.name);
 
+  await params.assertSendAllowed();
   let response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
     headers: { Accept: 'application/json', Authorization: `Bearer ${params.token}` },
@@ -451,6 +459,7 @@ async function sendAudioLikeWhapi(params: {
       if (params.kind === 'voice' && params.waveform) mediaIdPayload.waveform = params.waveform;
       if (params.quotedMessageId) mediaIdPayload.quoted = params.quotedMessageId;
 
+      await params.assertSendAllowed();
       response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
@@ -472,6 +481,7 @@ async function sendAudioLikeWhapi(params: {
   if (params.kind === 'voice' && params.waveform) jsonPayload.waveform = params.waveform;
   if (params.quotedMessageId) jsonPayload.quoted = params.quotedMessageId;
 
+  await params.assertSendAllowed();
   response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
@@ -488,6 +498,7 @@ async function sendDocumentWhapi(params: {
   caption: string;
   file: File;
   quotedMessageId?: string;
+  assertSendAllowed: () => Promise<void>;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const form = new FormData();
   form.append('to', params.chatId);
@@ -500,6 +511,7 @@ async function sendDocumentWhapi(params: {
     form.append('quoted', params.quotedMessageId);
   }
 
+  await params.assertSendAllowed();
   const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/document`, {
     method: 'POST',
     headers: {
@@ -729,6 +741,12 @@ Deno.serve(async (req: Request) => {
     }
     chatRoute = dispatchRoute;
     chatId = dispatchRoute.externalChatId;
+    const sendPurposeScope: ContactPermissionSendScope = internalActor ? 'commercial' : 'service_reply';
+    const assertSendAllowed = () => assertContactPermissionForSend(
+      supabaseAdmin!,
+      dispatchRoute.phoneNumber || extractPhoneFromChatId(chatId),
+      sendPurposeScope,
+    );
 
     let whapiResponse: Response;
     let uploadedMediaId = '';
@@ -750,6 +768,7 @@ Deno.serve(async (req: Request) => {
           waveform: mediaWaveform,
           file: mediaFile,
           quotedMessageId,
+          assertSendAllowed,
         });
 
         whapiResponse = audioLikeResult.response;
@@ -809,7 +828,7 @@ Deno.serve(async (req: Request) => {
           deliveryStatus,
           textContent: summaryText,
           createdBy: authResult.user.profileId,
-          source: 'api',
+          source: internalActor ? 'mcp' : 'api',
           senderPhone: channel.phone_number,
           senderName: channel.connected_user_name,
           statusUpdatedAt: nowIso,
@@ -823,6 +842,7 @@ Deno.serve(async (req: Request) => {
           mediaCaption: mediaKind === 'voice' ? null : text || null,
           metadata: {
             provider: 'whapi',
+            contact_permission_scope: sendPurposeScope,
             ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
             ...(quoteMetadata ? { quote: quoteMetadata } : {}),
           },
@@ -851,6 +871,7 @@ Deno.serve(async (req: Request) => {
           caption: text,
           file: mediaFile,
           quotedMessageId,
+          assertSendAllowed,
         });
         whapiResponse = documentResult.response;
         uploadedMediaId = documentResult.mediaId;
@@ -866,6 +887,7 @@ Deno.serve(async (req: Request) => {
         }
         messageForm.append('media', mediaFile, mediaFile.name);
 
+        await assertSendAllowed();
         whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
           method: 'POST',
           headers: {
@@ -884,6 +906,7 @@ Deno.serve(async (req: Request) => {
         textPayload.quoted = quotedMessageId;
       }
 
+      await assertSendAllowed();
       whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
         method: 'POST',
         headers: {
@@ -898,6 +921,7 @@ Deno.serve(async (req: Request) => {
 
       if (whapiResponse.status >= 500) {
         await new Promise((resolve) => setTimeout(resolve, TEXT_SEND_RETRY_DELAY_MS));
+        await assertSendAllowed();
         whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
           method: 'POST',
           headers: {
@@ -985,7 +1009,7 @@ Deno.serve(async (req: Request) => {
       deliveryStatus,
       textContent: isMediaMessage ? summaryText : text,
       createdBy: authResult.user.profileId,
-      source: 'api',
+      source: internalActor ? 'mcp' : 'api',
       senderPhone: channel.phone_number,
       senderName: channel.connected_user_name,
       statusUpdatedAt: nowIso,
@@ -999,6 +1023,7 @@ Deno.serve(async (req: Request) => {
       mediaCaption: mediaKind === 'voice' ? null : text || null,
       metadata: {
         provider: 'whapi',
+        contact_permission_scope: sendPurposeScope,
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
         ...(quoteMetadata ? { quote: quoteMetadata } : {}),
       },
@@ -1049,6 +1074,16 @@ Deno.serve(async (req: Request) => {
       } catch (cleanupError) {
         console.error('[comm-whatsapp-send] erro ao encerrar tentativa falha', cleanupError);
       }
+    }
+    if (error instanceof ContactPermissionBlockedError || error instanceof ContactPermissionCheckError) {
+      return new Response(JSON.stringify({
+        error: error.message,
+        code: error.code,
+        ambiguous: false,
+      }), {
+        status: error instanceof ContactPermissionBlockedError ? 409 : 503,
+        headers: jsonHeaders,
+      });
     }
     // O request ja tinha sido reservado (chegamos a chamar ou estavamos prestes a
     // chamar a Whapi) quando a excecao ocorreu - nao ha garantia de que a mensagem

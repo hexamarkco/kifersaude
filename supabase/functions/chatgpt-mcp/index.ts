@@ -2,6 +2,12 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
 import { authenticateOAuthAccessToken, getMcpOAuthChallenge, handleOAuthRoute } from './oauth.ts';
 import { executeMcpCommercialReadAction, executeMcpWriteAction } from './write-actions.ts';
 import { MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
+import { MCP_OPPORTUNITY_TOOLS, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
+import { MCP_CONTRACT_TOOLS, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
+import { MCP_CONTRACT_DOCUMENT_TOOLS, MCP_CONTRACT_DOCUMENT_TOOL_NAMES } from './contract-document-actions.ts';
+import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES } from './contact-permission-actions.ts';
+import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
+import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from './media-read-action.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
 
 /**
@@ -72,6 +78,7 @@ const READABLE_TABLES = [
 const READABLE_TABLE_SET = new Set<string>(READABLE_TABLES);
 const FILTER_OPERATORS = new Set(['eq', 'neq', 'ilike', 'like', 'gt', 'gte', 'lt', 'lte', 'is', 'in']);
 const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const SENSITIVE_KEY = /(?:^|_)(?:access_?token|api_?key|secret|password|credential|authorization|bearer|webhook_?secret|service_?role|private_?key|refresh_?token)(?:$|_)/i;
 
 type JsonRpcRequest = {
@@ -252,11 +259,12 @@ async function searchOperationalData(supabase: SupabaseClient, params: Record<st
   };
 }
 
-async function getLead360(supabase: SupabaseClient, params: Record<string, unknown>) {
+async function getLead360(supabase: SupabaseClient, params: Record<string, unknown>, actorId: string) {
   const leadId = text(params.lead_id);
   if (!leadId) throw new Error('Informe lead_id.');
+  if (!UUID.test(actorId)) throw new Error('OAuth admin obrigatório para consultar oportunidades do lead.');
 
-  const [lead, contracts, interactions, reminders, chats, statusHistory, jobs] = await Promise.all([
+  const [lead, contracts, interactions, reminders, chats, statusHistory, jobs, opportunities] = await Promise.all([
     supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
     supabase.from('contracts').select('id,lead_id,codigo_contrato,status,modalidade,operadora,produto_plano,abrangencia,acomodacao,data_inicio,data_renovacao,vidas,mensalidade_total,comissao_prevista,responsavel,updated_at').eq('lead_id', leadId).order('updated_at', { ascending: false }).limit(20),
     supabase.from('interactions').select('*').eq('lead_id', leadId).order('data_interacao', { ascending: false }).limit(30),
@@ -264,10 +272,12 @@ async function getLead360(supabase: SupabaseClient, params: Record<string, unkno
     supabase.from('comm_whatsapp_chats').select('*').eq('lead_id', leadId).order('last_message_at', { ascending: false }).limit(10),
     supabase.from('lead_status_history').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(30),
     supabase.from('auto_contact_flow_jobs').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(20),
+    supabase.rpc('mcp_get_opportunities_for_leads', { p_actor_user_id: actorId, p_lead_ids: [leadId] }),
   ]);
 
-  const firstError = [lead, contracts, interactions, reminders, chats, statusHistory, jobs].find((result) => result.error)?.error;
+  const firstError = [lead, contracts, interactions, reminders, chats, statusHistory, jobs, opportunities].find((result) => result.error)?.error;
   if (firstError) throw new Error(`Falha ao carregar contexto do lead: ${firstError.message}`);
+  const opportunityData = opportunities.data as { opportunities?: unknown[]; opportunities_truncated?: boolean } | null;
   return {
     lead: lead.data,
     contracts: contracts.data || [],
@@ -276,6 +286,8 @@ async function getLead360(supabase: SupabaseClient, params: Record<string, unkno
     whatsapp_chats: chats.data || [],
     status_history: statusHistory.data || [],
     automation_jobs: jobs.data || [],
+    opportunities: opportunityData?.opportunities ?? [],
+    opportunities_truncated: opportunityData?.opportunities_truncated ?? false,
   };
 }
 
@@ -573,6 +585,12 @@ const tools = [
     inputSchema: { type: 'object', required: ['lead_id', 'proximo_retorno'], additionalProperties: false, properties: { lead_id: { type: 'string' }, proximo_retorno: { type: 'string', format: 'date-time' }, observacao: { type: 'string', maxLength: 4000 } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
+  ...MCP_OPPORTUNITY_TOOLS,
+  ...MCP_CONTRACT_TOOLS,
+  ...MCP_CONTRACT_DOCUMENT_TOOLS,
+  ...MCP_CONTACT_PERMISSION_TOOLS,
+  ...MCP_INBOX_TOOLS,
+  MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
 const ADMIN_READ_TOOLS = new Set([
@@ -581,6 +599,11 @@ const ADMIN_READ_TOOLS = new Set([
   'kifer_list_leads_without_whatsapp_chat', 'kifer_list_reminders', 'kifer_get_next_follow_up',
   'kifer_list_automation_jobs', 'kifer_get_automation_job', 'kifer_get_automation_settings', 'kifer_get_operational_overview',
   'kifer_list_followup_flows', 'kifer_get_followup_flow', 'kifer_list_identity_conflicts', 'kifer_get_identity_conflict',
+  'kifer_get_opportunity', 'kifer_get_opportunity_360',
+  'kifer_list_contract_value_adjustments',
+  ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name === 'kifer_list_documents' || name === 'kifer_get_document'),
+  ...MCP_CONTACT_PERMISSION_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES,
 ]);
 
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
@@ -594,6 +617,11 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     'kifer_update_followup_step_message', 'kifer_delete_followup_step', 'kifer_reorder_followup_steps', 'kifer_clone_followup_flow',
     'kifer_bulk_update_leads', 'kifer_bulk_assign_leads', 'kifer_bulk_update_lead_status', 'kifer_bulk_archive_leads', 'kifer_bulk_enqueue_followup',
     'kifer_update_contract_status', 'kifer_cancel_contract',
+    ...MCP_OPPORTUNITY_WRITE_TOOL_NAMES,
+    ...MCP_CONTRACT_WRITE_TOOL_NAMES,
+    ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name !== 'kifer_list_documents' && name !== 'kifer_get_document'),
+    ...MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
+    ...MCP_INBOX_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
@@ -606,7 +634,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     const authorizationError = mcpAdminAuthorizationError(actorId);
     if (authorizationError) return toToolResult(authorizationError);
   }
-  const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args });
+  const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (commercialReadResult) return toToolResult(commercialReadResult);
   let output: unknown;
   let resourceName: string | null = null;
@@ -628,7 +656,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
       break;
     case 'kifer_get_lead_360':
       resourceName = 'leads';
-      output = await getLead360(supabase, args);
+      output = await getLead360(supabase, args, actorId ?? '');
       break;
     case 'kifer_get_whatsapp_transcript':
       resourceName = 'comm_whatsapp_messages';

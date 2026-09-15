@@ -23,9 +23,33 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Eventos inbound sem preview visível não contam como resposta. Worker e RPC devem compartilhar essa semântica.
 - Classificação de permissão de contato e compatibilidade com intents antigas vive em `_shared/campaign-intent-classification.ts`; testes devem importar esse módulo.
 
+## Oportunidades comerciais
+
+- `leads` representa contatos/pessoas e não um ciclo de venda único. O mesmo lead pode participar de oportunidades ativas distintas (por exemplo, nova contratação e renovação); a associação ativa é única somente dentro de cada oportunidade.
+- Cada oportunidade tem no máximo um contato principal, que deve ser membro ativo. Retirar um lead encerra o vínculo com `removed_at` e preserva o histórico; arquivar a oportunidade também é não destrutivo.
+- Alterações via MCP passam pelas RPCs `mcp_*_opportunity`, que verificam novamente o papel admin em `user_profiles`, usam `expected_updated_at` em mutações e registram auditoria sem copiar notas ou dados de contato.
+- Os status da oportunidade são `open`, `qualified`, `proposal`, `won` e `lost`; `archived` é um estado separado para manter a etapa comercial original.
+- O auditor de follow-up agrupa datas no fuso `America/Sao_Paulo`; ele apenas sinaliza lembretes/mensagens equivalentes entre membros, retornos coincidentes e mensagens dirigidas a não principais sem justificativa registrada. Não altera agenda automaticamente e marca cobertura parcial quando RPCs truncam membros/oportunidades.
+
+## Contratos e documentos privados
+
+- Escritas MCP de contrato/titular/dependente usam funções `mcp_*` com OAuth admin revalidado no banco, allowlists de campos, idempotência para criação/remoção e `expected_updated_at` nas atualizações. `kifer_create_contract_bundle` grava contrato, titular e dependentes atomicamente e não muda o lead; a conversão de lead continua sendo uma etapa explícita da UI.
+- Remoção física de titular/dependente só ocorre quando não há dependentes ou metadados de documentos associados; ao encontrar referências, a RPC rejeita a operação sem exclusão parcial. O log de auditoria guarda ator, entidade, campos alterados e timestamps, nunca valores de saúde/identificação.
+- Arquivos novos de lead/contrato/titular/dependente ficam em `contract-documents-private`, bucket privado de 20 MiB com allowlist PDF/JPEG/PNG/WebP. Metadados continuam polimórficos, mas RPCs validam a existência do alvo e triggers bloqueiam órfãos até a limpeza do Storage terminar. MCP recebe links assinados de 120 segundos.
+- A tabela legada `documents` preserva linhas e URLs existentes e permanece leitura somente no MCP. Novos documentos não são gravados nela.
+- O financeiro modela somente ajustes de acréscimo/desconto em `contract_value_adjustments`; não existe ledger de pagamentos/chargebacks/bonificações que autorize inferir tools de registro desses eventos.
+
+## Permissão de contato
+
+- A política de saída é por canal, endpoint normalizado e escopo: `global` bloqueia todo envio; `commercial` bloqueia prospecção/follow-up comercial; `service_reply` e `transactional` são escopos distintos. O estado antigo de opt-out de campanhas permanece como compatibilidade sincronizada, não como segundo árbitro.
+- Preferência de contato nunca se propaga a familiares. Leads só são associados quando o endpoint corresponde a exatamente um lead ativo; ambiguidades permanecem sem lead vinculado.
+- Envios comerciais e respostas de serviço consultam a fonte central imediatamente antes do despacho. Falha na consulta bloqueia o envio; nenhuma tela ou tool faz override silencioso.
+
 ## Inbox e persistência WhatsApp
 
 - Identidade canônica é resolvida antes de buscar/criar chat. Variantes de telefone e chats mesclados sempre persistem no UUID canônico.
+- Alterações MCP de estado/link da Inbox passam por RPCs estreitas, com ator OAuth admin revalidado no banco, lock do chat canônico, `expected_updated_at`, idempotência e auditoria; não se escrevem tabelas do Inbox diretamente pelo dispatcher MCP.
+- Link/deslink manual de chat não mescla nem exclui chats. Conflitos de identificadores externos sem evidência round-trip persistida permanecem para revisão; nenhum ID fornecido pelo cliente é aceito como prova de identidade.
 - Nome de perfil/push name de `GET /contacts/{ContactID}` tem prioridade sobre `chat_name` de eventos.
 - Persistência com `external_message_id` deve manter o caminho de `INSERT ... ON CONFLICT DO NOTHING`; nunca substituir por apenas SELECT/UPDATE.
 - Deduplicação e `message_at > archived_at` protegem contra ecos. Mensagem inbound ou outbound nova desarquiva o chat, salvo regra de silenciamento; soft-delete reabre com inbound real posterior.

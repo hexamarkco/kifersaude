@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { assertContactPermissionForSend } from '../_shared/contact-permissions.ts';
 import { generateTextForFeature, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
@@ -305,6 +306,8 @@ async function sendAutonomousWhatsAppText(params: {
   if (!token) throw new Error('WHAPI_TOKEN nao configurado.');
 
   const chatId = chatRoute.externalChatId;
+  const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
+  await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'service_reply');
   const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
     headers: {
@@ -327,8 +330,6 @@ async function sendAutonomousWhatsAppText(params: {
 
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
   const nowIso = getNowIso();
-  const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
-
   await persistCommWhatsAppMessage(supabaseAdmin, {
     channelId,
     externalChatId: chatId,
@@ -357,7 +358,7 @@ async function sendAutonomousWhatsAppText(params: {
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: null,
-    metadata: { provider: 'ai_autonomous' },
+    metadata: { provider: 'ai_autonomous', contact_permission_scope: 'service_reply' },
   });
 }
 

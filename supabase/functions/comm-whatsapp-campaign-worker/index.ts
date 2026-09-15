@@ -36,6 +36,11 @@ import { mapWithConcurrency } from '../_shared/concurrency.ts';
 import { composePrompt } from '../_shared/prompt-composer.ts';
 import { formatGreetingTitle, getGreetingForDate } from '../_shared/greeting.ts';
 import { createSupabaseAdminClient } from '../_shared/supabase-admin.ts';
+import {
+  assertContactPermissionForSend,
+  ContactPermissionBlockedError,
+  ContactPermissionCheckError,
+} from '../_shared/contact-permissions.ts';
 
 declare const Deno: {
   env: {
@@ -162,6 +167,19 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const CRM_TARGET_PAGE_SIZE = 1000;
 const CRM_TARGET_INSERT_CHUNK_SIZE = 500;
 const OPT_OUT_LOOKUP_CHUNK_SIZE = 500;
+
+const getCommercialContactBlock = async (
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  phone: string,
+): Promise<ContactPermissionBlockedError | null> => {
+  try {
+    await assertContactPermissionForSend(supabaseAdmin, phone, 'commercial');
+    return null;
+  } catch (error) {
+    if (error instanceof ContactPermissionBlockedError) return error;
+    throw error;
+  }
+};
 const MAX_SEND_ATTEMPTS = 3;
 const RETRY_BACKOFF_MINUTES = [5, 30, 120];
 const DEFAULT_CAMPAIGN_TIME_ZONE = 'America/Sao_Paulo';
@@ -852,18 +870,20 @@ async function materializeCrmTargets(
   const phoneDigits = Array.from(new Set(normalizedRows.map((row) => row.phone_digits)));
   const blockedPhones = new Set<string>();
   for (const phoneChunk of chunkArray(phoneDigits, OPT_OUT_LOOKUP_CHUNK_SIZE)) {
-    const { data: optOutRows, error: optOutError } = await supabaseAdmin
-      .from('comm_whatsapp_opt_outs')
-      .select('phone_digits')
-      .eq('status', 'blocked')
-      .in('phone_digits', phoneChunk);
+    const { data: policyRows, error: policyError } = await supabaseAdmin
+      .from('contact_permission_policies')
+      .select('endpoint_normalized')
+      .eq('channel', 'whatsapp')
+      .in('purpose_scope', ['global', 'commercial'])
+      .eq('state', 'blocked')
+      .in('endpoint_normalized', phoneChunk);
 
-    if (optOutError) {
-      throw new Error(`Erro ao consultar bloqueios de disparo: ${optOutError.message}`);
+    if (policyError) {
+      throw new Error(`Erro ao consultar permissões de contato: ${policyError.message}`);
     }
 
-    for (const row of optOutRows ?? []) {
-      blockedPhones.add(String(row.phone_digits));
+    for (const row of policyRows ?? []) {
+      blockedPhones.add(String(row.endpoint_normalized));
     }
   }
 
@@ -1048,6 +1068,11 @@ async function sendCampaignTestMessage(
   }
 
   const dispatchChatId = chatRoute?.externalChatId || chatId;
+  await assertContactPermissionForSend(
+    supabaseAdmin,
+    chatRoute?.phoneNumber || phoneDigits,
+    'commercial',
+  );
   const whapi = createWhapiClient(token);
   const response = step.media_url
     ? await sendCampaignMedia(token, dispatchChatId, step, text)
@@ -1690,16 +1715,10 @@ async function executeStageBurst(params: {
   }
   phoneDigits = chatRoute?.phoneNumber || phoneDigits;
 
-  // ── Check opt-out once ──
-  const { data: optOut } = await supabaseAdmin
-    .from('comm_whatsapp_opt_outs')
-    .select('id')
-    .eq('phone_digits', phoneDigits)
-    .eq('status', 'blocked')
-    .maybeSingle();
-
-  if (optOut) {
-    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: 'Opt-out detectado.' };
+  // ── Check canonical contact permission before reserving the burst ──
+  const permissionBlock = await getCommercialContactBlock(supabaseAdmin, phoneDigits);
+  if (permissionBlock) {
+    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: permissionBlock.message };
   }
 
   // ── Reserve stage atomically ──
@@ -1890,12 +1909,31 @@ async function executeStageBurst(params: {
     let response: Response;
     let payload: unknown;
     try {
+      await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
       response = step.media_url
         ? await sendCampaignMedia(params.token, chatId, step, text)
         : await whapi.sendText(chatId, text);
       payload = await readResponsePayload(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+      if (error instanceof ContactPermissionBlockedError) {
+        for (let j = i; j < companions.length; j++) {
+          await advanceStepDispatch(supabaseAdmin, {
+            dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+            newStatus: 'cancelled',
+            resolution: 'contact_permission_blocked',
+          });
+        }
+        await updateClaimedTarget(supabaseAdmin, target, {
+          status: 'stopped',
+          stopped_at: nowIso,
+          stopped_reason: 'contact_permission_blocked',
+          last_attempt_at: nowIso,
+          locked_at: null,
+          lock_token: null,
+        });
+        return { status: 'stopped', nextStepIndex: step.step_index, error: errorMessage };
+      }
       await advanceStepDispatch(supabaseAdmin, {
         dispatchKey,
         newStatus: 'failed',
@@ -2843,23 +2881,18 @@ async function sendTarget(params: {
   }
   phoneDigits = chatRoute?.phoneNumber || phoneDigits;
 
-  const { data: optOut } = await supabaseAdmin
-    .from('comm_whatsapp_opt_outs')
-    .select('id')
-    .eq('phone_digits', phoneDigits)
-    .eq('status', 'blocked')
-    .maybeSingle();
+  const permissionBlock = await getCommercialContactBlock(supabaseAdmin, phoneDigits);
 
-  if (optOut) {
+  if (permissionBlock) {
     await updateClaimedTarget(supabaseAdmin, target, {
       status: 'stopped',
       stopped_at: nowIso,
-      stopped_reason: 'opt_out',
+      stopped_reason: 'contact_permission_blocked',
       last_attempt_at: nowIso,
       locked_at: null,
       lock_token: null,
     });
-    return { status: 'stopped', reason: 'opt_out' };
+    return { status: 'stopped', reason: permissionBlock.message };
   }
 
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
@@ -3005,6 +3038,7 @@ async function sendTarget(params: {
   let response: Response;
   let payload: unknown;
   try {
+    await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
     const whapi = createWhapiClient(params.token);
     response = step.media_url
       ? await sendCampaignMedia(params.token, chatId, step, text)
@@ -3012,6 +3046,28 @@ async function sendTarget(params: {
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+    if (error instanceof ContactPermissionBlockedError) {
+      await resolveCampaignSendStartedEvent(supabaseAdmin, {
+        eventId: sendStartedEvent.id,
+        resolution: 'contact_permission_blocked',
+        dispatchPermitState: 'released',
+      });
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'stopped',
+        stopped_at: nowIso,
+        stopped_reason: 'contact_permission_blocked',
+        last_attempt_at: nowIso,
+        locked_at: null,
+        lock_token: null,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_stopped_contact_permission_blocked',
+        payload: { reason: error.message, sendStartedEventId: sendStartedEvent.id },
+      });
+      return { status: 'stopped', reason: error.message };
+    }
     const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
       target,
       errorMessage,
@@ -3643,6 +3699,11 @@ Deno.serve(async (req) => {
     return createJsonResponse({ error: 'Acao invalida.' }, 400);
   } catch (error) {
     console.error('[comm-whatsapp-campaign-worker] erro inesperado', error);
-    return createJsonResponse({ error: error instanceof Error ? error.message : 'Erro interno no worker de campanhas.' }, 500);
+    const blocked = error instanceof ContactPermissionBlockedError;
+    const permissionCheckFailed = error instanceof ContactPermissionCheckError;
+    return createJsonResponse({
+      error: error instanceof Error ? error.message : 'Erro interno no worker de campanhas.',
+      ...(blocked ? { code: error.code } : permissionCheckFailed ? { code: error.code } : {}),
+    }, blocked ? 409 : permissionCheckFailed ? 503 : 500);
   }
 });

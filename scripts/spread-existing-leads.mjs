@@ -125,7 +125,7 @@ function buildSlots(fromDate) {
 async function main() {
   const env = loadEnv();
   const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const serviceKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
     console.error("[spread] Faltam VITE_SUPABASE_URL / VITE_SUPABASE_SERVICE_ROLE_KEY (.env.local)");
     process.exit(1);

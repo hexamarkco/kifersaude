@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { assertContactPermissionForSend, ContactPermissionBlockedError } from '../_shared/contact-permissions.ts';
 import {
   corsHeaders,
   ensureCommWhatsAppSettings,
@@ -122,6 +123,7 @@ async function sendTextMessage(
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
+  await assertContactPermissionForSend(admin, msg.phone_digits, 'commercial');
   const chatId = normalizeWhapiChatId(msg.phone_digits);
 
   const body = {
@@ -196,6 +198,7 @@ async function sendMediaMessage(
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
+  await assertContactPermissionForSend(admin, msg.phone_digits, 'commercial');
   const chatId = normalizeWhapiChatId(msg.phone_digits);
   let mediaUrl = msg.media_url;
   const storagePath = mediaUrl?.startsWith(SCHEDULED_MEDIA_URL_PREFIX)
@@ -358,6 +361,19 @@ async function processBatch(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       errors.push(`Message ${msg.message_id}: ${errorMessage}`);
+
+      if (err instanceof ContactPermissionBlockedError) {
+        const { error: cancelError } = await admin.rpc('advance_scheduled_message', {
+          p_message_id: msg.message_id,
+          p_new_status: 'cancelled',
+          p_error_message: errorMessage,
+        });
+        if (cancelError) {
+          console.error(`[process-scheduled] advance_scheduled_message(cancelled) error: ${cancelError.message}`);
+        }
+        failed++;
+        continue;
+      }
 
       const nextRetryAt = msg.attempts < msg.max_attempts - 1
         ? new Date(Date.now() + Math.pow(2, msg.attempts) * 60000).toISOString()

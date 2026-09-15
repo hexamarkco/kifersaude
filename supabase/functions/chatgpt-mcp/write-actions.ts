@@ -6,14 +6,26 @@ import {
   normalizeCommWhatsAppPhone,
 } from '../_shared/comm-whatsapp/identity.ts';
 import { executeMcpLeadAdminAction, MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
+import { executeMcpOpportunityWriteAction, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
+import { executeMcpOpportunityReadAction } from './opportunity-actions.ts';
+import { executeMcpContractWriteAction, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
+import { executeMcpContractDocumentAction } from './contract-document-actions.ts';
+import {
+  executeMcpContactPermissionReadAction,
+  executeMcpContactPermissionWriteAction,
+  MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
+} from './contact-permission-actions.ts';
+import { executeMcpInboxAction, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
+import { executeMcpWhatsAppMediaReadAction } from './media-read-action.ts';
+import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
 const MAX_SHORT_TEXT_LENGTH = 160;
 const MAX_DESCRIPTION_LENGTH = 4_000;
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const PRIORITIES = new Set(['baixa', 'normal', 'alta']);
-const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64)/i;
-const PRIVATE_CUSTOMER_DATA_KEY = /(?:^|_)(?:cpf|cnpj|rg|cns|email|telefone|phone(?:_number|_digits)?|address|endereco|logradouro|cep|data_nascimento|birth_date|nome_completo|nome_fantasia|razao_social|bairro|complemento|observacoes|descricao|message|caption|text_content|display_name)(?:$|_)/i;
+const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64|signed[_-]?url|temporary[_-]?url)/i;
+const PRIVATE_CUSTOMER_DATA_KEY = /(?:^|_)(?:cpf|cnpj|rg|cns|email|telefone|phone(?:_number|_digits)?|endpoint(?:_normalized)?|address|endereco|logradouro|cep|data_nascimento|birth_date|nome_completo|nome_fantasia|razao_social|bairro|complemento|observacoes|descricao|message|caption|text_content|display_name|notes|reason|motivo|evidence)(?:$|_)/i;
 
 export type McpWriteActor = { actor: string; actorId: string };
 export type McpWriteResult = { success: boolean; [key: string]: unknown };
@@ -935,7 +947,7 @@ async function listScheduledWhatsAppMessages(supabase: SupabaseClient, params: R
   };
 }
 
-async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Record<string, unknown>, actorId: string): Promise<McpWriteResult> {
   const leadId = text(params.lead_id);
   const leadStatus = text(params.status_do_lead);
   if (leadId && !safeUuid(leadId)) return errorResult('INVALID_INPUT', 'lead_id inválido.');
@@ -1018,6 +1030,44 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
       if (lead?.arquivado === true || text(lead?.status).toLocaleLowerCase() === 'perdido') issues.push({ code: 'FOLLOW_UP_FOR_ARCHIVED_OR_LOST_LEAD', ...leadSummary(id), scheduled_message_id: scheduleId });
     }
   }
+  const opportunityLeadIds = involvedLeadIds.slice(0, 500);
+  const opportunityCoverageReasons: string[] = [];
+  const opportunitiesById = new Map<string, ReturnType<typeof normalizeOpportunityRecords>['opportunities'][number]>();
+  if (involvedLeadIds.length > 500) opportunityCoverageReasons.push('lead_limit_exceeded');
+  if (opportunityLeadIds.length > 0 && !safeUuid(actorId)) {
+    opportunityCoverageReasons.push('admin_actor_unavailable');
+  } else if (opportunityLeadIds.length > 0) {
+    const batches: string[][] = [];
+    for (let index = 0; index < opportunityLeadIds.length; index += 100) batches.push(opportunityLeadIds.slice(index, index + 100));
+    const opportunityResults = await Promise.all(batches.map((leadIds) => supabase.rpc('mcp_get_opportunities_for_leads', {
+      p_actor_user_id: actorId,
+      p_lead_ids: leadIds,
+    })));
+    for (const result of opportunityResults) {
+      if (result.error || !result.data || typeof result.data !== 'object' || Array.isArray(result.data)) {
+        opportunityCoverageReasons.push('opportunity_read_failed');
+        continue;
+      }
+      const payload = result.data as Record<string, unknown>;
+      if (payload.success !== true) {
+        opportunityCoverageReasons.push('opportunity_read_rejected');
+        continue;
+      }
+      const normalized = normalizeOpportunityRecords(payload);
+      if (normalized.truncated) opportunityCoverageReasons.push('opportunity_limit_exceeded');
+      for (const opportunity of normalized.opportunities) {
+        if (opportunity.members_truncated) opportunityCoverageReasons.push('opportunity_member_limit_exceeded');
+        opportunitiesById.set(opportunity.id, opportunity);
+      }
+    }
+  }
+  const uniqueOpportunityCoverageReasons = [...new Set(opportunityCoverageReasons)];
+  issues.push(...auditOpportunityFollowUps({
+    opportunities: [...opportunitiesById.values()],
+    reminders: filteredReminders,
+    schedules: filteredSchedules,
+  }));
+
   const allLeadIds = [...new Set([...remindersByLead.keys(), ...schedulesByLead.keys()])];
   const allFollowUps = params.somente_problemas === false
     ? allLeadIds.map((id) => ({
@@ -1033,7 +1083,9 @@ async function getCommercialFollowUpAudit(supabase: SupabaseClient, params: Reco
     issues: issues.slice(0, 500),
     issues_truncated: issues.length > 500,
     ...(allFollowUps ? { follow_ups: allFollowUps } : {}),
-    unavailable_checks: ['household_or_opportunity_primary_contact'],
+    opportunity_checks_available: uniqueOpportunityCoverageReasons.length === 0,
+    opportunity_checks_incomplete_reasons: uniqueOpportunityCoverageReasons,
+    opportunities_considered: opportunitiesById.size,
   };
 }
 
@@ -1942,8 +1994,47 @@ async function countLeadsWithoutWhatsAppChat(supabase: SupabaseClient, params: R
     : { success: true, total: count ?? 0, filters_applied: leadsWithoutChatFiltersView(validated.filters) };
 }
 
-export async function executeMcpCommercialReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown> }): Promise<Record<string, unknown> | null> {
+export async function executeMcpCommercialReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown>; actorId?: string }): Promise<Record<string, unknown> | null> {
   const { supabase, toolName, arguments: args } = params;
+  const opportunityRead = await executeMcpOpportunityReadAction({
+    supabase,
+    toolName,
+    arguments: args,
+    actorId: params.actorId ?? '',
+  });
+  if (opportunityRead) return opportunityRead;
+  const contactPermissionRead = await executeMcpContactPermissionReadAction({
+    supabase,
+    toolName,
+    arguments: args,
+    actorId: params.actorId ?? '',
+  });
+  if (contactPermissionRead) return contactPermissionRead;
+  const whatsappMediaRead = await executeMcpWhatsAppMediaReadAction({
+    supabase,
+    toolName,
+    arguments: args,
+    actor: { actorId: params.actorId ?? '' },
+  });
+  if (whatsappMediaRead) return whatsappMediaRead;
+  const documentRead = await executeMcpContractDocumentAction({ supabase, toolName, arguments: args, actor: { actorId: params.actorId ?? '' } });
+  if (documentRead && ['kifer_list_documents', 'kifer_get_document'].includes(toolName)) return documentRead;
+  if (toolName === 'kifer_list_contract_value_adjustments') {
+    const contractId = text(args.contract_id);
+    const page = boundedInteger(args.page ?? 1, 1, 10_000);
+    const pageSize = boundedInteger(args.page_size ?? 20, 1, 50);
+    if (!safeUuid(contractId) || page === null || pageSize === null) return errorResult('INVALID_INPUT', 'contract_id válido, page positivo e page_size entre 1 e 50 são obrigatórios.');
+    const from = (page - 1) * pageSize;
+    const { data, error, count } = await supabase
+      .from('contract_value_adjustments')
+      .select('id,contract_id,tipo,valor,motivo,created_by,created_at', { count: 'exact' })
+      .eq('contract_id', contractId)
+      .order('created_at', { ascending: true })
+      .range(from, from + pageSize - 1);
+    return error
+      ? errorResult('INTERNAL_ERROR', 'Não foi possível listar os ajustes de valor do contrato.')
+      : { success: true, page, page_size: pageSize, total: count ?? 0, adjustments: data ?? [] };
+  }
   if (toolName === 'kifer_list_identity_conflicts') {
     const page = boundedInteger(args.page ?? 1, 1, 10_000);
     const pageSize = boundedInteger(args.page_size ?? 20, 1, 50);
@@ -1970,7 +2061,7 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
   }
   if (toolName === 'kifer_list_scheduled_whatsapp_messages') return listScheduledWhatsAppMessages(supabase, args);
   if (toolName === 'kifer_get_scheduled_whatsapp_message') return getScheduledWhatsAppMessage(supabase, args);
-  if (toolName === 'kifer_get_commercial_followup_audit') return getCommercialFollowUpAudit(supabase, args);
+  if (toolName === 'kifer_get_commercial_followup_audit') return getCommercialFollowUpAudit(supabase, args, params.actorId ?? '');
   if (toolName === 'kifer_list_leads_without_whatsapp_chat') return listLeadsWithoutWhatsAppChat(supabase, args);
   if (toolName === 'kifer_count_leads_without_whatsapp_chat') return countLeadsWithoutWhatsAppChat(supabase, args);
   if (toolName === 'kifer_list_automation_jobs') {
@@ -2046,7 +2137,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   let actionType = '';
   const leadId = text(args.lead_id) || null;
   const chatId = text(args.chat_id) || null;
-  const contractId = text(args.contract_id) || null;
+  let contractId = text(args.contract_id) || null;
   const clientRequestId = text(args.client_request_id) || null;
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
@@ -2070,6 +2161,26 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_update_lead') { actionType = 'lead_update'; result = await updateLead(supabase, args); }
     else if (toolName === 'kifer_update_contract_status') { actionType = 'contract_status_update'; result = await updateContractStatus(supabase, args); }
     else if (toolName === 'kifer_cancel_contract') { actionType = 'contract_cancel'; result = await updateContractStatus(supabase, args, true); }
+    else if ((MCP_INBOX_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-inbox';
+      result = await executeMcpInboxAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-contact-permission';
+      result = await executeMcpContactPermissionWriteAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if (['kifer_upload_document', 'kifer_update_document_metadata', 'kifer_delete_document'].includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpContractDocumentAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_CONTRACT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpContractWriteAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_OPPORTUNITY_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-opportunity';
+      result = await executeMcpOpportunityWriteAction({ supabase, toolName, arguments: args, actor });
+    }
     else if (['kifer_bulk_update_leads', 'kifer_bulk_assign_leads', 'kifer_bulk_update_lead_status', 'kifer_bulk_archive_leads', 'kifer_bulk_enqueue_followup'].includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-bulk';
       result = await runBulkLeadMutation({ supabase, toolName, args, actor });
@@ -2099,6 +2210,8 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   }
   const resultLeadId = safeUuid(result?.lead_id) ? text(result?.lead_id) : leadId;
   const resultChatId = safeUuid(result?.chat_id) ? text(result?.chat_id) : chatId;
+  if (safeUuid(result?.contract_id)) contractId = text(result?.contract_id);
+  else if (isRecord(result?.contract) && safeUuid(result.contract.id)) contractId = text(result.contract.id);
   const bulkResults = Array.isArray(result?.results) ? result.results.filter(isRecord) : [];
   if (bulkResults.length > 0) {
     const sharedRequest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'lead_ids'));

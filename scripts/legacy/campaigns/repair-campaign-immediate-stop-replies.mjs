@@ -25,7 +25,7 @@ const env = {
 };
 
 const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-const serviceKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceKey) {
   console.error('[repair] Missing VITE_SUPABASE_URL/SUPABASE_URL or service role key in local env.');

@@ -29,6 +29,10 @@ verify_jwt = false
 [functions.chatgpt-mcp]
 verify_jwt = false
 
+# --- Biblioteca Tenor (JWT Supabase + permissao de visualizacao do Inbox) ---
+[functions.tenor-media]
+verify_jwt = true
+
 # --- Workers chamados por service role (webhook, cron, net.http_post) ---
 [functions.ai-autonomous-reply-worker]
 verify_jwt = false

@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run audit:visual && vite build",
+    "build": "npm run secrets:check && npm run audit:visual && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
     "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
+    "secrets:check": "node scripts/check-secrets.mjs",
     "architecture:check": "node scripts/check-architecture.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "types:supabase": "node scripts/generate-supabase-types.mjs",

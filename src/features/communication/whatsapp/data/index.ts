@@ -5,6 +5,7 @@ export { whatsappDashboardService } from './dashboardService';
 export { whatsappFollowUpService } from './followUpService';
 export { whatsappMediaRepository } from './mediaRepository';
 export { whatsappMessagesRepository } from './messagesRepository';
+export { tenorMediaRepository, type TenorMediaItem } from './tenorMediaRepository';
 export {
   approveInboxFollowUpSchedule,
   clearInboxLeadAgenda,

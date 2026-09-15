@@ -70,7 +70,7 @@ async function loadAll(supabase, table, columns, configure = (q) => q) {
 async function main() {
   const env = loadEnv();
   const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const serviceKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) throw new Error("Credenciais Supabase ausentes em .env.local.");
 
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });

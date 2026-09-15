@@ -1074,6 +1074,10 @@ export const commWhatsAppCampaignService = {
   },
 
   async acceptAiSuggestion(suggestion: CommWhatsAppAiIntentSuggestion): Promise<void> {
+    if (suggestion.intent !== 'opt_out' || suggestion.recommended_action !== 'suggest_block_whatsapp_campaigns') {
+      throw new Error('Somente uma solicitação explícita para parar contatos pode criar um bloqueio comercial.');
+    }
+
     const phoneDigits = suggestion.phone_digits?.trim() || '';
     if (!phoneDigits) {
       throw new Error('Sugestao sem telefone para bloquear.');

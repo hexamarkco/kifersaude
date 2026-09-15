@@ -879,7 +879,7 @@ export default function WhatsAppCampaignsScreen() {
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.acceptAiSuggestion(suggestion);
-      toast.success('Contato bloqueado para próximos disparos.');
+      toast.success('Opt-out comercial registrado para campanhas e follow-ups.');
       await loadCampaigns();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível bloquear este contato.');
@@ -1031,9 +1031,15 @@ export default function WhatsAppCampaignsScreen() {
                     </blockquote>
                   )}
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
-                      Bloquear disparos
-                    </Button>
+                    {suggestion.intent === 'opt_out' && suggestion.recommended_action === 'suggest_block_whatsapp_campaigns' ? (
+                      <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
+                        Registrar opt-out comercial
+                      </Button>
+                    ) : suggestion.intent === 'wrong_number' ? (
+                      <p className="self-center text-xs text-[color:var(--panel-text-muted)]">
+                        Número ou destinatário incorreto exige revisão de identidade; isso não é registrado como opt-out.
+                      </p>
+                    ) : null}
                     <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
                       Dispensar
                     </Button>

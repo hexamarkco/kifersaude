@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, test, vi } from 'vitest';
 
 import { executeMcpCommercialReadAction, executeMcpWriteAction } from '../write-actions';
+import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from '../authorization';
 
 const actor = { actor: 'chatgpt:admin@kifer.test', actorId: '11111111-1111-1111-1111-111111111111' };
 
@@ -67,12 +68,165 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+test('ações de escrita negam token legado ou principal sem usuário OAuth', () => {
+  assert.deepEqual(mcpWriteAuthorizationError(null), {
+    success: false,
+    error_code: 'UNAUTHORIZED',
+    message: 'Ações de escrita exigem uma conexão OAuth de administrador.',
+  });
+  assert.equal(mcpWriteAuthorizationError(actor.actorId), null);
+  assert.deepEqual(mcpAdminAuthorizationError(null), {
+    success: false,
+    error_code: 'UNAUTHORIZED',
+    message: 'Esta consulta exige uma conexão OAuth de administrador.',
+  });
+  assert.equal(mcpAdminAuthorizationError(actor.actorId), null);
+});
+
+test('consultas de conflito de identidade retornam somente metadados autorizados', async () => {
+  const supabase = client({
+    comm_whatsapp_identity_conflicts: { data: [{ id: 'conflict-1', channel_id: 'channel-1', chat_id: actor.actorId, conflict_type: 'reverse_mapping_conflict', status: 'open', created_at: '2026-09-15T10:00:00.000Z', updated_at: '2026-09-15T10:00:00.000Z', resolved_at: null, resolved_by: null }] },
+  });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_list_identity_conflicts', arguments: { status: 'open' } });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual(supabase.selections, ['id,channel_id,chat_id,conflict_type,status,created_at,updated_at,resolved_at,resolved_by']);
+  assert.equal(JSON.stringify(result).includes('private-id'), false);
+});
+
+test('rejeita filtro inválido ao listar conflitos de identidade', async () => {
+  const supabase = client({});
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_list_identity_conflicts', arguments: { status: 'pending' } });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.deepEqual(supabase.calls, []);
+});
+
+test('não retorna nem audita detalhes internos de uma exceção inesperada', async () => {
+  const base = client({ mcp_action_audit_log: {} });
+  const supabase = {
+    ...base,
+    from: (table: string) => {
+      if (table === 'leads') throw new Error('service_role_secret=internal-value');
+      return base.from(table);
+    },
+  };
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_lead', arguments: { lead_id: actor.actorId, changes: { cidade: 'Campinas' } }, actor });
+
+  assert.deepEqual(result, { success: false, error_code: 'INTERNAL_ERROR', message: 'Falha inesperada ao executar a ação. Detalhes internos não foram expostos.' });
+  const auditWrite = base.writes.find((write) => write.table === 'mcp_action_audit_log');
+  assert.equal(JSON.stringify(auditWrite).includes('internal-value'), false);
+});
+
+test('mascara dados pessoais no payload de auditoria de atualizações comerciais', async () => {
+  const supabase = client({
+    leads: [
+      { data: { id: actor.actorId, status: 'Novo', status_id: null, responsavel_id: actor.actorId } },
+      { data: { id: actor.actorId, email: 'paula@example.com', telefone: '+55 11 99999-9999' } },
+    ],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_lead', arguments: { lead_id: actor.actorId, changes: { email: 'paula@example.com', telefone: '+55 11 99999-9999' } }, actor });
+  const audit = supabase.writes.find((write) => write.table === 'mcp_action_audit_log');
+
+  assert.equal(result?.success, true);
+  assert.equal(JSON.stringify(audit).includes('paula@example.com'), false);
+  assert.equal(JSON.stringify(audit).includes('+55 11 99999-9999'), false);
+});
+
 test('rejeita mensagem vazia sem tentar enviar ao provider', async () => {
   const supabase = client({ mcp_action_audit_log: {} });
   const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_send_whatsapp_message', arguments: { chat_id: '11111111-1111-1111-1111-111111111111', message: '', client_request_id: 'request-1' }, actor });
 
   assert.deepEqual(result, { success: false, error_code: 'MESSAGE_EMPTY', message: 'A mensagem não pode estar vazia.' });
   assert.deepEqual(supabase.calls, ['mcp_action_audit_log']);
+});
+
+test('valida prévia de arquivamento em lote sem alterar leads', async () => {
+  const secondLeadId = '22222222-2222-2222-2222-222222222222';
+  const supabase = client({
+    leads: [{ data: { id: actor.actorId, arquivado: false } }, { data: { id: secondLeadId, arquivado: true } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_bulk_archive_leads',
+    arguments: { lead_ids: [actor.actorId, secondLeadId], dry_run: true },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.dry_run, true);
+  assert.equal(result?.requested_count, 2);
+  assert.equal(result?.succeeded_count, 2);
+  assert.deepEqual(result?.results, [
+    { lead_id: actor.actorId, success: true, would_archive: true },
+    { lead_id: secondLeadId, success: true, unchanged: true },
+  ]);
+  assert.equal(supabase.writes.some((write) => write.table === 'leads'), false);
+});
+
+test('rejeita IDs duplicados ou acima do limite em ações de leads em lote', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const duplicate = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_bulk_archive_leads', arguments: { lead_ids: [actor.actorId, actor.actorId] }, actor });
+  const tooMany = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_bulk_archive_leads', arguments: { lead_ids: Array.from({ length: 26 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`) }, actor });
+
+  assert.equal(duplicate?.error_code, 'INVALID_INPUT');
+  assert.equal(tooMany?.error_code, 'INVALID_INPUT');
+  assert.equal(supabase.writes.some((write) => write.table === 'leads'), false);
+});
+
+test('altera status de contrato configurado com controle de concorrência', async () => {
+  const contractId = '33333333-3333-3333-3333-333333333333';
+  const updatedAt = '2026-09-15T10:00:00.000Z';
+  const supabase = client({
+    contracts: [
+      { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Ativo', updated_at: updatedAt } },
+      { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Suspenso', updated_at: '2026-09-15T11:00:00.000Z' } },
+    ],
+    contract_status_config: { data: { value: 'Suspenso', ativo: true } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_contract_status', arguments: { contract_id: contractId, status: 'Suspenso', expected_updated_at: updatedAt }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.status_anterior, 'Ativo');
+  assert.equal(result?.status_novo, 'Suspenso');
+  assert.deepEqual(supabase.writes.find((write) => write.table === 'contracts')?.value, { status: 'Suspenso' });
+  assert.ok(supabase.filters.some((filter) => filter.table === 'contracts' && filter.column === 'updated_at' && filter.value === updatedAt));
+});
+
+test('não reabre contrato encerrado nem atualiza sobre versão desatualizada', async () => {
+  const contractId = '33333333-3333-3333-3333-333333333333';
+  const updatedAt = '2026-09-15T10:00:00.000Z';
+  const closed = client({ contracts: { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Encerrado', updated_at: updatedAt } }, mcp_action_audit_log: {} });
+  const stale = client({ contracts: { data: { id: contractId, codigo_contrato: 'KF-2026-001', status: 'Ativo', updated_at: '2026-09-15T11:00:00.000Z' } }, mcp_action_audit_log: {} });
+  const closedResult = await executeMcpWriteAction({ supabase: closed as never, toolName: 'kifer_cancel_contract', arguments: { contract_id: contractId, expected_updated_at: updatedAt }, actor });
+  const staleResult = await executeMcpWriteAction({ supabase: stale as never, toolName: 'kifer_cancel_contract', arguments: { contract_id: contractId, expected_updated_at: updatedAt }, actor });
+
+  assert.equal(closedResult?.error_code, 'NOT_ALLOWED');
+  assert.equal(staleResult?.error_code, 'CONFLICT');
+  assert.equal(closed.writes.some((write) => write.table === 'contracts'), false);
+  assert.equal(stale.writes.some((write) => write.table === 'contracts'), false);
+});
+
+test('enfileira follow-up em lote com chave estável e detecta reutilização divergente', async () => {
+  const job = { id: '44444444-4444-4444-8444-444444444444', lead_id: actor.actorId, flow_id: 'flow-1', status: 'pending', scheduled_at: '2026-09-16T10:00:00.000Z', action_payload: { mcp_request_signature: JSON.stringify({ lead_id: actor.actorId, flow_id: 'flow-1', scheduled_at: null, observacao: '' }) } };
+  const supabase = client({
+    leads: { data: { id: actor.actorId, status: 'Novo', status_id: null, responsavel_id: actor.actorId } },
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Retorno', ativo: true, triggerType: 'lead_created', steps: [{ id: 'step-1', actionType: 'create_task', enabled: true, delayValue: 1, delayUnit: 'days' }] }] } } },
+    auto_contact_flow_jobs: [{ data: null }, { data: null }, { data: job }, { data: job }, { data: job }],
+    mcp_action_audit_log: {},
+  });
+  const first = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_bulk_enqueue_followup', arguments: { lead_ids: [actor.actorId], flow_id: 'flow-1', client_request_id: 'follow-up-1' }, actor });
+  const repeated = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_bulk_enqueue_followup', arguments: { lead_ids: [actor.actorId], flow_id: 'flow-1', client_request_id: 'follow-up-1' }, actor });
+  const repeatedWithDifferentSchedule = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_bulk_enqueue_followup', arguments: { lead_ids: [actor.actorId], flow_id: 'flow-1', scheduled_at: '2026-09-20T10:00:00.000Z', client_request_id: 'follow-up-1' }, actor });
+
+  assert.equal(first?.success, true);
+  assert.equal((repeated?.results as Array<{ duplicate?: boolean }>)[0]?.duplicate, true);
+  assert.equal(repeatedWithDifferentSchedule?.success, false);
+  assert.equal((repeatedWithDifferentSchedule?.results as Array<{ error_code?: string }>)[0]?.error_code, 'IDEMPOTENCY_CONFLICT');
+  assert.equal(supabase.writes.filter((write) => write.table === 'auto_contact_flow_jobs').length, 1);
 });
 
 test('rejeita data inválida ao criar lembrete', async () => {
@@ -536,6 +690,62 @@ test('retorna o resultado original quando o fluxo normal informa duplicidade', a
   assert.equal(result?.external_message_id, 'provider-message-1');
 });
 
+test('envia mídia pelo caminho interno existente e audita sem gravar o base64', async () => {
+  stubMcpSendEnvironment();
+  let receivedForm: FormData | null = null;
+  let receivedHeaders: Headers | null = null;
+  vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    receivedForm = init?.body as FormData;
+    receivedHeaders = new Headers(init?.headers);
+    return new Response(JSON.stringify({ success: true, messageId: 'media-provider-1', status: 'sent' }), { status: 202 });
+  }));
+  const supabase = client({
+    comm_whatsapp_chats: { data: { id: actor.actorId, external_chat_id: '5511999999999@s.whatsapp.net', deleted_at: null } },
+    comm_whatsapp_messages: { data: { id: 'persisted-media-1', message_at: '2026-10-01T13:00:00.000Z', delivery_status: 'sent' } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_send_whatsapp_media',
+    arguments: { chat_id: actor.actorId, file_name: 'proposta.pdf', mime_type: 'application/pdf', content_base64: 'AQID', caption: 'Segue a proposta', client_request_id: 'media-send-1' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.media_kind, 'document');
+  assert.equal(receivedForm?.get('type'), 'document');
+  assert.equal(receivedForm?.get('chatId'), '5511999999999@s.whatsapp.net');
+  assert.equal(receivedForm?.get('clientRequestId'), 'media-send-1');
+  assert.equal(receivedHeaders?.get('X-Kifer-MCP-Actor-Id'), actor.actorId);
+  const file = receivedForm?.get('file');
+  assert.ok(file instanceof File);
+  assert.equal((file as File).name, 'proposta.pdf');
+  const audit = supabase.writes.find((write) => write.table === 'mcp_action_audit_log');
+  assert.equal((audit?.value as { request_payload?: { content_base64?: string } }).request_payload?.content_base64, '[REDACTED]');
+});
+
+test('recusa tipo de mídia incompatível antes de contactar o provider', async () => {
+  stubMcpSendEnvironment();
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  const supabase = client({ comm_whatsapp_chats: { data: { id: actor.actorId, external_chat_id: '5511999999999@s.whatsapp.net', deleted_at: null } }, mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_send_whatsapp_media', arguments: { chat_id: actor.actorId, file_name: 'proposta.pdf', mime_type: 'application/pdf', media_kind: 'image', content_base64: 'AQID', client_request_id: 'media-bad-type' }, actor });
+
+  assert.equal(result?.error_code, 'INVALID_MEDIA');
+  assert.equal(fetchMock.mock.calls.length, 0);
+});
+
+test('preserva estado ambíguo do provider para impedir retry cego de mídia', async () => {
+  stubMcpSendEnvironment();
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'uncertain provider state', ambiguous: true }), { status: 500 })));
+  const supabase = client({ comm_whatsapp_chats: { data: { id: actor.actorId, external_chat_id: '5511999999999@s.whatsapp.net', deleted_at: null } }, mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_send_whatsapp_media', arguments: { chat_id: actor.actorId, file_name: 'proposta.pdf', mime_type: 'application/pdf', content_base64: 'AQID', client_request_id: 'media-ambiguous-1' }, actor });
+
+  assert.equal(result?.success, false);
+  assert.equal(result?.ambiguous, true);
+  assert.match(String(result?.message), /incerto/);
+});
+
 const mcpInboxChannel = { id: '22222222-2222-2222-2222-222222222222' };
 const mcpInboxChat = {
   id: '33333333-3333-3333-3333-333333333333',
@@ -917,4 +1127,245 @@ test('exige novo nome ao clonar fluxo', async () => {
   });
 
   assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('consulta fluxo de follow-up sem expor URLs, IDs de template ou payloads de mídia', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Boas-vindas', triggerType: 'lead_created', steps: [{ id: 'step-1', actionType: 'send_message', messageSource: 'template', templateId: 'provider-template-secret', messages: ['Olá!'], mediaUrl: 'https://internal.test/private.pdf', schedulingPayload: { token: 'never-return' } }] }] } } },
+    auto_contact_flow_jobs: { data: [] },
+  });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_get_followup_flow', arguments: { flow_id: 'flow-1' } });
+
+  assert.deepEqual(result?.flow?.steps, [{ id: 'step-1', ordem: 0, action_type: 'send_message', delay_value: null, delay_unit: '', enabled: true, message_source: 'template', message_texts: ['Olá!'] }]);
+  assert.equal(JSON.stringify(result).includes('provider-template-secret'), false);
+  assert.equal(JSON.stringify(result).includes('internal.test'), false);
+  assert.equal(JSON.stringify(result).includes('never-return'), false);
+});
+
+test('bloqueia exclusão de etapa enquanto o fluxo ainda tem jobs ativos', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Retorno', triggerType: 'lead_created', steps: [{ id: 'step-1', actionType: 'create_task' }] }] } } },
+    auto_contact_flow_jobs: { data: [{ id: 'job-1' }] },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_delete_followup_step', arguments: { flow_id: 'flow-1', step_id: 'step-1' }, actor });
+
+  assert.equal(result?.error_code, 'CONFLICT');
+  assert.equal(supabase.writes.some((write) => write.table === 'integration_settings'), false);
+});
+
+test('exclui etapa somente após confirmar que não há jobs ativos e preserva as demais', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Retorno', triggerType: 'lead_created', steps: [{ id: 'step-1', actionType: 'create_task' }, { id: 'step-2', actionType: 'update_status', statusToSet: 'Contato' }] }] } } },
+    auto_contact_flow_jobs: { data: [] },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_delete_followup_step', arguments: { flow_id: 'flow-1', step_id: 'step-1' }, actor });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ steps: Array<{ id: string }> }> } };
+  assert.deepEqual(update.settings.flows[0].steps.map((step) => step.id), ['step-2']);
+  assert.ok(supabase.writes.some((write) => write.table === 'mcp_action_audit_log'));
+});
+
+test('reordenar etapas exige uma permutação exata dos IDs existentes', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Retorno', triggerType: 'lead_created', steps: [{ id: 'step-1' }, { id: 'step-2' }] }] } } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_reorder_followup_steps', arguments: { flow_id: 'flow-1', step_ids: ['step-1', 'step-1'] }, actor });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.equal(supabase.calls.includes('auto_contact_flow_jobs'), false);
+  assert.equal(supabase.writes.some((write) => write.table === 'integration_settings'), false);
+});
+
+test('reordena etapas com jobs ociosos sem descartar configuração de etapa', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Retorno', triggerType: 'lead_created', steps: [{ id: 'step-1', customMessage: { text: 'Oi' } }, { id: 'step-2', statusToSet: 'Contato' }] }] } } },
+    auto_contact_flow_jobs: { data: [] },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_reorder_followup_steps', arguments: { flow_id: 'flow-1', step_ids: ['step-2', 'step-1'] }, actor });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ steps: Array<{ id: string; statusToSet?: string; customMessage?: { text: string } }> }> } };
+  assert.deepEqual(update.settings.flows[0].steps, [{ id: 'step-2', statusToSet: 'Contato' }, { id: 'step-1', customMessage: { text: 'Oi' } }]);
+});
+
+test('atualiza nome e tipo de gatilho do fluxo com validação fechada', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Antes', ativo: true, triggerType: 'lead_created', triggerStatuses: [], triggerDurationHours: 0, scheduling: { startHour: '08:00', endHour: '18:00', allowedWeekdays: [1, 2, 3, 4, 5], dailySendLimit: null }, steps: [] }] } } },
+    lead_status_config: { data: [{ nome: 'Novo', ativo: true }] },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_followup_flow', arguments: { flow_id: 'flow-1', changes: { nome: 'Novo nome', trigger_type: 'status_changed', trigger_statuses: ['Novo'] } }, actor });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ name: string; triggerType: string; triggerStatuses: string[] }> } };
+  assert.deepEqual(update.settings.flows[0], { id: 'flow-1', name: 'Novo nome', ativo: true, triggerType: 'status_changed', triggerStatuses: ['Novo'], triggerStatus: 'Novo', triggerDurationHours: 0, scheduling: { startHour: '08:00', endHour: '18:00', allowedWeekdays: [1, 2, 3, 4, 5], dailySendLimit: null }, steps: [] });
+});
+
+test('rejeita propriedades desconhecidas ou IDs repetidos nos ajustes de etapas', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { flows: [{ id: 'flow-1', name: 'Fluxo', ativo: true, triggerType: 'lead_created', triggerStatuses: [], triggerDurationHours: 0, scheduling: { startHour: '08:00', endHour: '18:00', allowedWeekdays: [1, 2, 3, 4, 5], dailySendLimit: null }, steps: [{ id: 'step-1', delayValue: 1, delayUnit: 'days' }] }] } } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_followup_flow',
+    arguments: { flow_id: 'flow-1', changes: { step_delays: [{ step_id: 'step-1', delay_value: 2, delay_unit: 'hours', action_config: { actionType: 'delete_lead' } }] } },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.equal(supabase.writes.some((write) => write.table === 'integration_settings'), false);
+});
+
+test('arquiva lead logicamente e registra a mutação', async () => {
+  const supabase = client({
+    leads: [{ data: { id: actor.actorId, arquivado: false } }, { data: { id: actor.actorId, arquivado: true, updated_at: '2026-09-15T12:00:00.000Z' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_archive_lead', arguments: { lead_id: actor.actorId }, actor });
+
+  assert.deepEqual(result, { success: true, lead_id: actor.actorId, arquivado: true, updated_at: '2026-09-15T12:00:00.000Z' });
+  assert.ok(supabase.writes.some((write) => write.table === 'leads' && write.operation === 'update'));
+  assert.ok(supabase.writes.some((write) => write.table === 'mcp_action_audit_log'));
+});
+
+test('desarquiva lead sem recriar nem apagar o histórico', async () => {
+  const supabase = client({
+    leads: [{ data: { id: actor.actorId, arquivado: true } }, { data: { id: actor.actorId, arquivado: false, updated_at: '2026-09-15T12:00:00.000Z' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_unarchive_lead', arguments: { lead_id: actor.actorId }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.arquivado, false);
+  assert.equal(supabase.writes.filter((write) => write.table === 'leads').length, 1);
+});
+
+test('define favorito do lead e é idempotente para o estado atual', async () => {
+  const supabase = client({
+    leads: [{ data: { id: actor.actorId, favorito: false } }, { data: { id: actor.actorId, favorito: true, updated_at: '2026-09-15T12:00:00.000Z' } }],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_set_lead_favorite', arguments: { lead_id: actor.actorId, favorite: true }, actor });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.favorito, true);
+});
+
+test('favorito exige booleano e não escreve payload administrativo arbitrário', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_set_lead_favorite', arguments: { lead_id: actor.actorId, favorite: 'true' }, actor });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.deepEqual(supabase.calls, ['mcp_action_audit_log']);
+});
+
+test('administração de lead aceita somente controles comerciais e datas reais', async () => {
+  const invalidDatesClient = client({ mcp_action_audit_log: {} });
+  const invalidDates = await executeMcpWriteAction({
+    supabase: invalidDatesClient as never,
+    toolName: 'kifer_update_lead_administration',
+    arguments: { lead_id: actor.actorId, changes: { blackout_dates: ['2026-02-30'] } },
+    actor,
+  });
+  assert.equal(invalidDates?.error_code, 'INVALID_INPUT');
+  assert.deepEqual(invalidDatesClient.calls, ['mcp_action_audit_log']);
+
+  const massAssignmentClient = client({ mcp_action_audit_log: {} });
+  const massAssignment = await executeMcpWriteAction({
+    supabase: massAssignmentClient as never,
+    toolName: 'kifer_update_lead_administration',
+    arguments: { lead_id: actor.actorId, changes: { auto_message_attempts: 100 } },
+    actor,
+  });
+  assert.equal(massAssignment?.error_code, 'NOT_ALLOWED');
+  assert.deepEqual(massAssignmentClient.calls, ['mcp_action_audit_log']);
+});
+
+test('atualiza controles administrativos permitidos sem aceitar mass assignment', async () => {
+  const supabase = client({
+    leads: [
+      { data: { id: actor.actorId } },
+      { data: { id: actor.actorId, skip_automation: true, reativacao_habilitada: false, daily_send_limit: 5, blackout_dates: ['2026-12-25'], updated_at: '2026-09-15T12:00:00.000Z' } },
+    ],
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_lead_administration',
+    arguments: { lead_id: actor.actorId, changes: { skip_automation: true, reativacao_habilitada: false, daily_send_limit: 5, blackout_dates: ['2026-12-25', '2026-12-25'] } },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.deepEqual((result?.lead as { blackout_dates?: string[] })?.blackout_dates, ['2026-12-25']);
+  const update = supabase.writes.find((write) => write.table === 'leads' && write.operation === 'update')?.value as Record<string, unknown>;
+  assert.equal(update.skip_automation, true);
+  assert.equal('auto_message_attempts' in update, false);
+});
+
+test('cria lead com opções ativas e repete a mesma requisição sem duplicar', async () => {
+  const createdLead = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', nome_completo: 'Pessoa Teste', telefone: '11999999999', status: 'Novo' };
+  const handlers = {
+    leads: [{ data: null }, { data: [] }, { data: createdLead }],
+    lead_status_config: { data: [{ id: '22222222-2222-2222-2222-222222222222', nome: 'Novo', padrao: true, ordem: 1, ativo: true }] },
+    lead_origens: { data: [{ id: '33333333-3333-3333-3333-333333333333', nome: 'Site', ativo: true }] },
+    lead_responsaveis: { data: [{ id: '44444444-4444-4444-4444-444444444444', label: 'Equipe', value: 'Equipe', ordem: 1, ativo: true }] },
+    lead_tipos_contratacao: { data: [{ id: '55555555-5555-5555-5555-555555555555', label: 'Individual', value: 'individual', ordem: 1, ativo: true }] },
+    mcp_action_audit_log: {},
+  };
+  const supabase = client(handlers);
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_lead',
+    arguments: { client_request_id: 'create-lead-1', lead: { nome_completo: 'Pessoa Teste', telefone: '(11) 99999-9999' } },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.duplicate, false);
+  assert.equal((result?.lead as { telefone?: string })?.telefone, '11999999999');
+  const inserted = supabase.writes.find((write) => write.table === 'leads' && write.operation === 'insert')?.value as Record<string, unknown>;
+  assert.equal(inserted.skip_automation, false);
+  assert.equal(inserted.creation_source, 'chatgpt_mcp');
+
+  const repeatClient = client({
+    ...handlers,
+    leads: [{ data: createdLead }],
+  });
+  const repeated = await executeMcpWriteAction({
+    supabase: repeatClient as never,
+    toolName: 'kifer_create_lead',
+    arguments: { client_request_id: 'create-lead-1', lead: { nome_completo: 'Pessoa Teste', telefone: '11999999999' } },
+    actor,
+  });
+  assert.equal(repeated?.success, true);
+  assert.equal(repeated?.duplicate, true);
+  assert.equal(repeatClient.writes.filter((write) => write.table === 'leads' && write.operation === 'insert').length, 0);
+});
+
+test('não cria lead quando telefone ou e-mail já existe', async () => {
+  const existing = { id: '66666666-6666-4666-8666-666666666666', nome_completo: 'Já cadastrado', telefone: '11999999999', email: null };
+  const supabase = client({
+    leads: [{ data: null }, { data: [existing] }],
+    lead_status_config: { data: [{ id: '22222222-2222-2222-2222-222222222222', nome: 'Novo', padrao: true, ordem: 1, ativo: true }] },
+    lead_origens: { data: [{ id: '33333333-3333-3333-3333-333333333333', nome: 'Site', ativo: true }] },
+    lead_responsaveis: { data: [{ id: '44444444-4444-4444-4444-444444444444', label: 'Equipe', value: 'Equipe', ordem: 1, ativo: true }] },
+    lead_tipos_contratacao: { data: [{ id: '55555555-5555-4555-8555-555555555555', label: 'Individual', value: 'individual', ordem: 1, ativo: true }] },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_lead',
+    arguments: { client_request_id: 'create-lead-2', lead: { nome_completo: 'Duplicado', telefone: '11999999999' } },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'DUPLICATE_LEAD');
+  assert.equal(supabase.writes.filter((write) => write.table === 'leads' && write.operation === 'insert').length, 0);
 });

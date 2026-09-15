@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authenticateOAuthAccessToken, getMcpOAuthChallenge, handleOAuthRoute } from './oauth.ts';
 import { executeMcpCommercialReadAction, executeMcpWriteAction } from './write-actions.ts';
+import { MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
+import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
 
 /**
  * Endpoint MCP remoto para consultas no Kifer Saude.
@@ -25,6 +27,15 @@ const SCHEDULED_MEDIA_REFERENCE_SCHEMA = {
     file_name: { type: 'string', maxLength: 255 },
   },
 } as const;
+const MCP_MEDIA_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv',
+] as const;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,17 +54,8 @@ const jsonHeaders = {
 // Dados operacionais e historicos. Credenciais, configuracoes de integracao,
 // payloads brutos de webhook e artefatos internos ficam deliberadamente fora.
 const READABLE_TABLES = [
-  'leads',
-  'contracts',
-  'contract_holders',
-  'dependents',
-  'interactions',
-  'documents',
-  'reminders',
   'lead_origens',
-  'lead_responsaveis',
   'lead_status_config',
-  'lead_status_history',
   'lead_tipos_contratacao',
   'operadoras',
   'produtos_planos',
@@ -62,31 +64,9 @@ const READABLE_TABLES = [
   'contract_carencias',
   'contract_modalidades',
   'contract_status_config',
-  'contract_value_adjustments',
-  'auto_contact_flow_jobs',
-  'auto_contact_flow_executions',
-  'automation_run_log',
-  'comm_follow_up_audit_log',
-  'comm_whatsapp_chats',
-  'comm_whatsapp_messages',
-  'comm_whatsapp_campaigns',
-  'comm_whatsapp_campaign_steps',
-  'comm_whatsapp_campaign_targets',
-  'comm_whatsapp_campaign_events',
-  'comm_whatsapp_campaign_templates',
-  'comm_whatsapp_campaign_worker_runs',
-  'comm_whatsapp_attendance_critiques',
-  'comm_whatsapp_ai_intent_suggestions',
-  'comm_whatsapp_phone_contacts_cache',
-  'comm_whatsapp_identity_conflicts',
-  'public_forms',
-  'public_form_steps',
-  'public_form_submissions',
   'blog_posts',
   'public_link_page_settings',
   'public_link_items',
-  'config_options',
-  'user_profiles',
 ] as const;
 
 const READABLE_TABLE_SET = new Set<string>(READABLE_TABLES);
@@ -278,7 +258,7 @@ async function getLead360(supabase: SupabaseClient, params: Record<string, unkno
 
   const [lead, contracts, interactions, reminders, chats, statusHistory, jobs] = await Promise.all([
     supabase.from('leads').select('*').eq('id', leadId).maybeSingle(),
-    supabase.from('contracts').select('*').eq('lead_id', leadId).order('updated_at', { ascending: false }).limit(20),
+    supabase.from('contracts').select('id,lead_id,codigo_contrato,status,modalidade,operadora,produto_plano,abrangencia,acomodacao,data_inicio,data_renovacao,vidas,mensalidade_total,comissao_prevista,responsavel,updated_at').eq('lead_id', leadId).order('updated_at', { ascending: false }).limit(20),
     supabase.from('interactions').select('*').eq('lead_id', leadId).order('data_interacao', { ascending: false }).limit(30),
     supabase.from('reminders').select('*').eq('lead_id', leadId).order('data_lembrete', { ascending: true }).limit(30),
     supabase.from('comm_whatsapp_chats').select('*').eq('lead_id', leadId).order('last_message_at', { ascending: false }).limit(10),
@@ -355,6 +335,8 @@ const commercialTools = [
   { name: 'kifer_create_followup_flow', description: 'Cria um fluxo comercial de follow-up vazio, com gatilho e janela operacional fechados. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['nome', 'ativo', 'trigger_type', 'trigger_statuses', 'trigger_duration_hours', 'start_hour', 'end_hour', 'allowed_weekdays', 'daily_send_limit'], additionalProperties: false, properties: { nome: { type: 'string', minLength: 1, maxLength: 160 }, ativo: { type: 'boolean' }, trigger_type: { type: 'string', enum: ['lead_created', 'status_changed', 'status_duration', 'inactivity_duration'] }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, trigger_duration_hours: { type: 'integer', minimum: 0, maximum: 8760 }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_create_followup_step', description: 'Adiciona uma etapa comercial segura a um fluxo existente. Aceita somente mensagem de texto, atualização para status válido, criação de tarefa ou ativação de atendimento autônomo. Altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'ordem', 'action_type', 'delay_value', 'delay_unit', 'enabled', 'action_config'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, ordem: { type: 'integer', minimum: 0, maximum: 100 }, action_type: { type: 'string', enum: ['send_message', 'update_status', 'create_task', 'activate_autonomous_service'] }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] }, enabled: { type: 'boolean' }, action_config: { type: 'object', additionalProperties: false, properties: { message: { type: 'string', maxLength: 4096 }, status: { type: 'string', maxLength: 160 }, title: { type: 'string', maxLength: 160 }, description: { type: 'string', maxLength: 4000 }, priority: { type: 'string', enum: ['baixa', 'normal', 'alta'] }, due_hours: { type: 'integer', minimum: 0, maximum: 8760 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_followup_step_message', description: 'Altera exclusivamente o texto comercial de uma etapa send_message existente. Não aceita URLs, templates, credenciais ou payloads internos. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_id', 'message'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, step_id: { type: 'string', maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_delete_followup_step', description: 'Remove uma etapa de um fluxo de follow-up. Bloqueia a operação quando há jobs pendentes ou em processamento para o fluxo. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_id'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, step_id: { type: 'string', minLength: 1, maxLength: 160 } } }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false } },
+  { name: 'kifer_reorder_followup_steps', description: 'Reordena todas as etapas existentes de um fluxo. step_ids deve incluir cada etapa exatamente uma vez; bloqueia a operação com jobs pendentes ou em processamento. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_ids'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, step_ids: { type: 'array', maxItems: 101, items: { type: 'string', minLength: 1, maxLength: 160 } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_clone_followup_flow', description: 'Clona um fluxo e suas etapas com novos identificadores, permitindo somente sobrescrever gatilho, horários, limite diário e ativação. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['source_flow_id', 'overrides'], additionalProperties: false, properties: { source_flow_id: { type: 'string', maxLength: 160 }, overrides: { type: 'object', required: ['nome'], additionalProperties: false, properties: { nome: { type: 'string', minLength: 1, maxLength: 160 }, ativo: { type: 'boolean' }, trigger_type: { type: 'string', enum: ['lead_created', 'status_changed', 'status_duration', 'inactivity_duration'] }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, trigger_duration_hours: { type: 'integer', minimum: 0, maximum: 8760 }, start_hour: { type: 'string' }, end_hour: { type: 'string' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_list_automation_jobs', description: 'Lista jobs de automação com filtros fechados, paginação e ordenação segura. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: { status: { type: 'string' }, tipo: { type: 'string' }, lead_id: { type: 'string' }, flow_id: { type: 'string' }, data_inicial: { type: 'string', format: 'date-time' }, data_final: { type: 'string', format: 'date-time' }, erro: { type: 'boolean' }, page: { type: 'integer', minimum: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50 }, order_by: { type: 'string', enum: ['scheduled_at', 'created_at', 'updated_at', 'attempts'] }, ascending: { type: 'boolean' } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_get_automation_job', description: 'Consulta um job de automação específico pelo id. É somente leitura.', inputSchema: { type: 'object', required: ['job_id'], additionalProperties: false, properties: { job_id: { type: 'string' } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
@@ -364,12 +346,17 @@ const commercialTools = [
   { name: 'kifer_update_automation_settings', description: 'Altera configurações operacionais explicitamente permitidas da automação. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['settings'], additionalProperties: false, properties: { settings: { type: 'object', minProperties: 1, additionalProperties: false, properties: { enabled: { type: 'boolean' }, auto_send: { type: 'boolean' }, timezone: { type: 'string' }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, refresh_seconds: { type: 'integer', minimum: 5, maximum: 3600 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_list_followup_flows', description: 'Lista os fluxos de follow-up configurados, sem expor templates, URLs ou credenciais internas. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_get_followup_flow', description: 'Consulta detalhes operacionais de um fluxo de follow-up existente. É somente leitura.', inputSchema: { type: 'object', required: ['flow_id'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-  { name: 'kifer_update_followup_flow', description: 'Altera somente limites, horários, status de gatilho e delays de etapas já existentes. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'changes'], additionalProperties: false, properties: { flow_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { ativo: { type: 'boolean' }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, start_hour: { type: 'string' }, end_hour: { type: 'string' }, allowed_weekdays: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, enabled_step_ids: { type: 'array', items: { type: 'string' } }, step_delays: { type: 'array', items: { type: 'object', required: ['step_id', 'delay_value', 'delay_unit'], additionalProperties: false, properties: { step_id: { type: 'string' }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] } } } } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_update_followup_flow', description: 'Altera nome, gatilho, ativação, horários, limites, status de gatilho e configuração das etapas existentes. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'changes'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { nome: { type: 'string', minLength: 1, maxLength: 160 }, ativo: { type: 'boolean' }, trigger_type: { type: 'string', enum: ['lead_created', 'status_changed', 'status_duration', 'inactivity_duration'] }, trigger_duration_hours: { type: 'integer', minimum: 0, maximum: 8760 }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, enabled_step_ids: { type: 'array', maxItems: 101, items: { type: 'string', minLength: 1, maxLength: 160 } }, step_delays: { type: 'array', maxItems: 101, items: { type: 'object', required: ['step_id', 'delay_value', 'delay_unit'], additionalProperties: false, properties: { step_id: { type: 'string', minLength: 1, maxLength: 160 }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] } } } } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_pause_followup_flow', description: 'Pausa um fluxo de follow-up existente. Use somente quando o usuário pedir explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id'], additionalProperties: false, properties: { flow_id: { type: 'string' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_resume_followup_flow', description: 'Retoma um fluxo de follow-up existente. Use somente quando o usuário pedir explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id'], additionalProperties: false, properties: { flow_id: { type: 'string' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_enqueue_lead_followup', description: 'Insere um lead em um fluxo de follow-up existente, uma vez por fluxo ativo. Use somente quando o usuário pedir explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['lead_id', 'flow_id'], additionalProperties: false, properties: { lead_id: { type: 'string' }, flow_id: { type: 'string' }, scheduled_at: { type: 'string', format: 'date-time' }, observacao: { type: 'string', maxLength: 4000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_remove_lead_from_followup', description: 'Cancela jobs futuros pendentes de um lead em um fluxo específico. Use somente quando o usuário pedir explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['lead_id', 'flow_id'], additionalProperties: false, properties: { lead_id: { type: 'string' }, flow_id: { type: 'string' }, observacao: { type: 'string', maxLength: 4000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_lead', description: 'Atualiza apenas dados comerciais permitidos de um lead. Use somente quando o usuário solicitar explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['lead_id', 'changes'], additionalProperties: false, properties: { lead_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { nome_completo: { type: 'string', maxLength: 160 }, email: { type: 'string', maxLength: 160 }, telefone: { type: 'string', maxLength: 32 }, cidade: { type: 'string', maxLength: 160 }, cep: { type: 'string', maxLength: 16 }, endereco: { type: 'string', maxLength: 160 }, estado: { type: 'string', minLength: 2, maxLength: 2 }, regiao: { type: 'string', maxLength: 160 }, canal: { type: 'string', maxLength: 160 }, operadora_atual: { type: 'string', maxLength: 160 }, observacoes: { type: 'string', maxLength: 4000 }, origem_id: { type: 'string' }, responsavel_id: { type: 'string' } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_create_lead', description: 'Cria um lead com os campos comerciais suportados pelo CRM. A criação pode iniciar os fluxos automáticos configurados; use skip_automation=true somente quando solicitado. client_request_id estável torna a criação idempotente. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead', 'client_request_id'], additionalProperties: false, properties: { client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, lead: { type: 'object', required: ['nome_completo', 'telefone'], additionalProperties: false, properties: { nome_completo: { type: 'string', minLength: 1, maxLength: 160 }, telefone: { type: 'string', minLength: 10, maxLength: 32 }, email: { type: ['string', 'null'], maxLength: 160 }, cidade: { type: ['string', 'null'], maxLength: 160 }, cep: { type: ['string', 'null'], maxLength: 16 }, endereco: { type: ['string', 'null'], maxLength: 160 }, estado: { type: ['string', 'null'], minLength: 2, maxLength: 2 }, regiao: { type: ['string', 'null'], maxLength: 160 }, canal: { type: ['string', 'null'], maxLength: 160 }, operadora_atual: { type: ['string', 'null'], maxLength: 160 }, observacoes: { type: ['string', 'null'], maxLength: 4000 }, origem_id: { type: 'string', description: 'Omitido: usa a primeira origem ativa.' }, responsavel_id: { type: 'string', description: 'Omitido: usa o primeiro responsável ativo.' }, tipo_contratacao_id: { type: 'string', description: 'Omitido: usa o primeiro tipo ativo.' }, status_id: { type: 'string', description: 'Omitido: usa o status padrão ativo ou o primeiro ativo.' }, skip_automation: { type: 'boolean', default: false } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_archive_lead', description: 'Arquiva logicamente um lead, sem excluir histórico. O arquivamento não cancela automaticamente jobs ou fluxos de follow-up. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_id'], additionalProperties: false, properties: { lead_id: { type: 'string' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_unarchive_lead', description: 'Desarquiva um lead preservando seu histórico. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_id'], additionalProperties: false, properties: { lead_id: { type: 'string' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_set_lead_favorite', description: 'Define explicitamente o estado de favorito de um lead. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_id', 'favorite'], additionalProperties: false, properties: { lead_id: { type: 'string' }, favorite: { type: 'boolean' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_update_lead_administration', description: 'Atualiza somente controles comerciais administrativos do lead: reativação, skip automation, limite individual e datas de blackout. Não altera credenciais nem contadores internos. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_id', 'changes'], additionalProperties: false, properties: { lead_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { reativacao_habilitada: { type: 'boolean' }, skip_automation: { type: 'boolean' }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, blackout_dates: { type: ['array', 'null'], maxItems: 100, items: { type: 'string', format: 'date' } } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_list_lead_statuses', description: 'Lista os status comerciais ativos e válidos para uso em atualizações de status. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_list_reminders', description: 'Lista lembretes por lead, estado, período e prioridade. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: { lead_id: { type: 'string' }, status: { type: 'string', enum: ['pending', 'completed', 'cancelled'] }, data_inicial: { type: 'string', format: 'date-time' }, data_final: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] }, page: { type: 'integer', minimum: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50 } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_reminder', description: 'Atualiza título, descrição, data ou prioridade de um lembrete. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['reminder_id', 'changes'], additionalProperties: false, properties: { reminder_id: { type: 'string' }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { titulo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', maxLength: 4000 }, data_lembrete: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
@@ -378,7 +365,36 @@ const commercialTools = [
   { name: 'kifer_get_next_follow_up', description: 'Consulta o próximo lembrete de follow-up/retorno ainda pendente de um lead. É somente leitura.', inputSchema: { type: 'object', required: ['lead_id'], additionalProperties: false, properties: { lead_id: { type: 'string' } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
 ];
 
+const BULK_LEAD_IDS_SCHEMA = { type: 'array', minItems: 1, maxItems: 25, uniqueItems: true, items: { type: 'string', format: 'uuid' } };
+const LEAD_CHANGES_SCHEMA = { type: 'object', minProperties: 1, additionalProperties: false, properties: { nome_completo: { type: 'string', maxLength: 160 }, email: { type: 'string', maxLength: 160 }, telefone: { type: 'string', maxLength: 32 }, cidade: { type: 'string', maxLength: 160 }, cep: { type: 'string', maxLength: 16 }, endereco: { type: 'string', maxLength: 160 }, estado: { type: 'string', minLength: 2, maxLength: 2 }, regiao: { type: 'string', maxLength: 160 }, canal: { type: 'string', maxLength: 160 }, operadora_atual: { type: 'string', maxLength: 160 }, observacoes: { type: 'string', maxLength: 4000 }, origem_id: { type: 'string', format: 'uuid' }, responsavel_id: { type: 'string', format: 'uuid' } } };
+
+const bulkLeadTools = [
+  { name: 'kifer_bulk_update_leads', description: 'Atualiza os mesmos campos comerciais permitidos em até 25 leads. Use dry_run=true para validar todos sem gravar; resultados são independentes e podem ser parciais. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_ids', 'changes'], additionalProperties: false, properties: { lead_ids: BULK_LEAD_IDS_SCHEMA, changes: LEAD_CHANGES_SCHEMA, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_bulk_assign_leads', description: 'Atribui até 25 leads a um responsável ativo. Use dry_run=true para validar sem gravar; resultados são independentes e podem ser parciais. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_ids', 'responsavel_id'], additionalProperties: false, properties: { lead_ids: BULK_LEAD_IDS_SCHEMA, responsavel_id: { type: 'string', format: 'uuid' }, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_bulk_update_lead_status', description: 'Altera o status de até 25 leads usando status ativo do CRM e registrando interação e histórico por lead. Use dry_run=true para validar sem gravar; resultados são independentes e podem ser parciais. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_ids', 'status'], additionalProperties: false, properties: { lead_ids: BULK_LEAD_IDS_SCHEMA, status: { type: 'string', minLength: 1, maxLength: 160 }, observacao: { type: 'string', maxLength: 4000 }, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_bulk_archive_leads', description: 'Arquiva logicamente até 25 leads sem excluir histórico. Não cancela jobs ou follow-ups; resultados são independentes e podem ser parciais. Use dry_run=true para validar sem gravar. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_ids'], additionalProperties: false, properties: { lead_ids: BULK_LEAD_IDS_SCHEMA, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_bulk_enqueue_followup', description: 'Insere até 25 leads em um fluxo de follow-up existente. client_request_id estável torna a chamada idempotente por lead; use dry_run=true para validar sem inserir jobs. Resultados são independentes e podem ser parciais. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['lead_ids', 'flow_id', 'client_request_id'], additionalProperties: false, properties: { lead_ids: BULK_LEAD_IDS_SCHEMA, flow_id: { type: 'string', minLength: 1, maxLength: 160 }, scheduled_at: { type: 'string', format: 'date-time' }, observacao: { type: 'string', maxLength: 4000 }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+];
+
+const identityConflictTools = [
+  { name: 'kifer_list_identity_conflicts', description: 'Lista conflitos de identidade do WhatsApp com projeção mínima. Nunca expõe detalhes brutos que podem conter telefones ou IDs de terceiros; OAuth de administrador obrigatório.', inputSchema: { type: 'object', additionalProperties: false, properties: { status: { type: 'string', enum: ['open', 'resolved', 'ignored', 'all'], default: 'open' }, conflict_type: { type: 'string', enum: ['lead_ambiguous', 'lead_conflict', 'identifier_conflict', 'reverse_mapping_conflict'] }, chat_id: { type: 'string', format: 'uuid' }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_get_identity_conflict', description: 'Consulta metadados de um conflito de identidade sem retornar detalhes brutos de mapeamento. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['conflict_id'], additionalProperties: false, properties: { conflict_id: { type: 'string', format: 'uuid' } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
+];
+
+const whatsappMediaTools = [
+  { name: 'kifer_send_whatsapp_media', description: 'Envia imediatamente um anexo de imagem, vídeo, áudio/voz ou documento para uma conversa existente, usando o mesmo provider, validação de identidade, limite de taxa, persistência e idempotência do Inbox. Exige pedido explícito de envio. Aceita arquivos de até 20 MiB, sem URL externa; OAuth de administrador obrigatório. Se o resultado for ambiguous, confira a conversa antes de tentar novamente.', inputSchema: { type: 'object', required: ['chat_id', 'file_name', 'mime_type', 'content_base64', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string', format: 'uuid' }, file_name: { type: 'string', minLength: 1, maxLength: 255 }, mime_type: { type: 'string', enum: [...MCP_MEDIA_MIME_TYPES] }, media_kind: { type: 'string', enum: ['image', 'video', 'audio', 'voice', 'document'], description: 'Opcional; deve corresponder ao MIME. Use voice apenas para MIME de áudio.' }, caption: { type: 'string', maxLength: 4096 }, content_base64: { type: 'string', minLength: 1, description: 'Arquivo codificado em base64. Máximo de 20 MiB; o conteúdo não é persistido na auditoria.' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+];
+
+const contractStatusTools = [
+  { name: 'kifer_update_contract_status', description: 'Altera somente o status de um contrato para uma opção ativa, com controle otimista expected_updated_at. Não permite reabrir contratos cancelados ou encerrados; os triggers existentes de lembretes continuam valendo. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['contract_id', 'status', 'expected_updated_at'], additionalProperties: false, properties: { contract_id: { type: 'string', format: 'uuid' }, status: { type: 'string', minLength: 1, maxLength: 160 }, expected_updated_at: { type: 'string', format: 'date-time' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_cancel_contract', description: 'Cancela um contrato ativo usando o status Cancelado configurado no CRM. A operação é idempotente, exige expected_updated_at e não exclui contrato, titulares, lembretes ou histórico. OAuth de administrador obrigatório.', inputSchema: { type: 'object', required: ['contract_id', 'expected_updated_at'], additionalProperties: false, properties: { contract_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+];
+
 const tools = [
+  ...bulkLeadTools,
+  ...identityConflictTools,
+  ...whatsappMediaTools,
+  ...contractStatusTools,
   ...commercialTools,
   {
     name: 'kifer_list_resources',
@@ -463,7 +479,7 @@ const tools = [
   },
   {
     name: 'kifer_send_whatsapp_message',
-    description: 'Envia uma mensagem de WhatsApp para uma conversa existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o envio. Esta ação tem efeito externo real e aceita apenas chat_id existente.',
+    description: 'Envia uma mensagem de WhatsApp para uma conversa existente do CRM Kifer Saúde. Use somente quando o usuário solicitar explicitamente o envio. Esta ação tem efeito externo real e aceita apenas chat_id existente. Se retornar ambiguous, confira a conversa antes de tentar novamente.',
     inputSchema: { type: 'object', required: ['chat_id', 'message', 'client_request_id'], additionalProperties: false, properties: { chat_id: { type: 'string' }, message: { type: 'string', minLength: 1, maxLength: 4096 }, client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em tentativas repetidas.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
@@ -559,20 +575,36 @@ const tools = [
   },
 ];
 
+const ADMIN_READ_TOOLS = new Set([
+  'kifer_list_records', 'kifer_get_record', 'kifer_search', 'kifer_get_lead_360', 'kifer_get_whatsapp_transcript',
+  'kifer_list_scheduled_whatsapp_messages', 'kifer_get_scheduled_whatsapp_message', 'kifer_get_commercial_followup_audit',
+  'kifer_list_leads_without_whatsapp_chat', 'kifer_list_reminders', 'kifer_get_next_follow_up',
+  'kifer_list_automation_jobs', 'kifer_get_automation_job', 'kifer_get_automation_settings', 'kifer_get_operational_overview',
+  'kifer_list_followup_flows', 'kifer_get_followup_flow', 'kifer_list_identity_conflicts', 'kifer_get_identity_conflict',
+]);
+
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_send_whatsapp_media', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',
     'kifer_bulk_cancel_automation_jobs', 'kifer_create_followup_flow', 'kifer_create_followup_step',
-    'kifer_update_followup_step_message', 'kifer_clone_followup_flow',
+    'kifer_update_followup_step_message', 'kifer_delete_followup_step', 'kifer_reorder_followup_steps', 'kifer_clone_followup_flow',
+    'kifer_bulk_update_leads', 'kifer_bulk_assign_leads', 'kifer_bulk_update_lead_status', 'kifer_bulk_archive_leads', 'kifer_bulk_enqueue_followup',
+    'kifer_update_contract_status', 'kifer_cancel_contract',
+    ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
-    if (!actorId) return toToolResult({ success: false, error_code: 'UNAUTHORIZED', message: 'Ações de escrita exigem uma conexão OAuth de administrador.' });
+    const authorizationError = mcpWriteAuthorizationError(actorId);
+    if (authorizationError) return toToolResult(authorizationError);
     const result = await executeMcpWriteAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId } });
     return toToolResult(result);
+  }
+  if (ADMIN_READ_TOOLS.has(name)) {
+    const authorizationError = mcpAdminAuthorizationError(actorId);
+    if (authorizationError) return toToolResult(authorizationError);
   }
   const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args });
   if (commercialReadResult) return toToolResult(commercialReadResult);

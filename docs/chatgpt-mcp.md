@@ -1,15 +1,18 @@
 # Kifer Saude no ChatGPT
 
-O endpoint `chatgpt-mcp` permite consultar dados atuais do CRM e executar poucas ações comerciais explicitamente autorizadas. Ele não oferece SQL, RPC, atualização genérica de tabelas nem exclusões.
+O endpoint `chatgpt-mcp` permite consultar dados atuais do CRM e executar ações comerciais explicitamente autorizadas. Ele não oferece SQL, RPC, atualização genérica de tabelas nem exclusões.
 
 ## Limites de segurança
 
 - O acesso do ChatGPT exige OAuth com PKCE S256 e uma conta com perfil `admin` no CRM.
 - Tokens de autorização, acesso e renovação são armazenados somente como hashes, têm validade limitada e são invalidados quando a conta deixa de ser administradora.
 - As ferramentas de leitura continuam anotadas como `readOnlyHint`. As ações de escrita são schemas fechados, com validação de entidades, auditoria e OAuth de administrador.
-- O servidor usa uma allowlist de tabelas operacionais, pagina respostas e remove valores de chaves que parecam credenciais.
+- Consultas genéricas de registro exigem OAuth de administrador e aceitam somente catálogos sem dados de clientes. Leads, contratos, titulares, dependentes, documentos, conversas, mensagens e conflitos não podem ser consultados por `select *` genérico.
+- Consultas de leads, conversas, mensagens, lembretes, automações e conflitos com contexto operacional também exigem OAuth de administrador. A conexão legada permanece leitura apenas em ferramentas específicas de baixo risco.
 - Segredos, configuracoes de integracao, sessao/autenticacao e arquivos brutos de webhook nao sao expostos.
 - Cada consulta é registrada em `chatgpt_mcp_audit_log`; cada ação comercial é registrada em `mcp_action_audit_log`, com payload sanitizado e resultado.
+- Exceções inesperadas retornam uma mensagem genérica; detalhes internos não são enviados na resposta nem gravados no resultado da auditoria.
+- O payload de auditoria também mascara chaves comuns de dados pessoais (CPF/CNPJ, documentos, contatos e endereço), além de credenciais e conteúdo base64.
 
 As ações de escrita exigem OAuth de administrador. O token legado do MCP permanece compatível apenas com as ferramentas de leitura.
 
@@ -17,7 +20,8 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 
 | Tool | Schema fechado | Efeito |
 | --- | --- | --- |
-| `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia uma mensagem de texto para uma conversa existente; usa o mesmo provider, persistência, idempotência e rate limit do Inbox. |
+| `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia texto pela integração atual; em resultado `ambiguous`, consulte a conversa antes de tentar novamente com outra chave. |
+| `kifer_send_whatsapp_media` | `chat_id`, MIME/nome/base64 e `client_request_id` | Envia mídia imediata de até 20 MiB pelo endpoint interno existente; valida MIME, evita URL externa e não persiste base64 na auditoria. Provider aceita PDF/documento, imagem, áudio/voz e vídeo. Em resultado `ambiguous`, consulte a conversa antes de tentar novamente com outra chave. |
 | `kifer_schedule_whatsapp_message` | `chat_id`, `message`, `scheduled_at`, `client_request_id` | Programa uma única mensagem de texto para uma conversa existente. Usa a fila nativa do Inbox; não aceita telefone, mídia ou recorrência. |
 | `kifer_create_reminder` | `lead_id`, `contract_id?`, `tipo`, `titulo`, `descricao?`, `data_lembrete`, `prioridade` | Cria lembrete e sincroniza `leads.proximo_retorno` a partir do próximo lembrete aberto. |
 | `kifer_update_lead_status` | `lead_id`, `status`, `observacao?` | Aceita somente status ativos de `lead_status_config`, registra interação e histórico. |
@@ -27,9 +31,19 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_cancel_automation_job` / `kifer_retry_automation_job` | `job_id`, agendamento opcional | Cancela pendentes ou reagenda jobs falhos/ignorados; jobs concluídos não podem ser repetidos. |
 | `kifer_get_automation_settings` / `kifer_update_automation_settings` | schema fechado de operação | Consulta ou altera somente horários, dias, limite diário, estado e refresh permitidos. |
 | `kifer_list_followup_flows` / `kifer_get_followup_flow` | opcional / `flow_id` | Consulta a configuração operacional dos fluxos, sem templates ou URLs internas. |
-| `kifer_update_followup_flow` / `kifer_pause_followup_flow` / `kifer_resume_followup_flow` | `flow_id` e campos fechados | Ajusta somente ativação, horários, limites, status-gatilho e delay de etapas existentes. |
+| `kifer_update_followup_flow` / `kifer_pause_followup_flow` / `kifer_resume_followup_flow` | `flow_id` e campos fechados | Ajusta nome, gatilho, ativação, horários, limites, status-gatilho e configuração das etapas existentes. |
 | `kifer_enqueue_lead_followup` / `kifer_remove_lead_from_followup` | `lead_id`, `flow_id` | Adiciona um lead sem duplicar job ativo ou cancela jobs futuros pendentes do fluxo. |
 | `kifer_update_lead` | `lead_id`, dados comerciais fechados | Atualiza somente cadastro comercial explicitamente autorizado. |
+| `kifer_create_lead` | `lead`, `client_request_id` | Valida opções comerciais ativas, bloqueia duplicata por telefone/e-mail e cria um lead. A mesma requisição retorna o mesmo lead; a criação inicia automações do CRM por padrão. |
+| `kifer_archive_lead` / `kifer_unarchive_lead` | `lead_id` | Arquiva ou desarquiva logicamente. Arquivar não cancela jobs ou fluxos existentes. |
+| `kifer_set_lead_favorite` | `lead_id`, `favorite` | Define o favorito usando o campo existente do lead. |
+| `kifer_update_lead_administration` | `lead_id`, `changes` | Altera somente reativação, `skip_automation`, limite diário individual e datas de blackout. `skip_automation` não cancela jobs já criados. |
+| `kifer_bulk_update_leads` / `kifer_bulk_assign_leads` | até 25 `lead_ids` e campos comerciais fechados | Atualiza os mesmos campos ou atribui responsável ativo por lead, com `dry_run`, resultado individual e falha parcial isolada. |
+| `kifer_bulk_update_lead_status` | até 25 `lead_ids`, status ativo | Atualiza status e registra interação/histórico individual; aceita `dry_run` e retorna resultados por lead. |
+| `kifer_bulk_archive_leads` | até 25 `lead_ids` | Arquiva logicamente sem excluir histórico; aceita `dry_run` e retorna resultados por lead. |
+| `kifer_bulk_enqueue_followup` | até 25 `lead_ids`, `flow_id`, `client_request_id` | Enfileira individualmente com chave determinística por ator, requisição e lead; repetições com payload divergente são recusadas. Aceita `dry_run`. |
+| `kifer_list_identity_conflicts` / `kifer_get_identity_conflict` | filtros fechados / `conflict_id` | Lista e consulta somente metadados mínimos. Detalhes brutos com telefone e mapeamentos não são expostos. |
+| `kifer_update_contract_status` / `kifer_cancel_contract` | `contract_id`, `expected_updated_at`, status opcional | Altera o status configurado com controle de concorrência otimista; impede reabrir contratos cancelados/encerrados e preserva gatilhos de lembrete. |
 | `kifer_list_lead_statuses` | sem parâmetros | Lista status comerciais ativos e válidos. |
 | `kifer_list_reminders` / `kifer_update_reminder` | filtros fechados / campos fechados | Consulta ou altera lembretes sem acesso genérico à tabela. |
 | `kifer_complete_reminder` / `kifer_cancel_reminder` | `reminder_id` | Conclui ou cancela sem exclusão física, preservando auditoria e a sincronização do próximo retorno. |
@@ -38,11 +52,20 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_create_followup_flow` | gatilho e janela comercial fechados | Cria um fluxo vazio; não aceita URLs, webhooks ou configurações técnicas. |
 | `kifer_create_followup_step` | ação comercial permitida e configuração fechada | Adiciona somente texto, alteração de status, criação de tarefa ou ativação de atendimento autônomo. |
 | `kifer_update_followup_step_message` | `flow_id`, `step_id`, `message` | Troca exclusivamente o texto de uma etapa `send_message`. |
+| `kifer_delete_followup_step` / `kifer_reorder_followup_steps` | `flow_id` e etapa / lista completa de IDs | Remove ou reordena etapas somente quando não há jobs pendentes ou em processamento no fluxo. |
 | `kifer_clone_followup_flow` | fluxo de origem e sobrescritas fechadas | Copia fluxo e etapas com novos IDs; bloqueia etapas destrutivas, webhook e e-mail. |
 
 O envio e o agendamento de WhatsApp exigem `client_request_id`, para que uma nova tentativa da mesma solicitação retorne o resultado anterior em vez de disparar ou programar uma segunda mensagem.
 
-Tags, motivos estruturados de perda, contratos, documentos, mídia e campanhas não foram expostos por esta ampliação: o esquema atual não possui uma tabela de tags/motivos e a API MCP não deve aceitar arquivos ou URLs arbitrárias. Essas áreas exigem um modelo de dados e um fluxo de upload próprios antes de serem autorizadas.
+Criação/edição completa de contratos e operações de titulares/dependentes permanecem adiadas: a UI concentra validações que não existem no banco e a gravação do grafo não é transacional. Só status/cancelamento de contrato foram expostos com validação de status ativo e controle de concorrência. Documentos não têm bucket privado nem ciclo de storage concluído; o bucket de mídia agendada não será reutilizado para arquivos contratuais. Os RPCs atuais de estado e vínculo do Inbox exigem `auth.uid()` e permissão de edição; o token OAuth próprio do MCP não fornece uma sessão Supabase, portanto essas ações aguardam RPCs específicos que revalidem o administrador e preservem o lock canônico. Conflitos podem ser consultados por metadados mínimos, mas não resolvidos manualmente: reconciliação de identidade reversa exige evidência verificada do provider e pode mesclar chats. A tabela de opt-out só bloqueia campanhas hoje; não é uma fonte global de consentimento para envios manuais ou automações. Também não há entidade de oportunidade/núcleo familiar no schema atual.
+
+O MCP oferece upload privado para mídia agendada e envio imediato de mídia pelo endpoint Whapi já existente. Tags e motivos estruturados de perda não foram expostos porque o modelo atual não possui essa estrutura.
+
+`config_options` foi removida da allowlist de leitura: o recurso constava no MCP, mas não aparece no schema tipado vigente. O CRM usa hoje tabelas dedicadas e `system_configurations`; as migrations de `config_options` são históricas. Assim, o MCP deixa de anunciar uma consulta que falha no schema atual.
+
+## Inventário
+
+O servidor publica 65 ferramentas: 22 de leitura/consulta e 43 de escrita. Antes da continuação atual, o working tree já tinha 55 (48 no `HEAD` mais 7 da fase anterior); esta fase acrescentou 10. O inventário histórico tinha 45 no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra cada mutação em `mcp_action_audit_log`.
 
 ## Migration adicional
 

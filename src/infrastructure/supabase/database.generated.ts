@@ -3086,6 +3086,67 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_scheduled_message_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          chat_id: string | null
+          created_at: string
+          current_values: Json
+          id: string
+          lead_id: string | null
+          previous_values: Json
+          scheduled_message_id: string
+          source: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          chat_id?: string | null
+          created_at?: string
+          current_values?: Json
+          id?: string
+          lead_id?: string | null
+          previous_values?: Json
+          scheduled_message_id: string
+          source?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          chat_id?: string | null
+          created_at?: string
+          current_values?: Json
+          id?: string
+          lead_id?: string | null
+          previous_values?: Json
+          scheduled_message_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_message_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_message_audit_log_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_message_audit_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_scheduled_messages: {
         Row: {
           attempts: number
@@ -5373,6 +5434,16 @@ export type Database = {
       audit_run_dry_run: {
         Args: { p_batch_size?: number; p_run_id: string }
         Returns: undefined
+      }
+      auto_contact_message_is_same_flow_output: {
+        Args: {
+          p_flow_id: string
+          p_lead_id: string
+          p_message_at: string
+          p_message_metadata: Json
+          p_message_source: string
+        }
+        Returns: boolean
       }
       automation_flows_health: { Args: never; Returns: Json }
       build_dependent_pessoa_chave: {

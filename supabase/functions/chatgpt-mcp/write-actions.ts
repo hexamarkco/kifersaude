@@ -5,6 +5,7 @@ import {
   getCommWhatsAppPhoneLookupKeys,
   normalizeCommWhatsAppPhone,
 } from '../_shared/comm-whatsapp/identity.ts';
+import { executeMcpLeadAdminAction, MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
 const MAX_SHORT_TEXT_LENGTH = 160;
@@ -12,6 +13,7 @@ const MAX_DESCRIPTION_LENGTH = 4_000;
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const PRIORITIES = new Set(['baixa', 'normal', 'alta']);
 const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64)/i;
+const PRIVATE_CUSTOMER_DATA_KEY = /(?:^|_)(?:cpf|cnpj|rg|cns|email|telefone|phone(?:_number|_digits)?|address|endereco|logradouro|cep|data_nascimento|birth_date|nome_completo|nome_fantasia|razao_social|bairro|complemento|observacoes|descricao|message|caption|text_content|display_name)(?:$|_)/i;
 
 export type McpWriteActor = { actor: string; actorId: string };
 export type McpWriteResult = { success: boolean; [key: string]: unknown };
@@ -34,6 +36,7 @@ const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'fai
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
 const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,message_type,media_url,media_mime_type,media_file_name,media_size_bytes,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
 const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up', 'Retorno']);
+const MAX_BULK_LEAD_MUTATIONS = 25;
 const MCP_WHATSAPP_CHAT_SELECT = 'id,channel_id,external_chat_id,phone_number,phone_digits,display_name,lead_id,lead_link_source,deleted_at,merged_into_chat_id,created_at,updated_at';
 const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
 const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
@@ -56,7 +59,7 @@ const safeUuid = (value: unknown) => UUID.test(text(value));
 const sanitize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sanitize);
   if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => [key, SECRET_KEY.test(key) ? '[REDACTED]' : sanitize(child)]));
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => [key, SECRET_KEY.test(key) || PRIVATE_CUSTOMER_DATA_KEY.test(key) ? '[REDACTED]' : sanitize(child)]));
 };
 
 const errorResult = (errorCode: ActionErrorCode, message: string): McpWriteResult => ({ success: false, error_code: errorCode, message });
@@ -161,6 +164,17 @@ const flowView = (flow: Record<string, unknown>) => {
       delay_value: typeof step.delayValue === 'number' ? step.delayValue : null,
       delay_unit: text(step.delayUnit),
       enabled: step.enabled !== false,
+      ...(text(step.actionType) === 'send_message' ? {
+        message_source: ['custom', 'template'].includes(text(step.messageSource)) ? text(step.messageSource) : 'legacy_or_unknown',
+        message_texts: [
+          ...(isRecord(step.customMessage) && text(step.customMessage.type) === 'text' && text(step.customMessage.text)
+            ? [text(step.customMessage.text).slice(0, MAX_MESSAGE_LENGTH)]
+            : []),
+          ...(Array.isArray(step.messages)
+            ? step.messages.filter((message): message is string => typeof message === 'string' && Boolean(message.trim())).slice(0, 20).map((message) => message.trim().slice(0, MAX_MESSAGE_LENGTH))
+            : []),
+        ],
+      } : {}),
     })),
     scheduling: {
       start_hour: text(scheduling.startHour) || null,
@@ -328,7 +342,7 @@ async function createInteraction(supabase: SupabaseClient, params: Record<string
   return error || !data ? errorResult('INTERNAL_ERROR', 'Não foi possível registrar a interação.') : { success: true, interaction: data };
 }
 
-async function updateLeadStatus(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+async function updateLeadStatus(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor, dryRun = false): Promise<McpWriteResult> {
   const leadId = text(params.lead_id);
   const statusName = text(params.status).slice(0, MAX_SHORT_TEXT_LENGTH);
   const observation = text(params.observacao).slice(0, MAX_DESCRIPTION_LENGTH) || null;
@@ -338,6 +352,7 @@ async function updateLeadStatus(supabase: SupabaseClient, params: Record<string,
   const { data: status, error: statusError } = await supabase.from('lead_status_config').select('id,nome,ativo').ilike('nome', statusName).maybeSingle();
   if (statusError || !status || status.ativo === false) return errorResult('INVALID_STATUS', 'Status inexistente ou inativo.');
   if (lead.status_id === status.id) return { success: true, lead_id: leadId, status_anterior: lead.status, status_novo: status.nome, unchanged: true };
+  if (dryRun) return { success: true, dry_run: true, would_update: true, lead_id: leadId, status_anterior: lead.status, status_novo: status.nome };
   const timestamp = new Date().toISOString();
   const { error: updateError } = await supabase.from('leads').update({ status_id: status.id, ultimo_contato: timestamp }).eq('id', leadId);
   if (updateError) return errorResult('INTERNAL_ERROR', 'Não foi possível atualizar o status do lead.');
@@ -368,15 +383,71 @@ async function sendWhatsAppMessage(supabase: SupabaseClient, params: Record<stri
     const payload = await response.json().catch(() => ({}));
     body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
   } catch {
-    return errorResult('PROVIDER_ERROR', 'Não foi possível contactar o serviço de WhatsApp.');
+    return { ...errorResult('PROVIDER_ERROR', 'Não foi possível confirmar o resultado do envio. Consulte a conversa antes de tentar novamente.'), ambiguous: true };
   }
   if (!response.ok && response.status !== 202) {
     if (response.status === 429) return errorResult('RATE_LIMITED', 'Limite de envios atingido. Aguarde antes de tentar novamente.');
-    return errorResult('PROVIDER_ERROR', text(body.error) || 'O provedor de WhatsApp recusou a mensagem.');
+    return { ...errorResult('PROVIDER_ERROR', body.ambiguous === true ? 'O resultado do envio é incerto. Consulte a conversa antes de tentar novamente.' : text(body.error) || 'O provedor de WhatsApp recusou a mensagem.'), ...(body.ambiguous === true ? { ambiguous: true } : {}) };
   }
   const externalMessageId = text(body.messageId);
   const { data: persisted } = externalMessageId ? await supabase.from('comm_whatsapp_messages').select('id,message_at,delivery_status').eq('chat_id', chatId).eq('external_message_id', externalMessageId).maybeSingle() : { data: null };
-  return { success: true, duplicate: body.duplicate === true, message_id: persisted?.id || null, external_message_id: externalMessageId || null, chat_id: chatId, delivery_status: text(body.status) || persisted?.delivery_status || 'queued', sent_at: persisted?.message_at || new Date().toISOString() };
+  return { success: true, duplicate: body.duplicate === true, ambiguous: body.ambiguous === true, persistence_pending: body.persistencePending === true, message_id: persisted?.id || null, external_message_id: externalMessageId || null, chat_id: chatId, delivery_status: text(body.status) || persisted?.delivery_status || 'queued', sent_at: persisted?.message_at || new Date().toISOString() };
+}
+
+async function sendWhatsAppMedia(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  const chatId = text(params.chat_id);
+  const contentBase64 = rawString(params.content_base64).replace(/^data:[^;,]+;base64,/i, '');
+  const mimeType = text(params.mime_type).toLowerCase();
+  const fileName = rawString(params.file_name).trim();
+  const caption = rawString(params.caption);
+  const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
+  const expectedType = mediaTypeForMime(mimeType);
+  const requestedType = text(params.media_kind);
+  const validKinds = new Set(['image', 'video', 'audio', 'voice', 'document']);
+  const mediaKind = requestedType || expectedType || '';
+  const matchingKind = mediaKind === expectedType || (expectedType === 'audio' && mediaKind === 'voice');
+  if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
+  if (!contentBase64 || !mimeType || !ALLOWED_SCHEDULED_MEDIA_MIME_TYPES.has(mimeType) || !expectedType || !validKinds.has(mediaKind) || !matchingKind || !fileName || fileName.length > 255 || !clientRequestId) {
+    return errorResult('INVALID_MEDIA', 'Informe chat_id, arquivo base64, nome, MIME permitido, tipo compatível e client_request_id.');
+  }
+  if (caption.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A legenda excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
+  if (Math.ceil(contentBase64.length * 0.75) > MAX_SCHEDULED_MEDIA_BYTES) return errorResult('MEDIA_TOO_LARGE', `O arquivo excede o limite de ${MAX_SCHEDULED_MEDIA_BYTES / (1024 * 1024)} MB.`);
+  let bytes: Uint8Array;
+  try {
+    bytes = Uint8Array.from(atob(contentBase64), (character) => character.charCodeAt(0));
+  } catch {
+    return errorResult('INVALID_MEDIA', 'content_base64 não contém um arquivo base64 válido.');
+  }
+  if (bytes.byteLength === 0) return errorResult('INVALID_MEDIA', 'O arquivo de mídia está vazio.');
+  if (bytes.byteLength > MAX_SCHEDULED_MEDIA_BYTES) return errorResult('MEDIA_TOO_LARGE', `O arquivo excede o limite de ${MAX_SCHEDULED_MEDIA_BYTES / (1024 * 1024)} MB.`);
+  const { data: chat, error: chatError } = await supabase.from('comm_whatsapp_chats').select('id,external_chat_id,deleted_at').eq('id', chatId).maybeSingle();
+  if (chatError || !chat || chat.deleted_at) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada ou removida.');
+  const baseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const secret = Deno.env.get('KIFER_MCP_WHATSAPP_INTERNAL_SECRET') || '';
+  if (!baseUrl || !secret) return errorResult('INTERNAL_ERROR', 'Envio de WhatsApp ainda não está configurado no servidor MCP.');
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '') || 'anexo';
+  const form = new FormData();
+  form.set('chatId', text(chat.external_chat_id));
+  form.set('caption', caption);
+  form.set('clientRequestId', clientRequestId);
+  form.set('type', mediaKind);
+  form.set('file', new File([bytes], safeFileName, { type: mimeType }));
+  let response: Response;
+  let body: Record<string, unknown> = {};
+  try {
+    response = await fetch(`${baseUrl}/functions/v1/comm-whatsapp-send`, { method: 'POST', headers: { 'X-Kifer-MCP-Internal-Secret': secret, 'X-Kifer-MCP-Actor-Id': actor.actorId }, body: form });
+    const payload = await response.json().catch(() => ({}));
+    body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
+  } catch {
+    return { ...errorResult('PROVIDER_ERROR', 'Não foi possível confirmar o resultado do envio. Consulte a conversa antes de tentar novamente.'), ambiguous: true };
+  }
+  if (!response.ok && response.status !== 202) {
+    if (response.status === 429 && body.ambiguous !== true) return errorResult('RATE_LIMITED', 'Limite de envios atingido. Aguarde antes de tentar novamente.');
+    return { ...errorResult('PROVIDER_ERROR', body.ambiguous === true ? 'O resultado do envio é incerto. Consulte a conversa antes de tentar novamente.' : 'O envio da mídia foi recusado. Verifique o arquivo e tente novamente.'), ...(body.ambiguous === true ? { ambiguous: true } : {}) };
+  }
+  const externalMessageId = text(body.messageId);
+  const { data: persisted } = externalMessageId ? await supabase.from('comm_whatsapp_messages').select('id,message_at,delivery_status').eq('chat_id', chatId).eq('external_message_id', externalMessageId).maybeSingle() : { data: null };
+  return { success: true, duplicate: body.duplicate === true, ambiguous: body.ambiguous === true, persistence_pending: body.persistencePending === true, message_id: persisted?.id || null, external_message_id: externalMessageId || null, chat_id: chatId, media_kind: mediaKind, delivery_status: text(body.status) || persisted?.delivery_status || 'queued', sent_at: persisted?.message_at || new Date().toISOString() };
 }
 
 type McpWhatsAppChat = {
@@ -1133,9 +1204,28 @@ async function updateFollowUpFlow(supabase: SupabaseClient, params: Record<strin
   const previous = flowRecord(current.flows[position]);
   if (!previous) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
   const patch = isRecord(params.changes) ? params.changes : {};
-  const allowed = new Set(['ativo', 'daily_send_limit', 'start_hour', 'end_hour', 'allowed_weekdays', 'trigger_statuses', 'enabled_step_ids', 'step_delays']);
-  if (Object.keys(patch).some((key) => !allowed.has(key))) return errorResult('NOT_ALLOWED', 'A ferramenta só pode alterar ativação, horários, limites, status de gatilho e delays das etapas existentes.');
+  const allowed = new Set(['nome', 'ativo', 'trigger_type', 'trigger_duration_hours', 'daily_send_limit', 'start_hour', 'end_hour', 'allowed_weekdays', 'trigger_statuses', 'enabled_step_ids', 'step_delays']);
+  if (Object.keys(patch).some((key) => !allowed.has(key))) return errorResult('NOT_ALLOWED', 'A ferramenta só aceita nome, gatilho, ativação, horários, limites, status de gatilho e delays das etapas existentes.');
   const next: Record<string, unknown> = { ...previous };
+  if ('nome' in patch) {
+    const name = text(patch.nome);
+    if (!name || name.length > MAX_SHORT_TEXT_LENGTH) return errorResult('INVALID_INPUT', 'nome deve conter de 1 a 160 caracteres.');
+    if (current.flows.some((candidate) => {
+      const other = flowRecord(candidate);
+      return other && text(other.id) !== flowId && text(other.name).toLocaleLowerCase() === name.toLocaleLowerCase();
+    })) return errorResult('CONFLICT', 'Já existe outro fluxo com este nome.');
+    next.name = name;
+  }
+  if ('trigger_type' in patch) {
+    const triggerType = text(patch.trigger_type);
+    if (!FLOW_TRIGGER_TYPES.has(triggerType)) return errorResult('INVALID_INPUT', 'trigger_type inválido.');
+    next.triggerType = triggerType;
+  }
+  if ('trigger_duration_hours' in patch) {
+    const duration = boundedInteger(patch.trigger_duration_hours, 0, 8760);
+    if (duration === null) return errorResult('INVALID_INPUT', 'trigger_duration_hours deve estar entre 0 e 8760.');
+    next.triggerDurationHours = duration;
+  }
   if (forceActive !== undefined) next.ativo = forceActive;
   if ('ativo' in patch) {
     if (typeof patch.ativo !== 'boolean') return errorResult('INVALID_INPUT', 'ativo deve ser booleano.');
@@ -1156,17 +1246,32 @@ async function updateFollowUpFlow(supabase: SupabaseClient, params: Record<strin
     if (error || !statuses || statuses.length !== new Set(patch.trigger_statuses.map(text)).size || statuses.some((status) => status.ativo === false)) return errorResult('INVALID_STATUS', 'Um ou mais status de gatilho não existem ou estão inativos.');
     next.triggerStatuses = [...new Set(patch.trigger_statuses.map(text))];
   }
+  const validatedFlow = await validateFlowFields(supabase, {
+    nome: next.name,
+    ativo: next.ativo,
+    trigger_type: next.triggerType,
+    trigger_statuses: next.triggerStatuses,
+    trigger_duration_hours: next.triggerDurationHours,
+    start_hour: schedule.startHour,
+    end_hour: schedule.endHour,
+    allowed_weekdays: schedule.allowedWeekdays,
+    daily_send_limit: schedule.dailySendLimit ?? null,
+  }, previous);
+  if (validatedFlow.error || !validatedFlow.flow) return validatedFlow.error ?? errorResult('INVALID_INPUT', 'Configuração do fluxo inválida.');
+  Object.assign(next, validatedFlow.flow);
   const steps = Array.isArray(previous.steps) ? previous.steps.filter(isRecord).map((step) => ({ ...step })) : [];
   const knownStepIds = new Set(steps.map((step) => text(step.id)));
   if ('enabled_step_ids' in patch) {
-    if (!Array.isArray(patch.enabled_step_ids) || patch.enabled_step_ids.some((id) => !knownStepIds.has(text(id)))) return errorResult('INVALID_INPUT', 'enabled_step_ids deve conter somente etapas existentes do fluxo.');
+    if (!Array.isArray(patch.enabled_step_ids) || patch.enabled_step_ids.some((id) => typeof id !== 'string' || !knownStepIds.has(text(id))) || new Set(patch.enabled_step_ids.map(text)).size !== patch.enabled_step_ids.length) return errorResult('INVALID_INPUT', 'enabled_step_ids deve conter somente etapas existentes, sem duplicatas.');
     const enabled = new Set(patch.enabled_step_ids.map(text));
     steps.forEach((step) => { step.enabled = enabled.has(text(step.id)); });
   }
   if ('step_delays' in patch) {
     if (!Array.isArray(patch.step_delays) || patch.step_delays.length > steps.length) return errorResult('INVALID_INPUT', 'step_delays inválido.');
+    const changedStepIds = new Set<string>();
     for (const change of patch.step_delays) {
-      if (!isRecord(change) || !knownStepIds.has(text(change.step_id)) || boundedInteger(change.delay_value, 0, 3650) === null || !['seconds', 'minutes', 'hours', 'days'].includes(text(change.delay_unit))) return errorResult('INVALID_INPUT', 'Cada delay exige step_id existente, valor de 0 a 3650 e unidade válida.');
+      if (!isRecord(change) || Object.keys(change).some((key) => !['step_id', 'delay_value', 'delay_unit'].includes(key)) || typeof change.step_id !== 'string' || !knownStepIds.has(text(change.step_id)) || changedStepIds.has(text(change.step_id)) || boundedInteger(change.delay_value, 0, 3650) === null || !['seconds', 'minutes', 'hours', 'days'].includes(text(change.delay_unit))) return errorResult('INVALID_INPUT', 'Cada delay exige step_id existente, campos fechados, valor de 0 a 3650 e unidade válida; IDs repetidos não são aceitos.');
+      changedStepIds.add(text(change.step_id));
       const step = steps.find((item) => text(item.id) === text(change.step_id));
       if (step) { step.delayValue = boundedInteger(change.delay_value, 0, 3650); step.delayUnit = text(change.delay_unit); }
     }
@@ -1179,7 +1284,7 @@ async function updateFollowUpFlow(supabase: SupabaseClient, params: Record<strin
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar o fluxo.') : { success: true, flow: flowView(next) };
 }
 
-async function updateLead(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+async function updateLead(supabase: SupabaseClient, params: Record<string, unknown>, dryRun = false): Promise<McpWriteResult> {
   const leadId = text(params.lead_id);
   const changes = isRecord(params.changes) ? params.changes : null;
   if (!safeUuid(leadId) || !changes) return errorResult('INVALID_INPUT', 'Informe lead_id e changes.');
@@ -1197,8 +1302,121 @@ async function updateLead(supabase: SupabaseClient, params: Record<string, unkno
   if ('estado' in changes) { const value = text(changes.estado).toUpperCase(); if (!/^[A-Z]{2}$/.test(value)) return errorResult('INVALID_INPUT', 'estado deve usar a UF com duas letras.'); update.estado = value; }
   if ('origem_id' in changes) { const id = text(changes.origem_id); const { data } = safeUuid(id) ? await supabase.from('lead_origens').select('id,ativo').eq('id', id).maybeSingle() : { data: null }; if (!data || data.ativo === false) return errorResult('INVALID_INPUT', 'origem_id não existe ou está inativo.'); update.origem_id = id; }
   if ('responsavel_id' in changes) { const id = text(changes.responsavel_id); const { data } = safeUuid(id) ? await supabase.from('lead_responsaveis').select('id,ativo').eq('id', id).maybeSingle() : { data: null }; if (!data || data.ativo === false) return errorResult('INVALID_ASSIGNEE', 'responsavel_id não existe ou está inativo.'); update.responsavel_id = id; }
+  if (dryRun) return { success: true, dry_run: true, would_update: true, lead_id: leadId, changes: update };
   const { data, error } = await supabase.from('leads').update(update).eq('id', leadId).select('id,nome_completo,email,telefone,cidade,cep,endereco,estado,regiao,canal,operadora_atual,observacoes,origem_id,responsavel_id,updated_at').maybeSingle();
   return error || !data ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar os dados comerciais do lead.') : { success: true, lead: data, changed_fields: Object.keys(update) };
+}
+
+async function updateContractStatus(supabase: SupabaseClient, params: Record<string, unknown>, cancel = false): Promise<McpWriteResult> {
+  const contractId = text(params.contract_id);
+  const statusName = cancel ? 'Cancelado' : text(params.status);
+  const expectedUpdatedAt = parseDate(params.expected_updated_at);
+  if (!safeUuid(contractId) || !statusName || statusName.length > MAX_SHORT_TEXT_LENGTH || !expectedUpdatedAt) {
+    return errorResult('INVALID_INPUT', 'Informe contract_id, status e expected_updated_at válido.');
+  }
+  const { data: current, error: currentError } = await supabase.from('contracts').select('id,codigo_contrato,status,updated_at').eq('id', contractId).maybeSingle();
+  if (currentError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o contrato.');
+  if (!current) return errorResult('NOT_FOUND', 'Contrato não encontrado.');
+  if (!current.updated_at || Date.parse(text(current.updated_at)) !== Date.parse(expectedUpdatedAt)) return errorResult('CONFLICT', 'O contrato mudou desde a última leitura. Recarregue antes de tentar novamente.');
+  if (text(current.status) === statusName) return { success: true, contract_id: contractId, status_anterior: statusName, status_novo: statusName, unchanged: true };
+  if (['Cancelado', 'Encerrado'].includes(text(current.status))) return errorResult('NOT_ALLOWED', 'Contratos cancelados ou encerrados não podem ser reabertos ou alterados para outro estado.');
+  const { data: configuredStatus, error: statusError } = await supabase.from('contract_status_config').select('value,ativo').eq('value', statusName).maybeSingle();
+  if (statusError || !configuredStatus || configuredStatus.ativo === false) return errorResult('INVALID_STATUS', 'Status de contrato inexistente ou inativo.');
+  const updateQuery = supabase.from('contracts').update({ status: configuredStatus.value }).eq('id', contractId).eq('updated_at', current.updated_at);
+  const { data, error } = await updateQuery.select('id,codigo_contrato,status,updated_at').maybeSingle();
+  return error || !data
+    ? errorResult('CONFLICT', 'O contrato mudou durante a atualização. Recarregue e tente novamente.')
+    : { success: true, contract_id: contractId, codigo_contrato: data.codigo_contrato, status_anterior: current.status, status_novo: data.status, updated_at: data.updated_at, ...(cancel ? { cancelled: true } : {}) };
+}
+
+const leadIdsFrom = (value: unknown): string[] | null => {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_BULK_LEAD_MUTATIONS) return null;
+  const ids = value.map(text);
+  if (ids.some((id) => !safeUuid(id)) || new Set(ids).size !== ids.length) return null;
+  return ids;
+};
+
+const compactBulkItem = (leadId: string, result: McpWriteResult): Record<string, unknown> => {
+  if (result.success !== true) return { lead_id: leadId, success: false, error_code: result.error_code ?? 'INTERNAL_ERROR', message: result.message ?? 'Falha ao processar o lead.' };
+  return {
+    lead_id: leadId,
+    success: true,
+    ...(result.unchanged === true ? { unchanged: true } : {}),
+    ...(result.would_update === true ? { would_update: true } : {}),
+    ...(result.would_archive === true ? { would_archive: true } : {}),
+    ...(result.would_enqueue === true ? { would_enqueue: true, scheduled_at: result.scheduled_at } : {}),
+    ...(Array.isArray(result.changed_fields) ? { changed_fields: result.changed_fields } : {}),
+    ...(typeof result.status_novo === 'string' ? { status_novo: result.status_novo } : {}),
+    ...(result.duplicate === true ? { duplicate: true } : {}),
+    ...(result.job && isRecord(result.job) ? { job_id: text(result.job.id) || null } : {}),
+  };
+};
+
+async function archiveLead(supabase: SupabaseClient, leadId: string, dryRun: boolean): Promise<McpWriteResult> {
+  const { data: lead, error: lookupError } = await supabase.from('leads').select('id,arquivado').eq('id', leadId).maybeSingle();
+  if (lookupError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o lead.');
+  if (!lead) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+  if (lead.arquivado === true) return { success: true, lead_id: leadId, unchanged: true };
+  if (dryRun) return { success: true, dry_run: true, would_archive: true, lead_id: leadId };
+  const { data, error } = await supabase.from('leads').update({ arquivado: true }).eq('id', leadId).select('id,arquivado').maybeSingle();
+  return error || !data ? errorResult('INTERNAL_ERROR', 'Não foi possível arquivar o lead.') : { success: true, lead_id: leadId, archived: true };
+}
+
+async function deterministicJobId(actorId: string, requestId: string, leadId: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`kifer-mcp-followup:${actorId}:${requestId}:${leadId}`));
+  const bytes = new Uint8Array(digest).slice(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+async function runBulkLeadMutation(params: {
+  supabase: SupabaseClient;
+  toolName: string;
+  args: Record<string, unknown>;
+  actor: McpWriteActor;
+}): Promise<McpWriteResult> {
+  const { supabase, toolName, args, actor } = params;
+  const leadIds = leadIdsFrom(args.lead_ids);
+  const dryRun = args.dry_run === true;
+  if (!leadIds) return errorResult('INVALID_INPUT', `lead_ids deve conter entre 1 e ${MAX_BULK_LEAD_MUTATIONS} UUIDs únicos válidos.`);
+  if (toolName === 'kifer_bulk_update_leads' && !isRecord(args.changes)) return errorResult('INVALID_INPUT', 'Informe changes.');
+  if (toolName === 'kifer_bulk_assign_leads' && !safeUuid(text(args.responsavel_id))) return errorResult('INVALID_INPUT', 'responsavel_id inválido.');
+  if (toolName === 'kifer_bulk_update_lead_status' && !text(args.status)) return errorResult('INVALID_INPUT', 'Informe status.');
+  if (toolName === 'kifer_bulk_enqueue_followup') {
+    const requestId = text(args.client_request_id);
+    if (!text(args.flow_id) || requestId.length < 1 || requestId.length > 128) return errorResult('INVALID_INPUT', 'Informe flow_id e client_request_id estável (1 a 128 caracteres).');
+  }
+
+  const items: Record<string, unknown>[] = [];
+  for (const leadId of leadIds) {
+    let itemResult: McpWriteResult;
+    try {
+      if (toolName === 'kifer_bulk_update_leads') itemResult = await updateLead(supabase, { lead_id: leadId, changes: args.changes }, dryRun);
+      else if (toolName === 'kifer_bulk_assign_leads') itemResult = await updateLead(supabase, { lead_id: leadId, changes: { responsavel_id: args.responsavel_id } }, dryRun);
+      else if (toolName === 'kifer_bulk_update_lead_status') itemResult = await updateLeadStatus(supabase, { lead_id: leadId, status: args.status, observacao: args.observacao }, actor, dryRun);
+      else if (toolName === 'kifer_bulk_archive_leads') itemResult = await archiveLead(supabase, leadId, dryRun);
+      else if (toolName === 'kifer_bulk_enqueue_followup') itemResult = await enqueueLeadFollowUp(supabase, { lead_id: leadId, flow_id: args.flow_id, scheduled_at: args.scheduled_at, observacao: args.observacao, client_request_id: args.client_request_id }, dryRun, actor);
+      else return errorResult('NOT_ALLOWED', 'Ação em lote não permitida.');
+    } catch {
+      console.error('[chatgpt-mcp] falha isolada em ação em lote de leads.');
+      itemResult = errorResult('INTERNAL_ERROR', 'Falha inesperada ao processar este lead.');
+    }
+    items.push(compactBulkItem(leadId, itemResult));
+  }
+
+  const succeeded = items.filter((item) => item.success === true).length;
+  const failed = items.length - succeeded;
+  return {
+    success: failed === 0,
+    partial: succeeded > 0 && failed > 0,
+    dry_run: dryRun,
+    requested_count: leadIds.length,
+    succeeded_count: succeeded,
+    failed_count: failed,
+    results: items,
+  };
 }
 
 async function updateReminderAction(supabase: SupabaseClient, params: Record<string, unknown>, mode: 'update' | 'complete' | 'cancel'): Promise<McpWriteResult> {
@@ -1239,11 +1457,13 @@ const firstStepSchedule = (step: Record<string, unknown>, requestedAt: string | 
   return new Date(Date.now() + value * multiplier).toISOString();
 };
 
-async function enqueueLeadFollowUp(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+async function enqueueLeadFollowUp(supabase: SupabaseClient, params: Record<string, unknown>, dryRun = false, actor: McpWriteActor | null = null): Promise<McpWriteResult> {
   const leadId = text(params.lead_id);
   const flowId = text(params.flow_id);
   const scheduledAt = params.scheduled_at === undefined ? null : parseDate(params.scheduled_at);
   if (!safeUuid(leadId) || !flowId || (params.scheduled_at !== undefined && !scheduledAt)) return errorResult('INVALID_INPUT', 'Informe lead_id, flow_id e scheduled_at válido quando preenchido.');
+  const clientRequestId = params.client_request_id === undefined ? '' : text(params.client_request_id);
+  if (params.client_request_id !== undefined && (!clientRequestId || clientRequestId.length > 128 || !actor)) return errorResult('INVALID_INPUT', 'client_request_id deve ter de 1 a 128 caracteres.');
   const lead = await existingLead(supabase, leadId);
   if (!lead) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
   const integration = await loadAutomationIntegration(supabase);
@@ -1253,13 +1473,31 @@ async function enqueueLeadFollowUp(supabase: SupabaseClient, params: Record<stri
   const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord).filter((step) => step.enabled !== false) : [];
   const first = steps[0];
   if (!first || !text(first.id) || !text(first.actionType)) return errorResult('INVALID_INPUT', 'O fluxo não possui uma primeira etapa ativa válida.');
+  const jobId = clientRequestId && actor ? await deterministicJobId(actor.actorId, clientRequestId, leadId) : null;
+  const requestSignature = JSON.stringify({ lead_id: leadId, flow_id: flowId, scheduled_at: scheduledAt, observacao: text(params.observacao) });
+  if (jobId) {
+    const { data: priorRequest, error: priorRequestError } = await supabase.from('auto_contact_flow_jobs').select('id,lead_id,flow_id,scheduled_at,action_payload').eq('id', jobId).maybeSingle();
+    if (priorRequestError) throw new Error(priorRequestError.message);
+    if (priorRequest) {
+      const payload = isRecord(priorRequest.action_payload) ? priorRequest.action_payload : {};
+      if (payload.mcp_request_signature !== requestSignature) return errorResult('IDEMPOTENCY_CONFLICT', 'client_request_id já foi usado com parâmetros diferentes.');
+      return { success: true, duplicate: true, job: priorRequest, message: 'A solicitação já foi processada.' };
+    }
+  }
   const { data: activeJob, error: duplicateError } = await supabase.from('auto_contact_flow_jobs').select('id,status,scheduled_at').eq('lead_id', leadId).eq('flow_id', flowId).in('status', ['pending', 'processing']).limit(1).maybeSingle();
   if (duplicateError) throw new Error(duplicateError.message);
   if (activeJob) return { success: true, duplicate: true, job: activeJob, message: 'O lead já possui um job ativo neste fluxo.' };
   const observation = text(params.observacao).slice(0, MAX_DESCRIPTION_LENGTH);
   const actionPayload: Record<string, unknown> = observation ? { mcp_observacao: observation, mcp_source: 'chatgpt_mcp' } : { mcp_source: 'chatgpt_mcp' };
+  if (jobId) {
+    actionPayload.mcp_request_signature = requestSignature;
+    actionPayload.mcp_client_request_id = clientRequestId;
+  }
   if (text(first.actionType) === 'send_message' && Array.isArray(first.messages)) actionPayload.messages = first.messages;
+  const jobScheduledAt = firstStepSchedule(first, scheduledAt);
+  if (dryRun) return { success: true, dry_run: true, would_enqueue: true, lead_id: leadId, flow_id: flowId, step_id: text(first.id), scheduled_at: jobScheduledAt, action_type: text(first.actionType) };
   const { data, error } = await supabase.from('auto_contact_flow_jobs').insert({
+    ...(jobId ? { id: jobId } : {}),
     lead_id: leadId,
     flow_id: flowId,
     step_id: text(first.id),
@@ -1270,9 +1508,17 @@ async function enqueueLeadFollowUp(supabase: SupabaseClient, params: Record<stri
     custom_message: isRecord(first.customMessage) ? first.customMessage : null,
     status_to_set: text(first.statusToSet) || null,
     action_payload: actionPayload,
-    scheduled_at: firstStepSchedule(first, scheduledAt),
+    scheduled_at: jobScheduledAt,
     status: 'pending',
   }).select('*').maybeSingle();
+  if (error && jobId) {
+    const { data: racedRequest, error: racedLookupError } = await supabase.from('auto_contact_flow_jobs').select('id,lead_id,flow_id,scheduled_at,action_payload').eq('id', jobId).maybeSingle();
+    if (!racedLookupError && racedRequest) {
+      const payload = isRecord(racedRequest.action_payload) ? racedRequest.action_payload : {};
+      if (payload.mcp_request_signature !== requestSignature) return errorResult('IDEMPOTENCY_CONFLICT', 'client_request_id já foi usado com parâmetros diferentes.');
+      return { success: true, duplicate: true, job: racedRequest, message: 'A solicitação já foi processada.' };
+    }
+  }
   return error || !data ? errorResult('INTERNAL_ERROR', 'Não foi possível inserir o lead no fluxo.') : { success: true, job: data };
 }
 
@@ -1429,6 +1675,63 @@ async function updateFollowUpStepMessage(supabase: SupabaseClient, params: Recor
   const nextFlow = { ...flow, steps }; const flows = [...settings.flows]; flows[index] = nextFlow;
   const { error } = await supabase.from('integration_settings').update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() }).eq('id', integration.id);
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar a mensagem da etapa.') : { success: true, flow_id: flowId, step_id: stepId, message };
+}
+
+async function mutateFollowUpSteps(supabase: SupabaseClient, params: Record<string, unknown>, mode: 'delete' | 'reorder'): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id);
+  if (!flowId) return errorResult('INVALID_INPUT', 'flow_id é obrigatório.');
+  const integration = await loadAutomationIntegration(supabase);
+  const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
+  const flowIndex = settings.flows.findIndex((candidate) => flowRecord(candidate)?.id === flowId);
+  const flow = flowRecord(settings.flows[flowIndex]);
+  if (!flow) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
+  const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord).map((step) => ({ ...step })) : [];
+  let updatedSteps: Record<string, unknown>[];
+  let stepId: string | null = null;
+
+  if (mode === 'delete') {
+    stepId = text(params.step_id);
+    if (!stepId) return errorResult('INVALID_INPUT', 'step_id é obrigatório.');
+    const index = steps.findIndex((step) => text(step.id) === stepId);
+    if (index < 0) return errorResult('NOT_FOUND', 'Etapa não encontrada.');
+    updatedSteps = steps.filter((step) => text(step.id) !== stepId);
+  } else {
+    const orderedIds = params.step_ids;
+    const currentIds = steps.map((step) => text(step.id));
+    if (!Array.isArray(orderedIds) || orderedIds.length !== currentIds.length || orderedIds.some((id) => typeof id !== 'string' || !text(id))) {
+      return errorResult('INVALID_INPUT', 'step_ids deve listar cada etapa existente exatamente uma vez.');
+    }
+    const requestedIds = orderedIds.map(text);
+    if (new Set(requestedIds).size !== currentIds.length || requestedIds.some((id) => !currentIds.includes(id))) {
+      return errorResult('INVALID_INPUT', 'step_ids deve listar cada etapa existente exatamente uma vez.');
+    }
+    updatedSteps = requestedIds.map((id) => steps.find((step) => text(step.id) === id)!);
+    if (requestedIds.every((id, index) => id === currentIds[index])) {
+      return { success: true, flow_id: flowId, unchanged: true, steps: flowView(flow).steps };
+    }
+  }
+
+  const { count, error: jobsError } = await supabase.from('auto_contact_flow_jobs')
+    .select('id', { count: 'exact', head: true })
+    .eq('flow_id', flowId)
+    .in('status', ['pending', 'processing']);
+  if (jobsError) return errorResult('INTERNAL_ERROR', 'Não foi possível verificar jobs ativos do fluxo.');
+  if ((count ?? 0) > 0) return errorResult('CONFLICT', 'Pause ou esvazie os jobs ativos deste fluxo antes de alterar as etapas.');
+
+  const updatedFlow = { ...flow, steps: updatedSteps };
+  const flows = [...settings.flows];
+  flows[flowIndex] = updatedFlow;
+  const { error } = await supabase.from('integration_settings')
+    .update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() })
+    .eq('id', integration.id);
+  if (error) return errorResult('INTERNAL_ERROR', mode === 'delete' ? 'Não foi possível remover a etapa.' : 'Não foi possível reordenar as etapas.');
+  return {
+    success: true,
+    flow_id: flowId,
+    ...(mode === 'delete' ? { step_id: stepId, deleted: true } : { reordered: true }),
+    steps: flowView(updatedFlow).steps,
+  };
 }
 
 async function cloneFollowUpFlow(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
@@ -1640,6 +1943,30 @@ async function countLeadsWithoutWhatsAppChat(supabase: SupabaseClient, params: R
 
 export async function executeMcpCommercialReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown> }): Promise<Record<string, unknown> | null> {
   const { supabase, toolName, arguments: args } = params;
+  if (toolName === 'kifer_list_identity_conflicts') {
+    const page = boundedInteger(args.page ?? 1, 1, 10_000);
+    const pageSize = boundedInteger(args.page_size ?? 20, 1, 50);
+    if (page === null || pageSize === null) return errorResult('INVALID_INPUT', 'page deve ser positivo e page_size deve estar entre 1 e 50.');
+    const status = text(args.status) || 'open';
+    if (!['open', 'resolved', 'ignored', 'all'].includes(status)) return errorResult('INVALID_INPUT', 'status inválido.');
+    const conflictType = text(args.conflict_type);
+    if (conflictType && !['lead_ambiguous', 'lead_conflict', 'identifier_conflict', 'reverse_mapping_conflict'].includes(conflictType)) return errorResult('INVALID_INPUT', 'conflict_type inválido.');
+    const chatId = text(args.chat_id);
+    if (chatId && !safeUuid(chatId)) return errorResult('INVALID_INPUT', 'chat_id inválido.');
+    let query = supabase.from('comm_whatsapp_identity_conflicts').select('id,channel_id,chat_id,conflict_type,status,created_at,updated_at,resolved_at,resolved_by', { count: 'exact' });
+    if (status !== 'all') query = query.eq('status', status);
+    if (conflictType) query = query.eq('conflict_type', conflictType);
+    if (chatId) query = query.eq('chat_id', chatId);
+    const from = (page - 1) * pageSize;
+    const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, from + pageSize - 1);
+    return error ? errorResult('INTERNAL_ERROR', 'Não foi possível listar conflitos de identidade.') : { success: true, page, page_size: pageSize, total: count ?? 0, conflicts: data ?? [] };
+  }
+  if (toolName === 'kifer_get_identity_conflict') {
+    const conflictId = text(args.conflict_id);
+    if (!safeUuid(conflictId)) return errorResult('INVALID_INPUT', 'conflict_id inválido.');
+    const { data, error } = await supabase.from('comm_whatsapp_identity_conflicts').select('id,channel_id,chat_id,conflict_type,status,created_at,updated_at,resolved_at,resolved_by').eq('id', conflictId).maybeSingle();
+    return error ? errorResult('INTERNAL_ERROR', 'Não foi possível consultar o conflito de identidade.') : !data ? errorResult('NOT_FOUND', 'Conflito de identidade não encontrado.') : { success: true, conflict: data, details_available: false };
+  }
   if (toolName === 'kifer_list_scheduled_whatsapp_messages') return listScheduledWhatsAppMessages(supabase, args);
   if (toolName === 'kifer_get_scheduled_whatsapp_message') return getScheduledWhatsAppMessage(supabase, args);
   if (toolName === 'kifer_get_commercial_followup_audit') return getCommercialFollowUpAudit(supabase, args);
@@ -1722,6 +2049,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   const clientRequestId = text(args.client_request_id) || null;
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
+    else if (toolName === 'kifer_send_whatsapp_media') { actionType = 'whatsapp_media_send'; result = await sendWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
     else if (toolName === 'kifer_upload_scheduled_whatsapp_media') { actionType = 'whatsapp_schedule_media_upload'; result = await uploadScheduledWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
@@ -1739,6 +2067,12 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_enqueue_lead_followup') { actionType = 'followup_enqueue'; result = await enqueueLeadFollowUp(supabase, args); }
     else if (toolName === 'kifer_remove_lead_from_followup') { actionType = 'followup_remove'; result = await removeLeadFromFollowUp(supabase, args); }
     else if (toolName === 'kifer_update_lead') { actionType = 'lead_update'; result = await updateLead(supabase, args); }
+    else if (toolName === 'kifer_update_contract_status') { actionType = 'contract_status_update'; result = await updateContractStatus(supabase, args); }
+    else if (toolName === 'kifer_cancel_contract') { actionType = 'contract_cancel'; result = await updateContractStatus(supabase, args, true); }
+    else if (['kifer_bulk_update_leads', 'kifer_bulk_assign_leads', 'kifer_bulk_update_lead_status', 'kifer_bulk_archive_leads', 'kifer_bulk_enqueue_followup'].includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-bulk';
+      result = await runBulkLeadMutation({ supabase, toolName, args, actor });
+    }
     else if (toolName === 'kifer_update_reminder') { actionType = 'reminder_update'; result = await updateReminderAction(supabase, args, 'update'); }
     else if (toolName === 'kifer_complete_reminder') { actionType = 'reminder_complete'; result = await updateReminderAction(supabase, args, 'complete'); }
     else if (toolName === 'kifer_cancel_reminder') { actionType = 'reminder_cancel'; result = await updateReminderAction(supabase, args, 'cancel'); }
@@ -1748,13 +2082,40 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_create_followup_flow') { actionType = 'followup_flow_create'; result = await createFollowUpFlow(supabase, args); }
     else if (toolName === 'kifer_create_followup_step') { actionType = 'followup_step_create'; result = await createFollowUpStep(supabase, args); }
     else if (toolName === 'kifer_update_followup_step_message') { actionType = 'followup_step_message_update'; result = await updateFollowUpStepMessage(supabase, args); }
+    else if (toolName === 'kifer_delete_followup_step') { actionType = 'followup_step_delete'; result = await mutateFollowUpSteps(supabase, args, 'delete'); }
+    else if (toolName === 'kifer_reorder_followup_steps') { actionType = 'followup_step_reorder'; result = await mutateFollowUpSteps(supabase, args, 'reorder'); }
     else if (toolName === 'kifer_clone_followup_flow') { actionType = 'followup_flow_clone'; result = await cloneFollowUpFlow(supabase, args); }
+    else if ((MCP_LEAD_ADMIN_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      const action = await executeMcpLeadAdminAction({ supabase, toolName, arguments: args, actor });
+      if (!action) return null;
+      actionType = action.actionType;
+      result = action.result;
+    }
     else return null;
-  } catch (error) {
-    result = errorResult('INTERNAL_ERROR', error instanceof Error ? error.message : 'Falha inesperada ao executar a ação.');
+  } catch {
+    console.error('[chatgpt-mcp] falha inesperada em ação MCP.');
+    result = errorResult('INTERNAL_ERROR', 'Falha inesperada ao executar a ação. Detalhes internos não foram expostos.');
   }
   const resultLeadId = safeUuid(result?.lead_id) ? text(result?.lead_id) : leadId;
   const resultChatId = safeUuid(result?.chat_id) ? text(result?.chat_id) : chatId;
-  await audit({ supabase, actor, toolName, actionType, request: args, result: result!, leadId: resultLeadId, chatId: resultChatId, contractId, clientRequestId });
+  const bulkResults = Array.isArray(result?.results) ? result.results.filter(isRecord) : [];
+  if (bulkResults.length > 0) {
+    const sharedRequest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'lead_ids'));
+    for (const item of bulkResults) {
+      const itemLeadId = safeUuid(item.lead_id) ? text(item.lead_id) : null;
+      await audit({
+        supabase,
+        actor,
+        toolName,
+        actionType,
+        request: { ...sharedRequest, lead_id: itemLeadId, batch_count: bulkResults.length },
+        result: { success: item.success === true, ...item },
+        leadId: itemLeadId,
+        clientRequestId,
+      });
+    }
+  } else {
+    await audit({ supabase, actor, toolName, actionType, request: args, result: result!, leadId: resultLeadId, chatId: resultChatId, contractId, clientRequestId });
+  }
   return result;
 }

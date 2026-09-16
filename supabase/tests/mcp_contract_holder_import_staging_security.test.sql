@@ -107,6 +107,17 @@ SELECT ok(
   ),
   'import lifecycle audit is append-only'
 );
+SELECT ok(
+  (SELECT tgfoid = 'public._mcp_contract_audit_no_change()'::regprocedure
+   FROM pg_trigger
+   WHERE tgrelid = 'public.contract_person_import_audit_log'::regclass
+     AND tgname = 'contract_person_import_audit_immutable' AND NOT tgisinternal),
+  'import lifecycle audit uses its immutable guard'
+);
+SELECT ok(
+  NOT has_function_privilege('service_role', 'public._mcp_contract_audit_no_change()'::regprocedure, 'EXECUTE'),
+  'service_role cannot call the import immutability guard directly'
+);
 
 SELECT ok(to_regprocedure('public.create_contract_holder_import(uuid,text,jsonb,uuid,uuid,text,integer)') IS NOT NULL, 'holder staging RPC has the expected signature');
 SELECT ok(to_regprocedure('public.mcp_create_contract_holder_from_import(uuid,uuid,uuid,text)') IS NOT NULL, 'holder consume RPC has the expected signature');

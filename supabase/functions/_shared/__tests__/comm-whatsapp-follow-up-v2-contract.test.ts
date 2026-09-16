@@ -19,6 +19,10 @@ const reasoningBudgetMigrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261007011000_raise_follow_up_reasoning_budget.sql'),
   'utf8',
 );
+const pendingFollowUpMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261008090200_include_legacy_follow_up_labels_in_batch.sql'),
+  'utf8',
+);
 
 test('pipeline normal usa geração e validação por IA na mesma Feature', () => {
   const normalPipeline = edgeSource.slice(edgeSource.indexOf('// TWO-STAGE FOLLOW-UP'));
@@ -90,6 +94,17 @@ test('V2 persiste proveniência, textos e aprovação de reminder', () => {
 
 test('UI não oferece geração automática de múltiplas versões', () => {
   assert.doesNotMatch(batchModalSource, /variantCount|3 opções/);
+});
+
+test('follow-ups usam uma categoria canônica e bloqueiam aliases legados', () => {
+  assert.match(
+    pendingFollowUpMigrationSource,
+    /SET tipo = 'Follow-up'/,
+  );
+  assert.match(pendingFollowUpMigrationSource, /reminders_follow_up_type_canonical_check/);
+  assert.match(pendingFollowUpMigrationSource, /AND reminder\.tipo = 'Follow-up'/);
+  assert.doesNotMatch(pendingFollowUpMigrationSource, /lower\(btrim\(reminder\.tipo\)\) IN/);
+  assert.match(pendingFollowUpMigrationSource, /AT TIME ZONE 'America\/Sao_Paulo'/);
 });
 
 test('followup.refine continua manual e em uma única chamada própria', () => {

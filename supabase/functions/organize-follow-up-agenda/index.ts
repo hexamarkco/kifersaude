@@ -234,7 +234,7 @@ const normalizeText = (value: unknown) => toTrimmedString(value)
 
 const isFollowUpReminder = (reminder: ReminderRow) => {
   const type = normalizeText(reminder.tipo);
-  return type === 'follow-up' || type === 'follow up' || type === 'followup' || type === 'retorno';
+  return type === 'follow-up';
 };
 
 const isHotStatus = (status: unknown) => {

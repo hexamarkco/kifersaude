@@ -53,7 +53,8 @@ const MAX_BULK_SCHEDULED_MESSAGES = 50;
 const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
 const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,message_type,media_url,media_mime_type,media_file_name,media_size_bytes,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
-const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up', 'Retorno']);
+const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up']);
+const FOLLOW_UP_TYPE_ALIASES = new Set(['retorno', 'follow up', 'follow-up', 'followup']);
 const MAX_BULK_LEAD_MUTATIONS = 25;
 const MCP_WHATSAPP_CHAT_SELECT = 'id,channel_id,external_chat_id,phone_number,phone_digits,display_name,lead_id,lead_link_source,deleted_at,merged_into_chat_id,created_at,updated_at';
 const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
@@ -354,6 +355,9 @@ async function createReminder(supabase: SupabaseClient, params: Record<string, u
   const prioridade = text(params.prioridade) || 'normal';
   const date = parseDate(params.data_lembrete);
   if (!safeUuid(leadId) || !tipo || !titulo || !date || !PRIORITIES.has(prioridade)) return errorResult('INVALID_INPUT', 'Informe lead_id, tipo, titulo, data_lembrete válida e prioridade válida.');
+  if (FOLLOW_UP_TYPE_ALIASES.has(tipo.toLocaleLowerCase('pt-BR')) && tipo !== 'Follow-up') {
+    return errorResult('INVALID_INPUT', 'Use exatamente o tipo "Follow-up" para acompanhamento comercial; "Retorno" e aliases não são mais permitidos.');
+  }
   if (!(await existingLead(supabase, leadId))) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
   if (contractId && (!safeUuid(contractId) || !(await validateContract(supabase, leadId, contractId)))) return errorResult('CONTRACT_NOT_FOUND', 'Contrato não encontrado para este lead.');
   const { data, error } = await supabase.from('reminders').insert({ lead_id: leadId, contract_id: contractId || null, tipo, titulo, descricao, data_lembrete: date, prioridade }).select('id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,created_at').maybeSingle();
@@ -2187,7 +2191,7 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
     const leadId = text(args.lead_id);
     if (!safeUuid(leadId)) return errorResult('INVALID_INPUT', 'lead_id inválido.');
     if (!(await existingLead(supabase, leadId))) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
-    const { data, error } = await supabase.from('reminders').select('id,lead_id,tipo,titulo,descricao,data_lembrete,prioridade').eq('lead_id', leadId).eq('lido', false).in('tipo', ['Follow-up', 'Retorno']).gte('data_lembrete', new Date().toISOString()).order('data_lembrete', { ascending: true }).limit(1).maybeSingle();
+    const { data, error } = await supabase.from('reminders').select('id,lead_id,tipo,titulo,descricao,data_lembrete,prioridade').eq('lead_id', leadId).eq('lido', false).eq('tipo', 'Follow-up').gte('data_lembrete', new Date().toISOString()).order('data_lembrete', { ascending: true }).limit(1).maybeSingle();
     return error ? errorResult('INTERNAL_ERROR', 'Não foi possível consultar o próximo retorno.') : { success: true, follow_up: data ?? null };
   }
   return null;
@@ -2217,7 +2221,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_create_reminder') { actionType = 'reminder_create'; result = await createReminder(supabase, args, actor); }
     else if (toolName === 'kifer_update_lead_status') { actionType = 'lead_status_update'; result = await updateLeadStatus(supabase, args, actor); }
     else if (toolName === 'kifer_create_interaction') { actionType = 'interaction_create'; result = await createInteraction(supabase, args, actor); }
-    else if (toolName === 'kifer_set_next_follow_up') { actionType = 'next_follow_up_set'; result = await createReminder(supabase, { lead_id: args.lead_id, tipo: 'Retorno', titulo: 'Próximo retorno', descricao: args.observacao, data_lembrete: args.proximo_retorno, prioridade: 'normal' }, actor); }
+    else if (toolName === 'kifer_set_next_follow_up') { actionType = 'next_follow_up_set'; result = await createReminder(supabase, { lead_id: args.lead_id, tipo: 'Follow-up', titulo: 'Próximo retorno', descricao: args.observacao, data_lembrete: args.proximo_retorno, prioridade: 'normal' }, actor); }
     else if (toolName === 'kifer_update_automation_settings') { actionType = 'automation_settings_update'; result = await updateAutomationSettings(supabase, args); }
     else if (toolName === 'kifer_update_followup_flow') { actionType = 'followup_flow_update'; result = await updateFollowUpFlow(supabase, args); }
     else if (toolName === 'kifer_pause_followup_flow') { actionType = 'followup_flow_pause'; result = await updateFollowUpFlow(supabase, args, false); }

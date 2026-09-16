@@ -265,10 +265,39 @@ test('cria lembrete válido e sincroniza o próximo retorno do lead', async () =
     reminders: [{ data: { id: 'reminder-1', lead_id: actor.actorId, titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', prioridade: 'alta' } }, { data: { data_lembrete: '2026-10-01T13:00:00.000Z' } }],
     mcp_action_audit_log: {},
   });
-  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { lead_id: actor.actorId, tipo: 'Retorno', titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', prioridade: 'alta' }, actor });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', prioridade: 'alta' }, actor });
 
   assert.equal(result?.success, true);
   assert.equal(result?.proximo_retorno, '2026-10-01T13:00:00.000Z');
+  assert.deepEqual(supabase.writes.find((write) => write.table === 'reminders')?.value, {
+    lead_id: actor.actorId,
+    contract_id: null,
+    tipo: 'Follow-up',
+    titulo: 'Ligar',
+    descricao: null,
+    data_lembrete: '2026-10-01T13:00:00.000Z',
+    prioridade: 'alta',
+  });
+});
+
+test('rejeita Retorno como tipo de lembrete no MCP', async () => {
+  const supabase = client({ mcp_action_audit_log: {} });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_reminder',
+    arguments: {
+      lead_id: actor.actorId,
+      tipo: 'Retorno',
+      titulo: 'Ligar',
+      data_lembrete: '2026-10-01T13:00:00.000Z',
+      prioridade: 'normal',
+    },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.match(String(result?.message), /Follow-up/);
+  assert.equal(supabase.writes.some((write) => write.table === 'reminders'), false);
 });
 
 test('altera status válido e cria o histórico comercial', async () => {
@@ -534,7 +563,7 @@ test('audita follow-ups comerciais duplicados e sem mensagem agendada sem altera
   const supabase = client({
     reminders: { data: [
       { id: 'reminder-1', lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', lido: false, cancelled_at: null },
-      { id: 'reminder-2', lead_id: actor.actorId, tipo: 'Retorno', titulo: 'Retornar', data_lembrete: '2026-10-02T13:00:00.000Z', lido: false, cancelled_at: null },
+      { id: 'reminder-2', lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Retornar', data_lembrete: '2026-10-02T13:00:00.000Z', lido: false, cancelled_at: null },
     ] },
     comm_whatsapp_scheduled_messages: { data: [] },
     leads: { data: [{ id: actor.actorId, nome_completo: 'Larissa', status: 'Proposta Enviada', arquivado: false }] },

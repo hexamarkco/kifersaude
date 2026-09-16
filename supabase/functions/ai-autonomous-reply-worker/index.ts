@@ -26,6 +26,7 @@ import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-tra
 import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousValidationFallback,
   buildAutonomousValidationRetryInstruction,
   buildReferencePrompt,
   buildReplyUserPrompt,
@@ -34,6 +35,7 @@ import {
   fetchSimilarSituations,
   getReliableLeadFirstName,
   inferQualificationCompletionHandoff,
+  MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
   type HandoffCode,
@@ -617,26 +619,46 @@ Deno.serve(async (req: Request) => {
           leadFirstName: leadFirstName ?? undefined,
         }), AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION].join('\n\n');
 
-        const result = await generateTextForFeature({
-          supabaseAdmin,
-          featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
-          task: 'autonomous_attendance',
-          systemPrompt,
-          userPrompt,
-          temperature: autonomousConfig?.temperature || 0.6,
-          maxTokens: autonomousConfig?.maxOutputTokens || 350,
-          edgeFunction: 'ai-autonomous-reply-worker',
-          leadId,
-          chatId: chat.id,
-          messageId: promptInboundMessageId,
-          maxAttempts: 2,
-          maxProviderRequestsPerAttempt: 1,
-          retrySameResolvedModel: true,
-          validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-          buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-        });
+        let generatedReplyText: string;
+        try {
+          const result = await generateTextForFeature({
+            supabaseAdmin,
+            featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
+            task: 'autonomous_attendance',
+            systemPrompt,
+            userPrompt,
+            temperature: autonomousConfig?.temperature || 0.6,
+            maxTokens: autonomousConfig?.maxOutputTokens || 350,
+            edgeFunction: 'ai-autonomous-reply-worker',
+            leadId,
+            chatId: chat.id,
+            messageId: promptInboundMessageId,
+            maxAttempts: 2,
+            maxProviderRequestsPerAttempt: 1,
+            retrySameResolvedModel: true,
+            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+            buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
+          });
+          generatedReplyText = result.text;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const fallbackReply = buildAutonomousValidationFallback(history);
+          const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE);
+          if (!canRecoverFromValidation || !fallbackReply) throw error;
 
-        const parsedReply = splitGeneratedReply(result.text, false);
+          const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history);
+          if (!fallbackValidation.valid) throw error;
+
+          generatedReplyText = fallbackReply;
+          console.warn('[ai-autonomous-reply-worker] usando fallback deterministico apos rejeicao repetida de escopo', {
+            jobId: job.id,
+            chatId: chat.id,
+            leadId,
+            fallbackReply,
+          });
+        }
+
+        const parsedReply = splitGeneratedReply(generatedReplyText, false);
         const messages = [...parsedReply.messages];
         let handoffCode = parsedReply.handoffCode;
 

@@ -3,6 +3,7 @@ import { describe, test } from 'vitest';
 
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousValidationFallback,
   buildReplyUserPrompt,
   inferQualificationCompletionHandoff,
   getReliableLeadFirstName,
@@ -11,6 +12,7 @@ import {
   normalizeHandoffCode,
   validateAutonomousReplyOutput,
   HANDOFF_CODES,
+  MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
 
@@ -98,6 +100,7 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /VINCULO ANTES DO ROTEIRO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /criar proximidade real/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao precisa parecer uma sequencia de formulario/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Se o lead ja disser que e pessoa fisica/);
   });
 });
 
@@ -133,6 +136,36 @@ describe('validateAutonomousReplyOutput', () => {
     assert.equal(validateAutonomousReplyOutput('Certo! Você possui CNPJ ou MEI?', history).valid, false);
     assert.equal(validateAutonomousReplyOutput('Você ou seu marido, algum dos dois tem CNPJ ou MEI?', history).valid, true);
     assert.equal(validateAutonomousReplyOutput('Alguém que vai entrar no plano tem CNPJ ou MEI?', history).valid, true);
+  });
+
+  test('avanca quando o lead ja respondeu que e pessoa fisica', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'O plano é para eu e minha esposa.' },
+      { role: 'ai', content: 'Para vocês dois, alguém que vai entrar no plano tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'Sou pessoa física.' },
+    ];
+
+    const fallback = buildAutonomousValidationFallback(history);
+    assert.equal(fallback, 'Entendi, vamos seguir pela pessoa física. Em qual cidade vocês vão utilizar o plano?');
+    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
+  });
+
+  test('pergunta CNPJ de forma abrangente depois que a cidade foi informada', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Para mim é para meus 2 filhos.' },
+      { role: 'ai', content: 'Para os seus dois filhos, quais são as idades deles?' },
+      { role: 'lead', content: '11 e 22.' },
+      { role: 'ai', content: 'Para eu verificar a melhor alternativa, em qual cidade o plano será utilizado?' },
+      { role: 'lead', content: 'Nova Friburgo!' },
+    ];
+
+    const fallback = buildAutonomousValidationFallback(history);
+    assert.equal(fallback, 'Para eu seguir com a cotação, alguém que vai entrar no plano tem CNPJ ou MEI?');
+    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
+    assert.equal(
+      validateAutonomousReplyOutput('Você possui CNPJ ou MEI?', history).message,
+      MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
+    );
   });
 
   test('direciona CNPJ ao filho quando o pai apenas conversa', () => {

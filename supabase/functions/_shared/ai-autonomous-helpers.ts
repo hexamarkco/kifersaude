@@ -29,6 +29,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'VINCULO ANTES DO ROTEIRO: seu atendimento precisa criar proximidade real. Antes de coletar um dado, acolha o contexto que a pessoa trouxe e mostre que entendeu sua situacao, desejo ou preocupacao concreta. Uma conversa boa pode ter uma frase de cuidado, alivio ou orientacao antes da proxima pergunta; nao precisa parecer uma sequencia de formulario. Use o primeiro nome quando soar natural e deixe a pessoa se sentir acompanhada pela Luiza. Seja calorosa, interessada e presente, sem frases prontas, exageros ou promessas que nao possa cumprir.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
   'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
+  'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: reconheca a resposta e avance para a proxima informacao necessaria, normalmente a cidade. Se ele ja tiver informado a cidade, pergunte sobre CNPJ/MEI de forma abrangente para os beneficiarios, sem restringir ao interlocutor.',
   'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
   'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
   'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
@@ -246,6 +247,8 @@ const BUSINESS_ID_VALUE_ANSWER_REGEX = /(?:\bempresari[oa]\b.*\bmais\s+(?:barato
 const MEI_AGE_IN_MONTHS_REGEX = /\b(\d{1,2})\s*mes(?:es)?\b/;
 const MEI_SIX_MONTH_RULE_REGEX = /\b6\s*mes(?:es)?\b/;
 const PERSONA_FISICA_REGEX = /\bpessoa\s+fisica\b/;
+const NO_BUSINESS_ID_RESPONSE_REGEX = /\b(?:pessoa\s+fisica|sem\s+(?:cnpj|mei)|nao\s+(?:tenho|possuo|temos|possuimos)\s+(?:cnpj|mei))\b/;
+const CITY_QUESTION_REGEX = /\b(?:em\s+)?qual\s+cidade\b/;
 const PREGNANCY_CONTEXT_REGEX = /\b(gravida|gestante|gestacao|engravid|parto)\b/;
 const MATERNITY_QUESTION_REGEX = /\b(carencia|parto|gestacao|pre[- ]?natal|engravid)\b/;
 const TERM_BIRTH_WAIT_REGEX = /(?:\b10\s*mes(?:es)?\b|\b300\s*dias\b)/;
@@ -272,6 +275,8 @@ const THIRD_PARTY_ONLY_REGEX = new RegExp(
 const THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX = new RegExp(
   `(?:(?:seu|sua)\\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)|\\bbeneficiari[oa]\\b|\\bquem\\s+vai\\s+entrar\\b|\\balguem\\s+que\\s+(?:vai|ira)\\s+entrar\\b)`,
 );
+
+export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.';
 
 /**
  * Valida somente erros conversacionais de alta confianca. O modelo recebe uma
@@ -451,7 +456,7 @@ export const validateAutonomousReplyOutput = (
         valid: false,
         stopReason: 'invalid_output',
         message: hasMultipleBeneficiaries
-          ? 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.'
+          ? MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
           : 'O interlocutor esta cotando para outra pessoa. Direcione CNPJ/MEI ao beneficiario, nao a quem esta digitando.',
       };
     }
@@ -465,8 +470,44 @@ export const buildAutonomousValidationRetryInstruction = (
 ): string => [
   '--- CORRECAO OBRIGATORIA DA RESPOSTA ANTERIOR ---',
   validation.message ?? 'A resposta anterior violou uma regra critica de qualificacao.',
+  validation.message === MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
+    ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente se algum beneficiario possui CNPJ/MEI.'
+    : '',
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');
+
+/**
+ * Recuperacao deterministica para o caso em que a IA insiste no escopo errado
+ * de CNPJ/MEI mesmo depois do retry. A resposta precisa continuar o turno sem
+ * repetir uma pergunta que o lead ja respondeu e sem deixar o chat em silencio.
+ */
+export const buildAutonomousValidationFallback = (history: AutonomousMessageRow[]): string | null => {
+  const latestLead = [...history].reverse().find((row) => row.role === 'lead');
+  const previousAi = [...history].reverse().find((row) => row.role === 'ai');
+  if (!latestLead || !previousAi) return null;
+
+  const normalizedLatestLead = normalizeForSemanticMatch(latestLead.content);
+  const normalizedPreviousAi = normalizeForSemanticMatch(previousAi.content);
+  const leadHistoryText = normalizeForSemanticMatch(
+    history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
+  );
+
+  if (
+    CNPJ_OR_MEI_REGEX.test(normalizedPreviousAi)
+    && NO_BUSINESS_ID_RESPONSE_REGEX.test(normalizedLatestLead)
+  ) {
+    return 'Entendi, vamos seguir pela pessoa física. Em qual cidade vocês vão utilizar o plano?';
+  }
+
+  if (
+    MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText)
+    && CITY_QUESTION_REGEX.test(normalizedPreviousAi)
+  ) {
+    return 'Para eu seguir com a cotação, alguém que vai entrar no plano tem CNPJ ou MEI?';
+  }
+
+  return null;
+};
 
 export const extractHandoff = (
   text: string,

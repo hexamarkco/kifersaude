@@ -33,6 +33,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 ## Contratos e documentos privados
 
+- A importação JSON em massa cria somente contratos novos: não vincula leads nem importa titulares/dependentes, parcelas de comissão ou faixas de bônus. O lote inteiro é validado antes de um único insert; códigos repetidos no arquivo ou já existentes impedem a gravação de todos os itens.
 - Escritas MCP de contrato/titular/dependente usam funções `mcp_*` com OAuth admin revalidado no banco, allowlists de campos, idempotência para criação/remoção e `expected_updated_at` nas atualizações. `kifer_create_contract_bundle` grava contrato, titular e dependentes atomicamente e não muda o lead; a conversão de lead continua sendo uma etapa explícita da UI.
 - Remoção física de titular/dependente só ocorre quando não há dependentes ou metadados de documentos associados; ao encontrar referências, a RPC rejeita a operação sem exclusão parcial. O log de auditoria guarda ator, entidade, campos alterados e timestamps, nunca valores de saúde/identificação.
 - Arquivos novos de lead/contrato/titular/dependente ficam em `contract-documents-private`, bucket privado de 20 MiB com allowlist PDF/JPEG/PNG/WebP. Metadados continuam polimórficos, mas RPCs validam a existência do alvo e triggers bloqueiam órfãos até a limpeza do Storage terminar. MCP recebe links assinados de 120 segundos.

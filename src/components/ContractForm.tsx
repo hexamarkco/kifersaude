@@ -11,10 +11,10 @@ import {
   listContractConversionLeads,
   listContractValueAdjustments,
   saveContractRecord,
-  type ContractDocumentExtraction,
+  type ContractJsonImportPayload,
   type ContractPersistenceInput,
 } from "../features/contracts";
-import { ContractDocumentImportDialog } from "../features/contracts/components/ContractDocumentImportDialog";
+import { ContractJsonImportDialog } from "../features/contracts/components/ContractJsonImportDialog";
 import type { Lead } from "../features/leads";
 import {
   getContractBonusSummary,
@@ -42,7 +42,7 @@ import {
   Calendar,
   Building2,
   WalletCards,
-  Sparkles,
+  FileUp,
 } from "lucide-react";
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
@@ -304,7 +304,7 @@ export default function ContractForm({
   );
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
-  const [showDocumentImport, setShowDocumentImport] = useState(false);
+  const [showJsonImport, setShowJsonImport] = useState(false);
   const [importedHolderData, setImportedHolderData] = useState<Partial<ContractHolder> | null>(null);
   const [editingAdjustment, setEditingAdjustment] =
     useState<ContractValueAdjustment | null>(null);
@@ -646,20 +646,27 @@ export default function ContractForm({
     }));
   };
 
-  const handleDocumentImportApply = (extraction: ContractDocumentExtraction) => {
-    const { fields } = extraction;
-    setFormData((current) => ({
-      ...current,
-      ...fields,
-      cnpj: fields.cnpj ? formatCnpj(fields.cnpj) : current.cnpj,
-      mensalidade_total: fields.mensalidade_total
-        ? formatCurrencyInput(fields.mensalidade_total)
-        : current.mensalidade_total,
-    }));
-    setImportedHolderData(extraction.holder);
-    toast.success(extraction.holder
+  const handleJsonImportApply = (payload: ContractJsonImportPayload) => {
+    const importedFields: Partial<ContractFormState> = {};
+    const currencyFields = new Set([
+      "mensalidade_total",
+      "comissao_prevista",
+      "taxa_adesao_valor",
+    ]);
+
+    Object.entries(payload.contract).forEach(([key, rawValue]) => {
+      let value = String(rawValue);
+      if (currencyFields.has(key)) value = formatCurrencyFromNumber(Number(rawValue));
+      if (key === "cnpj") value = formatCnpj(value);
+      if (key === "mes_reajuste") value = value.padStart(2, "0");
+      Object.assign(importedFields, { [key]: value });
+    });
+
+    setFormData((current) => ({ ...current, ...importedFields }));
+    setImportedHolderData(payload.holder as Partial<ContractHolder> | null);
+    toast.success(payload.holder
       ? "Contrato e titular principal preparados. Revise os dados antes de salvar."
-      : "Campos extraídos aplicados. Revise os dados antes de salvar.");
+      : "Dados importados para o formulário. Revise tudo antes de salvar.");
   };
   const remainingCommissionValue = Math.max(
     0,
@@ -1153,10 +1160,10 @@ export default function ContractForm({
             variant="soft"
             size="sm"
             className="mt-3"
-            onClick={() => setShowDocumentImport(true)}
+            onClick={() => setShowJsonImport(true)}
           >
-            <Sparkles className="kds-control-icon" />
-            Preencher com PDFs
+            <FileUp className="kds-control-icon" />
+            Importar JSON
           </Button>
         </DialogHeader>
         <DialogBody>
@@ -2197,10 +2204,10 @@ export default function ContractForm({
         </DialogFooter>
       </Dialog>
 
-      {showDocumentImport && (
-        <ContractDocumentImportDialog
-          onApply={handleDocumentImportApply}
-          onClose={() => setShowDocumentImport(false)}
+      {showJsonImport && (
+        <ContractJsonImportDialog
+          onApply={handleJsonImportApply}
+          onClose={() => setShowJsonImport(false)}
         />
       )}
 

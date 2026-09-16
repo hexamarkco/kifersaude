@@ -4,11 +4,15 @@ export type {
   ContractHolderImportResult,
   CreateContractHolderImportInput,
 } from './domain/holderImport';
-export type {
-  ContractDocumentExtraction,
-  ContractDocumentProfile,
-  ContractImportFields,
-} from './domain/contractDocumentImport';
+export {
+  CONTRACT_JSON_BULK_IMPORT_TEMPLATE,
+  CONTRACT_JSON_IMPORT_TEMPLATE,
+  MAX_CONTRACTS_PER_JSON_IMPORT,
+  parseBulkContractJsonImport,
+  parseContractJsonImport,
+  type ContractJsonBulkImportPayload,
+  type ContractJsonImportPayload,
+} from './domain/contractJsonImport';
 export {
   deleteContract,
   listContractHolders,
@@ -37,4 +41,5 @@ export {
   saveContractValueAdjustment,
   type ContractPersistenceInput,
 } from './data/contractFormRepository';
+export { createContractRecordsBulk } from './data/contractJsonImportRepository';
 export { default as ContractsManagerScreen } from './ContractsManagerScreen';

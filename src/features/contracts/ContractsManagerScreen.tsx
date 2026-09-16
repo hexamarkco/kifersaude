@@ -6,6 +6,8 @@ import {
   listContractsSearchSnapshot,
   subscribeToContractChanges,
 } from "./data/contractsRepository";
+import { createContractRecordsBulk } from "./data/contractJsonImportRepository";
+import type { ContractJsonBulkImportPayload } from "./domain/contractJsonImport";
 import {
   Plus,
   Search,
@@ -16,12 +18,14 @@ import {
   Trash2,
   Users,
   Calendar,
+  FileUp,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
 import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
 import HolderImportPreparation from "./components/HolderImportPreparation";
+import { ContractBulkJsonImportDialog } from "./components/ContractBulkJsonImportDialog";
 import {
   Badge,
   Button,
@@ -91,6 +95,7 @@ export default function ContractsManager({
     "todos" | "proximos-30"
   >("todos");
   const [showForm, setShowForm] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
   );
@@ -208,6 +213,22 @@ export default function ContractsManager({
         (contractItem) => contractItem.id === selectedContract.id,
       ) || null;
     setSelectedContract(refreshed);
+  };
+
+  const handleBulkJsonImport = async (
+    contractsToImport: ContractJsonBulkImportPayload["contracts"],
+  ) => {
+    try {
+      await createContractRecordsBulk(contractsToImport);
+      toast.success(`${contractsToImport.length} contrato(s) importado(s).`);
+      await loadContracts();
+    } catch (error) {
+      console.error("Erro ao importar contratos em massa:", error);
+      if (error instanceof Error && error.message.includes("Nenhum contrato do lote foi incluído")) {
+        throw error;
+      }
+      throw new Error("Não foi possível importar o lote. Verifique os dados e tente novamente.");
+    }
   };
 
   const filterContracts = useCallback(() => {
@@ -485,15 +506,21 @@ export default function ContractsManager({
           title="Gestão de Contratos"
           description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
           actions={canEditContracts ? (
-            <Button
-              onClick={() => {
-                setEditingContract(null);
-                setShowForm(true);
-              }}
-            >
-              <Plus className="kds-control-icon" />
-              <span>Novo contrato</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="secondary" onClick={() => setShowBulkImport(true)}>
+                <FileUp className="kds-control-icon" />
+                <span>Importar em massa</span>
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingContract(null);
+                  setShowForm(true);
+                }}
+              >
+                <Plus className="kds-control-icon" />
+                <span>Novo contrato</span>
+              </Button>
+            </div>
           ) : undefined}
           data-panel-animate
         />
@@ -888,6 +915,13 @@ export default function ContractsManager({
               if (onConvertComplete) onConvertComplete();
               loadContracts();
             }}
+          />
+        )}
+
+        {showBulkImport && canEditContracts && (
+          <ContractBulkJsonImportDialog
+            onImport={handleBulkJsonImport}
+            onClose={() => setShowBulkImport(false)}
           />
         )}
 

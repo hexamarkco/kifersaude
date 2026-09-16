@@ -50,6 +50,37 @@ describe('MCP contract actions', () => {
     });
   });
 
+  it('keeps direct holder creation available with the existing PII payload contract', async () => {
+    const { client, rpc } = makeSupabase({ holder_id: actorId, contract_id: contractId });
+    const holder = {
+      nome_completo: 'Titular Manual',
+      cpf: '00000000000',
+      data_nascimento: '1980-01-01',
+      telefone: '11900000000',
+      email: 'titular@example.invalid',
+      endereco: 'Rua de Teste, 10',
+    };
+    const tool = MCP_CONTRACT_TOOLS.find(({ name }) => name === 'kifer_create_contract_holder');
+    const result = await executeMcpContractWriteAction({
+      supabase: client,
+      toolName: 'kifer_create_contract_holder',
+      arguments: { contract_id: contractId, client_request_id: 'req-holder-direct-1', holder },
+      actor: { actorId },
+    });
+
+    expect(tool?.inputSchema).toMatchObject({
+      required: ['contract_id', 'client_request_id', 'holder'],
+      additionalProperties: false,
+    });
+    expect(result).toMatchObject({ success: true, holder_id: actorId });
+    expect(rpc).toHaveBeenCalledWith('mcp_create_contract_holder', {
+      p_actor_user_id: actorId,
+      p_contract_id: contractId,
+      p_client_request_id: 'req-holder-direct-1',
+      p_payload: holder,
+    });
+  });
+
   it('limits commission changes to modeled commission fields and uses optimistic concurrency', async () => {
     const { client, rpc } = makeSupabase();
     const result = await executeMcpContractWriteAction({

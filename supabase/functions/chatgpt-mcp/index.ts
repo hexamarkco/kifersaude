@@ -4,6 +4,7 @@ import { executeMcpCommercialReadAction, executeMcpWriteAction } from './write-a
 import { MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
 import { MCP_OPPORTUNITY_TOOLS, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
 import { MCP_CONTRACT_TOOLS, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
+import { MCP_CONTRACT_HOLDER_IMPORT_TOOLS, MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES } from './contract-holder-import-actions.ts';
 import { MCP_CONTRACT_DOCUMENT_TOOLS, MCP_CONTRACT_DOCUMENT_TOOL_NAMES } from './contract-document-actions.ts';
 import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES } from './contact-permission-actions.ts';
 import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
@@ -588,6 +589,7 @@ const tools = [
   },
   ...MCP_OPPORTUNITY_TOOLS,
   ...MCP_CONTRACT_TOOLS,
+  ...MCP_CONTRACT_HOLDER_IMPORT_TOOLS,
   ...MCP_CONTRACT_DOCUMENT_TOOLS,
   ...MCP_CONTACT_PERMISSION_TOOLS,
   ...MCP_INBOX_TOOLS,
@@ -621,6 +623,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     'kifer_update_contract_status', 'kifer_cancel_contract',
     ...MCP_OPPORTUNITY_WRITE_TOOL_NAMES,
     ...MCP_CONTRACT_WRITE_TOOL_NAMES,
+    ...MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES,
     ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name !== 'kifer_list_documents' && name !== 'kifer_get_document'),
     ...MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
     ...MCP_INBOX_WRITE_TOOL_NAMES,

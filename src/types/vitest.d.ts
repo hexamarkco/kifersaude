@@ -2,6 +2,7 @@ declare module 'vitest' {
   export const test: (name: string, fn: () => void | Promise<void>) => void;
   export const vi: {
     fn: <T extends (...args: unknown[]) => unknown>(implementation?: T) => T;
+    hoisted: <T>(factory: () => T) => T;
     mock: (module: string, factory: () => unknown) => void;
   };
 }

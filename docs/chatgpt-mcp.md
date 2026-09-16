@@ -62,7 +62,7 @@ Todas as ferramentas abaixo exigem OAuth de administrador ativo. As ferramentas 
 | Domínio | Ferramentas | Leitura/escrita | Contrato, efeitos e limites |
 | --- | --- | --- | --- |
 | Oportunidades | `kifer_create_opportunity`, `kifer_get_opportunity`, `kifer_get_opportunity_360`, `kifer_update_opportunity`, `kifer_archive_opportunity`, `kifer_add_lead_to_opportunity`, `kifer_remove_lead_from_opportunity`, `kifer_set_opportunity_primary_contact` | 2 leitura, 6 escrita | Criação aceita até 50 leads únicos e `client_request_id`; edição, arquivamento e vínculos exigem `expected_updated_at`. Remoção preserva histórico e o contato principal precisa ser trocado antes de removê-lo. |
-| Contratos, titulares e dependentes | `kifer_create_contract`, `kifer_update_contract`, `kifer_update_contract_commission`, `kifer_create_contract_holder`, `kifer_update_contract_holder`, `kifer_remove_contract_holder`, `kifer_create_dependent`, `kifer_update_dependent`, `kifer_remove_dependent`, `kifer_create_contract_bundle`, `kifer_create_contract_value_adjustment`, `kifer_list_contract_value_adjustments` | 1 leitura, 11 escrita | Schemas fechados preservam validações e catálogos do CRM; criação usa idempotência, atualização usa concorrência otimista e o bundle grava contrato/grafo relacionado atomicamente. Remoções bloqueiam dependentes e documentos legados/privados ainda ativos ou não limpos. Ajustes registram acréscimo/desconto no modelo existente; não representam pagamentos nem estornos. |
+| Contratos, titulares e dependentes | `kifer_create_contract`, `kifer_update_contract`, `kifer_update_contract_commission`, `kifer_create_contract_holder`, `kifer_create_contract_holder_from_import`, `kifer_update_contract_holder`, `kifer_remove_contract_holder`, `kifer_create_dependent`, `kifer_update_dependent`, `kifer_remove_dependent`, `kifer_create_contract_bundle`, `kifer_create_contract_value_adjustment`, `kifer_list_contract_value_adjustments` | 1 leitura, 12 escrita | Schemas fechados preservam validações e catálogos do CRM; criação usa idempotência, atualização usa concorrência otimista e o bundle grava contrato/grafo relacionado atomicamente. O fluxo via import resolve PII apenas em staging privado, consome o import atomicamente e responde somente com IDs. Remoções bloqueiam dependentes e documentos legados/privados ainda ativos ou não limpos. Ajustes registram acréscimo/desconto no modelo existente; não representam pagamentos nem estornos. |
 | Documentos | `kifer_list_documents`, `kifer_get_document`, `kifer_upload_document`, `kifer_update_document_metadata`, `kifer_delete_document` | 2 leitura, 3 escrita | Upload privado limitado a 20 MiB e MIME allowlist; acesso administrativo, URL assinada de curta duração e trilha de listagem/acesso sem gravar URL, token, hash ou conteúdo no audit log. A infraestrutura nova não migra URLs de documentos legados. |
 | Consentimento | `kifer_get_contact_permission`, `kifer_set_contact_permission`, `kifer_bulk_set_contact_permission` | 1 leitura, 2 escrita | Estados `allowed`, `blocked` ou `unknown` por canal, endpoint e escopo (`global`, `commercial`, `service_reply`, `transactional`). Bulk é atômico e limitado a 50 entradas; decisões ficam em eventos append-only. |
 | Inbox | `kifer_archive_whatsapp_chat`, `kifer_unarchive_whatsapp_chat`, `kifer_pin_whatsapp_chat`, `kifer_unpin_whatsapp_chat`, `kifer_mute_whatsapp_chat`, `kifer_unmute_whatsapp_chat`, `kifer_mark_whatsapp_chat_read`, `kifer_mark_whatsapp_chat_unread`, `kifer_link_chat_to_lead`, `kifer_unlink_chat_from_lead` | 10 escrita | Cada operação usa RPC MCP com admin revalidado, lock canônico, auditoria, `expected_updated_at` e idempotência. Link não mescla chats; conflito aberto exige resolução restrita por evidência persistida. |
@@ -81,17 +81,48 @@ O envio e o agendamento de WhatsApp exigem `client_request_id`, para que uma nov
 
 Contratos, titulares e dependentes são operados por RPCs MCP com validação, auditoria e transações apropriadas. O bucket contratual é privado e separado da mídia do Inbox; registros legados em `documents` mantêm suas referências e URLs originais. A Inbox usa RPCs que revalidam o administrador e o lock canônico. A permissão de contato é verificada centralmente em campanhas, automações, mensagens manuais, retentativas e respostas autônomas; cada tentativa comercial revalida o estado antes do POST externo. Mensagens manuais e campanhas usam o escopo `commercial`; respostas autônomas usam `service_reply`.
 
+### Import privado de titular
+
+Um backend interno/admin autorizado chama `create_contract_holder_import` com `p_actor_user_id`, `p_client_request_id`, `p_holder_payload` e, opcionalmente, `p_lead_id`, `p_contract_id`, `p_source` e `p_ttl_hours`. A função verifica o perfil admin, valida os campos e retorna somente `success`, `import_id`, `expires_at` e `replayed`; o TTL padrão é 24 horas e o limite é 7 dias. A RPC é restrita a `service_role`, não é uma ferramenta MCP e não é acessível pelo navegador. O MCP recebe somente identificadores opacos em `kifer_create_contract_holder_from_import`; o consumo valida vínculo/expiração, grava o titular e apaga os campos PII do staging na mesma transação. Um tombstone sem PII é mantido por até sete dias para distinguir imports expirados/consumidos. A migration tenta habilitar `pg_cron` e agenda a limpeza por hora quando a extensão está disponível; confirme o job no ambiente após aplicar a migration. O staging não integra `kifer_list_resources` nem a allowlist de leitura.
+
+O cadastro manual continua independente: `HolderForm`/`DependentForm` seguem gravando pelas ações/repositórios atuais e não dependem de `import_id`. Não há migração do formulário manual para staging. A criação MCP direta, o bundle e o consumo do import usam os helpers de validação/inserção de titular existentes no servidor (`_mcp_validate_holder_payload` e `_mcp_insert_holder`); as gravações da interface continuam no caminho direto atual, sem mudança de comportamento. O staging privado de dependentes prepara a mesma fronteira para uma futura action `kifer_create_dependent_from_import`, ainda não publicada.
+
+O consumer bloqueia o contrato durante a checagem e a criação, mas `contract_holders.contract_id` não tem constraint `UNIQUE` no schema legado. Uma gravação manual direta concorrente ainda pode criar duplicata; não foi adicionada uma constraint/trigger para evitar alterar o comportamento do fluxo manual.
+
+Exemplo da chamada MCP sem dados pessoais e resposta esperada:
+
+```json
+{
+  "tool": "kifer_create_contract_holder_from_import",
+  "arguments": {
+    "contract_id": "00000000-0000-4000-8000-000000000001",
+    "import_id": "00000000-0000-4000-8000-000000000002",
+    "client_request_id": "holder-import-2026-001"
+  }
+}
+```
+
+```json
+{
+  "success": true,
+  "replayed": false,
+  "contract_id": "00000000-0000-4000-8000-000000000001",
+  "holder_id": "00000000-0000-4000-8000-000000000003",
+  "import_id": "00000000-0000-4000-8000-000000000002"
+}
+```
+
 O schema de oportunidades registra grupos comerciais e preserva histórico de vínculo, mas não substitui o cadastro do lead. Merge de leads permanece indisponível: relações em várias tabelas, referências de auditoria/IA sem FK, colisões de unicidade e caminhos de Storage atrelados ao UUID impedem uma transferência segura sem estratégia de linhagem. Merge genérico de chats também não é exposto. A resolução manual cobre apenas candidatos sustentados pelos dados persistidos; evidência externa exige validação pelo servidor/provider. Comissão pode ser ajustada nos campos modelados e receber acréscimos/descontos, mas pagamentos, bônus pagos e estornos não são implementados porque não há ledger financeiro que os represente. Tags e motivos estruturados de perda também não existem no modelo atual.
 
 `config_options` foi removida da allowlist de leitura: o recurso constava no MCP, mas não aparece no schema tipado vigente. O CRM usa hoje tabelas dedicadas e `system_configurations`; as migrations de `config_options` são históricas. Assim, o MCP deixa de anunciar uma consulta que falha no schema atual.
 
 ## Inventário
 
-O registry atual publica 105 ferramentas únicas: 29 de leitura e 76 de escrita. A classificação funcional exclusiva é 23 de comunicação, 21 de automação, 6 de analytics e 55 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
+O registry atual publica 107 ferramentas únicas: 29 de leitura e 78 de escrita. A classificação funcional exclusiva é 23 de comunicação, 21 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
 
 ## Migration adicional
 
-As migrations MCP atuais seguem as migrations anteriores do repositório e incluem a base de contratos/oportunidades/consentimento/documentos/Inbox/conflitos (`20261008010000` a `20261008090000`). Elas devem ser aplicadas em ordem antes de publicar a versão correspondente da Edge Function; migrations históricas permanecem imutáveis.
+As migrations MCP atuais seguem as migrations anteriores do repositório e incluem a base de contratos/oportunidades/consentimento/documentos/Inbox/conflitos (`20261008010000` a `20261008090000`) e o staging privado de titulares/dependentes (`20261008090100`). Elas devem ser aplicadas em ordem antes de publicar a versão correspondente da Edge Function; migrations históricas permanecem imutáveis.
 
 ## Publicação e reativação
 

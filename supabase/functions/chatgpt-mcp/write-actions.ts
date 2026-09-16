@@ -9,6 +9,10 @@ import { executeMcpLeadAdminAction, MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-adm
 import { executeMcpOpportunityWriteAction, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
 import { executeMcpOpportunityReadAction } from './opportunity-actions.ts';
 import { executeMcpContractWriteAction, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
+import {
+  executeMcpContractHolderImportAction,
+  MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES,
+} from './contract-holder-import-actions.ts';
 import { executeMcpContractDocumentAction } from './contract-document-actions.ts';
 import {
   executeMcpContactPermissionReadAction,
@@ -70,11 +74,26 @@ const ALLOWED_SCHEDULED_MEDIA_MIME_TYPES = new Set([
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const rawString = (value: unknown) => typeof value === 'string' ? value : '';
 const safeUuid = (value: unknown) => UUID.test(text(value));
+const safeRequestId = (value: unknown) => /^[A-Za-z0-9:_-]{1,128}$/.test(text(value));
 const sanitize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sanitize);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => [key, SECRET_KEY.test(key) || PRIVATE_CUSTOMER_DATA_KEY.test(key) ? '[REDACTED]' : sanitize(child)]));
 };
+
+async function requestIdFingerprint(actorId: string, operation: string, requestId: unknown): Promise<string | null> {
+  const normalized = text(requestId);
+  if (!safeRequestId(normalized)) return null;
+  try {
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`${actorId.toLowerCase()}:${operation}:${normalized}`),
+    );
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
+}
 
 const errorResult = (errorCode: ActionErrorCode, message: string): McpWriteResult => ({ success: false, error_code: errorCode, message });
 
@@ -2176,12 +2195,16 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
 
 export async function executeMcpWriteAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown>; actor: McpWriteActor }): Promise<McpWriteResult | null> {
   const { supabase, toolName, arguments: args, actor } = params;
+  const isHolderImportAction = (MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);
   let result: McpWriteResult | null = null;
   let actionType = '';
-  const leadId = text(args.lead_id) || null;
-  const chatId = text(args.chat_id) || null;
-  let contractId = text(args.contract_id) || null;
-  const clientRequestId = text(args.client_request_id) || null;
+  const leadId = isHolderImportAction ? null : text(args.lead_id) || null;
+  const chatId = isHolderImportAction ? null : text(args.chat_id) || null;
+  const rawContractId = text(args.contract_id);
+  let contractId = isHolderImportAction
+    ? (safeUuid(rawContractId) ? rawContractId : null)
+    : rawContractId || null;
+  const clientRequestId = isHolderImportAction ? null : text(args.client_request_id) || null;
   try {
     if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_send_whatsapp_media') { actionType = 'whatsapp_media_send'; result = await sendWhatsAppMedia(supabase, args, actor); }
@@ -2223,6 +2246,10 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if ((MCP_CONTRACT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
       result = await executeMcpContractWriteAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpContractHolderImportAction({ supabase, toolName, arguments: args, actor });
     }
     else if ((MCP_OPPORTUNITY_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-opportunity';
@@ -2276,7 +2303,27 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
       });
     }
   } else {
-    await audit({ supabase, actor, toolName, actionType, request: args, result: result!, leadId: resultLeadId, chatId: resultChatId, contractId, clientRequestId });
+    const auditRequest = isHolderImportAction
+      ? {
+          contract_id: safeUuid(args.contract_id) ? text(args.contract_id) : null,
+          import_id: safeUuid(args.import_id) ? text(args.import_id) : null,
+        }
+      : args;
+    const auditClientRequestId = isHolderImportAction
+      ? await requestIdFingerprint(actor.actorId, 'holder.import.consume', args.client_request_id)
+      : clientRequestId;
+    await audit({
+      supabase,
+      actor,
+      toolName,
+      actionType,
+      request: auditRequest,
+      result: result!,
+      leadId: resultLeadId,
+      chatId: resultChatId,
+      contractId,
+      clientRequestId: auditClientRequestId,
+    });
   }
   return result;
 }

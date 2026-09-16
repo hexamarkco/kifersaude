@@ -33,6 +33,10 @@ verify_jwt = false
 [functions.tenor-media]
 verify_jwt = true
 
+# --- Preparação administrativa de titulares para consumo via MCP ---
+[functions.contract-holder-imports]
+verify_jwt = true
+
 # --- Workers chamados por service role (webhook, cron, net.http_post) ---
 [functions.ai-autonomous-reply-worker]
 verify_jwt = false

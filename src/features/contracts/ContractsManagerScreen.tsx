@@ -21,6 +21,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
 import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
+import HolderImportPreparation from "./components/HolderImportPreparation";
 import {
   Badge,
   Button,
@@ -897,6 +898,7 @@ export default function ContractsManager({
             onClose={() => setSelectedContract(null)}
             onUpdate={handleContractsUpdated}
             onDelete={handleDeleteContract}
+            holderSectionAction={role === "admin" ? <HolderImportPreparation contract={selectedContract} /> : null}
           />
         )}
         {ConfirmationDialog}

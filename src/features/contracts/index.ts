@@ -1,5 +1,10 @@
 export type * from './domain/types';
 export type {
+  ContractHolderImportPayload,
+  ContractHolderImportResult,
+  CreateContractHolderImportInput,
+} from './domain/holderImport';
+export type {
   ContractDocumentExtraction,
   ContractDocumentProfile,
   ContractImportFields,
@@ -12,6 +17,7 @@ export {
   saveContractHolder,
   subscribeToContractChanges,
 } from './data/contractsRepository';
+export { createContractHolderImport } from './data/holderImportRepository';
 export {
   deleteContractDependent,
   deleteContractHolder,

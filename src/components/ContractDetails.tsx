@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import {
   Contract,
   ContractHolder,
@@ -89,6 +89,7 @@ type ContractDetailsProps = {
   onClose: () => void;
   onUpdate: () => void;
   onDelete?: (contract: Contract) => void;
+  holderSectionAction?: ReactNode;
 };
 
 export default function ContractDetails({
@@ -96,6 +97,7 @@ export default function ContractDetails({
   onClose,
   onUpdate,
   onDelete,
+  holderSectionAction,
 }: ContractDetailsProps) {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
@@ -1163,18 +1165,21 @@ export default function ContractDetails({
               <User className={detailSectionIconClass} />
               <span>Titulares ({holders.length})</span>
             </h4>
-            {canEditContracts && (
-              <Button
-                onClick={() => {
-                  setEditingHolder(null);
-                  setShowHolderForm(true);
-                }}
-                size="sm"
-              >
-                <Plus className="kds-control-icon" />
-                <span>Adicionar titular</span>
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {holderSectionAction}
+              {canEditContracts && (
+                <Button
+                  onClick={() => {
+                    setEditingHolder(null);
+                    setShowHolderForm(true);
+                  }}
+                  size="sm"
+                >
+                  <Plus className="kds-control-icon" />
+                  <span>Adicionar titular</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {holders.length > 0 ? (

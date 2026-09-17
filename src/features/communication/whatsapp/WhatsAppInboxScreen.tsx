@@ -386,6 +386,27 @@ const isVisualMediaMessage = (message: CommWhatsAppMessage) => {
   return isGalleryMediaMessage(message) || kind === 'sticker' || isPdfDocumentMessage(message);
 };
 
+const isMediaMessage = (message: CommWhatsAppMessage) => {
+  const kind = message.message_type.trim().toLowerCase();
+  return isVisualMediaMessage(message) || kind === 'document' || kind === 'audio' || kind === 'voice';
+};
+
+const MEDIA_SENDING_STATUSES = new Set(['pending', 'queued', 'sending']);
+
+const isMediaSendingMessage = (
+  message: CommWhatsAppMessage,
+  mediaUploadProgress: MediaUploadProgress | null,
+  retrying = false,
+) => (
+  message.direction === 'outbound'
+  && isMediaMessage(message)
+  && (
+    MEDIA_SENDING_STATUSES.has(message.delivery_status.trim().toLowerCase())
+    || mediaUploadProgress?.attachmentId === message.id
+    || retrying
+  )
+);
+
 const hasVisualMediaCaption = (message: CommWhatsAppMessage) => (
   isVisualMediaMessage(message) && Boolean(getMessageVisibleCaption(message))
 );
@@ -855,6 +876,32 @@ function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) 
   );
 }
 
+function MediaSendingOverlay({
+  progress,
+  onCancel,
+}: {
+  progress: number | null;
+  onCancel?: () => void;
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
+      <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-primary)]" />
+        <span>{progress === null ? 'Enviando' : `${progress}%`}</span>
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="ml-1 text-[var(--text-secondary)] underline decoration-current/40 underline-offset-2 transition hover:text-[var(--text-primary)]"
+          >
+            Cancelar
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppAudioPlayerCard({
   kind,
   mediaUrl,
@@ -863,6 +910,9 @@ function WhatsAppAudioPlayerCard({
   durationSeconds,
   loading,
   error,
+  mediaSending,
+  mediaSendingProgress,
+  onCancelMediaUpload,
 }: {
   kind: 'audio' | 'voice';
   mediaUrl: string | null;
@@ -871,6 +921,9 @@ function WhatsAppAudioPlayerCard({
   durationSeconds?: number | null;
   loading: boolean;
   error: string | null;
+  mediaSending: boolean;
+  mediaSendingProgress: number | null;
+  onCancelMediaUpload?: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -956,7 +1009,7 @@ function WhatsAppAudioPlayerCard({
 
   if (!mediaUrl) {
     return (
-      <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+      <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
         <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
           {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
         </div>
@@ -964,12 +1017,13 @@ function WhatsAppAudioPlayerCard({
           {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
           <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
         </div>
+        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
       </div>
     );
   }
 
   return (
-    <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'} ${isPlaying ? 'is-playing' : ''}`}>
+    <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'} ${isPlaying ? 'is-playing' : ''}`}>
       <audio ref={audioRef} preload="metadata">
         <source src={mediaUrl} type={mediaMimeType || undefined} />
       </audio>
@@ -1050,6 +1104,7 @@ function WhatsAppAudioPlayerCard({
           </div>
         </div>
       </div>
+      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
     </div>
   );
 }
@@ -1209,33 +1264,44 @@ function WhatsAppGalleryMediaTile({
   onOpenImage,
   className,
   overlayLabel,
+  mediaSending = false,
+  mediaSendingProgress = null,
+  onCancelMediaUpload,
 }: {
   message: CommWhatsAppMessage;
   onOpenImage: (messageId: string) => void;
   className?: string;
   overlayLabel?: string;
+  mediaSending?: boolean;
+  mediaSendingProgress?: number | null;
+  onCancelMediaUpload?: () => void;
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
   const normalizedKind = isVideoLikeMessageType(message.message_type) ? 'video' : 'image';
   const baseClassName = `relative block overflow-hidden rounded-[var(--kds-radius-lg)] bg-[var(--bg-inset)] ${className ?? ''}`.trim();
 
   if (normalizedKind === 'image') {
-    return mediaUrl ? (
-      <button
-        type="button"
-        onClick={() => onOpenImage(message.id)}
-        className={baseClassName}
-      >
-        <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
-        {overlayLabel ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-[var(--overlay)] text-base font-semibold text-[var(--text-on-brand)]">
-            {overlayLabel}
-          </span>
-        ) : null}
-      </button>
-    ) : (
-      <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--text-muted)]`}>
-        {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+    return (
+      <div className={baseClassName}>
+        {mediaUrl ? (
+          <button
+            type="button"
+            onClick={() => onOpenImage(message.id)}
+            className="relative block h-full w-full overflow-hidden"
+          >
+            <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
+            {overlayLabel ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-[var(--overlay)] text-base font-semibold text-[var(--text-on-brand)]">
+                {overlayLabel}
+              </span>
+            ) : null}
+          </button>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
+            {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+          </div>
+        )}
+        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
       </div>
     );
   }
@@ -1244,22 +1310,27 @@ function WhatsAppGalleryMediaTile({
     ? formatDurationLabel(Math.round(message.media_duration_seconds))
     : formatFileSize(message.media_size_bytes) || 'Video';
 
-  return mediaUrl ? (
-    <button type="button" onClick={() => onOpenImage(message.id)} className={baseClassName}>
-      <video muted playsInline preload="metadata" className="h-full w-full object-cover">
-        <source src={mediaUrl} type={message.media_mime_type || undefined} />
-      </video>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-[var(--overlay)] px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
-        <span className="inline-flex items-center gap-1.5 truncate">
-          <Play className="h-3.5 w-3.5 fill-current" />
-          <span className="truncate">{secondaryLabel}</span>
-        </span>
-        {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
-      </div>
-    </button>
-  ) : (
-    <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--text-muted)]`}>
-      {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+  return (
+    <div className={baseClassName}>
+      {mediaUrl ? (
+        <button type="button" onClick={() => onOpenImage(message.id)} className="relative block h-full w-full overflow-hidden">
+          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
+            <source src={mediaUrl} type={message.media_mime_type || undefined} />
+          </video>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-[var(--overlay)] px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Play className="h-3.5 w-3.5 fill-current" />
+              <span className="truncate">{secondaryLabel}</span>
+            </span>
+            {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
+          </div>
+        </button>
+      ) : (
+        <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
+          {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+        </div>
+      )}
+      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
     </div>
   );
 }
@@ -1267,9 +1338,15 @@ function WhatsAppGalleryMediaTile({
 function WhatsAppMediaGroupBody({
   messages,
   onOpenImage,
+  mediaSendingMessageId,
+  mediaSendingProgress = null,
+  onCancelMediaUpload,
 }: {
   messages: CommWhatsAppMessage[];
   onOpenImage: (messageId: string) => void;
+  mediaSendingMessageId?: string | null;
+  mediaSendingProgress?: number | null;
+  onCancelMediaUpload?: () => void;
 }) {
   const visibleMessages = messages.slice(0, 4);
   const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
@@ -1287,6 +1364,9 @@ function WhatsAppMediaGroupBody({
             onOpenImage={onOpenImage}
             className={isWideHero ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}
             overlayLabel={overlayLabel}
+            mediaSending={message.id === mediaSendingMessageId}
+            mediaSendingProgress={message.id === mediaSendingMessageId ? mediaSendingProgress : null}
+            onCancelMediaUpload={message.id === mediaSendingMessageId ? onCancelMediaUpload : undefined}
           />
         );
       })}
@@ -1464,6 +1544,9 @@ function WhatsAppMessageBody({
   onSaveSharedContact,
   sharedContactActionKey,
   transcribing,
+  mediaSending,
+  mediaSendingProgress,
+  onCancelMediaUpload,
 }: {
   message: CommWhatsAppMessage;
   onOpenImage: (messageId: string) => void;
@@ -1473,6 +1556,9 @@ function WhatsAppMessageBody({
   onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
   sharedContactActionKey: string | null;
   transcribing: boolean;
+  mediaSending: boolean;
+  mediaSendingProgress: number | null;
+  onCancelMediaUpload?: () => void;
 }) {
   const { mediaUrl, loading, error, retry } = useResolvedMediaUrl(message);
   const [showOriginalText, setShowOriginalText] = useState(false);
@@ -1737,30 +1823,37 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {deletedBannerNode}
         {quotePreviewNode}
-        <div className={caption ? 'w-[13.75rem] max-w-full overflow-hidden rounded-[var(--kds-radius-lg)]' : undefined}>
-          {mediaUrl ? (
-            <button
-              type="button"
-              onClick={() => onOpenImage(message.id)}
-              className={isSticker
-                ? 'whatsapp-inbox-media-content block w-fit max-w-[180px] overflow-hidden rounded-2xl bg-transparent text-left transition'
-                : `whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-            >
-              <img
-                src={mediaUrl}
-                alt={altLabel}
-                className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'block h-[11rem] w-full object-cover'}
-                loading="lazy"
-              />
-            </button>
-          ) : (
-            <div className={isSticker
-              ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
-              : `flex h-40 w-[13.75rem] max-w-full items-center justify-center border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-            >
-              {loading ? loadingLabel : error || unavailableLabel}
-            </div>
-          )}
+        <div className={cx(
+          'relative max-w-full',
+          isSticker ? 'w-fit' : 'w-[13.75rem]',
+          caption ? 'overflow-hidden rounded-[var(--kds-radius-lg)]' : null,
+        )}>
+          <div className="relative">
+            {mediaUrl ? (
+              <button
+                type="button"
+                onClick={() => onOpenImage(message.id)}
+                className={isSticker
+                  ? 'whatsapp-inbox-media-content block w-fit max-w-[180px] overflow-hidden rounded-2xl bg-transparent text-left transition'
+                  : `whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
+              >
+                <img
+                  src={mediaUrl}
+                  alt={altLabel}
+                  className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'block h-[11rem] w-full object-cover'}
+                  loading="lazy"
+                />
+              </button>
+            ) : (
+              <div className={isSticker
+                ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
+                : `flex h-40 w-[13.75rem] max-w-full items-center justify-center border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
+              >
+                {loading ? loadingLabel : error || unavailableLabel}
+              </div>
+            )}
+            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+          </div>
           {caption ? (
             <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
           ) : null}
@@ -1775,23 +1868,29 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {deletedBannerNode}
         {quotePreviewNode}
-        <div className={caption ? 'w-[13.75rem] max-w-full overflow-hidden rounded-[var(--kds-radius-lg)]' : undefined}>
-          <button
-            type="button"
-            onClick={() => onOpenImage(message.id)}
-            className={`whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-            aria-label={`Abrir ${message.media_file_name || 'vídeo'}`}
-          >
-            {mediaUrl ? (
-              <video muted playsInline preload="metadata" className="block h-[11rem] w-full bg-[var(--overlay)] object-cover">
-                <source src={mediaUrl} type={message.media_mime_type || undefined} />
-              </video>
-            ) : (
-              <div className={`flex h-[11rem] items-center justify-center bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
-                {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
-              </div>
-            )}
-          </button>
+        <div className={cx(
+          'relative w-[13.75rem] max-w-full',
+          caption ? 'overflow-hidden rounded-[var(--kds-radius-lg)]' : null,
+        )}>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => onOpenImage(message.id)}
+              className={`whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
+              aria-label={`Abrir ${message.media_file_name || 'vídeo'}`}
+            >
+              {mediaUrl ? (
+                <video muted playsInline preload="metadata" className="block h-[11rem] w-full bg-[var(--overlay)] object-cover">
+                  <source src={mediaUrl} type={message.media_mime_type || undefined} />
+                </video>
+              ) : (
+                <div className={`flex h-[11rem] items-center justify-center bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
+                  {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
+                </div>
+              )}
+            </button>
+            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+          </div>
           {caption ? (
             <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
           ) : null}
@@ -1829,6 +1928,7 @@ function WhatsAppMessageBody({
             <span className="absolute left-3 top-3 inline-flex items-center rounded-md bg-[var(--danger-text)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-on-brand)] shadow-sm">
               PDF
             </span>
+            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
           </div>
           <div className="border-t border-[var(--border-subtle)] px-3 py-3">
             <div className="flex items-start gap-3">
@@ -1887,7 +1987,7 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {deletedBannerNode}
         {quotePreviewNode}
-        <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
+        <div className="whatsapp-inbox-document-card relative flex items-center gap-3 rounded-2xl border px-3 py-3">
           <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tracking-[0.08em]">
             {extension.slice(0, 4)}
           </div>
@@ -1921,6 +2021,7 @@ function WhatsAppMessageBody({
               </div>
             )}
           </div>
+          {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
         </div>
         {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}
@@ -1944,6 +2045,9 @@ function WhatsAppMessageBody({
           durationSeconds={message.media_duration_seconds}
           loading={loading}
           error={error}
+          mediaSending={mediaSending}
+          mediaSendingProgress={mediaSendingProgress}
+          onCancelMediaUpload={onCancelMediaUpload}
         />
         <div className="space-y-2">
           {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
@@ -9245,6 +9349,19 @@ export default function WhatsAppInboxScreen() {
                       const lastMessage = groupMessages[groupMessages.length - 1];
 
                       const groupHighlighted = groupMessages.some((message) => message.id === highlightedMessageId);
+                      const groupMediaSendingMessage = groupMessages.find((message) => (
+                        message.id === mediaUploadProgress?.attachmentId || message.id === retryingMessageId
+                      )) ?? groupMessages.find((message) => isMediaSendingMessage(
+                        message,
+                        mediaUploadProgress,
+                        retryingMessageId === message.id,
+                      ));
+                      const groupMediaSendingProgress = groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id
+                        ? mediaUploadProgress.progress
+                        : null;
+                      const canCancelGroupMediaUpload = Boolean(
+                        groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id,
+                      );
 
                       return (
                         <div
@@ -9262,11 +9379,17 @@ export default function WhatsAppInboxScreen() {
                         >
                           <div className="relative max-w-[82%] pb-2">
                             <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
+                              <WhatsAppMediaGroupBody
+                                messages={groupMessages}
+                                onOpenImage={setLightboxMessageId}
+                                mediaSendingMessageId={groupMediaSendingMessage?.id}
+                                mediaSendingProgress={groupMediaSendingProgress}
+                                onCancelMediaUpload={canCancelGroupMediaUpload ? handleCancelMediaUpload : undefined}
+                              />
                               <div className="whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center justify-end gap-2 px-1 text-[11px] font-medium">
                                 <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                                   <span>{formatMessageTime(lastMessage.message_at)}</span>
-                                  {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                                  {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
                                 </span>
                               </div>
                             </div>
@@ -9285,6 +9408,8 @@ export default function WhatsAppInboxScreen() {
                     const showEditAction = canEditOutboundMessage(message);
                     const showDeleteAction = canDeleteOutboundMessage(message);
                     const showReplyForwardActions = canReplyOrForwardMessage(message);
+                    const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
+                    const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
 
                     return (
                       <div key={item.key} className={`message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`}>
@@ -9349,6 +9474,9 @@ export default function WhatsAppInboxScreen() {
                               onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
                               sharedContactActionKey={sharedContactActionKey}
                               transcribing={transcribingMessageId === message.id}
+                              mediaSending={mediaSending}
+                              mediaSendingProgress={mediaSendingProgress}
+                              onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
                             />
                             <div className={cx(
                               'whatsapp-inbox-message-meta flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium',
@@ -9396,27 +9524,12 @@ export default function WhatsAppInboxScreen() {
                               ) : null}
                               <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                                 <span>{formatMessageTime(message.message_at)}</span>
-                                {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                                {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
                               </span>
-                              {message.direction === 'outbound' && mediaUploadProgress?.attachmentId === message.id ? (
-                                <>
-                                  <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    <span>{mediaUploadProgress.progress === null ? 'Enviando' : `${mediaUploadProgress.progress}%`}</span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={handleCancelMediaUpload}
-                                    className="whatsapp-inbox-retry-button h-8 rounded-full px-3 text-[11px]"
-                                  >
-                                    Cancelar
-                                  </button>
-                                </>
-                              ) : null}
                               {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
                                 <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
                               ) : null}
-                              {message.direction === 'outbound' && retryingMessageId === message.id ? (
+                              {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
                                 <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   <span>Reenviando</span>

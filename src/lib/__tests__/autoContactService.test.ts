@@ -6,6 +6,7 @@ import {
   getNextAllowedSendAt,
   isAutoContactRuntimeEnabled,
   normalizeAutoContactSettings,
+  getAutoContactFlowMessageItems,
   type AutoContactSchedulingSettings,
 } from '../autoContactService';
 
@@ -85,4 +86,39 @@ test('normaliza régua de inatividade respeitando durações curtas (piso de 1 h
   assert.equal(settings.flows[0]?.triggerType, 'inactivity_duration');
   assert.equal(settings.flows[0]?.triggerDurationHours, 2);
   assert.deepEqual(settings.flows[0]?.triggerStatuses, ['Contato Inicial', 'Em Atendimento']);
+});
+
+test('preserva mensagens IA e a ordem mista de uma etapa', () => {
+  const settings = normalizeAutoContactSettings({
+    enabled: true,
+    autoSend: true,
+    messageTemplates: [{ id: 'template-1', name: 'Saudação', message: 'Olá' }],
+    flows: [{
+      id: 'mixed-flow',
+      name: 'Misto',
+      steps: [{
+        id: 'step-1',
+        actionType: 'send_message',
+        messages: [
+          { templateId: 'template-1' },
+          { custom: { type: 'text', text: 'Mensagem fixa' } },
+          { ai: { instruction: 'pergunte pelo melhor horário' } },
+        ],
+      }],
+    }],
+  });
+
+  const items = getAutoContactFlowMessageItems(settings.flows[0].steps[0]);
+  assert.equal(items.length, 3);
+  assert.deepEqual(items[0], { templateId: 'template-1' });
+  assert.deepEqual(items[1], {
+    custom: {
+      type: 'text',
+      text: 'Mensagem fixa',
+      mediaUrl: '',
+      caption: '',
+      filename: '',
+    },
+  });
+  assert.deepEqual(items[2], { ai: { instruction: 'pergunte pelo melhor horário' } });
 });

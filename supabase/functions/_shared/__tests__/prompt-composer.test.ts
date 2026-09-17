@@ -33,6 +33,14 @@ describe('Prompt Composer — listAvailableVariables', () => {
     expect(keys).toContain('style_profile');
   });
 
+  it('returns variables for automation.message_generate', () => {
+    const vars = listAvailableVariables(AI_FEATURES.AUTOMATION_MESSAGE_GENERATE);
+    const keys = vars.map((v) => v.key);
+    expect(keys).toContain('lead_context');
+    expect(keys).toContain('transcript');
+    expect(keys).toContain('instruction');
+  });
+
   it('returns empty for unknown feature key', () => {
     const vars = listAvailableVariables('unknown.feature' as AIFeatureKey);
     expect(vars).toHaveLength(0);

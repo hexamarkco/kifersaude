@@ -32,6 +32,7 @@ import {
   DEFAULT_MESSAGE_TEMPLATES,
   DEFAULT_AUTO_CONTACT_FLOWS,
   getTemplateMessages,
+  getAutoContactFlowMessageItems,
   isAutoContactRuntimeEnabled,
   normalizeAutoContactSettings,
   type AutoContactDelayUnit,
@@ -69,6 +70,7 @@ import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import {
   countDailyAutomationInteractions,
+  previewAutomationFlowMessage,
   sendAutomationFlowTest,
 } from "./data/automationApi";
 import {
@@ -461,6 +463,17 @@ export default function AutoContactFlowSettingsScreen() {
       return;
     }
 
+    const emptyAiInstruction = flowDrafts.some((flow) =>
+      flow.steps.some((step) =>
+        step.actionType === "send_message" &&
+        (step.messages ?? []).some((item) => "ai" in item && !item.ai.instruction.trim()),
+      ),
+    );
+    if (emptyAiInstruction) {
+      toast.error("Preencha a instrução de todas as mensagens IA antes de salvar.");
+      return;
+    }
+
     setSavingFlow(true);
 
     const sanitizedTemplates = normalizeTemplatesForSettings(
@@ -521,13 +534,10 @@ export default function AutoContactFlowSettingsScreen() {
                 customMessage,
                 messages: (() => {
                   if (!Array.isArray(step.messages)) return undefined;
-                  const items: Array<{
-                    templateId?: string;
-                    custom?: AutoContactFlowCustomMessage;
-                  }> = [];
+                  const items: NonNullable<AutoContactFlowStep["messages"]> = [];
                   for (const item of step.messages) {
                     if (!item || typeof item !== "object") continue;
-                    if (typeof item.templateId === "string" && item.templateId.trim()) {
+                    if ("templateId" in item && item.templateId.trim()) {
                       items.push({
                         templateId: sanitizedTemplates.some(
                           (template) => template.id === item.templateId,
@@ -535,7 +545,7 @@ export default function AutoContactFlowSettingsScreen() {
                           ? item.templateId
                           : fallbackTemplateId,
                       });
-                    } else if (item.custom && typeof item.custom === "object") {
+                    } else if ("custom" in item && item.custom && typeof item.custom === "object") {
                       items.push({
                         custom: {
                           type: item.custom.type ?? "text",
@@ -544,6 +554,10 @@ export default function AutoContactFlowSettingsScreen() {
                           caption: item.custom.caption ?? "",
                           filename: item.custom.filename ?? "",
                         },
+                      });
+                    } else if ("ai" in item && item.ai && typeof item.ai === "object") {
+                      items.push({
+                        ai: { instruction: item.ai.instruction ?? "" },
                       });
                     }
                   }
@@ -1224,6 +1238,17 @@ export default function AutoContactFlowSettingsScreen() {
   const getSimulationStepLabel = (step: AutoContactFlowStep) => {
     switch (step.actionType) {
       case "send_message": {
+        const messageItems = getAutoContactFlowMessageItems(step);
+        const aiItem = messageItems.find((item) => "ai" in item);
+        if (aiItem && "ai" in aiItem) {
+          const instruction = aiItem.ai.instruction.trim();
+          return instruction
+            ? `IA: ${instruction.slice(0, 72)}`
+            : "Mensagem gerada por IA";
+        }
+        if (messageItems.length > 1) {
+          return `${messageItems.length} mensagens em ordem`;
+        }
         if (step.messageSource === "custom") {
           const messageType =
             messageTypeLabels[step.customMessage?.type ?? "text"] ?? "Mensagem";
@@ -1347,25 +1372,21 @@ export default function AutoContactFlowSettingsScreen() {
       );
     }
     simulationFlow.steps.forEach((step, index) => {
-      if (
-        step.actionType === "send_message" &&
-        step.messageSource !== "custom"
-      ) {
-        const templateExists = messageTemplatesDraft.some(
-          (template) => template.id === step.templateId,
-        );
-        if (!templateExists) {
-          issues.push(
-            `Etapa ${index + 1}: selecione um template válido para a mensagem.`,
-          );
-        }
-      }
-      if (
-        step.actionType === "send_message" &&
-        step.messageSource === "custom" &&
-        !step.customMessage?.text?.trim()
-      ) {
-        issues.push(`Etapa ${index + 1}: a mensagem personalizada está vazia.`);
+      if (step.actionType === "send_message") {
+        getAutoContactFlowMessageItems(step).forEach((item, itemIndex) => {
+          if ("ai" in item && !item.ai.instruction.trim()) {
+            issues.push(`Etapa ${index + 1}, mensagem ${itemIndex + 1}: informe a instrução da IA.`);
+          } else if ("templateId" in item) {
+            const templateExists = messageTemplatesDraft.some(
+              (template) => template.id === item.templateId,
+            );
+            if (!templateExists) {
+              issues.push(`Etapa ${index + 1}, mensagem ${itemIndex + 1}: selecione um template válido.`);
+            }
+          } else if ("custom" in item && !item.custom.text?.trim() && !item.custom.mediaUrl?.trim()) {
+            issues.push(`Etapa ${index + 1}, mensagem ${itemIndex + 1}: a mensagem personalizada está vazia.`);
+          }
+        });
       }
       if (step.actionType === "update_status" && !step.statusToSet?.trim()) {
         issues.push(`Etapa ${index + 1}: informe o status de destino.`);
@@ -1459,6 +1480,20 @@ export default function AutoContactFlowSettingsScreen() {
       toast.error(error instanceof Error ? error.message : "Não foi possível enviar a mensagem de teste.");
     } finally {
       setSendingTest(false);
+    }
+  };
+
+  const handlePreviewAiMessage = async (instruction: string): Promise<string> => {
+    if (!activeFlow) throw new Error("Selecione um fluxo para gerar a prévia.");
+    try {
+      return await previewAutomationFlowMessage({
+        flowName: activeFlow.name,
+        instruction,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível gerar a prévia da mensagem.";
+      toast.error(message);
+      throw error;
     }
   };
 
@@ -2254,6 +2289,9 @@ export default function AutoContactFlowSettingsScreen() {
                       onChangeGraph={(graph) =>
                         handleUpdateFlowGraph(activeFlow.id, graph)
                       }
+                      onPreviewAiMessage={({ instruction }) =>
+                        handlePreviewAiMessage(instruction)
+                      }
                       onTriggerChange={(
                         triggerType,
                         triggerStatuses,
@@ -2696,6 +2734,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       { messages },
                                     )
                                   }
+                                  onPreviewAiMessage={handlePreviewAiMessage}
                                 />
                               </div>
                             )}

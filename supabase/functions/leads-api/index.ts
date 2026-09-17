@@ -39,6 +39,12 @@ import {
   isAutoContactFlowOutputMessage,
   LEGACY_AUTO_CONTACT_FLOW_MESSAGE_MATCH_WINDOW_MS,
 } from './domain/inactivity-flow-enrollment.ts';
+import {
+  generateAutoContactAiMessage,
+  loadRecentAutoContactTranscript,
+  type AutoContactAiLead,
+  type AutoContactAiGeneratedMessage,
+} from '../_shared/auto-contact-ai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -377,6 +383,15 @@ type AutoContactFlowCustomMessage = {
   filename?: string;
 };
 
+type AutoContactFlowAiMessage = {
+  instruction: string;
+};
+
+type AutoContactFlowMessageItem =
+  | { templateId: string }
+  | { custom: AutoContactFlowCustomMessage }
+  | { ai: AutoContactFlowAiMessage };
+
 type AutoContactFlowStep = {
   id: string;
   delayHours: number;
@@ -387,7 +402,7 @@ type AutoContactFlowStep = {
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
-  messages?: Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>;
+  messages?: AutoContactFlowMessageItem[];
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -1754,6 +1769,13 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
                     if (item.custom && typeof item.custom === 'object') {
                       return { custom: normalizeCustomMessage(item.custom) };
                     }
+                    if (item.ai && typeof item.ai === 'object') {
+                      return {
+                        ai: {
+                          instruction: typeof item.ai.instruction === 'string' ? item.ai.instruction : '',
+                        },
+                      };
+                    }
                     return null;
                   })
                   .filter(Boolean)
@@ -3010,52 +3032,25 @@ async function processFlowJobs({
           }
         }
 
-        let payload:
-          | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
-          | null = null;
-
-        const multiMessages = Array.isArray(job.action_payload?.messages)
-          ? (job.action_payload.messages as Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>)
-          : null;
-        const multiPayloads: Array<{
-          contentType: FlowMessageType;
-          content: string | { url: string; caption?: string; filename?: string };
-        }> = [];
-
-        if (multiMessages && multiMessages.length > 0) {
-          for (const item of multiMessages) {
-            const itemPayload = item?.templateId
-              ? (() => {
-                  const template =
-                    settings.messageTemplates.find((t) => t.id === item.templateId) ?? null;
-                  const message = getTemplateMessage(template);
-                  return message.trim()
-                    ? {
-                        contentType: 'text' as const,
-                        content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
-                      }
-                    : null;
-                })()
-              : buildCustomMessagePayload(item?.custom ?? null, leadWithRelations, settings.scheduling?.timezone);
-            if (itemPayload) multiPayloads.push(itemPayload);
-          }
-        } else if (job.message_source === 'custom') {
-          payload = buildCustomMessagePayload(job.custom_message, leadWithRelations, settings.scheduling?.timezone);
-        } else {
-          const template =
-            settings.messageTemplates.find((item) => item.id === job.template_id) ??
-            settings.messageTemplates[0] ??
-            null;
-          const message = getTemplateMessage(template);
-          if (message.trim()) {
-            payload = {
-              contentType: 'text',
-              content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
-            };
-          }
-        }
-
-        const messagePayloads = multiMessages ? multiPayloads : payload ? [payload] : [];
+        const currentStep = flow.steps.find((step) => step.id === job.step_id) ?? {
+          id: job.step_id,
+          delayHours: 0,
+          delayValue: 0,
+          delayUnit: 'hours' as const,
+          actionType: 'send_message' as const,
+          messageSource: job.message_source === 'custom' ? 'custom' as const : 'template' as const,
+          templateId: job.template_id ?? '',
+          customMessage: job.custom_message ?? undefined,
+        };
+        const messagePayloads = await resolveFlowMessagePayloads({
+          supabase,
+          settings,
+          flow,
+          step: currentStep,
+          job,
+          lead: leadWithRelations,
+          timeZone: settings.scheduling?.timezone,
+        });
         if (messagePayloads.length === 0) {
           throw new Error('Conteúdo inválido para envio automático.');
         }
@@ -3774,6 +3769,168 @@ const buildCustomMessagePayload = (
       filename: customMessage.filename,
     },
   };
+};
+
+type StoredAutoContactAiMessage = AutoContactAiGeneratedMessage & {
+  itemIndex: number;
+  generatedAt: string;
+};
+
+type AutoContactFlowJob = {
+  id: string;
+  action_payload?: Record<string, unknown> | null;
+  message_source?: AutoContactFlowMessageSource | null;
+  template_id?: string | null;
+  custom_message?: AutoContactFlowCustomMessage | null;
+};
+
+const getStoredAutoContactAiMessages = (actionPayload: unknown): StoredAutoContactAiMessage[] => {
+  if (!actionPayload || typeof actionPayload !== 'object') return [];
+  const raw = (actionPayload as Record<string, unknown>).ai_generated_messages;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is StoredAutoContactAiMessage => (
+    Boolean(item)
+    && typeof item === 'object'
+    && Number.isInteger((item as Record<string, unknown>).itemIndex)
+    && typeof (item as Record<string, unknown>).text === 'string'
+    && Boolean((item as Record<string, unknown>).text?.trim())
+  ));
+};
+
+const getFlowMessageItemsForJob = (
+  step: AutoContactFlowStep,
+  job?: AutoContactFlowJob,
+): AutoContactFlowMessageItem[] => {
+  const actionPayload = job?.action_payload;
+  if (actionPayload && typeof actionPayload === 'object' && Array.isArray(actionPayload.messages) && actionPayload.messages.length > 0) {
+    return actionPayload.messages as AutoContactFlowMessageItem[];
+  }
+  if (Array.isArray(step.messages) && step.messages.length > 0) return step.messages;
+  if (job?.message_source === 'custom') {
+    return [{ custom: job.custom_message ?? step.customMessage ?? { type: 'text', text: '' } }];
+  }
+  return [{ templateId: job?.template_id ?? step.templateId ?? '' }];
+};
+
+const persistAutoContactAiMessages = async (
+  supabase: ReturnType<typeof createClient>,
+  job: AutoContactFlowJob,
+  messages: StoredAutoContactAiMessage[],
+): Promise<void> => {
+  const currentPayload = job.action_payload && typeof job.action_payload === 'object'
+    ? job.action_payload as Record<string, unknown>
+    : {};
+  const nextPayload = {
+    ...currentPayload,
+    ai_generated_messages: messages,
+  };
+  const { error } = await supabase
+    .from('auto_contact_flow_jobs')
+    .update({ action_payload: nextPayload })
+    .eq('id', job.id);
+  if (error) throw new Error(`Não foi possível salvar a mensagem IA gerada: ${error.message}`);
+  job.action_payload = nextPayload;
+};
+
+const resolveFlowMessagePayloads = async ({
+  supabase,
+  settings,
+  flow,
+  step,
+  job,
+  lead,
+  timeZone,
+  edgeFunction = 'leads-api',
+}: {
+  supabase: ReturnType<typeof createClient>;
+  settings: AutoContactFlowSettings;
+  flow: AutoContactFlow;
+  step: AutoContactFlowStep;
+  job?: AutoContactFlowJob;
+  lead: AutoContactAiLead;
+  timeZone?: string;
+  edgeFunction?: string;
+}): Promise<Array<{
+  contentType: FlowMessageType;
+  content: string | { url: string; caption?: string; filename?: string };
+}>> => {
+  const items = getFlowMessageItemsForJob(step, job);
+  const storedMessages = getStoredAutoContactAiMessages(job?.action_payload);
+  const storedByIndex = new Map(storedMessages.map((item) => [item.itemIndex, item]));
+  const hasUncachedAi = items.some((item, itemIndex) => 'ai' in item && !storedByIndex.has(itemIndex));
+  const transcript = hasUncachedAi && lead?.id && lead.id !== 'flow-test'
+    ? await loadRecentAutoContactTranscript({
+        supabaseAdmin: supabase,
+        leadId: lead.id,
+        contactLabel: lead.nome_completo || 'Cliente',
+        timeZone,
+      })
+    : '';
+  const resolved: Array<{
+    contentType: FlowMessageType;
+    content: string | { url: string; caption?: string; filename?: string };
+  }> = [];
+  const generatedMessages = new Map(storedByIndex);
+
+  for (const [itemIndex, item] of items.entries()) {
+    if ('ai' in item) {
+      const instruction = applyTemplateVariables(item.ai.instruction, lead, timeZone).trim();
+      if (!instruction) throw new Error(`A instrução da mensagem IA ${itemIndex + 1} é obrigatória.`);
+
+      let generated = storedByIndex.get(itemIndex);
+      if (!generated) {
+        const result = await generateAutoContactAiMessage({
+          supabaseAdmin: supabase,
+          flowName: flow.name,
+          instruction,
+          lead,
+          transcript,
+          timeZone,
+          leadId: lead?.id && lead.id !== 'flow-test' ? lead.id : undefined,
+          edgeFunction,
+        });
+        generated = {
+          itemIndex,
+          text: result.text,
+          provider: result.provider,
+          model: result.model,
+          callLogId: result.callLogId,
+          configVersion: result.configVersion,
+          generatedAt: new Date().toISOString(),
+        };
+        generatedMessages.set(itemIndex, generated);
+        if (job) {
+          await persistAutoContactAiMessages(
+            supabase,
+            job,
+            [...generatedMessages.values()].sort((a, b) => a.itemIndex - b.itemIndex),
+          );
+        }
+      }
+
+      const message = applyTemplateVariables(generated.text, lead, timeZone).trim();
+      if (!message) throw new Error(`A mensagem IA ${itemIndex + 1} ficou vazia após aplicar variáveis.`);
+      resolved.push({ contentType: 'text', content: message });
+      continue;
+    }
+
+    if ('templateId' in item) {
+      const template = settings.messageTemplates.find((candidate) => candidate.id === item.templateId) ?? null;
+      const message = getTemplateMessage(template);
+      if (message.trim()) {
+        resolved.push({
+          contentType: 'text',
+          content: applyTemplateVariables(message, lead, timeZone),
+        });
+      }
+      continue;
+    }
+
+    const customPayload = buildCustomMessagePayload(item.custom, lead, timeZone);
+    if (customPayload) resolved.push(customPayload);
+  }
+
+  return resolved;
 };
 
 async function triggerAutoContactForLead({
@@ -4710,6 +4867,47 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true, leadId }, 200);
     }
 
+    if (action === 'preview-flow-message' && req.method === 'POST') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        return authResult.response;
+      }
+
+      const payload = await req.json().catch(() => null);
+      const flowName = typeof payload?.flow_name === 'string' ? payload.flow_name.trim() : '';
+      const instruction = typeof payload?.instruction === 'string' ? payload.instruction.trim() : '';
+      if (!instruction) {
+        return jsonResponse({ success: false, error: 'A instrução da mensagem IA é obrigatória.' }, 400);
+      }
+
+      const previewLead = {
+        id: 'automation-preview-lead',
+        nome_completo: 'Lead Exemplo',
+        telefone: '11999999999',
+        email: 'lead@exemplo.com',
+        status: 'Novo',
+        origem: 'Manual',
+        cidade: 'São Paulo',
+        estado: 'SP',
+        responsavel: 'Luiza',
+      };
+      const result = await generateAutoContactAiMessage({
+        supabaseAdmin: supabase,
+        flowName: flowName || 'Fluxo de teste',
+        instruction,
+        lead: previewLead,
+        transcript: '',
+        edgeFunction: 'leads-api-preview',
+      });
+
+      return jsonResponse({
+        success: true,
+        text: result.text,
+        provider: result.provider,
+        model: result.model,
+      }, 200);
+    }
+
     if (action === 'test-flow' && req.method === 'POST') {
       const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
       if (!authResult.authorized) {
@@ -4733,42 +4931,52 @@ Deno.serve(async (req: Request) => {
       const settings = await loadAutoContactFlowSettings(supabase);
       const flow = settings?.flows.find((item) => item.id === flowId);
       const step = flow?.steps.find((item) => item.id === stepId);
-      if (!flow || !step || step.actionType !== 'send_message') {
+      if (!settings || !flow || !step || step.actionType !== 'send_message') {
         return jsonResponse({ success: false, error: 'Etapa de mensagem não encontrada no fluxo salvo.' }, 404);
       }
 
-      const testLead = {
-        id: 'flow-test',
-        nome_completo: testName || 'Contato de teste',
-        telefone: testPhone,
-        status: flow.triggerStatuses?.[0] ?? flow.triggerStatus ?? 'Teste',
-      };
-      const messagePayload = step.messageSource === 'custom'
-        ? buildCustomMessagePayload(step.customMessage, testLead, settings?.scheduling.timezone)
-        : (() => {
-            const template = settings?.messageTemplates.find((item) => item.id === step.templateId) ?? null;
-            const message = getTemplateMessage(template);
-            return message.trim()
-              ? {
-                  contentType: 'text' as const,
-                  content: applyTemplateVariables(message, testLead, settings?.scheduling.timezone),
-                }
-              : null;
-          })();
+      const { data: savedTestLead } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('telefone', normalizeTelefone(testPhone))
+        .maybeSingle();
+      let testLead: AutoContactAiLead;
+      if (savedTestLead) {
+        testLead = mapLeadRelationsForResponse(savedTestLead, await getLookups());
+        if (!testLead.status) testLead.status = flow.triggerStatuses?.[0] ?? flow.triggerStatus ?? 'Teste';
+      } else {
+        testLead = {
+          id: 'flow-test',
+          nome_completo: testName || 'Contato de teste',
+          telefone: testPhone,
+          status: flow.triggerStatuses?.[0] ?? flow.triggerStatus ?? 'Teste',
+        };
+      }
+      const messagePayloads = await resolveFlowMessagePayloads({
+        supabase,
+        settings,
+        flow,
+        step,
+        lead: testLead,
+        timeZone: settings.scheduling.timezone,
+        edgeFunction: 'leads-api-test-flow',
+      });
 
-      if (!messagePayload) {
+      if (messagePayloads.length === 0) {
         return jsonResponse({ success: false, error: 'A etapa não possui uma mensagem válida para teste.' }, 400);
       }
 
-      await sendAutoContactMessage({
-        supabase,
-        lead: testLead,
-        contentType: messagePayload.contentType,
-        content: messagePayload.content,
-      });
+      for (const messagePayload of messagePayloads) {
+        await sendAutoContactMessage({
+          supabase,
+          lead: testLead,
+          contentType: messagePayload.contentType,
+          content: messagePayload.content,
+        });
+      }
 
-      logWithContext('Mensagem de teste de fluxo enviada', { flowId, stepId });
-      return jsonResponse({ success: true, message: 'Mensagem de teste enviada.' }, 200);
+      logWithContext('Mensagens de teste de fluxo enviadas', { flowId, stepId, count: messagePayloads.length });
+      return jsonResponse({ success: true, message: 'Mensagens de teste enviadas.', count: messagePayloads.length }, 200);
     }
 
     if (action === 'manual-automation' && req.method === 'POST') {

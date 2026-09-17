@@ -65,6 +65,11 @@ type FlowBuilderProps = {
   ) => string[] | null;
   leadStatuses: LeadStatusConfig[];
   onChangeGraph: (graph: AutoContactFlowGraph) => void;
+  onPreviewAiMessage?: (input: {
+    stepId: string;
+    itemIndex: number;
+    instruction: string;
+  }) => Promise<string>;
   onTriggerChange?: (
     triggerType: "lead_created" | "status_changed" | "status_duration" | "inactivity_duration",
     triggerStatuses: string[],
@@ -325,6 +330,7 @@ export default function FlowBuilder({
   getConditionValueOptions,
   leadStatuses,
   onChangeGraph,
+  onPreviewAiMessage,
   onTriggerChange,
 }: FlowBuilderProps) {
   const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow]);
@@ -636,6 +642,19 @@ export default function FlowBuilder({
                   : "Mensagem customizada";
               txt += `  Origem da mensagem: ${msgSource}\n`;
 
+              if (Array.isArray(step.messages) && step.messages.length > 0) {
+                step.messages.forEach((item, index) => {
+                  if ("ai" in item) {
+                    txt += `  Mensagem ${index + 1} (IA): ${item.ai.instruction || "instrução não definida"}\n`;
+                  } else if ("templateId" in item) {
+                    const template = messageTemplates.find((t) => t.id === item.templateId);
+                    txt += `  Mensagem ${index + 1} (Template): ${template?.name || item.templateId || "não definido"}\n`;
+                  } else {
+                    txt += `  Mensagem ${index + 1} (Custom): ${(item.custom.text || "não definida").substring(0, 100)}\n`;
+                  }
+                });
+              }
+
               if (step.messageSource === "template" && step.templateId) {
                 const template = messageTemplates.find(
                   (t) => t.id === step.templateId,
@@ -879,6 +898,9 @@ export default function FlowBuilder({
                   ? "Excluir lead"
                   : nextStep.actionType === "activate_autonomous_service"
                     ? "Ativar atendimento autônomo (IA)"
+                    : nextStep.actionType === "send_message" &&
+                        nextStep.messages?.some((item) => "ai" in item)
+                      ? "Enviar mensagem (IA)"
                     : "Enviar mensagem";
     updateSelectedNode({ step: nextStep, label });
   };
@@ -1619,6 +1641,13 @@ export default function FlowBuilder({
                       messageTemplates={messageTemplates}
                       onUpdate={(messages) =>
                         updateSelectedStep({ messages })
+                      }
+                      onPreviewAiMessage={(instruction, itemIndex) =>
+                        onPreviewAiMessage?.({
+                          stepId: selectedNode.data.step?.id ?? "",
+                          itemIndex,
+                          instruction,
+                        }) ?? Promise.reject(new Error("Prévia de IA indisponível."))
                       }
                     />
                   </div>

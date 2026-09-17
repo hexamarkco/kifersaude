@@ -1,8 +1,9 @@
-import { useMemo } from "react";
-import { ChevronDown, ChevronUp, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, Plus, RefreshCcw, Sparkles, Trash2 } from "lucide-react";
 
 import {
   type AutoContactFlowCustomMessage,
+  type AutoContactFlowMessageItem,
   type AutoContactFlowStep,
   type AutoContactTemplate,
 } from "../../../../lib/autoContactService";
@@ -14,22 +15,23 @@ import {
   IconButton,
 } from "../../../../design-system";
 
-export type MessageListItem = {
-  templateId?: string;
-  custom?: AutoContactFlowCustomMessage;
-};
+export type MessageListItem = AutoContactFlowMessageItem;
 
 type MessageListEditorProps = {
   step: AutoContactFlowStep;
   messageTemplates: AutoContactTemplate[];
   onUpdate: (messages: MessageListItem[]) => void;
+  onPreviewAiMessage?: (instruction: string, itemIndex: number) => Promise<string>;
 };
 
 export function MessageListEditor({
   step,
   messageTemplates,
   onUpdate,
+  onPreviewAiMessage,
 }: MessageListEditorProps) {
+  const [preview, setPreview] = useState<{ index: number; text: string } | null>(null);
+  const [previewingIndex, setPreviewingIndex] = useState<number | null>(null);
   const currentMessages = useMemo<MessageListItem[]>(() => {
     if (Array.isArray(step.messages) && step.messages.length > 0) {
       return step.messages.map((item) => ({ ...item }));
@@ -67,7 +69,8 @@ export function MessageListEditor({
   return (
     <div className="space-y-2">
       {currentMessages.map((item, index) => {
-        const isTemplate = Boolean(item.templateId);
+        const isTemplate = "templateId" in item;
+        const isAi = "ai" in item;
         return (
           <div
             key={`msg-${index}`}
@@ -115,13 +118,15 @@ export function MessageListEditor({
               <FilterSelect
                 icon={RefreshCcw}
                 size="sm"
-                value={isTemplate ? "template" : "custom"}
+                value={isAi ? "ai" : isTemplate ? "template" : "custom"}
                 onChange={(value) =>
                   updateItem(
                     index,
                     value === "custom"
                       ? { custom: { type: "text", text: "" } }
-                      : { templateId: "" },
+                      : value === "ai"
+                        ? { ai: { instruction: "" } }
+                        : { templateId: "" },
                   )
                 }
                 placeholder="Origem"
@@ -129,6 +134,7 @@ export function MessageListEditor({
                 options={[
                   { value: "template", label: "Template" },
                   { value: "custom", label: "Texto custom" },
+                  { value: "ai", label: "IA" },
                 ]}
               />
             </div>
@@ -149,6 +155,49 @@ export function MessageListEditor({
                   })),
                 ]}
               />
+            ) : isAi ? (
+              <div>
+                <VariableAutocompleteTextarea
+                  value={item.ai?.instruction ?? ""}
+                  onChange={(value) =>
+                    updateItem(index, { ai: { instruction: value } })
+                  }
+                  rows={3}
+                  size="sm"
+                  placeholder="Ex.: retome o orçamento e faça uma pergunta objetiva"
+                  suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
+                />
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[10px] text-[var(--text-subtle)]">
+                    Instrução obrigatória. A IA gera uma única mensagem no momento do envio.
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!item.ai?.instruction.trim() || !onPreviewAiMessage}
+                    loading={previewingIndex === index}
+                    onClick={async () => {
+                      if (!onPreviewAiMessage || !item.ai?.instruction.trim()) return;
+                      setPreviewingIndex(index);
+                      try {
+                        const text = await onPreviewAiMessage(item.ai.instruction, index);
+                        setPreview({ index, text });
+                      } finally {
+                        setPreviewingIndex(null);
+                      }
+                    }}
+                  >
+                    {previewingIndex !== index ? <Sparkles /> : null}
+                    Gerar prévia
+                  </Button>
+                </div>
+                {preview?.index === index && (
+                  <div className="mt-2 rounded-md border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-2 text-xs text-[var(--text-primary)]">
+                    {preview.text}
+                  </div>
+                )}
+              </div>
             ) : (
               <div>
                 <VariableAutocompleteTextarea

@@ -152,14 +152,18 @@ const describeStep = (
     if (Array.isArray(step.messages) && step.messages.length > 0) {
       lines.push(`Source: multi (${step.messages.length} mensagens)`);
       step.messages.forEach((item, index) => {
-        if (item?.templateId) {
+        if ('templateId' in item && item.templateId) {
           const template = templates.find((t) => t.id === item.templateId) ?? null;
           lines.push(
             `  Mensagem ${index + 1}: template "${template?.name ?? item.templateId}"`,
           );
-        } else if (item?.custom) {
+        } else if ('custom' in item) {
           lines.push(
             `  Mensagem ${index + 1}: custom | ${previewText(item.custom.text ?? item.custom.caption ?? item.custom.mediaUrl ?? '')}`,
+          );
+        } else if ('ai' in item) {
+          lines.push(
+            `  Mensagem ${index + 1}: IA | ${previewText(item.ai.instruction)}`,
           );
         }
       });
@@ -370,9 +374,9 @@ const buildDiagnostics = (
       if (hasMultiMessages) {
         const emptyCount = (step.messages ?? []).filter(
           (item) =>
-            !item?.templateId &&
-            !item?.custom?.text?.trim() &&
-            !item?.custom?.mediaUrl?.trim(),
+          ('templateId' in item && !item.templateId) ||
+            ('custom' in item && !item.custom.text?.trim() && !item.custom.mediaUrl?.trim()) ||
+            ('ai' in item && !item.ai.instruction.trim()),
         ).length;
         if (emptyCount > 0) {
           diagnostics.push(`Action ${node.id} has ${emptyCount} message(s) without template or text/media.`);

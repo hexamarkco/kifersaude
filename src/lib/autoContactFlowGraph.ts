@@ -111,9 +111,11 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
               ? 'Criar tarefa'
               : step.actionType === 'send_email'
                 ? 'Enviar e-mail'
-                : step.actionType === 'webhook'
-                  ? 'Disparar webhook'
-                  : 'Enviar mensagem',
+              : step.actionType === 'webhook'
+                ? 'Disparar webhook'
+                : step.actionType === 'send_message' && step.messages?.some((item) => 'ai' in item)
+                  ? 'Enviar mensagem (IA)'
+                : 'Enviar mensagem',
         step,
       },
     });

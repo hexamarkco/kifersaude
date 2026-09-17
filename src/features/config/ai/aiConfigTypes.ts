@@ -2,6 +2,7 @@ export type AiFeatureKey =
   | "audio.transcribe"
   | "message.rewrite"
   | "message.suggest"
+  | "automation.message_generate"
   | "attendance.critique"
   | "campaign.intent"
   | "agenda.organize"
@@ -145,6 +146,7 @@ export const AI_FEATURE_LABELS: Record<AiFeatureKey, string> = {
   "audio.transcribe": "Transcrição de Áudio",
   "message.rewrite": "Reescrita de Mensagem",
   "message.suggest": "Sugestão de Resposta",
+  "automation.message_generate": "Gerar Mensagem de Fluxo",
   "attendance.critique": "Crítica de Atendimento",
   "campaign.intent": "Classificação de Intenção",
   "agenda.organize": "Organização de Agenda",
@@ -162,6 +164,7 @@ export const AI_FEATURE_AI_TASK: Record<AiFeatureKey, string> = {
   "followup.refine": "follow_up_generation",
   "message.rewrite": "rewrite_message",
   "message.suggest": "follow_up_generation",
+  "automation.message_generate": "follow_up_generation",
   "attendance.critique": "attendance_critique",
   "audio.transcribe": "whatsapp_audio_transcription",
   "autonomous.reply": "autonomous_attendance",

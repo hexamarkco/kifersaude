@@ -348,7 +348,8 @@ const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*ameri
 const ANSWERLESS_MESSAGE_REGEX = /^(?:oi|ola|bom\s+dia|boa\s+tarde|boa\s+noite|ok|isso|certo|perfeito|obrigad[ao])$/;
 export const QUALIFICATION_COMPLETION_VALIDATION_MESSAGE = 'A cotacao so pode ser concluida depois de coletar vidas, idades, cidade, bairro quando a cidade for capital, CNPJ/MEI e resposta sobre plano atual. Operadora e nome do plano sao opcionais.';
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
-const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\s+(?:preparar|montar|elaborar|enviar|encaminhar|providenciar)\s+(?:(?:a|uma)\s+)?(?:(?:sua|a sua)\s+)?(?:cota[cç][aã]o|proposta)\b/i;
+export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa dizer que as opcoes serao montadas e que a cotacao sera enviada. Nao encerre apenas dizendo que vai preparar as opcoes.';
+const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\b[^.!?]{0,180}\b(?:cota[cç][aã]o|proposta)\b/i;
 const REPETITIVE_QUALIFICATION_OPENING_REGEX = /^(?:vou\s+considerar\b|como\s+voce\s+informou\b|com\s+\d{1,3}\s+anos\b|voce\s+j[aá]\s+(?:j[aá]\s+)?utiliza\b[^?]*\.\s*(?:vou|irei|agora\s+vou)\b)/i;
 
 const leadAnswersAfterAiQuestion = (
@@ -455,7 +456,7 @@ export const validateAutonomousReplyOutput = (
       return {
         valid: false,
         stopReason: 'invalid_output',
-        message: 'A qualificacao ja esta completa. Avise que vai preparar e enviar a cotacao e encerre com o handoff interno.',
+        message: QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
       };
     }
   } else if (qualificationState && !qualificationStateIsComplete(qualificationState)
@@ -469,6 +470,17 @@ export const validateAutonomousReplyOutput = (
   if (!visibleCandidate) return { valid: true };
 
   const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+
+  if (
+    parsedCandidate.handoffCode === 'QUALIFICACAO_COMPLETA'
+    && !QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)
+  ) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
+    };
+  }
 
   if (REPETITIVE_QUALIFICATION_OPENING_REGEX.test(normalizedCandidate)) {
     return {
@@ -684,6 +696,8 @@ export const buildAutonomousValidationRetryInstruction = (
       ? 'Nao diga que um adulto e obrigatorio. Essa regra so vale para uma unica vida abaixo de 12 anos sem adulto na cotacao. Siga a qualificacao normal.'
     : validation.message === QUALIFICATION_REPETITION_VALIDATION_MESSAGE
       ? 'Nao repita o ultimo dado do lead. Remova a frase de espelhamento e siga com uma confirmacao curta ou com a proxima pergunta. Se a qualificacao ja estiver completa, use este fechamento sem recapitular dados: Perfeito, [primeiro nome se soar natural]. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.'
+    : validation.message === QUALIFICATION_CLOSURE_VALIDATION_MESSAGE
+      ? 'O encerramento precisa informar o envio da cotacao. Use, sem pergunta e sem recapitular os dados: Perfeito. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.'
     : '',
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');
@@ -727,6 +741,10 @@ export const buildAutonomousValidationFallback = (
     && CITY_QUESTION_REGEX.test(normalizedPreviousAi)
   ) {
     return 'Para eu seguir com a cotação, alguém que vai entrar no plano tem CNPJ ou MEI?';
+  }
+
+  if (qualificationState && qualificationStateIsComplete(qualificationState)) {
+    return 'Perfeito. Já consegui as informações que precisava por aqui. Vou montar as opções que façam mais sentido para o seu perfil e te mando a cotação.';
   }
 
   return null;

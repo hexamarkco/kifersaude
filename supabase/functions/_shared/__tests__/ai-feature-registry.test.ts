@@ -10,9 +10,9 @@ import {
 } from '../ai-feature-registry.ts';
 
 describe('AI Feature Registry', () => {
-  it('contains all 12 expected features', () => {
+  it('contains all 13 expected features', () => {
     const keys = getAllFeatureKeys();
-    expect(keys).toHaveLength(12);
+    expect(keys).toHaveLength(13);
   });
 
   it('has metadata for every feature key', () => {
@@ -39,6 +39,7 @@ describe('AI Feature Registry', () => {
   it('isValidFeatureKey returns true for valid keys', () => {
     expect(isValidFeatureKey('followup.generate')).toBe(true);
     expect(isValidFeatureKey('message.rewrite')).toBe(true);
+    expect(isValidFeatureKey('automation.message_generate')).toBe(true);
     expect(isValidFeatureKey('audio.transcribe')).toBe(true);
   });
 
@@ -104,5 +105,14 @@ describe('AI Feature Registry', () => {
     const meta = AI_FEATURE_META[AI_FEATURES.CONTRACT_DOCUMENT_EXTRACT];
     expect(meta.taskType).toBe('structured_output');
     expect(meta.defaultTemperature).toBe(0);
+  });
+
+  it('AUTOMATION_MESSAGE_GENERATE is a single text message routed through follow-up generation', () => {
+    const meta = AI_FEATURE_META[AI_FEATURES.AUTOMATION_MESSAGE_GENERATE];
+    expect(meta.taskType).toBe('text');
+    expect(meta.aiTask).toBe('follow_up_generation');
+    expect(meta.availableVariables.map((item) => item.key)).toEqual(
+      expect.arrayContaining(['lead_context', 'transcript', 'flow_name', 'instruction']),
+    );
   });
 });

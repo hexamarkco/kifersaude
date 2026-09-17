@@ -17,6 +17,7 @@ import {
   CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
+  QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
   QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   hasQualificationDataForCompletion,
   type AutonomousMessageRow,
@@ -191,6 +192,26 @@ describe('validateAutonomousReplyOutput', () => {
     );
 
     assert.equal(result.valid, true);
+  });
+
+  test('rejeita encerramento que nao avisa que a cotacao sera enviada', () => {
+    const completeHistory: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'O plano será somente para você?' },
+      { role: 'lead', content: 'Só para mim, tenho 27 anos.' },
+      { role: 'ai', content: 'Em qual cidade você vai utilizar o plano e qual bairro?' },
+      { role: 'lead', content: 'Rio de Janeiro, Méier.' },
+      { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'sim' },
+      { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+      { role: 'lead', content: 'sim' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Perfeito. Já consegui as informações que precisava por aqui e vou preparar as opções para você. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
+      completeHistory,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.message, QUALIFICATION_CLOSURE_VALIDATION_MESSAGE);
   });
 
   test('rejeita mais de uma pergunta no mesmo turno', () => {

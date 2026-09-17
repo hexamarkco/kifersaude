@@ -46,6 +46,15 @@ export type AutoContactFlowCustomMessage = {
   filename?: string;
 };
 
+export type AutoContactFlowAiMessage = {
+  instruction: string;
+};
+
+export type AutoContactFlowMessageItem =
+  | { templateId: string }
+  | { custom: AutoContactFlowCustomMessage }
+  | { ai: AutoContactFlowAiMessage };
+
 export type AutoContactDelayUnit = 'seconds' | 'minutes' | 'hours' | 'days';
 
 export type AutoContactFlowStep = {
@@ -57,7 +66,7 @@ export type AutoContactFlowStep = {
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
-  messages?: Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>;
+  messages?: AutoContactFlowMessageItem[];
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -221,6 +230,20 @@ export const isAutoContactRuntimeEnabled = (
   }
 
   return settings.enabled !== false && settings.autoSend !== false;
+};
+
+export const getAutoContactFlowMessageItems = (
+  step: AutoContactFlowStep,
+): AutoContactFlowMessageItem[] => {
+  if (Array.isArray(step.messages) && step.messages.length > 0) {
+    return step.messages;
+  }
+
+  if (step.messageSource === 'custom' || step.customMessage?.text || step.customMessage?.mediaUrl) {
+    return [{ custom: step.customMessage ?? { type: 'text', text: '' } }];
+  }
+
+  return [{ templateId: step.templateId ?? '' }];
 };
 
 export type AutoContactScheduleAdjustmentReason = 'outside_window' | 'weekend' | 'holiday';
@@ -797,10 +820,17 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
                             : validTemplateId,
                         };
                       }
-                      if (item.custom && typeof item.custom === 'object') {
-                        return { custom: normalizeCustomMessage(item.custom) };
-                      }
-                      return null;
+                    if (item.custom && typeof item.custom === 'object') {
+                      return { custom: normalizeCustomMessage(item.custom) };
+                    }
+                    if (item.ai && typeof item.ai === 'object') {
+                      return {
+                        ai: {
+                          instruction: typeof item.ai.instruction === 'string' ? item.ai.instruction : '',
+                        },
+                      };
+                    }
+                    return null;
                     })
                     .filter(Boolean)
                 : undefined,

@@ -41,7 +41,9 @@ import {
   getReliableLeadFirstName,
   inferQualificationCompletionHandoff,
   CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
+  QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
+  QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
   type HandoffCode,
@@ -791,7 +793,9 @@ Deno.serve(async (req: Request) => {
           const errorMessage = error instanceof Error ? error.message : String(error);
           const fallbackReply = buildAutonomousValidationFallback(history, qualificationState);
           const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE)
-            || errorMessage.includes(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
+            || errorMessage.includes(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE)
+            || errorMessage.includes(QUALIFICATION_CLOSURE_VALIDATION_MESSAGE)
+            || errorMessage.includes(QUALIFICATION_REPETITION_VALIDATION_MESSAGE);
           if (!canRecoverFromValidation || !fallbackReply) throw error;
 
           const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history, qualificationState);

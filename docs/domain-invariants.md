@@ -8,6 +8,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Mensagem outbound produzida por um fluxo de inatividade não abre outro enrollment do mesmo fluxo. As etapas permanecem no enrollment atual; inbound do cliente, saída do status de gatilho ou cancelamento explícito encerram a régua.
 - A primeira etapa de inatividade ancora em `inactivity_started_at + triggerDurationHours`. Spread determinístico vale para backlog real e excesso de cap, nunca para a abordagem `lead_created`.
 - `step.messages[]` representa um pacote ordenado de mensagens na mesma etapa. Não existe modo `together`.
+- Cada item de `step.messages[]` é Template, Custom ou IA. A instrução IA é obrigatória, gera exatamente um texto no worker antes do primeiro envio e o resultado fica em `action_payload.ai_generated_messages` para retries determinísticos. Falha de geração invalida o job e cancela as próximas etapas sem fallback textual.
 - `settings.autoSend=false` pausa globalmente; cada fluxo também possui `ativo`. Jobs pendentes de fluxo inativo viram `skipped`, sem envio.
 - `leads.skip_automation` é persistente e deve ser respeitado pelo trigger, cron, `leads-api`, engine e scripts de distribuição.
 - Arquivamento de chat ou lead não exclui um lead dos fluxos. A tabela `leads` não possui coluna `ativo`.

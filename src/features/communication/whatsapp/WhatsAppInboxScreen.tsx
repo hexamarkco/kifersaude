@@ -8755,12 +8755,19 @@ export default function WhatsAppInboxScreen() {
                     aria-label="Chats arquivados"
                     title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
                   >
-                    <Archive className="kds-control-icon" />
-                    {archivedChatsCountValue > 0 ? (
-                      <span className="whatsapp-inbox-count-badge absolute -right-2 -top-2">
-                        {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
-                      </span>
-                    ) : null}
+                    <span className="relative inline-flex">
+                      <Archive className="kds-control-icon" />
+                      {archivedChatsCountValue > 0 ? (
+                        <Badge
+                          tone="primary"
+                          size="sm"
+                          className="whatsapp-inbox-count-badge"
+                          aria-label={`${archivedChatsCountValue} chats arquivados`}
+                        >
+                          {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
+                        </Badge>
+                      ) : null}
+                    </span>
                   </IconButton>
                   <IconButton
                     variant="ghost"
@@ -9205,9 +9212,14 @@ export default function WhatsAppInboxScreen() {
                       <span className="relative inline-flex">
                         <Info className="kds-control-icon" />
                         {chatAgendaSummary.pendingCount > 0 ? (
-                          <span className="whatsapp-inbox-count-badge absolute -right-2 -top-2">
+                          <Badge
+                            tone="primary"
+                            size="sm"
+                            className="whatsapp-inbox-count-badge"
+                            aria-label={`${chatAgendaSummary.pendingCount} lembretes pendentes`}
+                          >
                             {chatAgendaSummary.pendingCount > 99 ? '99+' : chatAgendaSummary.pendingCount}
-                          </span>
+                          </Badge>
                         ) : null}
                       </span>
                     </IconButton>

@@ -39,3 +39,24 @@ export async function sendAutomationFlowTest(input: {
     throw new Error(response?.error || error?.message || 'Não foi possível enviar a mensagem de teste.');
   }
 }
+
+export async function previewAutomationFlowMessage(input: {
+  flowName: string;
+  instruction: string;
+}): Promise<string> {
+  const { data, error } = await databaseClient.functions.invoke('leads-api', {
+    headers: { 'x-action': 'preview-flow-message' },
+    body: {
+      flow_name: input.flowName,
+      instruction: input.instruction,
+    },
+  });
+
+  const response = data && typeof data === 'object'
+    ? data as { success?: boolean; text?: string; error?: string }
+    : null;
+  if (error || response?.success !== true || !response.text?.trim()) {
+    throw new Error(response?.error || error?.message || 'Não foi possível gerar a prévia da mensagem.');
+  }
+  return response.text.trim();
+}

@@ -2,7 +2,7 @@
 
 ## Visão Geral da Arquitetura
 
-O sistema de IA do CRM Kifer Saude é composto por **12 features** que usam inteligência artificial para differentes tarefas. Toda configuração dessas features (prompts, parâmetros, comportamento) é editável pela tela **Configurações > IA** sem alterar código.
+O sistema de IA do CRM Kifer Saude é composto por **13 features** que usam inteligência artificial para differentes tarefas. Toda configuração dessas features (prompts, parâmetros, comportamento) é editável pela tela **Configurações > IA** sem alterar código.
 
 ### Features Existentes
 
@@ -14,6 +14,7 @@ O sistema de IA do CRM Kifer Saude é composto por **12 features** que usam inte
 | `followup.refine` | Refinar Follow-up | text | Refina mensagem existente com ajustes do operador |
 | `message.suggest` | Sugerir Resposta | text | Sugere próxima mensagem no composer |
 | `message.rewrite` | Reescrever Mensagem | text | Reescreve mensagem com tom/naturalidade melhor |
+| `automation.message_generate` | Gerar Mensagem de Fluxo | text | Gera uma mensagem de etapa com lead, histórico recente e instrução do operador |
 | `attendance.critique` | Avaliar Atendimento | structured_output | Audita qualidade do atendimento humano |
 | `campaign.intent` | Classificar Intenção | structured_output | Classifica respostas de campanhas WhatsApp |
 | `agenda.organize` | Organizar Agenda | structured_output | Prioriza follow-ups pendentes com scoring |

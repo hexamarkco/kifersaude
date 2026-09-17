@@ -1,5 +1,13 @@
 export { default as Alert } from './components/Alert';
 export type { AlertProps, AlertTone } from './components/Alert';
+export { Inline, Stack } from './components/LayoutPrimitives';
+export type { InlineProps, LayoutAlign, LayoutElement, LayoutGap, LayoutJustify, StackProps } from './components/LayoutPrimitives';
+export { Heading, Text } from './components/Typography';
+export type { HeadingProps, TextProps, TextSize, TextTone, TextWeight } from './components/Typography';
+export { ExternalLink, TextLink } from './components/TextLink';
+export type { TextLinkProps } from './components/TextLink';
+export { PublicCard, PublicEmptyState, PublicSection, PublicShell } from './components/Public';
+export type { PublicCardProps, PublicEmptyStateProps, PublicSectionProps, PublicShellProps, PublicTheme, PublicWidth } from './components/Public';
 export { FilterBar, PageContainer, PageSection, Toolbar, ToolbarActions, ToolbarSearch } from './components/Application';
 export type { PageContainerProps, PageContainerSize, PageContainerSpacing, PageSectionProps, ToolbarActionsProps, ToolbarProps, ToolbarSearchProps } from './components/Application';
 export { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './components/Breadcrumb';

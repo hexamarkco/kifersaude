@@ -1612,9 +1612,6 @@ export default function ContractForm({
                       })
                     }
                     className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--bg-inset)] accent-[var(--brand-primary)]"
-                    style={{
-                      accentColor: "var(--brand-primary)",
-                    }}
                   />
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-xs text-[var(--text-muted)]">

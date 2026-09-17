@@ -450,7 +450,7 @@ export default function WhatsAppMediaDrawer({
         </div>
       </div>
 
-      <div className="comm-emoji-picker-scroll overflow-y-auto px-3 pb-3 pt-3" style={{ height: 320 }}>
+      <div className="comm-emoji-picker-scroll comm-emoji-picker-scroll-height overflow-y-auto px-3 pb-3 pt-3">
         {mode === 'emoji' ? (
           searchQuery.trim() ? (
             emojiSearchResults && emojiSearchResults.length > 0 ? (

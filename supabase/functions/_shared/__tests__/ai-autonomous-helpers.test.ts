@@ -7,6 +7,7 @@ import {
   buildReplyUserPrompt,
   inferQualificationCompletionHandoff,
   getReliableLeadFirstName,
+  normalizeLeadVisibleMessageStyle,
   splitGeneratedReply,
   extractHandoff,
   normalizeHandoffCode,
@@ -102,6 +103,28 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /criar proximidade real/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao precisa parecer uma sequencia de formulario/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Se o lead ja disser que e pessoa fisica/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /EMPATIA SEM ENROLAÇÃO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /COPY VISIVEL/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao pode usar travessao.*dois-pontos/i);
+  });
+});
+
+describe('copy visible style', () => {
+  test('pede resposta curta, contextualizada e sem pontuacao rejeitada', () => {
+    const prompt = buildReplyUserPrompt([
+      { role: 'ai', content: 'Oi, tudo bem?' },
+      { role: 'lead', content: 'Quero cotar para minhas filhas em Campos.' },
+    ]);
+
+    assert.match(prompt, /Mostre em uma frase curta que voce entendeu o ponto concreto/i);
+    assert.match(prompt, /Faca no maximo uma pergunta/i);
+    assert.match(prompt, /nao pode conter travessao.*dois-pontos/i);
+  });
+
+  test('normaliza dois-pontos e travessao antes do envio', () => {
+    const normalized = normalizeLeadVisibleMessageStyle('Entendi: vamos comparar as opções — para você.');
+    assert.equal(normalized, 'Entendi, vamos comparar as opções, para você.');
+    assert.doesNotMatch(normalized, /[:：—–]/);
   });
 });
 
@@ -119,8 +142,32 @@ describe('validateAutonomousReplyOutput', () => {
   });
 
   test('aceita confirmar a hipotese mais provavel para as duas pessoas', () => {
-    const result = validateAutonomousReplyOutput('Só para confirmar: vocês dois têm 56 anos?', iedaHistory);
+    const result = validateAutonomousReplyOutput('Só para confirmar, vocês dois têm 56 anos?', iedaHistory);
     assert.equal(result.valid, true);
+  });
+
+  test('rejeita mais de uma pergunta no mesmo turno', () => {
+    const result = validateAutonomousReplyOutput('Entendi o cenário. Qual a cidade? E qual o orçamento?', [
+      { role: 'lead', content: 'Quero cotar para minhas filhas.' },
+    ]);
+    assert.equal(result.valid, false);
+    assert.match(result.message ?? '', /no maximo uma pergunta/i);
+  });
+
+  test('rejeita dois-pontos e travessao na copy visivel', () => {
+    const result = validateAutonomousReplyOutput('Entendi: vamos seguir — em qual cidade vocês vão usar?', [
+      { role: 'lead', content: 'Quero cotar para minhas filhas.' },
+    ]);
+    assert.equal(result.valid, false);
+    assert.match(result.message ?? '', /dois-pontos ou travessao/i);
+  });
+
+  test('rejeita resposta prolixa', () => {
+    const result = validateAutonomousReplyOutput('a'.repeat(721), [
+      { role: 'lead', content: 'Quero cotar para minhas filhas.' },
+    ]);
+    assert.equal(result.valid, false);
+    assert.match(result.message ?? '', /longa demais/i);
   });
 
   test('rejeita assumir a idade e seguir para outra pergunta', () => {
@@ -202,7 +249,7 @@ describe('validateAutonomousReplyOutput', () => {
       false,
     );
     assert.equal(
-      validateAutonomousReplyOutput('Como seu MEI tem 3 meses, ele ainda não pode ser usado: precisa completar 6 meses. Enquanto isso, posso cotar pessoa física para você não ficar sem cobertura. Faz sentido?', history).valid,
+      validateAutonomousReplyOutput('Como seu MEI tem 3 meses, ele ainda não pode ser usado, precisa completar 6 meses. Enquanto isso, posso cotar pessoa física para você não ficar sem cobertura. Faz sentido?', history).valid,
       true,
     );
   });

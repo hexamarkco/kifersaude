@@ -550,7 +550,7 @@ export default function WhatsAppBatchFollowUpModal({
                 const willReschedule = item.sendStatus === 'sent' && item.approvedScheduleAction === 'schedule' && Boolean(item.approvedScheduleDate);
                 const isWaitReschedule = item.currentAction === 'wait';
                 return (
-                  <div key={item.reminderId} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs" style={{ background: 'var(--bg-elevated)' }}>
+                  <div key={item.reminderId} className="comm-follow-up-detail-item flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs">
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 truncate font-semibold text-[var(--text-primary)]">
                         <LeadFavoriteBadge favorito={item.leadFavorito} />

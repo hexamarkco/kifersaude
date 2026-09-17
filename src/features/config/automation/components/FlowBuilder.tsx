@@ -257,15 +257,13 @@ const ConditionNode = ({
       id="yes"
       type="source"
       position={Position.Right}
-      className="h-2 w-2 bg-[var(--brand-primary)]"
-      style={{ top: "35%" }}
+      className="kds-flow-handle-yes h-2 w-2 bg-[var(--brand-primary)]"
     />
     <Handle
       id="no"
       type="source"
       position={Position.Right}
-      className="h-2 w-2 bg-[var(--brand-primary)]"
-      style={{ top: "70%" }}
+      className="kds-flow-handle-no h-2 w-2 bg-[var(--brand-primary)]"
     />
   </div>
 );

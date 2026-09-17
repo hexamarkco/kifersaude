@@ -23,6 +23,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   IconButton,
+  OperationalStatusBadge,
 } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
@@ -8937,15 +8938,15 @@ export default function WhatsAppInboxScreen() {
                         </Badge>
                       ) : null}
                       {selectedChat.autonomous_attendance_status === 'active' ? (
-                        <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--accent-gold)' } as CSSProperties}>
+                        <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase">
                           <Bot className="h-3 w-3" aria-hidden="true" />
                           IA atendendo
-                        </span>
+                        </OperationalStatusBadge>
                       ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
-                        <span className="kds-op-status-badge uppercase" style={{ '--op-status-color': 'var(--text-muted)' } as CSSProperties}>
+                        <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase">
                           <Bot className="h-3 w-3" aria-hidden="true" />
                           IA encerrada
-                        </span>
+                        </OperationalStatusBadge>
                       ) : null}
                     </div>
                     <IconButton
@@ -9236,11 +9237,7 @@ export default function WhatsAppInboxScreen() {
                     if (item.type === 'day') {
                       return (
                         <div key={item.key} className="flex w-full justify-center py-1">
-                          <div className="rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm" style={{
-                            borderColor: 'var(--border-strong)',
-                            background: 'var(--bg-elevated)',
-                            color: 'var(--text-secondary)',
-                          }}>
+                          <div className="whatsapp-inbox-day-divider rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm">
                             {item.label}
                           </div>
                         </div>

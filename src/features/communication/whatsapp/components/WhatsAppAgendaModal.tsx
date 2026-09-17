@@ -1323,8 +1323,7 @@ export default function WhatsAppAgendaModal({
                       position={quickScheduleDropdown.position}
                       onClose={() => setQuickScheduleDropdown(null)}
                       ariaLabel="Selecionar dias para agendar"
-                      className="rounded-xl border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-xl"
-                      style={{ width: 140, zIndex: 9999 }}
+                      className="comm-quick-schedule-popover rounded-xl border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-xl"
                     >
                       <div className="flex flex-col gap-1">
                         {[1, 2, 3, 4, 5].map((days) => (

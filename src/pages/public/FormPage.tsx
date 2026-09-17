@@ -13,9 +13,14 @@ import {
   Field,
   KIFER_THEME_COLORS,
   getPanelButtonClass,
+  IconButton,
   Input,
+  LinkButton,
   LoadingState,
+  PublicEmptyState,
+  PublicShell,
   Stepper,
+  TextLink,
 } from '../../design-system';
 
 const DARK_CANVAS_COLOR = KIFER_THEME_COLORS.darkCanvas;
@@ -265,8 +270,10 @@ export default function FormPage() {
   const pageTitle = form?.title || 'Kifer Saúde';
 
   return (
-    <div
-      className={`painel-theme kifer-ds relative flex min-h-dvh w-full justify-center overflow-y-auto [background:var(--surface-hero-bg)] px-4 py-10 sm:py-16${theme === 'dark' ? ' theme-dark' : ''}`}
+    <PublicShell
+      theme={theme}
+      width="narrow"
+      className="relative flex min-h-dvh w-full justify-center overflow-y-auto px-4 py-10 sm:py-16"
     >
       <PublicSeo
         title={pageTitle}
@@ -275,14 +282,15 @@ export default function FormPage() {
         indexable={false}
       />
 
-      <button
+      <IconButton
         type="button"
         onClick={toggleTheme}
         aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+        size="sm"
         className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] shadow-[var(--shadow-button)] transition hover:text-[color:var(--brand-primary)] sm:right-6 sm:top-6"
       >
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
+      </IconButton>
 
       <main className="w-full max-w-md">
         {loading ? (
@@ -290,14 +298,12 @@ export default function FormPage() {
             <LoadingState compact label="Carregando..." />
           </div>
         ) : !form ? (
-          <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-              <PublicBrandMark className="h-8 w-auto text-[color:var(--text-on-brand)]" />
-            </div>
-            <p className="text-sm text-[color:var(--text-secondary)]">Este formulário não está disponível.</p>
-          </div>
+          <PublicEmptyState
+            icon={<PublicBrandMark className="h-8 w-auto" />}
+            title="Este formulário não está disponível."
+          />
         ) : submitted ? (
-          <div className="form-step-in flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+          <div className="kds-form-step-in flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <Check className="h-8 w-8 text-[color:var(--text-on-brand)]" />
             </div>
@@ -306,39 +312,42 @@ export default function FormPage() {
             </h1>
             <p className="max-w-sm text-sm text-[color:var(--text-secondary)]">{form.success_message}</p>
             {form.whatsapp_redirect && form.whatsapp_message_template && (
-              <a
+              <LinkButton
                 href={buildWhatsAppUrl(form.whatsapp_message_template, contact.name.trim())}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={getPanelButtonClass({ variant: 'primary', size: 'lg' })}
+                variant="primary"
+                size="lg"
               >
                 <MessageCircle className="h-4 w-4" />
                 <span>Continuar no WhatsApp</span>
-              </a>
+              </LinkButton>
             )}
-            <a
+            <TextLink
               href="/"
               className="mt-2 flex items-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
             >
               <PublicBrandMark className="h-4 w-auto" />
               Kifer Saúde
-            </a>
+            </TextLink>
           </div>
         ) : (
           <>
             <div className="mb-6 flex flex-col items-center gap-2 text-center">
               <PublicBrandMark className="mb-1 h-7 w-auto text-[color:var(--brand-primary)]" />
               <div className="w-full overflow-x-auto">
-                <div style={{ minWidth: `${Math.max(totalSteps * MIN_STEP_WIDTH_PX, MIN_STEPPER_WIDTH_PX)}px` }}>
-                  <Stepper currentStep={stepIndex} steps={sequence.map(() => ({ label: '' }))} />
-                </div>
+                <Stepper
+                  currentStep={stepIndex}
+                  steps={sequence.map(() => ({ label: '' }))}
+                  minWidth={Math.max(totalSteps * MIN_STEP_WIDTH_PX, MIN_STEPPER_WIDTH_PX)}
+                />
               </div>
               <p className="text-xs font-medium text-[color:var(--text-muted)]">
                 Etapa {stepIndex + 1} de {totalSteps}
               </p>
             </div>
 
-            <div key={stepIndex} className="form-step-in space-y-5">
+            <div key={stepIndex} className="kds-form-step-in space-y-5">
               {current?.kind === 'question' && (
                 <QuestionStep
                   step={current.step}
@@ -392,19 +401,7 @@ export default function FormPage() {
         )}
       </main>
 
-      <style>{`
-        @keyframes form-step-fade-in {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .form-step-in {
-          animation: form-step-fade-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .form-step-in { animation: none; }
-        }
-      `}</style>
-    </div>
+    </PublicShell>
   );
 }
 

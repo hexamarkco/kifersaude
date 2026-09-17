@@ -63,3 +63,5 @@
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
 }
+
+.kds-showcase-aspect-video { aspect-ratio: 16 / 9; }

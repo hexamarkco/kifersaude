@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 
 import { toggleLeadFavorito } from '../lib/leadFavoriteService';
 import { toast } from '../lib/toast';
+import { cx } from '../lib/cx';
 
 // Estrela clicavel para favoritar/desfavoritar um lead. Usada só nos lugares
 // onde o lead é gerenciado diretamente (Leads, Detalhes do Lead, painel do
@@ -47,8 +48,11 @@ export function LeadFavoriteToggle({
       disabled={pending}
       aria-pressed={favorito}
       title={favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}
-      className={`inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ''}`}
-      style={{ color: favorito ? 'var(--accent-gold)' : 'var(--text-muted)' }}
+      className={cx(
+        'kds-favorite-toggle inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60',
+        favorito ? 'kds-favorite-active' : 'kds-favorite-inactive',
+        className,
+      )}
     >
       <Star className={iconSize} fill={favorito ? 'currentColor' : 'none'} />
     </button>
@@ -65,8 +69,7 @@ export function LeadFavoriteBadge({ favorito, className }: { favorito?: boolean 
   return (
     <span title="Lead favorito" className="inline-flex shrink-0">
       <Star
-        className={`h-3.5 w-3.5 shrink-0 ${className ?? ''}`}
-        style={{ color: 'var(--accent-gold)' }}
+        className={cx('kds-favorite-icon h-3.5 w-3.5 shrink-0', className)}
         fill="currentColor"
         aria-label="Lead favorito"
       />

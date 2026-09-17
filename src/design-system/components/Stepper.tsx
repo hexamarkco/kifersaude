@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import type { CSSProperties } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -9,10 +10,11 @@ export type StepperProps = {
   currentStep: number;
   steps: Array<{ label: string; description?: string }>;
   orientation?: StepperOrientation;
+  minWidth?: number;
   className?: string;
 };
 
-export function Stepper({ currentStep, steps, orientation = 'horizontal', className }: StepperProps) {
+export function Stepper({ currentStep, steps, orientation = 'horizontal', minWidth, className }: StepperProps) {
   return (
     <div
       className={cx(
@@ -20,6 +22,7 @@ export function Stepper({ currentStep, steps, orientation = 'horizontal', classN
         orientation === 'vertical' && 'kds-stepper-vertical',
         className,
       )}
+      style={minWidth ? ({ '--kds-stepper-min-width': `${minWidth}px` } as CSSProperties) : undefined}
       role="list"
     >
       {steps.map((step, index) => {

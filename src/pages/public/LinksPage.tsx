@@ -4,9 +4,14 @@ import { ArrowUpRight, BadgeCheck } from 'lucide-react';
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
 import {
+  Avatar,
+  AvatarBadge,
   KIFER_THEME_COLORS,
-  getPanelButtonClass,
+  LinkButton,
   LoadingState,
+  PublicEmptyState,
+  PublicShell,
+  TextLink,
 } from '../../design-system';
 import { getLinkIcon } from '../../lib/linkIcons';
 import { linksService } from '../../lib/linksService';
@@ -54,7 +59,11 @@ export default function LinksPage() {
   const pageTitle = settings?.title || 'Kifer Saúde';
 
   return (
-    <div className="painel-theme kifer-ds theme-dark flex min-h-dvh w-full justify-center overflow-y-auto [background:var(--surface-hero-bg)] px-4 py-10 sm:py-16">
+    <PublicShell
+      theme="dark"
+      width="narrow"
+      className="flex min-h-dvh w-full justify-center overflow-y-auto px-4 py-10 sm:py-16"
+    >
       <PublicSeo
         title={`${pageTitle} — Links`}
         description={settings?.bio || 'Todos os canais e redes sociais em um só lugar.'}
@@ -68,35 +77,27 @@ export default function LinksPage() {
             <LoadingState compact label="Carregando..." />
           </div>
         ) : !settings ? (
-          <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-              <PublicBrandMark className="h-8 w-auto text-[color:var(--text-on-brand)]" />
-            </div>
-            <p className="text-sm text-[color:var(--text-secondary)]">Esta página ainda não está disponível.</p>
-          </div>
+          <PublicEmptyState
+            icon={<PublicBrandMark className="h-8 w-auto" />}
+            title="Esta página ainda não está disponível."
+          />
         ) : (
           <>
-            <div className="links-reveal mb-8 flex flex-col items-center gap-3 text-center">
+            <div className="kds-public-reveal mb-8 flex flex-col items-center gap-3 text-center">
               <div className="relative">
-                {settings.avatar_url ? (
-                  <img
-                    src={settings.avatar_url}
-                    alt={pageTitle}
-                    className="h-20 w-20 rounded-full border border-[color:var(--border-default)] object-cover shadow-[var(--shadow-button)]"
-                  />
-                ) : (
-                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-                    <PublicBrandMark className="h-9 w-auto text-[color:var(--text-on-brand)]" />
-                  </div>
-                )}
+                <Avatar
+                  src={settings.avatar_url}
+                  alt={pageTitle}
+                  name={pageTitle}
+                  size="xl"
+                  fallback={<PublicBrandMark className="h-9 w-auto" />}
+                  className="border border-[color:var(--border-default)] shadow-[var(--shadow-button)]"
+                />
 
                 {settings.is_verified && (
-                  <span
-                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] ring-2 ring-[color:var(--bg-canvas)]"
-                    title="Perfil verificado"
-                  >
+                  <AvatarBadge position="bottom-right" title="Perfil verificado">
                     <BadgeCheck className="h-4 w-4" />
-                  </span>
+                  </AvatarBadge>
                 )}
               </div>
 
@@ -123,65 +124,40 @@ export default function LinksPage() {
                 items.map((link, index) => {
                   const Icon = getLinkIcon(link.icon);
                   return (
-                    <a
+                    <LinkButton
                       key={link.id}
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => handleLinkClick(link)}
                       style={{ animationDelay: `${LINK_REVEAL_BASE_DELAY_MS + index * LINK_REVEAL_STEP_MS}ms` }}
-                      className={getPanelButtonClass({
-                        variant: 'secondary',
-                        size: 'lg',
-                        fullWidth: true,
-                        className: 'links-reveal justify-between text-left',
-                      })}
+                      variant="secondary"
+                      size="lg"
+                      className="kds-public-reveal w-full justify-between text-left"
                     >
                       <span className="flex min-w-0 items-center gap-3">
                         <Icon className="h-4 w-4 shrink-0" />
                         <span className="min-w-0 truncate">{link.title}</span>
                       </span>
                       <ArrowUpRight className="h-4 w-4 shrink-0" />
-                    </a>
+                    </LinkButton>
                   );
                 })
               )}
             </div>
 
-            <a
+            <TextLink
               href="/"
               style={{ animationDelay: `${LINK_REVEAL_BASE_DELAY_MS + items.length * LINK_REVEAL_STEP_MS}ms` }}
               className="links-reveal mt-8 flex items-center justify-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
             >
               <PublicBrandMark className="h-4 w-auto" />
               Kifer Saúde
-            </a>
+            </TextLink>
           </>
         )}
       </main>
 
-      <style>{`
-        @keyframes links-fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .links-reveal {
-          animation: links-fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .links-reveal {
-            animation: none;
-          }
-        }
-      `}</style>
-    </div>
+    </PublicShell>
   );
 }

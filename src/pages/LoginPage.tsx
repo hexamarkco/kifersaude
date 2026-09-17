@@ -5,8 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Alert,
   Button,
+  Field,
+  Heading,
   Input,
+  PublicShell,
   Surface,
+  Text,
 } from '../design-system';
 import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../infrastructure/supabase';
 
@@ -35,15 +39,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="painel-theme kifer-ds theme-dark flex min-h-dvh w-full items-center justify-center overflow-hidden [background:var(--surface-hero-bg)] px-4 py-6 sm:py-12">
-      <div className="w-full max-w-sm sm:max-w-md">
+    <PublicShell
+      theme="dark"
+      width="narrow"
+      className="flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-6 sm:py-12"
+    >
+      <div className="w-full">
         <Surface variant="strong" padding="lg" className="backdrop-blur-sm">
           <div className="mb-8 text-center">
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
               <Lock className="h-8 w-8 text-[color:var(--text-on-brand)]" />
             </div>
-            <h1 className="mb-2 font-[var(--font-display)] text-3xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</h1>
-            <p className="text-[color:var(--text-secondary)]">Sistema de Gestão de Leads e Contratos</p>
+            <Heading level={1} size="lg">Kifer Saúde</Heading>
+            <Text> Sistema de Gestão de Leads e Contratos</Text>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -56,10 +64,7 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <div>
-              <label htmlFor="username" className="mb-2 block text-sm font-medium text-[color:var(--text-primary)]">
-                Usuário
-              </label>
+            <Field label="Usuário" htmlFor="username">
               <Input
                 id="username"
                 type="text"
@@ -70,12 +75,9 @@ export default function LoginPage() {
                 size="lg"
                 placeholder="seu.usuario"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-[color:var(--text-primary)]">
-                Senha
-              </label>
+            <Field label="Senha" htmlFor="password">
               <Input
                 id="password"
                 type="password"
@@ -86,7 +88,7 @@ export default function LoginPage() {
                 size="lg"
                 placeholder="********"
               />
-            </div>
+            </Field>
 
             <Button
               type="submit"
@@ -100,6 +102,6 @@ export default function LoginPage() {
           </form>
         </Surface>
       </div>
-    </div>
+    </PublicShell>
   );
 }

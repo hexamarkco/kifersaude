@@ -1440,7 +1440,7 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Aspect Ratio">
-            <div className="w-full overflow-hidden rounded-xl bg-[var(--bg-hover)]" style={{ aspectRatio: '16 / 9' }}>
+            <div className="kds-showcase-aspect-video w-full overflow-hidden rounded-xl bg-[var(--bg-hover)]">
               <div className="flex h-full items-center justify-center text-xs text-[var(--text-muted)]">16:9</div>
             </div>
           </Item>

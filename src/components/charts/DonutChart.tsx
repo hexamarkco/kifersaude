@@ -51,13 +51,10 @@ export default function DonutChart({
   if (total === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-[var(--radius-2xl)] border text-sm"
+        className="kds-donut-empty flex items-center justify-center rounded-[var(--radius-2xl)] border text-sm"
         style={{
           width: size,
           height: size,
-          borderColor: 'var(--border-subtle)',
-          background: 'var(--bg-inset)',
-          color: 'var(--text-muted)',
         }}
       >
         Sem dados
@@ -67,7 +64,7 @@ export default function DonutChart({
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size} className="shrink-0 transform -rotate-90">
+      <svg width={size} height={size} className="kds-donut-svg shrink-0">
           <circle
             cx={center}
             cy={center}
@@ -87,12 +84,8 @@ export default function DonutChart({
               strokeWidth={strokeWidth}
               strokeDasharray={segment.dashArray}
               strokeLinecap="butt"
-              style={{
-                transform: `rotate(${segment.rotation}deg)`,
-                transformOrigin: 'center',
-                transition: 'stroke-dasharray 0.3s ease',
-                cursor: onSegmentClick ? 'pointer' : 'default',
-              }}
+              className={onSegmentClick ? 'kds-donut-segment is-interactive' : 'kds-donut-segment'}
+              style={{ transform: `rotate(${segment.rotation}deg)` }}
               onClick={() => onSegmentClick?.(segment.label)}
             />
           ))}
@@ -113,7 +106,7 @@ export default function DonutChart({
             fontWeight="700"
             fontFamily="var(--font-sans)"
             fill="var(--text-primary)"
-            style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
+            className="kds-donut-text"
           >
             {total.toLocaleString('pt-BR')}
           </text>
@@ -127,7 +120,7 @@ export default function DonutChart({
             fontFamily="var(--font-sans)"
             letterSpacing="0.18em"
             fill="var(--text-muted)"
-            style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
+            className="kds-donut-text kds-donut-text-muted"
           >
             TOTAL
           </text>
@@ -139,15 +132,11 @@ export default function DonutChart({
           <button
             key={`${segment.label}-${index}`}
             type="button"
-            className="flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
-            style={{
-              borderColor: 'var(--border-subtle)',
-              background: 'var(--bg-inset)',
-            }}
+            className="kds-donut-legend-item flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
             onClick={() => onSegmentClick?.(segment.label)}
           >
             <div
-              className="h-3.5 w-3.5 flex-shrink-0 rounded-full"
+              className="kds-donut-legend-dot h-3.5 w-3.5 flex-shrink-0 rounded-full"
               style={{
                 backgroundColor: segment.color,
                 boxShadow: `0 0 0 7px color-mix(in srgb, ${segment.color} 14%, transparent)`,
@@ -155,12 +144,11 @@ export default function DonutChart({
             />
             <div className="min-w-0 flex-1">
               <div
-                className="truncate text-[11px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: 'var(--text-muted)' }}
+                className="kds-donut-label-muted truncate text-[11px] font-semibold uppercase tracking-[0.16em]"
               >
                 {segment.label}
               </div>
-              <div className="mt-1 text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <div className="kds-donut-value mt-1 text-base font-semibold">
                 {segment.value.toLocaleString('pt-BR')} ({segment.percentage.toFixed(0)}%)
               </div>
             </div>

@@ -20,14 +20,19 @@ import {
   TrendingUp,
   Users,
   UserRound,
-  X,
 } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import {
   Button,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   Input,
+  PublicShell,
   Select,
 } from '../../design-system';
 import {
@@ -265,31 +270,20 @@ const normalizePublicMetric = (value: unknown): PublicMetric | null => {
 
 function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, children }: OverlayModalProps) {
   return (
-    <div
-      className="modal-backdrop-animated fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--overlay)] p-4 backdrop-blur-sm"
-      onClick={onClose}
+    <Dialog
+      open
+      size="lg"
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      className={`modal-panel-animated ${maxWidthClass}`}
     >
-      <div
-        className={`modal-panel modal-panel-animated flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[var(--shadow-modal)]`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="sticky top-0 flex items-start justify-between gap-4 bg-[var(--brand-primary)] p-6 text-[color:var(--text-on-brand)]">
-          <div>
-            <h2 className="text-3xl font-bold">{title}</h2>
-            {subtitle ? <p className="mt-1 text-sm opacity-90">{subtitle}</p> : null}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-[var(--brand-primary-muted)]"
-            aria-label="Fechar modal"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-        <div className="modal-panel-content overflow-y-auto p-8">{children}</div>
-      </div>
-    </div>
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{title}</DialogTitle>
+        {subtitle ? <DialogDescription>{subtitle}</DialogDescription> : null}
+      </DialogHeader>
+      <DialogBody className="modal-panel-content">{children}</DialogBody>
+    </Dialog>
   );
 }
 
@@ -934,109 +928,7 @@ export default function HomePage() {
         faqItems={faqItems}
       />
 
-      <style>{`
-        @keyframes partner-logos-slide {
-          from {
-            transform: translateX(0);
-          }
-
-          to {
-            transform: translateX(-50%);
-          }
-        }
-
-        .partner-logos-marquee {
-          overflow: hidden;
-          -webkit-mask-image: none;
-          mask-image: none;
-        }
-
-        .partner-logos-track {
-          display: flex;
-          width: max-content;
-          animation: partner-logos-slide 24s linear infinite;
-        }
-
-        .partner-logos-card {
-          flex: 0 0 auto;
-          width: clamp(6.75rem, 11vw, 9rem);
-        }
-
-        @media (max-width: 768px) {
-          .partner-logos-track {
-            animation-duration: 18s;
-          }
-
-          .partner-logos-card {
-            width: clamp(5.5rem, 22vw, 7.25rem);
-          }
-        }
-
-        @keyframes modal-backdrop-in {
-          from {
-            opacity: 0;
-          }
-
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes modal-panel-in {
-          from {
-            opacity: 0;
-            transform: translateY(12px) scale(0.98);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .modal-backdrop-animated {
-          animation: modal-backdrop-in 200ms ease-out;
-        }
-
-        .modal-panel-animated {
-          animation: modal-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .reveal-hidden,
-        .reveal-visible {
-          transition: opacity 600ms ease-out, transform 600ms ease-out;
-        }
-
-        .reveal-hidden {
-          opacity: 0;
-          transform: translateY(24px);
-        }
-
-        .reveal-visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .partner-logos-track {
-            animation: none;
-          }
-
-          .modal-backdrop-animated,
-          .modal-panel-animated {
-            animation: none;
-          }
-
-          .reveal-hidden,
-          .reveal-visible {
-            transition: none;
-            opacity: 1;
-            transform: none;
-          }
-        }
-      `}</style>
-
-      <div className="painel-theme kifer-ds theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
+      <PublicShell width="full" className="min-h-screen overflow-x-hidden">
         <header>
         <nav
           aria-label="Navegação principal"
@@ -1686,7 +1578,7 @@ export default function HomePage() {
             </form>
           </OverlayModal>
         ) : null}
-      </div>
+      </PublicShell>
     </>
   );
 }

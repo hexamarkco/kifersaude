@@ -245,7 +245,7 @@ export default function BlogEditor({
               modules={modules}
               formats={BLOG_EDITOR_FORMATS}
               placeholder="Escreva o conteúdo do artigo aqui..."
-              style={{ height: "400px", marginBottom: "50px" }}
+              className="kds-blog-editor"
             />
           </Surface>
           <p className="mt-1 text-xs text-[var(--text-muted)]">

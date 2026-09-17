@@ -88,12 +88,8 @@ export default function MonthlyTrendChart({
   if (!chart) {
     return (
       <div
-        className="flex items-center justify-center rounded-2xl text-sm"
-        style={{
-          height,
-          background: 'var(--bg-hover)',
-          color: 'var(--text-muted)',
-        }}
+        className="kds-chart-empty flex items-center justify-center rounded-2xl text-sm"
+        style={{ height }}
       >
         Sem dados para o periodo
       </div>

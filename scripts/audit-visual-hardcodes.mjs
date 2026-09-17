@@ -44,6 +44,15 @@ const legacySizePattern = /\bsize=(['"])(?:icon|xs|default|compact|large)\1/;
 const geometryTokenPattern = /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:(?:min-|max-)?h-|(?:p|px|py|pl|pr|pt|pb)-|rounded(?:-|$)|text-(?:xs|sm|base|lg|xl|\[)|leading-(?:none|tight|snug|normal|relaxed|loose|\[)|gap-)/;
 const iconGeometryTokenPattern = /^(?:(?:sm|md|lg|xl|2xl):)?!?(?:min-|max-)?[hw]-(?:\d|\[)/;
 const legacyImportPattern = /from\s+['"][^'"]*(?:components\/Pagination|components\/Filter(?:SingleSelect|MultiSelect|DateRange)|components\/ui\/(?:Input|Textarea|DateTimePicker|ModalShell|ConfirmationModal)|WhatsAppDialog)['"]/g;
+const inlineStyleTagPattern = /<style\b/gi;
+const inlineStyleObjectPattern = /style=\{\{([\s\S]*?)\}\}/g;
+
+const hasStaticInlineStyleValue = (body) => {
+  if (/[?$`]|\$\{|\?\.|\?\?|=>|\b(?:Math|window|document)\b/.test(body)) return false;
+  if (/(?:^|,)\s*[A-Za-z_$][\w$]*\s*,/.test(body)) return false;
+  if (/\:\s*[A-Za-z_$][\w$]*(?:[.?]|,|$)/.test(body)) return false;
+  return /:\s*(?:['"][^'"]*['"]|\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|s|ms)?)/.test(body);
+};
 
 const findOpeningTagEnd = (source, start) => {
   let quote = null;
@@ -155,6 +164,16 @@ const auditFile = async (filePath) => {
   }
 
   if (!isDesignSystemFile) {
+    for (const value of source.match(inlineStyleTagPattern) || []) {
+      matches.push({ type: 'inline-style-tag', value });
+    }
+
+    for (const styleMatch of source.matchAll(inlineStyleObjectPattern)) {
+      if (hasStaticInlineStyleValue(styleMatch[1])) {
+        matches.push({ type: 'static-inline-style', value: styleMatch[0].slice(0, 120) });
+      }
+    }
+
     for (const value of source.match(legacyImportPattern) || []) {
       matches.push({ type: 'legacy-primitive-import', value });
     }

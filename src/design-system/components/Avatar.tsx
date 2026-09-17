@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -100,13 +100,12 @@ export function AvatarGroup({ children, max = 3, size = 'md', className }: Avata
   );
 }
 
-export type AvatarBadgeProps = {
+export type AvatarBadgeProps = HTMLAttributes<HTMLSpanElement> & {
   children: ReactNode;
   position?: 'top-right' | 'bottom-right';
-  className?: string;
 };
 
-export function AvatarBadge({ children, position = 'bottom-right', className }: AvatarBadgeProps) {
+export function AvatarBadge({ children, position = 'bottom-right', className, ...props }: AvatarBadgeProps) {
   return (
     <span
       className={cx(
@@ -114,6 +113,7 @@ export function AvatarBadge({ children, position = 'bottom-right', className }: 
         position === 'top-right' && 'kds-avatar-badge-top',
         className,
       )}
+      {...props}
     >
       {children}
     </span>

@@ -14,7 +14,10 @@ import {
   validateAutonomousReplyOutput,
   HANDOFF_CODES,
   CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
+  CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
+  QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
+  hasQualificationDataForCompletion,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
 
@@ -93,9 +96,10 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pessoa fisica como solucao temporaria/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /carencia para parto a termo e de 10 meses/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /ate 36 semanas e 6 dias/);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nunca apresente a idade de 12 anos como uma regra universal/i);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /o adolescente mais velho pode ser titular e o menor dependente/i);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /não insista para que um adulto que já tem plano entre em uma nova cotação/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /BASE OBRIGATORIA DA QUALIFICACAO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /bairro quando essa cidade for uma capital/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /MENOR DE 12 ANOS/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Não aplique essa regra a adolescentes de 12 anos ou mais/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /mostre que entendeu a situação concreta/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voce e sempre a Luiza Kifer/i);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nunca diga ou sugira que e IA/i);
@@ -314,7 +318,7 @@ describe('validateAutonomousReplyOutput', () => {
       history,
     );
     assert.equal(result.valid, false);
-    assert.match(result.message ?? '', /elegibilidade varia por operadora/i);
+    assert.equal(result.message, CHILD_ONLY_SCOPE_VALIDATION_MESSAGE);
   });
 
   test('aceita conduzir com acolhimento e elegibilidade condicionada à operadora', () => {
@@ -331,14 +335,12 @@ describe('validateAutonomousReplyOutput', () => {
     );
   });
 
-  test('rejeita promessa vaga para filhos menores sem handoff de elegibilidade', () => {
+  test('exige adulto somente para uma unica vida abaixo de 12 anos', () => {
     const history: AutonomousMessageRow[] = [
-      { role: 'lead', content: 'Meus filhos menores de 18' },
-      { role: 'lead', content: 'Boa tarde' },
-      { role: 'lead', content: 'Que seja completo e bom preço' },
+      { role: 'lead', content: 'Quero cotar somente para meu filho de 10 anos.' },
     ];
     const result = validateAutonomousReplyOutput(
-      'Boa tarde, Renato! Entendi, você busca uma opção completa, mas com bom custo-benefício para os seus filhos. Como a cotação é só para menores, o enquadramento pode variar conforme a operadora e as idades deles. Vou verificar a alternativa mais adequada para vocês.',
+      'Vou verificar uma opção para ele e já te retorno.',
       history,
     );
 
@@ -348,9 +350,17 @@ describe('validateAutonomousReplyOutput', () => {
     const fallback = buildAutonomousValidationFallback(history);
     assert.equal(
       fallback,
-      'Entendo. Como a cotacao e somente para criancas ou adolescentes, a composicao depende da operadora. Vou verificar a alternativa adequada para voces. [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]',
+      'Para contratar uma unica vida abaixo de 12 anos, e necessario incluir um adulto. Algum adulto tambem vai entrar na cotacao?',
     );
     assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
+  });
+
+  test('nao aplica a regra de adulto a adolescente de 15 anos', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'A cotação é para meu filho de 15 anos.' },
+    ];
+
+    assert.equal(validateAutonomousReplyOutput('Em qual cidade ele vai utilizar o plano?', history).valid, true);
   });
 
   test('nao exige handoff infantil quando um adulto tambem entra na cotacao', () => {
@@ -388,7 +398,15 @@ describe('validateAutonomousReplyOutput', () => {
 
   test('aceita handoff tag-only para o encerramento seguro do worker', () => {
     assert.equal(
-      validateAutonomousReplyOutput('[[HANDOFF: QUALIFICACAO_COMPLETA | completo]]', []).valid,
+      validateAutonomousReplyOutput('[[HANDOFF: QUALIFICACAO_COMPLETA | completo]]', [
+        { role: 'lead', content: 'Eu tenho 35 anos e minha esposa tem 34 anos. Vamos usar no Rio de Janeiro, no Centro. Não temos CNPJ ou MEI e não temos plano atualmente.' },
+        { role: 'ai', content: 'Qual é o bairro?' },
+        { role: 'lead', content: 'Centro.' },
+        { role: 'ai', content: 'Algum beneficiário tem CNPJ ou MEI?' },
+        { role: 'lead', content: 'Não temos.' },
+        { role: 'ai', content: 'Vocês têm plano atualmente?' },
+        { role: 'lead', content: 'Não temos plano.' },
+      ]).valid,
       true,
     );
   });
@@ -516,17 +534,44 @@ describe('splitGeneratedReply — handoff lifecycle', () => {
 });
 
 describe('inferQualificationCompletionHandoff', () => {
+  const completeHistory: AutonomousMessageRow[] = [
+    { role: 'lead', content: 'Eu tenho 35 anos e minha esposa tem 34 anos. Vamos usar no Rio de Janeiro, no Centro. Não temos CNPJ ou MEI e não temos plano atualmente.' },
+    { role: 'ai', content: 'Qual é o bairro?' },
+    { role: 'lead', content: 'Centro.' },
+    { role: 'ai', content: 'Algum beneficiário tem CNPJ ou MEI?' },
+    { role: 'lead', content: 'Não temos.' },
+    { role: 'ai', content: 'Vocês têm plano atualmente?' },
+    { role: 'lead', content: 'Não temos plano.' },
+  ];
+
   test('protege o handoff quando a IA promete preparar a cotação sem a tag técnica', () => {
     assert.equal(
-      inferQualificationCompletionHandoff(['Certo, Jefferson! Vou preparar sua cotação e já te retorno.']),
+      inferQualificationCompletionHandoff(['Certo, Jefferson! Vou preparar sua cotação e já te retorno.'], completeHistory),
       'QUALIFICACAO_COMPLETA',
     );
   });
 
   test('nao encerra apenas por mencionar cotação sem assumir o envio', () => {
     assert.equal(
-      inferQualificationCompletionHandoff(['Posso preparar uma cotação depois que eu confirmar a sua cidade.']),
+      inferQualificationCompletionHandoff(['Posso preparar uma cotação depois que eu confirmar a sua cidade.'], completeHistory),
       null,
+    );
+  });
+
+  test('nao infere encerramento quando faltam dados obrigatorios', () => {
+    const incompleteHistory: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Eu tenho 35 anos e quero usar no Rio de Janeiro.' },
+    ];
+
+    assert.equal(hasQualificationDataForCompletion(completeHistory), true);
+    assert.equal(hasQualificationDataForCompletion(incompleteHistory), false);
+    assert.equal(
+      inferQualificationCompletionHandoff(['Vou enviar sua cotação.'], incompleteHistory),
+      null,
+    );
+    assert.equal(
+      validateAutonomousReplyOutput('Vou enviar sua cotação. [[HANDOFF: QUALIFICACAO_COMPLETA | completo]]', incompleteHistory).message,
+      QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
     );
   });
 });

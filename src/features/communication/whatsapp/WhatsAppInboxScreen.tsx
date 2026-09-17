@@ -3793,6 +3793,14 @@ export default function WhatsAppInboxScreen() {
     () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null, leadPanel?.nome_completo),
     [channelState?.connected_user_name, selectedChat, leadPanel?.nome_completo],
   );
+  const isSelectedChatWaitingForQuote = useMemo(() => {
+    const normalizedStatus = String(leadPanel?.status_nome ?? selectedChat?.lead_status ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    return normalizedStatus === 'aguardando cotacao';
+  }, [leadPanel?.status_nome, selectedChat?.lead_status]);
   const followUpGenerationDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para gerar o follow-up.';
@@ -9109,14 +9117,22 @@ export default function WhatsAppInboxScreen() {
                       <IconButton
                         type="button"
                         onClick={() => (
+                          isSelectedChatWaitingForQuote
+                            ? undefined
+                            :
                           selectedChat.autonomous_attendance_status === 'active'
                             ? void handleDeactivateAutonomousAttendance(selectedChat)
                             : void handleActivateAutonomousAttendance(selectedChat)
                         )}
+                        disabled={isSelectedChatWaitingForQuote}
                         variant="icon"
                         loading={assumingControlChatId === selectedChat.id}
-                        aria-label={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
-                        title={selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
+                        aria-label={isSelectedChatWaitingForQuote
+                          ? 'IA encerrada enquanto aguarda cotação'
+                          : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
+                        title={isSelectedChatWaitingForQuote
+                          ? 'IA encerrada enquanto aguarda cotação'
+                          : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
                         className={cx(
                           'whatsapp-inbox-ai-toggle',
                           selectedChat.autonomous_attendance_status === 'active'
@@ -10982,17 +10998,22 @@ export default function WhatsAppInboxScreen() {
                   role="menuitem"
                   onClick={() => {
                     setThreadActionsMenuOpen(false);
+                    if (isSelectedChatWaitingForQuote) {
+                      return;
+                    }
                     if (selectedChat.autonomous_attendance_status === 'active') {
                       void handleDeactivateAutonomousAttendance(selectedChat);
                     } else {
                       void handleActivateAutonomousAttendance(selectedChat);
                     }
                   }}
-                  disabled={assumingControlChatId === selectedChat.id}
+                  disabled={assumingControlChatId === selectedChat.id || isSelectedChatWaitingForQuote}
                   className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
                 >
                   {assumingControlChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bot className="h-4 w-4 shrink-0" />}
-                  <span>{selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
+                  <span>{isSelectedChatWaitingForQuote
+                    ? 'IA encerrada enquanto aguarda cotação'
+                    : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
                 </button>
               ) : null}
               <button

@@ -21,8 +21,7 @@ test('Resposta Autônoma receives the fixed eligibility rule for children under 
 });
 
 test('automated scenarios apply the child-under-12 rule only to child-only quotes', () => {
-  assert.match(scenarioSource, /14\. Se o lead queria plano EXCLUSIVAMENTE para crianca menor de 12 anos/);
-  assert.match(scenarioSource, /se a cotacao ja incluia um adulto/);
-  assert.match(scenarioSource, /mencionar titular, dependente ou mensalidade sem o lead perguntar e uma violacao/);
+  assert.match(scenarioSource, /14\. Se o lead queria plano para uma unica vida abaixo de 12 anos/);
+  assert.match(scenarioSource, /Nao aplique essa regra a adolescentes de 12 anos ou mais/);
   assert.match(scenarioSource, /collectDeterministicViolations/);
 });

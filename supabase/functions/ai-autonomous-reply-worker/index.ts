@@ -25,6 +25,11 @@ import {
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
+  buildQualificationDecisionPrompt,
+  extractAutonomousQualificationState,
+  type AutonomousQualificationState,
+} from '../_shared/ai-autonomous-qualification.ts';
+import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
   buildAutonomousValidationFallback,
   buildAutonomousValidationRetryInstruction,
@@ -56,7 +61,8 @@ const MESSAGE_SEND_DELAY_MS = 1200;
 const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
 const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
   '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
-  'Quando idade(s), localizacao e a resposta sobre CNPJ/MEI ja tiverem sido coletadas e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
+  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando a cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar.',
+  'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
   'No FINAL ABSOLUTO, inclua exatamente `[[HANDOFF: QUALIFICACAO_COMPLETA | cotacao encaminhada para atendimento manual]]`.',
   'A tag e interna: nunca a explique ao cliente. Nao faca nova pergunta nem continue o atendimento depois da confirmacao.',
 ].join('\n');
@@ -136,6 +142,96 @@ const createAdminClient = () => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceRoleKey) throw new Error('Credenciais do Supabase nao configuradas.');
   return createClient(supabaseUrl, serviceRoleKey);
+};
+
+type AutonomousRpcResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type AutonomousRpcClient = {
+  rpc: (functionName: string, args: Record<string, unknown>) => Promise<AutonomousRpcResult>;
+};
+
+const callAutonomousRpc = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  functionName: string,
+  args: Record<string, unknown>,
+): Promise<AutonomousRpcResult> => {
+  const client = supabaseAdmin as unknown as AutonomousRpcClient;
+  return client.rpc(functionName, args);
+};
+
+const recordAutonomousAttendanceEvent = async (params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  chatId: string;
+  leadId: string;
+  eventType: string;
+  correlationId: string;
+  qualificationState?: AutonomousQualificationState;
+  qualificationStatus?: string;
+  decision?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}): Promise<void> => {
+  const { supabaseAdmin, chatId, leadId, eventType, correlationId, qualificationState, qualificationStatus, decision, metadata } = params;
+  const result = await callAutonomousRpc(supabaseAdmin, 'record_ai_autonomous_attendance_event', {
+    p_chat_id: chatId,
+    p_lead_id: leadId,
+    p_event_type: eventType,
+    p_correlation_id: correlationId,
+    p_qualification_status: qualificationStatus ?? qualificationState?.status ?? null,
+    p_decision: decision ?? {},
+    p_qualification_state: qualificationState ?? {},
+    p_metadata: metadata ?? {},
+  });
+  if (result.error) {
+    throw new Error(`Erro ao registrar evento do atendimento autonomo: ${result.error.message}`);
+  }
+};
+
+const persistQualificationState = async (params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  chatId: string;
+  leadId: string;
+  state: AutonomousQualificationState;
+  correlationId: string;
+}): Promise<void> => {
+  const { supabaseAdmin, chatId, leadId, state, correlationId } = params;
+  const stateResult = await callAutonomousRpc(supabaseAdmin, 'upsert_ai_autonomous_qualification_state', {
+    p_chat_id: chatId,
+    p_lead_id: leadId,
+    p_state: state,
+  });
+  if (stateResult.error) {
+    throw new Error(`Erro ao persistir estado da qualificacao: ${stateResult.error.message}`);
+  }
+
+  const decision = {
+    nextAction: state.status === 'complete' ? 'complete_qualification' : 'ask_missing_fields',
+    shouldReply: true,
+    shouldCompleteQualification: state.status === 'complete',
+    shouldChangeStatus: false,
+    shouldDisableAutonomousService: false,
+    missingRequiredFields: state.missingRequiredFields,
+  };
+  try {
+    await recordAutonomousAttendanceEvent({
+      supabaseAdmin,
+      chatId,
+      leadId,
+      eventType: 'qualification_decision',
+      correlationId,
+      qualificationState: state,
+      decision,
+      metadata: { source: 'ai-autonomous-reply-worker' },
+    });
+  } catch (error) {
+    console.warn('[ai-autonomous-reply-worker] falha ao registrar evento de qualificacao', {
+      chatId,
+      leadId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 };
 
 async function completeAutonomousAttendanceHandoff(params: {
@@ -302,7 +398,8 @@ async function sendAutonomousWhatsAppText(params: {
   text: string;
   channelPhone: string | null;
   channelName: string | null;
-}): Promise<void> {
+  idempotencyKey: string;
+}): Promise<string> {
   const { supabaseAdmin, chatRoute, text, channelId, channelPhone, channelName } = params;
 
   const token = getWhapiToken();
@@ -361,8 +458,14 @@ async function sendAutonomousWhatsAppText(params: {
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: null,
-    metadata: { provider: 'ai_autonomous', contact_permission_scope: 'service_reply' },
+    metadata: {
+      provider: 'ai_autonomous',
+      contact_permission_scope: 'service_reply',
+      idempotency_key: params.idempotencyKey,
+    },
   });
+
+  return externalMessageId;
 }
 
 Deno.serve(async (req: Request) => {
@@ -479,6 +582,7 @@ Deno.serve(async (req: Request) => {
         attempts: (job.attempts ?? 0) + 1,
       });
 
+      let conversationLockAcquired = false;
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
           .from('comm_whatsapp_chats')
@@ -537,7 +641,7 @@ Deno.serve(async (req: Request) => {
           fetchQuickReplies(supabaseAdmin),
           supabaseAdmin
             .from('leads')
-            .select('nome_completo')
+            .select('nome_completo, cidade, regiao, tipo_contratacao, operadora_atual')
             .eq('id', leadId)
             .maybeSingle(),
         ]);
@@ -563,6 +667,13 @@ Deno.serve(async (req: Request) => {
           }))
           .filter((row) => row.content.length > 0);
 
+        const qualificationState = extractAutonomousQualificationState(history, new Date().toISOString(), {
+          city: leadResult.data?.cidade,
+          state: leadResult.data?.regiao,
+          contractingType: leadResult.data?.tipo_contratacao,
+          currentOperator: leadResult.data?.operadora_atual,
+        });
+
         if (history.length === 0 || history[history.length - 1].role !== 'lead') {
           const latestFetched = fetchedHistoryRows[0];
           console.warn('[ai-autonomous-reply-worker] job cancelado: sem mensagem pendente do lead no historico recente', {
@@ -586,10 +697,43 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        const lockResult = await callAutonomousRpc(supabaseAdmin, 'try_acquire_ai_autonomous_reply_lock', {
+          p_chat_id: chat.id,
+          p_owner_id: job.id,
+          p_lease_seconds: 120,
+        });
+        if (lockResult.error) throw new Error(`Erro ao adquirir lock da conversa: ${lockResult.error.message}`);
+        if (lockResult.data !== true) {
+          await supabaseAdmin
+            .from('ai_autonomous_reply_jobs')
+            .update({
+              status: 'pending',
+              scheduled_at: new Date(Date.now() + 5_000).toISOString(),
+              last_error: 'Conversa ja esta sendo processada por outro worker.',
+            })
+            .eq('id', job.id)
+            .eq('status', 'processing');
+          console.log('[ai-autonomous-reply-worker] job devolvido para a fila por lock de conversa', {
+            jobId: job.id,
+            chatId: chat.id,
+          });
+          continue;
+        }
+        conversationLockAcquired = true;
+
         const promptInboundMessageId = fetchedHistoryRows.find((row) => row.direction === 'inbound')?.id;
         if (!promptInboundMessageId) {
           throw new Error('Nao foi possivel identificar a mensagem recebida que embasou a resposta autonoma.');
         }
+
+        const correlationId = `${job.id}:${promptInboundMessageId}`;
+        await persistQualificationState({
+          supabaseAdmin,
+          chatId: chat.id,
+          leadId,
+          state: qualificationState,
+          correlationId,
+        });
 
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
         const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
@@ -618,7 +762,7 @@ Deno.serve(async (req: Request) => {
         const userPrompt = [buildReplyUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
-        }), AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION].join('\n\n');
+        }), buildQualificationDecisionPrompt(qualificationState), AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION].join('\n\n');
 
         let generatedReplyText: string;
         try {
@@ -637,18 +781,18 @@ Deno.serve(async (req: Request) => {
             maxAttempts: 2,
             maxProviderRequestsPerAttempt: 1,
             retrySameResolvedModel: true,
-            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+            validateOutput: (text) => validateAutonomousReplyOutput(text, history, qualificationState),
             buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
           });
           generatedReplyText = result.text;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          const fallbackReply = buildAutonomousValidationFallback(history);
+          const fallbackReply = buildAutonomousValidationFallback(history, qualificationState);
           const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE)
             || errorMessage.includes(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
           if (!canRecoverFromValidation || !fallbackReply) throw error;
 
-          const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history);
+          const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history, qualificationState);
           if (!fallbackValidation.valid) throw error;
 
           generatedReplyText = fallbackReply;
@@ -693,7 +837,7 @@ Deno.serve(async (req: Request) => {
             maxAttempts: 2,
             maxProviderRequestsPerAttempt: 1,
             retrySameResolvedModel: true,
-            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+            validateOutput: (text) => validateAutonomousReplyOutput(text, history, qualificationState),
             buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
           });
           const retryParsed = splitGeneratedReply(retryResult.text, false);
@@ -723,7 +867,7 @@ Deno.serve(async (req: Request) => {
         }
 
         if (!handoffCode) {
-          handoffCode = inferQualificationCompletionHandoff(messages);
+          handoffCode = inferQualificationCompletionHandoff(messages, history, qualificationState);
           if (handoffCode) {
             console.warn('[ai-autonomous-reply-worker] handoff de cotacao inferido da confirmacao visivel', {
               jobId: job.id,
@@ -742,11 +886,41 @@ Deno.serve(async (req: Request) => {
           handoffCode: handoffCode ?? null,
         });
 
+        await recordAutonomousAttendanceEvent({
+          supabaseAdmin,
+          chatId: chat.id,
+          leadId,
+          eventType: 'reply_generated',
+          correlationId,
+          qualificationState,
+          decision: {
+            handoffCode,
+            messageCount: messages.length,
+            visibleMessageLengths: messages.map((message) => message.length),
+          },
+          metadata: { source: 'ai-autonomous-reply-worker' },
+        }).catch((error) => {
+          console.warn('[ai-autonomous-reply-worker] falha ao registrar resposta gerada', {
+            jobId: job.id,
+            chatId: chat.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
         // A IA pode levar alguns segundos para gerar. Se o cliente escreveu
         // nesse intervalo, nao enviamos uma resposta baseada no turno anterior:
         // o webhook ja deixou um novo job pendente para responder ao conjunto.
         if (await hasNewInboundMessageSincePrompt({ supabaseAdmin, chatId: chat.id, promptInboundMessageId })) {
           await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+          await recordAutonomousAttendanceEvent({
+            supabaseAdmin,
+            chatId: chat.id,
+            leadId,
+            eventType: 'reply_cancelled',
+            correlationId,
+            qualificationState,
+            decision: { reason: 'new_inbound_message_during_generation' },
+          }).catch(() => undefined);
           continue;
         }
 
@@ -789,13 +963,59 @@ Deno.serve(async (req: Request) => {
             replyWasDiscarded = true;
             break;
           }
-          await sendAutonomousWhatsAppText({
+          const sendPreparation = await prepareAutonomousAttendanceReply({
+            supabaseAdmin,
+            chatId: chat.id,
+            leadId,
+          });
+          if (!sendPreparation.canReply) {
+            await supabaseAdmin
+              .from('ai_autonomous_reply_jobs')
+              .update({ status: 'cancelled', last_error: 'Atendimento autonomo foi desativado antes de uma das bolhas.' })
+              .eq('id', job.id)
+              .eq('status', 'processing');
+            replyWasDiscarded = true;
+            break;
+          }
+          const idempotencyKey = `autonomous:${chat.id}:${promptInboundMessageId}:${i}`;
+          const deliveryClaim = await callAutonomousRpc(supabaseAdmin, 'claim_ai_autonomous_reply_delivery_key', {
+            p_idempotency_key: idempotencyKey,
+            p_chat_id: chat.id,
+            p_job_id: job.id,
+            p_message_index: i,
+          });
+          if (deliveryClaim.error) {
+            throw new Error(`Erro ao reservar envio autonomo: ${deliveryClaim.error.message}`);
+          }
+          if (deliveryClaim.data !== true) {
+            console.warn('[ai-autonomous-reply-worker] envio ignorado por idempotencia', {
+              jobId: job.id,
+              chatId: chat.id,
+              idempotencyKey,
+            });
+            continue;
+          }
+
+          const externalMessageId = await sendAutonomousWhatsAppText({
             supabaseAdmin,
             channelId: channel.id,
             chatRoute,
             text: messages[i],
             channelPhone: channel.phone_number,
             channelName: channel.connected_user_name,
+            idempotencyKey,
+          });
+          await callAutonomousRpc(supabaseAdmin, 'mark_ai_autonomous_reply_delivery_key_sent', {
+            p_idempotency_key: idempotencyKey,
+            p_job_id: job.id,
+            p_external_message_id: externalMessageId,
+          }).catch((error) => {
+            console.warn('[ai-autonomous-reply-worker] envio persistido, mas chave de idempotencia nao foi marcada', {
+              jobId: job.id,
+              chatId: chat.id,
+              idempotencyKey,
+              error: error instanceof Error ? error.message : String(error),
+            });
           });
           if (i < messages.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, MESSAGE_SEND_DELAY_MS));
@@ -810,6 +1030,15 @@ Deno.serve(async (req: Request) => {
             leadId,
             handoffCode,
           });
+          await recordAutonomousAttendanceEvent({
+            supabaseAdmin,
+            chatId: chat.id,
+            leadId,
+            eventType: 'handoff_completed',
+            correlationId,
+            qualificationState,
+            decision: { handoffCode },
+          }).catch(() => undefined);
         }
 
         await supabaseAdmin
@@ -831,6 +1060,19 @@ Deno.serve(async (req: Request) => {
           .from('ai_autonomous_reply_jobs')
           .update({ status: 'failed', last_error: message })
           .eq('id', job.id);
+      } finally {
+        if (conversationLockAcquired) {
+          await callAutonomousRpc(supabaseAdmin, 'release_ai_autonomous_reply_lock', {
+            p_chat_id: job.chat_id,
+            p_owner_id: job.id,
+          }).catch((error) => {
+            console.error('[ai-autonomous-reply-worker] falha ao liberar lock da conversa', {
+              jobId: job.id,
+              chatId: job.chat_id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
       }
     }
 

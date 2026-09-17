@@ -4,6 +4,10 @@ import {
   buildStyleProfileText,
   type MessageRow,
 } from './comm-whatsapp-transcript.ts';
+import {
+  qualificationStateIsComplete,
+  type AutonomousQualificationState,
+} from './ai-autonomous-qualification.ts';
 
 export type AutonomousMessageRow = {
   role: 'lead' | 'ai';
@@ -32,6 +36,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
+  'BASE OBRIGATORIA DA QUALIFICACAO: antes de concluir, colete quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas trate operadora e nome do plano como opcionais quando a pessoa nao souber ou nao quiser informar. Pergunte uma coisa por vez, aproveite respostas ja dadas e nao crie perguntas para dados que nao sao necessarios.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
   'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
   'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: reconheca a resposta e avance para a proxima informacao necessaria, normalmente a cidade. Se ele ja tiver informado a cidade, pergunte sobre CNPJ/MEI de forma abrangente para os beneficiarios, sem restringir ao interlocutor.',
@@ -39,7 +44,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
   'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
   'Se perguntarem especificamente sobre parto prematuro, explique que ate 36 semanas e 6 dias ele nao e parto a termo e fica fora da carencia de 10 meses do parto a termo, sendo tratado pelas regras de urgencia/emergencia apos 24 horas. Nao prometa cobertura irrestrita: ressalve a segmentacao/cobertura hospitalar contratada e as regras assistenciais aplicaveis.',
-  'CRIANÇAS E ADOLESCENTES: nunca apresente a idade de 12 anos como uma regra universal. Quando a cotação for apenas para crianças/adolescentes e não houver adulto beneficiário confirmado, explique com cuidado que o enquadramento depende da operadora: em algumas situações o adolescente mais velho pode ser titular e o menor dependente; em outras, cada um precisa de contrato individual ou um adulto precisa compor o plano. Não invente qual alternativa vale para aquele caso, não insista para que um adulto que já tem plano entre em uma nova cotação e não transforme essa incerteza em interrogatório. Acolha o contexto, diga em primeira pessoa que voce vai verificar a alternativa adequada e inclua [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]] depois de uma mensagem visível curta e pessoal. Se o lead estiver pedindo inclusão em um plano existente, mantenha o direcionamento para RH ou administradora; só trate cotação nova se ele a pedir de forma explícita.',
+  'MENOR DE 12 ANOS: use esta regra somente quando a cotação for para uma única vida abaixo de 12 anos e nenhum adulto estiver entrando no plano. Diga com clareza que é necessário incluir um adulto para conseguir contratar, porque as operadoras não estão aceitando menores de 12 anos como titular. Não aplique essa regra a adolescentes de 12 anos ou mais, a mais de uma vida ou a uma cotação que já inclua um adulto. Depois da orientação, pergunte somente se algum adulto também entrará na cotação. Não invente exceções e não repita a explicação.',
   'Quando uma resposta curta admitir uma interpretacao muito provavel, nao reinicie a coleta como formulario e nao assuma silenciosamente. Faca uma confirmacao fechada e facil. Exemplo: voce perguntou as idades de um casal e recebeu apenas "56"; a melhor resposta e "So para confirmar: voces dois tem 56 anos?", e nao "Qual a idade do seu marido?".',
   'A abordagem inicial ja apresentou a Luiza. Na primeira resposta do lead, nao se apresente de novo e nao force frases como "prazer em falar com voce" ou "que bom falar com voce". Acolha o conteudo real e avance naturalmente.',
   'Nao transforme cada turno em "marcador + pergunta". Varie a estrutura: as vezes va direto a pergunta, as vezes faca uma confirmacao breve, e use o primeiro nome apenas ocasionalmente quando trouxer proximidade real. Nao use o nome em mensagens consecutivas.',
@@ -270,8 +275,6 @@ const TWENTY_FOUR_HOURS_REGEX = /\b24\s*horas?\b/;
 const DEPENDENCY_EXPLANATION_REGEX = /\b(titular|dependente|mensalidade)\b/;
 const CHILD_COMPOSITION_QUESTION_REGEX = /\b(titular|dependente|mensalidade|entra\s+no\s+plano|pode\s+entrar)\b/;
 const CHILD_BENEFICIARY_CONTEXT_REGEX = /\b(filh[oa]s?|net[oa]s?|crianc[ae]s?|menor(?:es)?)\b/;
-const UNCONDITIONAL_ADULT_REQUIREMENT_REGEX = /(?:\b(?:precisa|necessita|tem\s+que|e\s+necessario)\b[^.!?]{0,80}\badulto\b[^.!?]{0,80}\b(?:titular|entrar|plano)\b|\badulto\b[^.!?]{0,80}\b(?:precisa|necessita|tem\s+que|e\s+necessario)\b)/;
-const OPERATOR_ELIGIBILITY_QUALIFIER_REGEX = /\b(depende|varia|algumas\s+operadoras|conforme\s+a\s+operadora|precisa\s+confirmar)\b/;
 const IDENTITY_DISCLOSURE_REGEX = /\b(?:inteligencia\s+artificial|assistente\s+virtual|chatbot|\bbot\b|automacao)\b/;
 const THIRD_PARTY_HANDOFF_REGEX = /\b(?:vou\s+(?:pedir|encaminhar|passar|transferir)[^.!?]{0,80}\b(?:time|equipe|outra\s+pessoa|especialista)|(?:time|equipe|outra\s+pessoa|especialista)[^.!?]{0,80}\b(?:vai|ira|pode)\b)\b/;
 const ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX = /\bvoce\s+(?:tem|possui|teria)\b/;
@@ -284,24 +287,128 @@ const THIRD_PARTY_ONLY_REGEX = new RegExp(
 const THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX = new RegExp(
   `(?:(?:seu|sua)\\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)|\\bbeneficiari[oa]\\b|\\bquem\\s+vai\\s+entrar\\b|\\balguem\\s+que\\s+(?:vai|ira)\\s+entrar\\b)`,
 );
-const EXPLICIT_CHILD_ONLY_SCOPE_REGEX = /(?:\b(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b[^.!?]{0,50}\bmenor(?:es)?\s+de\s+18\b|\b(?:so|somente|apenas)\s+(?:para\s+)?(?:os?\s+|as?\s+)?(?:meus?\s+|minhas?\s+)?(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b)/i;
+const EXPLICIT_CHILD_ONLY_SCOPE_REGEX = /(?:\b(?:para|cotacao\s+para)\s+(?:o\s+|a\s+|os\s+|as\s+|meu\s+|minha\s+|meus\s+|minhas\s+)?(?:filh[oa]|net[oa]|crianca|adolescente|menor)\b|\b(?:so|somente|apenas)\s+(?:para\s+)?(?:os?\s+|as?\s+)?(?:meus?\s+|minhas?\s+)?(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b)/i;
 const ADULT_BENEFICIARY_CONTEXT_REGEX = /(?:\b(?:eu|nos)\s+e\s+(?:meu|minha|meus|minhas|o|a)\b|\b(?:para|pra|pro)\s+mim\s+e\b|\beu\s+(?:tambem\s+)?vou\s+entrar\b|\b(?:vou|vamos|iremos?)\s+(?:entrar|ser\s+titular)\b|\b(?:meu|minha)\s+(?:marido|esposa|esposo|companheiro|companheira)\b)/i;
 const EXISTING_PLAN_ADULT_CONTEXT_REGEX = /\b(?:eu|nos|mae|pai|marido|esposa|esposo|companheiro|companheira)\b[^.!?]{0,60}\b(?:ja\s+temos?|temos?|possui|possuo)\s+plano\b/i;
 
 export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.';
-export const CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE = 'A cotacao e apenas para criancas/adolescentes sem adulto beneficiario confirmado. Reconheca que a elegibilidade varia por operadora e inclua no final exatamente [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]], depois de uma mensagem visivel curta.';
+export const CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE = 'A cotacao e para uma unica vida abaixo de 12 anos sem adulto beneficiario confirmado. Explique que e necessario incluir um adulto para conseguir contratar, porque as operadoras nao aceitam menor de 12 anos como titular.';
+export const CHILD_ONLY_SCOPE_VALIDATION_MESSAGE = 'A regra de incluir um adulto so vale quando a cotacao e para uma unica vida abaixo de 12 anos. Nao aplique essa regra a mais de uma vida, a uma cotacao com adulto ou a adolescentes de 12 anos ou mais.';
 
-const isChildOnlyQuoteWithoutKnownAdult = (leadHistoryText: string): boolean => {
+const isSingleUnderTwelveQuoteWithoutKnownAdult = (leadHistoryText: string): boolean => {
   const agesInLeadHistory = [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)]
     .map((match) => Number(match[1]));
-  const hasKnownChildOnlyAge = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
+  const hasKnownSingleUnderTwelve = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
+    && agesInLeadHistory.length === 1
     && agesInLeadHistory.some((age) => age < 12)
     && !agesInLeadHistory.some((age) => age >= 18);
   const hasAdultBeneficiary = ADULT_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
     && !EXISTING_PLAN_ADULT_CONTEXT_REGEX.test(leadHistoryText);
   const hasExplicitChildOnlyScope = EXPLICIT_CHILD_ONLY_SCOPE_REGEX.test(leadHistoryText);
 
-  return hasKnownChildOnlyAge || (hasExplicitChildOnlyScope && !hasAdultBeneficiary);
+  return hasKnownSingleUnderTwelve && hasExplicitChildOnlyScope && !hasAdultBeneficiary;
+};
+
+const CAPITAL_CITY_NAMES = [
+  'rio de janeiro',
+  'sao paulo',
+  'belo horizonte',
+  'vitoria',
+  'curitiba',
+  'florianopolis',
+  'porto alegre',
+  'sao luis',
+  'belem',
+  'macapa',
+  'manaus',
+  'boa vista',
+  'palmas',
+  'brasilia',
+  'goiania',
+  'cuiaba',
+  'campo grande',
+  'recife',
+  'natal',
+  'joao pessoa',
+  'maceio',
+  'aracaju',
+  'salvador',
+  'fortaleza',
+  'teresina',
+  'rio branco',
+  'porto velho',
+];
+
+const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|intermedica|medsenior|golden\s*cross|klini|levesaude|leve\s+saude|prevent\s+senior|care\s+plus|memorial|assim\s+saude)\b/;
+const ANSWERLESS_MESSAGE_REGEX = /^(?:oi|ola|bom\s+dia|boa\s+tarde|boa\s+noite|ok|isso|certo|perfeito|obrigad[ao])$/;
+export const QUALIFICATION_COMPLETION_VALIDATION_MESSAGE = 'A cotacao so pode ser concluida depois de coletar vidas, idades, cidade, bairro quando a cidade for capital, CNPJ/MEI e resposta sobre plano atual. Operadora e nome do plano sao opcionais.';
+const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\s+(?:preparar|montar|elaborar|enviar|encaminhar|providenciar)\s+(?:(?:a|uma)\s+)?(?:(?:sua|a sua)\s+)?(?:cota[cç][aã]o|proposta)\b/i;
+
+const leadAnswersAfterAiQuestion = (
+  history: AutonomousMessageRow[],
+  topicRegex: RegExp,
+): string[] => {
+  let previousAi = '';
+  const answers: string[] = [];
+
+  for (const row of history) {
+    if (row.role === 'ai') {
+      previousAi = row.content;
+      continue;
+    }
+
+    if (previousAi && topicRegex.test(normalizeForSemanticMatch(previousAi))) {
+      answers.push(row.content);
+    }
+  }
+
+  return answers;
+};
+
+const hasSubstantiveAnswerAfterAiQuestion = (
+  history: AutonomousMessageRow[],
+  topicRegex: RegExp,
+  allowShortAnswer = false,
+): boolean => leadAnswersAfterAiQuestion(history, topicRegex).some((answer) => {
+  const normalized = normalizeForSemanticMatch(answer);
+  return normalized.length > 1 && (allowShortAnswer || !ANSWERLESS_MESSAGE_REGEX.test(normalized));
+});
+
+const hasCurrentPlanInformation = (history: AutonomousMessageRow[], leadHistoryText: string): boolean => {
+  const planAnswers = leadAnswersAfterAiQuestion(
+    history,
+    /(?:plano.*(?:atualmente|hoje)|(?:tem|possui|est[aá])\s+(?:algum\s+)?plano|operadora)/,
+  );
+  const hasNoPlan = /(?:sem\s+plano|nao\s+(?:tenho|possuo|temos|possui)|nunca\s+(?:tive|teve|tivemos))/.test(leadHistoryText);
+  const hasPlanOperator = CURRENT_PLAN_OPERATOR_REGEX.test(leadHistoryText)
+    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:qual|nome).{0,30}operadora|qual.{0,30}plano/);
+
+  return planAnswers.length > 0 || hasNoPlan || hasPlanOperator;
+};
+
+export const hasQualificationDataForCompletion = (
+  history: AutonomousMessageRow[],
+  qualificationState?: AutonomousQualificationState,
+): boolean => {
+  if (qualificationState) return qualificationStateIsComplete(qualificationState);
+  const leadMessages = history.filter((row) => row.role === 'lead').map((row) => row.content);
+  const leadHistoryText = normalizeForSemanticMatch(leadMessages.join(' '));
+  const ageValues = [...leadHistoryText.matchAll(/\b(\d{1,3})\s*(?:anos?|ano)\b/g)].map((match) => Number(match[1]));
+  const hasAgeData = ageValues.length > 0
+    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:idade|idades|quantos\s+anos|anos?)/, true);
+  const hasLifeScope = ageValues.length > 0
+    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:so\s+para\s+voce|mais\s+alguem|para\s+quem|quem\s+vai\s+entrar|familia)/);
+  const hasCity = hasSubstantiveAnswerAfterAiQuestion(history, /(?:qual|em\s+qual).{0,30}cidade|onde.{0,20}(?:usar|utilizar|ficar)/)
+    || /\b(?:em|na|no)\s+[a-záàâãéêíóôõúç ]{3,}/i.test(leadHistoryText);
+  const isCapitalCity = CAPITAL_CITY_NAMES.some((city) => leadHistoryText.includes(city));
+  const hasNeighborhood = !isCapitalCity
+    || /\bbairro\b/.test(leadHistoryText)
+    || hasSubstantiveAnswerAfterAiQuestion(history, /\bbairro\b/);
+  const hasBusinessId = /\b(?:cnpj|mei|pessoa\s+fisica|sem\s+(?:cnpj|mei)|nao\s+(?:tenho|possuo|temos|possui)\s+(?:cnpj|mei))\b/.test(leadHistoryText)
+    || hasSubstantiveAnswerAfterAiQuestion(history, /\b(?:cnpj|mei)\b/, true);
+  const hasCurrentPlan = hasCurrentPlanInformation(history, leadHistoryText);
+
+  return hasLifeScope && hasAgeData && hasCity && hasNeighborhood && hasBusinessId && hasCurrentPlan;
 };
 
 /**
@@ -312,6 +419,7 @@ const isChildOnlyQuoteWithoutKnownAdult = (leadHistoryText: string): boolean => 
 export const validateAutonomousReplyOutput = (
   rawText: string,
   history: AutonomousMessageRow[],
+  qualificationState?: AutonomousQualificationState,
 ): AutonomousReplyValidationResult => {
   const trimmed = rawText.trim();
   if (!trimmed) {
@@ -328,6 +436,29 @@ export const validateAutonomousReplyOutput = (
   // especifico para esse caso e nao deve transformar handoff em fallback.
   const parsedCandidate = extractHandoff(trimmed);
   const visibleCandidate = parsedCandidate.text;
+  if (parsedCandidate.handoffCode === 'QUALIFICACAO_COMPLETA' && !hasQualificationDataForCompletion(history, qualificationState)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
+    };
+  }
+  if (qualificationState && qualificationStateIsComplete(qualificationState)) {
+    if (!parsedCandidate.handoffCode && !QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: 'A qualificacao ja esta completa. Avise que vai preparar e enviar a cotacao e encerre com o handoff interno.',
+      };
+    }
+  } else if (qualificationState && !qualificationStateIsComplete(qualificationState)
+    && QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
+    };
+  }
   if (!visibleCandidate) return { valid: true };
 
   if (visibleCandidate.length > 720) {
@@ -428,20 +559,28 @@ export const validateAutonomousReplyOutput = (
   const leadHistoryText = normalizeForSemanticMatch(
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
-  const childOnlyQuoteWithoutKnownAdult = isChildOnlyQuoteWithoutKnownAdult(leadHistoryText);
-  if (childOnlyQuoteWithoutKnownAdult) {
-    const hasChildEligibilityHandoff = parsedCandidate.handoffCode === 'PRECISA_HUMANO';
-    const explainsOperatorEligibility = OPERATOR_ELIGIBILITY_QUALIFIER_REGEX.test(normalizedCandidate);
-    if (
-      !hasChildEligibilityHandoff
-      || !explainsOperatorEligibility
-    ) {
+  const singleUnderTwelveQuoteWithoutKnownAdult = isSingleUnderTwelveQuoteWithoutKnownAdult(leadHistoryText);
+  if (singleUnderTwelveQuoteWithoutKnownAdult) {
+    const explainsAdultRequirement = /\badulto\b/.test(normalizedCandidate)
+      && /(?:necessari|precis|incluir|entrar|junto)/.test(normalizedCandidate);
+    if (!explainsAdultRequirement) {
       return {
         valid: false,
         stopReason: 'invalid_output',
         message: CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
       };
     }
+  }
+  const hasUnderTwelveBeneficiary = /\b(filh|net|crianc|menor)\w*\b/.test(leadHistoryText)
+    && [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)].some((match) => Number(match[1]) < 12);
+  const claimsAdultIsRequired = /\badulto\b/.test(normalizedCandidate)
+    && /(?:necessari|precis|incluir|entrar|junto)/.test(normalizedCandidate);
+  if (hasUnderTwelveBeneficiary && !singleUnderTwelveQuoteWithoutKnownAdult && claimsAdultIsRequired) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
+    };
   }
   if (PREGNANCY_CONTEXT_REGEX.test(leadHistoryText) && MATERNITY_QUESTION_REGEX.test(normalizedLatestLead)) {
     const explainsTermBirthWait = TERM_BIRTH_WAIT_REGEX.test(normalizedCandidate);
@@ -524,7 +663,9 @@ export const buildAutonomousValidationRetryInstruction = (
     ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente se algum beneficiario possui CNPJ/MEI.'
     : '',
   validation.message === CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE
-    ? 'Explique brevemente que a elegibilidade depende da operadora e finalize exatamente com [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]. Nao faca nova pergunta nem prometa cotar somente a crianca.'
+    ? 'Explique brevemente que, para uma unica vida abaixo de 12 anos, e necessario incluir um adulto para conseguir contratar. Nao aplique essa regra a adolescentes de 12 anos ou mais. Depois, pergunte somente se algum adulto tambem entrara na cotacao.'
+    : validation.message === CHILD_ONLY_SCOPE_VALIDATION_MESSAGE
+      ? 'Nao diga que um adulto e obrigatorio. Essa regra so vale para uma unica vida abaixo de 12 anos sem adulto na cotacao. Siga a qualificacao normal.'
     : '',
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');
@@ -534,7 +675,10 @@ export const buildAutonomousValidationRetryInstruction = (
  * de CNPJ/MEI mesmo depois do retry. A resposta precisa continuar o turno sem
  * repetir uma pergunta que o lead ja respondeu e sem deixar o chat em silencio.
  */
-export const buildAutonomousValidationFallback = (history: AutonomousMessageRow[]): string | null => {
+export const buildAutonomousValidationFallback = (
+  history: AutonomousMessageRow[],
+  qualificationState?: AutonomousQualificationState,
+): string | null => {
   const latestLead = [...history].reverse().find((row) => row.role === 'lead');
   const previousAi = [...history].reverse().find((row) => row.role === 'ai');
   if (!latestLead) return null;
@@ -545,8 +689,8 @@ export const buildAutonomousValidationFallback = (history: AutonomousMessageRow[
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
 
-  if (isChildOnlyQuoteWithoutKnownAdult(leadHistoryText)) {
-    return 'Entendo. Como a cotacao e somente para criancas ou adolescentes, a composicao depende da operadora. Vou verificar a alternativa adequada para voces. [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]';
+  if (qualificationState?.singleUnderTwelveWithoutAdult || isSingleUnderTwelveQuoteWithoutKnownAdult(leadHistoryText)) {
+    return 'Para contratar uma unica vida abaixo de 12 anos, e necessario incluir um adulto. Algum adulto tambem vai entrar na cotacao?';
   }
 
   if (
@@ -620,13 +764,14 @@ export const splitGeneratedReply = (
   return { messages, handoffCode, handoffNote };
 };
 
-// Safety net for the terminal commercial commitment. The primary path remains
-// the explicit technical tag, but a model must not be allowed to promise a
-// quotation and then leave the autonomous attendant active just because it
-// omitted that invisible tag.
-const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|já vou|agora vou)\s+(?:preparar|montar|elaborar|enviar|encaminhar|providenciar)\s+(?:(?:a|uma)\s+)?(?:(?:sua|a sua)\s+)?(?:cotação|cotacao|proposta)\b/i;
-
-export const inferQualificationCompletionHandoff = (visibleMessages: string[]): HandoffCode | null => {
+export const inferQualificationCompletionHandoff = (
+  visibleMessages: string[],
+  history: AutonomousMessageRow[],
+  qualificationState?: AutonomousQualificationState,
+): HandoffCode | null => {
   const visibleReply = visibleMessages.join('\n').trim();
-  return QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleReply) ? 'QUALIFICACAO_COMPLETA' : null;
+  return QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleReply)
+    && hasQualificationDataForCompletion(history, qualificationState)
+    ? 'QUALIFICACAO_COMPLETA'
+    : null;
 };

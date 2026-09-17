@@ -125,6 +125,11 @@ const extractCount = (text: string): number | null => {
   const numeric = text.match(/\b([1-9][0-9]?)\s+(?:vidas?|pessoas?|beneficiari[oa]s?)\b/i);
   if (numeric) return Number(numeric[1]);
 
+  const contextual = text.match(/^\s*(?:para|s[oó]\s+para|somente\s+para|apenas\s+para)\s+(\d{1,2}|uma|um|duas|dois|tres|três|quatro|cinco|seis)\s*$/i);
+  if (contextual) {
+    return Number(contextual[1]) || numberWords[normalize(contextual[1])] || null;
+  }
+
   const written = text.match(/\b(uma|um|duas|dois|tres|três|quatro|cinco|seis)\s+(?:vidas?|pessoas?|beneficiari[oa]s?)\b/i);
   if (written) return numberWords[normalize(written[1])] ?? null;
 
@@ -220,8 +225,9 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     const text = message.content;
     const normalizedPreviousAi = normalize(previousAi);
     const ages = extractAgeValues(text);
+    const hasPendingAge = count !== null && latestAges.length < count && /^\s*\d{1,3}\s*$/.test(text);
     if (ages.length === 0
-      && /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi)
+      && (hasPendingAge || /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi))
       && !/quantas?\s+(?:vidas?|pessoas?)/.test(normalizedPreviousAi)) {
       ages.push(...[...text.matchAll(/\b(\d{1,3})\b/g)]
         .map((match) => Number(match[1]))

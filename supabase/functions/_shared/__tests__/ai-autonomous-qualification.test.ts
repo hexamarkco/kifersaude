@@ -107,4 +107,19 @@ test('respostas curtas sao extraidas usando a pergunta anterior como contexto', 
   assert.equal(state.currentHealthPlan.hasPlan, 'no');
   assert.equal(qualificationStateIsComplete(state), true);
 });
+
+test('interpreta quantidade e idade enviadas em mensagens curtas consecutivas', () => {
+  const state = stateFrom([
+    { role: 'ai', content: 'Você busca um plano só para você ou para mais alguém da família?' },
+    { role: 'lead', content: 'Para 1' },
+    { role: 'lead', content: '49' },
+    { role: 'ai', content: 'Para uma pessoa de 49 anos, em qual cidade o plano será utilizado?' },
+    { role: 'lead', content: 'São Gonçalo' },
+  ]);
+
+  assert.equal(state.lives.count, 1);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [49]);
+  assert.equal(state.missingRequiredFields.includes('lives'), false);
+  assert.equal(state.missingRequiredFields.includes('ages'), false);
+});
 });

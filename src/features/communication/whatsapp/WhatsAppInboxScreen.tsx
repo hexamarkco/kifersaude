@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
@@ -8645,11 +8645,7 @@ export default function WhatsAppInboxScreen() {
                   >
                     <Archive className="kds-control-icon" />
                     {archivedChatsCountValue > 0 ? (
-                      <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[1.75rem] items-center justify-center whitespace-nowrap rounded-full border px-1.5 text-[10px] font-semibold leading-none" style={{
-                        borderColor: 'var(--brand-primary-border)',
-                        background: 'var(--brand-primary)',
-                        color: 'var(--text-on-brand)',
-                      }}>
+                      <span className="whatsapp-inbox-count-badge absolute -right-2 -top-2">
                         {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
                       </span>
                     ) : null}
@@ -9089,11 +9085,7 @@ export default function WhatsAppInboxScreen() {
                       <span className="relative inline-flex">
                         <Info className="kds-control-icon" />
                         {chatAgendaSummary.pendingCount > 0 ? (
-                          <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
-                            borderColor: 'var(--brand-primary-border)',
-                            background: 'var(--brand-primary)',
-                            color: 'var(--text-on-brand)',
-                          }}>
+                          <span className="whatsapp-inbox-count-badge absolute -right-2 -top-2">
                             {chatAgendaSummary.pendingCount > 99 ? '99+' : chatAgendaSummary.pendingCount}
                           </span>
                         ) : null}

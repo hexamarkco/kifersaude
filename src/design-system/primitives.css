@@ -147,6 +147,22 @@
 .kds-public-empty-state-title { margin: 0; color: var(--text-primary); font: var(--type-subtitle); }
 .kds-public-empty-state-description { max-width: 28rem; margin: 0; font: var(--type-body); }
 
+.kds-public-theme-toggle {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-button);
+}
+
+.kds-public-theme-toggle:hover { color: var(--brand-primary); }
+
+.kds-public-success-icon {
+  width: var(--control-icon-lg);
+  height: var(--control-icon-lg);
+  color: var(--text-on-brand);
+}
+
 .kds-donut-empty { border-color: var(--border-subtle); background: var(--bg-inset); color: var(--text-muted); }
 .kds-donut-svg { transform: rotate(-90deg); }
 .kds-donut-segment { transform-origin: center; transition: stroke-dasharray 300ms ease; cursor: default; }

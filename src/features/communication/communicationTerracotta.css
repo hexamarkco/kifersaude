@@ -870,6 +870,20 @@
 .comm-emoji-picker-scroll-height { height: 20rem; }
 .comm-follow-up-detail-item { background: var(--bg-elevated); }
 .comm-quick-schedule-popover { z-index: 9999; width: 8.75rem; }
+.whatsapp-inbox-count-badge {
+  display: inline-flex;
+  min-width: 1.75rem;
+  min-height: var(--control-height-sm);
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border: 1px solid var(--brand-primary-border);
+  border-radius: var(--radius-full);
+  padding-inline: var(--space-1);
+  font: var(--type-badge);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+}
 .whatsapp-inbox-day-divider {
   border-color: var(--border-strong);
   background: var(--bg-elevated);

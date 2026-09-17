@@ -287,9 +287,9 @@ export default function FormPage() {
         onClick={toggleTheme}
         aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
         size="sm"
-        className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] shadow-[var(--shadow-button)] transition hover:text-[color:var(--brand-primary)] sm:right-6 sm:top-6"
+        className="kds-public-theme-toggle absolute right-4 top-4 z-10 sm:right-6 sm:top-6"
       >
-        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        {theme === 'dark' ? <Sun className="kds-control-icon" /> : <Moon className="kds-control-icon" />}
       </IconButton>
 
       <main className="w-full max-w-md">
@@ -305,7 +305,7 @@ export default function FormPage() {
         ) : submitted ? (
           <div className="kds-form-step-in flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-              <Check className="h-8 w-8 text-[color:var(--text-on-brand)]" />
+              <Check className="kds-public-success-icon" />
             </div>
             <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">
               {form.success_headline}
@@ -319,7 +319,7 @@ export default function FormPage() {
                 variant="primary"
                 size="lg"
               >
-                <MessageCircle className="h-4 w-4" />
+                <MessageCircle className="kds-control-icon" />
                 <span>Continuar no WhatsApp</span>
               </LinkButton>
             )}
@@ -470,11 +470,11 @@ function QuestionStep({
                 })}
               >
                 <span>{option.label}</span>
-                {checked && <Check className="h-4 w-4 shrink-0" />}
+                {checked && <Check className="kds-control-icon shrink-0" />}
               </button>
             );
           })}
-          <Button onClick={onConfirmMulti} fullWidth size="lg" className="mt-1">
+          <Button onClick={onConfirmMulti} fullWidth size="lg">
             Continuar
           </Button>
         </div>

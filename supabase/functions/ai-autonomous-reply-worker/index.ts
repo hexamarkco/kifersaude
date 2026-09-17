@@ -35,6 +35,7 @@ import {
   fetchSimilarSituations,
   getReliableLeadFirstName,
   inferQualificationCompletionHandoff,
+  CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
@@ -643,7 +644,8 @@ Deno.serve(async (req: Request) => {
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           const fallbackReply = buildAutonomousValidationFallback(history);
-          const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE);
+          const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE)
+            || errorMessage.includes(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
           if (!canRecoverFromValidation || !fallbackReply) throw error;
 
           const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history);

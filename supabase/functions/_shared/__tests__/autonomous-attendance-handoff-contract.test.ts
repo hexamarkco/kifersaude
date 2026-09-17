@@ -72,6 +72,7 @@ test('the worker discards an answer if the customer writes again while the model
 test('the worker has a deterministic recovery when validation rejects beneficiary scope twice', () => {
   assert.match(workerSource, /buildAutonomousValidationFallback/);
   assert.match(workerSource, /MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE/);
+  assert.match(workerSource, /CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE/);
   assert.match(workerSource, /fallbackValidation = validateAutonomousReplyOutput/);
   assert.match(workerSource, /usando fallback deterministico apos rejeicao repetida de escopo/);
 });

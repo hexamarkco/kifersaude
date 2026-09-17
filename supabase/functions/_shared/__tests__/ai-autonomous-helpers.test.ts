@@ -12,6 +12,7 @@ import {
   normalizeHandoffCode,
   validateAutonomousReplyOutput,
   HANDOFF_CODES,
+  CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
@@ -281,6 +282,36 @@ describe('validateAutonomousReplyOutput', () => {
       ).valid,
       true,
     );
+  });
+
+  test('rejeita promessa vaga para filhos menores sem handoff de elegibilidade', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Meus filhos menores de 18' },
+      { role: 'lead', content: 'Boa tarde' },
+      { role: 'lead', content: 'Que seja completo e bom preço' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Boa tarde, Renato! Entendi, você busca uma opção completa, mas com bom custo-benefício para os seus filhos. Como a cotação é só para menores, o enquadramento pode variar conforme a operadora e as idades deles. Vou verificar a alternativa mais adequada para vocês.',
+      history,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.message, CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
+
+    const fallback = buildAutonomousValidationFallback(history);
+    assert.equal(
+      fallback,
+      'Entendo. Como a cotacao e somente para criancas ou adolescentes, a composicao depende da operadora. Vou verificar a alternativa adequada para voces. [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]',
+    );
+    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
+  });
+
+  test('nao exige handoff infantil quando um adulto tambem entra na cotacao', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Eu e meus filhos menores de 18 vamos entrar no plano.' },
+    ];
+
+    assert.equal(validateAutonomousReplyOutput('Em qual cidade vocês vão utilizar o plano?', history).valid, true);
   });
 
   test('rejeita expor IA ou direcionar o lead para outra pessoa', () => {

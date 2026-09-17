@@ -275,8 +275,25 @@ const THIRD_PARTY_ONLY_REGEX = new RegExp(
 const THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX = new RegExp(
   `(?:(?:seu|sua)\\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)|\\bbeneficiari[oa]\\b|\\bquem\\s+vai\\s+entrar\\b|\\balguem\\s+que\\s+(?:vai|ira)\\s+entrar\\b)`,
 );
+const EXPLICIT_CHILD_ONLY_SCOPE_REGEX = /(?:\b(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b[^.!?]{0,50}\bmenor(?:es)?\s+de\s+18\b|\b(?:so|somente|apenas)\s+(?:para\s+)?(?:os?\s+|as?\s+)?(?:meus?\s+|minhas?\s+)?(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b)/i;
+const ADULT_BENEFICIARY_CONTEXT_REGEX = /(?:\b(?:eu|nos)\s+e\s+(?:meu|minha|meus|minhas|o|a)\b|\b(?:para|pra|pro)\s+mim\s+e\b|\beu\s+(?:tambem\s+)?vou\s+entrar\b|\b(?:vou|vamos|iremos?)\s+(?:entrar|ser\s+titular)\b|\b(?:meu|minha)\s+(?:marido|esposa|esposo|companheiro|companheira)\b)/i;
+const EXISTING_PLAN_ADULT_CONTEXT_REGEX = /\b(?:eu|nos|mae|pai|marido|esposa|esposo|companheiro|companheira)\b[^.!?]{0,60}\b(?:ja\s+temos?|temos?|possui|possuo)\s+plano\b/i;
 
 export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.';
+export const CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE = 'A cotacao e apenas para criancas/adolescentes sem adulto beneficiario confirmado. Reconheca que a elegibilidade varia por operadora e inclua no final exatamente [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]], depois de uma mensagem visivel curta.';
+
+const isChildOnlyQuoteWithoutKnownAdult = (leadHistoryText: string): boolean => {
+  const agesInLeadHistory = [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)]
+    .map((match) => Number(match[1]));
+  const hasKnownChildOnlyAge = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
+    && agesInLeadHistory.some((age) => age < 12)
+    && !agesInLeadHistory.some((age) => age >= 18);
+  const hasAdultBeneficiary = ADULT_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
+    && !EXISTING_PLAN_ADULT_CONTEXT_REGEX.test(leadHistoryText);
+  const hasExplicitChildOnlyScope = EXPLICIT_CHILD_ONLY_SCOPE_REGEX.test(leadHistoryText);
+
+  return hasKnownChildOnlyAge || (hasExplicitChildOnlyScope && !hasAdultBeneficiary);
+};
 
 /**
  * Valida somente erros conversacionais de alta confianca. O modelo recebe uma
@@ -300,7 +317,8 @@ export const validateAutonomousReplyOutput = (
 
   // Tag-only e aceita aqui porque o worker possui um encerramento seguro
   // especifico para esse caso e nao deve transformar handoff em fallback.
-  const visibleCandidate = extractHandoff(trimmed).text;
+  const parsedCandidate = extractHandoff(trimmed);
+  const visibleCandidate = parsedCandidate.text;
   if (!visibleCandidate) return { valid: true };
 
   const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
@@ -377,21 +395,20 @@ export const validateAutonomousReplyOutput = (
   const leadHistoryText = normalizeForSemanticMatch(
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
-  const agesInLeadHistory = [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)]
-    .map((match) => Number(match[1]));
-  const isChildOnlyQuoteWithoutKnownAdult = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
-    && agesInLeadHistory.some((age) => age < 12)
-    && !agesInLeadHistory.some((age) => age >= 18);
-  if (
-    isChildOnlyQuoteWithoutKnownAdult
-    && UNCONDITIONAL_ADULT_REQUIREMENT_REGEX.test(normalizedCandidate)
-    && !OPERATOR_ELIGIBILITY_QUALIFIER_REGEX.test(normalizedCandidate)
-  ) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: 'A cotacao e apenas para criancas/adolescentes sem adulto beneficiario confirmado. Nao afirme que um adulto precisa entrar como regra universal: reconheca que a elegibilidade varia por operadora e encaminhe para confirmacao humana, sem insistir.',
-    };
+  const childOnlyQuoteWithoutKnownAdult = isChildOnlyQuoteWithoutKnownAdult(leadHistoryText);
+  if (childOnlyQuoteWithoutKnownAdult) {
+    const hasChildEligibilityHandoff = parsedCandidate.handoffCode === 'PRECISA_HUMANO';
+    const explainsOperatorEligibility = OPERATOR_ELIGIBILITY_QUALIFIER_REGEX.test(normalizedCandidate);
+    if (
+      !hasChildEligibilityHandoff
+      || !explainsOperatorEligibility
+    ) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
+      };
+    }
   }
   if (PREGNANCY_CONTEXT_REGEX.test(leadHistoryText) && MATERNITY_QUESTION_REGEX.test(normalizedLatestLead)) {
     const explainsTermBirthWait = TERM_BIRTH_WAIT_REGEX.test(normalizedCandidate);
@@ -473,6 +490,9 @@ export const buildAutonomousValidationRetryInstruction = (
   validation.message === MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
     ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente se algum beneficiario possui CNPJ/MEI.'
     : '',
+  validation.message === CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE
+    ? 'Explique brevemente que a elegibilidade depende da operadora e finalize exatamente com [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]. Nao faca nova pergunta nem prometa cotar somente a crianca.'
+    : '',
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');
 
@@ -484,15 +504,21 @@ export const buildAutonomousValidationRetryInstruction = (
 export const buildAutonomousValidationFallback = (history: AutonomousMessageRow[]): string | null => {
   const latestLead = [...history].reverse().find((row) => row.role === 'lead');
   const previousAi = [...history].reverse().find((row) => row.role === 'ai');
-  if (!latestLead || !previousAi) return null;
+  if (!latestLead) return null;
 
   const normalizedLatestLead = normalizeForSemanticMatch(latestLead.content);
-  const normalizedPreviousAi = normalizeForSemanticMatch(previousAi.content);
+  const normalizedPreviousAi = normalizeForSemanticMatch(previousAi?.content ?? '');
   const leadHistoryText = normalizeForSemanticMatch(
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
 
+  if (isChildOnlyQuoteWithoutKnownAdult(leadHistoryText)) {
+    return 'Entendo. Como a cotacao e somente para criancas ou adolescentes, a composicao depende da operadora. Vou verificar a alternativa adequada para voces. [[HANDOFF: PRECISA_HUMANO | elegibilidade infantil depende da operadora]]';
+  }
+
   if (
+    previousAi
+    &&
     CNPJ_OR_MEI_REGEX.test(normalizedPreviousAi)
     && NO_BUSINESS_ID_RESPONSE_REGEX.test(normalizedLatestLead)
   ) {
@@ -500,6 +526,8 @@ export const buildAutonomousValidationFallback = (history: AutonomousMessageRow[
   }
 
   if (
+    previousAi
+    &&
     MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText)
     && CITY_QUESTION_REGEX.test(normalizedPreviousAi)
   ) {

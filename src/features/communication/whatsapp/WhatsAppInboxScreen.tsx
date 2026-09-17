@@ -371,13 +371,26 @@ const getMessageRowClasses = (direction: CommWhatsAppMessage['direction']) => {
   return 'message-bubble-row-inbound justify-start';
 };
 
+const isPdfDocumentMessage = (message: CommWhatsAppMessage) => {
+  const kind = message.message_type.trim().toLowerCase();
+  if (kind !== 'document') return false;
+
+  const mimeType = message.media_mime_type?.split(';', 1)[0]?.trim().toLowerCase();
+  const fileName = message.media_file_name?.trim().toLowerCase() || '';
+  return mimeType === 'application/pdf' || fileName.endsWith('.pdf');
+};
+
 const isVisualMediaMessage = (message: CommWhatsAppMessage) => {
   const kind = message.message_type.trim().toLowerCase();
-  return isGalleryMediaMessage(message) || kind === 'sticker';
+  return isGalleryMediaMessage(message) || kind === 'sticker' || isPdfDocumentMessage(message);
 };
 
 const hasVisualMediaCaption = (message: CommWhatsAppMessage) => (
   isVisualMediaMessage(message) && Boolean(getMessageVisibleCaption(message))
+);
+
+const getVisualMediaBubbleWidth = (message: CommWhatsAppMessage) => (
+  isPdfDocumentMessage(message) ? 'w-[18rem]' : 'w-[13.75rem]'
 );
 
 const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
@@ -1783,12 +1796,91 @@ function WhatsAppMessageBody({
           ) : null}
         </div>
         {editInfoNode}
-        </div>
+      </div>
     );
   }
 
   if (kind === 'document') {
     const extension = message.media_file_name?.split('.').pop()?.toUpperCase() || 'DOC';
+
+    if (isPdfDocumentMessage(message)) {
+      const pdfFileName = message.media_file_name || 'Documento PDF';
+      const pdfBubbleWidth = getVisualMediaBubbleWidth(message);
+      const pdfCard = (
+        <div className={cx(
+          'whatsapp-inbox-document-card overflow-hidden',
+          pdfBubbleWidth,
+          caption ? 'border-0 rounded-t-[var(--kds-radius-lg)]' : 'rounded-2xl border',
+        )}>
+          <div className="whatsapp-inbox-document-preview relative h-36 overflow-hidden bg-[var(--bg-inset)]">
+            {mediaUrl ? (
+              <iframe
+                src={`${mediaUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                title={`Prévia de ${pdfFileName}`}
+                className="pointer-events-none h-full w-full border-0 bg-[var(--bg-surface)]"
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-[var(--text-muted)]">
+                <FileText className="h-8 w-8 text-[var(--danger-text)]" />
+                <span>{loading ? 'Carregando prévia...' : error || 'Prévia indisponível'}</span>
+              </div>
+            )}
+            <span className="absolute left-3 top-3 inline-flex items-center rounded-md bg-[var(--danger-text)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-on-brand)] shadow-sm">
+              PDF
+            </span>
+          </div>
+          <div className="border-t border-[var(--border-subtle)] px-3 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[10px] font-bold tracking-[0.08em] text-[var(--danger-text)]">
+                PDF
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--text-primary)]" title={pdfFileName}>{pdfFileName}</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  {formatFileSize(message.media_size_bytes) || 'Documento'} · PDF
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {mediaUrl ? (
+                <>
+                  <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
+                    Abrir
+                  </a>
+                  <a href={mediaUrl} download={pdfFileName} className={inboxInlineActionClassName}>
+                    <Download className="h-3.5 w-3.5" />
+                    Baixar
+                  </a>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-[var(--text-muted)]">{loading ? 'Carregando arquivo...' : error || 'Arquivo indisponível'}</span>
+                  {error ? (
+                    <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+                      Tentar novamente
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="space-y-3">
+          {deletedBannerNode}
+          {quotePreviewNode}
+          <div className={caption ? `${pdfBubbleWidth} max-w-full overflow-hidden rounded-[var(--kds-radius-lg)]` : undefined}>
+            {pdfCard}
+            {caption ? (
+              <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
+            ) : null}
+          </div>
+          {editInfoNode}
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-3">
@@ -9245,7 +9337,7 @@ export default function WhatsAppInboxScreen() {
                             className={cx(
                               isVisualMediaMessage(message)
                                 ? hasVisualMediaCaption(message)
-                                  ? `w-[13.75rem] max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
+                                  ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
                                   : 'whatsapp-inbox-media-message'
                                 : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`,
                               highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,

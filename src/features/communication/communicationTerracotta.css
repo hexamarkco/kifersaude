@@ -83,6 +83,17 @@
   color: var(--text-secondary);
 }
 
+.comm-terracotta .whatsapp-inbox-thread .message-bubble.whatsapp-inbox-media-caption-bubble {
+  overflow: hidden;
+  border-width: 0 0 1px;
+  border-style: solid;
+  border-color: var(--border-default);
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-outbound.whatsapp-inbox-media-caption-bubble {
+  border-bottom-color: var(--brand-primary-border);
+}
+
 .comm-terracotta .whatsapp-inbox-thread .message-bubble-outbound .whatsapp-inbox-message-meta,
 .comm-terracotta .whatsapp-inbox-message-meta,
 .comm-terracotta .whatsapp-inbox-chat-meta {

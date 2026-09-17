@@ -31,6 +31,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  LinkButton,
   Input,
   PublicShell,
   Select,
@@ -533,7 +534,7 @@ function CityAutocompleteField({ id, value, onChange }: CityAutocompleteFieldPro
             const after = matchIndex >= 0 ? city.slice(matchIndex + query.length) : '';
 
             return (
-              <button
+              <Button
                 key={city}
                 type="button"
                 role="option"
@@ -541,14 +542,15 @@ function CityAutocompleteField({ id, value, onChange }: CityAutocompleteFieldPro
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectCity(city)}
                 onMouseEnter={() => setHighlightedIndex(index)}
-                className={`block w-full rounded-xl px-3 py-2 text-left text-sm text-[color:var(--text-secondary)] ${
-                  index === highlightedIndex ? 'bg-[var(--bg-hover)]' : ''
-                }`}
+                variant="ghost"
+                size="sm"
+                fullWidth
+                className={`kds-public-autocomplete-option justify-start text-left ${index === highlightedIndex ? 'is-active' : ''}`}
               >
                 {before}
                 <strong className="text-[color:var(--text-primary)]">{match}</strong>
                 {after}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -982,13 +984,14 @@ export default function HomePage() {
               </a>
             </div>
 
-            <button
+            <Button
               type="button"
               onClick={() => setShowQuoteModal(true)}
-              className="rounded-full bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-hover)] sm:px-6"
+              variant="primary"
+              size="md"
             >
               Cotação grátis
-            </button>
+            </Button>
           </div>
         </nav>
         </header>
@@ -1017,32 +1020,36 @@ export default function HomePage() {
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] bg-[var(--brand-primary)] px-6 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand-primary)]"
+                  variant="primary"
+                  size="lg"
                 >
-                  <MessageCircle aria-hidden="true" className="h-5 w-5" />
+                  <MessageCircle aria-hidden="true" className="kds-control-icon" />
                   Quero minha cotação gratuita
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => openWhatsApp()}
-                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--kds-radius-lg)] border border-[color:var(--success-border)] bg-[var(--bg-surface)] px-6 text-base font-bold text-[color:var(--success)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--success-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--success)]"
+                  variant="success"
+                  size="lg"
                 >
-                  <MessageCircle aria-hidden="true" className="h-5 w-5" />
+                  <MessageCircle aria-hidden="true" className="kds-control-icon" />
                   Falar no WhatsApp
-                </button>
+                </Button>
               </div>
 
-              <button
+              <Button
                 type="button"
                 onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
-                className="mt-5 inline-flex min-h-10 items-center border-b border-[color:var(--border-default)] text-sm font-medium text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--brand-primary)] hover:text-[color:var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--brand-primary)]"
+                variant="text"
+                size="sm"
+                className="mt-5"
               >
                 Já sou cliente e preciso de suporte
-                <ArrowUpRight aria-hidden="true" className="ml-2 h-4 w-4" />
-              </button>
+                <ArrowUpRight aria-hidden="true" className="kds-control-icon" />
+              </Button>
             </div>
 
             <div className="relative mx-auto flex w-full max-w-xl items-end justify-center self-end lg:h-[calc(100vh-5rem)] lg:min-h-[640px]">
@@ -1158,14 +1165,16 @@ export default function HomePage() {
                     ))}
                   </ul>
 
-                  <button
+                  <Button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--brand-primary)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)]"
+                    variant="primary"
+                    size="md"
+                    className="mt-6"
                   >
                     {card.ctaLabel}
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </button>
+                    <ChevronRight className="kds-control-icon" />
+                  </Button>
                 </article>
               ))}
             </Reveal>
@@ -1201,14 +1210,15 @@ export default function HomePage() {
 
             <Reveal className="mt-14 flex flex-col items-center gap-4 text-center" delayMs={150}>
               <p className="text-base font-semibold text-[color:var(--text-primary)]">Pronto para começar a sua comparação?</p>
-              <button
+              <Button
                 type="button"
                 onClick={() => scrollToForm()}
-                className="inline-flex items-center justify-center rounded-full bg-[var(--brand-primary)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary-hover)]"
+                variant="primary"
+                size="lg"
               >
                 Quero minha cotação gratuita
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </button>
+                <ChevronRight className="kds-control-icon" />
+              </Button>
             </Reveal>
           </div>
         </section>
@@ -1326,19 +1336,22 @@ export default function HomePage() {
             <Reveal className="mt-12 space-y-3" delayMs={100}>
               {faqItems.map((faq, index) => (
                 <div key={faq.question} className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
-                    className="flex min-h-12 w-full items-center justify-between gap-5 text-left"
+                    variant="ghost"
+                    size="md"
+                    fullWidth
+                    className="justify-between text-left"
                     aria-expanded={openFaqIndex === index}
                   >
                     <span className="text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
                     {openFaqIndex === index ? (
-                      <Minus className="h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                      <Minus className="kds-control-icon shrink-0 text-[color:var(--brand-primary)]" />
                     ) : (
-                      <Plus className="h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                      <Plus className="kds-control-icon shrink-0 text-[color:var(--brand-primary)]" />
                     )}
-                  </button>
+                  </Button>
                   <div
                     className="grid transition-[grid-template-rows] duration-300 ease-out"
                     style={{ gridTemplateRows: openFaqIndex === index ? '1fr' : '0fr' }}
@@ -1459,20 +1472,22 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <a
+                <LinkButton
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group mt-5 inline-flex w-full items-center justify-between gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] py-2 pl-5 pr-2 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
+                  variant="success"
+                  size="lg"
+                  className="group mt-5 w-full justify-between"
                 >
                   <span className="inline-flex min-w-0 items-center gap-2">
-                    <MessageCircle className="h-5 w-5 shrink-0" />
+                    <MessageCircle className="kds-control-icon shrink-0" />
                     <span className="min-w-0 truncate">Falar no WhatsApp</span>
                   </span>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--text-on-brand)_20%,transparent)] transition-transform group-hover:translate-x-0.5">
-                    <ArrowUpRight className="h-5 w-5" />
+                  <span className="kds-public-outbound-icon">
+                    <ArrowUpRight className="kds-control-icon" />
                   </span>
-                </a>
+                </LinkButton>
               </div>
             </div>
           </Reveal>

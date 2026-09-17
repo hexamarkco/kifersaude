@@ -45,21 +45,21 @@ export default function LoginPage() {
       className="flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-6 sm:py-12"
     >
       <div className="w-full">
-        <Surface variant="strong" padding="lg" className="backdrop-blur-sm">
+        <Surface variant="strong" padding="lg">
           <div className="mb-8 text-center">
-            <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-              <Lock className="h-8 w-8 text-[color:var(--text-on-brand)]" />
+            <div className="kds-public-login-icon mb-4">
+              <Lock className="kds-public-login-symbol" />
             </div>
             <Heading level={1} size="lg">Kifer Saúde</Heading>
-            <Text> Sistema de Gestão de Leads e Contratos</Text>
+            <Text>Sistema de Gestão de Leads e Contratos</Text>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <Alert tone="danger">
                 <div className="flex items-center gap-3">
-                  <AlertCircle className="h-5 w-5 shrink-0" />
-                  <p className="text-sm">{error}</p>
+                  <AlertCircle className="kds-control-icon shrink-0" />
+                  <Text as="span" size="sm">{error}</Text>
                 </div>
               </Alert>
             )}

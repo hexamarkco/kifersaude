@@ -163,6 +163,102 @@
   color: var(--text-on-brand);
 }
 
+.kds-public-success-state,
+.kds-public-geo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
+  border-radius: var(--radius-full);
+}
+
+.kds-public-success-state {
+  background: var(--brand-primary);
+  box-shadow: var(--shadow-button);
+}
+
+.kds-public-geo-icon {
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+}
+
+.kds-public-geo-symbol {
+  width: var(--control-icon-lg);
+  height: var(--control-icon-lg);
+}
+
+.kds-public-brand-mark {
+  display: block;
+  width: auto;
+}
+
+.kds-public-brand-mark-xs { height: var(--control-icon-sm); }
+.kds-public-brand-mark-sm { height: var(--control-height-sm); }
+.kds-public-brand-mark-md { height: var(--control-height-md); }
+
+.kds-public-login-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-lg);
+  height: var(--control-height-lg);
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
+}
+
+.kds-public-login-symbol {
+  width: var(--control-icon-lg);
+  height: var(--control-icon-lg);
+}
+
+.kds-public-profile-avatar {
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-button);
+}
+
+.kds-public-footer-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-8);
+  font: var(--type-caption);
+}
+
+.kds-public-form-footer-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font: var(--type-caption);
+}
+
+.kds-public-outbound-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-md);
+  height: var(--control-height-md);
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--text-on-brand) 20%, transparent);
+  transition: transform 160ms ease;
+}
+
+.group:hover .kds-public-outbound-icon { transform: translateX(0.125rem); }
+
+.kds-public-autocomplete-option {
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.kds-public-autocomplete-option.is-active {
+  background: var(--bg-hover);
+}
+
 .kds-donut-empty { border-color: var(--border-subtle); background: var(--bg-inset); color: var(--text-muted); }
 .kds-donut-svg { transform: rotate(-90deg); }
 .kds-donut-segment { transform-origin: center; transition: stroke-dasharray 300ms ease; cursor: default; }

@@ -6,11 +6,13 @@ import PublicSeo from '../../components/public/PublicSeo';
 import {
   Avatar,
   AvatarBadge,
+  Heading,
   KIFER_THEME_COLORS,
   LinkButton,
   LoadingState,
   PublicEmptyState,
   PublicShell,
+  Text,
   TextLink,
 } from '../../design-system';
 import { getLinkIcon } from '../../lib/linkIcons';
@@ -78,7 +80,7 @@ export default function LinksPage() {
           </div>
         ) : !settings ? (
           <PublicEmptyState
-            icon={<PublicBrandMark className="h-8 w-auto" />}
+            icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}
             title="Esta página ainda não está disponível."
           />
         ) : (
@@ -90,36 +92,36 @@ export default function LinksPage() {
                   alt={pageTitle}
                   name={pageTitle}
                   size="xl"
-                  fallback={<PublicBrandMark className="h-9 w-auto" />}
-                  className="border border-[color:var(--border-default)] shadow-[var(--shadow-button)]"
+                  fallback={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}
+                  className="kds-public-profile-avatar"
                 />
 
                 {settings.is_verified && (
                   <AvatarBadge position="bottom-right" title="Perfil verificado">
-                    <BadgeCheck className="h-4 w-4" />
+                    <BadgeCheck className="kds-control-icon" />
                   </AvatarBadge>
                 )}
               </div>
 
               <div>
-                <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">
+                <Heading level={1} size="lg">
                   {pageTitle}
-                </h1>
+                </Heading>
                 {settings.subtitle && (
-                  <p className="mt-0.5 text-sm font-medium text-[color:var(--brand-primary)]">{settings.subtitle}</p>
+                  <Text size="sm" weight="medium" tone="brand" className="mt-0.5">{settings.subtitle}</Text>
                 )}
               </div>
 
               {settings.bio && (
-                <p className="max-w-sm text-sm text-[color:var(--text-secondary)]">{settings.bio}</p>
+                <Text size="sm" className="max-w-sm">{settings.bio}</Text>
               )}
             </div>
 
             <div className="flex flex-col gap-3">
               {items.length === 0 ? (
-                <p className="text-center text-sm text-[color:var(--text-secondary)]">
+                <Text size="sm" className="text-center">
                   Nenhum link disponível no momento.
-                </p>
+                </Text>
               ) : (
                 items.map((link, index) => {
                   const Icon = getLinkIcon(link.icon);
@@ -136,10 +138,10 @@ export default function LinksPage() {
                       className="kds-public-reveal w-full justify-between text-left"
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className="kds-control-icon shrink-0" />
                         <span className="min-w-0 truncate">{link.title}</span>
                       </span>
-                      <ArrowUpRight className="h-4 w-4 shrink-0" />
+                      <ArrowUpRight className="kds-control-icon shrink-0" />
                     </LinkButton>
                   );
                 })
@@ -149,9 +151,10 @@ export default function LinksPage() {
             <TextLink
               href="/"
               style={{ animationDelay: `${LINK_REVEAL_BASE_DELAY_MS + items.length * LINK_REVEAL_STEP_MS}ms` }}
-              className="links-reveal mt-8 flex items-center justify-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
+              tone="muted"
+              className="links-reveal kds-public-footer-link"
             >
-              <PublicBrandMark className="h-4 w-auto" />
+              <PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-xs" />
               Kifer Saúde
             </TextLink>
           </>

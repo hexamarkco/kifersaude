@@ -11,8 +11,8 @@ import { toast } from '../../lib/toast';
 import {
   Button,
   Field,
+  Heading,
   KIFER_THEME_COLORS,
-  getPanelButtonClass,
   IconButton,
   Input,
   LinkButton,
@@ -20,6 +20,7 @@ import {
   PublicEmptyState,
   PublicShell,
   Stepper,
+  Text,
   TextLink,
 } from '../../design-system';
 
@@ -299,18 +300,18 @@ export default function FormPage() {
           </div>
         ) : !form ? (
           <PublicEmptyState
-            icon={<PublicBrandMark className="h-8 w-auto" />}
+            icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}
             title="Este formulário não está disponível."
           />
         ) : submitted ? (
           <div className="kds-form-step-in flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
+            <div className="kds-public-success-state">
               <Check className="kds-public-success-icon" />
             </div>
-            <h1 className="font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">
+            <Heading level={1} size="lg">
               {form.success_headline}
-            </h1>
-            <p className="max-w-sm text-sm text-[color:var(--text-secondary)]">{form.success_message}</p>
+            </Heading>
+            <Text size="sm" className="max-w-sm">{form.success_message}</Text>
             {form.whatsapp_redirect && form.whatsapp_message_template && (
               <LinkButton
                 href={buildWhatsAppUrl(form.whatsapp_message_template, contact.name.trim())}
@@ -325,16 +326,17 @@ export default function FormPage() {
             )}
             <TextLink
               href="/"
-              className="mt-2 flex items-center gap-2 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
+              tone="muted"
+              className="kds-public-form-footer-link"
             >
-              <PublicBrandMark className="h-4 w-auto" />
+              <PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-xs" />
               Kifer Saúde
             </TextLink>
           </div>
         ) : (
           <>
             <div className="mb-6 flex flex-col items-center gap-2 text-center">
-              <PublicBrandMark className="mb-1 h-7 w-auto text-[color:var(--brand-primary)]" />
+              <PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-sm mb-1 text-[color:var(--brand-primary)]" />
               <div className="w-full overflow-x-auto">
                 <Stepper
                   currentStep={stepIndex}
@@ -342,9 +344,9 @@ export default function FormPage() {
                   minWidth={Math.max(totalSteps * MIN_STEP_WIDTH_PX, MIN_STEPPER_WIDTH_PX)}
                 />
               </div>
-              <p className="text-xs font-medium text-[color:var(--text-muted)]">
+              <Text size="xs" weight="medium" tone="muted">
                 Etapa {stepIndex + 1} de {totalSteps}
-              </p>
+              </Text>
             </div>
 
             <div key={stepIndex} className="kds-form-step-in space-y-5">
@@ -387,14 +389,16 @@ export default function FormPage() {
               />
 
               {stepIndex > 0 && current?.kind !== 'contact' && (
-                <button
+                <Button
                   type="button"
                   onClick={goBack}
-                  className="mx-auto flex items-center gap-1.5 text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
+                  variant="ghost"
+                  size="sm"
+                  className="mx-auto"
                 >
-                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <ArrowLeft className="kds-control-icon" />
                   Voltar
-                </button>
+                </Button>
               )}
             </div>
           </>
@@ -429,25 +433,28 @@ function QuestionStep({
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h1 className="font-[var(--font-display)] text-xl font-bold text-[color:var(--text-primary)] sm:text-2xl">
+        <Heading level={1} size="lg">
           {step.title}
-        </h1>
-        {step.description && <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">{step.description}</p>}
+        </Heading>
+        {step.description && <Text size="sm" className="mt-1.5">{step.description}</Text>}
       </div>
 
       {step.step_type === 'single_choice' && (
         <div className="flex flex-col gap-2.5" role="radiogroup" aria-label={step.title}>
           {step.options.map((option) => (
-            <button
+            <Button
               key={option.id}
               type="button"
               role="radio"
               aria-checked={false}
               onClick={() => onSelectSingle(option.id)}
-              className={getPanelButtonClass({ variant: 'secondary', size: 'lg', fullWidth: true, className: 'justify-start text-left' })}
+              variant="secondary"
+              size="lg"
+              fullWidth
+              className="justify-start text-left"
             >
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -457,21 +464,19 @@ function QuestionStep({
           {step.options.map((option) => {
             const checked = multiDraft.includes(option.id);
             return (
-              <button
+              <Button
                 key={option.id}
                 type="button"
                 aria-pressed={checked}
                 onClick={() => onToggleMulti(option.id)}
-                className={getPanelButtonClass({
-                  variant: checked ? 'primary' : 'secondary',
-                  size: 'lg',
-                  fullWidth: true,
-                  className: 'justify-between text-left',
-                })}
+                variant={checked ? 'primary' : 'secondary'}
+                size="lg"
+                fullWidth
+                className="justify-between text-left"
               >
                 <span>{option.label}</span>
                 {checked && <Check className="kds-control-icon shrink-0" />}
-              </button>
+              </Button>
             );
           })}
           <Button onClick={onConfirmMulti} fullWidth size="lg">
@@ -512,30 +517,32 @@ type GeoStepProps = {
 function GeoStep({ geo, onShare, onSkip }: GeoStepProps) {
   return (
     <div className="space-y-4 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full [background:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
-        <MapPin className="h-7 w-7" />
+      <div className="kds-public-geo-icon mx-auto">
+        <MapPin className="kds-public-geo-symbol" />
       </div>
       <div>
-        <h1 className="font-[var(--font-display)] text-xl font-bold text-[color:var(--text-primary)] sm:text-2xl">
+        <Heading level={1} size="lg">
           Compartilhar sua localização?
-        </h1>
-        <p className="mx-auto mt-1.5 max-w-xs text-sm text-[color:var(--text-secondary)]">
+        </Heading>
+        <Text size="sm" className="mx-auto mt-1.5 max-w-xs">
           Isso ajuda a agilizar seu atendimento com uma equipe mais próxima de você. É totalmente opcional.
-        </p>
+        </Text>
       </div>
       <div className="space-y-2.5">
         <Button onClick={onShare} loading={geo.requesting} fullWidth size="lg">
           {!geo.requesting && <MapPin className="kds-control-icon" />}
           <span>{geo.requesting ? 'Solicitando...' : 'Compartilhar localização'}</span>
         </Button>
-        <button
+        <Button
           type="button"
           onClick={onSkip}
           disabled={geo.requesting}
-          className="mx-auto flex items-center justify-center text-xs font-medium text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)] disabled:opacity-50"
+          variant="ghost"
+          size="sm"
+          className="mx-auto"
         >
           Pular esta etapa
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -553,10 +560,10 @@ function ContactStep({ step, contact, setContact, submitting, onSubmit }: Contac
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="text-center">
-        <h1 className="font-[var(--font-display)] text-xl font-bold text-[color:var(--text-primary)] sm:text-2xl">
+        <Heading level={1} size="lg">
           {step?.title || 'Quase lá! Como podemos te chamar?'}
-        </h1>
-        {step?.description && <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">{step.description}</p>}
+        </Heading>
+        {step?.description && <Text size="sm" className="mt-1.5">{step.description}</Text>}
       </div>
 
       <Field label="Nome completo">

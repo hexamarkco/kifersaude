@@ -17,6 +17,7 @@ import {
   CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
+  QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   hasQualificationDataForCompletion,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
@@ -110,6 +111,9 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /EMPATIA SEM ENROLAÇÃO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /COPY VISIVEL/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao pode usar travessao.*dois-pontos/i);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /REPETIÇÃO ZERO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Vou considerar/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /ENCERRAMENTO HUMANO/);
   });
 });
 
@@ -120,7 +124,7 @@ describe('copy visible style', () => {
       { role: 'lead', content: 'Quero cotar para minhas filhas em Campos.' },
     ]);
 
-    assert.match(prompt, /Mostre em uma frase curta que voce entendeu o ponto concreto/i);
+    assert.match(prompt, /Mostre que voce entendeu somente quando isso trouxer proximidade real/i);
     assert.match(prompt, /Faca no maximo uma pergunta/i);
     assert.match(prompt, /nao pode conter travessao.*dois-pontos/i);
   });
@@ -147,6 +151,45 @@ describe('validateAutonomousReplyOutput', () => {
 
   test('aceita confirmar a hipotese mais provavel para as duas pessoas', () => {
     const result = validateAutonomousReplyOutput('Só para confirmar, vocês dois têm 56 anos?', iedaHistory);
+    assert.equal(result.valid, true);
+  });
+
+  test('rejeita espelhamento artificial no encerramento da qualificacao', () => {
+    const completeHistory: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'O plano será somente para você?' },
+      { role: 'lead', content: 'Só para mim, tenho 27 anos.' },
+      { role: 'ai', content: 'Em qual cidade você vai utilizar o plano e qual bairro?' },
+      { role: 'lead', content: 'Rio de Janeiro, Santa Cruz.' },
+      { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'MEI.' },
+      { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+      { role: 'lead', content: 'klin' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Você já utiliza a Klin. Vou preparar e enviar sua cotação. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
+      completeHistory,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.message, QUALIFICATION_REPETITION_VALIDATION_MESSAGE);
+  });
+
+  test('aceita encerramento humano sem recapitular os dados', () => {
+    const completeHistory: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'O plano será somente para você?' },
+      { role: 'lead', content: 'Só para mim, tenho 27 anos.' },
+      { role: 'ai', content: 'Em qual cidade você vai utilizar o plano e qual bairro?' },
+      { role: 'lead', content: 'Rio de Janeiro, Santa Cruz.' },
+      { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'MEI.' },
+      { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+      { role: 'lead', content: 'klin' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Perfeito, Nick. Já consegui as informações que precisava por aqui. Vou montar as opções que façam mais sentido para o seu perfil e te mando a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
+      completeHistory,
+    );
+
     assert.equal(result.valid, true);
   });
 

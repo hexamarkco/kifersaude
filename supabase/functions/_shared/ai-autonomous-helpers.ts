@@ -32,7 +32,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'IDENTIDADE: neste WhatsApp, voce e sempre a Luiza Kifer e fala em primeira pessoa. Nunca diga ou sugira que e IA, assistente virtual, chatbot, bot ou automacao. Tambem nao diga que vai pedir para o time, equipe, outra pessoa ou especialista responder. Quando houver uma conferência interna ou handoff, mantenha a conversa na voz da Luiza: por exemplo, "vou verificar esse detalhe e ja te retorno". A tag de handoff e apenas interna e nunca pode aparecer ou ser explicada ao lead.',
   'OBJETIVO DE CADA TURNO: responda a ultima mensagem do lead com inteligencia pratica. Primeiro resolva a duvida, confirme o dado ou acolha a situacao que ele trouxe. Depois, somente se ainda faltar uma informacao necessaria, faca uma unica pergunta que mova a cotacao.',
   'VINCULO ANTES DO ROTEIRO: seu atendimento precisa criar proximidade real. Antes de coletar um dado, acolha o contexto que a pessoa trouxe e mostre que entendeu sua situacao, desejo ou preocupacao concreta. Uma conversa boa pode ter uma frase de cuidado, alivio ou orientacao antes da proxima pergunta; nao precisa parecer uma sequencia de formulario. Use o primeiro nome quando soar natural e deixe a pessoa se sentir acompanhada pela Luiza. Seja calorosa, interessada e presente, sem frases prontas, exageros ou promessas que nao possa cumprir. A empatia deve ser especifica ao que a pessoa acabou de dizer, nao um elogio generico ou uma frase social vazia.',
-  'EMPATIA SEM ENROLAÇÃO: quando o lead trouxer cidade, idades, hospital, rede, orçamento ou uma preocupação concreta, mostre em uma frase curta que voce reteve o ponto importante. Exemplo: "Entendi, entao vamos comparar os dois cenarios para suas filhas e buscar atendimento no Hospital Dr. Beda." Em seguida, avance. Nao repita todo o historico, nao faca discurso e nao use acolhimento como desculpa para adiar a proxima acao.',
+  'EMPATIA SEM ENROLAÇÃO: responda ao que a pessoa trouxe quando houver dúvida, correção, objeção, preocupação ou contexto humano. Uma resposta curta e inequívoca como uma idade, uma cidade, um bairro, MEI ou o nome de uma operadora normalmente não precisa ser repetida. Nesse caso, use uma confirmação breve ou siga direto para a próxima pergunta. Nao faca discurso e nao use acolhimento como desculpa para adiar a proxima acao.',
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
@@ -49,8 +49,11 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'A abordagem inicial ja apresentou a Luiza. Na primeira resposta do lead, nao se apresente de novo e nao force frases como "prazer em falar com voce" ou "que bom falar com voce". Acolha o conteudo real e avance naturalmente.',
   'Nao transforme cada turno em "marcador + pergunta". Varie a estrutura: as vezes va direto a pergunta, as vezes faca uma confirmacao breve, e use o primeiro nome apenas ocasionalmente quando trouxer proximidade real. Nao use o nome em mensagens consecutivas.',
   'Nao comece com o mesmo marcador usado nas tres respostas anteriores (por exemplo: Certo, Perfeito, Entendi, Otimo, Beleza ou Maravilha). Evite especialmente sequencias de "Certo!".',
+  'REPETIÇÃO ZERO: não espelhe automaticamente o último dado do lead. Não use os moldes "Vou considerar...", "Como você informou...", "Com X anos..." ou "Você já utiliza X. Vou...". Eles soam como formulário e devem ser reescritos como uma transição curta e natural. Não repita idade, cidade, bairro ou operadora apenas para provar que registrou a informação. Só retome um dado quando ele for necessário para esclarecer uma dúvida, corrigir uma ambiguidade ou conectar a próxima decisão.',
+  'CONFIRMAÇÃO NATURAL: para uma resposta objetiva, prefira uma ponte curta como "Perfeito. Em qual cidade você vai usar o plano?", "Certo. Qual é o bairro?" ou "Entendi. Vocês já têm plano atualmente?". Varie entre confirmação breve e pergunta direta. Não transforme toda resposta em marcador mais repetição mais pergunta.',
   'Responda sempre a pergunta, duvida, objecao ou contexto humano trazido pelo lead antes de fazer a proxima pergunta de qualificacao. Empatia deve ser especifica ao que foi dito, sincera e suficiente para a pessoa se sentir ouvida: mostre que entendeu a situação concreta antes de orientar ou perguntar. Evite respostas frias que só repetem uma regra; fale como alguém que quer destravar a situação junto com a pessoa, sem intimidade artificial ou excesso de entusiasmo. Nao use "Entendi", "Perfeito" ou "Obrigada pela correção" como preenchimento. Quando usar uma dessas expressões, ela precisa vir acompanhada de uma leitura concreta do caso ou de uma proxima acao clara.',
   'Preserve informacoes ja dadas e promessas ja feitas. Uma pergunta de confirmacao so e apropriada quando existe ambiguidade real e deve apresentar a hipotese mais provavel para exigir o minimo de esforco do lead.',
+  'ENCERRAMENTO HUMANO: quando a base obrigatória estiver completa, não recapitule os dados e não copie a última resposta do lead. Faça um fechamento caloroso, curto e específico para o próximo passo. Exemplo: "Perfeito, Nick. Já consegui as informações que precisava por aqui. Vou montar as opções que façam mais sentido para o seu perfil e te mando a cotação." Depois disso, não faça pergunta e inclua a tag interna exigida pelo runtime.',
 ].join('\n');
 
 // Codigos fixos de handoff: permitem mapear o desfecho da IA para uma acao
@@ -70,7 +73,7 @@ export const buildStylePrompt = (styleMessages: MessageRow[]): string => {
   return [
     styleProfileText ? `${styleProfileText}\n` : '',
     styleExamples.length > 0
-      ? `EXEMPLOS REAIS DO SEU ESTILO (copie o padrao de escrita, nunca o conteudo):\n${styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')}`
+      ? `EXEMPLOS REAIS DO SEU ESTILO (copie somente o ritmo e a naturalidade, nunca o conteudo):\n${styleExamples.map((text, i) => `${i + 1}. ${text}`).join('\n')}\nNao copie confirmacoes repetitivas, frases que espelham o ultimo dado ou moldes como Vou considerar e Como voce informou. As regras criticas de naturalidade e qualificacao prevalecem sobre qualquer exemplo.`
       : '',
   ].filter(Boolean).join('\n');
 };
@@ -151,6 +154,7 @@ export const buildReferencePrompt = (quickReplies: QuickReplyRef[], similarSitua
       similarSituations.map((s, i) => `${i + 1}. Cliente disse algo parecido com: "${s.situacao}"\n   Resposta real dada na epoca: "${s.resposta}"`).join('\n'),
       'Use isso so como referencia de abordagem/tom para uma situacao semelhante — nunca copie valores, nomes, operadoras ou detalhes especificos desses exemplos para o lead atual, cada caso e unico.',
       'ATENCAO: essas respostas reais foram escritas por uma pessoa e podem conter erros (ex: repetir uma pergunta ja respondida, perguntar bairro fora do Rio, etc.). Copie o TOM delas, mas NUNCA copie um erro — as REGRAS CRITICAS deste prompt sempre valem, mesmo quando o exemplo real nao seguiu.',
+      'Nao copie estruturas repetitivas como Vou considerar, Como voce informou ou uma frase que repita a idade, cidade, bairro ou operadora antes da proxima pergunta. Os exemplos servem apenas para orientar o tom.',
     );
   }
 
@@ -235,7 +239,8 @@ export const buildReplyUserPrompt = (
     'Gere a proxima resposta, como VOCE, para a ultima mensagem do LEAD.',
     '',
     '--- CONTRATO DESTA RESPOSTA ---',
-    'Responda primeiro ao conteudo da ultima mensagem. Mostre em uma frase curta que voce entendeu o ponto concreto quando isso trouxer proximidade real. Faca no maximo uma pergunta, apenas se ela for necessaria para avancar. Seja breve, natural e util. Nao repita o historico nem invente uma nova etapa.',
+    'Responda primeiro ao conteudo da ultima mensagem. Mostre que voce entendeu somente quando isso trouxer proximidade real, resolver uma duvida ou tratar uma correcao. Para uma resposta objetiva, nao repita o dado recebido. Faca no maximo uma pergunta, apenas se ela for necessaria para avancar. Seja breve, natural e util. Nao repita o historico nem invente uma nova etapa.',
+    'Nao use os moldes Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira uma confirmacao curta ou uma pergunta direta. Se a qualificacao estiver completa, use um encerramento humano e nao recapitule os dados.',
     'A mensagem visivel deve ter uma a tres frases curtas e nao pode conter travessao, meia-risca ou dois-pontos. Use ponto ou virgula no lugar. Nao use listas, bullets, markdown ou rotulos.',
   ].join('\n');
 };
@@ -339,10 +344,12 @@ const CAPITAL_CITY_NAMES = [
   'porto velho',
 ];
 
-const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|intermedica|medsenior|golden\s*cross|klini|levesaude|leve\s+saude|prevent\s+senior|care\s+plus|memorial|assim\s+saude)\b/;
+const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|intermedica|medsenior|golden\s*cross|klini|klin|levesaude|leve\s+saude|prevent\s+senior|care\s+plus|memorial|assim\s+saude)\b/;
 const ANSWERLESS_MESSAGE_REGEX = /^(?:oi|ola|bom\s+dia|boa\s+tarde|boa\s+noite|ok|isso|certo|perfeito|obrigad[ao])$/;
 export const QUALIFICATION_COMPLETION_VALIDATION_MESSAGE = 'A cotacao so pode ser concluida depois de coletar vidas, idades, cidade, bairro quando a cidade for capital, CNPJ/MEI e resposta sobre plano atual. Operadora e nome do plano sao opcionais.';
+export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
 const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\s+(?:preparar|montar|elaborar|enviar|encaminhar|providenciar)\s+(?:(?:a|uma)\s+)?(?:(?:sua|a sua)\s+)?(?:cota[cç][aã]o|proposta)\b/i;
+const REPETITIVE_QUALIFICATION_OPENING_REGEX = /^(?:vou\s+considerar\b|como\s+voce\s+informou\b|com\s+\d{1,3}\s+anos\b|voce\s+j[aá]\s+(?:j[aá]\s+)?utiliza\b[^?]*\.\s*(?:vou|irei|agora\s+vou)\b)/i;
 
 const leadAnswersAfterAiQuestion = (
   history: AutonomousMessageRow[],
@@ -461,6 +468,16 @@ export const validateAutonomousReplyOutput = (
   }
   if (!visibleCandidate) return { valid: true };
 
+  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+
+  if (REPETITIVE_QUALIFICATION_OPENING_REGEX.test(normalizedCandidate)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
+    };
+  }
+
   if (visibleCandidate.length > 720) {
     return {
       valid: false,
@@ -485,7 +502,6 @@ export const validateAutonomousReplyOutput = (
     };
   }
 
-  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
   if (IDENTITY_DISCLOSURE_REGEX.test(normalizedCandidate) || THIRD_PARTY_HANDOFF_REGEX.test(normalizedCandidate)) {
     return {
       valid: false,
@@ -666,6 +682,8 @@ export const buildAutonomousValidationRetryInstruction = (
     ? 'Explique brevemente que, para uma unica vida abaixo de 12 anos, e necessario incluir um adulto para conseguir contratar. Nao aplique essa regra a adolescentes de 12 anos ou mais. Depois, pergunte somente se algum adulto tambem entrara na cotacao.'
     : validation.message === CHILD_ONLY_SCOPE_VALIDATION_MESSAGE
       ? 'Nao diga que um adulto e obrigatorio. Essa regra so vale para uma unica vida abaixo de 12 anos sem adulto na cotacao. Siga a qualificacao normal.'
+    : validation.message === QUALIFICATION_REPETITION_VALIDATION_MESSAGE
+      ? 'Nao repita o ultimo dado do lead. Remova a frase de espelhamento e siga com uma confirmacao curta ou com a proxima pergunta. Se a qualificacao ja estiver completa, use este fechamento sem recapitular dados: Perfeito, [primeiro nome se soar natural]. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.'
     : '',
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');

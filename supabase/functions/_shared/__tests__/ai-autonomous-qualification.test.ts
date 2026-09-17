@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
 import {
   extractAutonomousQualificationState,
+  normalizeKnownOperator,
   qualificationStateIsComplete,
   type QualificationMessage,
 } from '../ai-autonomous-qualification.ts';
@@ -121,5 +122,25 @@ test('interpreta quantidade e idade enviadas em mensagens curtas consecutivas', 
   assert.deepEqual(state.lives.items.map((life) => life.age), [49]);
   assert.equal(state.missingRequiredFields.includes('lives'), false);
   assert.equal(state.missingRequiredFields.includes('ages'), false);
+});
+
+test('corrige somente o erro obvio de Klini sem inventar operadora', () => {
+  assert.equal(normalizeKnownOperator('klin'), 'Klini');
+  assert.equal(normalizeKnownOperator('Klini'), 'Klini');
+  assert.equal(normalizeKnownOperator('operadora desconhecida'), null);
+
+  const state = stateFrom([
+    { role: 'ai', content: 'O plano será somente para você ou para mais alguém?' },
+    { role: 'lead', content: 'Só para mim, tenho 27 anos.' },
+    { role: 'ai', content: 'Em qual cidade você vai utilizar o plano e qual bairro?' },
+    { role: 'lead', content: 'Rio de Janeiro, Santa Cruz.' },
+    { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+    { role: 'lead', content: 'MEI.' },
+    { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+    { role: 'lead', content: 'klin' },
+  ]);
+
+  assert.equal(state.currentHealthPlan.operator, 'Klini');
+  assert.equal(qualificationStateIsComplete(state), true);
 });
 });

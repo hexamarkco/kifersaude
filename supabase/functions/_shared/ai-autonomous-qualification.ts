@@ -104,6 +104,31 @@ const toTitle = (value: string): string => value
   .map((word) => word ? `${word[0].toUpperCase()}${word.slice(1).toLowerCase()}` : word)
   .join(' ');
 
+const KNOWN_OPERATOR_ALIASES: Record<string, string> = {
+  amil: 'Amil',
+  assim: 'Assim',
+  bradesco: 'Bradesco',
+  unimed: 'Unimed',
+  'sul america': 'Sul América',
+  hapvida: 'Hapvida',
+  notredame: 'NotreDame',
+  intermedica: 'NotreDame Intermédica',
+  medsenior: 'MedSênior',
+  'golden cross': 'Golden Cross',
+  'prevent senior': 'Prevent Senior',
+  memorial: 'Memorial',
+  klini: 'Klini',
+  klin: 'Klini',
+  levesaude: 'Leve Saúde',
+  'leve saude': 'Leve Saúde',
+  'care plus': 'Care Plus',
+};
+
+export const normalizeKnownOperator = (value: string): string | null => {
+  const normalized = normalize(value).replace(/\s+/g, ' ');
+  return KNOWN_OPERATOR_ALIASES[normalized] ?? null;
+};
+
 const cleanCapturedPlace = (value: string): string => value
   .replace(/[.!?,;]+.*$/, '')
   .replace(/\s+(?:e|mas|que|hoje|agora|tambem|também)\s+.*$/i, '')
@@ -202,10 +227,11 @@ const extractPlanAnswer = (text: string): { value: QualificationYesNo; operator:
     return { value: 'no', operator: null, plan: null };
   }
 
-  const operatorMatch = text.match(/\b(amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|interm[eé]dica|medsenior|golden\s+cross|prevent\s+senior|memorial)\b/i);
-  const yes = /\b(?:tenho|possuo|temos|possui|j[aá]\s+tenho|j[aá]\s+temos)\b[^.!?]{0,50}\bplano\b|\b(?:tenho|possuo|temos|possui)\b[^.!?]{0,50}(?:amil|unimed|bradesco|hapvida|assim|notredame)/i.test(normalized);
-  if (!yes && !operatorMatch) return null;
-  return { value: 'yes', operator: operatorMatch?.[1] ? toTitle(operatorMatch[1]) : null, plan: null };
+  const operatorMatch = text.match(/\b(amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|interm[eé]dica|medsenior|golden\s+cross|prevent\s+senior|memorial|klini|klin|leve\s*saude|care\s+plus)\b/i);
+  const operator = operatorMatch?.[1] ? normalizeKnownOperator(operatorMatch[1]) : null;
+  const yes = /\b(?:tenho|possuo|temos|possui|j[aá]\s+tenho|j[aá]\s+temos)\b[^.!?]{0,50}\bplano\b|\b(?:tenho|possuo|temos|possui)\b[^.!?]{0,50}(?:amil|unimed|bradesco|hapvida|assim|notredame|klini|klin)/i.test(normalized);
+  if (!yes && !operator) return null;
+  return { value: 'yes', operator, plan: null };
 };
 
 const buildLives = (messages: QualificationMessage[]): { count: number | null; items: QualificationLife[]; compositionStatus: QualificationValueStatus } => {
@@ -258,7 +284,8 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   const allLeadText = messages.map((row) => row.content).join(' ');
   if (hasAdult && hasChild && /\b(?:eu|mim)\s+e\s+(?:meu|minha|o|a)\b/i.test(allLeadText)) count = 2;
   if (hasAdult && !hasChild && /\b(?:eu|mim)\b.{0,50}\b(?:minha esposa|meu marido|ela|ele)\b/i.test(allLeadText)) count = 2;
-  if (hasSelfOnlyReference(messages.filter((row) => row.role === 'lead').at(-1)?.content ?? '') && !hasChild && count === null) count = 1;
+  const leadMessages = messages.filter((row) => row.role === 'lead');
+  if (leadMessages.some((row) => hasSelfOnlyReference(row.content)) && !hasChild && count === null) count = 1;
   if (hasAdult && !hasChild && count === null) count = 1;
 
   const items: QualificationLife[] = [];
@@ -318,12 +345,15 @@ const calculateState = (
     number: null,
     numberStatus: 'not_asked',
   };
+  const seededOperator = seed.currentOperator?.trim()
+    ? normalizeKnownOperator(seed.currentOperator) ?? seed.currentOperator.trim()
+    : null;
   let currentHealthPlan: AutonomousQualificationState['currentHealthPlan'] = {
-    hasPlan: seed.currentOperator?.trim() ? 'yes' : 'unknown',
-    answerStatus: seed.currentOperator?.trim() ? 'known' : 'not_asked',
-    operator: seed.currentOperator?.trim() || null,
+    hasPlan: seededOperator ? 'yes' : 'unknown',
+    answerStatus: seededOperator ? 'known' : 'not_asked',
+    operator: seededOperator,
     plan: null,
-    detailsStatus: seed.currentOperator?.trim() ? 'known' : 'not_asked',
+    detailsStatus: seededOperator ? 'known' : 'not_asked',
   };
 
   let previousAi = '';
@@ -353,9 +383,17 @@ const calculateState = (
 
     let business = extractBusinessAnswer(message.content);
     if (!business && /cnpj|mei/.test(normalizedPreviousAi)) {
-      const normalizedLeadAnswer = normalize(message.content);
+      const normalizedLeadAnswer = normalize(message.content).replace(/[.!?,;]+$/, '').trim();
       if (/^(?:sim|tenho|possuo|temos|sou|somos|tem\s+sim)\b/.test(normalizedLeadAnswer)) {
         business = { value: 'yes', type: null, number: null };
+      } else if (/^(?:mei|cnpj|mei\s+e\s+cnpj|cnpj\s+e\s+mei)$/.test(normalizedLeadAnswer)) {
+        business = {
+          value: 'yes',
+          type: normalizedLeadAnswer.includes('mei') && normalizedLeadAnswer.includes('cnpj')
+            ? 'both'
+            : normalizedLeadAnswer.includes('mei') ? 'mei' : 'cnpj',
+          number: null,
+        };
       } else if (/^(?:nao|não|sem|nenhum|nenhuma)\b/.test(normalizedLeadAnswer)) {
         business = { value: 'no', type: null, number: null };
       }

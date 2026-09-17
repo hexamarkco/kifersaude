@@ -63,6 +63,8 @@ const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
   '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
   'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando a cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar.',
   'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
+  'O encerramento visivel precisa soar humano e nao pode recapitular idade, cidade, bairro, CNPJ, MEI ou operadora. Nao use Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira duas frases curtas com uma confirmacao natural e o proximo passo. Exemplo valido. Perfeito, Nick. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.',
+  'Nao faca pergunta no encerramento. O nome e opcional e so deve ser usado se estiver validado e soar natural.',
   'No FINAL ABSOLUTO, inclua exatamente `[[HANDOFF: QUALIFICACAO_COMPLETA | cotacao encaminhada para atendimento manual]]`.',
   'A tag e interna: nunca a explique ao cliente. Nao faca nova pergunta nem continue o atendimento depois da confirmacao.',
 ].join('\n');

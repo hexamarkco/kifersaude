@@ -123,6 +123,8 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao precisa parecer uma sequencia de formulario/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Se o lead ja disser que e pessoa fisica/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /EMPATIA SEM ENROLAÇÃO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /TOM MEIGO E PROXIMO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Nao use coracao como recurso padrao/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /RITMO HUMANO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /COPY VISIVEL/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao pode usar travessao.*dois-pontos/i);

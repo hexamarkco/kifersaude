@@ -316,7 +316,7 @@ SECURITY DEFINER
 SET search_path = public
 STABLE
 AS $$
-  SELECT c.id, c.channel_id, c.external_chat_id, c.is_group,
+  SELECT c.id, c.channel_id, c.external_chat_id, COALESCE(chat.is_group, false),
     c.phone_number, c.phone_digits, c.display_name, c.saved_contact_name,
     c.push_name, c.lead_id, c.lead_name, c.lead_status,
     c.lead_responsavel_id, c.lead_responsavel, c.merged_into_chat_id,
@@ -331,6 +331,7 @@ AS $$
     p_archived_filter, p_lead_status_filters, p_lead_responsavel_filters,
     p_limit, p_offset
   ) c
+  LEFT JOIN public.comm_whatsapp_chats chat ON chat.id = c.id
   WHERE public.current_user_can_view_comm_whatsapp();
 $$;
 

@@ -2448,6 +2448,7 @@ export default function WhatsAppInboxScreen() {
   const chatsLoadKeyRef = useRef<string | null>(null);
   const pollingMessagesChatIdRef = useRef<string | null>(null);
   const olderMessagesRequestIdRef = useRef(0);
+  const quotedMessageNavigationRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
@@ -5376,15 +5377,56 @@ export default function WhatsAppInboxScreen() {
     });
   }, [buildMessagesSignature, loadMessages, upsertChatLocally]);
 
-  const handleOpenQuotedMessage = useCallback((quotedExternalMessageId: string) => {
+  const handleOpenQuotedMessage = useCallback(async (quotedExternalMessageId: string) => {
     const targetMessage = findLoadedMessageByExternalId(latestMessagesRef.current, quotedExternalMessageId);
-    if (!targetMessage) {
-      toast.info('A mensagem original não está carregada neste trecho da conversa.');
+    if (targetMessage) {
+      setHighlightedMessageId(targetMessage.id);
       return;
     }
 
-    setHighlightedMessageId(targetMessage.id);
-  }, []);
+    const targetChat = selectedChat;
+    if (!targetChat) {
+      return;
+    }
+
+    const requestId = ++quotedMessageNavigationRequestIdRef.current;
+    setLoadingMessages(true);
+
+    try {
+      const allMessages = await whatsappMessagesRepository.listAll(targetChat.id);
+      if (requestId !== quotedMessageNavigationRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
+        return;
+      }
+
+      const loadedTargetMessage = findLoadedMessageByExternalId(allMessages, quotedExternalMessageId);
+      if (!loadedTargetMessage) {
+        toast.info('Não foi possível localizar a mensagem original nesta conversa.');
+        return;
+      }
+
+      const nextSignature = buildMessagesSignature(allMessages);
+      messagesSignatureRef.current = nextSignature;
+      pendingScrollModeRef.current = null;
+      pendingScrollTopRef.current = null;
+      pendingScrollHeightRef.current = null;
+      setHasOlderMessages(false);
+      setMessages(allMessages);
+      messagesCacheByChatIdRef.current.set(targetChat.id, {
+        messages: allMessages,
+        signature: nextSignature,
+        hasOlderMessages: false,
+      });
+      setHighlightedMessageId(loadedTargetMessage.id);
+    } catch (error) {
+      if (requestId === quotedMessageNavigationRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível localizar a mensagem original.');
+      }
+    } finally {
+      if (requestId === quotedMessageNavigationRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
+        setLoadingMessages(false);
+      }
+    }
+  }, [buildMessagesSignature, selectedChat]);
 
   const handleToggleChatMessageSearch = useCallback(() => {
     setChatMessageSearchOpen((current) => {

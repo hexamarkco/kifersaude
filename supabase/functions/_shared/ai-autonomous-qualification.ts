@@ -402,7 +402,7 @@ const calculateState = (
     let business = extractBusinessAnswer(message.content);
     if (!business && /cnpj|mei/.test(normalizedPreviousAi)) {
       const normalizedLeadAnswer = normalize(message.content).replace(/[.!?,;]+$/, '').trim();
-      if (/^(?:sim|tenho|possuo|temos|sou|somos|tem\s+sim)\b/.test(normalizedLeadAnswer)) {
+      if (/^(?:sim|tenho|possuo|temos|tem\s+sim)\b/.test(normalizedLeadAnswer)) {
         business = { value: 'yes', type: null, number: null };
       } else if (/^(?:mei|cnpj|mei\s+e\s+cnpj|cnpj\s+e\s+mei)$/.test(normalizedLeadAnswer)) {
         business = {
@@ -492,25 +492,5 @@ export const extractAutonomousQualificationState = (
   extractedAt: string,
   seed?: QualificationContextSeed,
 ): AutonomousQualificationState => calculateState(messages, extractedAt, seed);
-
-export const buildQualificationDecisionPrompt = (state: AutonomousQualificationState): string => {
-  const missing = state.missingRequiredFields.length > 0 ? state.missingRequiredFields.join(', ') : 'nenhum';
-  return [
-    'ESTADO DETERMINISTICO DA QUALIFICACAO',
-    `status ${state.status}`,
-    `vidas ${state.lives.count ?? 'desconhecido'}`,
-    `idades ${state.lives.items.map((life) => life.age ?? 'desconhecida').join(', ') || 'desconhecidas'}`,
-    `cidade ${state.location.city ?? 'desconhecida'}`,
-    `bairro ${state.location.neighborhood ?? (state.location.neighborhoodRequired ? 'obrigatorio e ausente' : 'nao necessario')}`,
-    `cnpj ou mei ${state.company.hasCnpjOrMei}`,
-    `plano atual ${state.currentHealthPlan.hasPlan}`,
-    `operadora ${state.currentHealthPlan.operator ?? 'nao informada'}`,
-    `campos obrigatorios faltantes ${missing}`,
-    state.singleUnderTwelveWithoutAdult
-      ? 'REGRA ATIVA incluir adulto titular e obter a idade dele antes de concluir'
-      : 'REGRA DE MENOR DE 12 nao esta ativa',
-    'Use esse estado como fonte de verdade. Nao pergunte novamente um campo que nao esteja faltante.',
-  ].join('\n');
-};
 
 export const qualificationStateIsComplete = (state: AutonomousQualificationState): boolean => state.status === 'complete' && state.missingRequiredFields.length === 0;

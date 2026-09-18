@@ -3,9 +3,9 @@ import { describe, test } from 'vitest';
 
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-  buildAutonomousValidationFallback,
+  AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION,
+  buildAutonomousAttendanceUserPrompt,
   buildReplyUserPrompt,
-  inferQualificationCompletionHandoff,
   getReliableLeadFirstName,
   normalizeLeadVisibleMessageStyle,
   splitGeneratedReply,
@@ -15,11 +15,9 @@ import {
   HANDOFF_CODES,
   CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
   CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
-  MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
-  QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
   QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
   QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
-  hasQualificationDataForCompletion,
+  MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
 
@@ -85,6 +83,18 @@ describe('buildReplyUserPrompt', () => {
     });
 
     assert.doesNotMatch(prompt, /PRIMEIRA RESPOSTA APOS A ABORDAGEM/);
+  });
+});
+
+describe('paridade do prompt de atendimento', () => {
+  test('usa o historico como fonte e inclui as regras de handoff no prompt usado pelo inbox', () => {
+    const prompt = buildAutonomousAttendanceUserPrompt(
+      [{ role: 'lead', content: 'Tenho 44 anos.' }],
+    );
+
+    assert.match(prompt, /ANALISE O HISTORICO/);
+    assert.doesNotMatch(prompt, /ESTADO DETERMINISTICO DA QUALIFICACAO/);
+    assert.equal(prompt.includes(AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION), true);
   });
 });
 
@@ -275,18 +285,6 @@ describe('validateAutonomousReplyOutput', () => {
     assert.equal(validateAutonomousReplyOutput('Alguém que vai entrar no plano tem CNPJ ou MEI?', history).valid, true);
   });
 
-  test('avanca quando o lead ja respondeu que e pessoa fisica', () => {
-    const history: AutonomousMessageRow[] = [
-      { role: 'lead', content: 'O plano é para eu e minha esposa.' },
-      { role: 'ai', content: 'Para vocês dois, alguém que vai entrar no plano tem CNPJ ou MEI?' },
-      { role: 'lead', content: 'Sou pessoa física.' },
-    ];
-
-    const fallback = buildAutonomousValidationFallback(history);
-    assert.equal(fallback, 'Entendi, vamos seguir pela pessoa física. Em qual cidade vocês vão utilizar o plano?');
-    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
-  });
-
   test('pergunta CNPJ de forma abrangente depois que a cidade foi informada', () => {
     const history: AutonomousMessageRow[] = [
       { role: 'lead', content: 'Para mim é para meus 2 filhos.' },
@@ -296,9 +294,6 @@ describe('validateAutonomousReplyOutput', () => {
       { role: 'lead', content: 'Nova Friburgo!' },
     ];
 
-    const fallback = buildAutonomousValidationFallback(history);
-    assert.equal(fallback, 'Para eu seguir com a cotação, alguém que vai entrar no plano tem CNPJ ou MEI?');
-    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
     assert.equal(
       validateAutonomousReplyOutput('Você possui CNPJ ou MEI?', history).message,
       MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
@@ -432,12 +427,6 @@ describe('validateAutonomousReplyOutput', () => {
     assert.equal(result.valid, false);
     assert.equal(result.message, CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
 
-    const fallback = buildAutonomousValidationFallback(history);
-    assert.equal(
-      fallback,
-      'Para contratar uma unica vida abaixo de 12 anos, e necessario incluir um adulto. Algum adulto tambem vai entrar na cotacao?',
-    );
-    assert.equal(validateAutonomousReplyOutput(fallback ?? '', history).valid, true);
   });
 
   test('nao aplica a regra de adulto a adolescente de 15 anos', () => {
@@ -615,49 +604,6 @@ describe('splitGeneratedReply — handoff lifecycle', () => {
     assert.equal(messages.length, 2);
     assert.ok(messages[0].includes('Mensagem 1'));
     assert.ok(messages[1].includes('Mensagem 2'));
-  });
-});
-
-describe('inferQualificationCompletionHandoff', () => {
-  const completeHistory: AutonomousMessageRow[] = [
-    { role: 'lead', content: 'Eu tenho 35 anos e minha esposa tem 34 anos. Vamos usar no Rio de Janeiro, no Centro. Não temos CNPJ ou MEI e não temos plano atualmente.' },
-    { role: 'ai', content: 'Qual é o bairro?' },
-    { role: 'lead', content: 'Centro.' },
-    { role: 'ai', content: 'Algum beneficiário tem CNPJ ou MEI?' },
-    { role: 'lead', content: 'Não temos.' },
-    { role: 'ai', content: 'Vocês têm plano atualmente?' },
-    { role: 'lead', content: 'Não temos plano.' },
-  ];
-
-  test('protege o handoff quando a IA promete preparar a cotação sem a tag técnica', () => {
-    assert.equal(
-      inferQualificationCompletionHandoff(['Certo, Jefferson! Vou preparar sua cotação e já te retorno.'], completeHistory),
-      'QUALIFICACAO_COMPLETA',
-    );
-  });
-
-  test('nao encerra apenas por mencionar cotação sem assumir o envio', () => {
-    assert.equal(
-      inferQualificationCompletionHandoff(['Posso preparar uma cotação depois que eu confirmar a sua cidade.'], completeHistory),
-      null,
-    );
-  });
-
-  test('nao infere encerramento quando faltam dados obrigatorios', () => {
-    const incompleteHistory: AutonomousMessageRow[] = [
-      { role: 'lead', content: 'Eu tenho 35 anos e quero usar no Rio de Janeiro.' },
-    ];
-
-    assert.equal(hasQualificationDataForCompletion(completeHistory), true);
-    assert.equal(hasQualificationDataForCompletion(incompleteHistory), false);
-    assert.equal(
-      inferQualificationCompletionHandoff(['Vou enviar sua cotação.'], incompleteHistory),
-      null,
-    );
-    assert.equal(
-      validateAutonomousReplyOutput('Vou enviar sua cotação. [[HANDOFF: QUALIFICACAO_COMPLETA | completo]]', incompleteHistory).message,
-      QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
-    );
   });
 });
 

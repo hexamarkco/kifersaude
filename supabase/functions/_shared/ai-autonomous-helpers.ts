@@ -4,11 +4,6 @@ import {
   buildStyleProfileText,
   type MessageRow,
 } from './comm-whatsapp-transcript.ts';
-import {
-  qualificationStateIsComplete,
-  type AutonomousQualificationState,
-} from './ai-autonomous-qualification.ts';
-
 export type AutonomousMessageRow = {
   role: 'lead' | 'ai';
   content: string;
@@ -55,6 +50,16 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'Responda sempre a pergunta, duvida, objecao ou contexto humano trazido pelo lead antes de fazer a proxima pergunta de qualificacao. Empatia deve ser especifica ao que foi dito, sincera e suficiente para a pessoa se sentir ouvida: mostre que entendeu a situação concreta antes de orientar ou perguntar. Evite respostas frias que só repetem uma regra; fale como alguém que quer destravar a situação junto com a pessoa, sem intimidade artificial ou excesso de entusiasmo. Nao use "Entendi", "Perfeito" ou "Obrigada pela correção" como preenchimento. Quando usar uma dessas expressões, ela precisa vir acompanhada de uma leitura concreta do caso ou de uma proxima acao clara.',
   'Preserve informacoes ja dadas e promessas ja feitas. Uma pergunta de confirmacao so e apropriada quando existe ambiguidade real e deve apresentar a hipotese mais provavel para exigir o minimo de esforco do lead.',
   'ENCERRAMENTO HUMANO: quando a base obrigatória estiver completa, não recapitule os dados e não copie a última resposta do lead. Faça um fechamento caloroso, curto e específico para o próximo passo. Exemplo: "Perfeito, Nick. Já consegui as informações que precisava por aqui. Vou montar as opções que façam mais sentido para o seu perfil e te mando a cotação." Depois disso, não faça pergunta e inclua a tag interna exigida pelo runtime.',
+].join('\n');
+
+export const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
+  '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
+  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar.',
+  'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
+  'O encerramento visivel precisa soar humano e nao pode recapitular idade, cidade, bairro, CNPJ, MEI ou operadora. Nao use Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira duas frases curtas com uma confirmacao natural e o proximo passo. Exemplo valido. Perfeito, Nick. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.',
+  'Nao faca pergunta no encerramento. O nome e opcional e so deve ser usado se estiver validado e soar natural.',
+  'No FINAL ABSOLUTO, inclua exatamente `[[HANDOFF: QUALIFICACAO_COMPLETA | cotacao encaminhada para atendimento manual]]`.',
+  'A tag e interna: nunca a explique ao cliente. Nao faca nova pergunta nem continue o atendimento depois da confirmacao.',
 ].join('\n');
 
 // Codigos fixos de handoff: permitem mapear o desfecho da IA para uma acao
@@ -247,6 +252,15 @@ export const buildReplyUserPrompt = (
   ].join('\n');
 };
 
+export const buildAutonomousAttendanceUserPrompt = (
+  history: AutonomousMessageRow[],
+  options: ReplyPromptOptions = {},
+): string => [
+  buildReplyUserPrompt(history, options),
+  'ANALISE O HISTORICO: use os turnos completos do LEAD e da VOCE para identificar o que ja foi informado, inclusive quando o lead enviou varias mensagens seguidas. O historico explicito e a fonte de verdade. Nao confie em campos externos, estados preexistentes ou inferencias que contradigam o que foi dito. Nao invente vidas, idades, cidade, bairro, CNPJ, MEI, plano ou operadora. Pergunte somente o proximo dado obrigatorio que realmente nao estiver claro na conversa.',
+  AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION,
+].join('\n\n');
+
 const normalizeForSemanticMatch = (value: string): string => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -268,8 +282,6 @@ const BUSINESS_ID_VALUE_ANSWER_REGEX = /(?:\bempresari[oa]\b.*\bmais\s+(?:barato
 const MEI_AGE_IN_MONTHS_REGEX = /\b(\d{1,2})\s*mes(?:es)?\b/;
 const MEI_SIX_MONTH_RULE_REGEX = /\b6\s*mes(?:es)?\b/;
 const PERSONA_FISICA_REGEX = /\bpessoa\s+fisica\b/;
-const NO_BUSINESS_ID_RESPONSE_REGEX = /\b(?:pessoa\s+fisica|sem\s+(?:cnpj|mei)|nao\s+(?:tenho|possuo|temos|possuimos)\s+(?:cnpj|mei))\b/;
-const CITY_QUESTION_REGEX = /\b(?:em\s+)?qual\s+cidade\b/;
 const PREGNANCY_CONTEXT_REGEX = /\b(gravida|gestante|gestacao|engravid|parto)\b/;
 const MATERNITY_QUESTION_REGEX = /\b(carencia|parto|gestacao|pre[- ]?natal|engravid)\b/;
 const TERM_BIRTH_WAIT_REGEX = /(?:\b10\s*mes(?:es)?\b|\b300\s*dias\b)/;
@@ -316,39 +328,6 @@ const isSingleUnderTwelveQuoteWithoutKnownAdult = (leadHistoryText: string): boo
   return hasKnownSingleUnderTwelve && hasExplicitChildOnlyScope && !hasAdultBeneficiary;
 };
 
-const CAPITAL_CITY_NAMES = [
-  'rio de janeiro',
-  'sao paulo',
-  'belo horizonte',
-  'vitoria',
-  'curitiba',
-  'florianopolis',
-  'porto alegre',
-  'sao luis',
-  'belem',
-  'macapa',
-  'manaus',
-  'boa vista',
-  'palmas',
-  'brasilia',
-  'goiania',
-  'cuiaba',
-  'campo grande',
-  'recife',
-  'natal',
-  'joao pessoa',
-  'maceio',
-  'aracaju',
-  'salvador',
-  'fortaleza',
-  'teresina',
-  'rio branco',
-  'porto velho',
-];
-
-const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|intermedica|medsenior|golden\s*cross|klini|klin|levesaude|leve\s+saude|prevent\s+senior|care\s+plus|memorial|assim\s+saude)\b/;
-const ANSWERLESS_MESSAGE_REGEX = /^(?:oi|ola|bom\s+dia|boa\s+tarde|boa\s+noite|ok|isso|certo|perfeito|obrigad[ao])$/;
-export const QUALIFICATION_COMPLETION_VALIDATION_MESSAGE = 'A cotacao so pode ser concluida depois de coletar vidas, idades, cidade, bairro quando a cidade for capital, CNPJ/MEI e resposta sobre plano atual. Operadora e nome do plano sao opcionais.';
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
 export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa dizer que as opcoes serao montadas de acordo com o perfil ou as necessidades do lead e que a cotacao sera enviada. Nao encerre apenas dizendo que vai preparar as opcoes.';
 const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\b[^.!?]{0,180}\b(?:cota[cç][aã]o|proposta)\b/i;
@@ -360,73 +339,6 @@ const hasNaturalQualificationClosure = (value: string): boolean => (
   && QUALIFICATION_CLOSURE_CONTEXT_REGEX.test(normalizeForSemanticMatch(value))
 );
 
-const leadAnswersAfterAiQuestion = (
-  history: AutonomousMessageRow[],
-  topicRegex: RegExp,
-): string[] => {
-  let previousAi = '';
-  const answers: string[] = [];
-
-  for (const row of history) {
-    if (row.role === 'ai') {
-      previousAi = row.content;
-      continue;
-    }
-
-    if (previousAi && topicRegex.test(normalizeForSemanticMatch(previousAi))) {
-      answers.push(row.content);
-    }
-  }
-
-  return answers;
-};
-
-const hasSubstantiveAnswerAfterAiQuestion = (
-  history: AutonomousMessageRow[],
-  topicRegex: RegExp,
-  allowShortAnswer = false,
-): boolean => leadAnswersAfterAiQuestion(history, topicRegex).some((answer) => {
-  const normalized = normalizeForSemanticMatch(answer);
-  return normalized.length > 1 && (allowShortAnswer || !ANSWERLESS_MESSAGE_REGEX.test(normalized));
-});
-
-const hasCurrentPlanInformation = (history: AutonomousMessageRow[], leadHistoryText: string): boolean => {
-  const planAnswers = leadAnswersAfterAiQuestion(
-    history,
-    /(?:plano.*(?:atualmente|hoje)|(?:tem|possui|est[aá])\s+(?:algum\s+)?plano|operadora)/,
-  );
-  const hasNoPlan = /(?:sem\s+plano|nao\s+(?:tenho|possuo|temos|possui)|nunca\s+(?:tive|teve|tivemos))/.test(leadHistoryText);
-  const hasPlanOperator = CURRENT_PLAN_OPERATOR_REGEX.test(leadHistoryText)
-    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:qual|nome).{0,30}operadora|qual.{0,30}plano/);
-
-  return planAnswers.length > 0 || hasNoPlan || hasPlanOperator;
-};
-
-export const hasQualificationDataForCompletion = (
-  history: AutonomousMessageRow[],
-  qualificationState?: AutonomousQualificationState,
-): boolean => {
-  if (qualificationState) return qualificationStateIsComplete(qualificationState);
-  const leadMessages = history.filter((row) => row.role === 'lead').map((row) => row.content);
-  const leadHistoryText = normalizeForSemanticMatch(leadMessages.join(' '));
-  const ageValues = [...leadHistoryText.matchAll(/\b(\d{1,3})\s*(?:anos?|ano)\b/g)].map((match) => Number(match[1]));
-  const hasAgeData = ageValues.length > 0
-    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:idade|idades|quantos\s+anos|anos?)/, true);
-  const hasLifeScope = ageValues.length > 0
-    || hasSubstantiveAnswerAfterAiQuestion(history, /(?:so\s+para\s+voce|mais\s+alguem|para\s+quem|quem\s+vai\s+entrar|familia)/);
-  const hasCity = hasSubstantiveAnswerAfterAiQuestion(history, /(?:qual|em\s+qual).{0,30}cidade|onde.{0,20}(?:usar|utilizar|ficar)/)
-    || /\b(?:em|na|no)\s+[a-záàâãéêíóôõúç ]{3,}/i.test(leadHistoryText);
-  const isCapitalCity = CAPITAL_CITY_NAMES.some((city) => leadHistoryText.includes(city));
-  const hasNeighborhood = !isCapitalCity
-    || /\bbairro\b/.test(leadHistoryText)
-    || hasSubstantiveAnswerAfterAiQuestion(history, /\bbairro\b/);
-  const hasBusinessId = /\b(?:cnpj|mei|pessoa\s+fisica|sem\s+(?:cnpj|mei)|nao\s+(?:tenho|possuo|temos|possui)\s+(?:cnpj|mei))\b/.test(leadHistoryText)
-    || hasSubstantiveAnswerAfterAiQuestion(history, /\b(?:cnpj|mei)\b/, true);
-  const hasCurrentPlan = hasCurrentPlanInformation(history, leadHistoryText);
-
-  return hasLifeScope && hasAgeData && hasCity && hasNeighborhood && hasBusinessId && hasCurrentPlan;
-};
-
 /**
  * Valida somente erros conversacionais de alta confianca. O modelo recebe uma
  * segunda tentativa no mesmo modelo quando a saida repetiria um vicio ou
@@ -435,7 +347,6 @@ export const hasQualificationDataForCompletion = (
 export const validateAutonomousReplyOutput = (
   rawText: string,
   history: AutonomousMessageRow[],
-  qualificationState?: AutonomousQualificationState,
 ): AutonomousReplyValidationResult => {
   const trimmed = rawText.trim();
   if (!trimmed) {
@@ -458,29 +369,6 @@ export const validateAutonomousReplyOutput = (
       valid: false,
       stopReason: 'invalid_output',
       message: QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
-    };
-  }
-  if (parsedCandidate.handoffCode === 'QUALIFICACAO_COMPLETA' && !hasQualificationDataForCompletion(history, qualificationState)) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
-    };
-  }
-  if (qualificationState && qualificationStateIsComplete(qualificationState)) {
-    if (!parsedCandidate.handoffCode && !hasNaturalQualificationClosure(visibleCandidate)) {
-      return {
-        valid: false,
-        stopReason: 'invalid_output',
-        message: QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
-      };
-    }
-  } else if (qualificationState && !qualificationStateIsComplete(qualificationState)
-    && QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: QUALIFICATION_COMPLETION_VALIDATION_MESSAGE,
     };
   }
   if (!visibleCandidate) return { valid: true };
@@ -708,54 +596,6 @@ export const buildAutonomousValidationRetryInstruction = (
   'Reescreva a resposta inteira de forma curta, natural e coerente com o historico. Nao mencione esta validacao nem diga que esta corrigindo uma resposta.',
 ].join('\n');
 
-/**
- * Recuperacao deterministica para o caso em que a IA insiste no escopo errado
- * de CNPJ/MEI mesmo depois do retry. A resposta precisa continuar o turno sem
- * repetir uma pergunta que o lead ja respondeu e sem deixar o chat em silencio.
- */
-export const buildAutonomousValidationFallback = (
-  history: AutonomousMessageRow[],
-  qualificationState?: AutonomousQualificationState,
-): string | null => {
-  const latestLead = [...history].reverse().find((row) => row.role === 'lead');
-  const previousAi = [...history].reverse().find((row) => row.role === 'ai');
-  if (!latestLead) return null;
-
-  const normalizedLatestLead = normalizeForSemanticMatch(latestLead.content);
-  const normalizedPreviousAi = normalizeForSemanticMatch(previousAi?.content ?? '');
-  const leadHistoryText = normalizeForSemanticMatch(
-    history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
-  );
-
-  if (qualificationState?.singleUnderTwelveWithoutAdult || isSingleUnderTwelveQuoteWithoutKnownAdult(leadHistoryText)) {
-    return 'Para contratar uma unica vida abaixo de 12 anos, e necessario incluir um adulto. Algum adulto tambem vai entrar na cotacao?';
-  }
-
-  if (
-    previousAi
-    &&
-    CNPJ_OR_MEI_REGEX.test(normalizedPreviousAi)
-    && NO_BUSINESS_ID_RESPONSE_REGEX.test(normalizedLatestLead)
-  ) {
-    return 'Entendi, vamos seguir pela pessoa física. Em qual cidade vocês vão utilizar o plano?';
-  }
-
-  if (
-    previousAi
-    &&
-    MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText)
-    && CITY_QUESTION_REGEX.test(normalizedPreviousAi)
-  ) {
-    return 'Para eu seguir com a cotação, alguém que vai entrar no plano tem CNPJ ou MEI?';
-  }
-
-  if (qualificationState && qualificationStateIsComplete(qualificationState)) {
-    return 'Perfeito. Já consegui as informações que precisava por aqui. Vou montar as opções que façam mais sentido para o seu perfil e te mando a cotação.';
-  }
-
-  return null;
-};
-
 export const extractHandoff = (
   text: string,
 ): { text: string; handoffCode: HandoffCode | null; handoffNote: string | null } => {
@@ -804,16 +644,4 @@ export const splitGeneratedReply = (
   }).filter(Boolean);
 
   return { messages, handoffCode, handoffNote };
-};
-
-export const inferQualificationCompletionHandoff = (
-  visibleMessages: string[],
-  history: AutonomousMessageRow[],
-  qualificationState?: AutonomousQualificationState,
-): HandoffCode | null => {
-  const visibleReply = visibleMessages.join('\n').trim();
-  return QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleReply)
-    && hasQualificationDataForCompletion(history, qualificationState)
-    ? 'QUALIFICACAO_COMPLETA'
-    : null;
 };

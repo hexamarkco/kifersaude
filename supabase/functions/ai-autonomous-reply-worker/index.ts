@@ -25,25 +25,14 @@ import {
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
-  buildQualificationDecisionPrompt,
-  extractAutonomousQualificationState,
-  type AutonomousQualificationState,
-} from '../_shared/ai-autonomous-qualification.ts';
-import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-  buildAutonomousValidationFallback,
+  buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
   buildReferencePrompt,
-  buildReplyUserPrompt,
   buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
   getReliableLeadFirstName,
-  inferQualificationCompletionHandoff,
-  CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
-  QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
-  MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
-  QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
   type HandoffCode,
@@ -61,15 +50,6 @@ const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
 const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
-const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
-  '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
-  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando a cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar.',
-  'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
-  'O encerramento visivel precisa soar humano e nao pode recapitular idade, cidade, bairro, CNPJ, MEI ou operadora. Nao use Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira duas frases curtas com uma confirmacao natural e o proximo passo. Exemplo valido. Perfeito, Nick. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.',
-  'Nao faca pergunta no encerramento. O nome e opcional e so deve ser usado se estiver validado e soar natural.',
-  'No FINAL ABSOLUTO, inclua exatamente `[[HANDOFF: QUALIFICACAO_COMPLETA | cotacao encaminhada para atendimento manual]]`.',
-  'A tag e interna: nunca a explique ao cliente. Nao faca nova pergunta nem continue o atendimento depois da confirmacao.',
-].join('\n');
 
 type WorkerRequestBody = {
   source?: string;
@@ -172,69 +152,23 @@ const recordAutonomousAttendanceEvent = async (params: {
   leadId: string;
   eventType: string;
   correlationId: string;
-  qualificationState?: AutonomousQualificationState;
   qualificationStatus?: string;
   decision?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }): Promise<void> => {
-  const { supabaseAdmin, chatId, leadId, eventType, correlationId, qualificationState, qualificationStatus, decision, metadata } = params;
+  const { supabaseAdmin, chatId, leadId, eventType, correlationId, qualificationStatus, decision, metadata } = params;
   const result = await callAutonomousRpc(supabaseAdmin, 'record_ai_autonomous_attendance_event', {
     p_chat_id: chatId,
     p_lead_id: leadId,
     p_event_type: eventType,
     p_correlation_id: correlationId,
-    p_qualification_status: qualificationStatus ?? qualificationState?.status ?? null,
+    p_qualification_status: qualificationStatus ?? null,
     p_decision: decision ?? {},
-    p_qualification_state: qualificationState ?? {},
+    p_qualification_state: {},
     p_metadata: metadata ?? {},
   });
   if (result.error) {
     throw new Error(`Erro ao registrar evento do atendimento autonomo: ${result.error.message}`);
-  }
-};
-
-const persistQualificationState = async (params: {
-  supabaseAdmin: ReturnType<typeof createAdminClient>;
-  chatId: string;
-  leadId: string;
-  state: AutonomousQualificationState;
-  correlationId: string;
-}): Promise<void> => {
-  const { supabaseAdmin, chatId, leadId, state, correlationId } = params;
-  const stateResult = await callAutonomousRpc(supabaseAdmin, 'upsert_ai_autonomous_qualification_state', {
-    p_chat_id: chatId,
-    p_lead_id: leadId,
-    p_state: state,
-  });
-  if (stateResult.error) {
-    throw new Error(`Erro ao persistir estado da qualificacao: ${stateResult.error.message}`);
-  }
-
-  const decision = {
-    nextAction: state.status === 'complete' ? 'complete_qualification' : 'ask_missing_fields',
-    shouldReply: true,
-    shouldCompleteQualification: state.status === 'complete',
-    shouldChangeStatus: false,
-    shouldDisableAutonomousService: false,
-    missingRequiredFields: state.missingRequiredFields,
-  };
-  try {
-    await recordAutonomousAttendanceEvent({
-      supabaseAdmin,
-      chatId,
-      leadId,
-      eventType: 'qualification_decision',
-      correlationId,
-      qualificationState: state,
-      decision,
-      metadata: { source: 'ai-autonomous-reply-worker' },
-    });
-  } catch (error) {
-    console.warn('[ai-autonomous-reply-worker] falha ao registrar evento de qualificacao', {
-      chatId,
-      leadId,
-      error: error instanceof Error ? error.message : String(error),
-    });
   }
 };
 
@@ -645,7 +579,7 @@ Deno.serve(async (req: Request) => {
           fetchQuickReplies(supabaseAdmin),
           supabaseAdmin
             .from('leads')
-            .select('nome_completo, cidade, regiao, tipo_contratacao, operadora_atual')
+            .select('nome_completo')
             .eq('id', leadId)
             .maybeSingle(),
         ]);
@@ -670,13 +604,6 @@ Deno.serve(async (req: Request) => {
             content: getMessageContent(row),
           }))
           .filter((row) => row.content.length > 0);
-
-        const qualificationState = extractAutonomousQualificationState(history, new Date().toISOString(), {
-          city: leadResult.data?.cidade,
-          state: leadResult.data?.regiao,
-          contractingType: leadResult.data?.tipo_contratacao,
-          currentOperator: leadResult.data?.operadora_atual,
-        });
 
         if (history.length === 0 || history[history.length - 1].role !== 'lead') {
           const latestFetched = fetchedHistoryRows[0];
@@ -731,14 +658,6 @@ Deno.serve(async (req: Request) => {
         }
 
         const correlationId = `${job.id}:${promptInboundMessageId}`;
-        await persistQualificationState({
-          supabaseAdmin,
-          chatId: chat.id,
-          leadId,
-          state: qualificationState,
-          correlationId,
-        });
-
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
         const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
         console.log('[ai-autonomous-reply-worker] contexto pronto para gerar resposta', {
@@ -763,52 +682,30 @@ Deno.serve(async (req: Request) => {
           AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
         ].filter(Boolean).join('\n');
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
-        const userPrompt = [buildReplyUserPrompt(history, {
+        const userPrompt = buildAutonomousAttendanceUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
-        }), buildQualificationDecisionPrompt(qualificationState), AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION].join('\n\n');
+        });
 
-        let generatedReplyText: string;
-        try {
-          const result = await generateTextForFeature({
-            supabaseAdmin,
-            featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
-            task: 'autonomous_attendance',
-            systemPrompt,
-            userPrompt,
-            temperature: autonomousConfig?.temperature || 0.6,
-            maxTokens: autonomousConfig?.maxOutputTokens || 350,
-            edgeFunction: 'ai-autonomous-reply-worker',
-            leadId,
-            chatId: chat.id,
-            messageId: promptInboundMessageId,
-            maxAttempts: 2,
-            maxProviderRequestsPerAttempt: 1,
-            retrySameResolvedModel: true,
-            validateOutput: (text) => validateAutonomousReplyOutput(text, history, qualificationState),
-            buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-          });
-          generatedReplyText = result.text;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const fallbackReply = buildAutonomousValidationFallback(history, qualificationState);
-          const canRecoverFromValidation = errorMessage.includes(MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE)
-            || errorMessage.includes(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE)
-            || errorMessage.includes(QUALIFICATION_CLOSURE_VALIDATION_MESSAGE)
-            || errorMessage.includes(QUALIFICATION_REPETITION_VALIDATION_MESSAGE);
-          if (!canRecoverFromValidation || !fallbackReply) throw error;
-
-          const fallbackValidation = validateAutonomousReplyOutput(fallbackReply, history, qualificationState);
-          if (!fallbackValidation.valid) throw error;
-
-          generatedReplyText = fallbackReply;
-          console.warn('[ai-autonomous-reply-worker] usando fallback deterministico apos rejeicao repetida de escopo', {
-            jobId: job.id,
-            chatId: chat.id,
-            leadId,
-            fallbackReply,
-          });
-        }
+        const result = await generateTextForFeature({
+          supabaseAdmin,
+          featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
+          task: 'autonomous_attendance',
+          systemPrompt,
+          userPrompt,
+          temperature: autonomousConfig?.temperature || 0.6,
+          maxTokens: autonomousConfig?.maxOutputTokens || 350,
+          edgeFunction: 'ai-autonomous-reply-worker',
+          leadId,
+          chatId: chat.id,
+          messageId: promptInboundMessageId,
+          maxAttempts: 2,
+          maxProviderRequestsPerAttempt: 1,
+          retrySameResolvedModel: true,
+          validateOutput: (text) => validateAutonomousReplyOutput(text, history),
+          buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
+        });
+        const generatedReplyText = result.text;
 
         const parsedReply = splitGeneratedReply(generatedReplyText, false);
         const messages = [...parsedReply.messages];
@@ -843,7 +740,7 @@ Deno.serve(async (req: Request) => {
             maxAttempts: 2,
             maxProviderRequestsPerAttempt: 1,
             retrySameResolvedModel: true,
-            validateOutput: (text) => validateAutonomousReplyOutput(text, history, qualificationState),
+            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
             buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
           });
           const retryParsed = splitGeneratedReply(retryResult.text, false);
@@ -872,17 +769,6 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        if (!handoffCode) {
-          handoffCode = inferQualificationCompletionHandoff(messages, history, qualificationState);
-          if (handoffCode) {
-            console.warn('[ai-autonomous-reply-worker] handoff de cotacao inferido da confirmacao visivel', {
-              jobId: job.id,
-              chatId: chat.id,
-              leadId,
-            });
-          }
-        }
-
         if (messages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
         console.log('[ai-autonomous-reply-worker] resposta gerada', {
           jobId: job.id,
@@ -898,7 +784,6 @@ Deno.serve(async (req: Request) => {
           leadId,
           eventType: 'reply_generated',
           correlationId,
-          qualificationState,
           decision: {
             handoffCode,
             messageCount: messages.length,
@@ -924,7 +809,6 @@ Deno.serve(async (req: Request) => {
             leadId,
             eventType: 'reply_cancelled',
             correlationId,
-            qualificationState,
             decision: { reason: 'new_inbound_message_during_generation' },
           }).catch(() => undefined);
           continue;
@@ -1042,7 +926,6 @@ Deno.serve(async (req: Request) => {
             leadId,
             eventType: 'handoff_completed',
             correlationId,
-            qualificationState,
             decision: { handoffCode },
           }).catch(() => undefined);
         }

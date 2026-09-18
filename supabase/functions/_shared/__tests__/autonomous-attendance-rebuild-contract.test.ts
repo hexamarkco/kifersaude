@@ -15,18 +15,15 @@ const webhookSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/comm-whatsapp-webhook/index.ts'),
   'utf8',
 );
-const qualificationSource = readFileSync(
-  resolve(process.cwd(), 'supabase/functions/_shared/ai-autonomous-qualification.ts'),
-  'utf8',
-);
 
-test('qualification state is persisted and exposes deterministic decision data', () => {
+test('historico completo orienta a qualificacao e o parser nao decide o proximo turno', () => {
   assert.match(migrationSource, /ai_autonomous_qualification_states/);
   assert.match(migrationSource, /upsert_ai_autonomous_qualification_state/);
-  assert.match(qualificationSource, /missingRequiredFields/);
-  assert.match(workerSource, /extractAutonomousQualificationState/);
-  assert.match(workerSource, /persistQualificationState/);
-  assert.match(workerSource, /buildQualificationDecisionPrompt/);
+  assert.match(workerSource, /buildAutonomousAttendanceUserPrompt/);
+  assert.match(workerSource, /buildAutonomousAttendanceUserPrompt\(history/);
+  assert.doesNotMatch(workerSource, /extractAutonomousQualificationState/);
+  assert.doesNotMatch(workerSource, /persistQualificationState/);
+  assert.doesNotMatch(workerSource, /qualification_decision/);
 });
 
 test('commercial status blocks autonomous reactivation and scheduling', () => {

@@ -7,10 +7,10 @@ import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
   buildReferencePrompt,
-  buildReplyUserPrompt,
   buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
@@ -101,7 +101,6 @@ Deno.serve(async (req: Request) => {
 
     const history = (historyResult.data ?? []) as (AutonomousMessageRow & { handoff_reason: string | null; handoff_code: string | null })[];
     const isOpeningMode = history.length === 0;
-
     // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa —
     // mesmo que o lead mande agradecimento ou qualquer outra mensagem. A
     // partir daqui e atendimento humano.
@@ -139,7 +138,7 @@ Deno.serve(async (req: Request) => {
     const leadFirstName = getReliableLeadFirstName(leadName);
     const userPrompt = isOpeningMode
       ? buildOpeningUserPrompt(leadName)
-      : buildReplyUserPrompt(history, {
+      : buildAutonomousAttendanceUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
         });

@@ -69,10 +69,8 @@ test('the worker discards an answer if the customer writes again while the model
   assert.match(workerSource, /order\('created_at', \{ ascending: false \}\)/);
 });
 
-test('the worker has a deterministic recovery when validation rejects beneficiary scope twice', () => {
-  assert.match(workerSource, /buildAutonomousValidationFallback/);
-  assert.match(workerSource, /MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE/);
-  assert.match(workerSource, /CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE/);
-  assert.match(workerSource, /fallbackValidation = validateAutonomousReplyOutput/);
-  assert.match(workerSource, /usando fallback deterministico apos rejeicao repetida de escopo/);
+test('the worker retries through the model when output validation rejects a response', () => {
+  assert.match(workerSource, /buildAutonomousValidationRetryInstruction/);
+  assert.match(workerSource, /validateOutput: \(text\) => validateAutonomousReplyOutput\(text, history\)/);
+  assert.doesNotMatch(workerSource, /buildAutonomousValidationFallback/);
 });

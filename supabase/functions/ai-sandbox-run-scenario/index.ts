@@ -7,10 +7,10 @@ import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+  buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
   buildReferencePrompt,
-  buildReplyUserPrompt,
   buildStylePrompt,
   fetchQuickReplies,
   fetchSimilarSituations,
@@ -334,7 +334,7 @@ Deno.serve(async (req: Request) => {
         featureKey: 'autonomous.reply',
         task: 'autonomous_attendance',
         systemPrompt: await buildAttendantSystemPrompt(),
-        userPrompt: buildReplyUserPrompt(history, {
+        userPrompt: buildAutonomousAttendanceUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
         }),

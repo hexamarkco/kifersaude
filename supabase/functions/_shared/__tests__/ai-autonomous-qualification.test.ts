@@ -177,4 +177,28 @@ test('nao interpreta o numero de uma reclamacao como idade', () => {
   assert.equal(state.lives.count, 1);
   assert.deepEqual(state.lives.items.map((life) => life.age), [46]);
 });
+
+test('consolida respostas curtas da Karine sem inventar CNPJ ou plano', () => {
+  const state = stateFrom([
+    { role: 'lead', content: 'Pra mim' },
+    { role: 'lead', content: 'Bom dia' },
+    { role: 'ai', content: 'Bom dia. Qual é a sua idade?' },
+    { role: 'lead', content: '44' },
+    { role: 'ai', content: 'Em qual cidade você vai usar o plano?' },
+    { role: 'lead', content: 'Cachoeiro de Itapemirim' },
+    { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+    { role: 'lead', content: 'Nao' },
+    { role: 'lead', content: 'Sou funcionária pública municipal' },
+    { role: 'lead', content: 'Efetiva' },
+    { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+    { role: 'lead', content: 'Nao' },
+  ]);
+
+  assert.equal(state.lives.count, 1);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [44]);
+  assert.equal(state.location.city, 'Cachoeiro De Itapemirim');
+  assert.equal(state.company.hasCnpjOrMei, 'no');
+  assert.equal(state.currentHealthPlan.hasPlan, 'no');
+  assert.equal(qualificationStateIsComplete(state), true);
+});
 });

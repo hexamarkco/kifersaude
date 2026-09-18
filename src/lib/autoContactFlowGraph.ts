@@ -25,19 +25,58 @@ const getTriggerLabel = (triggerType: AutoContactFlow['triggerType']) => {
   }
 };
 
+const getActionLabel = (step: AutoContactFlowStep, fallback: string) => {
+  if (step.actionType === 'send_message' && step.messages?.some((item) => 'ai' in item)) {
+    return 'Enviar mensagem (IA)';
+  }
+
+  return fallback;
+};
+
+const syncExistingGraphSteps = (
+  graph: AutoContactFlowGraph,
+  steps: AutoContactFlowStep[],
+): AutoContactFlowGraph => {
+  const stepsById = new Map(
+    steps
+      .filter((step) => step.id.trim())
+      .map((step) => [step.id, step]),
+  );
+
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => {
+      if (node.type !== 'action' || !node.data.step) return node;
+
+      const canonicalStep = stepsById.get(node.data.step.id);
+      if (!canonicalStep) return node;
+
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          label: getActionLabel(canonicalStep, node.data.label),
+          step: canonicalStep,
+        },
+      };
+    }),
+  };
+};
+
 export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGraph => {
   if (flow.flowGraph?.nodes?.length) {
-    const triggerNode = flow.flowGraph.nodes.find(n => n.type === 'trigger');
+    const syncedGraph = syncExistingGraphSteps(flow.flowGraph, flow.steps);
+    const triggerNode = syncedGraph.nodes.find(n => n.type === 'trigger');
     if (triggerNode?.data?.triggerType) {
-      return flow.flowGraph;
+      return syncedGraph;
     }
     
     const triggerType = flow.triggerType ?? 'lead_created';
     const triggerLabel = getTriggerLabel(triggerType);
     
     return {
-      ...flow.flowGraph,
-      nodes: flow.flowGraph.nodes.map(node => {
+      ...syncedGraph,
+      nodes: syncedGraph.nodes.map(node => {
         if (node.type === 'trigger') {
           return {
             ...node,
@@ -361,7 +400,9 @@ const collectPathFromEdge = (
 export const expandFlowGraphToFlows = (flow: AutoContactFlow): AutoContactFlow[] => {
   if (!flow.flowGraph) return [flow];
 
-  const graph = flow.flowGraph;
+  // The linear steps are the canonical persisted representation. The graph
+  // is a visual projection and may have been written by an older client.
+  const graph = buildFlowGraphFromFlow(flow);
   const conditionNode = getBranchConditionNode(graph);
 
   if (!conditionNode) {

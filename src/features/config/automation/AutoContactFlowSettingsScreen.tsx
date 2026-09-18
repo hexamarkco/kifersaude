@@ -1311,7 +1311,7 @@ export default function AutoContactFlowSettingsScreen() {
   const simulationFlow = useMemo(() => {
     if (!activeFlow) return null;
     return activeFlow.flowGraph
-      ? applyFlowGraphToFlow(activeFlow, activeFlow.flowGraph)
+      ? applyFlowGraphToFlow(activeFlow, buildFlowGraphFromFlow(activeFlow))
       : activeFlow;
   }, [activeFlow]);
   const testableSteps = useMemo(

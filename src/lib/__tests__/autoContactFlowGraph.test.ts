@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import type { AutoContactFlow } from '../autoContactService';
+import type { AutoContactFlow, AutoContactFlowStep } from '../autoContactService';
 import { buildFlowGraphFromFlow, expandFlowGraphToFlows } from '../autoContactFlowGraph';
 
 const buildBaseFlow = (): AutoContactFlow => ({
@@ -186,4 +186,24 @@ test('buildFlowGraphFromFlow represents the inactivity trigger', () => {
   assert.equal(trigger?.data.triggerType, 'inactivity_duration');
   assert.equal(trigger?.data.triggerDurationHours, 48);
   assert.deepEqual(trigger?.data.triggerStatuses, ['Contato Inicial', 'Em Atendimento']);
+});
+
+test('canonical flow steps replace stale visual graph steps', () => {
+  const canonicalStep: AutoContactFlowStep = {
+    id: 'step-intro',
+    delayValue: 0,
+    delayUnit: 'hours',
+    actionType: 'send_message',
+    messages: [{ ai: { instruction: 'Retome a conversa com naturalidade.' } }],
+  };
+  const flow = { ...buildBaseFlow(), steps: [canonicalStep] };
+
+  const graph = buildFlowGraphFromFlow(flow);
+  const actionNode = graph.nodes.find((node) => node.id === 'action-intro');
+
+  assert.equal(actionNode?.data.label, 'Enviar mensagem (IA)');
+  assert.deepEqual(actionNode?.data.step?.messages, canonicalStep.messages);
+
+  const expanded = expandFlowGraphToFlows(flow);
+  assert.deepEqual(expanded[0]?.steps.find((step) => step.id === 'step-intro')?.messages, canonicalStep.messages);
 });

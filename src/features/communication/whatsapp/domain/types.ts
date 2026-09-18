@@ -30,6 +30,9 @@ export type CommWhatsAppChat = {
   channel_id: string;
   external_chat_id: string;
   is_group: boolean;
+  presence_status?: CommWhatsAppPresenceStatus | null;
+  presence_last_seen_at?: string | null;
+  presence_updated_at?: string | null;
   phone_number: string;
   phone_digits: string;
   display_name: string;
@@ -65,6 +68,23 @@ export type CommWhatsAppChat = {
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type CommWhatsAppPresenceStatus = 'online' | 'offline' | 'typing' | 'recording' | 'pending' | 'unknown';
+
+export type CommWhatsAppPresence = {
+  id?: string;
+  channel_id?: string;
+  external_entry_id: string;
+  chat_id: string | null;
+  status: CommWhatsAppPresenceStatus;
+  last_seen_at: string | null;
+  observed_at: string;
+  subscription_status?: string | null;
+  subscription_attempted_at?: string | null;
+  subscribed_at?: string | null;
+  subscription_error?: string | null;
+  raw_payload?: Record<string, unknown>;
 };
 
 export type CommWhatsAppGroup = {

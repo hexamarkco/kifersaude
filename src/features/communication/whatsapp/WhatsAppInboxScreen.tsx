@@ -44,6 +44,7 @@ import {
   whatsappFollowUpService,
   whatsappMediaRepository,
   whatsappMessagesRepository,
+  commWhatsAppService,
   approveInboxFollowUpSchedule,
   clearInboxLeadAgenda,
   insertInboxLegacyFollowUpAudits,
@@ -51,6 +52,7 @@ import {
   markInboxRemindersRead,
   scheduleInboxFollowUp,
   subscribeToInboxChats,
+  subscribeToInboxPresences,
   subscribeToInboxLead,
   subscribeToInboxReminders,
   updateInboxFollowUpSentAudit,
@@ -74,7 +76,7 @@ import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '.
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from './domain/types';
+import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, CommWhatsAppPresence } from './domain/types';
 import type { CommWhatsAppGroupContext } from './domain/types';
 import {
   canDeleteOutboundMessage,
@@ -163,6 +165,7 @@ import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 import WhatsAppScheduleMessageModal from './components/WhatsAppScheduleMessageModal';
 import WhatsAppScheduledMessagesPanel from './components/WhatsAppScheduledMessagesPanel';
+import WhatsAppPresenceIndicator from './components/WhatsAppPresenceIndicator';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
@@ -1447,6 +1450,7 @@ function InboxChatListItem({
                   {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
                   {getSafeChatDisplayName(chat, connectedUserName)}
                 </p>
+                <WhatsAppPresenceIndicator chat={chat} compact />
                 {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
                 {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
@@ -2169,7 +2173,7 @@ function WhatsAppMessageBody({
                 variant="text"
                 size="sm"
                 onClick={() => onTranscribe(message)}
-                className="whatsapp-inbox-transcribe-button h-7 min-h-0 px-1.5 text-[11px] font-semibold"
+                className="whatsapp-inbox-transcribe-button font-semibold"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -3478,6 +3482,24 @@ export default function WhatsAppInboxScreen() {
       return next;
     });
   }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, buildChatsSignature, chatMatchesActiveFilters]);
+
+  const applyRealtimePresenceChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppPresence>) => {
+    const incomingPresence = payload.new as Partial<CommWhatsAppPresence> | null;
+    const previousPresence = payload.old as Partial<CommWhatsAppPresence> | null;
+    const targetChatId = incomingPresence?.chat_id ?? previousPresence?.chat_id ?? null;
+    if (!targetChatId) return;
+
+    setChats((current) => current.map((chat) => (
+      chat.id !== targetChatId
+        ? chat
+        : {
+            ...chat,
+            presence_status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
+            presence_last_seen_at: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
+            presence_updated_at: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
+          }
+    )));
+  }, []);
 
   const applyRealtimeMessageChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {
     const incomingMessage = payload.new as CommWhatsAppMessage | null;
@@ -5647,6 +5669,50 @@ export default function WhatsAppInboxScreen() {
       unsubscribe();
     };
   }, [applyRealtimeChatChange, channelState?.id]);
+
+  useEffect(() => {
+    if (!channelState?.id) return undefined;
+
+    const unsubscribe = subscribeToInboxPresences(
+      channelState.id,
+      applyRealtimePresenceChange,
+      (status) => {
+        if (status === 'unavailable') {
+          console.warn('[WhatsAppInbox] realtime de presencas indisponivel; polling permanece ativo.');
+        }
+      },
+    );
+
+    return () => unsubscribe();
+  }, [applyRealtimePresenceChange, channelState?.id]);
+
+  useEffect(() => {
+    if (!selectedChat?.id) return undefined;
+    let active = true;
+
+    void commWhatsAppService.ensureChatPresence(selectedChat.id)
+      .then((result) => {
+        if (!active || !result.presence) return;
+        setChats((current) => current.map((chat) => (
+          chat.id !== selectedChat.id
+            ? chat
+            : {
+                ...chat,
+                presence_status: result.presence?.status ?? null,
+                presence_last_seen_at: result.presence?.last_seen_at ?? null,
+                presence_updated_at: result.presence?.observed_at ?? null,
+              }
+        )));
+      })
+      .catch((error) => {
+        if (!active || isSupabaseConnectivityError(error)) return;
+        console.warn('[WhatsAppInbox] nao foi possivel ativar presenca da conversa', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedChat?.id]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -9248,6 +9314,7 @@ export default function WhatsAppInboxScreen() {
                         Grupo{groupContext ? ` · ${groupContext.participants.length} participantes` : ''}
                       </span>
                     ) : <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>}
+                    <WhatsAppPresenceIndicator chat={selectedChat} />
                     {!selectedChat.is_group && !selectedChat.saved_contact_name ? (
                       <button
                         type="button"

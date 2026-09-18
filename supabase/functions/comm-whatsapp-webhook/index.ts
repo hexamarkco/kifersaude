@@ -28,6 +28,7 @@ import {
   isInboxWhapiChatId,
   isWhapiGroupChatId,
   persistWhapiGroupEvent,
+  persistWhapiPresence,
   restoreWhapiGroupSenderPhone,
   resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
@@ -54,6 +55,10 @@ import {
   buildWhapiGroupEventReceiptKey,
   extractWhapiGroupEvents,
 } from '../_shared/whapi-group-webhook-parser.ts';
+import {
+  buildWhapiPresenceEventKey,
+  extractWhapiPresenceItems,
+} from '../_shared/whapi-presence-parser.ts';
 import {
   findCommWhatsAppEventReceipt as findEventReceipt,
   recordCommWhatsAppEventReceipt as recordEventReceipt,
@@ -788,6 +793,40 @@ Deno.serve(async (req: Request) => {
       if (accepted) persistedGroupEvents += 1;
     }
 
+    const presenceItems = extractWhapiPresenceItems(payload);
+    let persistedPresences = 0;
+    let duplicatePresences = 0;
+    for (const presence of presenceItems) {
+      const eventKey = buildWhapiPresenceEventKey(eventAction, presence);
+      if (await findEventReceipt(supabaseAdmin, eventKey)) {
+        duplicatePresences += 1;
+        continue;
+      }
+
+      const persisted = await persistWhapiPresence(supabaseAdmin, {
+        channelId: channel.id,
+        item: presence,
+      });
+      if (!persisted) continue;
+
+      const accepted = await recordEventReceipt(
+        supabaseAdmin,
+        channel.id,
+        eventKey,
+        'presence',
+        presence.entryId,
+        {
+          event_action: eventAction,
+          entry_id: presence.entryId,
+          status: presence.status,
+          last_seen_at: presence.lastSeenAt,
+          chat_id: persisted.chatId,
+        },
+        archivePath,
+      );
+      if (accepted) persistedPresences += 1;
+    }
+
     if (eventType === 'statuses' && Array.isArray(payload.statuses)) {
       for (const item of payload.statuses) {
         if (!isRecord(item)) continue;
@@ -878,6 +917,11 @@ Deno.serve(async (req: Request) => {
         received: groupEvents.length,
         persisted: persistedGroupEvents,
         duplicates: duplicateGroupEvents,
+      },
+      presences: {
+        received: presenceItems.length,
+        persisted: persistedPresences,
+        duplicates: duplicatePresences,
       },
     }), {
       status: 200,

@@ -22,6 +22,12 @@ import {
   type WhapiGroupEventItem,
   type WhapiGroupSnapshot,
 } from './whapi-group-webhook-parser.ts';
+import {
+  extractWhapiPresenceItems,
+  normalizeWhapiPresenceItem,
+  type WhapiPresenceItem,
+  type WhapiPresenceStatus,
+} from './whapi-presence-parser.ts';
 
 export {
   buildWhapiDirectChatId,
@@ -40,6 +46,10 @@ export {
   normalizeWhapiChatId,
   normalizeWhapiParticipantId,
   normalizeWhapiPhoneChatId,
+  extractWhapiPresenceItems,
+  normalizeWhapiPresenceItem,
+  type WhapiPresenceItem,
+  type WhapiPresenceStatus,
 };
 
 // Antes '*': qualquer origem podia ler a resposta dessas Edge Functions no
@@ -3005,6 +3015,73 @@ export async function fetchWhapiGroup(params: {
   return isRecord(payload) ? payload : null;
 }
 
+export type WhapiPresenceSubscriptionStatus = 'subscribed' | 'already_subscribed' | 'not_found' | 'failed';
+
+export type WhapiPresenceSubscriptionResult = {
+  entryId: string;
+  status: WhapiPresenceSubscriptionStatus;
+  error: string | null;
+};
+
+export async function subscribeWhapiPresence(params: {
+  token: string;
+  entryId: string;
+}): Promise<WhapiPresenceSubscriptionResult> {
+  const entryId = normalizeWhapiParticipantId(params.entryId);
+  if (!entryId) {
+    throw new Error('Entrada invalida para assinatura de presenca.');
+  }
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/presences/${encodeURIComponent(entryId)}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  }, 15_000);
+  const payload = await readResponsePayload(response);
+  const error = response.ok ? null : parseWhapiError(payload) || `Whapi respondeu HTTP ${response.status}.`;
+
+  return {
+    entryId,
+    status: response.ok
+      ? 'subscribed'
+      : response.status === 409
+        ? 'already_subscribed'
+        : response.status === 404
+          ? 'not_found'
+          : 'failed',
+    error,
+  };
+}
+
+export async function fetchWhapiPresence(params: {
+  token: string;
+  entryId: string;
+}): Promise<WhapiPresenceItem | null> {
+  const entryId = normalizeWhapiParticipantId(params.entryId);
+  if (!entryId) return null;
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/presences/${encodeURIComponent(entryId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  }, 15_000);
+  const payload = await readResponsePayload(response);
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar presenca na Whapi.');
+  }
+
+  const rawPresence = isRecord(payload) && isRecord(payload.presence) ? payload.presence : payload;
+  const item = normalizeWhapiPresenceItem(
+    isRecord(rawPresence) ? { ...rawPresence, contact_id: rawPresence.contact_id ?? entryId } : rawPresence,
+  );
+  return item ? { ...item, entryId } : null;
+}
+
 const groupTimestampToIso = (value: string): string | null => {
   if (!value) return null;
   const numeric = Number(value);
@@ -3218,6 +3295,128 @@ export async function restoreWhapiGroupSenderPhone(
   if (error) {
     console.error('[comm-whatsapp] falha ao preservar sender_phone de grupo', error.message);
   }
+}
+
+type CommWhatsAppPresenceSubscriptionUpdate = {
+  entryId: string;
+  status: 'unknown' | 'pending' | 'subscribed' | 'already_subscribed' | 'not_found' | 'failed';
+  error?: string | null;
+};
+
+const findWhapiPresenceChatId = async (
+  supabaseAdmin: SupabaseClient,
+  channelId: string,
+  entryId: string,
+): Promise<string | null> => {
+  const byExternalId = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .select('id')
+    .eq('channel_id', channelId)
+    .eq('external_chat_id', entryId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (byExternalId.error) throw new Error(`Nao foi possivel resolver chat da presenca: ${byExternalId.error.message}`);
+  if (byExternalId.data?.id) return byExternalId.data.id;
+
+  const digits = extractWhapiParticipantDigits(entryId);
+  if (!digits) return null;
+
+  const byPhone = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .select('id')
+    .eq('channel_id', channelId)
+    .eq('phone_digits', digits)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (byPhone.error) throw new Error(`Nao foi possivel resolver chat da presenca por telefone: ${byPhone.error.message}`);
+  return byPhone.data?.id ?? null;
+};
+
+export async function updateWhapiPresenceSubscription(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; entryId: string; update: CommWhatsAppPresenceSubscriptionUpdate },
+): Promise<void> {
+  const entryId = normalizeWhapiParticipantId(params.entryId);
+  if (!entryId) return;
+
+  const chatId = await findWhapiPresenceChatId(supabaseAdmin, params.channelId, entryId);
+  const nowIso = getNowIso();
+  const isSubscribed = params.update.status === 'subscribed' || params.update.status === 'already_subscribed';
+  const existing = await supabaseAdmin
+    .from('comm_whatsapp_presences')
+    .select('id')
+    .eq('channel_id', params.channelId)
+    .eq('external_entry_id', entryId)
+    .maybeSingle();
+  if (existing.error) throw new Error(`Nao foi possivel carregar assinatura de presenca: ${existing.error.message}`);
+
+  const updatePayload = {
+    chat_id: chatId,
+    subscription_status: params.update.status,
+    subscription_attempted_at: nowIso,
+    subscribed_at: isSubscribed ? nowIso : null,
+    subscription_error: params.update.error ?? null,
+    updated_at: nowIso,
+  };
+  const result = existing.data?.id
+    ? await supabaseAdmin
+      .from('comm_whatsapp_presences')
+      .update(updatePayload)
+      .eq('id', existing.data.id)
+    : await supabaseAdmin
+    .from('comm_whatsapp_presences')
+    .insert({
+      channel_id: params.channelId,
+      external_entry_id: entryId,
+      chat_id: chatId,
+      status: 'unknown',
+      raw_payload: {},
+      ...updatePayload,
+    });
+  if (result.error) throw new Error(`Nao foi possivel registrar assinatura de presenca: ${result.error.message}`);
+}
+
+export async function persistWhapiPresence(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; item: WhapiPresenceItem },
+): Promise<{ id: string; chatId: string | null; entryId: string; status: WhapiPresenceStatus } | null> {
+  const entryId = normalizeWhapiParticipantId(params.item.entryId);
+  if (!entryId) return null;
+
+  const chatId = await findWhapiPresenceChatId(supabaseAdmin, params.channelId, entryId);
+  const existing = await supabaseAdmin
+    .from('comm_whatsapp_presences')
+    .select('last_seen_at, subscription_status, subscribed_at')
+    .eq('channel_id', params.channelId)
+    .eq('external_entry_id', entryId)
+    .maybeSingle();
+  if (existing.error) throw new Error(`Nao foi possivel carregar presenca anterior: ${existing.error.message}`);
+
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_presences')
+    .upsert({
+      channel_id: params.channelId,
+      external_entry_id: entryId,
+      chat_id: chatId,
+      status: params.item.status,
+      last_seen_at: params.item.lastSeenAt ?? existing.data?.last_seen_at ?? null,
+      observed_at: getNowIso(),
+      subscription_status: existing.data?.subscription_status ?? 'unknown',
+      subscribed_at: existing.data?.subscribed_at ?? null,
+      raw_payload: params.item.raw,
+    }, { onConflict: 'channel_id,external_entry_id' })
+    .select('id, chat_id, external_entry_id, status')
+    .single();
+  if (error || !data) {
+    throw new Error(`Nao foi possivel persistir presenca: ${error?.message || 'registro ausente'}`);
+  }
+
+  return {
+    id: data.id,
+    chatId: data.chat_id,
+    entryId: data.external_entry_id,
+    status: data.status as WhapiPresenceStatus,
+  };
 }
 
 export async function fetchWhapiContactsPage(params: {

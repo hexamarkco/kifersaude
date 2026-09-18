@@ -14,6 +14,7 @@ export {
   markInboxRemindersRead,
   scheduleInboxFollowUp,
   subscribeToInboxChats,
+  subscribeToInboxPresences,
   subscribeToInboxLead,
   subscribeToInboxReminders,
   updateInboxFollowUpSentAudit,

@@ -12,6 +12,7 @@ import type {
   CommWhatsAppGroupContext,
   CommWhatsAppMessage,
   CommWhatsAppPhoneContact,
+  CommWhatsAppPresenceStatus,
 } from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
@@ -212,6 +213,16 @@ export type CommWhatsAppChatThread = {
   hasMore: boolean;
   generatedAt?: string | null;
   group?: CommWhatsAppGroupContext | null;
+};
+
+export type CommWhatsAppPresenceSyncResult = {
+  presence: {
+    status: CommWhatsAppPresenceStatus;
+    last_seen_at: string | null;
+    observed_at: string | null;
+  } | null;
+  subscriptionStatus: string;
+  subscriptionError: string | null;
 };
 
 export type CommWhatsAppRefreshedMessageStatus = {
@@ -1052,7 +1063,7 @@ export const commWhatsAppService = {
 
     const search = sanitizeSearch(params.search ?? '');
 
-    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats_with_groups' as never, {
+    const listArgs = {
       p_search: search || null,
       p_activity_filter: activityFilter,
       p_lead_filter: leadFilter,
@@ -1062,7 +1073,16 @@ export const commWhatsAppService = {
       p_lead_responsavel_filters: leadResponsavelFilters.length > 0 ? leadResponsavelFilters : null,
       p_limit: limit,
       p_offset: offset,
-    } as never);
+    } as never;
+
+    let { data, error } = await supabase.rpc('comm_whatsapp_list_chats_with_presence' as never, listArgs);
+    if (error) {
+      // Mantém o Inbox funcional durante a janela em que o frontend pode ser
+      // publicado antes da migration de presença no projeto Supabase.
+      const fallback = await supabase.rpc('comm_whatsapp_list_chats_with_groups' as never, listArgs);
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
@@ -1310,6 +1330,41 @@ export const commWhatsAppService = {
       hasMore: payload.hasMore === true || payload.has_more === true,
       generatedAt: readString(payload.generatedAt) || readString(payload.generated_at) || null,
       group,
+    };
+  },
+
+  async ensureChatPresence(chatId: string): Promise<CommWhatsAppPresenceSyncResult> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para ativar a presença desta conversa.' });
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-presence', {
+      body: { chatId },
+    });
+
+    if (error) {
+      const context = (error as { context?: unknown }).context;
+      if (context instanceof Response) {
+        const payload = await context.clone().json().catch(() => null) as { error?: unknown } | null;
+        if (typeof payload?.error === 'string' && payload.error.trim()) {
+          throw new Error(payload.error.trim());
+        }
+      }
+      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel ativar a presenca desta conversa.'));
+    }
+
+    const payload = toRecord(data);
+    const subscription = toRecord(payload.subscription);
+    const presence = toRecord(payload.presence);
+    const status = readString(presence.status) as CommWhatsAppPresenceStatus;
+
+    return {
+      presence: status
+        ? {
+            status,
+            last_seen_at: readString(presence.last_seen_at) || null,
+            observed_at: readString(presence.observed_at) || null,
+          }
+        : null,
+      subscriptionStatus: readString(subscription.status) || 'unknown',
+      subscriptionError: readString(subscription.error) || null,
     };
   },
 

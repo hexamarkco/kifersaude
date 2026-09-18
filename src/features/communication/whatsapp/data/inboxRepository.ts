@@ -11,7 +11,7 @@ import {
   normalizeReminderType,
   type Reminder,
 } from '../../../reminders';
-import type { CommWhatsAppChat } from '../domain/types';
+import type { CommWhatsAppChat, CommWhatsAppPresence } from '../domain/types';
 
 type SubscriptionStatusHandler = (status: 'connected' | 'unavailable') => void;
 
@@ -55,6 +55,30 @@ export function subscribeToInboxChats(
         event: '*',
         schema: 'public',
         table: 'comm_whatsapp_chats',
+        filter: `channel_id=eq.${channelId}`,
+      },
+      onChange,
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') onStatus?.('connected');
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onStatus?.('unavailable');
+    });
+  return () => { void databaseClient.removeChannel(channel); };
+}
+
+export function subscribeToInboxPresences(
+  channelId: string,
+  onChange: (payload: RealtimePostgresChangesPayload<CommWhatsAppPresence>) => void,
+  onStatus?: SubscriptionStatusHandler,
+): () => void {
+  const channel = databaseClient
+    .channel(`comm-whatsapp-presences-${crypto.randomUUID()}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'comm_whatsapp_presences',
         filter: `channel_id=eq.${channelId}`,
       },
       onChange,

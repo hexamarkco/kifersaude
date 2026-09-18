@@ -2399,6 +2399,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -2436,6 +2437,7 @@ export type Database = {
           id?: string
           identity_conflict?: boolean
           is_archived?: boolean
+          is_group?: boolean
           is_muted?: boolean
           is_pinned?: boolean
           last_message_at?: string | null
@@ -2473,6 +2475,7 @@ export type Database = {
           id?: string
           identity_conflict?: boolean
           is_archived?: boolean
+          is_group?: boolean
           is_muted?: boolean
           is_pinned?: boolean
           last_message_at?: string | null
@@ -2740,6 +2743,188 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_group_events: {
+        Row: {
+          after_state: Json
+          before_state: Json
+          channel_id: string
+          created_at: string
+          event_type: string
+          group_id: string
+          id: string
+          occurred_at: string
+          participant_ids: string[]
+          provider_event_key: string
+          raw_payload: Json
+          triggered_by: string | null
+        }
+        Insert: {
+          after_state?: Json
+          before_state?: Json
+          channel_id: string
+          created_at?: string
+          event_type: string
+          group_id: string
+          id?: string
+          occurred_at?: string
+          participant_ids?: string[]
+          provider_event_key: string
+          raw_payload?: Json
+          triggered_by?: string | null
+        }
+        Update: {
+          after_state?: Json
+          before_state?: Json
+          channel_id?: string
+          created_at?: string
+          event_type?: string
+          group_id?: string
+          id?: string
+          occurred_at?: string
+          participant_ids?: string[]
+          provider_event_key?: string
+          raw_payload?: Json
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_group_events_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_group_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_group_participants: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          external_participant_id: string
+          group_id: string
+          joined_at: string | null
+          membership_status: string
+          phone_digits: string | null
+          rank: string
+          raw_metadata: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          external_participant_id: string
+          group_id: string
+          joined_at?: string | null
+          membership_status?: string
+          phone_digits?: string | null
+          rank?: string
+          raw_metadata?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          external_participant_id?: string
+          group_id?: string
+          joined_at?: string | null
+          membership_status?: string
+          phone_digits?: string | null
+          rank?: string
+          raw_metadata?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_group_participants_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_groups: {
+        Row: {
+          admin_add_member_mode: boolean | null
+          channel_id: string
+          chat_id: string
+          chat_pic: string | null
+          chat_pic_full: string | null
+          created_at: string
+          created_at_provider: string | null
+          created_by: string | null
+          description: string | null
+          external_group_id: string
+          first_seen_at: string
+          id: string
+          last_synced_at: string | null
+          name: string
+          name_at: string | null
+          raw_metadata: Json
+          updated_at: string
+        }
+        Insert: {
+          admin_add_member_mode?: boolean | null
+          channel_id: string
+          chat_id: string
+          chat_pic?: string | null
+          chat_pic_full?: string | null
+          created_at?: string
+          created_at_provider?: string | null
+          created_by?: string | null
+          description?: string | null
+          external_group_id: string
+          first_seen_at?: string
+          id?: string
+          last_synced_at?: string | null
+          name?: string
+          name_at?: string | null
+          raw_metadata?: Json
+          updated_at?: string
+        }
+        Update: {
+          admin_add_member_mode?: boolean | null
+          channel_id?: string
+          chat_id?: string
+          chat_pic?: string | null
+          chat_pic_full?: string | null
+          created_at?: string
+          created_at_provider?: string | null
+          created_by?: string | null
+          description?: string | null
+          external_group_id?: string
+          first_seen_at?: string
+          id?: string
+          last_synced_at?: string | null
+          name?: string
+          name_at?: string | null
+          raw_metadata?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_groups_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_groups_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: true
+            referencedRelation: "comm_whatsapp_chats"
             referencedColumns: ["id"]
           },
         ]
@@ -6934,6 +7119,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -6996,6 +7182,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7093,7 +7280,15 @@ export type Database = {
         Args: { p_chat_id: string; p_limit?: number }
         Returns: Json
       }
+      comm_whatsapp_get_chat_thread_with_groups: {
+        Args: { p_chat_id: string; p_limit?: number }
+        Returns: Json
+      }
       comm_whatsapp_get_dashboard_metrics: { Args: never; Returns: Json }
+      comm_whatsapp_get_group_context: {
+        Args: { p_chat_id: string }
+        Returns: Json
+      }
       comm_whatsapp_get_operational_state: {
         Args: never
         Returns: {
@@ -7143,6 +7338,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7246,6 +7442,59 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_muted: boolean
+          is_pinned: boolean
+          last_message_at: string
+          last_message_delivery_status: string
+          last_message_direction: string
+          last_message_text: string
+          last_read_at: string
+          lead_id: string
+          lead_link_source: string
+          lead_linked_at: string
+          lead_linked_by: string
+          lead_name: string
+          lead_responsavel: string
+          lead_responsavel_id: string
+          lead_status: string
+          manual_unread: boolean
+          manual_unread_at: string
+          merged_into_chat_id: string
+          muted_at: string
+          phone_digits: string
+          phone_number: string
+          pinned_at: string
+          push_name: string
+          saved_contact_name: string
+          status: string
+          unread_count: number
+          updated_at: string
+        }[]
+      }
+      comm_whatsapp_list_chats_with_groups: {
+        Args: {
+          p_activity_filter?: string
+          p_archived_filter?: string
+          p_lead_filter?: string
+          p_lead_responsavel_filters?: string[]
+          p_lead_status_filters?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_saved_filter?: string
+          p_search?: string
+        }
+        Returns: {
+          archived_at: string
+          auto_link_blocked: boolean
+          autonomous_attendance_status: string
+          channel_id: string
+          created_at: string
+          display_name: string
+          external_chat_id: string
+          id: string
+          identity_conflict: boolean
+          is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string
@@ -7434,6 +7683,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7644,6 +7894,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7767,6 +8018,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7835,6 +8087,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7887,6 +8140,7 @@ export type Database = {
           id: string
           identity_conflict: boolean
           is_archived: boolean
+          is_group: boolean
           is_muted: boolean
           is_pinned: boolean
           last_message_at: string | null
@@ -7984,6 +8238,26 @@ export type Database = {
           p_created_by?: string
           p_feature_key: string
           p_prompt: string
+        }
+        Returns: string
+      }
+      create_comm_whatsapp_group_scheduled_message: {
+        Args: {
+          p_cancel_on_inbound_message?: boolean
+          p_channel_id: string
+          p_chat_id: string
+          p_label?: string
+          p_max_attempts?: number
+          p_media_file_name?: string
+          p_media_mime_type?: string
+          p_media_url?: string
+          p_message_type?: string
+          p_notes?: string
+          p_recurrence?: string
+          p_recurrence_config?: Json
+          p_recurrence_ends_at?: string
+          p_scheduled_at: string
+          p_text_content?: string
         }
         Returns: string
       }

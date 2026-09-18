@@ -331,8 +331,15 @@ const isSingleUnderTwelveQuoteWithoutKnownAdult = (leadHistoryText: string): boo
   const hasAdultBeneficiary = ADULT_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
     && !EXISTING_PLAN_ADULT_CONTEXT_REGEX.test(leadHistoryText);
   const hasExplicitChildOnlyScope = EXPLICIT_CHILD_ONLY_SCOPE_REGEX.test(leadHistoryText);
+  const hasPluralChildReference = /\b(?:filhos|netos|criancas|menores|adolescentes)\b/.test(leadHistoryText);
 
-  return hasKnownSingleUnderTwelve && hasExplicitChildOnlyScope && !hasAdultBeneficiary;
+  // Uma resposta curta como "neto" seguida da idade também pode representar
+  // uma única vida. Só abrimos essa inferência quando não há plural, adulto ou
+  // outra idade no histórico, evitando exigir uma frase exata do lead.
+  const hasSingleChildByContext = hasExplicitChildOnlyScope
+    || (hasKnownSingleUnderTwelve && !hasPluralChildReference && !MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText));
+
+  return hasKnownSingleUnderTwelve && hasSingleChildByContext && !hasAdultBeneficiary;
 };
 
 const isSingleAdultWithMinorsQuote = (history: AutonomousMessageRow[]): boolean => {

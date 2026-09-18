@@ -469,6 +469,23 @@ describe('validateAutonomousReplyOutput', () => {
 
   });
 
+  test('reconhece uma unica vida infantil quando o lead responde de forma curta', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'ai', content: 'Você busca um plano só para você ou para mais alguém da família?' },
+      { role: 'lead', content: 'neto' },
+      { role: 'ai', content: 'Para eu encontrar opções adequadas para ele, qual é a idade do seu neto?' },
+      { role: 'lead', content: '10 anos' },
+    ];
+
+    assert.equal(
+      validateAutonomousReplyOutput(
+        'Para conseguir contratar o plano para seu neto, é necessário incluir um adulto junto.',
+        history,
+      ).valid,
+      true,
+    );
+  });
+
   test('nao aplica a regra de adulto a adolescente de 15 anos', () => {
     const history: AutonomousMessageRow[] = [
       { role: 'lead', content: 'A cotação é para meu filho de 15 anos.' },

@@ -9,6 +9,8 @@ export type WhapiPresenceItem = {
   raw: Record<string, unknown>;
 };
 
+export const WHAPI_TRANSIENT_PRESENCE_TTL_MS = 20_000;
+
 const PRESENCE_STATUSES = new Set<WhapiPresenceStatus>([
   'online',
   'offline',
@@ -16,6 +18,20 @@ const PRESENCE_STATUSES = new Set<WhapiPresenceStatus>([
   'recording',
   'pending',
 ]);
+
+export const isWhapiTransientPresenceStatus = (status: unknown): boolean =>
+  status === 'typing' || status === 'recording';
+
+export const isWhapiPresenceSnapshotStale = (
+  status: unknown,
+  observedAt: string | null | undefined,
+  nowMs = Date.now(),
+): boolean => {
+  if (!isWhapiTransientPresenceStatus(status) || !observedAt) return false;
+  const observedAtMs = Date.parse(observedAt);
+  return Number.isFinite(observedAtMs)
+    && nowMs - observedAtMs > WHAPI_TRANSIENT_PRESENCE_TTL_MS;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)

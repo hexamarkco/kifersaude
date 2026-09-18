@@ -5,6 +5,7 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   fetchWhapiPresence,
+  isWhapiPresenceSnapshotStale,
   normalizeWhapiChatId,
   subscribeWhapiPresence,
   updateWhapiPresenceSubscription,
@@ -142,25 +143,29 @@ Deno.serve(async (req: Request) => {
 
     let presence = null;
     let presenceError: string | null = null;
+    let preserveStaleTransientPresence = false;
     try {
       presence = await fetchWhapiPresence({ token: settings.token, entryId });
       if (presence) {
-        await persistWhapiPresence(supabaseAdmin, { channelId: chat.channel_id, item: presence });
+        preserveStaleTransientPresence = Boolean(previous)
+          && previous.status === presence.status
+          && isWhapiPresenceSnapshotStale(previous.status, previous.observed_at);
+
+        if (!preserveStaleTransientPresence) {
+          await persistWhapiPresence(supabaseAdmin, { channelId: chat.channel_id, item: presence });
+        }
       }
     } catch (error) {
       presenceError = error instanceof Error ? error.message : 'Falha ao consultar presenca.';
     }
 
-    return response({
-      success: true,
-      chat_id: chat.id,
-      entry_id: entryId,
-      is_group: chat.is_group,
-      subscription: {
-        status: subscriptionStatus,
-        error: subscriptionError,
-      },
-      presence: presence
+    const responsePresence = preserveStaleTransientPresence && previous
+      ? {
+          status: previous.status,
+          last_seen_at: previous.last_seen_at,
+          observed_at: previous.observed_at,
+        }
+      : presence
         ? {
             status: presence.status,
             last_seen_at: presence.lastSeenAt,
@@ -172,7 +177,18 @@ Deno.serve(async (req: Request) => {
               last_seen_at: previous.last_seen_at,
               observed_at: previous.observed_at,
             }
-          : null,
+          : null;
+
+    return response({
+      success: true,
+      chat_id: chat.id,
+      entry_id: entryId,
+      is_group: chat.is_group,
+      subscription: {
+        status: subscriptionStatus,
+        error: subscriptionError,
+      },
+      presence: responsePresence,
       presence_error: presenceError,
     });
   } catch (error) {

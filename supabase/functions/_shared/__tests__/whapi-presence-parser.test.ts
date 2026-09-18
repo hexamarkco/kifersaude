@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWhapiPresenceEventKey,
   extractWhapiPresenceItems,
+  isWhapiPresenceSnapshotStale,
   normalizeWhapiPresenceItem,
   normalizeWhapiPresenceStatus,
 } from '../whapi-presence-parser';
@@ -47,5 +48,13 @@ describe('whapi presence parser', () => {
     expect(buildWhapiPresenceEventKey('post', item!)).toBe(
       'presence:post:5511999999999:typing:no-last-seen',
     );
+  });
+
+  it('identifies stale transient snapshots without expiring durable states', () => {
+    const now = Date.parse('2026-09-18T15:00:00.000Z');
+
+    expect(isWhapiPresenceSnapshotStale('recording', '2026-09-18T14:59:30.000Z', now)).toBe(true);
+    expect(isWhapiPresenceSnapshotStale('online', '2026-09-18T14:00:00.000Z', now)).toBe(false);
+    expect(isWhapiPresenceSnapshotStale('recording', '2026-09-18T14:59:50.000Z', now)).toBe(false);
   });
 });

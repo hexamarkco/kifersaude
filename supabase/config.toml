@@ -63,6 +63,9 @@ verify_jwt = false
 [functions.comm-whatsapp-sync-chat]
 verify_jwt = false
 
+[functions.comm-whatsapp-presence]
+verify_jwt = false
+
 [functions.comm-whatsapp-send]
 verify_jwt = false
 

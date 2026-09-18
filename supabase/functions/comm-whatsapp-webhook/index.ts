@@ -9,6 +9,7 @@ import {
   ensurePrimaryChannel,
   extractWhapiContactCardMeta,
   extractWhapiEditedMessageEvent,
+  extractWhapiInviteMeta,
   extractWhapiInteractiveMeta,
   extractWhapiLinkPreviewMeta,
   extractWhapiQuotedMessageMeta,
@@ -336,6 +337,7 @@ async function persistMessageFromWebhook(
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
   const contactCardMeta = extractWhapiContactCardMeta(message);
+  const inviteMeta = extractWhapiInviteMeta(message);
   const interactiveMeta = extractWhapiInteractiveMeta(message);
   const patchStatusUpdatedAt = patch
     ? unixTimestampToIso(patch.trigger?.timestamp) || messageAt
@@ -378,6 +380,7 @@ async function persistMessageFromWebhook(
       from_name: toTrimmedString(message.from_name) || null,
       chat_name: toTrimmedString(message.chat_name) || null,
       link_preview: linkPreviewMeta,
+      ...(inviteMeta ? { invite: inviteMeta } : {}),
       ...(quoteMeta ? { quote: quoteMeta } : {}),
       ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
       ...(interactiveMeta ? { interactive: interactiveMeta } : {}),

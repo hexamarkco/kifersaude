@@ -198,8 +198,8 @@ export const aiSandboxChatService = {
     };
   },
 
-  async generateOpening(conversationId: string, leadName?: string): Promise<GenerateOpeningResult> {
-    const result = await callGenerate({ conversationId, leadName });
+  async startWithApproach(conversationId: string, leadName?: string): Promise<GenerateOpeningResult> {
+    const result = await callGenerate({ conversationId, leadName, startWithApproach: true });
     if (result.messages.length === 0) {
       throw new Error('A IA nao retornou uma abordagem valida.');
     }
@@ -225,7 +225,7 @@ export const aiSandboxChatService = {
   },
 };
 
-async function callGenerate(body: { conversationId: string; leadName?: string }): Promise<GenerateOpeningResult> {
+async function callGenerate(body: { conversationId: string; leadName?: string; startWithApproach?: boolean }): Promise<GenerateOpeningResult> {
   const { data, error } = await supabase.functions.invoke('ai-sandbox-chat', { body });
 
   if (error) {

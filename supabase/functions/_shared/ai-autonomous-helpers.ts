@@ -404,7 +404,11 @@ export const validateAutonomousReplyOutput = (
     };
   }
 
-  if ((visibleCandidate.match(/\?/g) ?? []).length > 1) {
+  const questionCount = (visibleCandidate.match(/\?/g) ?? []).length;
+  const normalizedForOpening = normalizeForSemanticMatch(visibleCandidate);
+  const hasOpeningSocialQuestion = /\b(?:tudo bem|como vai|como voce esta|tudo certo)\s*\?/.test(normalizedForOpening);
+  const allowsOpeningGreetingQuestion = history.length === 0 && questionCount === 2 && hasOpeningSocialQuestion;
+  if (questionCount > 1 && !allowsOpeningGreetingQuestion) {
     return {
       valid: false,
       stopReason: 'invalid_output',

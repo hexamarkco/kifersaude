@@ -427,11 +427,12 @@ export default function AiSandboxChatScreen() {
     try {
       const conversation = await aiSandboxChatService.createConversation(name || 'Abordagem', user.id);
       setConversations((prev) => [conversation, ...prev]);
+      activeConversationIdRef.current = conversation.id;
       setActiveConversationId(conversation.id);
+      setMessages([]);
       setLeadNameForApproach('');
 
-      setGeneratingReply(true);
-      await aiSandboxChatService.generateOpening(conversation.id, name || undefined);
+      await aiSandboxChatService.startWithApproach(conversation.id, name || undefined);
       if (activeConversationIdRef.current !== conversation.id) return;
 
       const rows = await aiSandboxChatService.listMessages(conversation.id);
@@ -635,7 +636,7 @@ export default function AiSandboxChatScreen() {
               <EmptyState
                 icon={<Sparkles className="h-6 w-6" />}
                 title="Simule um atendimento"
-                description="Na maioria dos casos é você quem aborda o lead primeiro — a IA pode puxar o mesmo fluxo de abordagem. Se for um lead que te procurou por indicação, é só mandar a primeira mensagem no campo abaixo."
+                description="A abordagem inicial usa o mesmo fluxo cadastrado no atendimento. Depois, você pode responder como lead e a IA continua a conversa."
               />
               <div className="mt-4 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
                 <p className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</p>

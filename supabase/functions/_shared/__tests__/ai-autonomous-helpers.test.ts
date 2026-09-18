@@ -264,6 +264,14 @@ describe('validateAutonomousReplyOutput', () => {
     assert.match(result.message ?? '', /no maximo uma pergunta/i);
   });
 
+  test('aceita a pergunta social da abertura junto com a primeira pergunta de qualificacao', () => {
+    const result = validateAutonomousReplyOutput(
+      'Oi, tudo bem? Sou a Luiza Kifer. Você busca um plano só para você ou para mais alguém?',
+      [],
+    );
+    assert.equal(result.valid, true);
+  });
+
   test('rejeita dois-pontos e travessao na copy visivel', () => {
     const result = validateAutonomousReplyOutput('Entendi: vamos seguir — em qual cidade vocês vão usar?', [
       { role: 'lead', content: 'Quero cotar para minhas filhas.' },

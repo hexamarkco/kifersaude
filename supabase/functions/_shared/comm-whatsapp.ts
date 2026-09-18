@@ -405,6 +405,19 @@ export type CommWhatsAppLinkPreviewMeta = {
   preview: string | null;
 };
 
+export type CommWhatsAppInviteMeta = {
+  kind: 'group_invite' | 'newsletter_invite' | 'admin_invite';
+  body: string | null;
+  url: string | null;
+  title: string | null;
+  description: string | null;
+  preview: string | null;
+  invite_code: string | null;
+  newsletter_id: string | null;
+  newsletter_name: string | null;
+  expiration: number | null;
+};
+
 export type CommWhatsAppQuotedMessageMeta = {
   external_message_id: string | null;
   author_phone: string | null;
@@ -1075,6 +1088,40 @@ export const extractWhapiLinkPreviewMeta = (message: unknown): CommWhatsAppLinkP
   };
 };
 
+export const extractWhapiInviteMeta = (message: unknown): CommWhatsAppInviteMeta | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const type = toTrimmedString(message.type).toLowerCase();
+  if (type !== 'group_invite' && type !== 'newsletter_invite' && type !== 'admin_invite') {
+    return null;
+  }
+
+  const payload = isRecord(message[type]) ? message[type] : null;
+  if (!payload) {
+    return null;
+  }
+
+  const expirationValue = Number(payload.expiration);
+  const invite: CommWhatsAppInviteMeta = {
+    kind: type,
+    body: firstNonEmpty(payload.body) || null,
+    url: firstNonEmpty(payload.url, payload.link) || null,
+    title: firstNonEmpty(payload.title, payload.name) || null,
+    description: firstNonEmpty(payload.description) || null,
+    preview: firstNonEmpty(payload.preview) || null,
+    invite_code: firstNonEmpty(payload.invite_code, payload.inviteCode) || null,
+    newsletter_id: firstNonEmpty(payload.newsletter_id, payload.newsletterId) || null,
+    newsletter_name: firstNonEmpty(payload.newsletter_name, payload.newsletterName) || null,
+    expiration: Number.isFinite(expirationValue) ? expirationValue : null,
+  };
+
+  return invite.body || invite.url || invite.title || invite.description || invite.preview || invite.invite_code || invite.newsletter_id || invite.newsletter_name || invite.expiration !== null
+    ? invite
+    : null;
+};
+
 export const summarizeWhapiMessage = (message: unknown): string => {
   if (!isRecord(message)) return '[Mensagem]';
 
@@ -1099,6 +1146,9 @@ export const summarizeWhapiMessage = (message: unknown): string => {
 
   const contactSummary = summarizeWhapiContactCard(extractWhapiContactCardMeta(message));
   if (contactSummary) return contactSummary;
+
+  const inviteMeta = extractWhapiInviteMeta(message);
+  if (inviteMeta?.body) return inviteMeta.body;
 
   const reply = isRecord(message.reply) ? message.reply : null;
   if (reply) {
@@ -3875,6 +3925,7 @@ export async function syncWhapiDirectChatMessages(
     const externalMessageId = extractWhapiMessageId(message);
     const mediaMeta = extractWhapiMediaMeta(message);
     const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
+    const inviteMeta = extractWhapiInviteMeta(message);
     const quoteMeta = extractWhapiQuotedMessageMeta(message);
     const contactCardMeta = extractWhapiContactCardMeta(message);
     const summaryText = summarizeWhapiMessage(message);
@@ -3954,6 +4005,7 @@ export async function syncWhapiDirectChatMessages(
         from_name: toTrimmedString(message.from_name) || null,
         chat_name: toTrimmedString(message.chat_name) || null,
         link_preview: linkPreviewMeta,
+        ...(inviteMeta ? { invite: inviteMeta } : {}),
         ...(quoteMeta ? { quote: quoteMeta } : {}),
         ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
       },

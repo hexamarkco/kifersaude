@@ -3,6 +3,7 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
+import { buildSandboxApproachMessages } from '../_shared/auto-contact-approach.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
@@ -30,6 +31,7 @@ declare const Deno: {
 type RequestBody = {
   conversationId?: string;
   leadName?: string;
+  startWithApproach?: boolean;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -113,6 +115,48 @@ Deno.serve(async (req: Request) => {
         handoffCode: null,
         handoffReason: null,
         alreadyHandedOff: true,
+      }), { status: 200, headers: jsonHeaders });
+    }
+
+    if (isOpeningMode && body.startWithApproach === true) {
+      const { data: integration, error: integrationError } = await supabaseAdmin
+        .from('integration_settings')
+        .select('settings')
+        .eq('slug', 'whatsapp_auto_contact')
+        .maybeSingle();
+      if (integrationError) throw new Error(`Erro ao carregar a abordagem configurada: ${integrationError.message}`);
+
+      const approachMessages = buildSandboxApproachMessages(integration?.settings, leadName);
+      const responseStartedAt = Date.now();
+      const rowsToInsert = approachMessages.map((content, index) => ({
+        conversation_id: conversationId,
+        role: 'ai' as const,
+        content,
+        handoff_reason: null,
+        handoff_code: null,
+        provider: null,
+        model: null,
+        created_at: new Date(responseStartedAt + index).toISOString(),
+      }));
+
+      const { error: insertApproachError } = await supabaseAdmin
+        .from('ai_sandbox_messages')
+        .insert(rowsToInsert);
+      if (insertApproachError) throw new Error(`Erro ao salvar a abordagem: ${insertApproachError.message}`);
+
+      await supabaseAdmin
+        .from('ai_sandbox_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      return new Response(JSON.stringify({
+        success: true,
+        conversationId,
+        messages: approachMessages,
+        handoffCode: null,
+        handoffReason: null,
+        provider: null,
+        model: null,
       }), { status: 200, headers: jsonHeaders });
     }
 

@@ -15,6 +15,7 @@ const createChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat
   id: 'chat-1',
   channel_id: 'channel-1',
   external_chat_id: '5511999999999@s.whatsapp.net',
+  is_group: false,
   phone_number: '5511999999999',
   phone_digits: '5511999999999',
   display_name: 'Contato',
@@ -122,4 +123,17 @@ test('keeps the first copy when chat collections overlap', () => {
   const duplicate = createChat({ id: 'same', display_name: 'Segundo' });
 
   assert.equal(mergeUniqueChats([first], [duplicate])[0].display_name, 'Primeiro');
+});
+
+test('uses the group name and never falls back to a phone identity for groups', () => {
+  const group = createChat({
+    is_group: true,
+    external_chat_id: '120363012345678901@g.us',
+    display_name: 'Equipe de Atendimento',
+    phone_number: '',
+    phone_digits: '',
+    lead_id: null,
+  });
+
+  assert.equal(getSafeChatDisplayName(group), 'Equipe de Atendimento');
 });

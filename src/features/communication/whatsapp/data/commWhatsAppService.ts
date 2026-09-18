@@ -9,6 +9,7 @@ import type { Contract } from '../../../contracts';
 import type {
   CommWhatsAppChannel,
   CommWhatsAppChat,
+  CommWhatsAppGroupContext,
   CommWhatsAppMessage,
   CommWhatsAppPhoneContact,
 } from '../domain/types';
@@ -210,6 +211,7 @@ export type CommWhatsAppChatThread = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
   generatedAt?: string | null;
+  group?: CommWhatsAppGroupContext | null;
 };
 
 export type CommWhatsAppRefreshedMessageStatus = {
@@ -1050,7 +1052,7 @@ export const commWhatsAppService = {
 
     const search = sanitizeSearch(params.search ?? '');
 
-    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats', {
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats_with_groups' as never, {
       p_search: search || null,
       p_activity_filter: activityFilter,
       p_lead_filter: leadFilter,
@@ -1060,7 +1062,7 @@ export const commWhatsAppService = {
       p_lead_responsavel_filters: leadResponsavelFilters.length > 0 ? leadResponsavelFilters : null,
       p_limit: limit,
       p_offset: offset,
-    });
+    } as never);
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
@@ -1260,7 +1262,7 @@ export const commWhatsAppService = {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar esta conversa do WhatsApp.' });
 
     const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
-    const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_thread' as never, {
+    const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_thread_with_groups' as never, {
       p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_limit: safeLimit,
     } as never);
@@ -1278,6 +1280,28 @@ export const commWhatsAppService = {
     const leadPayload = toRecord(payload.lead);
     const lead = leadPayload.id ? (leadPayload as CommWhatsAppLeadPanel) : null;
     const messages = Array.isArray(payload.messages) ? payload.messages as CommWhatsAppMessage[] : [];
+    let group: CommWhatsAppGroupContext | null = null;
+    if (chat.is_group) {
+      const { data: groupData, error: groupError } = await supabase.rpc('comm_whatsapp_get_group_context', {
+        p_chat_id: chat.id,
+      });
+      if (groupError) {
+        throw new Error(await getSupabaseErrorMessage(groupError, 'Nao foi possivel carregar o contexto do grupo.'));
+      }
+      const groupPayload = toRecord(groupData);
+      const groupRecord = toRecord(groupPayload.group);
+      if (groupRecord.id) {
+        group = {
+          group: groupRecord as unknown as CommWhatsAppGroupContext['group'],
+          participants: Array.isArray(groupPayload.participants)
+            ? groupPayload.participants as CommWhatsAppGroupContext['participants']
+            : [],
+          events: Array.isArray(groupPayload.events)
+            ? groupPayload.events as CommWhatsAppGroupContext['events']
+            : [],
+        };
+      }
+    }
 
     return {
       chat,
@@ -1285,6 +1309,7 @@ export const commWhatsAppService = {
       messages,
       hasMore: payload.hasMore === true || payload.has_more === true,
       generatedAt: readString(payload.generatedAt) || readString(payload.generated_at) || null,
+      group,
     };
   },
 
@@ -2533,6 +2558,7 @@ export const commWhatsAppService = {
 
   async scheduleMessage(input: {
     channelId: string;
+    chatId?: string | null;
     phoneDigits: string;
     scheduledAt: string;
     messageType?: string;
@@ -2549,6 +2575,37 @@ export const commWhatsAppService = {
     notes?: string | null;
     cancelOnInboundMessage?: boolean;
   }): Promise<string> {
+    if (input.chatId) {
+      const { data: chat } = await supabase
+        .from('comm_whatsapp_chats')
+        .select('id,is_group')
+        .eq('id', input.chatId)
+        .maybeSingle();
+      if (chat?.is_group === true) {
+        const { data, error } = await supabase.rpc('create_comm_whatsapp_group_scheduled_message' as never, {
+          p_channel_id: input.channelId,
+          p_chat_id: input.chatId,
+          p_scheduled_at: input.scheduledAt,
+          p_message_type: input.messageType ?? 'text',
+          p_text_content: input.textContent ?? null,
+          p_media_url: input.mediaUrl ?? null,
+          p_media_mime_type: input.mediaMimeType ?? null,
+          p_media_file_name: input.mediaFileName ?? null,
+          p_recurrence: input.recurrence ?? 'none',
+          p_recurrence_config: input.recurrenceConfig ?? {},
+          p_recurrence_ends_at: input.recurrenceEndsAt ?? null,
+          p_label: input.label ?? null,
+          p_notes: input.notes ?? null,
+          p_max_attempts: 3,
+          p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? false,
+        } as never);
+        if (error) {
+          throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel agendar a mensagem no grupo.'));
+        }
+        return data as string;
+      }
+    }
+
     const { error, data } = await supabase.rpc('create_scheduled_message', {
       p_channel_id: input.channelId,
       p_phone_digits: input.phoneDigits,
@@ -2578,6 +2635,7 @@ export const commWhatsAppService = {
 
   async listScheduledMessages(options?: {
     channelId?: string;
+    chatId?: string;
     status?: string;
     createdBy?: string;
     leadId?: string;
@@ -2591,6 +2649,9 @@ export const commWhatsAppService = {
 
     if (options?.channelId) {
       query = query.eq('channel_id', options.channelId);
+    }
+    if (options?.chatId) {
+      query = query.eq('chat_id', options.chatId);
     }
     if (options?.status) {
       query = query.eq('status', options.status);

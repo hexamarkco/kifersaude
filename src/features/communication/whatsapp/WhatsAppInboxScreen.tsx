@@ -75,6 +75,7 @@ import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from './domain/types';
+import type { CommWhatsAppGroupContext } from './domain/types';
 import {
   canDeleteOutboundMessage,
   canEditOutboundMessage,
@@ -387,9 +388,18 @@ const isVisualMediaMessage = (message: CommWhatsAppMessage) => {
   return isGalleryMediaMessage(message) || kind === 'sticker' || isPdfDocumentMessage(message);
 };
 
+const isAudioMessage = (message: CommWhatsAppMessage) => {
+  const kind = message.message_type.trim().toLowerCase();
+  return kind === 'audio' || kind === 'voice';
+};
+
+const isBubblelessMediaMessage = (message: CommWhatsAppMessage) => (
+  isVisualMediaMessage(message) || isAudioMessage(message)
+);
+
 const isMediaMessage = (message: CommWhatsAppMessage) => {
   const kind = message.message_type.trim().toLowerCase();
-  return isVisualMediaMessage(message) || kind === 'document' || kind === 'audio' || kind === 'voice';
+  return isBubblelessMediaMessage(message) || kind === 'document';
 };
 
 const MEDIA_SENDING_STATUSES = new Set(['pending', 'queued', 'sending']);
@@ -1424,6 +1434,7 @@ function InboxChatListItem({
               <div className="flex items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />
                 <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
+                  {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
                   {getSafeChatDisplayName(chat, connectedUserName)}
                 </p>
                 {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
@@ -2129,10 +2140,10 @@ function WhatsAppMessageBody({
             ) : canTranscribe ? (
               <Button
                 type="button"
-                variant="soft"
+                variant="text"
                 size="sm"
                 onClick={() => onTranscribe(message)}
-                
+                className="whatsapp-inbox-transcribe-button h-7 min-h-0 px-1.5 text-[11px] font-semibold"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -2310,6 +2321,7 @@ export default function WhatsAppInboxScreen() {
   const [chatFilesOpen, setChatFilesOpen] = useState(false);
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
+  const [groupContext, setGroupContext] = useState<CommWhatsAppGroupContext | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
@@ -3870,6 +3882,10 @@ export default function WhatsAppInboxScreen() {
       return 'Selecione uma conversa para gerar o follow-up.';
     }
 
+    if (selectedChat.is_group) {
+      return 'Grupos são conversas manuais e não participam de follow-ups ou IA autônoma.';
+    }
+
     if (generatingFollowUp) {
       return 'Gerando follow-up com IA...';
     }
@@ -5146,6 +5162,7 @@ export default function WhatsAppInboxScreen() {
       let hasMore = false;
       let threadChat: CommWhatsAppChat | null = null;
       let threadLead: CommWhatsAppLeadPanel | null = null;
+      let threadGroup: CommWhatsAppGroupContext | null = null;
 
       if (reason === 'initial') {
         const thread = await whatsappConversationsRepository.getThread(targetChatId, {
@@ -5156,6 +5173,7 @@ export default function WhatsAppInboxScreen() {
         hasMore = thread.hasMore;
         threadChat = thread.chat;
         threadLead = thread.lead;
+        threadGroup = thread.group ?? null;
 
         if (data.length === 0 && Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim())) {
           setThreadReconcileChatId(targetChatId);
@@ -5183,6 +5201,7 @@ export default function WhatsAppInboxScreen() {
       if (threadLead) {
         setLeadPanel(threadLead);
       }
+      setGroupContext(threadChat?.is_group ? threadGroup : null);
 
       const stillEmptyDespitePreview = reason === 'initial'
         && data.length === 0
@@ -5554,6 +5573,7 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
+      setGroupContext(null);
       setLoadingMessages(false);
       setThreadReconcileChatId(null);
       lastSelectedChatPreviewRefreshKeyRef.current = '';
@@ -7109,6 +7129,9 @@ export default function WhatsAppInboxScreen() {
   }, [leadPanel?.id, loadLeadContracts]);
 
   const handleOpenLeadDrawer = () => {
+    if (selectedChat?.is_group) {
+      return;
+    }
     setLeadDrawerOpen(true);
   };
 
@@ -7117,7 +7140,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleOpenCreateLeadFromChat = useCallback(() => {
-    if (!selectedChat) {
+    if (!selectedChat || selectedChat.is_group) {
       return;
     }
 
@@ -7138,7 +7161,7 @@ export default function WhatsAppInboxScreen() {
     const targetChatId = createLeadDraft?.chatId;
     setCreateLeadDraft(null);
 
-    if (!targetChatId) {
+    if (!targetChatId || selectedChat?.is_group) {
       return;
     }
 
@@ -7152,10 +7175,10 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao vincular lead criado no chat', error);
       toast.error('Lead criado, mas não foi possível vinculá-lo ao chat.');
     }
-  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, upsertChatLocally]);
+  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, selectedChat?.is_group, upsertChatLocally]);
 
   const handleLinkLead = useCallback(async (leadId: string) => {
-    if (!selectedChat) {
+    if (!selectedChat || selectedChat.is_group) {
       return;
     }
 
@@ -7175,7 +7198,7 @@ export default function WhatsAppInboxScreen() {
   }, [loadChats, loadLeadPanel, selectedChat, upsertChatLocally]);
 
   const handleUnlinkLead = async () => {
-    if (!selectedChat) {
+    if (!selectedChat || selectedChat.is_group) {
       return;
     }
 
@@ -7194,7 +7217,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleLeadStatusChange = async (_leadId: string, newStatus: string) => {
-    if (!selectedChat || !leadPanel) {
+    if (!selectedChat || selectedChat.is_group || !leadPanel) {
       return;
     }
 
@@ -7230,7 +7253,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleLeadResponsavelChange = async (_leadId: string, responsavelValue: string) => {
-    if (!selectedChat) {
+    if (!selectedChat || selectedChat.is_group) {
       return;
     }
 
@@ -9092,7 +9115,8 @@ export default function WhatsAppInboxScreen() {
                   <div className="flex min-w-0 items-start gap-2">
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
-                        {leadPanel?.id ? (
+                        {selectedChat.is_group ? <Users className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
+                        {!selectedChat.is_group && leadPanel?.id ? (
                           <LeadFavoriteToggle
                             leadId={leadPanel.id}
                             favorito={favoritedLeadIds.has(leadPanel.id)}
@@ -9101,7 +9125,7 @@ export default function WhatsAppInboxScreen() {
                         ) : null}
                         <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
                       </p>
-                      {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
+                      {!selectedChat.is_group && selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                         <StatusDropdown
                           currentStatus={leadPanel.status_nome}
                           leadId={leadPanel.id}
@@ -9109,17 +9133,17 @@ export default function WhatsAppInboxScreen() {
                           statusOptions={leadStatuses}
                         />
                       ) : null}
-                      {selectedChatWasAutoLinked ? (
+                      {!selectedChat.is_group && selectedChatWasAutoLinked ? (
                         <Badge tone="primary" size="sm" className="uppercase tracking-[0.12em]">
                           Auto
                         </Badge>
                       ) : null}
-                      {selectedChat.autonomous_attendance_status === 'active' ? (
+                      {!selectedChat.is_group && selectedChat.autonomous_attendance_status === 'active' ? (
                         <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase">
                           <Bot className="h-3 w-3" aria-hidden="true" />
                           IA atendendo
                         </OperationalStatusBadge>
-                      ) : selectedChat.autonomous_attendance_status === 'handed_off' ? (
+                      ) : !selectedChat.is_group && selectedChat.autonomous_attendance_status === 'handed_off' ? (
                         <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase">
                           <Bot className="h-3 w-3" aria-hidden="true" />
                           IA encerrada
@@ -9140,8 +9164,13 @@ export default function WhatsAppInboxScreen() {
                     </IconButton>
                   </div>
                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
-                    <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
-                    {!selectedChat.saved_contact_name ? (
+                    {selectedChat.is_group ? (
+                      <span className="inline-flex items-center gap-1.5 text-[var(--brand-primary)]">
+                        <Users className="h-3.5 w-3.5" />
+                        Grupo{groupContext ? ` · ${groupContext.participants.length} participantes` : ''}
+                      </span>
+                    ) : <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>}
+                    {!selectedChat.is_group && !selectedChat.saved_contact_name ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -9152,7 +9181,7 @@ export default function WhatsAppInboxScreen() {
                       >
                         + Salvar contato
                       </button>
-                    ) : (
+                    ) : !selectedChat.is_group ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -9164,9 +9193,64 @@ export default function WhatsAppInboxScreen() {
                         <Pencil className="h-3 w-3" />
                         Renomear contato
                       </button>
-                    )}
-                    {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
+                    ) : null}
+                    {!selectedChat.is_group && leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
+                  {selectedChat.is_group && groupContext ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+                      {groupContext.group.description ? <span className="max-w-xl truncate">{groupContext.group.description}</span> : null}
+                      <span>{groupContext.participants.length} participante(s)</span>
+                      <span>{groupContext.events.length} evento(s) registrado(s)</span>
+                      <details className="basis-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-2.5">
+                        <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">Ver dados, participantes e eventos</summary>
+                        <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                          <div className="flex gap-3">
+                            {groupContext.group.chat_pic || groupContext.group.chat_pic_full ? (
+                              <img
+                                src={groupContext.group.chat_pic_full || groupContext.group.chat_pic || undefined}
+                                alt={`Foto do grupo ${groupContext.group.name}`}
+                                className="whatsapp-inbox-group-avatar shrink-0 rounded-xl object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="whatsapp-inbox-group-avatar flex shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                                <Users className="h-6 w-6" aria-hidden="true" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[var(--text-primary)]">{groupContext.group.name}</p>
+                              <p>{groupContext.group.admin_add_member_mode ? 'Somente administradores adicionam participantes' : 'Participantes podem ser adicionados'}</p>
+                              {groupContext.group.created_by ? <p>Criado por {groupContext.group.created_by}</p> : null}
+                            </div>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="mb-1 font-semibold text-[var(--text-primary)]">Participantes</p>
+                              <div className="whatsapp-inbox-group-participant-list space-y-1 pr-1">
+                                {groupContext.participants.map((participant) => (
+                                  <div key={participant.external_participant_id} className="flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate">{participant.display_name || participant.external_participant_id}</span>
+                                    <span className="shrink-0 rounded-full bg-[var(--bg-surface)] px-2 py-0.5">{participant.rank}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="mb-1 font-semibold text-[var(--text-primary)]">Eventos recentes</p>
+                              <div className="whatsapp-inbox-group-event-list space-y-1 pr-1">
+                                {groupContext.events.slice(0, 12).map((event) => (
+                                  <div key={event.id} className="flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate">{event.event_type}{event.participant_ids.length ? ` · ${event.participant_ids.length} participante(s)` : ''}</span>
+                                    <span className="shrink-0">{formatDateTimeFullBR(event.occurred_at)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+                  ) : null}
                   {nextChatReminderSummary ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge
@@ -9182,7 +9266,7 @@ export default function WhatsAppInboxScreen() {
                 <div className="hidden min-w-0 shrink-0 items-start lg:flex lg:justify-end">
                   <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
                     <ButtonGroup className="whatsapp-inbox-action-group" role="group" aria-label="Ações da conversa">
-                    {selectedChat.lead_id ? (
+                    {!selectedChat.is_group && selectedChat.lead_id ? (
                       <IconButton
                         type="button"
                         onClick={() => (
@@ -9254,17 +9338,17 @@ export default function WhatsAppInboxScreen() {
                      size="md">
                       {syncingHistoryChatId === selectedChat.id ? <Loader2 className="animate-spin" /> : <Download aria-hidden="true" />}
                     </IconButton>
-                    <IconButton
+                    {!selectedChat.is_group ? <IconButton
                       type="button"
                       onClick={handleOpenFollowUpModal}
                       variant="ghost"
                       aria-label="Gerar follow-up com IA"
                       title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
                       disabled={Boolean(followUpGenerationDisabledReason)}
-                     size="md">
+                      size="md">
                       {generatingFollowUp ? <Loader2 className="animate-spin" /> : <Sparkles className="kds-control-icon" />}
-                    </IconButton>
-                    <IconButton
+                    </IconButton> : null}
+                    {!selectedChat.is_group ? <IconButton
                       type="button"
                       onClick={handleOpenLeadDrawer}
                       variant="ghost"
@@ -9282,7 +9366,7 @@ export default function WhatsAppInboxScreen() {
                           </span>
                         ) : null}
                       </span>
-                    </IconButton>
+                    </IconButton> : null}
                     </ButtonGroup>
                   </div>
                 </div>
@@ -9305,8 +9389,8 @@ export default function WhatsAppInboxScreen() {
                           }
                         }}
                       />
-                      <IconButton
-                        type="button"
+                    <IconButton
+                      type="button"
                         onClick={() => {
                           setChatMessageSearchDraft('');
                           setChatMessageSearchResults([]);
@@ -9317,7 +9401,7 @@ export default function WhatsAppInboxScreen() {
                         title="Fechar busca"
                        size="md">
                         <X aria-hidden="true" />
-                      </IconButton>
+                    </IconButton>
                     </div>
 
                     {chatMessageSearch ? (
@@ -9467,6 +9551,9 @@ export default function WhatsAppInboxScreen() {
                         >
                           <div className="relative max-w-[82%] pb-2">
                             <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
+                              {selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
+                                <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
+                              ) : null}
                               <WhatsAppMediaGroupBody
                                 messages={groupMessages}
                                 onOpenImage={setLightboxMessageId}
@@ -9537,7 +9624,7 @@ export default function WhatsAppInboxScreen() {
 
                           <div
                             className={cx(
-                              isVisualMediaMessage(message)
+                              isBubblelessMediaMessage(message)
                                 ? hasVisualMediaCaption(message)
                                   ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
                                   : 'whatsapp-inbox-media-message'
@@ -9553,6 +9640,9 @@ export default function WhatsAppInboxScreen() {
                               handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
                             }}
                           >
+                            {selectedChat.is_group && message.direction === 'inbound' && message.sender_name ? (
+                              <p className="mb-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
+                            ) : null}
                             <WhatsAppMessageBody
                               message={message}
                               onOpenImage={setLightboxMessageId}
@@ -9568,7 +9658,7 @@ export default function WhatsAppInboxScreen() {
                             />
                             <div className={cx(
                               'whatsapp-inbox-message-meta flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium',
-                              isVisualMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1' : 'mt-2',
+                              isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1' : 'mt-2',
                             )}>
                               {showEditAction || showDeleteAction || showReplyForwardActions ? (
                                 <button
@@ -10768,7 +10858,7 @@ export default function WhatsAppInboxScreen() {
         </Dialog>
 
         <WhatsAppLeadDrawer
-          isOpen={leadDrawerOpen}
+          isOpen={leadDrawerOpen && !selectedChat?.is_group}
           onClose={handleCloseLeadDrawer}
           chatId={selectedChat?.id ?? null}
           chatDisplayName={selectedChatDisplayName}
@@ -10790,7 +10880,7 @@ export default function WhatsAppInboxScreen() {
           searchResults={leadSearchResults}
           suggestedLead={suggestedLead}
           searchLoading={leadSearchLoading}
-          onCreateLead={selectedChat && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
+          onCreateLead={selectedChat && !selectedChat.is_group && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
           onLinkLead={(leadId) => void handleLinkLead(leadId)}
           linkLoadingLeadId={linkLoadingLeadId}
           canViewAgenda={canViewAgenda}
@@ -10833,6 +10923,7 @@ export default function WhatsAppInboxScreen() {
             isOpen={scheduleMessageModalOpen}
             onClose={() => setScheduleMessageModalOpen(false)}
             channelId={selectedChat.channel_id}
+            chatId={selectedChat.id}
             phoneDigits={selectedChat.phone_digits}
             leadId={selectedChat.lead_id}
             initialText={messageDraft}
@@ -10846,6 +10937,7 @@ export default function WhatsAppInboxScreen() {
         {selectedChat && (
           <WhatsAppScheduledMessagesPanel
             channelId={selectedChat.channel_id}
+            chatId={selectedChat.id}
             phoneDigits={selectedChat.phone_digits}
             isOpen={scheduledMessagesPanelOpen}
             onClose={() => setScheduledMessagesPanelOpen(false)}
@@ -11064,7 +11156,7 @@ export default function WhatsAppInboxScreen() {
         >
           {selectedChat ? (
             <div className="flex flex-col gap-1">
-              {selectedChat.lead_id ? (
+              {!selectedChat.is_group && selectedChat.lead_id ? (
                 <button
                   type="button"
                   role="menuitem"
@@ -11139,7 +11231,7 @@ export default function WhatsAppInboxScreen() {
                 {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
                 <span>Recuperar histórico antigo</span>
               </button>
-              <button
+              {!selectedChat.is_group ? <button
                 type="button"
                 role="menuitem"
                 onClick={() => {
@@ -11152,8 +11244,8 @@ export default function WhatsAppInboxScreen() {
               >
                 {generatingFollowUp ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
                 <span>Gerar follow-up com IA</span>
-              </button>
-              <button
+              </button> : null}
+              {!selectedChat.is_group ? <button
                 type="button"
                 role="menuitem"
                 onClick={() => {
@@ -11164,7 +11256,7 @@ export default function WhatsAppInboxScreen() {
               >
                 <Info className="h-4 w-4 shrink-0" />
                 <span>{selectedChat.lead_id ? 'Informações do lead' : 'Vincular lead do CRM'}</span>
-              </button>
+              </button> : null}
             </div>
           ) : null}
         </PanelPopoverShell>

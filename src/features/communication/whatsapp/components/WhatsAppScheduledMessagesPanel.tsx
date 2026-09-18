@@ -10,6 +10,7 @@ import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
 type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
+  chatId?: string;
   phoneDigits?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -84,6 +85,7 @@ function getScheduleTimingLabel(value: string): string {
 
 export default function WhatsAppScheduledMessagesPanel({
   channelId,
+  chatId,
   phoneDigits,
   isOpen,
   onClose,
@@ -98,7 +100,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const isFiltered = Boolean(phoneDigits);
+  const isFiltered = Boolean(chatId || phoneDigits);
 
   const loadMessages = useCallback(async () => {
     if (!isOpen) return;
@@ -110,6 +112,7 @@ export default function WhatsAppScheduledMessagesPanel({
       while (true) {
         const data = await commWhatsAppService.listScheduledMessages({
           ...(channelId ? { channelId } : {}),
+          ...(chatId ? { chatId } : {}),
           limit: SCHEDULED_MESSAGES_PAGE_SIZE,
           offset,
         });
@@ -121,7 +124,9 @@ export default function WhatsAppScheduledMessagesPanel({
       }
 
       setMessages(
-        phoneDigits
+        chatId
+          ? allMessages
+          : phoneDigits
           ? allMessages.filter((m) => m.phone_digits === phoneDigits)
           : allMessages,
       );
@@ -130,7 +135,7 @@ export default function WhatsAppScheduledMessagesPanel({
     } finally {
       setLoading(false);
     }
-  }, [channelId, phoneDigits, isOpen]);
+  }, [channelId, chatId, phoneDigits, isOpen]);
 
   useEffect(() => {
     void loadMessages();
@@ -383,6 +388,7 @@ export default function WhatsAppScheduledMessagesPanel({
           isOpen
           onClose={() => setEditingMessage(null)}
           channelId={editingMessage.channel_id}
+          chatId={editingMessage.chat_id}
           phoneDigits={editingMessage.phone_digits}
           leadId={editingMessage.lead_id}
           contractId={editingMessage.contract_id}

@@ -10,6 +10,14 @@ import {
   isValidCommWhatsAppDisplayName,
   resolveVerifiedWhapiDirectIdentity,
 } from '../comm-whatsapp';
+import {
+  extractWhapiParticipantDigits,
+  isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
+  normalizeWhapiChatId,
+  normalizeWhapiParticipantId,
+} from '../comm-whatsapp/identity';
 
 const originalFetch = globalThis.fetch;
 
@@ -107,4 +115,13 @@ test('rejects a divergent reverse mapping', async () => {
 
   assert.equal(identity.verified, false);
   assert.equal(identity.reason, 'reverse_mismatch');
+});
+
+test('keeps group ids outside direct identity checks', () => {
+  assert.equal(normalizeWhapiChatId('120363012345678901@g.us'), '120363012345678901@g.us');
+  assert.equal(isWhapiGroupChatId('120363012345678901@g.us'), true);
+  assert.equal(isDirectWhapiChatId('120363012345678901@g.us'), false);
+  assert.equal(isInboxWhapiChatId('120363012345678901@g.us'), true);
+  assert.equal(normalizeWhapiParticipantId('61371989950'), '61371989950');
+  assert.equal(extractWhapiParticipantDigits('61371989950'), '61371989950');
 });

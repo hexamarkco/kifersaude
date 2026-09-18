@@ -7,9 +7,10 @@ import {
   ensurePrimaryChannel,
   extractWhapiChatId,
   fetchWhapiChatsPage,
-  isDirectWhapiChatId,
+  fetchWhapiGroupsPage,
+  isInboxWhapiChatId,
   normalizeWhapiChatId,
-  syncWhapiDirectChatMessages,
+  syncWhapiInboxChatMessages,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -150,7 +151,7 @@ Deno.serve(async (req: Request) => {
       const discoveryPage = await fetchWhapiChatsPage({ token: settings.token, count: chatCount, offset: chatOffset });
       for (const rawChat of discoveryPage.chats) {
         const candidateId = normalizeWhapiChatId(extractWhapiChatId(rawChat));
-        if (!candidateId || !isDirectWhapiChatId(candidateId) || knownExternalChatIds.has(candidateId)) {
+        if (!candidateId || !isInboxWhapiChatId(candidateId) || knownExternalChatIds.has(candidateId)) {
           continue;
         }
 
@@ -163,6 +164,25 @@ Deno.serve(async (req: Request) => {
         if (existingChat) {
           continue;
         }
+
+        chatsToSync.push({ externalChatId: candidateId, discovered: true });
+        discoveredChats += 1;
+      }
+
+      const groupsPage = await fetchWhapiGroupsPage({ token: settings.token, count: chatCount, offset: chatOffset });
+      for (const rawGroup of groupsPage.groups) {
+        const candidateId = normalizeWhapiChatId(extractWhapiChatId(rawGroup));
+        if (!candidateId || !isInboxWhapiChatId(candidateId) || knownExternalChatIds.has(candidateId)) {
+          continue;
+        }
+
+        const { data: existingGroup } = await supabaseAdmin
+          .from('comm_whatsapp_chats')
+          .select('id')
+          .eq('channel_id', channel.id)
+          .eq('external_chat_id', candidateId)
+          .maybeSingle();
+        if (existingGroup) continue;
 
         chatsToSync.push({ externalChatId: candidateId, discovered: true });
         discoveredChats += 1;
@@ -185,7 +205,7 @@ Deno.serve(async (req: Request) => {
 
       try {
         while (hasMore && pages < pagesPerChat) {
-          const result = await syncWhapiDirectChatMessages(supabaseAdmin, {
+          const result = await syncWhapiInboxChatMessages(supabaseAdmin, {
             channel,
             token: settings.token,
             externalChatId,

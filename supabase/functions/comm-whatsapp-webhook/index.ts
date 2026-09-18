@@ -7,6 +7,7 @@ import {
   corsHeaders,
   extractWhapiDeletedMessageEvent,
   ensurePrimaryChannel,
+  ensureWhapiGroupChatMetadata,
   extractWhapiContactCardMeta,
   extractWhapiEditedMessageEvent,
   extractWhapiInviteMeta,
@@ -16,6 +17,7 @@ import {
   extractWhapiReactionEvent,
   extractWhapiStarEvent,
   extractPhoneFromChatId,
+  extractWhapiParticipantDigits,
   extractWhapiMediaMeta,
   formatPhoneLabel,
   getCommWhatsAppWebhookSecret,
@@ -23,13 +25,17 @@ import {
   getHealthStatusText,
   getNowIso,
   isCommWhatsAppWebhookRequestAuthorized,
-  isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
+  persistWhapiGroupEvent,
+  restoreWhapiGroupSenderPhone,
   resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
   isWhapiTechnicalPlaceholderMessage,
   isRecord,
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
+  normalizeWhapiParticipantId,
   persistCommWhatsAppMessage,
   resolveCommWhatsAppCanonicalChatRoute,
   stringTimestampToIso,
@@ -44,6 +50,10 @@ import {
   hasWhapiPatchTextChange,
   type WhapiWebhookMessagePatch,
 } from '../_shared/whapi-webhook-parser.ts';
+import {
+  buildWhapiGroupEventReceiptKey,
+  extractWhapiGroupEvents,
+} from '../_shared/whapi-group-webhook-parser.ts';
 import {
   findCommWhatsAppEventReceipt as findEventReceipt,
   recordCommWhatsAppEventReceipt as recordEventReceipt,
@@ -93,7 +103,7 @@ type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
 // Espera essa quantidade de segundos em silencio apos a ultima mensagem
 // inbound antes da IA responder num chat com atendimento autonomo ativo.
 // Nova mensagem nesse intervalo reagenda o mesmo job no banco.
-const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 8;
+const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 16;
 
 declare const Deno: {
   env: {
@@ -191,7 +201,7 @@ async function persistMessageFromWebhook(
   patch: WhapiWebhookMessagePatch | null,
 ) {
   const externalChatId = resolveMessageChatId(message);
-  if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
+  if (!externalChatId || !isInboxWhapiChatId(externalChatId)) {
     return null;
   }
 
@@ -300,8 +310,18 @@ async function persistMessageFromWebhook(
     externalChatId,
   });
   const direction = message.from_me === true ? 'outbound' : 'inbound';
-  const phoneDigits = extractPhoneFromChatId(externalChatId);
+  const isGroup = isWhapiGroupChatId(externalChatId);
+  const phoneDigits = isGroup ? '' : extractPhoneFromChatId(externalChatId);
   const messageName = getDirectChatDisplayNameCandidate(message, direction);
+  const groupName = toTrimmedString(message.chat_name)
+    || (isRecord(message.chat) ? toTrimmedString(message.chat.name ?? message.chat.subject) : '')
+    || existingChat.displayName
+    || 'Grupo';
+  const senderId = normalizeWhapiParticipantId(message.from ?? message.sender ?? message.author);
+  const groupSenderName = toTrimmedString(message.from_name)
+    || toTrimmedString(message.sender_name)
+    || (isRecord(message.sender) ? toTrimmedString(message.sender.name) : '')
+    || null;
   let resolvedName = messageName;
 
   if (
@@ -320,15 +340,15 @@ async function persistMessageFromWebhook(
     resolvedName = existingChat.pushName;
   }
 
-  const fallbackDisplayName = formatPhoneLabel(phoneDigits);
+  const fallbackDisplayName = isGroup ? groupName : formatPhoneLabel(phoneDigits);
   const existingLooksLikeOwnName = Boolean(
     existingChat.displayName &&
       channel.connected_user_name &&
       existingChat.displayName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase(),
   );
-  const displayName =
-    resolvedName ||
-    (!existingLooksLikeOwnName && existingChat.displayName ? existingChat.displayName : fallbackDisplayName);
+  const displayName = isGroup
+    ? groupName
+    : resolvedName || (!existingLooksLikeOwnName && existingChat.displayName ? existingChat.displayName : fallbackDisplayName);
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
   const externalMessageId = toTrimmedString(message.id);
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent');
@@ -347,7 +367,7 @@ async function persistMessageFromWebhook(
     externalChatId,
     phoneNumber: phoneDigits || null,
     displayName,
-    pushName: resolvedName || (!isOwnChannelName(existingChat.pushName, channel.connected_user_name) ? existingChat.pushName : null),
+    pushName: isGroup ? null : resolvedName || (!isOwnChannelName(existingChat.pushName, channel.connected_user_name) ? existingChat.pushName : null),
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,
@@ -362,8 +382,8 @@ async function persistMessageFromWebhook(
     textContent: summaryText,
     createdBy: null,
     source: toTrimmedString(message.source) || null,
-    senderName: getDirectChatDisplayNameCandidate(message, direction) || null,
-    senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits || null,
+    senderName: isGroup ? groupSenderName : getDirectChatDisplayNameCandidate(message, direction) || null,
+    senderPhone: direction === 'outbound' ? channel.phone_number || null : (isGroup ? extractWhapiParticipantDigits(senderId) || null : phoneDigits || null),
     statusUpdatedAt: patchStatusUpdatedAt,
     errorMessage: null,
     mediaId: mediaMeta.mediaId,
@@ -378,7 +398,13 @@ async function persistMessageFromWebhook(
       chat_id: externalChatId,
       from: toTrimmedString(message.from) || null,
       from_name: toTrimmedString(message.from_name) || null,
-      chat_name: toTrimmedString(message.chat_name) || null,
+      chat_name: toTrimmedString(message.chat_name) || (isGroup ? groupName : null),
+      ...(isGroup ? {
+        is_group: true,
+        group_id: externalChatId,
+        sender_id: senderId || null,
+        sender_name: groupSenderName,
+      } : {}),
       link_preview: linkPreviewMeta,
       ...(inviteMeta ? { invite: inviteMeta } : {}),
       ...(quoteMeta ? { quote: quoteMeta } : {}),
@@ -399,7 +425,23 @@ async function persistMessageFromWebhook(
     },
   });
 
-  if (direction === 'inbound' && !patch && !isTechnicalPlaceholder) {
+  if (isGroup && direction === 'inbound' && result.messageId && senderId) {
+    await restoreWhapiGroupSenderPhone(supabaseAdmin, {
+      channelId: channel.id,
+      messageId: result.messageId,
+      senderPhone: extractWhapiParticipantDigits(senderId) || null,
+    });
+  }
+
+  if (isGroup) {
+    await ensureWhapiGroupChatMetadata(supabaseAdmin, {
+      channelId: channel.id,
+      groupId: externalChatId,
+      name: groupName,
+    });
+  }
+
+  if (direction === 'inbound' && !patch && !isTechnicalPlaceholder && !isGroup) {
     try {
       await supabaseAdmin.rpc('resolve_comm_whatsapp_campaign_stop_on_reply', {
         p_chat_id: result.chatId,
@@ -650,7 +692,7 @@ Deno.serve(async (req: Request) => {
         };
 
         const chatId = resolveMessageChatId(item.message);
-        if (!chatId || !isDirectWhapiChatId(chatId)) {
+        if (!chatId || !isInboxWhapiChatId(chatId)) {
           skippedMessages += 1;
           continue;
         }
@@ -709,6 +751,41 @@ Deno.serve(async (req: Request) => {
 
     if ((eventType === 'messages' || eventType === 'message') && messageItems.length === 0) {
       console.warn(`[${correlationId}] evento de mensagem sem itens reconhecidos`);
+    }
+
+    const groupEvents = extractWhapiGroupEvents(payload);
+    let persistedGroupEvents = 0;
+    let duplicateGroupEvents = 0;
+    for (const groupEvent of groupEvents) {
+      const eventKey = buildWhapiGroupEventReceiptKey(groupEvent);
+      if (await findEventReceipt(supabaseAdmin, eventKey)) {
+        duplicateGroupEvents += 1;
+        continue;
+      }
+
+      const result = await persistWhapiGroupEvent(supabaseAdmin, {
+        channelId: channel.id,
+        event: groupEvent,
+        providerEventKey: eventKey,
+      });
+
+      const accepted = await recordEventReceipt(
+        supabaseAdmin,
+        channel.id,
+        eventKey,
+        'group',
+        groupEvent.groupId,
+        {
+          event_action: eventAction,
+          group_id: groupEvent.groupId,
+          event_type: groupEvent.eventType,
+          action: groupEvent.action,
+          participant_ids: groupEvent.participantIds,
+          chat_id: result.chatId,
+        },
+        archivePath,
+      );
+      if (accepted) persistedGroupEvents += 1;
     }
 
     if (eventType === 'statuses' && Array.isArray(payload.statuses)) {
@@ -796,6 +873,11 @@ Deno.serve(async (req: Request) => {
         skipped: skippedMessages,
         duplicate_diagnostics: duplicateDiagnostics,
         duplicate_diagnostics_truncated: duplicateMessages > duplicateDiagnostics.length,
+      },
+      groups: {
+        received: groupEvents.length,
+        persisted: persistedGroupEvents,
+        duplicates: duplicateGroupEvents,
       },
     }), {
       status: 200,

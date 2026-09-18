@@ -5,9 +5,9 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
-  isDirectWhapiChatId,
+  isInboxWhapiChatId,
   normalizeWhapiChatId,
-  syncWhapiDirectChatMessages,
+  syncWhapiInboxChatMessages,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
       ? Math.floor(requestedTimeTo)
       : Math.floor(Date.now() / 1000);
 
-    if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
+    if (!externalChatId || !isInboxWhapiChatId(externalChatId)) {
       return new Response(JSON.stringify({ error: 'Conversa invalida para sincronizacao.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -109,7 +109,7 @@ Deno.serve(async (req: Request) => {
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
 
-    const result = await syncWhapiDirectChatMessages(supabaseAdmin, {
+    const result = await syncWhapiInboxChatMessages(supabaseAdmin, {
       channel,
       token: settings.token,
       externalChatId,

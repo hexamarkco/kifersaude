@@ -8,6 +8,7 @@ import {
   extractWhapiMessageId,
   fetchWhapiWithTimeout,
   getNowIso,
+  isWhapiGroupChatId,
   normalizeWhapiChatId,
   parseWhapiError,
   persistCommWhatsAppMessage,
@@ -48,6 +49,13 @@ type ProcessRequestBody = {
   action?: 'process';
   limit?: number;
   source?: 'cron' | 'manual';
+};
+
+type ScheduledDestination = {
+  chatId: string;
+  phoneDigits: string;
+  displayName: string;
+  isGroup: boolean;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -117,14 +125,47 @@ async function isScheduledWorkerRequest(
   return secureTokenEquals(providedToken, data.token);
 }
 
+async function resolveScheduledDestination(
+  admin: ReturnType<typeof createAdminClient>,
+  msg: ScheduledMessageRow,
+): Promise<ScheduledDestination> {
+  if (msg.chat_id) {
+    const { data: chat, error } = await admin
+      .from('comm_whatsapp_chats')
+      .select('external_chat_id,phone_digits,display_name,is_group')
+      .eq('id', msg.chat_id)
+      .maybeSingle();
+    if (error) throw new Error(`Nao foi possivel resolver o destino agendado: ${error.message}`);
+    const externalChatId = normalizeWhapiChatId(chat?.external_chat_id);
+    if (externalChatId) {
+      const isGroup = chat?.is_group === true || isWhapiGroupChatId(externalChatId);
+      return {
+        chatId: externalChatId,
+        phoneDigits: isGroup ? '' : (chat?.phone_digits || msg.phone_digits),
+        displayName: chat?.display_name || (isGroup ? 'Grupo' : msg.display_name || msg.phone_digits),
+        isGroup,
+      };
+    }
+  }
+
+  const chatId = normalizeWhapiChatId(msg.phone_digits);
+  return {
+    chatId,
+    phoneDigits: msg.phone_digits,
+    displayName: msg.display_name ?? msg.phone_digits,
+    isGroup: isWhapiGroupChatId(chatId),
+  };
+}
+
 async function sendTextMessage(
   admin: ReturnType<typeof createAdminClient>,
   channelRow: { id: string; phone_number: string | null },
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
-  await assertContactPermissionForSend(admin, msg.phone_digits, 'commercial');
-  const chatId = normalizeWhapiChatId(msg.phone_digits);
+  const destination = await resolveScheduledDestination(admin, msg);
+  if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
+  const chatId = destination.chatId;
 
   const body = {
     to: chatId,
@@ -151,18 +192,16 @@ async function sendTextMessage(
   const externalMessageId = extractWhapiMessageId(payload) ?? '';
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload);
 
-  const route = await resolveCommWhatsAppCanonicalChatRoute(admin, {
+  await resolveCommWhatsAppCanonicalChatRoute(admin, {
     channelId: channelRow.id,
-    phoneDigits: msg.phone_digits,
     externalChatId: chatId,
-    leadId: null,
   });
 
   await persistCommWhatsAppMessage(admin, {
     channelId: channelRow.id,
     externalChatId: chatId,
-    phoneNumber: msg.phone_digits,
-    displayName: msg.display_name ?? msg.phone_digits,
+    phoneNumber: destination.isGroup ? null : destination.phoneDigits,
+    displayName: destination.displayName,
     pushName: null,
     lastMessageText: msg.text_content ?? null,
     lastMessageDirection: 'outbound',
@@ -186,7 +225,7 @@ async function sendTextMessage(
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: null,
-    metadata: {},
+    metadata: destination.isGroup ? { is_group: true } : {},
   });
 
   return { externalMessageId, deliveryStatus };
@@ -198,8 +237,9 @@ async function sendMediaMessage(
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
-  await assertContactPermissionForSend(admin, msg.phone_digits, 'commercial');
-  const chatId = normalizeWhapiChatId(msg.phone_digits);
+  const destination = await resolveScheduledDestination(admin, msg);
+  if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
+  const chatId = destination.chatId;
   let mediaUrl = msg.media_url;
   const storagePath = mediaUrl?.startsWith(SCHEDULED_MEDIA_URL_PREFIX)
     ? mediaUrl.slice(SCHEDULED_MEDIA_URL_PREFIX.length)
@@ -241,18 +281,16 @@ async function sendMediaMessage(
   const externalMessageId = extractWhapiMessageId(payload) ?? '';
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload);
 
-  const route = await resolveCommWhatsAppCanonicalChatRoute(admin, {
+  await resolveCommWhatsAppCanonicalChatRoute(admin, {
     channelId: channelRow.id,
-    phoneDigits: msg.phone_digits,
     externalChatId: chatId,
-    leadId: null,
   });
 
   await persistCommWhatsAppMessage(admin, {
     channelId: channelRow.id,
     externalChatId: chatId,
-    phoneNumber: msg.phone_digits,
-    displayName: msg.display_name ?? msg.phone_digits,
+    phoneNumber: destination.isGroup ? null : destination.phoneDigits,
+    displayName: destination.displayName,
     pushName: null,
     lastMessageText: msg.text_content ?? null,
     lastMessageDirection: 'outbound',
@@ -276,7 +314,7 @@ async function sendMediaMessage(
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: msg.text_content ?? null,
-    metadata: {},
+    metadata: destination.isGroup ? { is_group: true } : {},
   });
 
   return { externalMessageId, deliveryStatus };

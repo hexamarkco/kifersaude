@@ -29,6 +29,7 @@ export type CommWhatsAppChat = {
   id: string;
   channel_id: string;
   external_chat_id: string;
+  is_group: boolean;
   phone_number: string;
   phone_digits: string;
   display_name: string;
@@ -64,6 +65,60 @@ export type CommWhatsAppChat = {
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type CommWhatsAppGroup = {
+  id: string;
+  channel_id: string;
+  chat_id: string;
+  external_group_id: string;
+  name: string;
+  description: string | null;
+  chat_pic: string | null;
+  chat_pic_full: string | null;
+  created_at_provider: string | null;
+  created_by: string | null;
+  name_at: string | null;
+  admin_add_member_mode: boolean | null;
+  first_seen_at: string;
+  last_synced_at: string | null;
+  raw_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommWhatsAppGroupParticipant = {
+  group_id: string;
+  external_participant_id: string;
+  phone_digits: string | null;
+  display_name: string | null;
+  rank: 'creator' | 'admin' | 'member' | 'unknown';
+  membership_status: 'member' | 'pending' | 'removed' | 'unknown';
+  joined_at: string | null;
+  raw_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommWhatsAppGroupEvent = {
+  id: string;
+  channel_id: string;
+  group_id: string;
+  event_type: string;
+  participant_ids: string[];
+  before_state: Record<string, unknown>;
+  after_state: Record<string, unknown>;
+  triggered_by: string | null;
+  occurred_at: string;
+  provider_event_key: string;
+  raw_payload: Record<string, unknown>;
+  created_at: string;
+};
+
+export type CommWhatsAppGroupContext = {
+  group: CommWhatsAppGroup;
+  participants: CommWhatsAppGroupParticipant[];
+  events: CommWhatsAppGroupEvent[];
 };
 
 export type CommWhatsAppPhoneContact = {

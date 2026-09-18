@@ -71,6 +71,32 @@ export const normalizeWhapiChatId = (value: unknown): string => {
   return phone ? `${phone}@s.whatsapp.net` : raw;
 };
 
+/**
+ * Group participant ids are provider identifiers, not direct-chat phone
+ * identities. Whapi may return them as plain international digits, so do not
+ * apply normalizeCommWhatsAppPhone here.
+ */
+export const normalizeWhapiParticipantId = (value: unknown): string => {
+  const raw = toTrimmedString(value);
+  if (!raw) return '';
+
+  if (/@c\.us$/i.test(raw) || /@s\.whatsapp\.net$/i.test(raw)) {
+    const identifier = normalizePhoneDigits(raw.replace(/@(?:c\.us|s\.whatsapp\.net)$/i, ''));
+    return identifier ? `${identifier}@s.whatsapp.net` : '';
+  }
+  if (/@lid$/i.test(raw)) {
+    const identifier = raw.replace(/@lid$/i, '').trim();
+    return identifier ? `${identifier}@lid` : '';
+  }
+  if (raw.includes('@')) return raw;
+
+  const digits = normalizePhoneDigits(raw);
+  return digits || raw;
+};
+
+export const extractWhapiParticipantDigits = (value: unknown): string =>
+  normalizePhoneDigits(normalizeWhapiParticipantId(value).split('@')[0]);
+
 export const buildWhapiDirectChatId = (value: unknown): string => {
   const phone = normalizeCommWhatsAppPhone(value);
   return phone ? `${phone}@s.whatsapp.net` : '';
@@ -82,8 +108,17 @@ export const isWhapiPhoneDirectChatId = (value: unknown): boolean =>
 export const isWhapiLidChatId = (value: unknown): boolean =>
   /@lid$/i.test(normalizeWhapiChatId(value));
 
+/** A WhatsApp group id is never a phone identity. Keep this separate from
+ * direct chats so contact/lead resolution cannot accidentally run for a
+ * group. */
+export const isWhapiGroupChatId = (value: unknown): boolean =>
+  /@g\.us$/i.test(normalizeWhapiChatId(value));
+
 export const isDirectWhapiChatId = (value: unknown): boolean =>
   isWhapiPhoneDirectChatId(value) || isWhapiLidChatId(value);
+
+export const isInboxWhapiChatId = (value: unknown): boolean =>
+  isDirectWhapiChatId(value) || isWhapiGroupChatId(value);
 
 export const extractPhoneFromChatId = (value: unknown): string => {
   const chatId = normalizeWhapiChatId(value);

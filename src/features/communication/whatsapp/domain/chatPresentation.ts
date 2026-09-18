@@ -80,6 +80,10 @@ export const getSafeChatDisplayName = (
 ) => {
   if (!chat) return 'Conversa';
 
+  if (chat.is_group) {
+    return getValidWhatsAppDisplayName(chat.display_name) || 'Grupo';
+  }
+
   const savedContactName = getValidWhatsAppDisplayName(chat.saved_contact_name);
   const resolvedLeadName = getValidWhatsAppDisplayName(leadName) || getValidWhatsAppDisplayName(chat.lead_name);
   const pushName = getValidWhatsAppDisplayName(chat.push_name);
@@ -103,6 +107,24 @@ export const stabilizeChatIdentityForLocalMerge = (
   incoming: CommWhatsAppChat,
   previous?: CommWhatsAppChat | null,
 ): CommWhatsAppChat => {
+  if (incoming.is_group) {
+    return {
+      ...incoming,
+      is_group: true,
+      phone_number: '',
+      phone_digits: '',
+      lead_id: null,
+      lead_name: null,
+      lead_status: null,
+      lead_link_source: null,
+      lead_linked_at: null,
+      lead_linked_by: null,
+      auto_link_blocked: true,
+      saved_contact_name: null,
+      push_name: null,
+      display_name: getValidWhatsAppDisplayName(incoming.display_name) || 'Grupo',
+    };
+  }
   const savedContactName = getValidWhatsAppDisplayName(incoming.saved_contact_name)
     || getValidWhatsAppDisplayName(previous?.saved_contact_name);
   const leadName = getValidWhatsAppDisplayName(incoming.lead_name)

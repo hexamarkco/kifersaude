@@ -33,6 +33,10 @@ test('commercial status blocks autonomous reactivation and scheduling', () => {
   assert.match(webhookSource, /schedule_ai_autonomous_reply_job/);
 });
 
+test('webhook waits sixteen seconds to group inbound messages before replying', () => {
+  assert.match(webhookSource, /const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 16;/);
+});
+
 test('same conversation has a lease and outbound delivery key before sending', () => {
   assert.match(migrationSource, /ai_autonomous_reply_locks/);
   assert.match(migrationSource, /try_acquire_ai_autonomous_reply_lock/);

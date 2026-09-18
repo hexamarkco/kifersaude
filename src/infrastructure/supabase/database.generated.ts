@@ -47,6 +47,156 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_autonomous_attendance_events: {
+        Row: {
+          autonomous_status: string | null
+          chat_id: string
+          commercial_status: string | null
+          correlation_id: string | null
+          created_at: string
+          decision: Json
+          event_type: string
+          id: string
+          lead_id: string | null
+          metadata: Json
+          qualification_state: Json
+          qualification_status: string | null
+        }
+        Insert: {
+          autonomous_status?: string | null
+          chat_id: string
+          commercial_status?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          decision?: Json
+          event_type: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          qualification_state?: Json
+          qualification_status?: string | null
+        }
+        Update: {
+          autonomous_status?: string | null
+          chat_id?: string
+          commercial_status?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          decision?: Json
+          event_type?: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          qualification_state?: Json
+          qualification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_autonomous_attendance_events_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_autonomous_attendance_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_autonomous_qualification_states: {
+        Row: {
+          chat_id: string
+          created_at: string
+          lead_id: string | null
+          state: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          lead_id?: string | null
+          state?: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          lead_id?: string | null
+          state?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_autonomous_qualification_states_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: true
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_autonomous_qualification_states_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_autonomous_reply_delivery_keys: {
+        Row: {
+          chat_id: string
+          created_at: string
+          external_message_id: string | null
+          idempotency_key: string
+          job_id: string
+          message_index: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          external_message_id?: string | null
+          idempotency_key: string
+          job_id: string
+          message_index: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          external_message_id?: string | null
+          idempotency_key?: string
+          job_id?: string
+          message_index?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_autonomous_reply_delivery_keys_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_autonomous_reply_delivery_keys_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_autonomous_reply_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_autonomous_reply_jobs: {
         Row: {
           attempts: number
@@ -94,6 +244,35 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_autonomous_reply_locks: {
+        Row: {
+          chat_id: string
+          lease_until: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: string
+          lease_until: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: string
+          lease_until?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_autonomous_reply_locks_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: true
+            referencedRelation: "comm_whatsapp_chats"
             referencedColumns: ["id"]
           },
         ]
@@ -3640,6 +3819,72 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_dependent_imports: {
+        Row: {
+          actor_id: string
+          bonus_por_vida_aplicado: boolean | null
+          carencia_individual: string | null
+          consumed_at: string | null
+          contract_id: string | null
+          cpf: string | null
+          create_request_fingerprint: string
+          created_at: string
+          data_nascimento: string | null
+          dependent_id: string | null
+          elegibilidade: string | null
+          expires_at: string
+          holder_id: string | null
+          id: string
+          nome_completo: string | null
+          relacao: string | null
+          status: string
+          updated_at: string
+          valor_individual: number | null
+        }
+        Insert: {
+          actor_id: string
+          bonus_por_vida_aplicado?: boolean | null
+          carencia_individual?: string | null
+          consumed_at?: string | null
+          contract_id?: string | null
+          cpf?: string | null
+          create_request_fingerprint: string
+          created_at: string
+          data_nascimento?: string | null
+          dependent_id?: string | null
+          elegibilidade?: string | null
+          expires_at: string
+          holder_id?: string | null
+          id?: string
+          nome_completo?: string | null
+          relacao?: string | null
+          status?: string
+          updated_at: string
+          valor_individual?: number | null
+        }
+        Update: {
+          actor_id?: string
+          bonus_por_vida_aplicado?: boolean | null
+          carencia_individual?: string | null
+          consumed_at?: string | null
+          contract_id?: string | null
+          cpf?: string | null
+          create_request_fingerprint?: string
+          created_at?: string
+          data_nascimento?: string | null
+          dependent_id?: string | null
+          elegibilidade?: string | null
+          expires_at?: string
+          holder_id?: string | null
+          id?: string
+          nome_completo?: string | null
+          relacao?: string | null
+          status?: string
+          updated_at?: string
+          valor_individual?: number | null
+        }
+        Relationships: []
+      }
       contract_document_extraction_cache: {
         Row: {
           cache_key: string
@@ -3790,6 +4035,120 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_holder_imports: {
+        Row: {
+          actor_id: string
+          bairro: string | null
+          bonus_por_vida_aplicado: boolean | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          cns: string | null
+          complemento: string | null
+          consume_request_fingerprint: string | null
+          consumed_at: string | null
+          contract_holder_id: string | null
+          contract_id: string | null
+          cpf: string | null
+          create_request_fingerprint: string
+          created_at: string
+          data_abertura_cnpj: string | null
+          data_nascimento: string | null
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          estado_civil: string | null
+          expires_at: string
+          id: string
+          lead_id: string | null
+          nome_completo: string | null
+          nome_fantasia: string | null
+          numero: string | null
+          percentual_societario: number | null
+          razao_social: string | null
+          rg: string | null
+          sexo: string | null
+          source: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          actor_id: string
+          bairro?: string | null
+          bonus_por_vida_aplicado?: boolean | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          cns?: string | null
+          complemento?: string | null
+          consume_request_fingerprint?: string | null
+          consumed_at?: string | null
+          contract_holder_id?: string | null
+          contract_id?: string | null
+          cpf?: string | null
+          create_request_fingerprint: string
+          created_at: string
+          data_abertura_cnpj?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          estado_civil?: string | null
+          expires_at: string
+          id?: string
+          lead_id?: string | null
+          nome_completo?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          percentual_societario?: number | null
+          razao_social?: string | null
+          rg?: string | null
+          sexo?: string | null
+          source?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at: string
+        }
+        Update: {
+          actor_id?: string
+          bairro?: string | null
+          bonus_por_vida_aplicado?: boolean | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          cns?: string | null
+          complemento?: string | null
+          consume_request_fingerprint?: string | null
+          consumed_at?: string | null
+          contract_holder_id?: string | null
+          contract_id?: string | null
+          cpf?: string | null
+          create_request_fingerprint?: string
+          created_at?: string
+          data_abertura_cnpj?: string | null
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          estado_civil?: string | null
+          expires_at?: string
+          id?: string
+          lead_id?: string | null
+          nome_completo?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          percentual_societario?: number | null
+          razao_social?: string | null
+          rg?: string | null
+          sexo?: string | null
+          source?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contract_holders: {
         Row: {
           bairro: string | null
@@ -3918,6 +4277,51 @@ export type Database = {
           ordem?: number | null
           updated_at?: string | null
           value?: string
+        }
+        Relationships: []
+      }
+      contract_person_import_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          client_request_id_fingerprint: string | null
+          contract_id: string | null
+          created_at: string
+          holder_id: string | null
+          id: string
+          import_id: string
+          import_type: string
+          lead_id: string | null
+          operation: string
+          result: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          client_request_id_fingerprint?: string | null
+          contract_id?: string | null
+          created_at?: string
+          holder_id?: string | null
+          id?: string
+          import_id: string
+          import_type: string
+          lead_id?: string | null
+          operation: string
+          result: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          client_request_id_fingerprint?: string | null
+          contract_id?: string | null
+          created_at?: string
+          holder_id?: string | null
+          id?: string
+          import_id?: string
+          import_type?: string
+          lead_id?: string | null
+          operation?: string
+          result?: string
         }
         Relationships: []
       }
@@ -5967,6 +6371,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      _mcp_audit_contract_person_import: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_client_request_id_fingerprint: string
+          p_contract_id: string
+          p_holder_id: string
+          p_import_id: string
+          p_import_type: string
+          p_lead_id: string
+          p_operation: string
+        }
+        Returns: undefined
+      }
       _mcp_begin_contract_write_request: {
         Args: {
           p_actor_user_id: string
@@ -6066,6 +6484,18 @@ export type Database = {
       _mcp_contract_document_snapshot: {
         Args: { p_document_id: string; p_include_deleted?: boolean }
         Returns: Json
+      }
+      _mcp_contract_import_missing_fields: {
+        Args: { p_import_type: string; p_payload: Json }
+        Returns: string[]
+      }
+      _mcp_contract_import_request_fingerprint: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_operation: string
+        }
+        Returns: string
       }
       _mcp_insert_contract: {
         Args: { p_payload: Json }
@@ -6253,6 +6683,10 @@ export type Database = {
           old_status: string
         }[]
       }
+      ai_lead_is_waiting_for_quote: {
+        Args: { p_lead_id: string }
+        Returns: boolean
+      }
       archive_comm_whatsapp_old_deleted_chat_messages: {
         Args: { p_batch_size?: number; p_older_than_days?: number }
         Returns: number
@@ -6370,6 +6804,15 @@ export type Database = {
       }
       check_lead_created_backlog_triggers: { Args: never; Returns: undefined }
       check_status_duration_triggers: { Args: never; Returns: undefined }
+      claim_ai_autonomous_reply_delivery_key: {
+        Args: {
+          p_chat_id: string
+          p_idempotency_key: string
+          p_job_id: string
+          p_message_index: number
+        }
+        Returns: boolean
+      }
       claim_comm_whatsapp_campaign_targets: {
         Args: {
           p_campaign_id: string
@@ -6451,6 +6894,10 @@ export type Database = {
         Returns: {
           archive_path: string
         }[]
+      }
+      cleanup_contract_person_imports: {
+        Args: { p_batch_limit?: number }
+        Returns: number
       }
       cleanup_logs_7d: { Args: never; Returns: undefined }
       comm_whatsapp_apply_message_mutation: {
@@ -7540,6 +7987,29 @@ export type Database = {
         }
         Returns: string
       }
+      create_contract_dependent_import: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id?: string
+          p_holder_id?: string
+          p_payload: Json
+          p_ttl_hours?: number
+        }
+        Returns: Json
+      }
+      create_contract_holder_import: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id?: string
+          p_holder_payload: Json
+          p_lead_id?: string
+          p_source?: string
+          p_ttl_hours?: number
+        }
+        Returns: Json
+      }
       create_scheduled_message: {
         Args: {
           p_cancel_on_inbound_message?: boolean
@@ -7658,6 +8128,14 @@ export type Database = {
       invoke_process_pending_leads: { Args: never; Returns: number }
       invoke_scheduled_messages_worker: { Args: never; Returns: number }
       is_leap_year: { Args: { year_value: number }; Returns: boolean }
+      mark_ai_autonomous_reply_delivery_key_sent: {
+        Args: {
+          p_external_message_id: string
+          p_idempotency_key: string
+          p_job_id: string
+        }
+        Returns: undefined
+      }
       mcp_add_lead_to_opportunity: {
         Args: {
           p_actor_user_id: string
@@ -7846,6 +8324,15 @@ export type Database = {
           p_client_request_id: string
           p_contract_id: string
           p_payload: Json
+        }
+        Returns: Json
+      }
+      mcp_create_contract_holder_from_import: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id: string
+          p_import_id: string
         }
         Returns: Json
       }
@@ -8046,6 +8533,25 @@ export type Database = {
           moved_to_attendance: boolean
         }[]
       }
+      record_ai_autonomous_attendance_event: {
+        Args: {
+          p_autonomous_status?: string
+          p_chat_id: string
+          p_commercial_status?: string
+          p_correlation_id?: string
+          p_decision?: Json
+          p_event_type: string
+          p_lead_id: string
+          p_metadata?: Json
+          p_qualification_state?: Json
+          p_qualification_status?: string
+        }
+        Returns: string
+      }
+      release_ai_autonomous_reply_lock: {
+        Args: { p_chat_id: string; p_owner_id: string }
+        Returns: undefined
+      }
       release_pending_stage_dispatches: {
         Args: { p_lock_token: string; p_target_id: string }
         Returns: number
@@ -8175,6 +8681,22 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       trigger_lead_processing_now: { Args: never; Returns: Json }
+      try_acquire_ai_autonomous_reply_lock: {
+        Args: {
+          p_chat_id: string
+          p_lease_seconds?: number
+          p_owner_id: string
+        }
+        Returns: boolean
+      }
+      upsert_ai_autonomous_qualification_state: {
+        Args: { p_chat_id: string; p_lead_id: string; p_state: Json }
+        Returns: {
+          state: Json
+          updated_at: string
+          version: number
+        }[]
+      }
       upsert_commercial_state: {
         Args: {
           p_analysis_confidence: number

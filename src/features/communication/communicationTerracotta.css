@@ -133,6 +133,31 @@
   background: color-mix(in srgb, var(--brand-primary-muted) 48%, var(--bg-elevated));
 }
 
+.comm-terracotta .whatsapp-inbox-transcribe-button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.comm-terracotta .whatsapp-inbox-transcribe-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+  text-decoration: none;
+}
+
+.comm-terracotta .whatsapp-inbox-group-avatar {
+  width: var(--space-12);
+  height: var(--space-12);
+}
+
+.comm-terracotta .whatsapp-inbox-group-participant-list,
+.comm-terracotta .whatsapp-inbox-group-event-list {
+  max-height: calc(var(--space-16) * 2);
+  overflow-y: auto;
+}
+
 .comm-terracotta .whatsapp-inbox-composer.is-focused {
   border-color: var(--brand-primary-border);
   box-shadow: 0 0 0 2px var(--focus-ring);

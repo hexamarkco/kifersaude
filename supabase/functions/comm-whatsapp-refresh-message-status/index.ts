@@ -11,7 +11,7 @@ import {
   fetchWhapiMessage,
   fetchWhapiMessageStatuses,
   getNowIso,
-  isDirectWhapiChatId,
+  isInboxWhapiChatId,
   isRecord,
   normalizeWhapiChatId,
   resolveCommWhatsAppCanonicalChatRoute,
@@ -200,7 +200,7 @@ Deno.serve(async (req: Request) => {
     const externalChatId = normalizeWhapiChatId(body.chatId);
     const limit = Math.max(1, Math.min(20, Math.floor(Number(body.limit) || 10)));
 
-    if (externalChatId && !isDirectWhapiChatId(externalChatId)) {
+    if (externalChatId && !isInboxWhapiChatId(externalChatId)) {
       return new Response(JSON.stringify({ error: 'Conversa invalida para atualizar status.' }), {
         status: 400,
         headers: jsonHeaders,

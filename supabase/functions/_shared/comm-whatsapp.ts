@@ -1,31 +1,44 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   buildWhapiDirectChatId,
+  extractWhapiParticipantDigits,
   extractPhoneFromChatId,
   formatPhoneFromDigits,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
   isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
   isWhapiLidChatId,
   isWhapiPhoneDirectChatId,
   normalizeCommWhatsAppPhone,
   normalizePhoneDigits,
   normalizeWhapiChatId,
+  normalizeWhapiParticipantId,
   normalizeWhapiPhoneChatId,
 } from './comm-whatsapp/identity.ts';
+import {
+  normalizeWhapiGroupSnapshot,
+  type WhapiGroupEventItem,
+  type WhapiGroupSnapshot,
+} from './whapi-group-webhook-parser.ts';
 
 export {
   buildWhapiDirectChatId,
+  extractWhapiParticipantDigits,
   extractPhoneFromChatId,
   formatPhoneFromDigits,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
   isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
   isWhapiLidChatId,
   isWhapiPhoneDirectChatId,
   normalizeCommWhatsAppPhone,
   normalizePhoneDigits,
   normalizeWhapiChatId,
+  normalizeWhapiParticipantId,
   normalizeWhapiPhoneChatId,
 };
 
@@ -2941,6 +2954,272 @@ export async function fetchWhapiChatsPage(params: {
   return { chats, hasMore: chats.length >= count };
 }
 
+export async function fetchWhapiGroupsPage(params: {
+  token: string;
+  count?: number;
+  offset?: number;
+}): Promise<{ groups: Array<Record<string, unknown>>; hasMore: boolean }> {
+  const count = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 500);
+  const offset = Math.max(Math.floor(Number(params.offset) || 0), 0);
+  const query = new URLSearchParams({ count: String(count) });
+  if (offset > 0) query.set('offset', String(offset));
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/groups?${query.toString()}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  }, 15_000);
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar grupos na Whapi.');
+  }
+
+  const groups = isRecord(payload) && Array.isArray(payload.groups)
+    ? payload.groups.filter(isRecord)
+    : extractWhapiChats(payload);
+  return { groups, hasMore: groups.length >= count };
+}
+
+export async function fetchWhapiGroup(params: {
+  token: string;
+  groupId: string;
+}): Promise<Record<string, unknown> | null> {
+  const groupId = normalizeWhapiChatId(params.groupId);
+  if (!isWhapiGroupChatId(groupId)) return null;
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/groups/${encodeURIComponent(groupId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  }, 15_000);
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar o grupo na Whapi.');
+  }
+
+  if (isRecord(payload) && isRecord(payload.group)) return payload.group;
+  return isRecord(payload) ? payload : null;
+}
+
+const groupTimestampToIso = (value: string): string | null => {
+  if (!value) return null;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return unixTimestampToIso(numeric);
+  return stringTimestampToIso(value);
+};
+
+const buildFallbackGroupSnapshot = (groupId: string, raw: Record<string, unknown> = {}): WhapiGroupSnapshot => ({
+  id: normalizeWhapiChatId(groupId),
+  name: toTrimmedString(raw.name ?? raw.subject ?? raw.chat_name) || 'Grupo',
+  description: toTrimmedString(raw.description),
+  chatPic: toTrimmedString(raw.chat_pic ?? raw.picture),
+  chatPicFull: toTrimmedString(raw.chat_pic_full ?? raw.picture_full),
+  createdAt: toTrimmedString(raw.created_at ?? raw.creation_time),
+  nameAt: toTrimmedString(raw.name_at),
+  createdBy: normalizeWhapiParticipantId(raw.created_by ?? raw.owner),
+  adminAddMemberMode: typeof raw.adminAddMemberMode === 'boolean'
+    ? raw.adminAddMemberMode
+    : typeof raw.admin_add_member_only === 'boolean' ? raw.admin_add_member_only : null,
+  participants: [],
+  raw,
+});
+
+export async function persistWhapiGroupSnapshot(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; snapshot: WhapiGroupSnapshot },
+): Promise<{ chatId: string; groupId: string }> {
+  const snapshot = params.snapshot;
+  if (!isWhapiGroupChatId(snapshot.id)) {
+    throw new Error('Snapshot de grupo invalido.');
+  }
+
+  const { data: chat, error: chatError } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .upsert({
+      channel_id: params.channelId,
+      external_chat_id: snapshot.id,
+      phone_number: '',
+      phone_digits: '',
+      display_name: snapshot.name || 'Grupo',
+      is_group: true,
+      auto_link_blocked: true,
+      last_message_direction: 'system',
+    }, { onConflict: 'channel_id,external_chat_id' })
+    .select('id')
+    .single();
+  if (chatError || !chat?.id) {
+    throw new Error(`Nao foi possivel preparar o chat do grupo: ${chatError?.message || 'id ausente'}`);
+  }
+
+  const { data: group, error: groupError } = await supabaseAdmin
+    .from('comm_whatsapp_groups')
+    .upsert({
+      channel_id: params.channelId,
+      chat_id: chat.id,
+      external_group_id: snapshot.id,
+      name: snapshot.name || 'Grupo',
+      description: snapshot.description || null,
+      chat_pic: snapshot.chatPic || null,
+      chat_pic_full: snapshot.chatPicFull || null,
+      created_at_provider: groupTimestampToIso(snapshot.createdAt),
+      created_by: snapshot.createdBy || null,
+      name_at: groupTimestampToIso(snapshot.nameAt) || (snapshot.name ? getNowIso() : null),
+      admin_add_member_mode: snapshot.adminAddMemberMode,
+      last_synced_at: getNowIso(),
+      raw_metadata: snapshot.raw,
+    }, { onConflict: 'channel_id,external_group_id' })
+    .select('id')
+    .single();
+  if (groupError || !group?.id) {
+    throw new Error(`Nao foi possivel persistir os dados do grupo: ${groupError?.message || 'id ausente'}`);
+  }
+
+  if (snapshot.participants.length > 0) {
+    const activeParticipantIds = snapshot.participants.map((participant) => participant.id);
+    const participantRows = snapshot.participants.map((participant) => ({
+      group_id: group.id,
+      external_participant_id: participant.id,
+      phone_digits: extractWhapiParticipantDigits(participant.id) || null,
+      display_name: participant.name || null,
+      rank: participant.rank,
+      membership_status: participant.membershipStatus,
+      raw_metadata: participant.raw,
+    }));
+    const { error: participantError } = await supabaseAdmin
+      .from('comm_whatsapp_group_participants')
+      .upsert(participantRows, { onConflict: 'group_id,external_participant_id' });
+    if (participantError) {
+      throw new Error(`Nao foi possivel persistir participantes do grupo: ${participantError.message}`);
+    }
+
+    const { data: existingParticipants, error: existingParticipantsError } = await supabaseAdmin
+      .from('comm_whatsapp_group_participants')
+      .select('external_participant_id')
+      .eq('group_id', group.id);
+    if (existingParticipantsError) {
+      throw new Error(`Nao foi possivel reconciliar participantes do grupo: ${existingParticipantsError.message}`);
+    }
+
+    const activeParticipantSet = new Set(activeParticipantIds);
+    const removedParticipantIds = (existingParticipants ?? [])
+      .map((participant) => toTrimmedString(participant.external_participant_id))
+      .filter((participantId) => Boolean(participantId) && !activeParticipantSet.has(participantId));
+    if (removedParticipantIds.length > 0) {
+      const { error: removedParticipantsError } = await supabaseAdmin
+        .from('comm_whatsapp_group_participants')
+        .update({ membership_status: 'removed' })
+        .eq('group_id', group.id)
+        .in('external_participant_id', removedParticipantIds);
+      if (removedParticipantsError) {
+        throw new Error(`Nao foi possivel marcar participantes removidos: ${removedParticipantsError.message}`);
+      }
+    }
+  }
+
+  return { chatId: chat.id, groupId: group.id };
+}
+
+export async function ensureWhapiGroupChatMetadata(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; groupId: string; name?: string | null },
+): Promise<{ chatId: string; groupId: string }> {
+  const groupId = normalizeWhapiChatId(params.groupId);
+  if (!isWhapiGroupChatId(groupId)) {
+    throw new Error('Grupo invalido para preparar metadados.');
+  }
+
+  return persistWhapiGroupSnapshot(supabaseAdmin, {
+    channelId: params.channelId,
+    snapshot: buildFallbackGroupSnapshot(groupId, { name: params.name || 'Grupo' }),
+  });
+}
+
+export async function persistWhapiGroupEvent(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; event: WhapiGroupEventItem; providerEventKey: string },
+): Promise<{ chatId: string; groupId: string; inserted: boolean }> {
+  const event = params.event;
+  const snapshot = event.snapshot || buildFallbackGroupSnapshot(event.groupId, event.after);
+  const ensured = await persistWhapiGroupSnapshot(supabaseAdmin, {
+    channelId: params.channelId,
+    snapshot,
+  });
+
+  if (event.eventType === 'participants' && event.participantIds.length > 0) {
+    const action = event.action.toLowerCase();
+    const membershipStatus = action === 'remove' ? 'removed' : action === 'request' ? 'pending' : 'member';
+    const rank = action === 'promote' ? 'admin' : action === 'demote' ? 'member' : 'unknown';
+    const rows = event.participantIds.map((participantId) => ({
+      group_id: ensured.groupId,
+      external_participant_id: participantId,
+      phone_digits: extractWhapiParticipantDigits(participantId) || null,
+      membership_status: membershipStatus,
+      rank,
+      raw_metadata: event.raw,
+    }));
+    const { error } = await supabaseAdmin
+      .from('comm_whatsapp_group_participants')
+      .upsert(rows, { onConflict: 'group_id,external_participant_id' });
+    if (error) throw new Error(`Nao foi possivel aplicar participantes do grupo: ${error.message}`);
+  }
+
+  const { data: existing } = await supabaseAdmin
+    .from('comm_whatsapp_group_events')
+    .select('id')
+    .eq('provider_event_key', params.providerEventKey)
+    .maybeSingle();
+  if (existing?.id) {
+    return { ...ensured, inserted: false };
+  }
+
+  const { error: eventError } = await supabaseAdmin
+    .from('comm_whatsapp_group_events')
+    .insert({
+      channel_id: params.channelId,
+      group_id: ensured.groupId,
+      event_type: `${event.eventType}:${event.action}`,
+      participant_ids: event.participantIds,
+      before_state: event.before,
+      after_state: event.after,
+      triggered_by: event.performedBy || null,
+      occurred_at: groupTimestampToIso(toTrimmedString(event.receipt.timestamp)) || getNowIso(),
+      provider_event_key: params.providerEventKey,
+      raw_payload: event.raw,
+    });
+  if (eventError) {
+    if (eventError.code === '23505') return { ...ensured, inserted: false };
+    throw new Error(`Nao foi possivel registrar evento do grupo: ${eventError.message}`);
+  }
+
+  return { ...ensured, inserted: true };
+}
+
+/**
+ * comm_whatsapp_persist_message normalizes sender_phone as a Brazilian
+ * WhatsApp destination. Group participant ids are provider ids and may be
+ * international, so restore the exact participant digits after persistence.
+ */
+export async function restoreWhapiGroupSenderPhone(
+  supabaseAdmin: SupabaseClient,
+  params: { channelId: string; messageId: string; senderPhone: string | null },
+): Promise<void> {
+  if (!params.messageId) return;
+
+  const { error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .update({ sender_phone: params.senderPhone || null })
+    .eq('channel_id', params.channelId)
+    .eq('id', params.messageId);
+
+  if (error) {
+    console.error('[comm-whatsapp] falha ao preservar sender_phone de grupo', error.message);
+  }
+}
+
 export async function fetchWhapiContactsPage(params: {
   token: string;
   count?: number;
@@ -3559,7 +3838,7 @@ export async function resolveCommWhatsAppCanonicalChatRoute(
   input: { channelId: string; externalChatId: string },
 ): Promise<CommWhatsAppCanonicalChatRoute> {
   const externalChatId = normalizeWhapiChatId(input.externalChatId);
-  if (!input.channelId || !isDirectWhapiChatId(externalChatId)) {
+  if (!input.channelId || !isInboxWhapiChatId(externalChatId)) {
     throw new Error('Canal ou identificador invalido para resolver a conversa canonica.');
   }
 
@@ -4031,6 +4310,196 @@ export async function syncWhapiDirectChatMessages(
     timeTo,
     identityConflict,
   };
+}
+
+export type SyncWhapiInboxChatMessagesParams = SyncWhapiDirectChatMessagesParams;
+
+const syncWhapiGroupChatMessages = async (
+  supabaseAdmin: SupabaseClient,
+  params: SyncWhapiInboxChatMessagesParams,
+): Promise<SyncWhapiDirectChatMessagesResult> => {
+  const { channel, token } = params;
+  const externalChatId = normalizeWhapiChatId(params.externalChatId);
+  const offset = Math.max(Math.floor(Number(params.offset) || 0), 0);
+  const pageSize = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 500);
+  const requestedTimeTo = Number(params.timeTo);
+  const timeTo = Number.isFinite(requestedTimeTo) && requestedTimeTo > 0
+    ? Math.floor(requestedTimeTo)
+    : Math.floor(Date.now() / 1000);
+
+  if (!isWhapiGroupChatId(externalChatId)) {
+    throw new Error('Grupo invalido para sincronizacao.');
+  }
+
+  const remoteGroup = await fetchWhapiGroup({ token, groupId: externalChatId }).catch(() => null);
+  const groupSnapshot = normalizeWhapiGroupSnapshot(remoteGroup) || buildFallbackGroupSnapshot(externalChatId);
+  const ensuredGroup = await persistWhapiGroupSnapshot(supabaseAdmin, {
+    channelId: channel.id,
+    snapshot: groupSnapshot,
+  });
+
+  const messagePage = await fetchWhapiChatMessagesPage({
+    token,
+    chatId: externalChatId,
+    count: pageSize,
+    offset,
+    timeTo,
+    sort: 'asc',
+  });
+  const messages = dedupeWhapiHistoryMessages(messagePage.messages);
+  const orderedMessages = [...messages].sort((a, b) => Number(a.timestamp ?? 0) - Number(b.timestamp ?? 0));
+  let insertedCount = 0;
+  let updatedCount = 0;
+
+  for (const message of orderedMessages) {
+    const reactionEvent = extractWhapiReactionEvent(message, 'messages');
+    if (reactionEvent?.targetExternalMessageId) {
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: reactionEvent.targetExternalMessageId,
+        mutationType: 'reaction',
+        eventExternalMessageId: reactionEvent.eventExternalMessageId,
+        occurredAt: reactionEvent.reactedAt,
+        payload: {
+          actor_key: reactionEvent.actorKey,
+          emoji: reactionEvent.emoji,
+          from_me: reactionEvent.fromMe,
+          from: reactionEvent.from,
+          from_name: reactionEvent.fromName,
+        },
+        dedupeKey: reactionEvent.eventExternalMessageId
+          || `history-group-reaction:${reactionEvent.targetExternalMessageId}:${reactionEvent.actorKey}:${reactionEvent.reactedAt}`,
+      });
+      continue;
+    }
+
+    const deletedEvent = extractWhapiDeletedMessageEvent(message, 'messages');
+    if (deletedEvent?.targetExternalMessageId) {
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: deletedEvent.targetExternalMessageId,
+        mutationType: 'delete',
+        eventExternalMessageId: deletedEvent.eventExternalMessageId,
+        occurredAt: deletedEvent.deletedAt,
+        payload: { original_text: deletedEvent.originalText, action_type: deletedEvent.actionType, deleted_by: deletedEvent.deletedBy },
+        dedupeKey: deletedEvent.eventExternalMessageId
+          || `history-group-delete:${deletedEvent.targetExternalMessageId}:${deletedEvent.deletedAt}`,
+      });
+      continue;
+    }
+
+    const editedEvent = extractWhapiEditedMessageEvent(message, 'messages');
+    if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
+      const editedAt = editedEvent.editedAt || getNowIso();
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+        channelId: channel.id,
+        targetExternalMessageId: editedEvent.targetExternalMessageId,
+        mutationType: 'edit',
+        eventExternalMessageId: editedEvent.eventExternalMessageId,
+        occurredAt: editedAt,
+        payload: { edited_text: editedEvent.editedText, original_text: editedEvent.originalText, action_type: editedEvent.actionType },
+        dedupeKey: editedEvent.eventExternalMessageId
+          || `history-group-edit:${editedEvent.targetExternalMessageId}:${editedAt}`,
+      });
+      continue;
+    }
+
+    const direction = message.from_me === true ? 'outbound' : 'inbound';
+    const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
+    const externalMessageId = extractWhapiMessageId(message);
+    const mediaMeta = extractWhapiMediaMeta(message);
+    const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
+    const inviteMeta = extractWhapiInviteMeta(message);
+    const quoteMeta = extractWhapiQuotedMessageMeta(message);
+    const contactCardMeta = extractWhapiContactCardMeta(message);
+    const summaryText = summarizeWhapiMessage(message);
+    const senderId = normalizeWhapiParticipantId(message.from ?? message.sender ?? message.author);
+    const senderName = toTrimmedString(message.from_name)
+      || toTrimmedString(message.sender_name)
+      || getDirectChatDisplayNameCandidate(message, direction)
+      || null;
+    const senderPhone = direction === 'outbound'
+      ? channel.phone_number || null
+      : extractWhapiParticipantDigits(senderId) || null;
+
+    const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
+      channelId: channel.id,
+      externalChatId,
+      phoneNumber: null,
+      displayName: groupSnapshot.name || 'Grupo',
+      pushName: null,
+      lastMessageText: summaryText,
+      lastMessageDirection: direction,
+      lastMessageAt: messageAt,
+      incrementUnread: false,
+      externalMessageId: externalMessageId || null,
+      direction,
+      messageType: toTrimmedString(message.type) || 'text',
+      deliveryStatus: toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent'),
+      textContent: summaryText,
+      createdBy: null,
+      source: toTrimmedString(message.source) || null,
+      senderName,
+      senderPhone,
+      statusUpdatedAt: messageAt,
+      errorMessage: null,
+      mediaId: mediaMeta.mediaId,
+      mediaUrl: mediaMeta.mediaUrl,
+      mediaMimeType: mediaMeta.mediaMimeType,
+      mediaFileName: mediaMeta.mediaFileName,
+      mediaSizeBytes: mediaMeta.mediaSizeBytes,
+      mediaDurationSeconds: mediaMeta.mediaDurationSeconds,
+      mediaCaption: mediaMeta.mediaCaption,
+      metadata: {
+        is_group: true,
+        group_id: externalChatId,
+        from_me: message.from_me === true,
+        chat_id: externalChatId,
+        from: toTrimmedString(message.from) || null,
+        from_name: senderName,
+        chat_name: groupSnapshot.name,
+        link_preview: linkPreviewMeta,
+        ...(senderId ? { sender_id: senderId } : {}),
+        ...(inviteMeta ? { invite: inviteMeta } : {}),
+        ...(quoteMeta ? { quote: quoteMeta } : {}),
+        ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+      },
+    });
+
+    if (persisted.inserted) insertedCount += 1;
+    else updatedCount += 1;
+
+    if (direction === 'inbound' && senderPhone && persisted.messageId) {
+      await restoreWhapiGroupSenderPhone(supabaseAdmin, {
+        channelId: channel.id,
+        messageId: persisted.messageId,
+        senderPhone,
+      });
+    }
+  }
+
+  const hasMore = messagePage.hasMore && messagePage.nextOffset > offset;
+  return {
+    chatId: ensuredGroup.chatId,
+    canonicalExternalChatId: externalChatId,
+    fetched: orderedMessages.length,
+    inserted: insertedCount,
+    updated: updatedCount,
+    hasMore,
+    nextOffset: hasMore ? messagePage.nextOffset : null,
+    timeTo,
+    identityConflict: false,
+  };
+};
+
+export async function syncWhapiInboxChatMessages(
+  supabaseAdmin: SupabaseClient,
+  params: SyncWhapiInboxChatMessagesParams,
+): Promise<SyncWhapiDirectChatMessagesResult> {
+  const externalChatId = normalizeWhapiChatId(params.externalChatId);
+  return isWhapiGroupChatId(externalChatId)
+    ? syncWhapiGroupChatMessages(supabaseAdmin, params)
+    : syncWhapiDirectChatMessages(supabaseAdmin, params);
 }
 
 export async function updateCommWhatsAppMessageStatus(

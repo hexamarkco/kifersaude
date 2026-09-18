@@ -23,6 +23,7 @@ type WhatsAppScheduleMessageModalProps = {
   isOpen: boolean;
   onClose: () => void;
   channelId: string;
+  chatId?: string | null;
   phoneDigits: string;
   leadId?: string | null;
   contractId?: string | null;
@@ -75,6 +76,7 @@ export default function WhatsAppScheduleMessageModal({
   isOpen,
   onClose,
   channelId,
+  chatId,
   phoneDigits,
   leadId,
   contractId,
@@ -165,6 +167,7 @@ export default function WhatsAppScheduleMessageModal({
       } else {
         await commWhatsAppService.scheduleMessage({
           channelId,
+          chatId,
           phoneDigits,
           scheduledAt: scheduledAtIso!,
           messageType,
@@ -194,6 +197,7 @@ export default function WhatsAppScheduleMessageModal({
     isValid,
     submitting,
     channelId,
+    chatId,
     phoneDigits,
     scheduledAtIso,
     messageType,

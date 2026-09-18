@@ -13,6 +13,7 @@ const baseChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat =
   id: overrides.id ?? 'chat-1',
   channel_id: overrides.channel_id ?? 'channel-1',
   external_chat_id: overrides.external_chat_id ?? '5511999999999@s.whatsapp.net',
+  is_group: overrides.is_group ?? false,
   phone_number: overrides.phone_number ?? '5511999999999',
   phone_digits: overrides.phone_digits ?? '5511999999999',
   display_name: overrides.display_name ?? 'Cliente Teste',

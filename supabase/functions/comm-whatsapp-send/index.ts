@@ -14,6 +14,7 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  ensureWhapiGroupChatMetadata,
   extractPhoneFromChatId,
   extractWhapiMediaId,
   extractWhapiMessageId,
@@ -21,7 +22,8 @@ import {
   fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
-  isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
   normalizeWhapiChatId,
   parseWhapiError,
   persistCommWhatsAppMessage,
@@ -657,7 +659,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (!chatId || !isDirectWhapiChatId(chatId)) {
+    if (!chatId || !isInboxWhapiChatId(chatId)) {
       return new Response(JSON.stringify({ error: 'Conversa inválida para envio.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -743,12 +745,22 @@ Deno.serve(async (req: Request) => {
     // Manual Inbox messages may contain sales outreach. Until the UI provides
     // an explicit, auditable service-reply classification, all manual sends
     // follow the commercial policy so opt-outs cannot be bypassed silently.
+    const isGroup = isWhapiGroupChatId(chatId);
+    if (isGroup) {
+      await ensureWhapiGroupChatMetadata(supabaseAdmin, {
+        channelId: channel.id,
+        groupId: chatId,
+        name: dispatchRoute.displayName,
+      });
+    }
     const sendPurposeScope = 'commercial' as const;
-    const assertSendAllowed = () => assertContactPermissionForSend(
-      supabaseAdmin!,
-      dispatchRoute.phoneNumber || extractPhoneFromChatId(chatId),
-      sendPurposeScope,
-    );
+    const assertSendAllowed = isGroup
+      ? async () => undefined
+      : () => assertContactPermissionForSend(
+          supabaseAdmin!,
+          dispatchRoute.phoneNumber || extractPhoneFromChatId(chatId),
+          sendPurposeScope,
+        );
 
     let whapiResponse: Response;
     let uploadedMediaId = '';
@@ -818,7 +830,7 @@ Deno.serve(async (req: Request) => {
           channelId: channel.id,
           externalChatId: chatId,
           phoneNumber: phoneDigits || null,
-          displayName: chatRoute.displayName || formatPhoneLabel(phoneDigits),
+          displayName: isGroup ? (chatRoute.displayName || 'Grupo') : chatRoute.displayName || formatPhoneLabel(phoneDigits),
           pushName: chatRoute.pushName,
           lastMessageText: summaryText,
           lastMessageDirection: 'outbound',
@@ -844,7 +856,7 @@ Deno.serve(async (req: Request) => {
           mediaCaption: mediaKind === 'voice' ? null : text || null,
           metadata: {
             provider: 'whapi',
-            contact_permission_scope: sendPurposeScope,
+            ...(isGroup ? { is_group: true } : { contact_permission_scope: sendPurposeScope }),
             ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
             ...(quoteMetadata ? { quote: quoteMetadata } : {}),
           },
@@ -999,7 +1011,7 @@ Deno.serve(async (req: Request) => {
       channelId: channel.id,
       externalChatId: chatId,
       phoneNumber: phoneDigits || null,
-      displayName: chatRoute.displayName || formatPhoneLabel(phoneDigits),
+      displayName: isGroup ? (chatRoute.displayName || 'Grupo') : chatRoute.displayName || formatPhoneLabel(phoneDigits),
       pushName: chatRoute.pushName,
       lastMessageText: isMediaMessage ? summaryText : text,
       lastMessageDirection: 'outbound',
@@ -1025,7 +1037,7 @@ Deno.serve(async (req: Request) => {
       mediaCaption: mediaKind === 'voice' ? null : text || null,
       metadata: {
         provider: 'whapi',
-        contact_permission_scope: sendPurposeScope,
+        ...(isGroup ? { is_group: true } : { contact_permission_scope: sendPurposeScope }),
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
         ...(quoteMetadata ? { quote: quoteMetadata } : {}),
       },

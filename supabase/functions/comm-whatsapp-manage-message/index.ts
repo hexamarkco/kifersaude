@@ -8,11 +8,13 @@ import {
   createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  ensureWhapiGroupChatMetadata,
   extractPhoneFromChatId,
   extractWhapiMessageId,
   formatPhoneLabel,
   getNowIso,
-  isDirectWhapiChatId,
+  isInboxWhapiChatId,
+  isWhapiGroupChatId,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
   parseWhapiError,
@@ -306,7 +308,7 @@ Deno.serve(async (req: Request) => {
       }
 
       for (const targetChatId of requestedTargetChatIds) {
-        if (!isDirectWhapiChatId(targetChatId)) {
+        if (!isInboxWhapiChatId(targetChatId)) {
           return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
             status: 400,
             headers: jsonHeaders,
@@ -329,6 +331,13 @@ Deno.serve(async (req: Request) => {
 
       for (const targetRoute of uniqueTargetRoutes) {
         const targetChatId = targetRoute.externalChatId;
+        if (isWhapiGroupChatId(targetChatId)) {
+          await ensureWhapiGroupChatMetadata(supabaseAdmin, {
+            channelId: channel.id,
+            groupId: targetChatId,
+            name: targetRoute.displayName,
+          });
+        }
         const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
         const payload = await readResponsePayload(response);
 
@@ -349,7 +358,9 @@ Deno.serve(async (req: Request) => {
           channelId: channel.id,
           externalChatId: targetChatId,
           phoneNumber: phoneDigits || null,
-          displayName: targetRoute.displayName || formatPhoneLabel(phoneDigits),
+          displayName: isWhapiGroupChatId(targetChatId)
+            ? targetRoute.displayName || 'Grupo'
+            : targetRoute.displayName || formatPhoneLabel(phoneDigits),
           pushName: targetRoute.pushName,
           lastMessageText: summaryText,
           lastMessageDirection: 'outbound',
@@ -375,6 +386,7 @@ Deno.serve(async (req: Request) => {
           mediaCaption: null,
           metadata: {
             provider: 'whapi',
+            ...(isWhapiGroupChatId(targetChatId) ? { is_group: true } : {}),
             forwarded: true,
             forwarded_from_external_message_id: externalMessageId,
           },

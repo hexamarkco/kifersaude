@@ -119,6 +119,7 @@ test('rejects a divergent reverse mapping', async () => {
 
 test('keeps group ids outside direct identity checks', () => {
   assert.equal(normalizeWhapiChatId('120363012345678901@g.us'), '120363012345678901@g.us');
+  assert.equal(normalizeWhapiChatId('5511999999999'), '5511999999999@s.whatsapp.net');
   assert.equal(isWhapiGroupChatId('120363012345678901@g.us'), true);
   assert.equal(isDirectWhapiChatId('120363012345678901@g.us'), false);
   assert.equal(isInboxWhapiChatId('120363012345678901@g.us'), true);

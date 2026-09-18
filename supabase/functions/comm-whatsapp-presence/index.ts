@@ -4,6 +4,7 @@ import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
   ensureCommWhatsAppSettings,
+  extractWhapiParticipantDigits,
   fetchWhapiPresence,
   isWhapiPresenceSnapshotStale,
   normalizeWhapiChatId,
@@ -95,11 +96,17 @@ Deno.serve(async (req: Request) => {
     if (!settings.enabled) return response({ error: 'Integração WhatsApp desabilitada.' }, 403);
     if (!settings.token) return response({ error: 'Token da Whapi nao configurado.' }, 400);
 
+    const presenceEntryIds = Array.from(new Set([
+      entryId,
+      extractWhapiParticipantDigits(entryId),
+    ].filter(Boolean)));
     const { data: previous, error: previousError } = await supabaseAdmin
       .from('comm_whatsapp_presences')
       .select('status, last_seen_at, observed_at, subscription_status, subscription_attempted_at')
       .eq('channel_id', chat.channel_id)
-      .eq('external_entry_id', entryId)
+      .in('external_entry_id', presenceEntryIds)
+      .order('observed_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (previousError) throw new Error(`Nao foi possivel carregar estado de presenca: ${previousError.message}`);
 

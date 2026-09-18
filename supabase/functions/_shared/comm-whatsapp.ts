@@ -3336,7 +3336,7 @@ export async function updateWhapiPresenceSubscription(
   supabaseAdmin: SupabaseClient,
   params: { channelId: string; entryId: string; update: CommWhatsAppPresenceSubscriptionUpdate },
 ): Promise<void> {
-  const entryId = normalizeWhapiParticipantId(params.entryId);
+  const entryId = normalizeWhapiChatId(params.entryId);
   if (!entryId) return;
 
   const chatId = await findWhapiPresenceChatId(supabaseAdmin, params.channelId, entryId);
@@ -3380,15 +3380,21 @@ export async function persistWhapiPresence(
   supabaseAdmin: SupabaseClient,
   params: { channelId: string; item: WhapiPresenceItem },
 ): Promise<{ id: string; chatId: string | null; entryId: string; status: WhapiPresenceStatus } | null> {
-  const entryId = normalizeWhapiParticipantId(params.item.entryId);
+  const entryId = normalizeWhapiChatId(params.item.entryId);
   if (!entryId) return null;
 
   const chatId = await findWhapiPresenceChatId(supabaseAdmin, params.channelId, entryId);
+  const presenceEntryIds = Array.from(new Set([
+    entryId,
+    extractWhapiParticipantDigits(entryId),
+  ].filter(Boolean)));
   const existing = await supabaseAdmin
     .from('comm_whatsapp_presences')
     .select('last_seen_at, subscription_status, subscribed_at')
     .eq('channel_id', params.channelId)
-    .eq('external_entry_id', entryId)
+    .in('external_entry_id', presenceEntryIds)
+    .order('observed_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (existing.error) throw new Error(`Nao foi possivel carregar presenca anterior: ${existing.error.message}`);
 

@@ -41,6 +41,16 @@ test('capital exige bairro e bairro informado libera a qualificacao', () => {
   assert.equal(qualificationStateIsComplete(withNeighborhood), true);
 });
 
+test('preserva tres vidas quando ha um adulto, uma adolescente e um bebe', () => {
+  const state = stateFrom([
+    { role: 'lead', content: 'Um seria pra mim, tenho 67 anos.' },
+    { role: 'lead', content: 'Outro para uma adolescente de 13 anos e um bebê de 2 meses.' },
+  ]);
+  assert.equal(state.lives.count, 3);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [67, 13, 0]);
+  assert.deepEqual(state.lives.items.map((life) => life.role), ['adult', 'child', 'child']);
+});
+
 test('numero do CNPJ e detalhes da operadora nao bloqueiam a conclusao', () => {
   const state = stateFrom([
     { role: 'lead', content: 'É para mim, tenho 32 anos, moro em Campinas. Tenho MEI, mas prefiro não passar o número. Tenho plano, mas não sei qual é.' },

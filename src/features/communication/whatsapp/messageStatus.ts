@@ -71,6 +71,7 @@ export const getMessageDisplayMetadataSignature = (message?: CommWhatsAppMessage
     quote: metadata.quote ?? null,
     contact_card: metadata.contact_card ?? null,
     link_preview: metadata.link_preview ?? null,
+    invite: metadata.invite ?? null,
     reactions: Array.isArray(metadata.reactions) ? metadata.reactions : [],
     edited: metadata.edited === true,
     edited_at: metadata.edited_at ?? null,

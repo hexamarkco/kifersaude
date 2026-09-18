@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -100,6 +100,7 @@ import {
   getMessageClientRequestId,
   getMessageContactCardInfo,
   getMessageInteractiveInfo,
+  getMessageInviteInfo,
   getMessageLinkPreview,
   getMessageMetadataRecord,
   getMessageQuoteInfo,
@@ -1570,6 +1571,7 @@ function WhatsAppMessageBody({
   const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
   const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
   const interactiveInfo = useMemo(() => getMessageInteractiveInfo(message), [message]);
+  const inviteInfo = useMemo(() => getMessageInviteInfo(message), [message]);
   const visibleTextContent = getVisiblePreviewText(message.text_content, message.message_type);
 
   useEffect(() => {
@@ -1783,6 +1785,58 @@ function WhatsAppMessageBody({
         ) : null}
       </div>
     )
+  ) : null;
+
+  const inviteLabel = inviteInfo?.kind === 'group_invite'
+    ? 'Convite para grupo'
+    : inviteInfo?.kind === 'newsletter_invite'
+      ? 'Convite para canal'
+      : 'Convite de administrador';
+  const inviteIcon = inviteInfo?.kind === 'group_invite'
+    ? <Users className="h-5 w-5" />
+    : inviteInfo?.kind === 'newsletter_invite'
+      ? <Radio className="h-5 w-5" />
+      : <ShieldCheck className="h-5 w-5" />;
+  const inviteExpirationLabel = inviteInfo?.expiration
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(inviteInfo.expiration * 1000))
+    : null;
+  const inviteNode = inviteInfo ? (
+    <div className="w-[320px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
+      {inviteInfo.preview ? (
+        <div className="h-36 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+          <img src={inviteInfo.preview} alt="Prévia do convite" className="h-full w-full object-cover" loading="lazy" />
+        </div>
+      ) : null}
+      <div className="space-y-3 px-3 py-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+            {inviteIcon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{inviteLabel}</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-[var(--text-primary)]">{inviteInfo.title}</p>
+            {inviteInfo.newsletterName ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{inviteInfo.newsletterName}</p> : null}
+          </div>
+        </div>
+        {inviteInfo.description ? <p className="text-sm leading-6 text-[var(--text-secondary)]">{inviteInfo.description}</p> : null}
+        {inviteInfo.body ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={inviteInfo.body} /> : null}
+        {inviteExpirationLabel ? <p className="text-xs text-[var(--text-muted)]">Validade: {inviteExpirationLabel}</p> : null}
+        {inviteInfo.url ? (
+          <a
+            href={inviteInfo.url}
+            target="_blank"
+            rel="noreferrer"
+            className={cx(inboxInlineActionClassName, 'inline-flex items-center gap-1.5')}
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Abrir convite
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <p className="text-xs font-medium text-[var(--text-muted)]">Convite recebido sem link disponível.</p>
+        )}
+      </div>
+    </div>
   ) : null;
 
   const hasPreservableDeletedMedia = deletedInfo.deleted
@@ -2110,6 +2164,16 @@ function WhatsAppMessageBody({
       <div className="space-y-3">
         {quotePreviewNode}
         {interactiveNode}
+        {editInfoNode}
+      </div>
+    );
+  }
+
+  if (inviteInfo) {
+    return (
+      <div className="space-y-3">
+        {quotePreviewNode}
+        {inviteNode}
         {editInfoNode}
       </div>
     );

@@ -18,6 +18,7 @@ import {
   QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
   QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
+  SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE,
   type AutonomousMessageRow,
 } from '../ai-autonomous-helpers';
 
@@ -101,10 +102,17 @@ describe('paridade do prompt de atendimento', () => {
 describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
   test('protege interlocutor, beneficiarios e confirmacao de resposta ambigua', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /INTERLOCUTOR de BENEFICIARIOS/);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Alguem que vai entrar no plano tem CNPJ ou MEI/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /algum beneficiario adulto tem CNPJ ou MEI/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /JUSTIFICATIVA CNPJ\/MEI/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pode ficar mais em conta por CNPJ\/MEI/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /coletivo por adesao/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /VINCULO PUBLICO E COLETIVO POR ADESAO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /tabelas melhores ou mais competitivas/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Nao diga que ser funcionario publico nao impede a cotacao/);
+    assert.doesNotMatch(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Ser funcionária pública não impede a cotação/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /CNPJ\/MEI E IDADE/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Criancas e adolescentes nao contam/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pergunte diretamente ao adulto/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voces dois tem 56 anos/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /planos empresariais por CNPJ\/MEI ficam mais em conta/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /depois de completar 6 meses de abertura/);
@@ -302,6 +310,19 @@ describe('validateAutonomousReplyOutput', () => {
     assert.equal(validateAutonomousReplyOutput('Certo! Você possui CNPJ ou MEI?', history).valid, false);
     assert.equal(validateAutonomousReplyOutput('Você ou seu marido, algum dos dois tem CNPJ ou MEI?', history).valid, true);
     assert.equal(validateAutonomousReplyOutput('Alguém que vai entrar no plano tem CNPJ ou MEI?', history).valid, true);
+  });
+
+  test('direciona CNPJ ao unico adulto quando os demais beneficiarios sao menores', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Um seria pra mim, tenho 67 anos.' },
+      { role: 'lead', content: 'Outro para uma adolescente de 13 anos e um bebê de 2 meses.' },
+    ];
+
+    assert.equal(
+      validateAutonomousReplyOutput('Alguém que vai entrar no plano tem CNPJ ou MEI?', history).message,
+      SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE,
+    );
+    assert.equal(validateAutonomousReplyOutput('Você tem CNPJ ou MEI?', history).valid, true);
   });
 
   test('pergunta CNPJ de forma abrangente depois que a cidade foi informada', () => {

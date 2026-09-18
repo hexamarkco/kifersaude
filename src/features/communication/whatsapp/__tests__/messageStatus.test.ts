@@ -130,12 +130,14 @@ test('includes displayed metadata in the update signature', () => {
   const base = baseMessage({
     metadata: {
       link_preview: { url: 'https://example.com', title: 'Original' },
+      invite: { title: 'Convite original' },
       reactions: [],
     },
   });
   const updated = baseMessage({
     metadata: {
       link_preview: { url: 'https://example.com', title: 'Atualizado' },
+      invite: { title: 'Convite atualizado' },
       reactions: [{ actor_key: '5511999999999', emoji: '👍' }],
     },
   });

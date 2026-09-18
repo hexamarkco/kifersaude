@@ -36,6 +36,19 @@ export type MessageInteractiveInfo = {
   selectedReply: { id: string | null; title: string | null } | null;
 };
 
+export type MessageInviteInfo = {
+  kind: 'group_invite' | 'newsletter_invite' | 'admin_invite';
+  body: string | null;
+  url: string | null;
+  title: string | null;
+  description: string | null;
+  preview: string | null;
+  inviteCode: string | null;
+  newsletterId: string | null;
+  newsletterName: string | null;
+  expiration: number | null;
+};
+
 const readRecord = (value: unknown): Record<string, unknown> | null => (
   value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -180,6 +193,58 @@ export const getMessageInteractiveInfo = (message?: CommWhatsAppMessage | null):
     buttons,
     sections,
     selectedReply,
+  };
+};
+
+const getSafeExternalUrl = (value: unknown) => {
+  const candidate = String(value ?? '').trim();
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+};
+
+const getSafeInvitePreview = (value: unknown) => {
+  const candidate = String(value ?? '').trim();
+  if (!candidate) return null;
+  if (candidate.startsWith('data:image/')) return candidate;
+  return getSafeExternalUrl(candidate);
+};
+
+export const getMessageInviteInfo = (message?: CommWhatsAppMessage | null): MessageInviteInfo | null => {
+  if (!message) return null;
+
+  const messageType = message.message_type.trim().toLowerCase();
+  if (messageType !== 'group_invite' && messageType !== 'newsletter_invite' && messageType !== 'admin_invite') return null;
+
+  const rawInvite = readRecord(getMessageMetadataRecord(message).invite) ?? {};
+  const rawBody = String(rawInvite.body ?? '').trim();
+  const fallbackText = String(message.text_content ?? '').trim();
+  const body = rawBody || (!isMessageSummaryMarker(fallbackText, message.message_type) ? fallbackText : '') || null;
+  const title = String(rawInvite.title ?? '').trim() || (
+    messageType === 'group_invite'
+      ? 'Convite para grupo'
+      : messageType === 'newsletter_invite'
+        ? 'Convite para canal'
+        : 'Convite para administrador de canal'
+  );
+  const expirationValue = Number(rawInvite.expiration);
+
+  return {
+    kind: messageType,
+    body,
+    url: getSafeExternalUrl(rawInvite.url ?? rawInvite.link),
+    title,
+    description: String(rawInvite.description ?? '').trim() || null,
+    preview: getSafeInvitePreview(rawInvite.preview),
+    inviteCode: String(rawInvite.invite_code ?? rawInvite.inviteCode ?? '').trim() || null,
+    newsletterId: String(rawInvite.newsletter_id ?? rawInvite.newsletterId ?? '').trim() || null,
+    newsletterName: String(rawInvite.newsletter_name ?? rawInvite.newsletterName ?? '').trim() || null,
+    expiration: Number.isFinite(expirationValue) ? expirationValue : null,
   };
 };
 

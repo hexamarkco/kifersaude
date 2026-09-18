@@ -166,8 +166,9 @@ const extractCount = (text: string): number | null => {
   return null;
 };
 
-const hasAdultReference = (text: string): boolean => /\b(?:eu|nos|a gente|adulto|adult[ao]s?|mae|m[aã]e|pai|marido|esposa|esposo|companheir[oa]|respons[aá]vel|titular)\b/i.test(text);
-const hasChildReference = (text: string): boolean => /\b(?:filh[oa]s?|net[oa]s?|crian[cç]a?s?|menor(?:es)?|adolescente?s?)\b/i.test(text);
+const hasAdultReference = (text: string): boolean => /\b(?:eu|mim|nos|a gente|adulto|adult[ao]s?|mae|m[aã]e|pai|marido|esposa|esposo|companheir[oa]|respons[aá]vel|titular)\b/i.test(text);
+const CHILD_REFERENCE_REGEX = /\b(?:filh[oa]s?|net[oa]s?|crian[cç]a?s?|menor(?:es)?|adolescente?s?|beb[eê]s?)(?=\s|[.!?,;:]|$)/gi;
+const countChildReferences = (text: string): number => [...text.matchAll(CHILD_REFERENCE_REGEX)].length;
 const hasSelfOnlyReference = (text: string): boolean => /\b(?:s[oó]|somente|apenas)\s+(?:para\s+)?mim\b|\bpara\s+mim\b|\bmim\b|\beu\b/i.test(text);
 const hasExplicitChildOnlyReference = (text: string): boolean => /\b(?:para|pra|pro|cot[aá]?[cç][aã]o\s+para)\s+(?:o\s+|a\s+|meu\s+|minha\s+)?(?:filh[oa]|net[oa]|crian[cç]a|adolescente|menor)\b|\b(?:s[oó]|somente|apenas)\s+(?:para\s+)?(?:meu|minha|o|a)?\s*(?:filh[oa]|net[oa]|crian[cç]a|adolescente|menor)/i.test(text);
 
@@ -182,6 +183,9 @@ const extractAgeValues = (text: string): number[] => {
   addValues(text.matchAll(/\b(\d{1,3})(?:\s*(?:anos?|ano)\b|(?=\s*(?:e|,|\/|\+)\s*\d{1,3}\s*(?:anos?|ano)\b))/gi));
   addValues(text.matchAll(/\b(?:tenho|tem|fez|fiz|com|idade\s+(?:de|é|e)?)\s+(\d{1,3})\b/gi));
   addValues(text.matchAll(/\b(?:eu|ele|ela|filh[oa]|net[oa]|esposa|esposo|marido|mulher|homem)\b\s+(?:tem\s+)?(\d{1,3})\b/gi));
+  if (/(?:beb[eê]s?|rec[eé]m[- ]nascid[oa])\s+(?:de\s+)?\d{1,2}\s+mes(?:es)?/i.test(text)) {
+    values.push(0);
+  }
   return values;
 };
 
@@ -239,6 +243,7 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   let compositionStatus: QualificationValueStatus = 'not_asked';
   let hasAdult = false;
   let hasChild = false;
+  let childReferenceCount = 0;
   let onlyChild = false;
   let latestAges: number[] = [];
 
@@ -287,7 +292,11 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
         : null);
     if (extractedCount !== null) count = extractedCount;
     if (hasAdultReference(text)) hasAdult = true;
-    if (hasChildReference(text)) hasChild = true;
+    const currentChildReferenceCount = countChildReferences(text);
+    if (currentChildReferenceCount > 0) {
+      hasChild = true;
+      childReferenceCount = Math.max(childReferenceCount, currentChildReferenceCount);
+    }
     if (hasExplicitChildOnlyReference(text)) {
       onlyChild = true;
       if (count === null) count = extractedCount ?? (ages.length > 1 ? ages.length : 1);
@@ -296,6 +305,14 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   }
 
   if (hasAdult && hasChild && (count === null || count < 2)) count = 2;
+  if ((hasAdult || hasChild) && latestAges.length > 1 && (count === null || count < latestAges.length)) {
+    count = latestAges.length;
+  }
+  if (hasAdult && childReferenceCount > 0) {
+    const adultCount = Math.max(1, latestAges.filter((age) => age >= 18).length);
+    const minorCount = Math.max(childReferenceCount, latestAges.filter((age) => age < 18).length);
+    count = Math.max(count ?? 0, adultCount + minorCount);
+  }
   if (onlyChild && !hasAdult) {
     if (count === null) count = latestAges.length > 1 ? latestAges.length : 1;
   }

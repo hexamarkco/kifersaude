@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   extractWhapiDeletedMessageEvent,
   extractWhapiEditedMessageEvent,
+  extractWhapiInviteMeta,
   extractWhapiInteractiveMeta,
   extractWhapiReactionEvent,
   extractWhapiStarEvent,
@@ -333,4 +334,48 @@ test('extractWhapiInteractiveMeta retorna null para mensagem de texto comum', ()
 test('extractWhapiInteractiveMeta retorna null quando o payload interactive nao tem nada util', () => {
   const meta = extractWhapiInteractiveMeta({ type: 'interactive', interactive: {} });
   assert.equal(meta, null);
+});
+
+test('extractWhapiInviteMeta preserva os dados do convite de grupo e o resumo usa o corpo', () => {
+  const message = {
+    type: 'group_invite',
+    group_invite: {
+      body: 'Entre no nosso grupo',
+      url: 'https://chat.whatsapp.com/example-code',
+      title: 'Grupo Kifer Saúde',
+      invite_code: 'example-code',
+      description: 'WhatsApp Group Invite',
+      preview: 'data:image/jpeg;base64,preview',
+    },
+  };
+
+  assert.deepEqual(extractWhapiInviteMeta(message), {
+    kind: 'group_invite',
+    body: 'Entre no nosso grupo',
+    url: 'https://chat.whatsapp.com/example-code',
+    title: 'Grupo Kifer Saúde',
+    description: 'WhatsApp Group Invite',
+    preview: 'data:image/jpeg;base64,preview',
+    invite_code: 'example-code',
+    newsletter_id: null,
+    newsletter_name: null,
+    expiration: null,
+  });
+  assert.equal(summarizeWhapiMessage(message), 'Entre no nosso grupo');
+});
+
+test('extractWhapiInviteMeta reconhece convite de administrador de canal', () => {
+  const meta = extractWhapiInviteMeta({
+    type: 'admin_invite',
+    admin_invite: {
+      newsletter_id: '120363@newsletter',
+      newsletter_name: 'Kifer Saúde',
+      body: 'Ajude a administrar o canal',
+      expiration: 1714401910,
+    },
+  });
+
+  assert.equal(meta?.kind, 'admin_invite');
+  assert.equal(meta?.newsletter_name, 'Kifer Saúde');
+  assert.equal(meta?.expiration, 1714401910);
 });

@@ -8,6 +8,7 @@ import {
   getEditedMessageInfo,
   getMessageContactCardInfo,
   getMessageInteractiveInfo,
+  getMessageInviteInfo,
   getMessageLinkPreview,
   getMessageQuoteInfo,
   getMessageReactions,
@@ -102,6 +103,50 @@ test('normalizes interactive buttons, sections and selected reply', () => {
     sections: [{ title: 'Planos', rows: [{ id: 'pme', title: 'PME', description: 'Empresarial' }] }],
     selectedReply: { id: 'pme', title: 'PME' },
   });
+});
+
+test('normalizes group invite metadata and keeps a readable fallback for old rows', () => {
+  const message = createMessage({
+    message_type: 'group_invite',
+    text_content: '[Convite]',
+    metadata: {
+      invite: {
+        body: 'Entre no grupo da Kifer Saúde',
+        url: 'https://chat.whatsapp.com/example-code',
+        title: 'Grupo Kifer Saúde',
+        description: 'WhatsApp Group Invite',
+        preview: 'data:image/jpeg;base64,preview',
+        invite_code: 'example-code',
+      },
+    },
+  });
+
+  assert.deepEqual(getMessageInviteInfo(message), {
+    kind: 'group_invite',
+    body: 'Entre no grupo da Kifer Saúde',
+    url: 'https://chat.whatsapp.com/example-code',
+    title: 'Grupo Kifer Saúde',
+    description: 'WhatsApp Group Invite',
+    preview: 'data:image/jpeg;base64,preview',
+    inviteCode: 'example-code',
+    newsletterId: null,
+    newsletterName: null,
+    expiration: null,
+  });
+
+  assert.equal(getMessageInviteInfo(createMessage({
+    message_type: 'group_invite',
+    text_content: '[Convite]',
+  }))?.title, 'Convite para grupo');
+});
+
+test('rejects unsafe invite links before rendering them as anchors', () => {
+  const message = createMessage({
+    message_type: 'group_invite',
+    metadata: { invite: { url: 'javascript:alert(1)' } },
+  });
+
+  assert.equal(getMessageInviteInfo(message)?.url, null);
 });
 
 test('preserves edit and delete history presentation', () => {

@@ -4,6 +4,7 @@ import {
   buildStyleProfileText,
   type MessageRow,
 } from './comm-whatsapp-transcript.ts';
+import { extractAutonomousQualificationState } from './ai-autonomous-qualification.ts';
 export type AutonomousMessageRow = {
   role: 'lead' | 'ai';
   content: string;
@@ -30,16 +31,17 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'EMPATIA SEM ENROLAÇÃO: responda ao que a pessoa trouxe quando houver dúvida, correção, objeção, preocupação ou contexto humano. Uma resposta curta e inequívoca como uma idade, uma cidade, um bairro, MEI ou o nome de uma operadora normalmente não precisa ser repetida. Nesse caso, use uma confirmação breve ou siga direto para a próxima pergunta. Nao faca discurso e nao use acolhimento como desculpa para adiar a proxima acao.',
   'TOM MEIGO E PROXIMO: escreva como uma consultora atenciosa, leve e acolhedora. A proximidade deve aparecer na escolha das palavras e em microtransicoes humanas, nao em intimidade artificial, infantilizacao ou excesso de entusiasmo. Nao use coracao como recurso padrao e nao encha a mensagem de emojis. Um emoji ocasional so cabe quando combinar de verdade com o contexto.',
   'PONTE HUMANA ANTES DA PERGUNTA: depois de uma resposta objetiva do lead, evite comecar por "Agora preciso saber", "Certo" ou "Perfeito" seguido diretamente de uma pergunta. Quando nao houver duvida urgente, conecte a proxima etapa ao objetivo da cotacao com uma frase curta e gentil, sem repetir o dado recebido. Exemplo: "Perfeito, Márcia. Vamos encontrar uma opção que faça sentido para você. Em qual cidade pretende usar o plano?". Se as duas respostas anteriores da Luiza foram perguntas diretas, quebre obrigatoriamente esse padrao no turno seguinte. Nao use essa ponte para alongar a conversa ou criar acolhimento vazio.',
-  'RITMO HUMANO: nao deixe a conversa virar uma fila de perguntas secas. Quebre sequencias de marcador mais pergunta com uma microtransicao natural, como "Perfeito. Vamos encontrar uma opção que faça sentido para você. Qual é a sua idade?", "Obrigada. Vamos avançar com calma. Em qual cidade você vai usar o plano?" ou "Entendi. Ser funcionária pública não impede a cotação. Você já tem plano atualmente?". Se o lead mandar uma saudação, um "ok" ou outra mensagem sem informação logo depois de uma resposta substantiva, considere o contexto anterior e continue dali, sem perder o fio nem reiniciar a coleta.',
+  'RITMO HUMANO: nao deixe a conversa virar uma fila de perguntas secas. Quebre sequencias de marcador mais pergunta com uma microtransicao natural, como "Perfeito. Vamos encontrar uma opção que faça sentido para você. Qual é a sua idade?", "Obrigada. Vamos avançar com calma. Em qual cidade você vai usar o plano?" ou "Entendi. Seu vínculo como funcionária pública pode abrir acesso a tabelas melhores no coletivo por adesão, dependendo da entidade. Você é vinculada a qual órgão ou sindicato?". Se o lead mandar uma saudação, um "ok" ou outra mensagem sem informação logo depois de uma resposta substantiva, considere o contexto anterior e continue dali, sem perder o fio nem reiniciar a coleta.',
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
-  'BASE OBRIGATORIA DA QUALIFICACAO: antes de concluir, colete quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, tente descobrir a operadora uma vez, mas trate operadora e nome do plano como opcionais quando a pessoa nao souber ou nao quiser informar. Pergunte uma coisa por vez, aproveite respostas ja dadas e nao crie perguntas para dados que nao sao necessarios.',
+  'BASE OBRIGATORIA DA QUALIFICACAO: antes de concluir, colete quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, tente descobrir a operadora uma vez, mas trate operadora e nome do plano como opcionais quando a pessoa nao souber ou nao quiser informar. Pergunte uma coisa por vez, aproveite respostas ja dadas e nao crie perguntas para dados que nao sao necessarios.',
+  'VINCULO PUBLICO E COLETIVO POR ADESAO: quando o lead disser que e funcionaria ou funcionario publico, servidor publico, efetivo ou mencionar orgao publico, trate esse dado como uma pista comercial relevante. Acolha e explique que o vinculo pode abrir acesso a tabelas melhores ou mais competitivas no coletivo por adesao, dependendo do orgao, entidade, sindicato ou operadora. Nao diga que ser funcionario publico nao impede a cotacao, nao trate o vinculo como irrelevante e nao mude automaticamente para pessoa fisica. Pergunte, quando ainda for util, qual e o orgao, sindicato ou entidade de vinculo para verificar a opcao de adesao. Nunca prometa preco, elegibilidade ou tabela especifica.',
   'PLANO ATUAL E MOTIVO DA TROCA: se o lead disser que ja tem plano, busque entender uma vez o que esta motivando a troca ou a nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema. Esse motivo e contexto comercial opcional e nunca bloqueia a qualificacao ou o handoff. Se o motivo ja estiver no historico, use-o sem repetir. Se a pessoa nao souber ou nao quiser detalhar, aceite e siga sem insistir.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
-  'CNPJ/MEI pertence a qualificacao dos beneficiarios da cotacao. Se o plano for para uma terceira pessoa, pergunte por ela (ex.: "Seu filho tem CNPJ ou MEI?"). Se houver mais de um beneficiario, pergunte de forma abrangente (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?" ou "Alguem que vai entrar no plano tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outra pessoa tambem ou exclusivamente entrara no plano.',
+  'CNPJ/MEI E IDADE: verifique CNPJ/MEI somente entre os beneficiarios adultos. Criancas e adolescentes nao contam para essa pergunta. Se houver apenas um adulto e os demais beneficiarios forem menores, pergunte diretamente ao adulto (ex.: "Voce tem CNPJ ou MEI?") e nunca use "alguem que vai entrar no plano" como se as criancas tambem pudessem ter CNPJ/MEI. Se o plano for para uma terceira pessoa adulta, pergunte por ela. Se houver mais de um beneficiario adulto, pergunte de forma abrangente somente entre os adultos (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outro adulto tambem ou exclusivamente entrar no plano.',
   'JUSTIFICATIVA CNPJ/MEI: sempre que perguntar se existe CNPJ ou MEI, explique na mesma mensagem e de forma breve que, dependendo do caso, o plano pode ficar mais em conta por CNPJ/MEI do que por pessoa fisica ou coletivo por adesao. Use pode ficar mais em conta, nunca prometa preco nem trate isso como garantia. A justificativa deve soar natural e nao criar uma segunda pergunta.',
-  'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: reconheca a resposta e avance para a proxima informacao necessaria, normalmente a cidade. Se ele ja tiver informado a cidade, pergunte sobre CNPJ/MEI de forma abrangente para os beneficiarios, sem restringir ao interlocutor.',
+  'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: reconheca a resposta e avance para a proxima informacao necessaria, normalmente a cidade. Se ele ja tiver informado a cidade, pergunte sobre CNPJ/MEI de forma abrangente somente entre os beneficiarios adultos, sem restringir ao interlocutor quando houver outro adulto na cotacao.',
   'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
   'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
   'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
@@ -58,7 +60,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
 
 export const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
   '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
-  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario tem CNPJ ou MEI e se alguem ja tem plano atualmente. Se houver plano, busque entender uma vez o motivo da troca ou da nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema, mas trate esse motivo como contexto comercial opcional que nunca bloqueia o handoff. Tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar. Se ela nao souber ou nao quiser detalhar o motivo, aceite e siga.',
+  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, busque entender uma vez o motivo da troca ou da nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema, mas trate esse motivo como contexto comercial opcional que nunca bloqueia o handoff. Tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar. Se ela nao souber ou nao quiser detalhar o motivo, aceite e siga.',
   'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
   'O encerramento visivel precisa soar humano e nao pode recapitular idade, cidade, bairro, CNPJ, MEI ou operadora. Nao use Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira duas frases curtas com uma confirmacao natural e o proximo passo. Exemplo valido. Perfeito, Nick. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.',
   'Nao faca pergunta no encerramento. O nome e opcional e so deve ser usado se estiver validado e soar natural.',
@@ -314,7 +316,8 @@ const EXPLICIT_CHILD_ONLY_SCOPE_REGEX = /(?:\b(?:para|cotacao\s+para)\s+(?:o\s+|
 const ADULT_BENEFICIARY_CONTEXT_REGEX = /(?:\b(?:eu|nos)\s+e\s+(?:meu|minha|meus|minhas|o|a)\b|\b(?:para|pra|pro)\s+mim\s+e\b|\beu\s+(?:tambem\s+)?vou\s+entrar\b|\b(?:vou|vamos|iremos?)\s+(?:entrar|ser\s+titular)\b|\b(?:meu|minha)\s+(?:marido|esposa|esposo|companheiro|companheira)\b)/i;
 const EXISTING_PLAN_ADULT_CONTEXT_REGEX = /\b(?:eu|nos|mae|pai|marido|esposa|esposo|companheiro|companheira)\b[^.!?]{0,60}\b(?:ja\s+temos?|temos?|possui|possuo)\s+plano\b/i;
 
-export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte se alguem que entrara no plano tem CNPJ/MEI, ou nomeie todos os envolvidos; nao pergunte apenas ao interlocutor.';
+export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte sobre CNPJ/MEI somente entre os beneficiarios adultos, ou nomeie os adultos envolvidos; nao pergunte apenas ao interlocutor quando houver outro adulto.';
+export const SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE = 'A cotacao tem um unico beneficiario adulto e os demais sao menores. Pergunte diretamente ao adulto se ele tem CNPJ/MEI; criancas e adolescentes nao contam para essa verificacao.';
 export const CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE = 'A cotacao e para uma unica vida abaixo de 12 anos sem adulto beneficiario confirmado. Explique que e necessario incluir um adulto para conseguir contratar, porque as operadoras nao aceitam menor de 12 anos como titular.';
 export const CHILD_ONLY_SCOPE_VALIDATION_MESSAGE = 'A regra de incluir um adulto so vale quando a cotacao e para uma unica vida abaixo de 12 anos. Nao aplique essa regra a mais de uma vida, a uma cotacao com adulto ou a adolescentes de 12 anos ou mais.';
 
@@ -330,6 +333,13 @@ const isSingleUnderTwelveQuoteWithoutKnownAdult = (leadHistoryText: string): boo
   const hasExplicitChildOnlyScope = EXPLICIT_CHILD_ONLY_SCOPE_REGEX.test(leadHistoryText);
 
   return hasKnownSingleUnderTwelve && hasExplicitChildOnlyScope && !hasAdultBeneficiary;
+};
+
+const isSingleAdultWithMinorsQuote = (history: AutonomousMessageRow[]): boolean => {
+  const state = extractAutonomousQualificationState(history, '1970-01-01T00:00:00.000Z');
+  const adultCount = state.lives.items.filter((life) => life.age !== null && life.age >= 18).length;
+  const minorCount = state.lives.items.filter((life) => life.age !== null && life.age < 18).length;
+  return adultCount === 1 && minorCount > 0;
 };
 
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
@@ -579,6 +589,13 @@ export const validateAutonomousReplyOutput = (
           : 'O interlocutor esta cotando para outra pessoa. Direcione CNPJ/MEI ao beneficiario, nao a quem esta digitando.',
       };
     }
+    if (isSingleAdultWithMinorsQuote(history) && hasGroupScope) {
+      return {
+        valid: false,
+        stopReason: 'invalid_output',
+        message: SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE,
+      };
+    }
   }
 
   return { valid: true };
@@ -590,7 +607,9 @@ export const buildAutonomousValidationRetryInstruction = (
   '--- CORRECAO OBRIGATORIA DA RESPOSTA ANTERIOR ---',
   validation.message ?? 'A resposta anterior violou uma regra critica de qualificacao.',
   validation.message === MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
-    ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente se algum beneficiario possui CNPJ/MEI.'
+    ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente somente entre os beneficiarios adultos.'
+    : validation.message === SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE
+      ? 'Pergunte diretamente ao unico adulto se ele tem CNPJ ou MEI. Nao inclua criancas ou adolescentes na pergunta e nao use alguem que vai entrar no plano.'
     : '',
   validation.message === CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE
     ? 'Explique brevemente que, para uma unica vida abaixo de 12 anos, e necessario incluir um adulto para conseguir contratar. Nao aplique essa regra a adolescentes de 12 anos ou mais. Depois, pergunte somente se algum adulto tambem entrara na cotacao.'

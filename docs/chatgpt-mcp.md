@@ -50,10 +50,13 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 | `kifer_get_next_follow_up` | `lead_id` | Retorna o próximo lembrete pendente de retorno/follow-up. |
 | `kifer_bulk_cancel_automation_jobs` | filtros fechados de fila | Cancela logicamente no máximo 100 jobs pendentes, preservando histórico e retornando itens ignorados/erros. |
 | `kifer_create_followup_flow` | gatilho e janela comercial fechados | Cria um fluxo vazio; não aceita URLs, webhooks ou configurações técnicas. |
-| `kifer_create_followup_step` | ação comercial permitida e configuração fechada | Adiciona somente texto, alteração de status, criação de tarefa ou ativação de atendimento autônomo. |
-| `kifer_update_followup_step_message` | `flow_id`, `step_id`, `message` | Troca exclusivamente o texto de uma etapa `send_message`. |
+| `kifer_create_followup_step` | ação comercial permitida e configuração fechada | Adiciona texto customizado, template ou messages ordenadas com itens `template`, `custom` e `ai`; a instrução IA é obrigatória e só é executada no envio. |
+| `kifer_update_followup_step_message` | `flow_id`, `step_id` e origem da mensagem | Troca uma única mensagem de uma etapa `send_message`; aceita `message`, `template_id` ou `ai_instruction` conforme `message_source`. |
+| `kifer_update_followup_step_messages` | `flow_id`, `step_id`, `messages` | Substitui a lista completa e ordenada de mensagens, preservando a mistura de Template, Texto customizado e IA. |
 | `kifer_delete_followup_step` / `kifer_reorder_followup_steps` | `flow_id` e etapa / lista completa de IDs | Remove ou reordena etapas somente quando não há jobs pendentes ou em processamento no fluxo. |
 | `kifer_clone_followup_flow` | fluxo de origem e sobrescritas fechadas | Copia fluxo e etapas com novos IDs; bloqueia etapas destrutivas, webhook e e-mail. |
+
+Para uma etapa `send_message`, `action_config.messages` e `kifer_update_followup_step_messages.messages` aceitam itens na ordem enviada: `{ "template_id": "..." }`, `{ "custom": { "type": "text", "text": "..." } }` ou `{ "ai": { "instruction": "..." } }`. Templates precisam existir na biblioteca do fluxo; seus IDs continuam ocultos nas respostas de leitura. A IA usa a configuração central da Feature `automation.message_generate` e não é gerada durante a alteração do fluxo.
 
 ### Módulos administrativos da expansão
 
@@ -118,7 +121,7 @@ O schema de oportunidades registra grupos comerciais e preserva histórico de v�
 
 ## Inventário
 
-O registry atual publica 107 ferramentas únicas: 29 de leitura e 78 de escrita. A classificação funcional exclusiva é 23 de comunicação, 21 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
+O registry atual publica 108 ferramentas únicas: 29 de leitura e 79 de escrita. A classificação funcional exclusiva é 23 de comunicação, 22 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
 
 ## Migration adicional
 

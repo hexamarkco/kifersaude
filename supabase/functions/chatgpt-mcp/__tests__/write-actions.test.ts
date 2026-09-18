@@ -1175,6 +1175,113 @@ test('não permite criar etapa com ação destrutiva do motor', async () => {
   assert.equal(result?.error_code, 'INVALID_INPUT');
 });
 
+test('cria etapa send_message com itens custom e IA na ordem configurada', async () => {
+  const supabase = client({
+    integration_settings: {
+      data: {
+        id: 'integration-1',
+        settings: { messageTemplates: [], flows: [{ id: 'flow-1', steps: [] }] },
+      },
+    },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_followup_step',
+    arguments: {
+      flow_id: 'flow-1', ordem: 0, action_type: 'send_message', delay_value: 1, delay_unit: 'hours', enabled: true,
+      action_config: { messages: [{ custom: { type: 'text', text: 'Olá!' } }, { ai: { instruction: 'Pergunte se ainda procura um plano.' } }] },
+    },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ steps: Array<{ messages: unknown[] }> }> } };
+  assert.deepEqual(update.settings.flows[0].steps[0].messages, [
+    { custom: { type: 'text', text: 'Olá!' } },
+    { ai: { instruction: 'Pergunte se ainda procura um plano.' } },
+  ]);
+  assert.deepEqual((result?.step as { message_source?: string; ai_instructions?: string[] })?.message_source, 'mixed');
+  assert.deepEqual((result?.step as { ai_instructions?: string[] })?.ai_instructions, ['Pergunte se ainda procura um plano.']);
+});
+
+test('rejeita item IA sem instrução e não grava a etapa', async () => {
+  const supabase = client({
+    integration_settings: { data: { id: 'integration-1', settings: { messageTemplates: [], flows: [{ id: 'flow-1', steps: [] }] } } },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_create_followup_step',
+    arguments: {
+      flow_id: 'flow-1', ordem: 0, action_type: 'send_message', delay_value: 0, delay_unit: 'hours', enabled: true,
+      action_config: { messages: [{ ai: { instruction: ' ' } }] },
+    },
+    actor,
+  });
+
+  assert.equal(result?.error_code, 'INVALID_INPUT');
+  assert.equal(supabase.writes.some((write) => write.table === 'integration_settings'), false);
+});
+
+test('atualiza a origem de uma mensagem de etapa para IA', async () => {
+  const supabase = client({
+    integration_settings: {
+      data: {
+        id: 'integration-1',
+        settings: { messageTemplates: [], flows: [{ id: 'flow-1', steps: [{ id: 'step-1', actionType: 'send_message', customMessage: { type: 'text', text: 'Antiga' } }] }] },
+      },
+    },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_followup_step_message',
+    arguments: { flow_id: 'flow-1', step_id: 'step-1', message_source: 'ai', ai_instruction: 'Retome o assunto com naturalidade.' },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ steps: Array<{ messages: unknown[] }> }> } };
+  assert.deepEqual(update.settings.flows[0].steps[0].messages, [{ ai: { instruction: 'Retome o assunto com naturalidade.' } }]);
+});
+
+test('substitui a lista completa mantendo template, custom e IA', async () => {
+  const supabase = client({
+    integration_settings: {
+      data: {
+        id: 'integration-1',
+        settings: {
+          messageTemplates: [{ id: 'template-1', name: 'Boas-vindas' }],
+          flows: [{ id: 'flow-1', steps: [{ id: 'step-1', actionType: 'send_message' }] }],
+        },
+      },
+    },
+    mcp_action_audit_log: {},
+  });
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_update_followup_step_messages',
+    arguments: {
+      flow_id: 'flow-1', step_id: 'step-1',
+      messages: [
+        { template_id: 'template-1' },
+        { custom: { type: 'text', text: 'Confira esta condição.' } },
+        { ai: { instruction: 'Finalize convidando para uma conversa.' } },
+      ],
+    },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  const update = supabase.writes.find((write) => write.table === 'integration_settings')?.value as { settings: { flows: Array<{ steps: Array<{ messages: unknown[] }> }> } };
+  assert.deepEqual(update.settings.flows[0].steps[0].messages, [
+    { templateId: 'template-1' },
+    { custom: { type: 'text', text: 'Confira esta condição.' } },
+    { ai: { instruction: 'Finalize convidando para uma conversa.' } },
+  ]);
+});
+
 test('não atualiza mensagem de etapa quando o novo texto é vazio', async () => {
   const supabase = client({ mcp_action_audit_log: {} });
   const result = await executeMcpWriteAction({
@@ -1210,6 +1317,36 @@ test('consulta fluxo de follow-up sem expor URLs, IDs de template ou payloads de
   assert.equal(JSON.stringify(result).includes('provider-template-secret'), false);
   assert.equal(JSON.stringify(result).includes('internal.test'), false);
   assert.equal(JSON.stringify(result).includes('never-return'), false);
+});
+
+test('consulta fluxo com mensagem IA e retorna somente a instrução da origem', async () => {
+  const supabase = client({
+    integration_settings: {
+      data: {
+        id: 'integration-1',
+        settings: {
+          flows: [{
+            id: 'flow-1', name: 'Boas-vindas', triggerType: 'lead_created',
+            steps: [{
+              id: 'step-1', actionType: 'send_message',
+              messages: [{ templateId: 'template-interno' }, { ai: { instruction: 'Pergunte pelo melhor horário.' } }],
+            }],
+          }],
+        },
+      },
+    },
+    auto_contact_flow_jobs: { data: [] },
+  });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_get_followup_flow', arguments: { flow_id: 'flow-1' } });
+
+  assert.equal(result?.success, true);
+  const step = (result?.flow as { steps: Array<{ message_source?: string; message_items?: unknown[] }> }).steps[0];
+  assert.equal(step.message_source, 'mixed');
+  assert.deepEqual(step.message_items, [
+    { type: 'template' },
+    { type: 'ai', instruction: 'Pergunte pelo melhor horário.' },
+  ]);
+  assert.equal(JSON.stringify(result).includes('template-interno'), false);
 });
 
 test('bloqueia exclusão de etapa enquanto o fluxo ainda tem jobs ativos', async () => {

@@ -48,6 +48,9 @@ type ActionErrorCode =
 const FLOW_TRIGGER_TYPES = new Set(['lead_created', 'status_changed', 'status_duration', 'inactivity_duration']);
 const STEP_ACTION_TYPES = new Set(['send_message', 'update_status', 'create_task', 'activate_autonomous_service']);
 const DELAY_UNITS = new Set(['seconds', 'minutes', 'hours', 'days']);
+const FLOW_MESSAGE_SOURCES = new Set(['template', 'custom', 'ai']);
+const MAX_FLOW_MESSAGE_ITEMS = 20;
+const MAX_AI_INSTRUCTION_LENGTH = 4_000;
 const MAX_BULK_CANCEL_JOBS = 100;
 const MAX_BULK_SCHEDULED_MESSAGES = 50;
 const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
@@ -181,6 +184,97 @@ const automationSettings = (value: unknown): AutomationSettings | null => {
 
 const flowRecord = (value: unknown): Record<string, unknown> | null => isRecord(value) ? value : null;
 
+type McpFlowMessageItem =
+  | { templateId: string }
+  | { custom: { type: 'text'; text: string } }
+  | { ai: { instruction: string } };
+
+const templateIdsFromSettings = (settings: AutomationSettings): Set<string> => {
+  if (!Array.isArray(settings.messageTemplates)) return new Set();
+  return new Set(
+    settings.messageTemplates
+      .filter(isRecord)
+      .map((template) => text(template.id))
+      .filter(Boolean),
+  );
+};
+
+const invalidFlowMessageItems = (message: string): { items?: McpFlowMessageItem[]; error: McpWriteResult } => ({
+  error: errorResult('INVALID_INPUT', message),
+});
+
+const normalizeFlowMessageItems = (
+  value: unknown,
+  templateIds: Set<string>,
+): { items?: McpFlowMessageItem[]; error?: McpWriteResult } => {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_FLOW_MESSAGE_ITEMS) {
+    return invalidFlowMessageItems(`messages deve conter entre 1 e ${MAX_FLOW_MESSAGE_ITEMS} itens ordenados.`);
+  }
+
+  const items: McpFlowMessageItem[] = [];
+  for (const item of value) {
+    if (!isRecord(item)) return invalidFlowMessageItems('Cada item de messages deve ser template, custom ou ai.');
+    const keys = Object.keys(item);
+    if (keys.length !== 1) return invalidFlowMessageItems('Cada item de messages deve conter exatamente uma origem: template_id, custom ou ai.');
+
+    if ('template_id' in item || 'templateId' in item) {
+      const key = 'template_id' in item ? 'template_id' : 'templateId';
+      if (keys[0] !== key || typeof item[key] !== 'string' || !text(item[key])) {
+        return invalidFlowMessageItems('O item template exige template_id não vazio.');
+      }
+      const templateId = text(item[key]);
+      if (!templateIds.has(templateId)) return invalidFlowMessageItems('O template informado não existe na biblioteca do fluxo.');
+      items.push({ templateId });
+      continue;
+    }
+
+    if ('custom' in item) {
+      const custom = item.custom;
+      if (!isRecord(custom) || Object.keys(custom).some((key) => key !== 'type' && key !== 'text')) {
+        return invalidFlowMessageItems('O item custom aceita somente type=text e text.');
+      }
+      const customText = text(custom.text);
+      if ((custom.type !== undefined && text(custom.type) !== 'text') || !customText) {
+        return invalidFlowMessageItems('O item custom exige texto não vazio e type=text.');
+      }
+      if (customText.length > MAX_MESSAGE_LENGTH) {
+        return invalidFlowMessageItems(`A mensagem custom excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
+      }
+      items.push({ custom: { type: 'text', text: customText } });
+      continue;
+    }
+
+    if ('ai' in item) {
+      const ai = item.ai;
+      const instruction = isRecord(ai) ? text(ai.instruction) : '';
+      if (!isRecord(ai) || Object.keys(ai).some((key) => key !== 'instruction') || !instruction) {
+        return invalidFlowMessageItems('O item ai exige instruction não vazia.');
+      }
+      if (instruction.length > MAX_AI_INSTRUCTION_LENGTH) {
+        return invalidFlowMessageItems(`A instrução IA excede o limite de ${MAX_AI_INSTRUCTION_LENGTH} caracteres.`);
+      }
+      items.push({ ai: { instruction } });
+      continue;
+    }
+
+    return invalidFlowMessageItems('Cada item de messages deve ser template, custom ou ai.');
+  }
+
+  return { items };
+};
+
+const flowMessageItemView = (item: unknown): Record<string, unknown> | null => {
+  if (!isRecord(item)) return null;
+  if (typeof item.templateId === 'string' && text(item.templateId)) return { type: 'template' };
+  if (isRecord(item.custom) && text(item.custom.type) === 'text' && text(item.custom.text)) {
+    return { type: 'custom', text: text(item.custom.text).slice(0, MAX_MESSAGE_LENGTH) };
+  }
+  if (isRecord(item.ai) && text(item.ai.instruction)) {
+    return { type: 'ai', instruction: text(item.ai.instruction).slice(0, MAX_AI_INSTRUCTION_LENGTH) };
+  }
+  return null;
+};
+
 const flowView = (flow: Record<string, unknown>) => {
   const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord) : [];
   const scheduling = isRecord(flow.scheduling) ? flow.scheduling : {};
@@ -199,15 +293,36 @@ const flowView = (flow: Record<string, unknown>) => {
       delay_unit: text(step.delayUnit),
       enabled: step.enabled !== false,
       ...(text(step.actionType) === 'send_message' ? {
-        message_source: ['custom', 'template'].includes(text(step.messageSource)) ? text(step.messageSource) : 'legacy_or_unknown',
-        message_texts: [
-          ...(isRecord(step.customMessage) && text(step.customMessage.type) === 'text' && text(step.customMessage.text)
-            ? [text(step.customMessage.text).slice(0, MAX_MESSAGE_LENGTH)]
-            : []),
-          ...(Array.isArray(step.messages)
-            ? step.messages.filter((message): message is string => typeof message === 'string' && Boolean(message.trim())).slice(0, 20).map((message) => message.trim().slice(0, MAX_MESSAGE_LENGTH))
-            : []),
-        ],
+        ...(() => {
+          const objectItems = Array.isArray(step.messages)
+            ? step.messages.map(flowMessageItemView).filter((item): item is Record<string, unknown> => Boolean(item))
+            : [];
+          if (objectItems.length > 0) {
+            const sources = [...new Set(objectItems.map((item) => text(item.type)))];
+            const aiInstructions = objectItems.filter((item) => item.type === 'ai').map((item) => text(item.instruction));
+            return {
+              message_source: sources.length === 1 ? sources[0] : 'mixed',
+              message_texts: objectItems
+                .filter((item) => item.type === 'custom')
+                .map((item) => text(item.text)),
+              message_items: objectItems,
+              ...(aiInstructions.length > 0
+                ? { ai_instructions: aiInstructions, ...(aiInstructions.length === 1 ? { ai_instruction: aiInstructions[0] } : {}) }
+                : {}),
+            };
+          }
+          return {
+            message_source: ['custom', 'template'].includes(text(step.messageSource)) ? text(step.messageSource) : 'legacy_or_unknown',
+            message_texts: [
+              ...(isRecord(step.customMessage) && text(step.customMessage.type) === 'text' && text(step.customMessage.text)
+                ? [text(step.customMessage.text).slice(0, MAX_MESSAGE_LENGTH)]
+                : []),
+              ...(Array.isArray(step.messages)
+                ? step.messages.filter((message): message is string => typeof message === 'string' && Boolean(message.trim())).slice(0, MAX_FLOW_MESSAGE_ITEMS).map((message) => message.trim().slice(0, MAX_MESSAGE_LENGTH))
+                : []),
+            ],
+          };
+        })(),
       } : {}),
     })),
     scheduling: {
@@ -1684,12 +1799,52 @@ async function createFollowUpFlow(supabase: SupabaseClient, params: Record<strin
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível criar o fluxo.') : { success: true, flow: flowView(flow) };
 }
 
-async function resolveStepActionConfiguration(supabase: SupabaseClient, actionType: string, value: unknown): Promise<{ configuration?: Record<string, unknown>; error?: McpWriteResult }> {
+async function resolveStepActionConfiguration(
+  supabase: SupabaseClient,
+  actionType: string,
+  value: unknown,
+  templateIds: Set<string> = new Set(),
+): Promise<{ configuration?: Record<string, unknown>; error?: McpWriteResult }> {
   const config = isRecord(value) ? value : {};
   if (actionType === 'send_message') {
-    if (Object.keys(config).some((key) => key !== 'message')) return { error: errorResult('NOT_ALLOWED', 'send_message aceita somente o texto comercial da mensagem.') };
+    const allowedKeys = new Set([
+      'message', 'messages', 'message_items', 'message_source', 'messageSource', 'template_id', 'templateId', 'ai_instruction', 'aiInstruction',
+    ]);
+    if (Object.keys(config).some((key) => !allowedKeys.has(key))) {
+      return { error: errorResult('NOT_ALLOWED', 'send_message aceita somente message, messages, message_source, template_id ou ai_instruction.') };
+    }
+
+    const listValue = config.messages ?? config.message_items;
+    if (listValue !== undefined) {
+      if (config.messages !== undefined && config.message_items !== undefined) {
+        return { error: errorResult('INVALID_INPUT', 'Informe somente messages ou message_items.') };
+      }
+      if (Object.keys(config).some((key) => key !== 'messages' && key !== 'message_items')) {
+        return { error: errorResult('INVALID_INPUT', 'Uma lista de mensagens não pode ser combinada com os atalhos de origem.') };
+      }
+      const normalized = normalizeFlowMessageItems(listValue, templateIds);
+      return normalized.error ? { error: normalized.error } : { configuration: { messages: normalized.items } };
+    }
+
+    const rawSource = config.message_source ?? config.messageSource;
+    const source = text(rawSource);
+    const templateId = text(config.template_id ?? config.templateId);
+    const instruction = text(config.ai_instruction ?? config.aiInstruction);
     const message = text(config.message);
-    if (!message) return { error: errorResult('INVALID_INPUT', 'A etapa send_message exige uma mensagem não vazia.') };
+    if (source && !FLOW_MESSAGE_SOURCES.has(source)) return { error: errorResult('INVALID_INPUT', 'message_source deve ser template, custom ou ai.') };
+
+    const inferredSource = source || (instruction ? 'ai' : templateId ? 'template' : message ? 'custom' : '');
+    if (!inferredSource) return { error: errorResult('INVALID_INPUT', 'A etapa send_message exige message, template_id, ai_instruction ou messages.') };
+    if (inferredSource === 'ai') {
+      if (message || templateId || (source && !instruction)) return { error: errorResult('INVALID_INPUT', 'Uma mensagem IA exige somente ai_instruction não vazia.') };
+      if (instruction.length > MAX_AI_INSTRUCTION_LENGTH) return { error: errorResult('INVALID_INPUT', `A instrução IA excede o limite de ${MAX_AI_INSTRUCTION_LENGTH} caracteres.`) };
+      return { configuration: { messages: [{ ai: { instruction } }] } };
+    }
+    if (inferredSource === 'template') {
+      if (!templateId || !templateIds.has(templateId) || message || instruction) return { error: errorResult('INVALID_INPUT', 'Uma mensagem template exige template_id existente e nenhum texto adicional.') };
+      return { configuration: { messageSource: 'template', templateId } };
+    }
+    if (!message || templateId || instruction) return { error: errorResult('INVALID_INPUT', 'Uma mensagem custom exige somente message não vazio.') };
     if (message.length > MAX_MESSAGE_LENGTH) return { error: errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`) };
     return { configuration: { messageSource: 'custom', customMessage: { type: 'text', text: message } } };
   }
@@ -1735,7 +1890,7 @@ async function createFollowUpStep(supabase: SupabaseClient, params: Record<strin
     if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível verificar jobs ativos do fluxo.');
     if ((count ?? 0) > 0) return errorResult('CONFLICT', 'Não é possível inserir uma etapa no meio de um fluxo com jobs ativos. Adicione ao final ou pause/remova os jobs primeiro.');
   }
-  const action = await resolveStepActionConfiguration(supabase, actionType, params.action_config);
+  const action = await resolveStepActionConfiguration(supabase, actionType, params.action_config, templateIdsFromSettings(settings));
   if (action.error || !action.configuration) return action.error ?? errorResult('INVALID_INPUT', 'Configuração da ação inválida.');
   const step = { id: crypto.randomUUID(), delayValue, delayUnit, actionType, enabled, ...action.configuration };
   steps.splice(order, 0, step);
@@ -1744,24 +1899,127 @@ async function createFollowUpStep(supabase: SupabaseClient, params: Record<strin
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível criar a etapa.') : { success: true, flow_id: flowId, step: flowView(nextFlow).steps[order] };
 }
 
-async function updateFollowUpStepMessage(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
-  const flowId = text(params.flow_id); const stepId = text(params.step_id); const message = text(params.message);
-  if (!flowId || !stepId || !message) return errorResult('INVALID_INPUT', 'flow_id, step_id e message são obrigatórios.');
-  if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
-  const integration = await loadAutomationIntegration(supabase); const settings = automationSettings(integration?.settings);
-  if (!integration || !settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
-  const index = settings.flows.findIndex((flow) => flowRecord(flow)?.id === flowId); const flow = flowRecord(settings.flows[index]);
+async function replaceFollowUpStepMessageItems(
+  supabase: SupabaseClient,
+  integration: Record<string, unknown>,
+  settings: AutomationSettings,
+  flowIndex: number,
+  stepIndex: number,
+  items: McpFlowMessageItem[],
+): Promise<McpWriteResult> {
+  const flow = flowRecord(settings.flows?.[flowIndex]);
   if (!flow) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
   const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord).map((step) => ({ ...step })) : [];
-  const step = steps.find((candidate) => text(candidate.id) === stepId);
+  const step = steps[stepIndex];
   if (!step) return errorResult('NOT_FOUND', 'Etapa não encontrada.');
-  if (text(step.actionType) !== 'send_message') return errorResult('NOT_ALLOWED', 'Somente etapas send_message podem ter o texto alterado.');
+  if (text(step.actionType) !== 'send_message') return errorResult('NOT_ALLOWED', 'Somente etapas send_message podem ter mensagens alteradas.');
+
+  step.messages = items;
+  delete step.messageSource;
+  delete step.templateId;
+  delete step.customMessage;
+  const nextFlow = { ...flow, steps };
+  const flows = [...(settings.flows ?? [])];
+  flows[flowIndex] = nextFlow;
+  const { error } = await supabase
+    .from('integration_settings')
+    .update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() })
+    .eq('id', integration.id);
+  return error
+    ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar as mensagens da etapa.')
+    : { success: true, flow_id: text(flow.id), step_id: text(step.id), messages: items, step: flowView(nextFlow).steps[stepIndex] };
+}
+
+async function loadFollowUpStepMessageContext(
+  supabase: SupabaseClient,
+  flowId: string,
+  stepId: string,
+): Promise<{
+  integration?: Record<string, unknown>;
+  settings?: AutomationSettings;
+  flowIndex?: number;
+  stepIndex?: number;
+  error?: McpWriteResult;
+}> {
+  const integration = await loadAutomationIntegration(supabase);
+  const settings = automationSettings(integration?.settings);
+  if (!integration || !settings || !Array.isArray(settings.flows)) return { error: errorResult('NOT_FOUND', 'Configuração de automação não encontrada.') };
+  const flowIndex = settings.flows.findIndex((flow) => flowRecord(flow)?.id === flowId);
+  const flow = flowRecord(settings.flows[flowIndex]);
+  if (!flow) return { error: errorResult('NOT_FOUND', 'Fluxo não encontrado.') };
+  const steps = Array.isArray(flow.steps) ? flow.steps.filter(isRecord) : [];
+  const stepIndex = steps.findIndex((step) => text(step.id) === stepId);
+  if (stepIndex < 0) return { error: errorResult('NOT_FOUND', 'Etapa não encontrada.') };
+  if (text(steps[stepIndex].actionType) !== 'send_message') return { error: errorResult('NOT_ALLOWED', 'Somente etapas send_message podem ter mensagens alteradas.') };
+  return { integration, settings, flowIndex, stepIndex };
+}
+
+async function updateFollowUpStepMessages(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id);
+  const stepId = text(params.step_id);
+  if (!flowId || !stepId || !Array.isArray(params.messages)) return errorResult('INVALID_INPUT', 'flow_id, step_id e messages são obrigatórios.');
+  if (Object.keys(params).some((key) => !['flow_id', 'step_id', 'messages'].includes(key))) return errorResult('NOT_ALLOWED', 'A ferramenta permite alterar somente flow_id, step_id e messages.');
+
+  const context = await loadFollowUpStepMessageContext(supabase, flowId, stepId);
+  if (context.error || !context.integration || !context.settings || context.flowIndex === undefined || context.stepIndex === undefined) {
+    return context.error ?? errorResult('NOT_FOUND', 'Etapa não encontrada.');
+  }
+  const normalized = normalizeFlowMessageItems(params.messages, templateIdsFromSettings(context.settings));
+  if (normalized.error || !normalized.items) return normalized.error ?? errorResult('INVALID_INPUT', 'Mensagens inválidas.');
+  return replaceFollowUpStepMessageItems(supabase, context.integration, context.settings, context.flowIndex, context.stepIndex, normalized.items);
+}
+
+async function updateFollowUpStepMessage(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const flowId = text(params.flow_id);
+  const stepId = text(params.step_id);
+  const message = text(params.message);
+  const source = text(params.message_source ?? params.messageSource);
+  const templateId = text(params.template_id ?? params.templateId);
+  const instruction = text(params.ai_instruction ?? params.aiInstruction);
+  if (Object.keys(params).some((key) => !['flow_id', 'step_id', 'message', 'message_source', 'messageSource', 'template_id', 'templateId', 'ai_instruction', 'aiInstruction'].includes(key))) {
+    return errorResult('NOT_ALLOWED', 'A ferramenta permite somente message, message_source, template_id ou ai_instruction.');
+  }
+  if (!flowId || !stepId) return errorResult('INVALID_INPUT', 'flow_id e step_id são obrigatórios.');
+  if (source && !FLOW_MESSAGE_SOURCES.has(source)) return errorResult('INVALID_INPUT', 'message_source deve ser template, custom ou ai.');
+
+  const inferredSource = source || (instruction ? 'ai' : templateId ? 'template' : 'custom');
+  if (inferredSource === 'ai' || inferredSource === 'template') {
+    if (inferredSource === 'ai' && (!instruction || message || templateId)) return errorResult('INVALID_INPUT', 'Uma mensagem IA exige somente ai_instruction não vazia.');
+    if (inferredSource === 'template' && (!templateId || message || instruction)) return errorResult('INVALID_INPUT', 'Uma mensagem template exige somente template_id não vazio.');
+    if (inferredSource === 'ai' && instruction.length > MAX_AI_INSTRUCTION_LENGTH) return errorResult('INVALID_INPUT', `A instrução IA excede o limite de ${MAX_AI_INSTRUCTION_LENGTH} caracteres.`);
+
+    const context = await loadFollowUpStepMessageContext(supabase, flowId, stepId);
+    if (context.error || !context.integration || !context.settings || context.flowIndex === undefined || context.stepIndex === undefined) {
+      return context.error ?? errorResult('NOT_FOUND', 'Etapa não encontrada.');
+    }
+    const items: McpFlowMessageItem[] = inferredSource === 'ai'
+      ? [{ ai: { instruction } }]
+      : [{ templateId }];
+    if (inferredSource === 'template' && !templateIdsFromSettings(context.settings).has(templateId)) {
+      return errorResult('INVALID_INPUT', 'O template informado não existe na biblioteca do fluxo.');
+    }
+    return replaceFollowUpStepMessageItems(supabase, context.integration, context.settings, context.flowIndex, context.stepIndex, items);
+  }
+
+  if (!message) return errorResult('INVALID_INPUT', 'flow_id, step_id e message são obrigatórios.');
+  if (message.length > MAX_MESSAGE_LENGTH) return errorResult('MESSAGE_TOO_LONG', `A mensagem excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`);
+  if (templateId || instruction) return errorResult('INVALID_INPUT', 'Uma mensagem custom exige somente message não vazio.');
+  const context = await loadFollowUpStepMessageContext(supabase, flowId, stepId);
+  if (context.error || !context.integration || !context.settings || context.flowIndex === undefined || context.stepIndex === undefined) {
+    return context.error ?? errorResult('NOT_FOUND', 'Etapa não encontrada.');
+  }
+  const flow = flowRecord(context.settings.flows?.[context.flowIndex]);
+  const steps = flow && Array.isArray(flow.steps) ? flow.steps.filter(isRecord).map((step) => ({ ...step })) : [];
+  const step = steps[context.stepIndex];
+  if (!flow || !step) return errorResult('NOT_FOUND', 'Etapa não encontrada.');
   step.messageSource = 'custom';
   step.customMessage = { type: 'text', text: message };
   delete step.templateId;
   delete step.messages;
-  const nextFlow = { ...flow, steps }; const flows = [...settings.flows]; flows[index] = nextFlow;
-  const { error } = await supabase.from('integration_settings').update({ settings: { ...settings, flows }, updated_at: new Date().toISOString() }).eq('id', integration.id);
+  const nextFlow = { ...flow, steps };
+  const flows = [...(context.settings.flows ?? [])];
+  flows[context.flowIndex] = nextFlow;
+  const { error } = await supabase.from('integration_settings').update({ settings: { ...context.settings, flows }, updated_at: new Date().toISOString() }).eq('id', context.integration.id);
   return error ? errorResult('INTERNAL_ERROR', 'Não foi possível atualizar a mensagem da etapa.') : { success: true, flow_id: flowId, step_id: stepId, message };
 }
 
@@ -2272,6 +2530,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_create_followup_flow') { actionType = 'followup_flow_create'; result = await createFollowUpFlow(supabase, args); }
     else if (toolName === 'kifer_create_followup_step') { actionType = 'followup_step_create'; result = await createFollowUpStep(supabase, args); }
     else if (toolName === 'kifer_update_followup_step_message') { actionType = 'followup_step_message_update'; result = await updateFollowUpStepMessage(supabase, args); }
+    else if (toolName === 'kifer_update_followup_step_messages') { actionType = 'followup_step_messages_update'; result = await updateFollowUpStepMessages(supabase, args); }
     else if (toolName === 'kifer_delete_followup_step') { actionType = 'followup_step_delete'; result = await mutateFollowUpSteps(supabase, args, 'delete'); }
     else if (toolName === 'kifer_reorder_followup_steps') { actionType = 'followup_step_reorder'; result = await mutateFollowUpSteps(supabase, args, 'reorder'); }
     else if (toolName === 'kifer_clone_followup_flow') { actionType = 'followup_flow_clone'; result = await cloneFollowUpFlow(supabase, args); }

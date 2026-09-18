@@ -8758,14 +8758,12 @@ export default function WhatsAppInboxScreen() {
                     <span className="relative inline-flex">
                       <Archive className="kds-control-icon" />
                       {archivedChatsCountValue > 0 ? (
-                        <Badge
-                          tone="primary"
-                          size="sm"
-                          className="whatsapp-inbox-count-badge"
+                        <span
+                          className="kds-sidebar-badge whatsapp-inbox-count-badge"
                           aria-label={`${archivedChatsCountValue} chats arquivados`}
                         >
-                          {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
-                        </Badge>
+                          {archivedChatsCountValue > 9 ? '9+' : archivedChatsCountValue}
+                        </span>
                       ) : null}
                     </span>
                   </IconButton>
@@ -9212,14 +9210,12 @@ export default function WhatsAppInboxScreen() {
                       <span className="relative inline-flex">
                         <Info className="kds-control-icon" />
                         {chatAgendaSummary.pendingCount > 0 ? (
-                          <Badge
-                            tone="primary"
-                            size="sm"
-                            className="whatsapp-inbox-count-badge"
+                          <span
+                            className="kds-sidebar-badge whatsapp-inbox-count-badge"
                             aria-label={`${chatAgendaSummary.pendingCount} lembretes pendentes`}
                           >
-                            {chatAgendaSummary.pendingCount > 99 ? '99+' : chatAgendaSummary.pendingCount}
-                          </Badge>
+                            {chatAgendaSummary.pendingCount > 9 ? '9+' : chatAgendaSummary.pendingCount}
+                          </span>
                         ) : null}
                       </span>
                     </IconButton>

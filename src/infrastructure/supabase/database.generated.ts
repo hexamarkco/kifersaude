@@ -3450,6 +3450,72 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_presences: {
+        Row: {
+          channel_id: string
+          chat_id: string | null
+          created_at: string
+          external_entry_id: string
+          id: string
+          last_seen_at: string | null
+          observed_at: string
+          raw_payload: Json
+          status: string
+          subscribed_at: string | null
+          subscription_attempted_at: string | null
+          subscription_error: string | null
+          subscription_status: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          chat_id?: string | null
+          created_at?: string
+          external_entry_id: string
+          id?: string
+          last_seen_at?: string | null
+          observed_at?: string
+          raw_payload?: Json
+          status?: string
+          subscribed_at?: string | null
+          subscription_attempted_at?: string | null
+          subscription_error?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          chat_id?: string | null
+          created_at?: string
+          external_entry_id?: string
+          id?: string
+          last_seen_at?: string | null
+          observed_at?: string
+          raw_payload?: Json
+          status?: string
+          subscribed_at?: string | null
+          subscription_attempted_at?: string | null
+          subscription_error?: string | null
+          subscription_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_presences_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_presences_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_scheduled_message_audit_log: {
         Row: {
           action: string
@@ -7517,6 +7583,62 @@ export type Database = {
           phone_digits: string
           phone_number: string
           pinned_at: string
+          push_name: string
+          saved_contact_name: string
+          status: string
+          unread_count: number
+          updated_at: string
+        }[]
+      }
+      comm_whatsapp_list_chats_with_presence: {
+        Args: {
+          p_activity_filter?: string
+          p_archived_filter?: string
+          p_lead_filter?: string
+          p_lead_responsavel_filters?: string[]
+          p_lead_status_filters?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_saved_filter?: string
+          p_search?: string
+        }
+        Returns: {
+          archived_at: string
+          auto_link_blocked: boolean
+          autonomous_attendance_status: string
+          channel_id: string
+          created_at: string
+          display_name: string
+          external_chat_id: string
+          id: string
+          identity_conflict: boolean
+          is_archived: boolean
+          is_group: boolean
+          is_muted: boolean
+          is_pinned: boolean
+          last_message_at: string
+          last_message_delivery_status: string
+          last_message_direction: string
+          last_message_text: string
+          last_read_at: string
+          lead_id: string
+          lead_link_source: string
+          lead_linked_at: string
+          lead_linked_by: string
+          lead_name: string
+          lead_responsavel: string
+          lead_responsavel_id: string
+          lead_status: string
+          manual_unread: boolean
+          manual_unread_at: string
+          merged_into_chat_id: string
+          muted_at: string
+          phone_digits: string
+          phone_number: string
+          pinned_at: string
+          presence_last_seen_at: string
+          presence_status: string
+          presence_updated_at: string
           push_name: string
           saved_contact_name: string
           status: string

@@ -109,6 +109,9 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /carencia para parto a termo e de 10 meses/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /ate 36 semanas e 6 dias/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /BASE OBRIGATORIA DA QUALIFICACAO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /PLANO ATUAL E MOTIVO DA TROCA/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /custo, rede, reajuste, atendimento, cobertura/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /contexto comercial opcional e nunca bloqueia/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /bairro quando essa cidade for uma capital/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /MENOR DE 12 ANOS/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Não aplique essa regra a adolescentes de 12 anos ou mais/);

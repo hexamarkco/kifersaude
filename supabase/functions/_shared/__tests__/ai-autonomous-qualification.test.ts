@@ -143,4 +143,38 @@ test('corrige somente o erro obvio de Klini sem inventar operadora', () => {
   assert.equal(state.currentHealthPlan.operator, 'Klini');
   assert.equal(qualificationStateIsComplete(state), true);
 });
+
+test('nao transforma a mesma idade repetida em novas vidas', () => {
+  const state = stateFrom([
+    { role: 'ai', content: 'Você busca um plano só para você ou para mais alguém da família?' },
+    { role: 'lead', content: 'Só para minha filha de 46 anos' },
+    { role: 'ai', content: 'Qual é a idade da sua filha?' },
+    { role: 'lead', content: '46 anos' },
+    { role: 'ai', content: 'Qual é a idade dela?' },
+    { role: 'lead', content: 'Idade 46 anos' },
+    { role: 'ai', content: 'Além dela, quais são as idades das outras duas pessoas que entrarão no plano?' },
+    { role: 'lead', content: 'Ninguém vai no plano, só ela.' },
+  ]);
+
+  assert.equal(state.lives.count, 1);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [46]);
+  assert.equal(state.missingRequiredFields.includes('lives'), false);
+  assert.equal(state.missingRequiredFields.includes('ages'), false);
+});
+
+test('nao interpreta o numero de uma reclamacao como idade', () => {
+  const state = stateFrom([
+    { role: 'ai', content: 'O plano será somente para você ou para mais alguém da família?' },
+    { role: 'lead', content: 'Só para minha filha de 46 anos' },
+    { role: 'ai', content: 'Qual é a idade da sua filha?' },
+    { role: 'lead', content: '46 anos' },
+    { role: 'ai', content: 'Qual é a idade dela?' },
+    { role: 'lead', content: 'Idade 46 anos' },
+    { role: 'ai', content: 'Além dela, quais são as idades das outras duas pessoas que entrarão no plano?' },
+    { role: 'lead', content: 'Você já me fez essa pergunta 2 vezes.' },
+  ]);
+
+  assert.equal(state.lives.count, 1);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [46]);
+});
 });

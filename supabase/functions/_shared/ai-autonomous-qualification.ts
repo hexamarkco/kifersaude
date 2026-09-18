@@ -251,19 +251,35 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     const text = message.content;
     const normalizedPreviousAi = normalize(previousAi);
     const ages = extractAgeValues(text);
+    const ageQuestionPending = /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi)
+      && !/quantas?\s+(?:vidas?|pessoas?)/.test(normalizedPreviousAi);
     const hasPendingAge = count !== null && latestAges.length < count && /^\s*\d{1,3}\s*$/.test(text);
+    const likelyAgeReply = /^\s*\d{1,3}\s*$/.test(text)
+      || /^\s*\d{1,3}(?:\s*(?:,|e|\/|\+)\s*\d{1,3})+\s*$/i.test(text)
+      || /\b(?:idade|anos?)\b/i.test(text);
     if (ages.length === 0
-      && (hasPendingAge || /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi))
-      && !/quantas?\s+(?:vidas?|pessoas?)/.test(normalizedPreviousAi)) {
+      && (hasPendingAge || (ageQuestionPending && likelyAgeReply))) {
       ages.push(...[...text.matchAll(/\b(\d{1,3})\b/g)]
         .map((match) => Number(match[1]))
         .filter((age) => age >= 0 && age <= 120));
     }
     if (ages.length > 0) {
       const isCorrection = /\b(?:corrig|desculp|na verdade|fez|fiz|errei|errado)\w*/i.test(text);
-      latestAges = isCorrection && latestAges.length > 0
-        ? [...latestAges.slice(0, Math.max(0, latestAges.length - 1)), ...ages]
-        : [...latestAges, ...ages];
+      if (isCorrection && latestAges.length > 0) {
+        latestAges = [...latestAges.slice(0, Math.max(0, latestAges.length - 1)), ...ages];
+      } else if (count === 1) {
+        // Respostas repetidas como "46 anos" depois de "só para minha filha"
+        // confirmam a mesma vida. Nunca transforme a repetição em uma nova vida.
+        latestAges = [ages[ages.length - 1]];
+      } else if (ageQuestionPending && count !== null) {
+        if (ages.length >= count) {
+          latestAges = ages.slice(0, count);
+        } else if (latestAges.length < count) {
+          latestAges = [...latestAges, ...ages].slice(0, count);
+        }
+      } else {
+        latestAges = [...latestAges, ...ages];
+      }
     }
     const extractedCount = extractCount(text)
       ?? (/quantas?\s+(?:vidas?|pessoas?)|para\s+quantas?/.test(normalizedPreviousAi)
@@ -272,14 +288,16 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     if (extractedCount !== null) count = extractedCount;
     if (hasAdultReference(text)) hasAdult = true;
     if (hasChildReference(text)) hasChild = true;
-    if (hasExplicitChildOnlyReference(text)) onlyChild = true;
+    if (hasExplicitChildOnlyReference(text)) {
+      onlyChild = true;
+      if (count === null) count = extractedCount ?? (ages.length > 1 ? ages.length : 1);
+    }
     if (hasAdult || hasChild || extractedCount !== null || hasSelfOnlyReference(text)) compositionStatus = 'known';
   }
 
   if (hasAdult && hasChild && (count === null || count < 2)) count = 2;
   if (onlyChild && !hasAdult) {
     if (count === null) count = latestAges.length > 1 ? latestAges.length : 1;
-    else if (latestAges.length > 1) count = latestAges.length;
   }
   const allLeadText = messages.map((row) => row.content).join(' ');
   if (hasAdult && hasChild && /\b(?:eu|mim)\s+e\s+(?:meu|minha|o|a)\b/i.test(allLeadText)) count = 2;
@@ -302,7 +320,7 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
       const age = role === 'adult'
         ? adultAges[index] ?? null
         : role === 'child'
-          ? childAges[index - (hasAdult ? 1 : 0)] ?? null
+          ? childAges[index - (hasAdult ? 1 : 0)] ?? latestAges[index] ?? null
           : latestAges[index] ?? null;
       items.push({
         id: `life-${index + 1}`,

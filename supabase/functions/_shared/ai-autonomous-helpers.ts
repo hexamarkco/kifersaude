@@ -33,6 +33,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'OBJETIVO DE CADA TURNO: responda a ultima mensagem do lead com inteligencia pratica. Primeiro resolva a duvida, confirme o dado ou acolha a situacao que ele trouxe. Depois, somente se ainda faltar uma informacao necessaria, faca uma unica pergunta que mova a cotacao.',
   'VINCULO ANTES DO ROTEIRO: seu atendimento precisa criar proximidade real. Antes de coletar um dado, acolha o contexto que a pessoa trouxe e mostre que entendeu sua situacao, desejo ou preocupacao concreta. Uma conversa boa pode ter uma frase de cuidado, alivio ou orientacao antes da proxima pergunta; nao precisa parecer uma sequencia de formulario. Use o primeiro nome quando soar natural e deixe a pessoa se sentir acompanhada pela Luiza. Seja calorosa, interessada e presente, sem frases prontas, exageros ou promessas que nao possa cumprir. A empatia deve ser especifica ao que a pessoa acabou de dizer, nao um elogio generico ou uma frase social vazia.',
   'EMPATIA SEM ENROLAÇÃO: responda ao que a pessoa trouxe quando houver dúvida, correção, objeção, preocupação ou contexto humano. Uma resposta curta e inequívoca como uma idade, uma cidade, um bairro, MEI ou o nome de uma operadora normalmente não precisa ser repetida. Nesse caso, use uma confirmação breve ou siga direto para a próxima pergunta. Nao faca discurso e nao use acolhimento como desculpa para adiar a proxima acao.',
+  'RITMO HUMANO: nao deixe a conversa virar uma fila de perguntas secas. Em sequencias de respostas objetivas, use microtransicoes naturais em alguns turnos, como "Perfeito. Qual é a sua idade?", "Obrigada. Em qual cidade você vai usar o plano?" ou "Entendi. Ser funcionária pública não impede a cotação. Você já tem plano atualmente?". Se o lead mandar uma saudação, um "ok" ou outra mensagem sem informação logo depois de uma resposta substantiva, considere o contexto anterior e continue dali, sem perder o fio nem reiniciar a coleta.',
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
@@ -241,6 +242,7 @@ export const buildReplyUserPrompt = (
     '--- CONTRATO DESTA RESPOSTA ---',
     'Responda primeiro ao conteudo da ultima mensagem. Mostre que voce entendeu somente quando isso trouxer proximidade real, resolver uma duvida ou tratar uma correcao. Para uma resposta objetiva, nao repita o dado recebido. Faca no maximo uma pergunta, apenas se ela for necessaria para avancar. Seja breve, natural e util. Nao repita o historico nem invente uma nova etapa.',
     'Nao use os moldes Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira uma confirmacao curta ou uma pergunta direta. Se a qualificacao estiver completa, use um encerramento humano e nao recapitule os dados.',
+    'RITMO HUMANO: nao deixe todos os turnos no formato pergunta direta. Use uma microtransicao curta em parte da sequencia para a conversa soar acompanhada. Se a ultima mensagem do LEAD for apenas uma saudacao, um ok ou uma resposta sem conteudo, use tambem a ultima resposta substantiva do LEAD para manter o contexto e avancar o campo pendente.',
     'A mensagem visivel deve ter uma a tres frases curtas e nao pode conter travessao, meia-risca ou dois-pontos. Use ponto ou virgula no lugar. Nao use listas, bullets, markdown ou rotulos.',
   ].join('\n');
 };
@@ -348,9 +350,15 @@ const CURRENT_PLAN_OPERATOR_REGEX = /\b(?:amil|assim|bradesco|unimed|sul\s*ameri
 const ANSWERLESS_MESSAGE_REGEX = /^(?:oi|ola|bom\s+dia|boa\s+tarde|boa\s+noite|ok|isso|certo|perfeito|obrigad[ao])$/;
 export const QUALIFICATION_COMPLETION_VALIDATION_MESSAGE = 'A cotacao so pode ser concluida depois de coletar vidas, idades, cidade, bairro quando a cidade for capital, CNPJ/MEI e resposta sobre plano atual. Operadora e nome do plano sao opcionais.';
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
-export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa dizer que as opcoes serao montadas e que a cotacao sera enviada. Nao encerre apenas dizendo que vai preparar as opcoes.';
+export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa dizer que as opcoes serao montadas de acordo com o perfil ou as necessidades do lead e que a cotacao sera enviada. Nao encerre apenas dizendo que vai preparar as opcoes.';
 const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\b[^.!?]{0,180}\b(?:cota[cç][aã]o|proposta)\b/i;
+const QUALIFICATION_CLOSURE_CONTEXT_REGEX = /\b(?:perfil|necessidad(?:e|es)|cenario|facam\s+mais\s+sentido|melhores?\s+opcoes?|opcoes?\s+que\s+facam\s+sentido)\b/i;
 const REPETITIVE_QUALIFICATION_OPENING_REGEX = /^(?:vou\s+considerar\b|como\s+voce\s+informou\b|com\s+\d{1,3}\s+anos\b|voce\s+j[aá]\s+(?:j[aá]\s+)?utiliza\b[^?]*\.\s*(?:vou|irei|agora\s+vou)\b)/i;
+
+const hasNaturalQualificationClosure = (value: string): boolean => (
+  QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(value)
+  && QUALIFICATION_CLOSURE_CONTEXT_REGEX.test(normalizeForSemanticMatch(value))
+);
 
 const leadAnswersAfterAiQuestion = (
   history: AutonomousMessageRow[],
@@ -444,6 +452,14 @@ export const validateAutonomousReplyOutput = (
   // especifico para esse caso e nao deve transformar handoff em fallback.
   const parsedCandidate = extractHandoff(trimmed);
   const visibleCandidate = parsedCandidate.text;
+  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+  if (REPETITIVE_QUALIFICATION_OPENING_REGEX.test(normalizedCandidate)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
+    };
+  }
   if (parsedCandidate.handoffCode === 'QUALIFICACAO_COMPLETA' && !hasQualificationDataForCompletion(history, qualificationState)) {
     return {
       valid: false,
@@ -452,7 +468,7 @@ export const validateAutonomousReplyOutput = (
     };
   }
   if (qualificationState && qualificationStateIsComplete(qualificationState)) {
-    if (!parsedCandidate.handoffCode && !QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)) {
+    if (!parsedCandidate.handoffCode && !hasNaturalQualificationClosure(visibleCandidate)) {
       return {
         valid: false,
         stopReason: 'invalid_output',
@@ -469,24 +485,14 @@ export const validateAutonomousReplyOutput = (
   }
   if (!visibleCandidate) return { valid: true };
 
-  const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
-
   if (
     parsedCandidate.handoffCode === 'QUALIFICACAO_COMPLETA'
-    && !QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(visibleCandidate)
+    && !hasNaturalQualificationClosure(visibleCandidate)
   ) {
     return {
       valid: false,
       stopReason: 'invalid_output',
       message: QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
-    };
-  }
-
-  if (REPETITIVE_QUALIFICATION_OPENING_REGEX.test(normalizedCandidate)) {
-    return {
-      valid: false,
-      stopReason: 'invalid_output',
-      message: QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
     };
   }
 

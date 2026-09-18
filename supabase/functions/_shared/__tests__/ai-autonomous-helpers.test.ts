@@ -110,6 +110,7 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao precisa parecer uma sequencia de formulario/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Se o lead ja disser que e pessoa fisica/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /EMPATIA SEM ENROLAÇÃO/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /RITMO HUMANO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /COPY VISIVEL/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao pode usar travessao.*dois-pontos/i);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /REPETIÇÃO ZERO/);
@@ -127,6 +128,7 @@ describe('copy visible style', () => {
 
     assert.match(prompt, /Mostre que voce entendeu somente quando isso trouxer proximidade real/i);
     assert.match(prompt, /Faca no maximo uma pergunta/i);
+    assert.match(prompt, /ultima mensagem do LEAD.*saudacao.*ultima resposta substantiva/i);
     assert.match(prompt, /nao pode conter travessao.*dois-pontos/i);
   });
 
@@ -207,6 +209,25 @@ describe('validateAutonomousReplyOutput', () => {
     ];
     const result = validateAutonomousReplyOutput(
       'Perfeito. Já consegui as informações que precisava por aqui e vou preparar as opções para você. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
+      completeHistory,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.message, QUALIFICATION_CLOSURE_VALIDATION_MESSAGE);
+  });
+
+  test('rejeita encerramento funcional mas seco', () => {
+    const completeHistory: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Pra mim, tenho 44 anos.' },
+      { role: 'ai', content: 'Em qual cidade você vai usar o plano?' },
+      { role: 'lead', content: 'Cachoeiro de Itapemirim.' },
+      { role: 'ai', content: 'Você tem CNPJ ou MEI?' },
+      { role: 'lead', content: 'Não.' },
+      { role: 'ai', content: 'Você já tem plano de saúde atualmente?' },
+      { role: 'lead', content: 'Não.' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Certo. Já consegui as informações que precisava por aqui. Vou preparar a cotação e te envio as opções. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
       completeHistory,
     );
 

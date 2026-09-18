@@ -18,7 +18,7 @@ describe('whapi presence parser', () => {
     expect(item).toEqual({
       entryId: '5511999999999',
       status: 'recording',
-      lastSeenAt: '2024-04-13T16:02:57.000Z',
+      lastSeenAt: '2024-04-13T08:02:57.000Z',
       raw: {
         contact_id: '5511999999999',
         status: 'recording',

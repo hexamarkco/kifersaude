@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarClock, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -2368,6 +2368,7 @@ export default function WhatsAppInboxScreen() {
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
   const [scheduleMessageModalOpen, setScheduleMessageModalOpen] = useState(false);
   const [scheduledMessagesPanelOpen, setScheduledMessagesPanelOpen] = useState(false);
+  const [allScheduledMessagesPanelOpen, setAllScheduledMessagesPanelOpen] = useState(false);
   const [startChatQuery, setStartChatQuery] = useState('');
   const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
   const [savedContactsLoading, setSavedContactsLoading] = useState(false);
@@ -9009,6 +9010,15 @@ export default function WhatsAppInboxScreen() {
                     <Calendar className="kds-control-icon" />
                   </IconButton>
                   <IconButton
+                    variant={allScheduledMessagesPanelOpen ? 'soft' : 'ghost'}
+                    className="shrink-0"
+                    size="md" onClick={() => setAllScheduledMessagesPanelOpen(true)}
+                    aria-label="Mensagens agendadas"
+                    title="Mensagens agendadas"
+                  >
+                    <CalendarClock className="kds-control-icon" />
+                  </IconButton>
+                  <IconButton
                     variant="ghost"
                     className="shrink-0"
                     size="md" onClick={() => setWhatsAppDashboardOpen(true)}
@@ -9465,6 +9475,15 @@ export default function WhatsAppInboxScreen() {
                     </IconButton>
                     <IconButton
                       type="button"
+                      onClick={() => setScheduledMessagesPanelOpen(true)}
+                      variant={scheduledMessagesPanelOpen ? 'secondary' : 'ghost'}
+                      aria-label="Ver mensagens agendadas desta conversa"
+                      title="Mensagens agendadas desta conversa"
+                     size="md">
+                      <CalendarClock className="kds-control-icon" />
+                    </IconButton>
+                    <IconButton
+                      type="button"
                       onClick={() => void handleCopyChatTranscript()}
                       variant="ghost"
                       aria-label="Copiar conversa formatada"
@@ -9679,6 +9698,14 @@ export default function WhatsAppInboxScreen() {
                       const canCancelGroupMediaUpload = Boolean(
                         groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id,
                       );
+                      const mediaGroupMeta = (
+                        <div className={`whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center gap-2 px-1 text-[11px] font-medium ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                            <span>{formatMessageTime(lastMessage.message_at)}</span>
+                            {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
+                          </span>
+                        </div>
+                      );
 
                       return (
                         <div
@@ -9695,8 +9722,11 @@ export default function WhatsAppInboxScreen() {
                           className={`message-bubble-row flex w-full ${getMessageRowClasses(lastMessage.direction)}`}
                         >
                           <div className="relative max-w-[82%] pb-2">
+                            {selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
+                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
+                            ) : null}
                             <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              {selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
+                              {!selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
                                 <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
                               ) : null}
                               <WhatsAppMediaGroupBody
@@ -9706,13 +9736,9 @@ export default function WhatsAppInboxScreen() {
                                 mediaSendingProgress={groupMediaSendingProgress}
                                 onCancelMediaUpload={canCancelGroupMediaUpload ? handleCancelMediaUpload : undefined}
                               />
-                              <div className="whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center justify-end gap-2 px-1 text-[11px] font-medium">
-                                <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                                  <span>{formatMessageTime(lastMessage.message_at)}</span>
-                                  {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
-                                </span>
-                              </div>
+                              {!selectedChat.is_group ? mediaGroupMeta : null}
                             </div>
+                            {selectedChat.is_group ? mediaGroupMeta : null}
                           </div>
                         </div>
                       );
@@ -9730,6 +9756,69 @@ export default function WhatsAppInboxScreen() {
                     const showReplyForwardActions = canReplyOrForwardMessage(message);
                     const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
                     const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
+                    const isGroupMessage = selectedChat.is_group && message.direction !== 'system';
+                    const messageMeta = (
+                      <div className={cx(
+                        'whatsapp-inbox-message-meta flex flex-wrap items-center gap-1.5 text-[11px] font-medium',
+                        isGroupMessage
+                          ? `mt-1 px-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`
+                          : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1 justify-end' : 'mt-2 justify-end',
+                      )}>
+                        {showEditAction || showDeleteAction || showReplyForwardActions ? (
+                          <button
+                            ref={(node) => {
+                              if (node) {
+                                messageActionTriggerRefs.current[message.id] = node;
+                              } else {
+                                delete messageActionTriggerRefs.current[message.id];
+                              }
+                            }}
+                            type="button"
+                            onClick={() => handleToggleMessageActionMenu(message.id)}
+                            className={cx(
+                              'inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              openMessageActionMenuMessageId === message.id
+                                ? 'bg-[var(--bg-hover)] opacity-100'
+                                : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
+                            )}
+                            aria-label="Mais acoes da mensagem"
+                            aria-expanded={openMessageActionMenuMessageId === message.id}
+                            title="Mais acoes"
+                          >
+                            <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
+                          </button>
+                        ) : null}
+                        {showReplyForwardActions ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleToggleStarMessage(message)}
+                            className={cx(
+                              'inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              isMessageStarred(message)
+                                ? 'text-[var(--accent-gold)]'
+                                : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
+                            )}
+                            aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
+                            title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
+                          >
+                            <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />
+                          </button>
+                        ) : null}
+                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                          <span>{formatMessageTime(message.message_at)}</span>
+                          {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
+                        </span>
+                        {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
+                          <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
+                        ) : null}
+                        {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
+                          <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Reenviando</span>
+                          </span>
+                        ) : null}
+                      </div>
+                    );
 
                     return (
                       <div key={item.key} className={`message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`}>
@@ -9767,6 +9856,9 @@ export default function WhatsAppInboxScreen() {
                             </>
                           ) : null}
 
+                          {isGroupMessage && message.sender_name ? (
+                            <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
+                          ) : null}
                           <div
                             className={cx(
                               isBubblelessMediaMessage(message)
@@ -9785,7 +9877,7 @@ export default function WhatsAppInboxScreen() {
                               handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
                             }}
                           >
-                            {selectedChat.is_group && message.direction === 'inbound' && message.sender_name ? (
+                            {!isGroupMessage && message.direction === 'inbound' && message.sender_name ? (
                               <p className="mb-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
                             ) : null}
                             <WhatsAppMessageBody
@@ -9802,65 +9894,10 @@ export default function WhatsAppInboxScreen() {
                               mediaSendingProgress={mediaSendingProgress}
                               onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
                             />
-                            <div className={cx(
-                              'whatsapp-inbox-message-meta flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium',
-                              isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1' : 'mt-2',
-                            )}>
-                              {showEditAction || showDeleteAction || showReplyForwardActions ? (
-                                <button
-                                  ref={(node) => {
-                                    if (node) {
-                                      messageActionTriggerRefs.current[message.id] = node;
-                                    } else {
-                                      delete messageActionTriggerRefs.current[message.id];
-                                    }
-                                  }}
-                                  type="button"
-                                  onClick={() => handleToggleMessageActionMenu(message.id)}
-                                  className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
-                                    openMessageActionMenuMessageId === message.id
-                                      ? 'bg-[var(--bg-hover)] opacity-100'
-                                      : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
-                                  )}
-                                  aria-label="Mais acoes da mensagem"
-                                  aria-expanded={openMessageActionMenuMessageId === message.id}
-                                  title="Mais acoes"
-                                >
-                                  <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
-                                </button>
-                              ) : null}
-                              {showReplyForwardActions ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleToggleStarMessage(message)}
-                                  className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
-                                    isMessageStarred(message)
-                                      ? 'text-[var(--accent-gold)]'
-                                      : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
-                                  )}
-                                  aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
-                                  title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
-                                >
-                                  <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />
-                                </button>
-                              ) : null}
-                              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                                <span>{formatMessageTime(message.message_at)}</span>
-                                {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
-                              </span>
-                              {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                                <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
-                              ) : null}
-                              {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
-                                <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  <span>Reenviando</span>
-                                </span>
-                              ) : null}
-                            </div>
+                            {!isGroupMessage ? messageMeta : null}
                           </div>
+
+                          {isGroupMessage ? messageMeta : null}
 
                           {reactions.length > 0 ? (
                             <div
@@ -10578,19 +10615,6 @@ export default function WhatsAppInboxScreen() {
                           </div>
                         </PopoverContent>
                       </Popover>
-                      {selectedChat && voiceRecordingState === 'idle' && (
-                        <IconButton
-                          variant="ghost"
-                          size="md"
-                          onClick={() => setScheduledMessagesPanelOpen(true)}
-                          disabled={generatingFollowUp || sending}
-                          className="whatsapp-inbox-composer-icon"
-                          aria-label="Agendar mensagem"
-                          title="Agendar mensagem para envio futuro"
-                        >
-                          <Calendar className="kds-control-icon" />
-                        </IconButton>
-                      )}
                     </ButtonGroup>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
@@ -11080,7 +11104,7 @@ export default function WhatsAppInboxScreen() {
           />
         )}
 
-        {selectedChat && (
+        {selectedChat ? (
           <WhatsAppScheduledMessagesPanel
             channelId={selectedChat.channel_id}
             chatId={selectedChat.id}
@@ -11089,7 +11113,12 @@ export default function WhatsAppInboxScreen() {
             onClose={() => setScheduledMessagesPanelOpen(false)}
             onScheduleNew={() => setScheduleMessageModalOpen(true)}
           />
-        )}
+        ) : null}
+
+        <WhatsAppScheduledMessagesPanel
+          isOpen={allScheduledMessagesPanelOpen}
+          onClose={() => setAllScheduledMessagesPanelOpen(false)}
+        />
 
         <PanelPopoverShell
           ref={reactionPickerRef}
@@ -11349,6 +11378,18 @@ export default function WhatsAppInboxScreen() {
               >
                 <Search className="h-4 w-4 shrink-0" />
                 <span>Pesquisar neste chat</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setThreadActionsMenuOpen(false);
+                  setScheduledMessagesPanelOpen(true);
+                }}
+                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+              >
+                <CalendarClock className="h-4 w-4 shrink-0" />
+                <span>Mensagens agendadas desta conversa</span>
               </button>
               <button
                 type="button"

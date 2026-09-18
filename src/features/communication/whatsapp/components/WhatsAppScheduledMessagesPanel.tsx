@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { CalendarClock, Clock, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 
 import { Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
@@ -239,7 +239,7 @@ export default function WhatsAppScheduledMessagesPanel({
       >
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex items-center gap-3">
-            <Calendar className="kds-control-icon text-[var(--brand-primary)]" />
+            <CalendarClock className="kds-control-icon text-[var(--brand-primary)]" />
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
@@ -267,7 +267,7 @@ export default function WhatsAppScheduledMessagesPanel({
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
-              <Calendar className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
+              <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
               <p className="text-[var(--text-muted)]">Nenhuma mensagem agendada</p>
               <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
                 Agende mensagens para envio automático

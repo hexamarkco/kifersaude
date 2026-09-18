@@ -374,6 +374,16 @@ const getMessageRowClasses = (direction: CommWhatsAppMessage['direction']) => {
   return 'message-bubble-row-inbound justify-start';
 };
 
+const findLoadedMessageByExternalId = (messages: CommWhatsAppMessage[], externalMessageId: string) => {
+  const normalizedExternalMessageId = externalMessageId.trim();
+  if (!normalizedExternalMessageId) return null;
+
+  return messages.find((message) => (
+    message.id === normalizedExternalMessageId
+    || message.external_message_id?.trim() === normalizedExternalMessageId
+  )) ?? null;
+};
+
 const isPdfDocumentMessage = (message: CommWhatsAppMessage) => {
   const kind = message.message_type.trim().toLowerCase();
   if (kind !== 'document') return false;
@@ -1550,6 +1560,7 @@ function InboxMessageSearchListItem({
 function WhatsAppMessageBody({
   message,
   onOpenImage,
+  onOpenQuotedMessage,
   onTranscribe,
   onSelectInteractiveReply,
   onOpenSharedContactChat,
@@ -1562,6 +1573,7 @@ function WhatsAppMessageBody({
 }: {
   message: CommWhatsAppMessage;
   onOpenImage: (messageId: string) => void;
+  onOpenQuotedMessage: (externalMessageId: string) => void;
   onTranscribe: (message: CommWhatsAppMessage) => void;
   onSelectInteractiveReply: (message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => void;
   onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
@@ -1653,15 +1665,29 @@ function WhatsAppMessageBody({
         </div>
       )
     : null;
-  const quotePreviewNode = quoteInfo ? (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
-        </div>
+  const quotedExternalMessageId = quoteInfo?.externalMessageId;
+  const quotePreviewContent = quoteInfo ? (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
+        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
       </div>
+    </div>
+  ) : null;
+  const quotePreviewNode = quoteInfo ? quotedExternalMessageId ? (
+    <button
+      type="button"
+      onClick={() => onOpenQuotedMessage(quotedExternalMessageId)}
+      className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+      title="Ir para a mensagem respondida"
+      aria-label={`Ir para a mensagem respondida: ${quoteInfo.previewText}`}
+    >
+      {quotePreviewContent}
+    </button>
+  ) : (
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
+      {quotePreviewContent}
     </div>
   ) : null;
   const visibleContactItems = contactCardInfo?.items.slice(0, 3) ?? [];
@@ -5349,6 +5375,16 @@ export default function WhatsAppInboxScreen() {
       }
     });
   }, [buildMessagesSignature, loadMessages, upsertChatLocally]);
+
+  const handleOpenQuotedMessage = useCallback((quotedExternalMessageId: string) => {
+    const targetMessage = findLoadedMessageByExternalId(latestMessagesRef.current, quotedExternalMessageId);
+    if (!targetMessage) {
+      toast.info('A mensagem original não está carregada neste trecho da conversa.');
+      return;
+    }
+
+    setHighlightedMessageId(targetMessage.id);
+  }, []);
 
   const handleToggleChatMessageSearch = useCallback(() => {
     setChatMessageSearchOpen((current) => {
@@ -9646,6 +9682,7 @@ export default function WhatsAppInboxScreen() {
                             <WhatsAppMessageBody
                               message={message}
                               onOpenImage={setLightboxMessageId}
+                              onOpenQuotedMessage={handleOpenQuotedMessage}
                               onTranscribe={(target) => void handleTranscribeMessage(target)}
                               onSelectInteractiveReply={handleSelectInteractiveReply}
                               onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}

@@ -102,6 +102,9 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
   test('protege interlocutor, beneficiarios e confirmacao de resposta ambigua', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /INTERLOCUTOR de BENEFICIARIOS/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Alguem que vai entrar no plano tem CNPJ ou MEI/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /JUSTIFICATIVA CNPJ\/MEI/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /pode ficar mais em conta por CNPJ\/MEI/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /coletivo por adesao/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /voces dois tem 56 anos/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /planos empresariais por CNPJ\/MEI ficam mais em conta/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /depois de completar 6 meses de abertura/);
@@ -125,6 +128,9 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /EMPATIA SEM ENROLAÇÃO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /TOM MEIGO E PROXIMO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Nao use coracao como recurso padrao/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /PONTE HUMANA ANTES DA PERGUNTA/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Agora preciso saber/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Se as duas respostas anteriores da Luiza foram perguntas diretas/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /RITMO HUMANO/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /COPY VISIVEL/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /nao pode usar travessao.*dois-pontos/i);

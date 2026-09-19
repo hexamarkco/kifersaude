@@ -171,7 +171,7 @@ type CommWhatsAppSendResult = {
   duplicate?: boolean;
 };
 
-export type CommWhatsAppMediaType = 'all' | 'image' | 'video' | 'document' | 'audio';
+export type CommWhatsAppMediaType = 'all' | 'image' | 'video' | 'document' | 'audio' | 'link';
 
 type ListChatMediaPageParams = ListMessagesPageParams & {
   mediaType?: CommWhatsAppMediaType;

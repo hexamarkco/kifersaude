@@ -695,7 +695,7 @@
 
 .comm-whatsapp-chat-files-tabs-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   width: 100%;
 }
 
@@ -712,7 +712,8 @@
 
 .comm-whatsapp-chat-files-loading,
 .comm-whatsapp-chat-files-results,
-.comm-whatsapp-chat-files-file-list {
+.comm-whatsapp-chat-files-file-list,
+.comm-whatsapp-chat-files-link-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -911,6 +912,60 @@
 .comm-whatsapp-chat-files-download-link:hover {
   color: var(--brand-primary-hover);
   text-decoration: underline;
+}
+
+.comm-whatsapp-chat-files-link {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  border-color: var(--border-subtle);
+  background: var(--bg-inset);
+}
+
+.comm-whatsapp-chat-files-link-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.comm-whatsapp-chat-files-link-title {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font: var(--type-label);
+  text-overflow: ellipsis;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.comm-whatsapp-chat-files-link-title:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
+.comm-whatsapp-chat-files-link-description {
+  display: -webkit-box;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.comm-whatsapp-chat-files-link-open {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height-md);
+  height: var(--control-height-md);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+
+.comm-whatsapp-chat-files-link-open:hover {
+  background: var(--bg-hover);
+  color: var(--brand-primary);
 }
 
 @media (max-width: 639px) {

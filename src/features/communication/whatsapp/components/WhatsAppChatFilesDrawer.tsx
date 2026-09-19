@@ -7,6 +7,7 @@ import {
   Files,
   Image,
   Images,
+  Link2,
   Pause,
   Play,
   Video,
@@ -28,6 +29,7 @@ import {
   Surface,
 } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
+import { getMessageLinkPreview } from '../domain/messageMetadata';
 import type { CommWhatsAppMessage } from '../domain/types';
 
 type ChatFilesDrawerProps = {
@@ -56,6 +58,7 @@ const mediaTabs: readonly MediaTab[] = [
   { id: 'video', label: 'Vídeos', icon: Video },
   { id: 'document', label: 'Documentos', icon: FileText },
   { id: 'audio', label: 'Áudios', icon: FileAudio },
+  { id: 'link', label: 'Links', icon: Link2 },
 ];
 
 const mediaDateFormatter = new Intl.DateTimeFormat('pt-BR', {
@@ -79,6 +82,50 @@ const isVisualMessage = (message: CommWhatsAppMessage) => {
 const isAudioMessage = (message: CommWhatsAppMessage) => {
   const type = normalizeMediaType(message);
   return type === 'audio' || type === 'voice';
+};
+
+const trailingUrlPunctuationPattern = /[.,!?;:)}\]]+$/;
+
+const normalizeExternalUrl = (value?: string | null) => {
+  const candidate = String(value ?? '').trim().replace(trailingUrlPunctuationPattern, '');
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+};
+
+const getMessageLink = (message: CommWhatsAppMessage) => {
+  const preview = getMessageLinkPreview(message);
+  const previewUrl = normalizeExternalUrl(preview?.url);
+  const textUrl = normalizeExternalUrl(message.text_content?.match(/https?:\/\/[^\s<]+/i)?.[0]);
+  const url = previewUrl ?? textUrl;
+  if (!url) return null;
+
+  let domain: string | null = preview?.domain ?? null;
+  if (!domain) {
+    try {
+      domain = new URL(url).hostname.replace(/^www\./i, '');
+    } catch {
+      domain = null;
+    }
+  }
+
+  return {
+    url,
+    title: preview?.title ?? null,
+    description: preview?.description ?? null,
+    domain,
+  };
+};
+
+const isLinkMessage = (message: CommWhatsAppMessage) => {
+  const type = normalizeMediaType(message);
+  if (type === 'image' || type === 'video' || type === 'document' || type === 'audio' || type === 'voice') return false;
+  return Boolean(getMessageLink(message));
 };
 
 const formatSize = (value?: number | null) => {
@@ -366,6 +413,37 @@ function DocumentFileRow({ message, onOpen }: { message: CommWhatsAppMessage; on
   );
 }
 
+function LinkFileRow({ message }: { message: CommWhatsAppMessage }) {
+  const link = getMessageLink(message);
+  if (!link) return null;
+
+  const title = link.title || link.domain || link.url;
+  const description = link.description || (message.text_content?.trim() !== link.url ? message.text_content?.trim() : null);
+
+  return (
+    <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-link">
+      <MediaIcon><Link2 className="kds-control-icon" /></MediaIcon>
+      <div className="comm-whatsapp-chat-files-link-content">
+        <a href={link.url} target="_blank" rel="noreferrer" className="comm-whatsapp-chat-files-link-title">
+          {title}
+        </a>
+        <p className="comm-whatsapp-chat-files-item-meta">{link.domain || link.url}</p>
+        {description ? <p className="comm-whatsapp-chat-files-link-description">{description}</p> : null}
+      </div>
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noreferrer"
+        className="comm-whatsapp-chat-files-link-open"
+        aria-label={`Abrir link: ${title}`}
+        title="Abrir link"
+      >
+        <ExternalLink className="kds-control-icon" />
+      </a>
+    </Surface>
+  );
+}
+
 function ChatFilesLoadingSkeleton() {
   return (
     <div className="comm-whatsapp-chat-files-loading" role="status" aria-live="polite">
@@ -425,7 +503,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
       <DrawerHeader onClose={onClose} className="comm-whatsapp-chat-files-header">
         <p className="comm-whatsapp-chat-files-eyebrow">Arquivos da conversa</p>
         <DialogTitle>{chatDisplayName}</DialogTitle>
-        <p className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos e áudios compartilhados neste atendimento.</p>
+        <p className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos, áudios e links compartilhados neste atendimento.</p>
       </DrawerHeader>
       <DrawerBody className="comm-whatsapp-chat-files-body">
         <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-intro">
@@ -473,13 +551,14 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
 
             {groups.map((group) => {
               const visuals = group.messages.filter(isVisualMessage);
-              const files = group.messages.filter((message) => !isVisualMessage(message));
+              const links = group.messages.filter(isLinkMessage);
+              const files = group.messages.filter((message) => !isVisualMessage(message) && !isLinkMessage(message));
 
               return (
                 <section key={group.id} className="comm-whatsapp-chat-files-day" aria-labelledby={`chat-files-day-${group.id}`}>
                   <div className="comm-whatsapp-chat-files-day-header">
                     <h4 id={`chat-files-day-${group.id}`}>{group.label}</h4>
-                    <span>{group.messages.length} {group.messages.length === 1 ? 'arquivo' : 'arquivos'}</span>
+                    <span>{group.messages.length} {group.messages.length === 1 ? 'item' : 'itens'}</span>
                   </div>
 
                   {visuals.length > 0 && (
@@ -495,6 +574,12 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
                           ? <AudioFileRow key={message.id} message={message} onOpen={() => onOpenMedia(message)} />
                           : <DocumentFileRow key={message.id} message={message} onOpen={() => onOpenMedia(message)} />
                       ))}
+                    </div>
+                  )}
+
+                  {links.length > 0 && (
+                    <div className="comm-whatsapp-chat-files-link-list">
+                      {links.map((message) => <LinkFileRow key={message.id} message={message} />)}
                     </div>
                   )}
                 </section>

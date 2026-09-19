@@ -70,7 +70,7 @@ export type CommWhatsAppChat = {
   updated_at: string;
 };
 
-export type CommWhatsAppPresenceStatus = 'online' | 'offline' | 'typing' | 'recording' | 'pending' | 'unknown';
+export type CommWhatsAppPresenceStatus = 'typing' | 'recording' | 'unknown';
 
 export type CommWhatsAppPresence = {
   id?: string;

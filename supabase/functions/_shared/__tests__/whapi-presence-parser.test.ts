@@ -4,6 +4,7 @@ import {
   buildWhapiPresenceEventKey,
   extractWhapiPresenceItems,
   isWhapiPresenceSnapshotStale,
+  isWhapiTransientPresenceStatus,
   normalizeWhapiPresenceItem,
   normalizeWhapiPresenceStatus,
 } from '../whapi-presence-parser';
@@ -56,5 +57,11 @@ describe('whapi presence parser', () => {
     expect(isWhapiPresenceSnapshotStale('recording', '2026-09-18T14:59:30.000Z', now)).toBe(true);
     expect(isWhapiPresenceSnapshotStale('online', '2026-09-18T14:00:00.000Z', now)).toBe(false);
     expect(isWhapiPresenceSnapshotStale('recording', '2026-09-18T14:59:50.000Z', now)).toBe(false);
+  });
+
+  it('keeps only typing and recording as transient inbox states', () => {
+    expect(isWhapiTransientPresenceStatus('typing')).toBe(true);
+    expect(isWhapiTransientPresenceStatus('recording')).toBe(true);
+    expect(isWhapiTransientPresenceStatus('online')).toBe(false);
   });
 });

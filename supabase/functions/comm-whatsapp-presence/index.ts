@@ -6,6 +6,7 @@ import {
   ensureCommWhatsAppSettings,
   extractWhapiParticipantDigits,
   fetchWhapiPresence,
+  isWhapiTransientPresenceStatus,
   isWhapiPresenceSnapshotStale,
   normalizeWhapiChatId,
   subscribeWhapiPresence,
@@ -153,7 +154,7 @@ Deno.serve(async (req: Request) => {
     let preserveStaleTransientPresence = false;
     try {
       presence = await fetchWhapiPresence({ token: settings.token, entryId });
-      if (presence) {
+      if (presence && isWhapiTransientPresenceStatus(presence.status)) {
         preserveStaleTransientPresence = Boolean(previous)
           && previous.status === presence.status
           && isWhapiPresenceSnapshotStale(previous.status, previous.observed_at);
@@ -172,13 +173,13 @@ Deno.serve(async (req: Request) => {
           last_seen_at: previous.last_seen_at,
           observed_at: previous.observed_at,
         }
-      : presence
+      : presence && isWhapiTransientPresenceStatus(presence.status)
         ? {
             status: presence.status,
             last_seen_at: presence.lastSeenAt,
             observed_at: new Date().toISOString(),
           }
-        : previous
+        : previous && isWhapiTransientPresenceStatus(previous.status)
           ? {
               status: previous.status,
               last_seen_at: previous.last_seen_at,

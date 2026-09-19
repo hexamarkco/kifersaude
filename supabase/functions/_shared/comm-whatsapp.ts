@@ -24,6 +24,7 @@ import {
 } from './whapi-group-webhook-parser.ts';
 import {
   extractWhapiPresenceItems,
+  isWhapiTransientPresenceStatus,
   normalizeWhapiPresenceItem,
   type WhapiPresenceItem,
   type WhapiPresenceStatus,
@@ -47,6 +48,7 @@ export {
   normalizeWhapiParticipantId,
   normalizeWhapiPhoneChatId,
   extractWhapiPresenceItems,
+  isWhapiTransientPresenceStatus,
   normalizeWhapiPresenceItem,
   type WhapiPresenceItem,
   type WhapiPresenceStatus,
@@ -3380,6 +3382,8 @@ export async function persistWhapiPresence(
   supabaseAdmin: SupabaseClient,
   params: { channelId: string; item: WhapiPresenceItem },
 ): Promise<{ id: string; chatId: string | null; entryId: string; status: WhapiPresenceStatus } | null> {
+  if (!isWhapiTransientPresenceStatus(params.item.status)) return null;
+
   const entryId = normalizeWhapiChatId(params.item.entryId);
   if (!entryId) return null;
 

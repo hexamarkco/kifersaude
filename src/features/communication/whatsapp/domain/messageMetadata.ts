@@ -347,21 +347,52 @@ export const getDeletedMessageInfo = (message?: CommWhatsAppMessage | null) => {
   };
 };
 
-export const getMessageReactions = (message?: CommWhatsAppMessage | null) => {
+type NormalizedMessageReaction = {
+  actorKey: string;
+  emoji: string;
+  fromMe: boolean;
+  actorLabel: string;
+  reactedAt: number;
+};
+
+const getNormalizedMessageReactions = (message?: CommWhatsAppMessage | null): NormalizedMessageReaction[] => {
   if (!message) return [];
 
   const rawReactions = Array.isArray(getMessageMetadataRecord(message).reactions)
     ? getMessageMetadataRecord(message).reactions as unknown[]
     : [];
-  const normalized = rawReactions
-    .map(readRecord)
-    .filter((item): item is Record<string, unknown> => Boolean(item))
-    .map((item) => ({
-      emoji: String(item.emoji ?? '').trim(),
-      fromMe: item.from_me === true,
-      actorLabel: item.from_me === true ? 'Você' : String(item.from_name ?? item.from ?? '').trim() || 'Contato',
-    }))
-    .filter((item) => Boolean(item.emoji));
+  const latestReactionByActor = new Map<string, NormalizedMessageReaction>();
+
+  rawReactions.forEach((value, index) => {
+    const item = readRecord(value);
+    if (!item) return;
+
+    const emoji = String(item.emoji ?? '').trim();
+    if (!emoji) return;
+
+    const fromMe = item.from_me === true || String(item.actor_key ?? '').trim() === 'self';
+    const actorKey = fromMe
+      ? 'self'
+      : String(item.actor_key ?? item.from ?? item.from_name ?? `anonymous-${index}`).trim() || `anonymous-${index}`;
+    const parsedReactedAt = Date.parse(String(item.reacted_at ?? ''));
+    const reaction = {
+      actorKey,
+      emoji,
+      fromMe,
+      actorLabel: fromMe ? 'Você' : String(item.from_name ?? item.from ?? '').trim() || 'Contato',
+      reactedAt: Number.isNaN(parsedReactedAt) ? index : parsedReactedAt,
+    };
+    const previous = latestReactionByActor.get(actorKey);
+    if (!previous || reaction.reactedAt >= previous.reactedAt) {
+      latestReactionByActor.set(actorKey, reaction);
+    }
+  });
+
+  return Array.from(latestReactionByActor.values());
+};
+
+export const getMessageReactions = (message?: CommWhatsAppMessage | null) => {
+  const normalized = getNormalizedMessageReactions(message);
 
   const grouped = new Map<string, { emoji: string; count: number; fromMe: boolean; actors: string[] }>();
   for (const reaction of normalized) {
@@ -387,11 +418,5 @@ export const getReactionTooltipText = (message?: CommWhatsAppMessage | null) => 
 
 export const getOwnReactionEmoji = (message?: CommWhatsAppMessage | null) => {
   if (!message) return null;
-  const rawReactions = Array.isArray(getMessageMetadataRecord(message).reactions)
-    ? getMessageMetadataRecord(message).reactions as unknown[]
-    : [];
-  const ownReaction = rawReactions
-    .map(readRecord)
-    .find((item) => item && String(item.actor_key ?? '').trim() === 'self');
-  return ownReaction ? String(ownReaction.emoji ?? '').trim() || null : null;
+  return getNormalizedMessageReactions(message).find((reaction) => reaction.actorKey === 'self')?.emoji || null;
 };

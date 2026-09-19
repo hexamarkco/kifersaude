@@ -77,7 +77,6 @@ import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, CommWhatsAppPresence } from './domain/types';
-import type { CommWhatsAppGroupContext } from './domain/types';
 import {
   canDeleteOutboundMessage,
   canEditOutboundMessage,
@@ -903,9 +902,12 @@ function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) 
   const Icon = meta.icon;
 
   return (
-    <span className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
-      <Icon className="h-3.5 w-3.5" />
-      <span>{meta.label}</span>
+    <span
+      className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone} inline-flex shrink-0 items-center whitespace-nowrap`}
+      title={meta.label}
+      aria-label={`Status: ${meta.label}`}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
     </span>
   );
 }
@@ -1745,7 +1747,7 @@ function WhatsAppMessageBody({
 
   const interactiveNode = interactiveInfo ? (
     interactiveInfo.kind === 'reply' ? (
-      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
+      <div className="flex items-start gap-2">
         <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-70" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Opção selecionada</p>
@@ -1755,13 +1757,13 @@ function WhatsAppMessageBody({
         </div>
       </div>
     ) : (
-      <div className="w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
+      <div className="w-[280px] max-w-full overflow-hidden">
         {interactiveInfo.header ? (
-          <p className="border-b border-[var(--border-subtle)] px-3 py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
+          <p className="border-b border-[var(--border-subtle)] py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
             {interactiveInfo.header}
           </p>
         ) : null}
-        <div className="space-y-1.5 px-3 py-3">
+        <div className="space-y-1.5 py-1">
           {interactiveInfo.body ? (
             <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={interactiveInfo.body} />
           ) : null}
@@ -1778,7 +1780,7 @@ function WhatsAppMessageBody({
                 onClick={() => onSelectInteractiveReply(message, button)}
                 disabled={message.direction !== 'inbound' || (!button.title && !button.id)}
                 className={cx(
-                  'w-full px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))] transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent',
+                  'w-full py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))] transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent',
                   index > 0 ? 'border-t border-[var(--border-subtle)]' : null,
                 )}
               >
@@ -1790,7 +1792,7 @@ function WhatsAppMessageBody({
         {interactiveInfo.sections.length > 0 ? (
           <div className="border-t border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
             {interactiveInfo.sections.map((section, sectionIndex) => (
-              <div key={section.title ?? `section-${sectionIndex}`} className="px-3 py-2.5">
+              <div key={section.title ?? `section-${sectionIndex}`} className="py-2.5">
                 {section.title ? (
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</p>
                 ) : null}
@@ -1801,7 +1803,7 @@ function WhatsAppMessageBody({
                       key={row.id ?? `${section.title}-row-${rowIndex}`}
                       onClick={() => onSelectInteractiveReply(message, row)}
                       disabled={message.direction !== 'inbound' || (!row.title && !row.id)}
-                      className="w-full rounded-md px-1 py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
+                      className="w-full rounded-md py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
                     >
                       <p className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</p>
                       {row.description ? (
@@ -2341,7 +2343,6 @@ export default function WhatsAppInboxScreen() {
   const [chatFilesOpen, setChatFilesOpen] = useState(false);
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
-  const [groupContext, setGroupContext] = useState<CommWhatsAppGroupContext | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
@@ -3605,7 +3606,9 @@ export default function WhatsAppInboxScreen() {
     const reactions = Array.isArray(metadata.reactions)
       ? metadata.reactions.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
       : [];
-    const withoutOwnReaction = reactions.filter((item) => String(item.actor_key ?? '').trim() !== 'self');
+    const withoutOwnReaction = reactions.filter((item) => (
+      String(item.actor_key ?? '').trim() !== 'self' && item.from_me !== true
+    ));
     const nextReactions = emoji
       ? [
           ...withoutOwnReaction,
@@ -5202,7 +5205,6 @@ export default function WhatsAppInboxScreen() {
       let hasMore = false;
       let threadChat: CommWhatsAppChat | null = null;
       let threadLead: CommWhatsAppLeadPanel | null = null;
-      let threadGroup: CommWhatsAppGroupContext | null = null;
 
       if (reason === 'initial') {
         const thread = await whatsappConversationsRepository.getThread(targetChatId, {
@@ -5213,7 +5215,6 @@ export default function WhatsAppInboxScreen() {
         hasMore = thread.hasMore;
         threadChat = thread.chat;
         threadLead = thread.lead;
-        threadGroup = thread.group ?? null;
 
         if (data.length === 0 && Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim())) {
           setThreadReconcileChatId(targetChatId);
@@ -5241,7 +5242,6 @@ export default function WhatsAppInboxScreen() {
       if (threadLead) {
         setLeadPanel(threadLead);
       }
-      setGroupContext(threadChat?.is_group ? threadGroup : null);
 
       const stillEmptyDespitePreview = reason === 'initial'
         && data.length === 0
@@ -5708,7 +5708,6 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
-      setGroupContext(null);
       setLoadingMessages(false);
       setThreadReconcileChatId(null);
       lastSelectedChatPreviewRefreshKeyRef.current = '';
@@ -9307,93 +9306,35 @@ export default function WhatsAppInboxScreen() {
                       <MoreHorizontal aria-hidden="true" />
                     </IconButton>
                   </div>
-                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
-                    {selectedChat.is_group ? (
-                      <span className="inline-flex items-center gap-1.5 text-[var(--brand-primary)]">
-                        <Users className="h-3.5 w-3.5" />
-                        Grupo{groupContext ? ` · ${groupContext.participants.length} participantes` : ''}
-                      </span>
-                    ) : <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>}
-                    <WhatsAppPresenceIndicator chat={selectedChat} />
-                    {!selectedChat.is_group && !selectedChat.saved_contact_name ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSaveContactName(selectedChatDisplayName);
-                          setSaveContactDialogOpen(true);
-                        }}
-                        className="text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                      >
-                        + Salvar contato
-                      </button>
-                    ) : !selectedChat.is_group ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSaveContactName(selectedChat.saved_contact_name || selectedChatDisplayName);
-                          setSaveContactDialogOpen(true);
-                        }}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Renomear contato
-                      </button>
-                    ) : null}
-                    {!selectedChat.is_group && leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
-                  </div>
-                  {selectedChat.is_group && groupContext ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-                      {groupContext.group.description ? <span className="max-w-xl truncate">{groupContext.group.description}</span> : null}
-                      <span>{groupContext.participants.length} participante(s)</span>
-                      <span>{groupContext.events.length} evento(s) registrado(s)</span>
-                      <details className="basis-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-2.5">
-                        <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">Ver dados, participantes e eventos</summary>
-                        <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-                          <div className="flex gap-3">
-                            {groupContext.group.chat_pic || groupContext.group.chat_pic_full ? (
-                              <img
-                                src={groupContext.group.chat_pic_full || groupContext.group.chat_pic || undefined}
-                                alt={`Foto do grupo ${groupContext.group.name}`}
-                                className="whatsapp-inbox-group-avatar shrink-0 rounded-xl object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="whatsapp-inbox-group-avatar flex shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                                <Users className="h-6 w-6" aria-hidden="true" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="font-semibold text-[var(--text-primary)]">{groupContext.group.name}</p>
-                              <p>{groupContext.group.admin_add_member_mode ? 'Somente administradores adicionam participantes' : 'Participantes podem ser adicionados'}</p>
-                              {groupContext.group.created_by ? <p>Criado por {groupContext.group.created_by}</p> : null}
-                            </div>
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <p className="mb-1 font-semibold text-[var(--text-primary)]">Participantes</p>
-                              <div className="whatsapp-inbox-group-participant-list space-y-1 pr-1">
-                                {groupContext.participants.map((participant) => (
-                                  <div key={participant.external_participant_id} className="flex items-center justify-between gap-2">
-                                    <span className="min-w-0 truncate">{participant.display_name || participant.external_participant_id}</span>
-                                    <span className="shrink-0 rounded-full bg-[var(--bg-surface)] px-2 py-0.5">{participant.rank}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            <div>
-                              <p className="mb-1 font-semibold text-[var(--text-primary)]">Eventos recentes</p>
-                              <div className="whatsapp-inbox-group-event-list space-y-1 pr-1">
-                                {groupContext.events.slice(0, 12).map((event) => (
-                                  <div key={event.id} className="flex items-center justify-between gap-2">
-                                    <span className="min-w-0 truncate">{event.event_type}{event.participant_ids.length ? ` · ${event.participant_ids.length} participante(s)` : ''}</span>
-                                    <span className="shrink-0">{formatDateTimeFullBR(event.occurred_at)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </details>
+                  {!selectedChat.is_group ? (
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
+                      <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
+                      <WhatsAppPresenceIndicator chat={selectedChat} />
+                      {!selectedChat.saved_contact_name ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSaveContactName(selectedChatDisplayName);
+                            setSaveContactDialogOpen(true);
+                          }}
+                          className="text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                        >
+                          + Salvar contato
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSaveContactName(selectedChat.saved_contact_name || selectedChatDisplayName);
+                            setSaveContactDialogOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Renomear contato
+                        </button>
+                      )}
+                      {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
                     </div>
                   ) : null}
                   {nextChatReminderSummary ? (
@@ -9445,15 +9386,17 @@ export default function WhatsAppInboxScreen() {
                         )}
                       </IconButton>
                     ) : null}
-                    <IconButton
+                    <Button
                       type="button"
                       onClick={() => setChatFilesOpen(true)}
                       variant={chatFilesOpen ? 'secondary' : 'ghost'}
-                      aria-label="Ver arquivos desta conversa"
                       title="Arquivos da conversa"
-                     size="md">
-                      <FolderOpen aria-hidden="true" />
-                    </IconButton>
+                      size="sm"
+                      className="shrink-0 gap-1.5 whitespace-nowrap"
+                    >
+                      <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                      Arquivos da conversa
+                    </Button>
                     <IconButton
                       type="button"
                       onClick={handleToggleChatMessageSearch}
@@ -9743,14 +9686,21 @@ export default function WhatsAppInboxScreen() {
                     const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
                     const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
                     const isGroupMessage = isGroupChatMessage(selectedChat, message);
+                    const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
+                    const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
+                    const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
                     const messageMeta = (
                       <div className={cx(
                         'whatsapp-inbox-message-meta flex flex-wrap items-center gap-1.5 text-[11px] font-medium',
-                        isGroupMessage
+                        reactions.length > 0
+                          ? `mt-0 px-1 ${messageMetaJustify}`
+                          : isGroupMessage
                           ? `mt-1 px-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`
-                          : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1 justify-end' : 'mt-2 justify-end',
+                          : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message)
+                            ? `mt-1 px-1 ${messageMetaJustify}`
+                            : `mt-2 px-1 ${messageMetaJustify}`,
                       )}>
-                        <span className="order-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                        <span className={`${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
                         </span>
@@ -9766,7 +9716,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={() => handleToggleMessageActionMenu(message.id)}
                             className={cx(
-                              'order-3 inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              `${messageMetaActionsOrder} inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]`,
                               openMessageActionMenuMessageId === message.id
                                 ? 'bg-[var(--bg-hover)] opacity-100'
                                 : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -9822,7 +9772,7 @@ export default function WhatsAppInboxScreen() {
                           }}
                           className="relative max-w-[80%]"
                         >
-                          <div className={cx('relative', reactions.length > 0 ? 'pb-5' : null)}>
+                          <div className="relative">
                             {message.direction !== 'system' && message.external_message_id ? (
                               <>
                                 <button
@@ -9882,9 +9832,15 @@ export default function WhatsAppInboxScreen() {
                               />
                             </div>
 
-                            {reactions.length > 0 ? (
+                          </div>
+
+                          {reactions.length > 0 ? (
+                            <div className={cx(
+                              'mt-1 flex min-w-0 items-center gap-1',
+                              message.direction === 'outbound' ? 'justify-end' : 'justify-start',
+                            )}>
                               <div
-                                className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
+                                className="flex max-w-[90%] flex-wrap gap-1"
                                 title={reactionTooltipText || undefined}
                               >
                                 {reactions.map((reaction) => (
@@ -9897,10 +9853,9 @@ export default function WhatsAppInboxScreen() {
                                   </span>
                                 ))}
                               </div>
-                            ) : null}
-                          </div>
-
-                          {messageMeta}
+                              {messageMeta}
+                            </div>
+                          ) : messageMeta}
                         </div>
                       </div>
                     );

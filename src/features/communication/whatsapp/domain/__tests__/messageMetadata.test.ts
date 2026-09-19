@@ -196,3 +196,20 @@ test('groups reactions and identifies the own reaction without losing group labe
   assert.equal(getOwnReactionEmoji(message), '👍');
   assert.equal(getReactionTooltipText(message), '👍 Você, Ana\n❤️ Bruno');
 });
+
+test('deduplicates the own reaction when manual and webhook entries use different actor identifiers', () => {
+  const message = createMessage({
+    direction: 'outbound',
+    metadata: {
+      reactions: [
+        { actor_key: 'self', emoji: '❤️', from_me: true, reacted_at: '2026-09-08T12:00:00.000Z' },
+        { actor_key: '5511999999999', emoji: '❤️', from_me: true, reacted_at: '2026-09-08T12:00:01.000Z' },
+      ],
+    },
+  });
+
+  assert.deepEqual(getMessageReactions(message), [
+    { emoji: '❤️', count: 1, fromMe: true, actors: ['Você'] },
+  ]);
+  assert.equal(getOwnReactionEmoji(message), '❤️');
+});

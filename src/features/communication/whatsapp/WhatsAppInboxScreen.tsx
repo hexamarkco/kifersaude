@@ -9723,9 +9723,8 @@ export default function WhatsAppInboxScreen() {
                                 mediaSendingProgress={groupMediaSendingProgress}
                                 onCancelMediaUpload={canCancelGroupMediaUpload ? handleCancelMediaUpload : undefined}
                               />
-                              {!selectedChat.is_group ? mediaGroupMeta : null}
                             </div>
-                            {selectedChat.is_group ? mediaGroupMeta : null}
+                            {mediaGroupMeta}
                           </div>
                         </div>
                       );
@@ -9821,86 +9820,87 @@ export default function WhatsAppInboxScreen() {
                               delete messageBubbleRefs.current[message.id];
                             }
                           }}
-                          className={`relative max-w-[80%] ${reactions.length > 0 ? 'pb-5' : ''}`}
+                          className="relative max-w-[80%]"
                         >
-                          {message.direction !== 'system' && message.external_message_id ? (
-                            <>
-                              <button
-                                ref={(node) => {
-                                  if (node) {
-                                    reactionTriggerRefs.current[message.id] = node;
-                                  } else {
-                                    delete reactionTriggerRefs.current[message.id];
-                                  }
-                                }}
-                                type="button"
-                                onClick={() => handleToggleReactionPicker(message.id)}
-                                className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--bg-hover)] focus:opacity-100`}
-                                aria-label="Reagir à mensagem"
-                                title="Reagir"
+                          <div className={cx('relative', reactions.length > 0 ? 'pb-5' : null)}>
+                            {message.direction !== 'system' && message.external_message_id ? (
+                              <>
+                                <button
+                                  ref={(node) => {
+                                    if (node) {
+                                      reactionTriggerRefs.current[message.id] = node;
+                                    } else {
+                                      delete reactionTriggerRefs.current[message.id];
+                                    }
+                                  }}
+                                  type="button"
+                                  onClick={() => handleToggleReactionPicker(message.id)}
+                                  className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--bg-hover)] focus:opacity-100`}
+                                  aria-label="Reagir à mensagem"
+                                  title="Reagir"
+                                >
+                                  <Smile className="h-4 w-4" />
+                                </button>
+
+                              </>
+                            ) : null}
+
+                            {isGroupMessage && message.sender_name ? (
+                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
+                            ) : null}
+                            <div
+                              className={cx(
+                                isBubblelessMediaMessage(message)
+                                  ? hasVisualMediaCaption(message)
+                                    ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
+                                    : 'whatsapp-inbox-media-message'
+                                  : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`,
+                                highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
+                              )}
+                              onContextMenu={(event) => {
+                                if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
+                                  return;
+                                }
+
+                                event.preventDefault();
+                                handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
+                              }}
+                            >
+                              <WhatsAppMessageBody
+                                message={message}
+                                onOpenImage={setLightboxMessageId}
+                                onOpenQuotedMessage={handleOpenQuotedMessage}
+                                onTranscribe={(target) => void handleTranscribeMessage(target)}
+                                onSelectInteractiveReply={handleSelectInteractiveReply}
+                                onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
+                                onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
+                                sharedContactActionKey={sharedContactActionKey}
+                                transcribing={transcribingMessageId === message.id}
+                                mediaSending={mediaSending}
+                                mediaSendingProgress={mediaSendingProgress}
+                                onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
+                              />
+                            </div>
+
+                            {reactions.length > 0 ? (
+                              <div
+                                className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
+                                title={reactionTooltipText || undefined}
                               >
-                                <Smile className="h-4 w-4" />
-                              </button>
-
-                            </>
-                          ) : null}
-
-                          {isGroupMessage && message.sender_name ? (
-                            <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
-                          ) : null}
-                          <div
-                            className={cx(
-                              isBubblelessMediaMessage(message)
-                                ? hasVisualMediaCaption(message)
-                                  ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                                  : 'whatsapp-inbox-media-message'
-                                : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`,
-                              highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
-                            )}
-                            onContextMenu={(event) => {
-                              if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
-                            }}
-                          >
-                            <WhatsAppMessageBody
-                              message={message}
-                              onOpenImage={setLightboxMessageId}
-                              onOpenQuotedMessage={handleOpenQuotedMessage}
-                              onTranscribe={(target) => void handleTranscribeMessage(target)}
-                              onSelectInteractiveReply={handleSelectInteractiveReply}
-                              onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
-                              onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
-                              sharedContactActionKey={sharedContactActionKey}
-                              transcribing={transcribingMessageId === message.id}
-                              mediaSending={mediaSending}
-                              mediaSendingProgress={mediaSendingProgress}
-                              onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
-                            />
-                            {!isGroupMessage ? messageMeta : null}
+                                {reactions.map((reaction) => (
+                                  <span
+                                    key={`${message.id}:${reaction.emoji}`}
+                                    className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
+                                  >
+                                    <span className="text-sm leading-none">{reaction.emoji}</span>
+                                    {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
 
-                          {isGroupMessage ? messageMeta : null}
-
-                          {reactions.length > 0 ? (
-                            <div
-                              className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
-                              title={reactionTooltipText || undefined}
-                            >
-                              {reactions.map((reaction) => (
-                                <span
-                                  key={`${message.id}:${reaction.emoji}`}
-                                  className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
-                                >
-                                  <span className="text-sm leading-none">{reaction.emoji}</span>
-                                  {reaction.count > 1 ? <span>{reaction.count}</span> : null}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
+                          {messageMeta}
                         </div>
                       </div>
                     );

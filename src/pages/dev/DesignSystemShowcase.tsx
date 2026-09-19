@@ -1,14 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
   Bell,
   Bold,
   Bookmark,
+  Calendar as CalendarIcon,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Copy,
   DollarSign,
   ExternalLink,
@@ -52,6 +54,7 @@ import {
 
 import {
   Alert,
+  ActionSurface,
   Avatar,
   AvatarBadge,
   AvatarGroup,
@@ -66,6 +69,7 @@ import {
   Checkbox,
   Combobox,
   ConfirmDialog,
+  DateRangeFilter,
   DateTimePicker,
   Dialog,
   DialogBody,
@@ -79,14 +83,19 @@ import {
   EmptyState,
   Field,
   FilterBar,
+  FilterMultiSelect,
   FilterSelect,
   IconButton,
   Input,
   InputAddon,
   InputGroup,
   KpiCard,
+  LinkButton,
   LoadingState,
   MultiSelect,
+  PageContainer,
+  PageHeader,
+  PageSection,
   OperationalMetricChip,
   OperationalStatusBadge,
   OperationalStatusDot,
@@ -100,8 +109,10 @@ import {
   SearchInput,
   SegmentedControl,
   Select,
+  SectionHeader,
   Skeleton,
   Stepper,
+  Stack,
   Surface,
   Switch,
   Table,
@@ -112,8 +123,18 @@ import {
   TableRow,
   Tabs,
   Textarea,
+  Text,
+  TextLink,
+  Heading,
   ToastProvider,
   Tooltip,
+  Toolbar,
+  ToolbarActions,
+  ToolbarSearch,
+  Inline,
+  PublicCard,
+  PublicEmptyState,
+  PublicSection,
   useToast,
 } from '../../design-system';
 import './design-system-showcase.css';
@@ -153,9 +174,9 @@ function Item({
           ? 'sm:col-span-2'
           : '';
   return (
-    <div className={['ds-item-card flex flex-col gap-4', spanClass].join(' ')}>
+    <div className={['ds-item-card flex min-w-0 flex-col gap-4', spanClass].join(' ')}>
       <p className="text-[13px] font-medium text-[var(--text-muted)]">{title}</p>
-      <div className="flex flex-1 flex-col justify-center gap-3">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">{children}</div>
     </div>
   );
 }
@@ -193,6 +214,7 @@ function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
 
 function CatNav() {
   const cats = [
+    ['foundations', 'Foundations'],
     ['actions', 'Actions'],
     ['forms', 'Forms'],
     ['navigation', 'Navigation'],
@@ -229,6 +251,9 @@ const STATUS_DROPDOWN_OPTIONS = [
 ];
 
 const SHOWCASE_COLORS = ['var(--brand-primary)', 'var(--accent-gold)', 'var(--success)', 'var(--info)', 'var(--text-primary)'];
+const SHOWCASE_CODE = "const lead = { nome: 'Ana Paula' };";
+const SHOWCASE_CAROUSEL_ITEMS = ['Imagem principal', 'Detalhes do plano', 'Documentos'];
+const SHOWCASE_INFINITE_ITEMS = ['Ana Paula', 'Carlos Silva', 'Fernanda Oliveira'];
 
 /* ── Page ─────────────────────────────────────────── */
 
@@ -247,11 +272,17 @@ function ShowcaseContent() {
   const [comboboxValue, setComboboxValue] = useState('bradesco');
   const [multiSelectValues, setMultiSelectValues] = useState(['luiza']);
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterOwners, setFilterOwners] = useState<string[]>([]);
+  const [filterFrom, setFilterFrom] = useState('2026-08-01');
+  const [filterTo, setFilterTo] = useState('2026-08-31');
   const [metricTab, setMetricTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [underlineTab, setUnderlineTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [statusDropdownValue, setStatusDropdownValue] = useState('Proposta Enviada');
+  const [splitMenuOpen, setSplitMenuOpen] = useState(false);
+  const [buttonGroupValue, setButtonGroupValue] = useState('Semana');
   const [page, setPage] = useState(3);
+  const [actionSurfaceSelected, setActionSurfaceSelected] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
@@ -263,8 +294,48 @@ function ShowcaseContent() {
   const [otp, setOtp] = useState(['4', '2', '', '', '', '']);
   const [toggleGridPressed, setToggleGridPressed] = useState(true);
   const [selectedTreeOpen, setSelectedTreeOpen] = useState(true);
+  const [fileName, setFileName] = useState('');
+  const [tagDraft, setTagDraft] = useState('');
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [splitRatio, setSplitRatio] = useState(34);
+  const [infiniteItems, setInfiniteItems] = useState(SHOWCASE_INFINITE_ITEMS);
+  const [sortableStatuses, setSortableStatuses] = useState(['Novo', 'Contato Inicial', 'Proposta Enviada']);
+  const [draggedStatus, setDraggedStatus] = useState<string | null>(null);
+  const [tourVisible, setTourVisible] = useState(true);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const sliderCurrency = 800 + Math.round((sliderValue / 100) * 3200);
+
+  const addTag = () => {
+    const nextTag = tagDraft.trim().replace(/,$/, '');
+    if (!nextTag || tagsInput.includes(nextTag)) return;
+    setTagsInput((prev) => [...prev, nextTag]);
+    setTagDraft('');
+  };
+
+  const copyShowcaseCode = async () => {
+    try {
+      await navigator.clipboard?.writeText(SHOWCASE_CODE);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast({ description: 'Não foi possível copiar o código.', variant: 'error' });
+    }
+  };
+
+  const loadMoreInfiniteItems = () => {
+    setInfiniteItems((prev) => {
+      if (prev.length >= 9) return prev;
+      const next = ['João Mendes', 'Mariana Alves', 'Rafael Costa'];
+      return [...prev, ...next.slice(0, 9 - prev.length)];
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] px-4 py-16 sm:px-8">
@@ -277,6 +348,85 @@ function ShowcaseContent() {
         </p>
 
         <CatNav />
+
+        {/* ═══════════════════ FOUNDATIONS ═══════════════════ */}
+        <Cat id="foundations" title="Foundations" description="Tipografia, layout e superfícies públicas reutilizáveis.">
+          <Item title="Typography" span="md">
+            <Stack gap="sm">
+              <Heading level={3} size="lg">Leads em negociação</Heading>
+              <Text size="sm" tone="secondary">Use a escala tipográfica para diferenciar contexto, conteúdo e apoio.</Text>
+              <Inline gap="sm" align="center">
+                <Text size="xs" tone="muted" weight="medium">Última atualização há 2 min</Text>
+                <TextLink href="#feedback" underline>Ver feedback</TextLink>
+              </Inline>
+            </Stack>
+          </Item>
+
+          <Item title="Layout primitives">
+            <Stack gap="sm">
+              <Inline gap="sm" justify="between" align="center" className="rounded-xl bg-[var(--bg-hover)] p-3">
+                <Text as="span" size="sm" weight="semibold" tone="primary">Stack + Inline</Text>
+                <Badge tone="info">Responsivo</Badge>
+              </Inline>
+              <Stack as="ul" gap="xs" className="list-disc pl-5 text-sm text-[var(--text-secondary)]">
+                <li>Espaçamento semântico</li>
+                <li>Alinhamento consistente</li>
+              </Stack>
+            </Stack>
+          </Item>
+
+          <Item title="Application composition" span="lg">
+            <PageContainer size="full" spacing="sm" className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-canvas)] p-3">
+              <PageHeader
+                eyebrow="CRM / LEADS"
+                title="Cabeçalho de página"
+                description="Composição pronta para telas operacionais."
+                actions={<LinkButton href="#data" size="sm">Ver métricas</LinkButton>}
+              />
+              <PageSection className="mt-4">
+                <Toolbar>
+                  <ToolbarSearch><SearchInput placeholder="Buscar nesta tela" /></ToolbarSearch>
+                  <ToolbarActions><Button size="sm" variant="secondary">Filtrar</Button></ToolbarActions>
+                </Toolbar>
+              </PageSection>
+            </PageContainer>
+          </Item>
+
+          <Item title="Section header + empty state">
+            <Stack gap="sm">
+              <SectionHeader title="Nenhum resultado" description="A composição mantém título, contexto e ação alinhados." action={<Button size="sm">Criar lead</Button>} />
+              <EmptyState icon={<Users className="h-5 w-5" />} title="Sua busca está vazia" description="Ajuste os filtros para continuar." />
+            </Stack>
+          </Item>
+
+          <Item title="Public surfaces" span="md">
+            <PublicSection tone="muted" className="rounded-2xl p-3">
+              <PublicCard className="p-4">
+                <Heading level={4} size="sm">Conteúdo público</Heading>
+                <Text size="sm" className="mt-1">Card, seção e estado vazio com os mesmos tokens.</Text>
+                <PublicEmptyState
+                  className="mt-3"
+                  icon={<CheckCircle2 className="h-5 w-5" />}
+                  title="Tudo certo"
+                  description="Nenhuma pendência para este visitante."
+                />
+              </PublicCard>
+            </PublicSection>
+          </Item>
+
+          <Item title="Action surface">
+            <ActionSurface
+              type="button"
+              padding="sm"
+              variant="muted"
+              selected={actionSurfaceSelected}
+              onClick={() => setActionSurfaceSelected((value) => !value)}
+              aria-pressed={actionSurfaceSelected}
+            >
+              <Text as="span" size="sm" weight="semibold" tone="primary">{actionSurfaceSelected ? 'Selecionado' : 'Selecionar superfície'}</Text>
+            </ActionSurface>
+          </Item>
+        </Cat>
 
         {/* ═══════════════════ ACTIONS ═══════════════════ */}
         <Cat id="actions" title="Actions" description="Botões e controles de ação.">
@@ -315,23 +465,36 @@ function ShowcaseContent() {
 
           <Item title="Button Group">
             <ButtonGroup>
-              <Button variant="ghost" size="sm">
-                Dia
-              </Button>
-              <Button variant="ghost" size="sm">
-                Semana
-              </Button>
-              <Button variant="ghost" size="sm">
-                Mês
-              </Button>
+              {['Dia', 'Semana', 'Mês'].map((option) => (
+                <Button
+                  key={option}
+                  variant={buttonGroupValue === option ? 'primary' : 'ghost'}
+                  size="sm"
+                  aria-pressed={buttonGroupValue === option}
+                  onClick={() => setButtonGroupValue(option)}
+                >
+                  {option}
+                </Button>
+              ))}
             </ButtonGroup>
           </Item>
 
           <Item title="Split Button">
-            <ButtonGroup>
-              <Button>Salvar</Button>
-              <IconButton aria-label="Mais opções" variant="primary"><ChevronDown /></IconButton>
-            </ButtonGroup>
+            <Popover open={splitMenuOpen} onOpenChange={setSplitMenuOpen}>
+              <ButtonGroup>
+                <Button onClick={() => toast({ title: 'Alterações salvas', description: 'O exemplo de split button respondeu ao clique.', variant: 'success' })}>Salvar</Button>
+                <PopoverTrigger>
+                  <IconButton aria-label="Mais opções de salvar" variant="primary"><ChevronDown /></IconButton>
+                </PopoverTrigger>
+              </ButtonGroup>
+              <PopoverContent className="w-48 p-1.5">
+                {['Salvar e fechar', 'Salvar como rascunho'].map((option) => (
+                  <button key={option} type="button" className="kds-dropdown-option flex w-full px-3 py-2 text-left text-sm" onClick={() => setSplitMenuOpen(false)}>
+                    {option}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
           </Item>
 
           <Item title="Floating Action Button">
@@ -339,10 +502,10 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Link">
-            <a href="#actions" className="inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-primary)] underline underline-offset-4">
+            <TextLink href="#containers" underline className="inline-flex items-center gap-1">
               Ver todos os contratos
               <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            </TextLink>
           </Item>
 
           <Item title="Toggle Button">
@@ -398,8 +561,8 @@ function ShowcaseContent() {
               placeholder="********"
               leftIcon={undefined}
               defaultValue="segredo123"
-              action={
-                <button type="button" onClick={() => setPasswordVisible((v) => !v)} >
+                action={
+                <button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setPasswordVisible((v) => !v)} >
                   {passwordVisible ? <EyeOff className="w-4" /> : <Eye className="w-4" />}
                 </button>
               }
@@ -411,8 +574,18 @@ function ShowcaseContent() {
               {otp.map((digit, i) => (
                 <input
                   key={i}
+                  ref={(element) => { otpRefs.current[i] = element; }}
                   value={digit}
-                  onChange={(e) => setOtp((prev) => prev.map((d, idx) => (idx === i ? e.target.value.slice(-1) : d)))}
+                  inputMode="numeric"
+                  aria-label={`Código, dígito ${i + 1} de ${otp.length}`}
+                  onChange={(e) => {
+                    const nextDigit = e.target.value.replace(/\D/g, '').slice(-1);
+                    setOtp((prev) => prev.map((d, idx) => (idx === i ? nextDigit : d)));
+                    if (nextDigit && i < otp.length - 1) otpRefs.current[i + 1]?.focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !digit && i > 0) otpRefs.current[i - 1]?.focus();
+                  }}
                   maxLength={1}
                   className="h-11 w-9 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-surface)] text-center text-lg font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
                 />
@@ -545,10 +718,14 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="Date Range Picker">
-            <div className="flex items-center gap-2">
-              <DateTimePicker type="date" defaultValue="2026-08-01" />
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+              <div className="w-full min-w-0 flex-1">
+                <DateTimePicker type="date" defaultValue="2026-08-01" />
+              </div>
               <span className="text-[var(--text-muted)]">–</span>
-              <DateTimePicker type="date" defaultValue="2026-08-31" />
+              <div className="w-full min-w-0 flex-1">
+                <DateTimePicker type="date" defaultValue="2026-08-31" />
+              </div>
             </div>
           </Item>
 
@@ -557,11 +734,29 @@ function ShowcaseContent() {
           </Item>
 
           <Item title="File Upload">
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border-strong)] px-4 py-6 text-center">
+            <label
+              htmlFor="showcase-file-upload"
+              className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border-strong)] px-4 py-6 text-center transition hover:border-[var(--brand-primary)] hover:bg-[var(--bg-hover)]"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                const file = event.dataTransfer.files[0];
+                if (file) setFileName(file.name);
+              }}
+            >
               <Upload className="h-5 w-5 text-[var(--text-muted)]" />
-              <p className="text-sm text-[var(--text-secondary)]">Arraste um arquivo ou clique para enviar</p>
+              <p className="text-sm text-[var(--text-secondary)]">Arraste um arquivo ou clique para selecionar</p>
               <p className="text-xs text-[var(--text-muted)]">PDF, JPG até 10MB</p>
-            </div>
+              <input
+                ref={fileInputRef}
+                id="showcase-file-upload"
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                className="sr-only"
+                onChange={(event) => setFileName(event.target.files?.[0]?.name ?? '')}
+              />
+              {fileName && <span className="text-xs font-medium text-[var(--brand-primary)]">Selecionado: {fileName}</span>}
+            </label>
           </Item>
 
           <Item title="Tags Input">
@@ -569,12 +764,27 @@ function ShowcaseContent() {
               {tagsInput.map((tag) => (
                 <span key={tag} className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)]">
                   {tag}
-                  <button onClick={() => setTagsInput((prev) => prev.filter((t) => t !== tag))}>
+                  <button type="button" aria-label={`Remover ${tag}`} onClick={() => setTagsInput((prev) => prev.filter((t) => t !== tag))}>
                     <X className="h-3 w-3" />
                   </button>
                 </span>
               ))}
-              <input placeholder="Adicionar..." className="min-w-[6rem] flex-1 bg-transparent px-1 text-sm outline-none" />
+              <input
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ',') {
+                    event.preventDefault();
+                    addTag();
+                  }
+                  if (event.key === 'Backspace' && !tagDraft && tagsInput.length > 0) {
+                    setTagsInput((prev) => prev.slice(0, -1));
+                  }
+                }}
+                aria-label="Adicionar tag"
+                placeholder="Adicionar..."
+                className="min-w-[6rem] flex-1 bg-transparent px-1 text-sm outline-none"
+              />
             </div>
           </Item>
 
@@ -583,6 +793,9 @@ function ShowcaseContent() {
               {SHOWCASE_COLORS.map((c) => (
                 <button
                   key={c}
+                  type="button"
+                  aria-label={`Selecionar cor ${c}`}
+                  aria-pressed={colorValue === c}
                   onClick={() => setColorValue(c)}
                   className={['h-7 w-7 rounded-full ring-offset-2 ring-offset-[var(--bg-surface)]', colorValue === c ? 'ring-2 ring-[var(--text-primary)]' : ''].join(' ')}
                   style={{ background: c }}
@@ -685,11 +898,11 @@ function ShowcaseContent() {
           <Item title="Breadcrumbs">
             <Breadcrumb>
               <BreadcrumbItem>
-                <BreadcrumbLink onClick={() => {}}>Painel</BreadcrumbLink>
+                <BreadcrumbLink href="#foundations">Painel</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbLink onClick={() => {}}>Leads</BreadcrumbLink>
+                <BreadcrumbLink href="#actions">Leads</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem isCurrent>Ana Paula Costa</BreadcrumbItem>
@@ -721,15 +934,15 @@ function ShowcaseContent() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-1.5">
-                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
+                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de editar selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                   <Pencil className="h-3.5 w-3.5" />
                   Editar
                 </button>
-                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
+                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de compartilhar selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                   <Share2 className="h-3.5 w-3.5" />
                   Compartilhar
                 </button>
-                <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--danger-text)]">
+                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de excluir selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--danger-text)]">
                   <Trash2 className="h-3.5 w-3.5" />
                   Excluir
                 </button>
@@ -740,11 +953,11 @@ function ShowcaseContent() {
           <Item title="Context Menu">
             <div className="relative rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5">
               <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lead: Ana Paula</p>
-              <button className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
+              <button type="button" onClick={() => toast({ description: 'Telefone copiado no exemplo.', variant: 'success' })} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                 <Copy className="h-3.5 w-3.5" />
                 Copiar telefone
               </button>
-              <button className="kds-dropdown-option is-selected flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
+              <button type="button" onClick={() => toast({ description: 'Abrindo conversa no WhatsApp.', variant: 'default' })} className="kds-dropdown-option is-selected flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                 <MessageCircle className="h-3.5 w-3.5" />
                 Abrir WhatsApp
               </button>
@@ -939,7 +1152,7 @@ function ShowcaseContent() {
                 <Sparkles className="h-4 w-4 text-[var(--brand-primary)]" />
                 <p className="text-sm text-[var(--text-primary)]">Novo design system disponível em todo o painel.</p>
               </div>
-              <Button size="sm" variant="ghost">Ver mais</Button>
+                  <LinkButton href="#foundations" size="sm" variant="ghost">Ver mais</LinkButton>
             </div>
           </Item>
 
@@ -998,7 +1211,7 @@ function ShowcaseContent() {
 
           <Item title="Tooltip">
             <Tooltip content="Enviar mensagem no WhatsApp">
-              <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--text-primary)]">
+              <button type="button" aria-label="Enviar mensagem no WhatsApp" onClick={() => toast({ description: 'Ação de tooltip executada.', variant: 'default' })} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--text-primary)]">
                 <MessageCircle className="h-4 w-4" />
               </button>
             </Tooltip>
@@ -1207,44 +1420,83 @@ function ShowcaseContent() {
 
           <Item title="Carousel / Image Carousel" span="md">
             <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]">
+              <button
+                type="button"
+                aria-label="Imagem anterior"
+                onClick={() => setCarouselIndex((index) => (index - 1 + SHOWCASE_CAROUSEL_ITEMS.length) % SHOWCASE_CAROUSEL_ITEMS.length)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <div className="flex flex-1 items-center justify-center rounded-xl bg-[var(--bg-hover)] py-6">
+              <div className="flex min-w-0 flex-1 items-center justify-center rounded-xl bg-[var(--bg-hover)] py-6">
                 <ImageIcon className="h-5 w-5 text-[var(--text-muted)]" />
+                <span className="ml-2 text-xs text-[var(--text-muted)]">{SHOWCASE_CAROUSEL_ITEMS[carouselIndex]}</span>
               </div>
-              <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]">
+              <button
+                type="button"
+                aria-label="Próxima imagem"
+                onClick={() => setCarouselIndex((index) => (index + 1) % SHOWCASE_CAROUSEL_ITEMS.length)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]"
+              >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
             <div className="flex justify-center gap-1">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className={['h-1.5 w-1.5 rounded-full', i === 0 ? 'bg-[var(--text-primary)]' : 'bg-[var(--border-strong)]'].join(' ')} />
+              {SHOWCASE_CAROUSEL_ITEMS.map((item, i) => (
+                <button
+                  key={item}
+                  type="button"
+                  aria-label={`Ir para ${item}`}
+                  aria-pressed={carouselIndex === i}
+                  onClick={() => setCarouselIndex(i)}
+                  className={['h-1.5 w-1.5 rounded-full', carouselIndex === i ? 'bg-[var(--text-primary)]' : 'bg-[var(--border-strong)]'].join(' ')}
+                />
               ))}
             </div>
           </Item>
 
           <Item title="Lightbox">
-            <div className="relative flex h-24 items-center justify-center rounded-2xl bg-[color:var(--overlay)]">
+            <button
+              type="button"
+              aria-label="Abrir lightbox"
+              onClick={() => setLightboxOpen(true)}
+              className="relative flex h-24 w-full items-center justify-center rounded-2xl bg-[color:var(--overlay)]"
+            >
               <ImageIcon className="h-5 w-5 text-[color:var(--text-inverse)] opacity-70" />
-              <button className="absolute right-2 top-2 text-[color:var(--text-inverse)] opacity-70">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            </button>
+            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen} size="md" aria-label="Visualização da imagem">
+              <DialogHeader onClose={() => setLightboxOpen(false)}><DialogTitle>Lightbox</DialogTitle></DialogHeader>
+              <DialogBody>
+                <div className="flex h-48 items-center justify-center rounded-2xl bg-[var(--bg-hover)] text-sm text-[var(--text-muted)]">Pré-visualização da imagem</div>
+              </DialogBody>
+            </Dialog>
           </Item>
 
           <Item title="Video Player">
             <div className="relative flex h-24 items-center justify-center rounded-2xl bg-[var(--bg-hover)]">
-              <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]">
-                <Play className="h-4 w-4" />
+              <button
+                type="button"
+                aria-label={videoPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
+                aria-pressed={videoPlaying}
+                onClick={() => setVideoPlaying((value) => !value)}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"
+              >
+                {videoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </button>
+              {videoPlaying && <span className="absolute bottom-2 text-[11px] text-[var(--text-muted)]">Reproduzindo demonstração</span>}
             </div>
           </Item>
 
           <Item title="Audio Player">
             <div className="flex items-center gap-3 rounded-2xl bg-[var(--bg-hover)] px-3 py-2.5">
-              <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]">
-                <Pause className="h-3.5 w-3.5" />
+              <button
+                type="button"
+                aria-label={audioPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
+                aria-pressed={audioPlaying}
+                onClick={() => setAudioPlaying((value) => !value)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"
+              >
+                {audioPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               </button>
               <div className="flex flex-1 items-center gap-0.5">
                 {Array.from({ length: 20 }, (_, i) => (
@@ -1275,6 +1527,31 @@ function ShowcaseContent() {
             />
           </Item>
 
+          <Item title="Filter Multi Select">
+            <FilterMultiSelect
+              icon={Users}
+              placeholder="Responsáveis"
+              values={filterOwners}
+              onChange={setFilterOwners}
+              options={[
+                { value: 'luiza', label: 'Luiza' },
+                { value: 'nick', label: 'Nick' },
+                { value: 'ana', label: 'Ana' },
+              ]}
+            />
+          </Item>
+
+          <Item title="Date Range Filter">
+            <DateRangeFilter
+              icon={CalendarIcon}
+              label="Período"
+              fromValue={filterFrom}
+              toValue={filterTo}
+              onFromChange={setFilterFrom}
+              onToChange={setFilterTo}
+            />
+          </Item>
+
           <Item title="Filter Bar" span="lg">
             <FilterBar>
               <SearchInput placeholder="Buscar" className="max-w-[14rem]" />
@@ -1299,65 +1576,133 @@ function ShowcaseContent() {
         <Cat id="advanced" title="Advanced" description="Padrões de interação avançados.">
           <Item title="Drag & Drop / Sortable List">
             <div className="flex flex-col gap-1.5">
-              {['Novo', 'Contato Inicial', 'Proposta Enviada'].map((s) => (
-                <div key={s} className="flex items-center gap-2 rounded-xl bg-[var(--bg-hover)] px-3 py-2 text-sm text-[var(--text-primary)]">
-                  <GripVertical className="h-4 w-4 text-[var(--text-muted)]" />
-                  {s}
+              {sortableStatuses.map((status, index) => (
+                <div
+                  key={status}
+                  draggable
+                  onDragStart={() => setDraggedStatus(status)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    if (!draggedStatus || draggedStatus === status) return;
+                    setSortableStatuses((items) => {
+                      const next = [...items];
+                      const from = next.indexOf(draggedStatus);
+                      next.splice(from, 1);
+                      next.splice(index, 0, draggedStatus);
+                      return next;
+                    });
+                    setDraggedStatus(null);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-[var(--bg-hover)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                >
+                  <GripVertical className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">{status}</span>
+                  <button
+                    type="button"
+                    aria-label={`Mover ${status} para cima`}
+                    disabled={index === 0}
+                    onClick={() => setSortableStatuses((items) => items.map((item, itemIndex) => itemIndex === index - 1 ? items[index] : itemIndex === index ? items[index - 1] : item))}
+                    className="text-[var(--text-muted)] disabled:opacity-40"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Mover ${status} para baixo`}
+                    disabled={index === sortableStatuses.length - 1}
+                    onClick={() => setSortableStatuses((items) => items.map((item, itemIndex) => itemIndex === index ? items[index + 1] : itemIndex === index + 1 ? items[index] : item))}
+                    className="text-[var(--text-muted)] disabled:opacity-40"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
           </Item>
 
           <Item title="Resizable Panel / Split Pane">
-            <div className="flex h-20 overflow-hidden rounded-2xl border border-[var(--border-default)]">
-              <div className="flex-1 bg-[var(--bg-hover)]" />
-              <div className="w-1.5 cursor-col-resize bg-[var(--border-strong)]" />
-              <div className="flex-[2] bg-[var(--bg-surface)]" />
+            <div>
+              <div className="flex h-20 overflow-hidden rounded-2xl border border-[var(--border-default)]">
+                <div className="bg-[var(--bg-hover)]" style={{ width: `${splitRatio}%` }} />
+                <div className="w-1.5 shrink-0 bg-[var(--border-strong)]" />
+                <div className="flex-1 bg-[var(--bg-surface)]" />
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <span>Divisão</span>
+                <input aria-label="Tamanho do painel esquerdo" type="range" min={20} max={70} value={splitRatio} onChange={(event) => setSplitRatio(Number(event.target.value))} className="ds-slider" />
+              </label>
             </div>
           </Item>
 
           <Item title="Infinite Scroll">
-            <div className="relative h-24 overflow-hidden rounded-2xl border border-[var(--border-default)] p-2">
-              {['Ana Paula', 'Carlos Silva', 'Fernanda'].map((n) => (
+            <div
+              className="relative h-24 overflow-y-auto rounded-2xl border border-[var(--border-default)] p-2"
+              onScroll={(event) => {
+                const element = event.currentTarget;
+                if (element.scrollTop + element.clientHeight >= element.scrollHeight - 8) loadMoreInfiniteItems();
+              }}
+            >
+              {infiniteItems.map((n) => (
                 <p key={n} className="py-1 text-sm text-[var(--text-secondary)]">{n}</p>
               ))}
-              <div className="absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-[var(--bg-surface)] pb-1">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--text-muted)]" />
-              </div>
+              {infiniteItems.length < 9 && <button type="button" onClick={loadMoreInfiniteItems} className="w-full py-1 text-xs font-medium text-[var(--brand-primary)]">Carregar mais</button>}
             </div>
           </Item>
 
           <Item title="Tour / Onboarding">
-            <div className="relative rounded-2xl bg-[var(--text-primary)] px-4 py-3 text-[var(--text-inverse)]">
-              <p className="text-sm font-medium">Novo: filtros por operadora</p>
-              <p className="mt-0.5 text-xs opacity-80">Clique aqui para refinar sua busca.</p>
-              <span className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 bg-[var(--text-primary)]" />
-            </div>
+            {tourVisible ? (
+              <div className="relative rounded-2xl bg-[var(--text-primary)] px-4 py-3 text-[var(--text-inverse)]">
+                <p className="text-sm font-medium">Novo: filtros por operadora</p>
+                <p className="mt-0.5 text-xs opacity-80">Clique aqui para refinar sua busca.</p>
+                <button type="button" onClick={() => setTourVisible(false)} className="mt-3 text-xs font-semibold underline underline-offset-2">Entendi</button>
+                <span className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 bg-[var(--text-primary)]" />
+              </div>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => setTourVisible(true)}>Reabrir tour</Button>
+            )}
           </Item>
 
           <Item title="Wizard / Multi-step Form" span="md">
-            <Stepper currentStep={0} orientation="vertical" steps={[{ label: 'Dados pessoais', description: 'Nome, telefone, e-mail' }, { label: 'Operadora', description: 'Escolha do plano' }, { label: 'Confirmação' }]} />
+            <Stepper currentStep={wizardStep} orientation="vertical" steps={[{ label: 'Dados pessoais', description: 'Nome, telefone, e-mail' }, { label: 'Operadora', description: 'Escolha do plano' }, { label: 'Confirmação' }]} />
+            <div className="flex items-center justify-between gap-2">
+              <Button size="sm" variant="ghost" disabled={wizardStep === 0} onClick={() => setWizardStep((step) => Math.max(0, step - 1))}>Voltar</Button>
+              <Button size="sm" onClick={() => setWizardStep((step) => Math.min(2, step + 1))}>{wizardStep === 2 ? 'Concluído' : 'Próximo'}</Button>
+            </div>
           </Item>
 
           <Item title="Rich Text Editor" span="md">
             <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)]">
               <div className="flex items-center gap-1 border-b border-[var(--border-subtle)] px-2 py-1.5">
-                <Bold className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                <Italic className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                <Underline className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                <ListOrdered className="ml-2 h-3.5 w-3.5 text-[var(--text-secondary)]" />
-                <List className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                {[
+                  { command: 'bold', label: 'Negrito', icon: Bold },
+                  { command: 'italic', label: 'Itálico', icon: Italic },
+                  { command: 'underline', label: 'Sublinhado', icon: Underline },
+                  { command: 'insertOrderedList', label: 'Lista numerada', icon: ListOrdered },
+                  { command: 'insertUnorderedList', label: 'Lista', icon: List },
+                ].map(({ command, label, icon: Icon }) => (
+                  <button
+                    key={command}
+                    type="button"
+                    aria-label={label}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => document.execCommand(command)}
+                    className="rounded-md p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
               </div>
-              <p className="px-3 py-2.5 text-sm text-[var(--text-secondary)]">Anotações sobre o atendimento...</p>
+              <div contentEditable role="textbox" aria-multiline="true" aria-label="Anotações sobre o atendimento" suppressContentEditableWarning className="min-h-20 px-3 py-2.5 text-sm text-[var(--text-secondary)] outline-none">Anotações sobre o atendimento...</div>
             </div>
           </Item>
 
           <Item title="Code Block / Copy Button">
             <div className="relative rounded-2xl bg-[var(--text-primary)] p-3 font-mono text-xs text-[var(--text-inverse)]">
-              <button className="absolute right-2 top-2 text-[var(--text-muted)]">
+              <button type="button" aria-label="Copiar código" onClick={copyShowcaseCode} className="absolute right-2 top-2 flex items-center gap-1 text-[var(--text-muted)]">
                 <Copy className="h-3.5 w-3.5" />
+                <span>{copied ? 'Copiado' : 'Copiar'}</span>
               </button>
-              <pre>{`const lead = { nome: 'Ana Paula' };`}</pre>
+              <pre className="max-w-full overflow-x-auto pr-20">{SHOWCASE_CODE}</pre>
             </div>
           </Item>
 
@@ -1467,11 +1812,9 @@ function ShowcaseContent() {
           </Item>
         </Cat>
 
-        <div className="mt-4 flex justify-center">
-          <button className="rounded-full bg-[var(--bg-hover)] px-6 py-3 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-active)]">
-            And more...
-          </button>
-        </div>
+        <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
+          Catálogo completo dos componentes públicos exportados pelo design system.
+        </p>
       </div>
     </div>
   );

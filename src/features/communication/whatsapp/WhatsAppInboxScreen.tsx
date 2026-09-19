@@ -377,6 +377,16 @@ const getMessageRowClasses = (direction: CommWhatsAppMessage['direction']) => {
   return 'message-bubble-row-inbound justify-start';
 };
 
+const isWhapiGroupChatId = (value: unknown) => String(value ?? '').trim().toLowerCase().endsWith('@g.us');
+
+const isGroupChatMessage = (chat: CommWhatsAppChat, message: CommWhatsAppMessage) => (
+  message.direction !== 'system'
+  && (
+    isWhapiGroupChatId(chat.external_chat_id)
+    || isWhapiGroupChatId(getMessageMetadataRecord(message).chat_id)
+  )
+);
+
 const findLoadedMessageByExternalId = (messages: CommWhatsAppMessage[], externalMessageId: string) => {
   const normalizedExternalMessageId = externalMessageId.trim();
   if (!normalizedExternalMessageId) return null;
@@ -954,7 +964,6 @@ function WhatsAppAudioPlayerCard({
   const [currentTime, setCurrentTime] = useState(0);
   const [resolvedDuration, setResolvedDuration] = useState(durationSeconds ?? 0);
   const [playbackRate, setPlaybackRate] = useState<(typeof AUDIO_PLAYBACK_RATES)[number]>(1);
-  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1030,6 +1039,12 @@ function WhatsAppAudioPlayerCard({
   };
 
   const formatPlaybackRate = (rate: number) => `${rate.toString().replace('.', ',')}×`;
+  const handleCyclePlaybackRate = () => {
+    setPlaybackRate((currentRate) => {
+      const currentIndex = AUDIO_PLAYBACK_RATES.indexOf(currentRate);
+      return AUDIO_PLAYBACK_RATES[(currentIndex + 1) % AUDIO_PLAYBACK_RATES.length];
+    });
+  };
 
   if (!mediaUrl) {
     return (
@@ -1069,40 +1084,15 @@ function WhatsAppAudioPlayerCard({
                 {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
               </p>
               <div className="flex shrink-0 items-center gap-2">
-                <Popover open={speedMenuOpen} onOpenChange={setSpeedMenuOpen}>
-                  <PopoverTrigger>
-                    <button
-                      type="button"
-                      className="whatsapp-inbox-audio-speed-trigger"
-                      aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}`}
-                      aria-expanded={speedMenuOpen}
-                    >
-                      {formatPlaybackRate(playbackRate)}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    side="top"
-                    align="end"
-                    sideOffset={6}
-                    className="whatsapp-inbox-audio-speed-menu grid grid-cols-4 gap-1 border p-1 shadow-lg"
-                    aria-label="Velocidade de reprodução"
-                  >
-                    {AUDIO_PLAYBACK_RATES.map((rate) => (
-                      <button
-                        key={rate}
-                        type="button"
-                        onClick={() => {
-                          setPlaybackRate(rate);
-                          setSpeedMenuOpen(false);
-                        }}
-                        className={`whatsapp-inbox-audio-speed-option ${playbackRate === rate ? 'is-selected' : ''}`}
-                        aria-pressed={playbackRate === rate}
-                      >
-                        {formatPlaybackRate(rate)}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
+                <button
+                  type="button"
+                  onClick={handleCyclePlaybackRate}
+                  className="whatsapp-inbox-audio-speed-trigger"
+                  aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}. Clique para mudar`}
+                  title="Clique para mudar a velocidade"
+                >
+                  {formatPlaybackRate(playbackRate)}
+                </button>
                 <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
                   {formatDurationLabel(Math.round(duration))}
                 </span>
@@ -9722,13 +9712,10 @@ export default function WhatsAppInboxScreen() {
                           className={`message-bubble-row flex w-full ${getMessageRowClasses(lastMessage.direction)}`}
                         >
                           <div className="relative max-w-[82%] pb-2">
-                            {selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
+                            {isGroupChatMessage(selectedChat, lastMessage) && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
                               <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
                             ) : null}
                             <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              {!selectedChat.is_group && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
-                                <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
-                              ) : null}
                               <WhatsAppMediaGroupBody
                                 messages={groupMessages}
                                 onOpenImage={setLightboxMessageId}
@@ -9756,7 +9743,7 @@ export default function WhatsAppInboxScreen() {
                     const showReplyForwardActions = canReplyOrForwardMessage(message);
                     const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
                     const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
-                    const isGroupMessage = selectedChat.is_group && message.direction !== 'system';
+                    const isGroupMessage = isGroupChatMessage(selectedChat, message);
                     const messageMeta = (
                       <div className={cx(
                         'whatsapp-inbox-message-meta flex flex-wrap items-center gap-1.5 text-[11px] font-medium',
@@ -9764,6 +9751,10 @@ export default function WhatsAppInboxScreen() {
                           ? `mt-1 px-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`
                           : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message) ? 'mt-1 px-1 justify-end' : 'mt-2 justify-end',
                       )}>
+                        <span className="order-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                          <span>{formatMessageTime(message.message_at)}</span>
+                          {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
+                        </span>
                         {showEditAction || showDeleteAction || showReplyForwardActions ? (
                           <button
                             ref={(node) => {
@@ -9776,7 +9767,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={() => handleToggleMessageActionMenu(message.id)}
                             className={cx(
-                              'inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              'order-3 inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
                               openMessageActionMenuMessageId === message.id
                                 ? 'bg-[var(--bg-hover)] opacity-100'
                                 : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -9793,7 +9784,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={() => void handleToggleStarMessage(message)}
                             className={cx(
-                              'inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              'order-2 inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
                               isMessageStarred(message)
                                 ? 'text-[var(--accent-gold)]'
                                 : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -9802,17 +9793,15 @@ export default function WhatsAppInboxScreen() {
                             title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
                           >
                             <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />
-                          </button>
+                        </button>
                         ) : null}
-                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                          <span>{formatMessageTime(message.message_at)}</span>
-                          {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
-                        </span>
                         {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                          <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
+                          <span className="order-4 inline-flex">
+                            <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
+                          </span>
                         ) : null}
                         {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
-                          <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
+                          <span className="order-4 whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             <span>Reenviando</span>
                           </span>
@@ -9877,9 +9866,6 @@ export default function WhatsAppInboxScreen() {
                               handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
                             }}
                           >
-                            {!isGroupMessage && message.direction === 'inbound' && message.sender_name ? (
-                              <p className="mb-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
-                            ) : null}
                             <WhatsAppMessageBody
                               message={message}
                               onOpenImage={setLightboxMessageId}

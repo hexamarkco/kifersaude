@@ -1165,7 +1165,7 @@ function InboxFilterChip({
       aria-pressed={active}
       variant={active ? 'soft' : 'secondary'}
       size="sm"
-      className={compact ? 'h-8 px-3 text-[11px]' : 'h-9 px-3.5 text-xs'}
+      className={compact ? 'text-[11px]' : 'text-xs'}
     >
       {label}
     </Button>
@@ -9392,9 +9392,9 @@ export default function WhatsAppInboxScreen() {
                       variant={chatFilesOpen ? 'secondary' : 'ghost'}
                       title="Arquivos da conversa"
                       size="sm"
-                      className="shrink-0 gap-1.5 whitespace-nowrap"
+                      className="shrink-0 whitespace-nowrap"
                     >
-                      <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                      <FolderOpen className="kds-control-icon" aria-hidden="true" />
                       Arquivos da conversa
                     </Button>
                     <IconButton

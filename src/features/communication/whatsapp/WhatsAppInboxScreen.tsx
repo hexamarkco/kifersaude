@@ -2155,18 +2155,19 @@ function WhatsAppMessageBody({
 
           <div className="flex flex-wrap items-center gap-2">
             {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status" role="status" aria-live="polite">
+                <Loader2 className="kds-control-icon animate-spin" />
                 Transcrevendo...
               </span>
             ) : canTranscribe ? (
               <Button
                 type="button"
-                variant="text"
+                variant="secondary"
                 size="sm"
                 onClick={() => onTranscribe(message)}
-                className="whatsapp-inbox-transcribe-button font-semibold"
+                className="whatsapp-inbox-transcribe-button"
               >
+                <FileText className="kds-control-icon" aria-hidden="true" />
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
             ) : null}

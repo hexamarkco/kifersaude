@@ -506,14 +506,6 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
         <p className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos, áudios e links compartilhados neste atendimento.</p>
       </DrawerHeader>
       <DrawerBody className="comm-whatsapp-chat-files-body">
-        <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-intro">
-          <MediaIcon><Files className="kds-control-icon" /></MediaIcon>
-          <div>
-            <p className="comm-whatsapp-chat-files-intro-title">Biblioteca da conversa</p>
-            <p className="comm-whatsapp-chat-files-intro-description">Abra, reproduza ou baixe os arquivos sem sair do atendimento.</p>
-          </div>
-        </Surface>
-
         <SegmentedControl
           items={mediaTabs}
           value={mediaType}

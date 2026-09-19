@@ -9386,17 +9386,16 @@ export default function WhatsAppInboxScreen() {
                         )}
                       </IconButton>
                     ) : null}
-                    <Button
+                    <IconButton
                       type="button"
                       onClick={() => setChatFilesOpen(true)}
                       variant={chatFilesOpen ? 'secondary' : 'ghost'}
+                      aria-label="Arquivos da conversa"
                       title="Arquivos da conversa"
-                      size="sm"
-                      className="shrink-0 whitespace-nowrap"
+                      size="md"
                     >
                       <FolderOpen className="kds-control-icon" aria-hidden="true" />
-                      Arquivos da conversa
-                    </Button>
+                    </IconButton>
                     <IconButton
                       type="button"
                       onClick={handleToggleChatMessageSearch}
@@ -9689,9 +9688,9 @@ export default function WhatsAppInboxScreen() {
                     const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
                     const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
                     const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
-                    const messageMeta = (
-                      <div className={cx(
-                        'whatsapp-inbox-message-meta flex flex-wrap items-center gap-1.5 text-[11px] font-medium',
+                      const messageMeta = (
+                        <div className={cx(
+                        'whatsapp-inbox-message-meta flex w-full flex-wrap items-center gap-1.5 text-[11px] font-medium',
                         reactions.length > 0
                           ? `mt-0 px-1 ${messageMetaJustify}`
                           : isGroupMessage
@@ -9835,23 +9834,25 @@ export default function WhatsAppInboxScreen() {
                           </div>
 
                           {reactions.length > 0 ? (
-                            <div className={cx(
-                              'mt-1 flex min-w-0 items-center gap-1',
-                              message.direction === 'outbound' ? 'justify-end' : 'justify-start',
-                            )}>
-                              <div
-                                className="flex max-w-[90%] flex-wrap gap-1"
-                                title={reactionTooltipText || undefined}
-                              >
-                                {reactions.map((reaction) => (
-                                  <span
-                                    key={`${message.id}:${reaction.emoji}`}
-                                    className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
-                                  >
-                                    <span className="text-sm leading-none">{reaction.emoji}</span>
-                                    {reaction.count > 1 ? <span>{reaction.count}</span> : null}
-                                  </span>
-                                ))}
+                            <div className="relative mt-1 min-h-[28px]">
+                              <div className={cx(
+                                'absolute inset-y-0 z-[1] flex max-w-[90%] items-center',
+                                message.direction === 'outbound' ? 'left-0' : 'right-0',
+                              )}>
+                                <div
+                                  className="flex max-w-full flex-wrap gap-1"
+                                  title={reactionTooltipText || undefined}
+                                >
+                                  {reactions.map((reaction) => (
+                                    <span
+                                      key={`${message.id}:${reaction.emoji}`}
+                                      className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
+                                    >
+                                      <span className="text-sm leading-none">{reaction.emoji}</span>
+                                      {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                               {messageMeta}
                             </div>

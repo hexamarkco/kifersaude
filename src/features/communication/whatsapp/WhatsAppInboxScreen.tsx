@@ -944,6 +944,11 @@ function WhatsAppAudioPlayerCard({
   mediaMimeType,
   fileName,
   durationSeconds,
+  canTranscribe,
+  hasTranscription,
+  transcriptionStatus,
+  transcribing,
+  onTranscribe,
   loading,
   error,
   mediaSending,
@@ -955,6 +960,11 @@ function WhatsAppAudioPlayerCard({
   mediaMimeType?: string | null;
   fileName?: string | null;
   durationSeconds?: number | null;
+  canTranscribe?: boolean;
+  hasTranscription?: boolean;
+  transcriptionStatus?: CommWhatsAppMessage['transcription_status'];
+  transcribing?: boolean;
+  onTranscribe?: () => void;
   loading: boolean;
   error: string | null;
   mediaSending: boolean;
@@ -1048,6 +1058,24 @@ function WhatsAppAudioPlayerCard({
     });
   };
 
+  const transcriptionAction = transcriptionStatus === 'processing' || transcribing ? (
+    <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status whatsapp-inbox-audio-transcribe-button" role="status" aria-live="polite">
+      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+      <span>Transcrevendo...</span>
+    </span>
+  ) : canTranscribe ? (
+      <button
+        type="button"
+        onClick={onTranscribe}
+        className="whatsapp-inbox-transcribe-button whatsapp-inbox-audio-transcribe-button"
+        aria-label={transcriptionStatus === 'failed' ? 'Tentar transcrever novamente' : transcriptionStatus === 'completed' ? 'Retranscrever áudio' : 'Transcrever áudio'}
+        title={transcriptionStatus === 'failed' ? 'Tentar transcrever novamente' : transcriptionStatus === 'completed' ? 'Retranscrever áudio' : 'Transcrever áudio'}
+      >
+        <FileText className="h-3 w-3" aria-hidden="true" />
+        <span>{transcriptionStatus === 'failed' ? 'Tentar novamente' : hasTranscription ? 'Retranscrever' : 'Transcrever'}</span>
+      </button>
+  ) : null;
+
   if (!mediaUrl) {
     return (
       <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
@@ -1058,6 +1086,7 @@ function WhatsAppAudioPlayerCard({
           {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
           <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
         </div>
+        {transcriptionAction ? <div className="shrink-0 self-center">{transcriptionAction}</div> : null}
         {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
       </div>
     );
@@ -1086,6 +1115,7 @@ function WhatsAppAudioPlayerCard({
                 {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
               </p>
               <div className="flex shrink-0 items-center gap-2">
+                {transcriptionAction}
                 <button
                   type="button"
                   onClick={handleCyclePlaybackRate}
@@ -2130,6 +2160,11 @@ function WhatsAppMessageBody({
           mediaMimeType={message.media_mime_type}
           fileName={message.media_file_name}
           durationSeconds={message.media_duration_seconds}
+          canTranscribe={canTranscribe}
+          hasTranscription={Boolean(message.transcription_text?.trim())}
+          transcriptionStatus={transcriptionStatus}
+          transcribing={transcribing}
+          onTranscribe={() => onTranscribe(message)}
           loading={loading}
           error={error}
           mediaSending={mediaSending}
@@ -2153,29 +2188,11 @@ function WhatsAppMessageBody({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status" role="status" aria-live="polite">
-                <Loader2 className="kds-control-icon animate-spin" />
-                Transcrevendo...
-              </span>
-            ) : canTranscribe ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => onTranscribe(message)}
-                className="whatsapp-inbox-transcribe-button"
-              >
-                <FileText className="kds-control-icon" aria-hidden="true" />
-                {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
-              </Button>
-            ) : null}
-
-            {transcriptionStatus === 'failed' && message.transcription_error ? (
+          {transcriptionStatus === 'failed' && message.transcription_error ? (
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-[var(--danger-text)]">{message.transcription_error}</span>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
         {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}

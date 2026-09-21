@@ -50,6 +50,21 @@ const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
 const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
+const AUTONOMOUS_MAX_JOB_ATTEMPTS = 4;
+const AUTONOMOUS_RETRY_DELAYS_MS = [15_000, 60_000, 180_000] as const;
+const AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS = 20_000;
+
+const isTerminalAutonomousReplyError = (message: string): boolean => {
+  const normalized = message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return /whapi_token nao configurado|identidade do whatsapp|permissao de contato|atendimento autonomo foi desativado|chat sem lead vinculado|status atendimento nao encontrado/.test(normalized);
+};
+
+const getAutonomousRetryDelayMs = (attemptNumber: number): number => (
+  AUTONOMOUS_RETRY_DELAYS_MS[Math.min(Math.max(attemptNumber - 1, 0), AUTONOMOUS_RETRY_DELAYS_MS.length - 1)]
+);
 
 type WorkerRequestBody = {
   source?: string;
@@ -401,7 +416,7 @@ async function sendAutonomousWhatsAppText(params: {
       contact_permission_scope: 'service_reply',
       idempotency_key: params.idempotencyKey,
     },
-  });
+  }, AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS);
 
   return externalMessageId;
 }
@@ -521,6 +536,7 @@ Deno.serve(async (req: Request) => {
       });
 
       let conversationLockAcquired = false;
+      let deliveryAttemptStarted = false;
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
           .from('comm_whatsapp_chats')
@@ -886,6 +902,11 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
+          // Depois que a chave foi reservada, uma falha de rede pode significar
+          // que a Whapi aceitou a mensagem e apenas perdeu a resposta. Nao
+          // reencaminhar automaticamente esse job evita duplicidade no lead.
+          deliveryAttemptStarted = true;
+
           const externalMessageId = await sendAutonomousWhatsAppText({
             supabaseAdmin,
             channelId: channel.id,
@@ -907,6 +928,7 @@ Deno.serve(async (req: Request) => {
               error: error instanceof Error ? error.message : String(error),
             });
           });
+          deliveryAttemptStarted = false;
           if (i < messages.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, MESSAGE_SEND_DELAY_MS));
           }
@@ -945,10 +967,48 @@ Deno.serve(async (req: Request) => {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error('[ai-autonomous-reply-worker] erro ao processar job', { jobId: job.id, error: message });
-        await supabaseAdmin
-          .from('ai_autonomous_reply_jobs')
-          .update({ status: 'failed', last_error: message })
-          .eq('id', job.id);
+        const attemptNumber = (job.attempts ?? 0) + 1;
+        const shouldRetry = !deliveryAttemptStarted
+          && attemptNumber < AUTONOMOUS_MAX_JOB_ATTEMPTS
+          && !isTerminalAutonomousReplyError(message);
+
+        if (shouldRetry) {
+          const scheduledAt = new Date(Date.now() + getAutonomousRetryDelayMs(attemptNumber)).toISOString();
+          const { error: retryError } = await supabaseAdmin
+            .from('ai_autonomous_reply_jobs')
+            .update({
+              status: 'pending',
+              scheduled_at: scheduledAt,
+              last_error: `Tentativa ${attemptNumber} falhou; nova tentativa agendada: ${message}`,
+            })
+            .eq('id', job.id)
+            .eq('status', 'processing');
+
+          if (!retryError) {
+            console.warn('[ai-autonomous-reply-worker] job devolvido para nova tentativa', {
+              jobId: job.id,
+              chatId: job.chat_id,
+              attemptNumber,
+              scheduledAt,
+              error: message,
+            });
+          } else {
+            console.error('[ai-autonomous-reply-worker] falha ao reagendar job apos erro', {
+              jobId: job.id,
+              chatId: job.chat_id,
+              retryError: retryError.message,
+            });
+            await supabaseAdmin
+              .from('ai_autonomous_reply_jobs')
+              .update({ status: 'failed', last_error: `${message} | Falha ao reagendar: ${retryError.message}` })
+              .eq('id', job.id);
+          }
+        } else {
+          await supabaseAdmin
+            .from('ai_autonomous_reply_jobs')
+            .update({ status: 'failed', last_error: message })
+            .eq('id', job.id);
+        }
       } finally {
         if (conversationLockAcquired) {
           await callAutonomousRpc(supabaseAdmin, 'release_ai_autonomous_reply_lock', {

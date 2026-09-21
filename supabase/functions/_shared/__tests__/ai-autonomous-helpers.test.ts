@@ -16,6 +16,7 @@ import {
   CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE,
   CHILD_ONLY_SCOPE_VALIDATION_MESSAGE,
   QUALIFICATION_CLOSURE_VALIDATION_MESSAGE,
+  QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE,
   QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
   MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE,
   SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE,
@@ -528,6 +529,26 @@ describe('validateAutonomousReplyOutput', () => {
     ];
     assert.equal(validateAutonomousReplyOutput('Certo! Quais são as idades?', history).valid, false);
     assert.equal(validateAutonomousReplyOutput('E quais são as idades?', history).valid, true);
+  });
+
+  test('rejeita narrar a etapa interna da qualificacao', () => {
+    const history: AutonomousMessageRow[] = [
+      { role: 'lead', content: 'Quero um plano para meu filho.' },
+    ];
+    const result = validateAutonomousReplyOutput(
+      'Agora vamos ver a região para encontrar opções adequadas. Em qual cidade você vai usar o plano?',
+      history,
+    );
+
+    assert.equal(result.valid, false);
+    assert.equal(result.message, QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE);
+    assert.equal(
+      validateAutonomousReplyOutput(
+        'Entendi. Para eu te indicar algo que faça sentido para você, em qual cidade você pretende usar o plano?',
+        history,
+      ).valid,
+      true,
+    );
   });
 
   test('aceita handoff tag-only para o encerramento seguro do worker', () => {

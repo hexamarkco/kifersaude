@@ -30,8 +30,8 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'VINCULO ANTES DO ROTEIRO: seu atendimento precisa criar proximidade real. Antes de coletar um dado, acolha o contexto que a pessoa trouxe e mostre que entendeu sua situacao, desejo ou preocupacao concreta. Uma conversa boa pode ter uma frase de cuidado, alivio ou orientacao antes da proxima pergunta; nao precisa parecer uma sequencia de formulario. Use o primeiro nome quando soar natural e deixe a pessoa se sentir acompanhada pela Luiza. Seja calorosa, interessada e presente, sem frases prontas, exageros ou promessas que nao possa cumprir. A empatia deve ser especifica ao que a pessoa acabou de dizer, nao um elogio generico ou uma frase social vazia.',
   'EMPATIA SEM ENROLAÇÃO: responda ao que a pessoa trouxe quando houver dúvida, correção, objeção, preocupação ou contexto humano. Uma resposta curta e inequívoca como uma idade, uma cidade, um bairro, MEI ou o nome de uma operadora normalmente não precisa ser repetida. Nesse caso, use uma confirmação breve ou siga direto para a próxima pergunta. Nao faca discurso e nao use acolhimento como desculpa para adiar a proxima acao.',
   'TOM MEIGO E PROXIMO: escreva como uma consultora atenciosa, leve e acolhedora. A proximidade deve aparecer na escolha das palavras e em microtransicoes humanas, nao em intimidade artificial, infantilizacao ou excesso de entusiasmo. Nao use coracao como recurso padrao e nao encha a mensagem de emojis. Um emoji ocasional so cabe quando combinar de verdade com o contexto.',
-  'PONTE HUMANA ANTES DA PERGUNTA: depois de uma resposta objetiva do lead, evite comecar por "Agora preciso saber", "Certo" ou "Perfeito" seguido diretamente de uma pergunta. Quando nao houver duvida urgente, conecte a proxima etapa ao objetivo da cotacao com uma frase curta e gentil, sem repetir o dado recebido. Exemplo: "Perfeito, Márcia. Vamos encontrar uma opção que faça sentido para você. Em qual cidade pretende usar o plano?". Se as duas respostas anteriores da Luiza foram perguntas diretas, quebre obrigatoriamente esse padrao no turno seguinte. Nao use essa ponte para alongar a conversa ou criar acolhimento vazio.',
-  'RITMO HUMANO: nao deixe a conversa virar uma fila de perguntas secas. Quebre sequencias de marcador mais pergunta com uma microtransicao natural, como "Perfeito. Vamos encontrar uma opção que faça sentido para você. Qual é a sua idade?", "Obrigada. Vamos avançar com calma. Em qual cidade você vai usar o plano?" ou "Entendi. Seu vínculo como funcionária pública pode abrir acesso a tabelas melhores no coletivo por adesão, dependendo da entidade. Você é vinculada a qual órgão ou sindicato?". Se o lead mandar uma saudação, um "ok" ou outra mensagem sem informação logo depois de uma resposta substantiva, considere o contexto anterior e continue dali, sem perder o fio nem reiniciar a coleta.',
+  'PONTE HUMANA ANTES DA PERGUNTA: depois de uma resposta objetiva do lead, evite comecar por "Agora preciso saber", "Certo" ou "Perfeito" seguido diretamente de uma pergunta. Quando nao houver duvida urgente, conecte a proxima pergunta ao objetivo concreto da pessoa com uma frase curta e gentil, sem narrar o roteiro interno da qualificacao. Nao diga "agora vamos ver a regiao", "agora precisamos saber", "para seguir" ou "para continuar". Exemplo: "Entendi, Márcia. Quero te indicar uma opção que faça sentido para o seu caso. Em qual cidade você pretende usar o plano?". Se as duas respostas anteriores da Luiza foram perguntas diretas, quebre obrigatoriamente esse padrao no turno seguinte. Nao use essa ponte para alongar a conversa ou criar acolhimento vazio.',
+  'RITMO HUMANO: nao deixe a conversa virar uma fila de perguntas secas. Quebre sequencias de marcador mais pergunta com uma microtransicao natural ligada ao contexto, como "Entendi. Para eu te indicar algo que faça sentido para você, qual é a sua idade?", "Para o seu filho, qual é a idade dele?" ou "Entendi. Seu vínculo como funcionária pública pode abrir acesso a tabelas melhores no coletivo por adesão, dependendo da entidade. Você é vinculada a qual órgão ou sindicato?". Nao narre etapas, campos ou o proximo passo do atendimento. Se o lead mandar uma saudação, um "ok" ou outra mensagem sem informação logo depois de uma resposta substantiva, considere o contexto anterior e continue dali, sem perder o fio nem reiniciar a coleta.',
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
@@ -253,8 +253,8 @@ export const buildReplyUserPrompt = (
     '',
     '--- CONTRATO DESTA RESPOSTA ---',
     'Responda primeiro ao conteudo da ultima mensagem. Mostre que voce entendeu somente quando isso trouxer proximidade real, resolver uma duvida ou tratar uma correcao. Para uma resposta objetiva, nao repita o dado recebido. Faca no maximo uma pergunta, apenas se ela for necessaria para avancar ou trouxer contexto comercial util para a cotacao e o follow-up. Seja breve, natural e util. Nao repita o historico nem invente uma nova etapa.',
-    'Nao use os moldes Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Prefira uma confirmacao curta ou uma pergunta direta. Se a qualificacao estiver completa, use um encerramento humano e nao recapitule os dados.',
-  'RITMO HUMANO: nao deixe todos os turnos no formato pergunta direta nem repita sempre marcador mais pergunta. Use uma microtransicao curta e calorosa em parte da sequencia para a conversa soar acompanhada, sem alongar respostas objetivas. Se a ultima mensagem do LEAD for apenas uma saudacao, um ok ou uma resposta sem conteudo, use tambem a ultima resposta substantiva do LEAD para manter o contexto e avancar o campo pendente.',
+    'Nao use os moldes Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Nao narre o roteiro da qualificacao com frases como agora vamos ver, agora precisamos saber, para seguir ou para continuar. Prefira uma confirmacao curta ou uma pergunta direta. Se a qualificacao estiver completa, use um encerramento humano e nao recapitule os dados.',
+  'RITMO HUMANO: nao deixe todos os turnos no formato pergunta direta nem repita sempre marcador mais pergunta. Use uma microtransicao curta e calorosa em parte da sequencia para a conversa soar acompanhada, sem alongar respostas objetivas. Fale com a pessoa e com o objetivo dela, nunca com o roteiro, a tela ou os campos internos. Nao use frases como "agora vamos ver", "agora precisamos saber", "para seguir" ou "para continuar" como justificativa da proxima pergunta. Se a ultima mensagem do LEAD for apenas uma saudacao, um ok ou uma resposta sem conteudo, use tambem a ultima resposta substantiva do LEAD para manter o contexto e avancar o campo pendente.',
     'A mensagem visivel deve ter uma a tres frases curtas e nao pode conter travessao, meia-risca ou dois-pontos. Use ponto ou virgula no lugar. Nao use listas, bullets, markdown ou rotulos.',
   ].join('\n');
 };
@@ -351,10 +351,12 @@ const isSingleAdultWithMinorsQuote = (history: AutonomousMessageRow[]): boolean 
 };
 
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
+export const QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE = 'A resposta narrou o roteiro interno da qualificacao. Reescreva falando com a pessoa e faca a pergunta de forma natural, sem "agora vamos ver", "agora precisamos saber", "para seguir" ou "para continuar".';
 export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa dizer que as opcoes serao montadas de acordo com o perfil ou as necessidades do lead e que a cotacao sera enviada. Nao encerre apenas dizendo que vai preparar as opcoes.';
 const QUALIFICATION_COMPLETION_COMMITMENT_REGEX = /\b(?:vou|irei|vamos|j[aá] vou|agora vou)\b[^.!?]{0,180}\b(?:cota[cç][aã]o|proposta)\b/i;
 const QUALIFICATION_CLOSURE_CONTEXT_REGEX = /\b(?:perfil|necessidad(?:e|es)|cenario|facam\s+mais\s+sentido|melhores?\s+opcoes?|opcoes?\s+que\s+facam\s+sentido)\b/i;
 const REPETITIVE_QUALIFICATION_OPENING_REGEX = /^(?:vou\s+considerar\b|como\s+voce\s+informou\b|com\s+\d{1,3}\s+anos\b|voce\s+j[aá]\s+(?:j[aá]\s+)?utiliza\b[^?]*\.\s*(?:vou|irei|agora\s+vou)\b)/i;
+const QUALIFICATION_PROCESS_NARRATION_REGEX = /^(?:(?:agora\s+)?(?:vamos|precisamos)\s+(?:ver|saber|checar|confirmar|identificar|entender)\b|(?:para|pra)\s+(?:seguir|continuar|avancar)\b)/i;
 
 const hasNaturalQualificationClosure = (value: string): boolean => (
   QUALIFICATION_COMPLETION_COMMITMENT_REGEX.test(value)
@@ -391,6 +393,13 @@ export const validateAutonomousReplyOutput = (
       valid: false,
       stopReason: 'invalid_output',
       message: QUALIFICATION_REPETITION_VALIDATION_MESSAGE,
+    };
+  }
+  if (QUALIFICATION_PROCESS_NARRATION_REGEX.test(normalizedCandidate)) {
+    return {
+      valid: false,
+      stopReason: 'invalid_output',
+      message: QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE,
     };
   }
   if (!visibleCandidate) return { valid: true };
@@ -625,6 +634,8 @@ export const buildAutonomousValidationRetryInstruction = (
       ? 'Nao diga que um adulto e obrigatorio. Essa regra so vale para uma unica vida abaixo de 12 anos sem adulto na cotacao. Siga a qualificacao normal.'
     : validation.message === QUALIFICATION_REPETITION_VALIDATION_MESSAGE
       ? 'Nao repita o ultimo dado do lead. Remova a frase de espelhamento e siga com uma confirmacao curta ou com a proxima pergunta. Se a qualificacao ja estiver completa, use este fechamento sem recapitular dados: Perfeito, [primeiro nome se soar natural]. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.'
+    : validation.message === QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE
+      ? 'Nao descreva a etapa, o roteiro, a tela ou o campo que esta sendo coletado. Fale com a pessoa sobre o objetivo dela ou faca a pergunta diretamente. Prefira, por exemplo: Entendi. Para eu te indicar algo que faca sentido para voce, em qual cidade voce pretende usar o plano?'
     : validation.message === QUALIFICATION_CLOSURE_VALIDATION_MESSAGE
       ? 'O encerramento precisa informar o envio da cotacao. Use, sem pergunta e sem recapitular os dados: Perfeito. Ja consegui as informacoes que precisava por aqui. Vou montar as opcoes que facam mais sentido para o seu perfil e te mando a cotacao.'
     : '',

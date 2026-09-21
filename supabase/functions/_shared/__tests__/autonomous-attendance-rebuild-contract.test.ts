@@ -47,3 +47,12 @@ test('same conversation has a lease and outbound delivery key before sending', (
   assert.match(workerSource, /release_ai_autonomous_reply_lock/);
   assert.match(workerSource, /finally/);
 });
+
+test('requeues transient worker failures instead of leaving the lead without a response', () => {
+  assert.match(workerSource, /AUTONOMOUS_MAX_JOB_ATTEMPTS/);
+  assert.match(workerSource, /AUTONOMOUS_RETRY_DELAYS_MS/);
+  assert.match(workerSource, /status: 'pending'/);
+  assert.match(workerSource, /nova tentativa agendada/);
+  assert.match(workerSource, /deliveryAttemptStarted/);
+  assert.match(workerSource, /AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS = 20_000/);
+});

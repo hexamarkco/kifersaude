@@ -7,6 +7,7 @@ export {
   getReminderLead,
   listReminderContracts,
   listReminderLeads,
+  listPendingRemindersForLead,
   listReminders,
   listRemindersForLeadContext,
   markLeadLostFromAgenda,

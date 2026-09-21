@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
-import { Calendar, Clock, MessageSquare, Repeat, Upload, X } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
+import { Calendar, Clock, MessageSquare, Plus, Repeat, Trash2, Upload, X } from 'lucide-react';
 
 import {
   Button,
@@ -12,11 +12,14 @@ import {
 } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
+import { useConfig } from '../../../../contexts/ConfigContext';
+import { listPendingRemindersForLead, type Reminder } from '../../../reminders';
 import { commWhatsAppService } from '../data';
 import type {
   CommWhatsAppScheduledMessage,
   CommWhatsAppScheduledMessageRecurrence,
   CommWhatsAppScheduledMessageType,
+  CommWhatsAppScheduledSequenceActionType,
 } from '../domain/types';
 
 type WhatsAppScheduleMessageModalProps = {
@@ -48,6 +51,39 @@ type ScheduledAttachment = {
   filename: string;
   type: CommWhatsAppScheduledMessageType;
 };
+
+type SequenceActionDraft = {
+  id: string;
+  type: CommWhatsAppScheduledSequenceActionType;
+  statusId: string;
+  reminderId: string;
+  statusName: string;
+  title: string;
+  description: string;
+  dueHours: number;
+  priority: 'baixa' | 'normal' | 'alta';
+};
+
+type SequenceStepDraft = {
+  id: string;
+  delayHours: number;
+  text: string;
+  attachment: ScheduledAttachment | null;
+  reminderId: string;
+  actions: SequenceActionDraft[];
+};
+
+const createSequenceAction = (type: CommWhatsAppScheduledSequenceActionType = 'update_status'): SequenceActionDraft => ({
+  id: crypto.randomUUID(),
+  type,
+  statusId: '',
+  reminderId: '',
+  statusName: '',
+  title: 'Próximo follow-up',
+  description: '',
+  dueHours: 24,
+  priority: 'normal',
+});
 
 const RECURRENCE_OPTIONS: RecurrenceOption[] = [
   { value: 'none', label: 'Sem recorrência', description: 'Enviar apenas uma vez' },
@@ -88,6 +124,8 @@ export default function WhatsAppScheduleMessageModal({
   scheduledMessage,
   onScheduled,
 }: WhatsAppScheduleMessageModalProps) {
+  const { leadStatuses } = useConfig();
+  const [mode, setMode] = useState<'single' | 'sequence'>('single');
   const initialAttachment: ScheduledAttachment | null = (scheduledMessage?.media_url ?? initialMediaUrl)
     ? {
       url: scheduledMessage?.media_url ?? initialMediaUrl ?? '',
@@ -113,7 +151,35 @@ export default function WhatsAppScheduleMessageModal({
   );
   const [label, setLabel] = useState(scheduledMessage?.label ?? '');
   const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(scheduledMessage?.cancel_on_inbound_message ?? false);
+  const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
+  const [sequenceSteps, setSequenceSteps] = useState<SequenceStepDraft[]>(() => [{
+    id: crypto.randomUUID(),
+    delayHours: 0,
+    text: initialText ?? '',
+    attachment: initialAttachment,
+    reminderId: '',
+    actions: [],
+  }]);
   const [submitting, setSubmitting] = useState(false);
+  const sequenceAttachmentRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    if (!leadId || mode !== 'sequence') {
+      setPendingReminders([]);
+      return;
+    }
+    let active = true;
+    void listPendingRemindersForLead(leadId)
+      .then((items) => {
+        if (active) setPendingReminders(items);
+      })
+      .catch(() => {
+        if (active) setPendingReminders([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [leadId, mode]);
 
   const hasContent = useMemo(() => {
     return text.trim().length > 0 || Boolean(mediaUrl);
@@ -126,6 +192,20 @@ export default function WhatsAppScheduleMessageModal({
 
   const segmentCount = messageSegments.length;
 
+  const sequenceIsValid = useMemo(() => {
+    if (sequenceSteps.length === 0) return false;
+    return sequenceSteps.every((step) => {
+      const hasMessage = step.text.trim().length > 0 || Boolean(step.attachment?.url);
+      if (!hasMessage && step.actions.length === 0) return false;
+      return step.actions.every((action) => {
+        if (action.type === 'update_status') return Boolean(action.statusId);
+        if (action.type === 'complete_reminder') return Boolean(action.reminderId || step.reminderId);
+        if (action.type === 'create_reminder') return Boolean(action.title.trim());
+        return true;
+      });
+    });
+  }, [sequenceSteps]);
+
   const scheduledAtIso = useMemo(() => {
     if (!scheduledAt) return null;
     return new Date(scheduledAt).toISOString();
@@ -137,18 +217,67 @@ export default function WhatsAppScheduleMessageModal({
   }, [recurrenceEndsAt, recurrence]);
 
   const isValid = useMemo(() => {
+    if (mode === 'sequence') {
+      return sequenceIsValid && Boolean(scheduledAtIso) && new Date(scheduledAtIso ?? 0) > new Date();
+    }
     if (!hasContent) return false;
     if (!scheduledAtIso) return false;
     if (new Date(scheduledAtIso) <= new Date()) return false;
     if (recurrence !== 'none' && !recurrenceEndsAtIso) return false;
     return true;
-  }, [hasContent, scheduledAtIso, recurrence, recurrenceEndsAtIso]);
+  }, [hasContent, mode, scheduledAtIso, recurrence, recurrenceEndsAtIso, sequenceIsValid]);
 
   const handleSchedule = useCallback(async () => {
     if (!isValid || submitting) return;
 
     setSubmitting(true);
     try {
+      if (mode === 'sequence') {
+        await commWhatsAppService.scheduleSequence({
+          channelId,
+          chatId,
+          phoneDigits,
+          scheduledAt: scheduledAtIso!,
+          leadId,
+          contractId,
+          label: label.trim() || null,
+          cancelOnInboundMessage: true,
+          steps: sequenceSteps.map((step) => ({
+            delaySeconds: Math.max(0, Math.round(step.delayHours * 3600)),
+            reminderId: step.reminderId || null,
+            message: step.text.trim() || step.attachment?.url
+              ? {
+                  messageType: step.attachment?.type ?? 'text',
+                  textContent: step.text.trim() || null,
+                  mediaUrl: step.attachment?.url ?? null,
+                  mediaMimeType: step.attachment?.mimeType ?? null,
+                  mediaFileName: step.attachment?.filename ?? null,
+                }
+              : null,
+            actions: step.actions.map((action) => ({
+              actionType: action.type,
+              config: action.type === 'update_status'
+                ? { status_id: action.statusId, status_name: action.statusName.trim() }
+                : action.type === 'complete_reminder'
+                  ? { reminder_id: action.reminderId || step.reminderId || null }
+                  : action.type === 'create_reminder'
+                    ? {
+                        title: action.title.trim(),
+                        description: action.description.trim(),
+                        due_seconds: Math.max(0, Math.round(action.dueHours * 3600)),
+                        priority: action.priority,
+                        type: 'Follow-up',
+                      }
+                    : {},
+            })),
+          })),
+        });
+        toast.success('Sequência de mensagens agendada com sucesso!');
+        onScheduled?.();
+        onClose();
+        return;
+      }
+
       if (scheduledMessage) {
         await commWhatsAppService.updateScheduledMessage(scheduledMessage.id, {
           scheduledAt: scheduledAtIso!,
@@ -195,6 +324,7 @@ export default function WhatsAppScheduleMessageModal({
     }
   }, [
     isValid,
+    mode,
     submitting,
     channelId,
     chatId,
@@ -212,6 +342,7 @@ export default function WhatsAppScheduleMessageModal({
     label,
     cancelOnInboundMessage,
     scheduledMessage,
+    sequenceSteps,
     onScheduled,
     onClose,
   ]);
@@ -242,6 +373,47 @@ export default function WhatsAppScheduleMessageModal({
     }
   }, [submitting, uploadingAttachment]);
 
+  const updateSequenceStep = useCallback((stepId: string, patch: Partial<SequenceStepDraft>) => {
+    setSequenceSteps((current) => current.map((step) => step.id === stepId ? { ...step, ...patch } : step));
+  }, []);
+
+  const updateSequenceAction = useCallback((stepId: string, actionId: string, patch: Partial<SequenceActionDraft>) => {
+    setSequenceSteps((current) => current.map((step) => step.id === stepId
+      ? { ...step, actions: step.actions.map((action) => action.id === actionId ? { ...action, ...patch } : action) }
+      : step));
+  }, []);
+
+  const addSequenceStep = useCallback(() => {
+    setSequenceSteps((current) => [...current, {
+      id: crypto.randomUUID(),
+      delayHours: 24,
+      text: '',
+      attachment: null,
+      reminderId: '',
+      actions: [],
+    }]);
+  }, []);
+
+  const uploadSequenceAttachment = useCallback(async (stepId: string, event: ChangeEvent<HTMLInputElement>) => {
+    const [file] = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (!file || submitting) return;
+    try {
+      const uploaded = await commWhatsAppService.uploadScheduledMessageMedia(file);
+      updateSequenceStep(stepId, {
+        attachment: {
+          url: uploaded.url,
+          mimeType: uploaded.mimeType,
+          filename: uploaded.filename,
+          type: uploaded.type,
+        },
+      });
+      toast.success('Anexo adicionado à etapa.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível anexar a mídia.');
+    }
+  }, [submitting, updateSequenceStep]);
+
   return (
     <WorkspaceDialog
       isOpen={isOpen}
@@ -258,7 +430,32 @@ export default function WhatsAppScheduleMessageModal({
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
           onChange={(event) => void handleAttachmentChange(event)}
         />
-        <div>
+        {!scheduledMessage && (
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-1">
+            {(['single', 'sequence'] as const).map((nextMode) => (
+              <button
+                key={nextMode}
+                type="button"
+                onClick={() => {
+                  setMode(nextMode);
+                  if (nextMode === 'sequence') {
+                    setCancelOnInboundMessage(true);
+                    setSequenceSteps((current) => current.map((step, index) => index === 0 && !step.text.trim() && !step.attachment
+                      ? { ...step, text, attachment }
+                      : step));
+                  }
+                }}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === nextMode
+                  ? 'bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+              >
+                {nextMode === 'single' ? 'Mensagem única' : 'Criar sequência'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode === 'single' ? <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Mensagem
           </label>
@@ -324,7 +521,139 @@ export default function WhatsAppScheduleMessageModal({
               ))}
             </div>
           )}
-        </div>
+        </div> : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Etapas da sequência</p>
+                <p className="text-xs text-[var(--text-muted)]">Cada etapa pode enviar uma mensagem, executar ações ou fazer os dois.</p>
+              </div>
+              <Button type="button" variant="secondary" size="sm" onClick={addSequenceStep}>
+                <Plus className="kds-control-icon" /> Adicionar etapa
+              </Button>
+            </div>
+
+            {sequenceSteps.map((step, stepIndex) => (
+              <div key={step.id} className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-xs font-semibold text-[var(--brand-primary)]">{stepIndex + 1}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">Etapa {stepIndex + 1}</span>
+                  </div>
+                  {sequenceSteps.length > 1 && (
+                    <IconButton
+                      type="button"
+                      variant="danger"
+                      aria-label={`Remover etapa ${stepIndex + 1}`}
+                      onClick={() => setSequenceSteps((current) => current.filter((candidate) => candidate.id !== step.id))}
+                    >
+                      <Trash2 className="kds-control-icon" />
+                    </IconButton>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{stepIndex === 0 ? 'Primeira etapa' : 'Aguardar após etapa anterior (horas)'}</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.25}
+                        value={stepIndex === 0 ? 0 : step.delayHours}
+                        disabled={stepIndex === 0}
+                        onChange={(event) => updateSequenceStep(step.id, { delayHours: Number(event.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Lembrete relacionado</label>
+                      <select
+                        className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                        value={step.reminderId}
+                        onChange={(event) => updateSequenceStep(step.id, { reminderId: event.target.value })}
+                      >
+                        <option value="">Nenhum lembrete</option>
+                        {pendingReminders.map((reminder) => <option key={reminder.id} value={reminder.id}>{reminder.titulo}</option>)}
+                      </select>
+                    </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Mensagem (opcional)</label>
+                  <Textarea value={step.text} onChange={(event) => updateSequenceStep(step.id, { text: event.target.value })} rows={3} placeholder="Deixe vazio se esta etapa for somente operacional." />
+                  <input
+                    ref={(element) => { sequenceAttachmentRefs.current[step.id] = element; }}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                    onChange={(event) => void uploadSequenceAttachment(step.id, event)}
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={() => sequenceAttachmentRefs.current[step.id]?.click()}>
+                      <Upload className="kds-control-icon" /> {step.attachment ? 'Substituir mídia' : 'Anexar mídia'}
+                    </Button>
+                    {step.attachment && <span className="flex min-w-0 items-center gap-1 text-xs text-[var(--text-muted)]"><span className="truncate">{step.attachment.filename}</span><IconButton type="button" aria-label="Remover mídia" onClick={() => updateSequenceStep(step.id, { attachment: null })}><X className="kds-control-icon" /></IconButton></span>}
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Ações da etapa</span>
+                    <select
+                      className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                      value=""
+                      onChange={(event) => {
+                        const type = event.target.value as CommWhatsAppScheduledSequenceActionType;
+                        if (!type) return;
+                        setSequenceSteps((current) => current.map((candidate) => candidate.id === step.id
+                          ? { ...candidate, actions: [...candidate.actions, createSequenceAction(type)] }
+                          : candidate));
+                        event.target.value = '';
+                      }}
+                    >
+                      <option value="">Adicionar ação...</option>
+                      <option value="update_status">Alterar status do lead</option>
+                      <option value="complete_reminder">Concluir lembrete</option>
+                      <option value="create_reminder">Criar próximo lembrete</option>
+                      <option value="cancel_sequence">Cancelar sequência</option>
+                    </select>
+                  </div>
+                  {step.actions.map((action, actionIndex) => (
+                    <div key={action.id} className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-[var(--text-secondary)]">{actionIndex + 1}. {action.type === 'update_status' ? 'Alterar status' : action.type === 'complete_reminder' ? 'Concluir lembrete' : action.type === 'create_reminder' ? 'Criar próximo lembrete' : 'Cancelar sequência'}</span>
+                        <IconButton type="button" variant="danger" aria-label="Remover ação" onClick={() => setSequenceSteps((current) => current.map((candidate) => candidate.id === step.id ? { ...candidate, actions: candidate.actions.filter((item) => item.id !== action.id) } : candidate))}><Trash2 className="kds-control-icon" /></IconButton>
+                      </div>
+                      {action.type === 'update_status' && (
+                        <select className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]" value={action.statusId} onChange={(event) => {
+                          const status = leadStatuses.find((candidate) => candidate.id === event.target.value);
+                          updateSequenceAction(step.id, action.id, { statusId: event.target.value, statusName: status?.nome ?? '' });
+                        }}>
+                          <option value="">Selecione o status</option>
+                          {leadStatuses.filter((status) => status.ativo !== false).map((status) => <option key={status.id} value={status.nome}>{status.nome}</option>)}
+                        </select>
+                      )}
+                      {action.type === 'complete_reminder' && (
+                        <select className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]" value={action.reminderId || step.reminderId} onChange={(event) => updateSequenceAction(step.id, action.id, { reminderId: event.target.value })}>
+                          <option value="">Selecione o lembrete</option>
+                          {pendingReminders.map((reminder) => <option key={reminder.id} value={reminder.id}>{reminder.titulo}</option>)}
+                        </select>
+                      )}
+                      {action.type === 'create_reminder' && (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Input value={action.title} placeholder="Título do próximo lembrete" onChange={(event) => updateSequenceAction(step.id, action.id, { title: event.target.value })} />
+                          <Input type="number" min={0} step={0.5} value={action.dueHours} placeholder="Horas até o lembrete" onChange={(event) => updateSequenceAction(step.id, action.id, { dueHours: Number(event.target.value) || 0 })} />
+                          <Textarea className="sm:col-span-2" rows={2} value={action.description} placeholder="Descrição opcional" onChange={(event) => updateSequenceAction(step.id, action.id, { description: event.target.value })} />
+                        </div>
+                      )}
+                      {action.type === 'cancel_sequence' && <p className="text-xs text-[var(--text-muted)]">As etapas futuras serão canceladas depois que esta ação for executada.</p>}
+                    </div>
+                  ))}
+                  {step.actions.length === 0 && <p className="text-xs text-[var(--text-muted)]">Nenhuma ação configurada.</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
@@ -357,7 +686,7 @@ export default function WhatsAppScheduleMessageModal({
           </span>
         </label>
 
-        <div>
+        {mode === 'single' && <div>
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
             <Repeat className="inline-block w-4 h-4 mr-1" />
             Recorrência
@@ -379,9 +708,9 @@ export default function WhatsAppScheduleMessageModal({
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
-        {recurrence !== 'none' && (
+        {recurrence !== 'none' && mode === 'single' && (
           <div>
             <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               <Clock className="inline-block w-4 h-4 mr-1" />

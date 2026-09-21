@@ -226,6 +226,59 @@ export type CommWhatsAppScheduledMessageStatus = 'scheduled' | 'sending' | 'sent
 export type CommWhatsAppScheduledMessageRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
 export type CommWhatsAppScheduledMessageType = 'text' | 'image' | 'video' | 'document' | 'audio' | 'voice';
 
+export type CommWhatsAppScheduledSequenceStatus = 'scheduled' | 'running' | 'paused' | 'completed' | 'cancelled';
+export type CommWhatsAppScheduledSequenceActionType = 'update_status' | 'complete_reminder' | 'create_reminder' | 'cancel_sequence';
+export type CommWhatsAppScheduledSequenceActionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+export type CommWhatsAppScheduledSequenceAction = {
+  id?: string;
+  actionIndex: number;
+  actionType: CommWhatsAppScheduledSequenceActionType;
+  config: Record<string, unknown>;
+  status?: CommWhatsAppScheduledSequenceActionStatus;
+  errorMessage?: string | null;
+};
+
+export type CommWhatsAppScheduledSequenceStep = {
+  id?: string;
+  stepIndex: number;
+  delaySeconds: number;
+  dueAt?: string | null;
+  reminderId?: string | null;
+  messageType?: CommWhatsAppScheduledMessageType | null;
+  textContent?: string | null;
+  mediaUrl?: string | null;
+  mediaMimeType?: string | null;
+  mediaFileName?: string | null;
+  status?: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  lastError?: string | null;
+  actions: CommWhatsAppScheduledSequenceAction[];
+};
+
+export type CommWhatsAppScheduledSequence = {
+  id: string;
+  channel_id: string;
+  chat_id: string | null;
+  phone_digits: string;
+  phone_number: string | null;
+  display_name: string | null;
+  lead_id: string | null;
+  contract_id: string | null;
+  reminder_id: string | null;
+  label: string | null;
+  status: CommWhatsAppScheduledSequenceStatus;
+  scheduled_at: string;
+  current_step_index: number;
+  cancel_on_inbound_message: boolean;
+  last_error: string | null;
+  paused_at: string | null;
+  cancelled_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  steps?: CommWhatsAppScheduledSequenceStep[];
+};
+
 export type CommWhatsAppScheduledMessage = {
   id: string;
   channel_id: string;
@@ -259,6 +312,9 @@ export type CommWhatsAppScheduledMessage = {
   created_by: string | null;
   lead_id: string | null;
   contract_id: string | null;
+  reminder_id: string | null;
+  sequence_id: string | null;
+  sequence_step_id: string | null;
   label: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;

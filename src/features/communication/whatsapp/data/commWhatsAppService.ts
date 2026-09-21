@@ -13,6 +13,7 @@ import type {
   CommWhatsAppMessage,
   CommWhatsAppPhoneContact,
   CommWhatsAppPresenceStatus,
+  CommWhatsAppScheduledSequence,
 } from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
@@ -37,6 +38,33 @@ type ScheduledMediaUpload = {
   mimeType: string;
   filename: string;
   sizeBytes: number;
+};
+
+export type CreateScheduledSequenceInput = {
+  channelId: string;
+  chatId?: string | null;
+  phoneDigits: string;
+  scheduledAt: string;
+  leadId?: string | null;
+  contractId?: string | null;
+  reminderId?: string | null;
+  label?: string | null;
+  cancelOnInboundMessage?: boolean;
+  steps: Array<{
+    delaySeconds: number;
+    reminderId?: string | null;
+    message?: {
+      messageType: string;
+      textContent?: string | null;
+      mediaUrl?: string | null;
+      mediaMimeType?: string | null;
+      mediaFileName?: string | null;
+    } | null;
+    actions: Array<{
+      actionType: string;
+      config: Record<string, unknown>;
+    }>;
+  }>;
 };
 
 function scheduledMediaUploadDescriptor(file: File): Omit<ScheduledMediaUpload, 'url' | 'sizeBytes' | 'filename'> {
@@ -2686,6 +2714,83 @@ export const commWhatsAppService = {
     }
 
     return data as string;
+  },
+
+  async scheduleSequence(input: CreateScheduledSequenceInput): Promise<string> {
+    const steps = input.steps.map((step) => ({
+      delay_seconds: Math.max(0, Math.floor(step.delaySeconds || 0)),
+      reminder_id: step.reminderId ?? null,
+      message: step.message
+        ? {
+            message_type: step.message.messageType,
+            text_content: step.message.textContent ?? null,
+            media_url: step.message.mediaUrl ?? null,
+            media_mime_type: step.message.mediaMimeType ?? null,
+            media_file_name: step.message.mediaFileName ?? null,
+          }
+        : null,
+      actions: step.actions.map((action) => ({
+        type: action.actionType,
+        ...action.config,
+      })),
+    }));
+
+    const { data, error } = await supabase.rpc('create_scheduled_message_sequence' as never, {
+      p_channel_id: input.channelId,
+      p_phone_digits: input.phoneDigits,
+      p_scheduled_at: input.scheduledAt,
+      p_steps: steps,
+      p_chat_id: input.chatId ?? null,
+      p_lead_id: input.leadId ?? null,
+      p_contract_id: input.contractId ?? null,
+      p_reminder_id: input.reminderId ?? null,
+      p_label: input.label ?? null,
+      p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? true,
+    } as never);
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível criar a sequência de mensagens.'));
+    }
+    return data as string;
+  },
+
+  async listScheduledSequences(options?: {
+    channelId?: string;
+    chatId?: string;
+    phoneDigits?: string;
+    leadId?: string;
+    status?: string;
+    limit?: number;
+  }): Promise<CommWhatsAppScheduledSequence[]> {
+    let query = supabase
+      .from('comm_whatsapp_scheduled_sequences' as never)
+      .select('*, steps:comm_whatsapp_scheduled_sequence_steps(*)')
+      .order('scheduled_at', { ascending: false });
+    if (options?.channelId) query = query.eq('channel_id', options.channelId);
+    if (options?.chatId) query = query.eq('chat_id', options.chatId);
+    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+    if (options?.leadId) query = query.eq('lead_id', options.leadId);
+    if (options?.status) query = query.eq('status', options.status);
+    if (options?.limit) query = query.limit(options.limit);
+    const { data, error } = await query;
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível listar as sequências.'));
+    return (data ?? []) as unknown as CommWhatsAppScheduledSequence[];
+  },
+
+  async cancelScheduledSequence(sequenceId: string, reason?: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('cancel_scheduled_message_sequence' as never, {
+      p_sequence_id: sequenceId,
+      p_reason: reason ?? null,
+    } as never);
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível cancelar a sequência.'));
+    return data as boolean;
+  },
+
+  async retryScheduledSequence(sequenceId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('retry_scheduled_message_sequence' as never, {
+      p_sequence_id: sequenceId,
+    } as never);
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível retomar a sequência.'));
+    return data as boolean;
   },
 
   async listScheduledMessages(options?: {

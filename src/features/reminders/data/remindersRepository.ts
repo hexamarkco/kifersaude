@@ -84,6 +84,18 @@ export async function listRemindersForLeadContext(
   return { leadReminders, contractReminders };
 }
 
+export async function listPendingRemindersForLead(leadId: string): Promise<Reminder[]> {
+  const { data, error } = await databaseClient
+    .from('reminders')
+    .select('*')
+    .eq('lead_id', leadId)
+    .eq('lido', false)
+    .order('data_lembrete', { ascending: true })
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((reminder) => normalizeReminder(reminder as Reminder));
+}
+
 async function listByIds<T>(params: {
   table: 'contracts' | 'leads';
   ids: string[];

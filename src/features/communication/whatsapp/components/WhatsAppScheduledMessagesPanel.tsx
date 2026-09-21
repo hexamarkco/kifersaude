@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Clock, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
 import { Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
-import type { CommWhatsAppScheduledMessage, CommWhatsAppScheduledMessageStatus } from '../domain/types';
+import type {
+  CommWhatsAppScheduledMessage,
+  CommWhatsAppScheduledMessageStatus,
+  CommWhatsAppScheduledSequence,
+  CommWhatsAppScheduledSequenceStatus,
+} from '../domain/types';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
 type WhatsAppScheduledMessagesPanelProps = {
@@ -53,6 +58,29 @@ const VIEW_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppSchedule
   all: ['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired'],
 };
 
+const SEQUENCE_STATUS_LABELS: Record<CommWhatsAppScheduledSequenceStatus, string> = {
+  scheduled: 'Agendada',
+  running: 'Executando',
+  paused: 'Pausada',
+  completed: 'Concluída',
+  cancelled: 'Cancelada',
+};
+
+const SEQUENCE_STATUS_COLORS: Record<CommWhatsAppScheduledSequenceStatus, string> = {
+  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
+  running: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
+  paused: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
+  completed: 'bg-[var(--success-soft)] text-[var(--success-text)]',
+  cancelled: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
+};
+
+const VIEW_SEQUENCE_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppScheduledSequenceStatus[]> = {
+  upcoming: ['scheduled', 'running'],
+  attention: ['paused'],
+  history: ['completed', 'cancelled'],
+  all: ['scheduled', 'running', 'paused', 'completed', 'cancelled'],
+};
+
 function normalizeSearchTerm(value: string): string {
   return value
     .normalize('NFD')
@@ -92,6 +120,7 @@ export default function WhatsAppScheduledMessagesPanel({
   onScheduleNew,
 }: WhatsAppScheduledMessagesPanelProps) {
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
+  const [sequences, setSequences] = useState<CommWhatsAppScheduledSequence[]>([]);
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
@@ -130,6 +159,14 @@ export default function WhatsAppScheduledMessagesPanel({
           ? allMessages.filter((m) => m.phone_digits === phoneDigits)
           : allMessages,
       );
+
+      const sequenceData = await commWhatsAppService.listScheduledSequences({
+        ...(channelId ? { channelId } : {}),
+        ...(chatId ? { chatId } : {}),
+        ...(phoneDigits && !chatId ? { phoneDigits } : {}),
+        limit: SCHEDULED_MESSAGES_PAGE_SIZE,
+      });
+      setSequences(sequenceData);
     } catch (error) {
       console.error('[ScheduledMessagesPanel] error loading', error);
     } finally {
@@ -169,6 +206,34 @@ export default function WhatsAppScheduledMessagesPanel({
     }
   }, [loadMessages]);
 
+  const handleCancelSequence = useCallback(async (id: string) => {
+    setCancellingId(id);
+    try {
+      await commWhatsAppService.cancelScheduledSequence(id, 'Cancelada pelo usuário');
+      toast.success('Sequência cancelada');
+      await loadMessages();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao cancelar sequência';
+      toast.error(message);
+    } finally {
+      setCancellingId(null);
+    }
+  }, [loadMessages]);
+
+  const handleRetrySequence = useCallback(async (id: string) => {
+    setCancellingId(id);
+    try {
+      await commWhatsAppService.retryScheduledSequence(id);
+      toast.success('Sequência retomada');
+      await loadMessages();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao retomar sequência';
+      toast.error(message);
+    } finally {
+      setCancellingId(null);
+    }
+  }, [loadMessages]);
+
   const viewCounts = useMemo(() => {
     const counts: Record<ScheduledMessagesView, number> = {
       upcoming: 0,
@@ -186,12 +251,29 @@ export default function WhatsAppScheduledMessagesPanel({
     return counts;
   }, [messages]);
 
+  const sequenceViewCounts = useMemo(() => {
+    const counts: Record<ScheduledMessagesView, number> = {
+      upcoming: 0,
+      attention: 0,
+      history: 0,
+      all: sequences.length,
+    };
+
+    for (const sequence of sequences) {
+      if (VIEW_SEQUENCE_STATUSES.upcoming.includes(sequence.status)) counts.upcoming += 1;
+      if (VIEW_SEQUENCE_STATUSES.attention.includes(sequence.status)) counts.attention += 1;
+      if (VIEW_SEQUENCE_STATUSES.history.includes(sequence.status)) counts.history += 1;
+    }
+
+    return counts;
+  }, [sequences]);
+
   const viewTabs: TabItem<ScheduledMessagesView>[] = useMemo(() => [
-    { id: 'upcoming', label: 'Próximas', badge: viewCounts.upcoming },
-    { id: 'attention', label: 'Atenção', badge: viewCounts.attention },
-    { id: 'history', label: 'Histórico', badge: viewCounts.history },
-    { id: 'all', label: 'Todas', badge: viewCounts.all },
-  ], [viewCounts]);
+    { id: 'upcoming', label: 'Próximas', badge: viewCounts.upcoming + sequenceViewCounts.upcoming },
+    { id: 'attention', label: 'Atenção', badge: viewCounts.attention + sequenceViewCounts.attention },
+    { id: 'history', label: 'Histórico', badge: viewCounts.history + sequenceViewCounts.history },
+    { id: 'all', label: 'Todas', badge: viewCounts.all + sequenceViewCounts.all },
+  ], [sequenceViewCounts, viewCounts]);
 
   const visibleMessages = useMemo(() => {
     const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
@@ -223,6 +305,35 @@ export default function WhatsAppScheduledMessagesPanel({
       });
   }, [activeView, endDate, messages, searchQuery, startDate]);
 
+  const visibleSequences = useMemo(() => {
+    const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
+    const allowedStatuses = VIEW_SEQUENCE_STATUSES[activeView];
+    const startDateTime = startDate ? getDateRangeBoundary(startDate, 'start') : null;
+    const endDateTime = endDate ? getDateRangeBoundary(endDate, 'end') : null;
+
+    return sequences
+      .filter((sequence) => {
+        if (!allowedStatuses.includes(sequence.status)) return false;
+        const scheduleTime = new Date(sequence.scheduled_at).getTime();
+        if (startDateTime !== null && scheduleTime < startDateTime) return false;
+        if (endDateTime !== null && scheduleTime > endDateTime) return false;
+        if (!normalizedQuery) return true;
+
+        return normalizeSearchTerm([
+          sequence.label,
+          sequence.display_name,
+          sequence.phone_number,
+          sequence.phone_digits,
+          SEQUENCE_STATUS_LABELS[sequence.status],
+        ].filter(Boolean).join(' ')).includes(normalizedQuery);
+      })
+      .sort((first, second) => {
+        const firstDate = new Date(first.scheduled_at).getTime();
+        const secondDate = new Date(second.scheduled_at).getTime();
+        return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
+      });
+  }, [activeView, endDate, searchQuery, sequences, startDate]);
+
   const hasListFilters = Boolean(searchQuery || startDate || endDate);
 
   if (!isOpen) return null;
@@ -244,7 +355,7 @@ export default function WhatsAppScheduledMessagesPanel({
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
               </h2>
-              <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) encontrada(s)</p>
+              <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) e {sequences.length} sequência(s)</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -265,12 +376,12 @@ export default function WhatsAppScheduledMessagesPanel({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
             </div>
-          ) : messages.length === 0 ? (
+          ) : messages.length === 0 && sequences.length === 0 ? (
             <div className="text-center py-12">
               <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-muted)]">Nenhuma mensagem agendada</p>
+              <p className="text-[var(--text-muted)]">Nenhum agendamento encontrado</p>
               <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
-                Agende mensagens para envio automático
+                Agende mensagens únicas ou sequências para envio automático
               </p>
               {onScheduleNew && (
                 <Button onClick={onScheduleNew} size="sm">
@@ -348,11 +459,29 @@ export default function WhatsAppScheduledMessagesPanel({
               </div>
 
               <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-                <span>{visibleMessages.length} resultado(s) nesta visão</span>
+                <span>{visibleMessages.length} mensagem(ns) e {visibleSequences.length} sequência(s) nesta visão</span>
                 {hasListFilters ? <span>Filtro aplicado</span> : null}
               </div>
 
-              {visibleMessages.length === 0 ? (
+              {visibleSequences.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                    <Repeat className="kds-control-icon text-[var(--brand-primary)]" />
+                    Sequências
+                  </div>
+                  {visibleSequences.map((sequence) => (
+                    <ScheduledSequenceItem
+                      key={sequence.id}
+                      sequence={sequence}
+                      cancelling={cancellingId === sequence.id}
+                      onCancel={() => void handleCancelSequence(sequence.id)}
+                      onRetry={() => void handleRetrySequence(sequence.id)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {visibleMessages.length === 0 && visibleSequences.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-4 py-10 text-center">
                   <p className="text-sm font-medium text-[var(--text-secondary)]">
                     Nenhuma mensagem nesta visão
@@ -483,6 +612,68 @@ function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete 
                 aria-label="Excluir mensagem"
               >
                 {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <Trash2 className="kds-control-icon" />}
+              </IconButton>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type ScheduledSequenceItemProps = {
+  sequence: CommWhatsAppScheduledSequence;
+  cancelling: boolean;
+  onCancel: () => void;
+  onRetry: () => void;
+};
+
+function ScheduledSequenceItem({ sequence, cancelling, onCancel, onRetry }: ScheduledSequenceItemProps) {
+  const canCancel = sequence.status === 'scheduled' || sequence.status === 'running' || sequence.status === 'paused';
+  const canRetry = sequence.status === 'paused';
+  const stepCount = sequence.steps?.length;
+
+  return (
+    <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${SEQUENCE_STATUS_COLORS[sequence.status]}`}>
+              {SEQUENCE_STATUS_LABELS[sequence.status]}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
+              Etapa {sequence.current_step_index + 1}{stepCount ? ` de ${stepCount}` : ''}
+            </span>
+          </div>
+          <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+            {sequence.label || 'Sequência de mensagens'}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+            <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
+              <Clock className="kds-control-icon" />
+              {getScheduleTimingLabel(sequence.scheduled_at)}
+            </span>
+            <span>{formatDateTimeFullBR(sequence.scheduled_at)}</span>
+            <span>{formatCommWhatsAppPhoneLabel(sequence.phone_digits)}</span>
+            {sequence.display_name && sequence.display_name !== sequence.phone_number && (
+              <span className="truncate">{sequence.display_name}</span>
+            )}
+          </div>
+          {sequence.last_error && (
+            <p className="mt-1 truncate text-xs text-[var(--danger-text)]">{sequence.last_error}</p>
+          )}
+        </div>
+
+        {(canCancel || canRetry) && (
+          <div className="flex shrink-0 items-center gap-1">
+            {canRetry && (
+              <IconButton onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência">
+                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <RotateCcw className="kds-control-icon" />}
+              </IconButton>
+            )}
+            {canCancel && (
+              <IconButton onClick={onCancel} disabled={cancelling} aria-label="Cancelar sequência" title="Cancelar sequência">
+                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <X className="kds-control-icon" />}
               </IconButton>
             )}
           </div>

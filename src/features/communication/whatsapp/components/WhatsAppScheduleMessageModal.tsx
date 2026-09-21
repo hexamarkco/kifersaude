@@ -7,6 +7,8 @@ import {
   DateTimePicker,
   IconButton,
   Input,
+  SegmentedControl,
+  Select,
   Textarea,
   WorkspaceDialog,
 } from '../../../../design-system';
@@ -431,28 +433,27 @@ export default function WhatsAppScheduleMessageModal({
           onChange={(event) => void handleAttachmentChange(event)}
         />
         {!scheduledMessage && (
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-1">
-            {(['single', 'sequence'] as const).map((nextMode) => (
-              <button
-                key={nextMode}
-                type="button"
-                onClick={() => {
-                  setMode(nextMode);
-                  if (nextMode === 'sequence') {
-                    setCancelOnInboundMessage(true);
-                    setSequenceSteps((current) => current.map((step, index) => index === 0 && !step.text.trim() && !step.attachment
-                      ? { ...step, text, attachment }
-                      : step));
-                  }
-                }}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === nextMode
-                  ? 'bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-              >
-                {nextMode === 'single' ? 'Mensagem única' : 'Criar sequência'}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            items={[
+              { id: 'single', label: 'Mensagem única' },
+              { id: 'sequence', label: 'Criar sequência' },
+            ]}
+            value={mode}
+            onChange={(nextMode) => {
+              setMode(nextMode);
+              if (nextMode === 'sequence') {
+                setCancelOnInboundMessage(true);
+                setSequenceSteps((current) => current.map((step, index) => index === 0 && !step.text.trim() && !step.attachment
+                  ? { ...step, text, attachment }
+                  : step));
+              }
+            }}
+            size="sm"
+            className="w-full"
+            listClassName="grid w-full grid-cols-2"
+            triggerClassName="w-full"
+            ariaLabel="Tipo de agendamento"
+          />
         )}
 
         {mode === 'single' ? <div>
@@ -566,14 +567,16 @@ export default function WhatsAppScheduleMessageModal({
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Lembrete relacionado</label>
-                      <select
-                        className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                      <Select
+                        size="sm"
                         value={step.reminderId}
+                        placeholder="Nenhum lembrete"
                         onChange={(event) => updateSequenceStep(step.id, { reminderId: event.target.value })}
-                      >
-                        <option value="">Nenhum lembrete</option>
-                        {pendingReminders.map((reminder) => <option key={reminder.id} value={reminder.id}>{reminder.titulo}</option>)}
-                      </select>
+                        options={[
+                          { value: '', label: 'Nenhum lembrete' },
+                          ...pendingReminders.map((reminder) => ({ value: reminder.id, label: reminder.titulo })),
+                        ]}
+                      />
                     </div>
                 </div>
 
@@ -598,24 +601,25 @@ export default function WhatsAppScheduleMessageModal({
                 <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Ações da etapa</span>
-                    <select
-                      className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                    <Select
+                      size="sm"
                       value=""
+                      placeholder="Adicionar ação..."
                       onChange={(event) => {
                         const type = event.target.value as CommWhatsAppScheduledSequenceActionType;
                         if (!type) return;
                         setSequenceSteps((current) => current.map((candidate) => candidate.id === step.id
                           ? { ...candidate, actions: [...candidate.actions, createSequenceAction(type)] }
                           : candidate));
-                        event.target.value = '';
                       }}
-                    >
-                      <option value="">Adicionar ação...</option>
-                      <option value="update_status">Alterar status do lead</option>
-                      <option value="complete_reminder">Concluir lembrete</option>
-                      <option value="create_reminder">Criar próximo lembrete</option>
-                      <option value="cancel_sequence">Cancelar sequência</option>
-                    </select>
+                      options={[
+                        { value: '', label: 'Adicionar ação...' },
+                        { value: 'update_status', label: 'Alterar status do lead' },
+                        { value: 'complete_reminder', label: 'Concluir lembrete' },
+                        { value: 'create_reminder', label: 'Criar próximo lembrete' },
+                        { value: 'cancel_sequence', label: 'Cancelar sequência' },
+                      ]}
+                    />
                   </div>
                   {step.actions.map((action, actionIndex) => (
                     <div key={action.id} className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
@@ -624,19 +628,31 @@ export default function WhatsAppScheduleMessageModal({
                         <IconButton type="button" variant="danger" aria-label="Remover ação" onClick={() => setSequenceSteps((current) => current.map((candidate) => candidate.id === step.id ? { ...candidate, actions: candidate.actions.filter((item) => item.id !== action.id) } : candidate))}><Trash2 className="kds-control-icon" /></IconButton>
                       </div>
                       {action.type === 'update_status' && (
-                        <select className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]" value={action.statusId} onChange={(event) => {
+                        <Select
+                          size="sm"
+                          value={action.statusId}
+                          placeholder="Selecione o status"
+                          options={[
+                            { value: '', label: 'Selecione o status' },
+                            ...leadStatuses.filter((status) => status.ativo !== false).map((status) => ({ value: status.id, label: status.nome })),
+                          ]}
+                          onChange={(event) => {
                           const status = leadStatuses.find((candidate) => candidate.id === event.target.value);
                           updateSequenceAction(step.id, action.id, { statusId: event.target.value, statusName: status?.nome ?? '' });
-                        }}>
-                          <option value="">Selecione o status</option>
-                          {leadStatuses.filter((status) => status.ativo !== false).map((status) => <option key={status.id} value={status.nome}>{status.nome}</option>)}
-                        </select>
+                          }}
+                        />
                       )}
                       {action.type === 'complete_reminder' && (
-                        <select className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]" value={action.reminderId || step.reminderId} onChange={(event) => updateSequenceAction(step.id, action.id, { reminderId: event.target.value })}>
-                          <option value="">Selecione o lembrete</option>
-                          {pendingReminders.map((reminder) => <option key={reminder.id} value={reminder.id}>{reminder.titulo}</option>)}
-                        </select>
+                        <Select
+                          size="sm"
+                          value={action.reminderId || step.reminderId}
+                          placeholder="Selecione o lembrete"
+                          onChange={(event) => updateSequenceAction(step.id, action.id, { reminderId: event.target.value })}
+                          options={[
+                            { value: '', label: 'Selecione o lembrete' },
+                            ...pendingReminders.map((reminder) => ({ value: reminder.id, label: reminder.titulo })),
+                          ]}
+                        />
                       )}
                       {action.type === 'create_reminder' && (
                         <div className="grid gap-2 sm:grid-cols-2">

@@ -157,6 +157,7 @@ import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteMo
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
+import WhatsAppMessageDetailsModal from './components/WhatsAppMessageDetailsModal';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
@@ -2339,6 +2340,7 @@ export default function WhatsAppInboxScreen() {
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
   const [messageActionMenuPosition, setMessageActionMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [messageActionMenuPointerAnchor, setMessageActionMenuPointerAnchor] = useState<PointerAnchor | null>(null);
+  const [messageDetailsMessageId, setMessageDetailsMessageId] = useState<string | null>(null);
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
   const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
@@ -3292,6 +3294,10 @@ export default function WhatsAppInboxScreen() {
 
     return visibleMessages.find((message) => message.id === openMessageActionMenuMessageId) ?? null;
   }, [openMessageActionMenuMessageId, visibleMessages]);
+  const messageDetailsMessage = useMemo(() => {
+    if (!messageDetailsMessageId) return null;
+    return visibleMessages.find((message) => message.id === messageDetailsMessageId) ?? null;
+  }, [messageDetailsMessageId, visibleMessages]);
   const openChatMenuChat = useMemo(() => {
     if (!openChatMenuChatId) {
       return null;
@@ -3320,6 +3326,12 @@ export default function WhatsAppInboxScreen() {
     setOpenReactionPickerMessageId(null);
     setMessageActionMenuPointerAnchor(anchor);
     setOpenMessageActionMenuMessageId(messageId);
+  }, []);
+
+  const handleOpenMessageDetails = useCallback((message: CommWhatsAppMessage) => {
+    setMessageActionMenuPointerAnchor(null);
+    setOpenMessageActionMenuMessageId(null);
+    setMessageDetailsMessageId(message.id);
   }, []);
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
@@ -6517,8 +6529,6 @@ export default function WhatsAppInboxScreen() {
       return { segment, optimisticMessage, clientRequestId };
     });
 
-    const wasArchived = Boolean(chat.is_archived);
-
     enqueueChatSend(chat.id, async () => {
       let hadSuccessfulSend = false;
 
@@ -6562,18 +6572,15 @@ export default function WhatsAppInboxScreen() {
         void Promise.resolve(onSent?.()).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar auditoria do follow-up enviado', error);
         });
-        if (wasArchived) {
-          setArchivedSectionOpen(false);
-        }
         // BUG FIX (BUG #13): erro de pós-envio agora avisa o usuário
         // de forma discreta (warning), em vez de falhar silenciosamente.
-        void Promise.all([loadMessages(chat, 'send'), loadChats({ sections: wasArchived ? ['active'] : undefined })]).catch((error) => {
+        void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
           toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
         });
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, setArchivedSectionOpen, updateOptimisticChatPreviewStatus]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
 
   const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
     if (!selectedChat || message.direction !== 'inbound') return;
@@ -6668,7 +6675,6 @@ export default function WhatsAppInboxScreen() {
         });
 
         enqueueChatSend(selectedChat.id, async () => {
-          const wasArchived = Boolean(selectedChat.is_archived);
           let shouldStopQueue = false;
           let hadSuccessfulSend = false;
           let firstErrorMessage = '';
@@ -6765,11 +6771,8 @@ export default function WhatsAppInboxScreen() {
           }
 
           if (hadSuccessfulSend || hadAmbiguousSend) {
-            if (wasArchived) {
-              setArchivedSectionOpen(false);
-            }
             void (async () => {
-              await Promise.all([loadMessages(selectedChat, 'send'), loadChats({ sections: wasArchived ? ['active'] : undefined })]);
+              await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
             })().catch((error) => {
               console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de midia', error);
             });
@@ -9721,7 +9724,7 @@ export default function WhatsAppInboxScreen() {
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
                         </span>
-                        {showEditAction || showDeleteAction || showReplyForwardActions ? (
+                        {message.direction === 'outbound' || showEditAction || showDeleteAction || showReplyForwardActions ? (
                           <button
                             ref={(node) => {
                               if (node) {
@@ -9825,7 +9828,7 @@ export default function WhatsAppInboxScreen() {
                                 highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
                               )}
                               onContextMenu={(event) => {
-                                if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
+                                if (message.direction !== 'outbound' && !showEditAction && !showDeleteAction && !showReplyForwardActions) {
                                   return;
                                 }
 
@@ -10718,6 +10721,11 @@ export default function WhatsAppInboxScreen() {
           onSubmit={() => void handleSaveEditedMessage()}
         />
 
+        <WhatsAppMessageDetailsModal
+          message={messageDetailsMessage}
+          onClose={() => setMessageDetailsMessageId(null)}
+        />
+
         {forwardingMessage ? (
           <Dialog
             open
@@ -11135,6 +11143,16 @@ export default function WhatsAppInboxScreen() {
         >
           {openMessageActionMenuMessage ? (
             <div className="flex flex-col gap-1">
+              {openMessageActionMenuMessage.direction === 'outbound' ? (
+                <button
+                  type="button"
+                  onClick={() => handleOpenMessageDetails(openMessageActionMenuMessage)}
+                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                >
+                  <Info className="h-4 w-4 shrink-0" />
+                  <span>Dados da mensagem</span>
+                </button>
+              ) : null}
               {canReplyOrForwardMessage(openMessageActionMenuMessage) ? (
                 <>
                   <button

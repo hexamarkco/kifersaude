@@ -97,7 +97,7 @@ test('releases an archive patch when a newer inbound server message unarchives t
   assert.equal(state.has(activeChat.id), false);
 });
 
-test('releases archive patch when server unarchived the chat via outbound send', () => {
+test('keeps archive patch when outbound activity reaches the server', () => {
   const state = new Map<string, PendingChatInboxStatePatch>();
   const activeChat = baseChat({ is_archived: false, archived_at: null });
   const archivedAt = new Date(Date.now() - 1_000).toISOString();
@@ -117,6 +117,6 @@ test('releases archive patch when server unarchived the chat via outbound send',
   });
   const result = applyPendingChatInboxState([serverChat], state)[0];
 
-  assert.equal(result.is_archived, false);
-  assert.equal(state.has(activeChat.id), false);
+  assert.equal(result.is_archived, true);
+  assert.equal(state.has(activeChat.id), true);
 });

@@ -32,7 +32,7 @@ describe('getReliableLeadFirstName', () => {
 });
 
 describe('buildReplyUserPrompt', () => {
-  test('nao reapresenta a Luiza nem exige frase social na primeira resposta', () => {
+  test('nao reapresenta a Luiza e pede uma ponte humana contextual na primeira resposta', () => {
     const prompt = buildReplyUserPrompt([
       { role: 'ai', content: 'Oi, tudo bem?' },
       { role: 'lead', content: 'Quero um plano para mim.' },
@@ -44,7 +44,8 @@ describe('buildReplyUserPrompt', () => {
     assert.match(prompt, /PRIMEIRA RESPOSTA APOS A ABORDAGEM/);
     assert.match(prompt, /ja cumprimentou e apresentou a Luiza/i);
     assert.match(prompt, /pode usar apenas o primeiro nome validado "Maria"/i);
-    assert.match(prompt, /Evite aberturas prontas como "prazer em falar com voce"/i);
+    assert.match(prompt, /microtransicao humana e especifica/i);
+    assert.match(prompt, /nao responda apenas com a pergunta/i);
     assert.doesNotMatch(prompt, /ABERTURA OBRIGATORIA DESTA RESPOSTA/);
   });
 

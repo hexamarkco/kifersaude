@@ -7,6 +7,7 @@ import {
   getDeletedMessageInfo,
   getEditedMessageInfo,
   getMessageContactCardInfo,
+  getMessageDeliveryStatusHistory,
   getMessageInteractiveInfo,
   getMessageInviteInfo,
   getMessageLinkPreview,
@@ -78,6 +79,25 @@ test('reads quote, link and contact metadata used by message rendering', () => {
       { name: 'Bruno', phoneNumber: null },
     ],
   });
+});
+
+test('normalizes and orders delivery status history from message metadata', () => {
+  const message = createMessage({
+    direction: 'outbound',
+    metadata: {
+      delivery_status_history: [
+        { status: 'read', at: '2026-09-08T12:03:00.000Z' },
+        { status: 'SENT', at: '2026-09-08T12:00:00.000Z' },
+        { status: 'read', at: '2026-09-08T12:03:00.000Z' },
+        { status: 'received', at: 'invalid' },
+      ],
+    },
+  });
+
+  assert.deepEqual(getMessageDeliveryStatusHistory(message), [
+    { status: 'sent', at: '2026-09-08T12:00:00.000Z', error: null },
+    { status: 'read', at: '2026-09-08T12:03:00.000Z', error: null },
+  ]);
 });
 
 test('normalizes interactive buttons, sections and selected reply', () => {

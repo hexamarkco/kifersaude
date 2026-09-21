@@ -49,6 +49,12 @@ export type MessageInviteInfo = {
   expiration: number | null;
 };
 
+export type MessageDeliveryStatusEvent = {
+  status: string;
+  at: string;
+  error: string | null;
+};
+
 const readRecord = (value: unknown): Record<string, unknown> | null => (
   value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -56,6 +62,32 @@ const readRecord = (value: unknown): Record<string, unknown> | null => (
 );
 
 export const getMessageMetadataRecord = (message?: CommWhatsAppMessage | null) => readRecord(message?.metadata) ?? {};
+
+export const getMessageDeliveryStatusHistory = (message?: CommWhatsAppMessage | null): MessageDeliveryStatusEvent[] => {
+  if (!message) return [];
+
+  const rawHistory = getMessageMetadataRecord(message).delivery_status_history;
+  const history = Array.isArray(rawHistory)
+    ? rawHistory.flatMap((item): MessageDeliveryStatusEvent[] => {
+        const record = readRecord(item);
+        const status = String(record?.status ?? '').trim().toLowerCase();
+        const at = String(record?.at ?? '').trim();
+        if (!status || !at || Number.isNaN(new Date(at).getTime())) return [];
+        return [{
+          status,
+          at,
+          error: String(record?.error ?? '').trim() || null,
+        }];
+      })
+    : [];
+
+  const uniqueHistory = new Map<string, MessageDeliveryStatusEvent>();
+  history.forEach((event) => uniqueHistory.set(`${event.status}:${event.at}`, event));
+
+  return Array.from(uniqueHistory.values()).sort((left, right) => (
+    new Date(left.at).getTime() - new Date(right.at).getTime()
+  ));
+};
 
 export const getMessageClientRequestId = (message?: CommWhatsAppMessage | null) => {
   const metadata = getMessageMetadataRecord(message);

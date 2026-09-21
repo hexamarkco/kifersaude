@@ -57,7 +57,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Merge de leads permanece pendente: as referências por FK têm políticas de exclusão distintas, existem colisões em índices únicos e documentos privados prendem metadados e caminho do Storage ao UUID original.
 - Nome de perfil/push name de `GET /contacts/{ContactID}` tem prioridade sobre `chat_name` de eventos.
 - Persistência com `external_message_id` deve manter o caminho de `INSERT ... ON CONFLICT DO NOTHING`; nunca substituir por apenas SELECT/UPDATE.
-- Deduplicação e `message_at > archived_at` protegem contra ecos. Mensagem inbound ou outbound nova desarquiva o chat, salvo regra de silenciamento; soft-delete reabre com inbound real posterior.
+- Deduplicação e `message_at > archived_at` protegem contra ecos. Mensagem inbound nova e contabilizada pode desarquivar o chat, salvo regra de silenciamento; persistência outbound e atualização de status preservam o arquivamento manual. Soft-delete reabre com inbound real posterior.
 - Mídias históricas ficam em Storage (`comm-whatsapp-media`), não dependem de URL/MediaID temporário da Whapi.
 - Status outbound continua sendo consultado de `delivered` até `read`; webhook ausente usa `GET /statuses/{MessageID}`.
 - Follow-up normal usa duas etapas na mesma Feature `followup.generate`: a primeira gera o rascunho e a segunda IA faz revisão semântica com o histórico completo, podendo aprovar, reescrever ou recomendar espera. Cada etapa admite no máximo um retry de contrato técnico e mantém o mesmo modelo resolvido. `followup.refine` é manual e a recuperação tardia usa `comm_follow_up_audit_log` para evitar chamada duplicada.

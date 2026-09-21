@@ -214,15 +214,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   }, [activeOrigins, formData.origem, lead]);
 
   useEffect(() => {
-    if (!lead && !formData.tipo_contratacao && tipoContratacaoOptions.length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        tipo_contratacao: tipoContratacaoOptions[0].label,
-      }));
-    }
-  }, [formData.tipo_contratacao, lead, tipoContratacaoOptions]);
-
-  useEffect(() => {
     if (!lead && !formData.responsavel && responsavelOptions.length > 0) {
       setFormData((prev) => ({ ...prev, responsavel: responsavelOptions[0].label }));
     }
@@ -349,7 +340,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         { value: formData.nome_completo.trim(), label: 'nome completo' },
         { value: formData.telefone.trim(), label: 'telefone' },
         { value: formData.origem.trim(), label: 'origem do lead' },
-        { value: formData.tipo_contratacao.trim(), label: 'tipo de contratação' },
         { value: formData.status.trim(), label: 'status' },
         { value: formData.responsavel.trim(), label: 'responsável' },
       ];
@@ -613,7 +603,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             )}
           </Field>
 
-          <Field label="Tipo de contratação *">
+          <Field label="Tipo de contratação">
             {tipoContratacaoOptions.length > 0 ? (
               <FilterSelect
                 icon={Briefcase}
@@ -624,8 +614,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                     tipo_contratacao: value,
                   }))
                 }
-                placeholder="Tipo de contratação"
-                includePlaceholderOption={false}
+                placeholder="Definir após qualificação"
+                includePlaceholderOption
                 options={[
                   ...(!tipoContratacaoOptions.some(
                     (option) => option.label === formData.tipo_contratacao,
@@ -646,7 +636,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             ) : (
               <Input
                 type="text"
-                required
                 leftIcon={Briefcase}
                 value={formData.tipo_contratacao}
                 onChange={(e) =>

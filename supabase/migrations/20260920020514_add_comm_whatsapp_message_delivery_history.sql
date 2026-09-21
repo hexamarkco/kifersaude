@@ -90,9 +90,6 @@ $$;
 
 REVOKE ALL ON FUNCTION public.comm_whatsapp_merge_delivery_status_history(jsonb, jsonb) FROM PUBLIC;
 
-ALTER TABLE public.comm_whatsapp_pending_message_statuses
-  ADD COLUMN IF NOT EXISTS delivery_status_history jsonb NOT NULL DEFAULT '[]'::jsonb;
-
 -- Mensagens antigas não têm como recuperar os webhooks já recebidos. Ainda
 -- assim, o horário de envio e o último status conhecido ficam disponíveis no
 -- modal sem inventar horários intermediários.
@@ -115,6 +112,9 @@ SET metadata = jsonb_set(
 )
 WHERE m.direction = 'outbound'
   AND jsonb_typeof(COALESCE(m.metadata, '{}'::jsonb)->'delivery_status_history') IS DISTINCT FROM 'array';
+
+ALTER TABLE public.comm_whatsapp_pending_message_statuses
+  ADD COLUMN IF NOT EXISTS delivery_status_history jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_seed_delivery_status_history()
 RETURNS trigger

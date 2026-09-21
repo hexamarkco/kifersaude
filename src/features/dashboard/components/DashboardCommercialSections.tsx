@@ -238,7 +238,7 @@ export function DashboardCommercialSections({
 
       <section data-panel-animate aria-labelledby="dashboard-kpi-title">
         <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
-        <div className={`mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 ${showFinancialMetrics ? '2xl:grid-cols-6' : '2xl:grid-cols-4'}`}>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <KpiCard padding="sm" icon={<Briefcase className="h-4 w-4" aria-hidden="true" />} title="Vendas" subtitle="Contratos fechados" value={<span className="tabular-nums">{analysis.salesCount}</span>} trend={<KpiTrend>{`${analysis.leadsReceived} leads recebidos`}</KpiTrend>} className="h-full" />
           <KpiCard padding="sm" icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} title="Valor mensal vendido" subtitle="Contratos do período" value={<span className="tabular-nums">{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? currency(analysis.monthlyRevenue) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? 'Mensalidade registrada' : 'Sem mensalidade cadastrada'}</KpiTrend>} className="h-full" />
           {showFinancialMetrics && <KpiCard padding="sm" icon={<WalletCards className="h-4 w-4" aria-hidden="true" />} title="Comissão prevista" subtitle="Vendas do período" value={<span className="tabular-nums">{analysis.dataCoverage.commissionExpected ? currency(analysis.commissionExpected) : '—'}</span>} trend={<KpiTrend tone={analysis.dataCoverage.commissionExpected ? 'neutral' : 'warning'}>{analysis.dataCoverage.commissionExpected ? 'Sem forecast adicional' : 'Sem comissão cadastrada'}</KpiTrend>} className="h-full" />}

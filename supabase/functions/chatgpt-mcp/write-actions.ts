@@ -56,6 +56,12 @@ const MAX_BULK_SCHEDULED_MESSAGES = 50;
 const SCHEDULED_MESSAGE_STATUSES = new Set(['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired']);
 const SCHEDULED_MESSAGE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status']);
 const SCHEDULED_MESSAGE_SELECT = 'id,chat_id,lead_id,text_content,message_type,media_url,media_mime_type,media_file_name,media_size_bytes,scheduled_at,status,cancel_on_inbound_message,mcp_client_request_id,created_at,updated_at,sent_at,cancelled_at,error_message,cancelled_reason,delivery_status';
+const SCHEDULED_SEQUENCE_STATUSES = new Set(['scheduled', 'running', 'paused', 'completed', 'cancelled']);
+const SCHEDULED_SEQUENCE_ORDER_FIELDS = new Set(['scheduled_at', 'created_at', 'updated_at', 'status']);
+const SCHEDULED_SEQUENCE_SELECT = 'id,channel_id,chat_id,phone_digits,phone_number,display_name,lead_id,contract_id,reminder_id,label,status,scheduled_at,current_step_index,cancel_on_inbound_message,last_error,paused_at,cancelled_at,completed_at,created_by,mcp_client_request_id,created_at,updated_at';
+const MAX_SCHEDULED_SEQUENCE_STEPS = 30;
+const MAX_SCHEDULED_SEQUENCE_ACTIONS = 10;
+const MAX_SCHEDULED_SEQUENCE_DELAY_SECONDS = 366 * 24 * 60 * 60;
 const COMMERCIAL_FOLLOW_UP_TYPES = new Set(['Follow-up']);
 const FOLLOW_UP_TYPE_ALIASES = new Set(['retorno', 'follow up', 'follow-up', 'followup']);
 const MAX_BULK_LEAD_MUTATIONS = 25;
@@ -972,6 +978,192 @@ async function scheduleWhatsAppMessage(supabase: SupabaseClient, params: Record<
   };
 }
 
+type NormalizedScheduledSequenceStep = {
+  delay_seconds: number;
+  reminder_id: string | null;
+  message: {
+    message_type: ScheduledMedia['messageType'] | 'text';
+    text_content: string | null;
+    media_url: string | null;
+    media_mime_type: string | null;
+    media_file_name: string | null;
+  } | null;
+  actions: Array<Record<string, unknown>>;
+};
+
+const normalizeSequenceAction = (value: unknown): { action?: Record<string, unknown>; error?: McpWriteResult } => {
+  if (!isRecord(value)) return { error: errorResult('INVALID_INPUT', 'Cada ação da sequência deve ser um objeto.') };
+  const type = text(value.type);
+  if (!['update_status', 'complete_reminder', 'create_reminder', 'cancel_sequence'].includes(type)) {
+    return { error: errorResult('INVALID_INPUT', 'A ação deve ser update_status, complete_reminder, create_reminder ou cancel_sequence.') };
+  }
+  const allowed = {
+    update_status: new Set(['type', 'status_id', 'status_name']),
+    complete_reminder: new Set(['type', 'reminder_id']),
+    create_reminder: new Set(['type', 'title', 'description', 'due_seconds', 'priority']),
+    cancel_sequence: new Set(['type']),
+  }[type];
+  if (Object.keys(value).some((key) => !allowed.has(key))) return { error: errorResult('NOT_ALLOWED', `Campos não permitidos na ação ${type}.`) };
+
+  if (type === 'update_status') {
+    const statusId = text(value.status_id);
+    const statusName = text(value.status_name);
+    if (!statusId && !statusName) return { error: errorResult('INVALID_STATUS', 'update_status exige status_id ou status_name.') };
+    if (statusId && !safeUuid(statusId)) return { error: errorResult('INVALID_STATUS', 'status_id inválido.') };
+    if (statusName.length > MAX_SHORT_TEXT_LENGTH) return { error: errorResult('INVALID_STATUS', 'status_name excede 160 caracteres.') };
+    return { action: { type, ...(statusId ? { status_id: statusId } : {}), ...(statusName ? { status_name: statusName } : {}) } };
+  }
+  if (type === 'complete_reminder') {
+    const reminderId = text(value.reminder_id);
+    if (reminderId && !safeUuid(reminderId)) return { error: errorResult('INVALID_INPUT', 'reminder_id inválido na ação complete_reminder.') };
+    return { action: { type, ...(reminderId ? { reminder_id: reminderId } : {}) } };
+  }
+  if (type === 'create_reminder') {
+    const title = text(value.title);
+    const description = rawString(value.description);
+    const dueSeconds = boundedInteger(value.due_seconds ?? 0, 0, MAX_SCHEDULED_SEQUENCE_DELAY_SECONDS);
+    const priority = text(value.priority) || 'normal';
+    if (!title || title.length > MAX_SHORT_TEXT_LENGTH || description.length > MAX_DESCRIPTION_LENGTH || dueSeconds === null || !PRIORITIES.has(priority)) {
+      return { error: errorResult('INVALID_INPUT', 'create_reminder exige title, due_seconds, priority e tipo válidos.') };
+    }
+    return {
+      action: {
+        type,
+        title,
+        ...(description ? { description } : {}),
+        due_seconds: dueSeconds,
+        priority,
+      },
+    };
+  }
+  return { action: { type } };
+};
+
+const normalizeScheduledSequenceSteps = async (
+  params: Record<string, unknown>,
+  actor: McpWriteActor,
+  supabase: SupabaseClient,
+): Promise<{ steps?: NormalizedScheduledSequenceStep[]; error?: McpWriteResult }> => {
+  if (!Array.isArray(params.steps) || params.steps.length < 1 || params.steps.length > MAX_SCHEDULED_SEQUENCE_STEPS) {
+    return { error: errorResult('INVALID_INPUT', `steps deve conter entre 1 e ${MAX_SCHEDULED_SEQUENCE_STEPS} etapas.`) };
+  }
+  const steps: NormalizedScheduledSequenceStep[] = [];
+  for (const [index, value] of params.steps.entries()) {
+    if (!isRecord(value)) return { error: errorResult('INVALID_INPUT', `A etapa ${index + 1} deve ser um objeto.`) };
+    const allowedKeys = new Set(['delay_seconds', 'message', 'media', 'reminder_id', 'actions']);
+    if (Object.keys(value).some((key) => !allowedKeys.has(key))) return { error: errorResult('NOT_ALLOWED', `Campos não permitidos na etapa ${index + 1}.`) };
+    const delaySeconds = boundedInteger(value.delay_seconds ?? 0, 0, MAX_SCHEDULED_SEQUENCE_DELAY_SECONDS);
+    if (delaySeconds === null || (index === 0 && delaySeconds !== 0)) return { error: errorResult('INVALID_INPUT', 'A primeira etapa deve ter delay_seconds=0 e os demais delays devem estar entre 0 e 366 dias.') };
+    const messageValue = value.message === undefined ? '' : rawString(value.message);
+    if (value.message !== undefined && typeof value.message !== 'string') return { error: errorResult('INVALID_INPUT', `message da etapa ${index + 1} deve ser texto.`) };
+    if (messageValue.length > MAX_MESSAGE_LENGTH) return { error: errorResult('MESSAGE_TOO_LONG', `A mensagem da etapa ${index + 1} excede o limite de ${MAX_MESSAGE_LENGTH} caracteres.`) };
+    const parsedMedia = scheduledMediaFromParams(value.media, actor);
+    if (parsedMedia.error) return { error: parsedMedia.error };
+    if (parsedMedia.media) {
+      const mediaError = await ensureScheduledMediaExists(supabase, parsedMedia.media);
+      if (mediaError) return { error: mediaError };
+    }
+    const actionsValue = value.actions ?? [];
+    if (!Array.isArray(actionsValue) || actionsValue.length > MAX_SCHEDULED_SEQUENCE_ACTIONS) return { error: errorResult('INVALID_INPUT', `A etapa ${index + 1} deve ter no máximo ${MAX_SCHEDULED_SEQUENCE_ACTIONS} ações.`) };
+    const actions: Array<Record<string, unknown>> = [];
+    for (const actionValue of actionsValue) {
+      const normalized = normalizeSequenceAction(actionValue);
+      if (normalized.error) return { error: normalized.error };
+      actions.push(normalized.action!);
+    }
+    const reminderId = text(value.reminder_id);
+    if (reminderId && !safeUuid(reminderId)) return { error: errorResult('INVALID_INPUT', `reminder_id inválido na etapa ${index + 1}.`) };
+    if (!messageValue.trim() && !parsedMedia.media && actions.length === 0) return { error: errorResult('MESSAGE_EMPTY', `A etapa ${index + 1} precisa ter mensagem, mídia ou ação.`) };
+    steps.push({
+      delay_seconds: delaySeconds,
+      reminder_id: reminderId || null,
+      message: messageValue.trim() || parsedMedia.media
+        ? {
+            message_type: parsedMedia.media?.messageType ?? 'text',
+            text_content: messageValue || null,
+            media_url: parsedMedia.media ? `${SCHEDULED_MEDIA_URL_PREFIX}${parsedMedia.media.storagePath}` : null,
+            media_mime_type: parsedMedia.media?.mimeType ?? null,
+            media_file_name: parsedMedia.media?.fileName ?? null,
+          }
+        : null,
+      actions,
+    });
+  }
+  return { steps };
+};
+
+async function scheduleWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  const suppliedChatId = text(params.chat_id);
+  const suppliedLeadId = text(params.lead_id);
+  const clientRequestId = text(params.client_request_id).replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 128);
+  const scheduledAt = parseDate(params.scheduled_at);
+  const label = text(params.label);
+  const cancelOnInboundMessage = params.cancel_on_inbound_message === undefined ? true : params.cancel_on_inbound_message;
+  const contractId = text(params.contract_id);
+  const sequenceReminderId = text(params.reminder_id);
+  if ((suppliedChatId && suppliedLeadId) || (!suppliedChatId && !suppliedLeadId)) return errorResult('INVALID_INPUT', 'Informe exatamente um de chat_id ou lead_id para criar a sequência.');
+  if (!clientRequestId) return errorResult('INVALID_INPUT', 'client_request_id é obrigatório para impedir sequências duplicadas.');
+  if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000 || Date.parse(scheduledAt) > Date.now() + 366 * 24 * 60 * 60 * 1_000) return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at deve estar entre um minuto e 366 dias no futuro, em ISO 8601.');
+  if (label.length > MAX_SHORT_TEXT_LENGTH) return errorResult('INVALID_INPUT', 'label excede 160 caracteres.');
+  if (typeof cancelOnInboundMessage !== 'boolean') return errorResult('INVALID_INPUT', 'cancel_on_inbound_message deve ser booleano.');
+  if (contractId && !safeUuid(contractId)) return errorResult('CONTRACT_NOT_FOUND', 'contract_id inválido.');
+  if (sequenceReminderId && !safeUuid(sequenceReminderId)) return errorResult('INVALID_INPUT', 'reminder_id inválido.');
+
+  const normalized = await normalizeScheduledSequenceSteps(params, actor, supabase);
+  if (normalized.error || !normalized.steps) return normalized.error ?? errorResult('INVALID_INPUT', 'Etapas inválidas.');
+
+  let chatId = suppliedChatId;
+  if (suppliedLeadId) {
+    if (!safeUuid(suppliedLeadId)) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+    const { data: lead, error: leadError } = await supabase.from('leads').select('id,telefone').eq('id', suppliedLeadId).maybeSingle();
+    if (leadError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o lead para criar a sequência.');
+    if (!lead) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+    const phone = normalizedBrazilWhatsAppPhone((lead as McpLeadPhone).telefone);
+    if (!phone) return errorResult('INVALID_INPUT', 'O lead não possui telefone brasileiro válido para criar uma conversa do WhatsApp.');
+    const chatResult = await getOrCreateWhatsAppChat(supabase, { phone, lead_id: suppliedLeadId }, actor);
+    if (!chatResult.success) return chatResult;
+    chatId = text(chatResult.chat_id);
+  }
+  if (!safeUuid(chatId)) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada.');
+
+  const { data: chat, error: chatError } = await supabase
+    .from('comm_whatsapp_chats')
+    .select('id,channel_id,phone_digits,phone_number,display_name,lead_id,deleted_at')
+    .eq('id', chatId)
+    .maybeSingle();
+  if (chatError || !chat || chat.deleted_at || !chat.channel_id || !chat.phone_digits) return errorResult('CHAT_NOT_FOUND', 'Conversa de WhatsApp não encontrada, removida ou sem canal associado.');
+  const effectiveLeadId = suppliedLeadId || (safeUuid(chat.lead_id) ? chat.lead_id : null);
+  if (normalized.steps.some((step) => step.actions.some((action) => text(action.type) !== 'cancel_sequence')) && !effectiveLeadId) return errorResult('INVALID_INPUT', 'Ações de CRM exigem uma conversa vinculada a um lead.');
+  if (contractId && effectiveLeadId && !(await validateContract(supabase, effectiveLeadId, contractId))) return errorResult('CONTRACT_NOT_FOUND', 'Contrato não encontrado para este lead.');
+
+  const rpcSteps = normalized.steps.map((step) => ({ ...step, actions: step.actions }));
+  const lookupExisting = async () => await supabase.from('comm_whatsapp_scheduled_sequences').select(SCHEDULED_SEQUENCE_SELECT).eq('channel_id', chat.channel_id).eq('mcp_client_request_id', clientRequestId).maybeSingle();
+  const existing = await lookupExisting();
+  if (existing.error) return errorResult('INTERNAL_ERROR', 'Não foi possível verificar a duplicidade da sequência.');
+  if (existing.data) return { success: true, duplicate: true, scheduled_sequence_id: existing.data.id, chat_id: existing.data.chat_id, lead_id: existing.data.lead_id, scheduled_at: existing.data.scheduled_at, status: existing.data.status, client_request_id: clientRequestId };
+
+  const { data: sequenceId, error: sequenceError } = await supabase.rpc('create_scheduled_message_sequence_for_mcp', {
+    p_channel_id: chat.channel_id,
+    p_phone_digits: chat.phone_digits,
+    p_scheduled_at: scheduledAt,
+    p_steps: rpcSteps,
+    p_created_by: actor.actorId,
+    p_mcp_client_request_id: clientRequestId,
+    p_chat_id: chat.id,
+    p_lead_id: effectiveLeadId,
+    p_contract_id: contractId || null,
+    p_reminder_id: sequenceReminderId || null,
+    p_label: label || null,
+    p_cancel_on_inbound_message: cancelOnInboundMessage,
+  } as never);
+  if (sequenceError || !sequenceId) {
+    const concurrent = await lookupExisting();
+    if (!concurrent.error && concurrent.data) return { success: true, duplicate: true, scheduled_sequence_id: concurrent.data.id, chat_id: concurrent.data.chat_id, lead_id: concurrent.data.lead_id, scheduled_at: concurrent.data.scheduled_at, status: concurrent.data.status, client_request_id: clientRequestId };
+    return errorResult('INTERNAL_ERROR', 'Não foi possível criar a sequência de mensagens.');
+  }
+  return { success: true, duplicate: false, scheduled_sequence_id: text(sequenceId), chat_id: chat.id, lead_id: effectiveLeadId, scheduled_at: scheduledAt, status: 'scheduled', client_request_id: clientRequestId };
+}
+
 const scheduledMessageView = (row: Record<string, unknown>, leadName: string | null = null) => {
   const scheduledAt = parseDate(row.scheduled_at);
   const message = rawString(row.text_content);
@@ -1011,6 +1203,220 @@ const scheduledMessageView = (row: Record<string, unknown>, leadName: string | n
     delivery_status: text(row.delivery_status) || null,
   };
 };
+
+const scheduledSequenceView = (
+  row: Record<string, unknown>,
+  steps: Array<Record<string, unknown>> = [],
+  actions: Array<Record<string, unknown>> = [],
+  leadName: string | null = null,
+) => {
+  const actionsByStep = new Map<string, Array<Record<string, unknown>>>();
+  for (const action of actions) {
+    const key = text(action.step_id);
+    if (key) actionsByStep.set(key, [...(actionsByStep.get(key) ?? []), action]);
+  }
+  return {
+    scheduled_sequence_id: text(row.id),
+    chat_id: text(row.chat_id) || null,
+    lead_id: text(row.lead_id) || null,
+    lead_name: leadName,
+    label: text(row.label) || null,
+    scheduled_at: parseDate(row.scheduled_at),
+    scheduled_at_utc: parseDate(row.scheduled_at),
+    timezone: 'America/Sao_Paulo',
+    status: text(row.status) || null,
+    current_step_index: typeof row.current_step_index === 'number' ? row.current_step_index : null,
+    cancel_on_inbound_message: row.cancel_on_inbound_message === true,
+    client_request_id: text(row.mcp_client_request_id) || null,
+    created_at: parseDate(row.created_at),
+    updated_at: parseDate(row.updated_at),
+    paused_at: parseDate(row.paused_at),
+    cancelled_at: parseDate(row.cancelled_at),
+    completed_at: parseDate(row.completed_at),
+    last_error: text(row.last_error) || null,
+    steps: steps.map((step) => ({
+      sequence_step_id: text(step.id),
+      step_index: step.step_index,
+      delay_seconds: step.delay_seconds,
+      due_at: parseDate(step.due_at),
+      reminder_id: text(step.reminder_id) || null,
+      status: text(step.status) || null,
+      attempts: step.attempts,
+      completed_at: parseDate(step.completed_at),
+      last_error: text(step.last_error) || null,
+      ...(step.message_type
+        ? {
+            message: rawString(step.text_content),
+            ...(step.media_url ? {
+              media: {
+                attached: true,
+                message_type: text(step.message_type),
+                mime_type: text(step.media_mime_type) || null,
+                file_name: text(step.media_file_name) || null,
+                storage_path: rawString(step.media_url).startsWith(SCHEDULED_MEDIA_URL_PREFIX)
+                  ? rawString(step.media_url).slice(SCHEDULED_MEDIA_URL_PREFIX.length)
+                  : null,
+                managed_by_mcp: rawString(step.media_url).startsWith(SCHEDULED_MEDIA_URL_PREFIX),
+              },
+            } : {}),
+          }
+        : {}),
+      actions: (actionsByStep.get(text(step.id)) ?? [])
+        .sort((left, right) => Number(left.action_index) - Number(right.action_index))
+        .map((action) => ({
+          action_id: text(action.id),
+          action_index: action.action_index,
+          type: text(action.action_type),
+          config: isRecord(action.config) ? action.config : {},
+          status: text(action.status) || null,
+          executed_at: parseDate(action.executed_at),
+          error: text(action.error_message) || null,
+        })),
+    })),
+  };
+};
+
+async function getScheduledSequenceDetails(
+  supabase: SupabaseClient,
+  row: Record<string, unknown>,
+): Promise<{ sequence?: Record<string, unknown>; error?: McpWriteResult }> {
+  const sequenceId = text(row.id);
+  const { data: steps, error: stepsError } = await supabase
+    .from('comm_whatsapp_scheduled_sequence_steps')
+    .select('id,sequence_id,step_index,delay_seconds,due_at,reminder_id,message_type,text_content,media_url,media_mime_type,media_file_name,status,attempts,completed_at,last_error')
+    .eq('sequence_id', sequenceId)
+    .order('step_index', { ascending: true });
+  if (stepsError) return { error: errorResult('INTERNAL_ERROR', 'Não foi possível consultar as etapas da sequência.') };
+  const stepRows = (steps ?? []) as Array<Record<string, unknown>>;
+  const stepIds = stepRows.map((step) => text(step.id)).filter(Boolean);
+  const { data: actions, error: actionsError } = stepIds.length > 0
+    ? await supabase.from('comm_whatsapp_scheduled_sequence_actions').select('id,step_id,action_index,action_type,config,status,executed_at,error_message').in('step_id', stepIds).order('action_index', { ascending: true })
+    : { data: [], error: null };
+  if (actionsError) return { error: errorResult('INTERNAL_ERROR', 'Não foi possível consultar as ações da sequência.') };
+  return { sequence: scheduledSequenceView(row, stepRows, (actions ?? []) as Array<Record<string, unknown>>) };
+}
+
+async function getScheduledSequenceRow(supabase: SupabaseClient, sequenceId: string): Promise<{ row: Record<string, unknown> | null; error: McpWriteResult | null }> {
+  const { data, error } = await supabase.from('comm_whatsapp_scheduled_sequences').select(SCHEDULED_SEQUENCE_SELECT).eq('id', sequenceId).maybeSingle();
+  if (error) return { row: null, error: errorResult('INTERNAL_ERROR', 'Não foi possível consultar a sequência.') };
+  if (!data) return { row: null, error: errorResult('SCHEDULE_NOT_FOUND', 'Sequência de mensagens não encontrada.') };
+  return { row: data as Record<string, unknown>, error: null };
+}
+
+async function listScheduledWhatsAppSequences(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const leadId = text(params.lead_id);
+  const chatId = text(params.chat_id);
+  const status = text(params.status);
+  if (leadId && !safeUuid(leadId)) return errorResult('INVALID_INPUT', 'lead_id inválido.');
+  if (chatId && !safeUuid(chatId)) return errorResult('INVALID_INPUT', 'chat_id inválido.');
+  if (status && !SCHEDULED_SEQUENCE_STATUSES.has(status)) return errorResult('INVALID_INPUT', 'status de sequência inválido.');
+  const page = boundedInteger(params.page ?? 1, 1, 10_000);
+  const pageSize = boundedInteger(params.page_size ?? 20, 1, 50);
+  if (page === null || pageSize === null) return errorResult('INVALID_INPUT', 'page e page_size estão fora do intervalo permitido.');
+  const orderBy = text(params.order_by) || 'scheduled_at';
+  if (!SCHEDULED_SEQUENCE_ORDER_FIELDS.has(orderBy)) return errorResult('INVALID_INPUT', 'order_by inválido.');
+  const start = params.data_inicial === undefined ? null : parseDate(params.data_inicial);
+  const end = params.data_final === undefined ? null : parseDate(params.data_final);
+  if ((params.data_inicial !== undefined && !start) || (params.data_final !== undefined && !end)) return errorResult('INVALID_INPUT', 'data_inicial e data_final devem estar no formato ISO 8601.');
+  if (start && end && Date.parse(start) > Date.parse(end)) return errorResult('INVALID_INPUT', 'data_inicial deve ser anterior a data_final.');
+  let query = supabase.from('comm_whatsapp_scheduled_sequences').select(SCHEDULED_SEQUENCE_SELECT, { count: 'exact' });
+  if (leadId) query = query.eq('lead_id', leadId);
+  if (chatId) query = query.eq('chat_id', chatId);
+  if (status) query = query.eq('status', status);
+  if (start) query = query.gte('scheduled_at', start);
+  if (end) query = query.lte('scheduled_at', end);
+  const from = (page - 1) * pageSize;
+  const { data, error, count } = await query.order(orderBy, { ascending: params.ascending === true }).range(from, from + pageSize - 1);
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível listar as sequências de mensagens.');
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const names = await leadNamesById(supabase, rows);
+  const sequences: Array<Record<string, unknown>> = [];
+  for (const row of rows) {
+    const details = await getScheduledSequenceDetails(supabase, row);
+    if (details.error || !details.sequence) return details.error ?? errorResult('INTERNAL_ERROR', 'Não foi possível carregar as etapas da sequência.');
+    const view = details.sequence as Record<string, unknown>;
+    view.lead_name = names.get(text(row.lead_id)) || null;
+    sequences.push(view);
+  }
+  return { success: true, page, page_size: pageSize, total: count ?? null, scheduled_sequences: sequences };
+}
+
+async function getScheduledWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const sequenceId = text(params.scheduled_sequence_id);
+  if (!safeUuid(sequenceId)) return errorResult('INVALID_INPUT', 'scheduled_sequence_id inválido.');
+  const current = await getScheduledSequenceRow(supabase, sequenceId);
+  if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Sequência de mensagens não encontrada.');
+  const details = await getScheduledSequenceDetails(supabase, current.row);
+  if (details.error || !details.sequence) return details.error ?? errorResult('INTERNAL_ERROR', 'Não foi possível consultar a sequência.');
+  const names = await leadNamesById(supabase, [current.row]);
+  const view = details.sequence as Record<string, unknown>;
+  view.lead_name = names.get(text(current.row.lead_id)) || null;
+  return { success: true, scheduled_sequence: view };
+}
+
+async function cancelScheduledWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const sequenceId = text(params.scheduled_sequence_id);
+  const reason = rawString(params.observacao);
+  if (!safeUuid(sequenceId)) return errorResult('INVALID_INPUT', 'scheduled_sequence_id inválido.');
+  if (reason.length > MAX_DESCRIPTION_LENGTH) return errorResult('INVALID_INPUT', `observacao excede o limite de ${MAX_DESCRIPTION_LENGTH} caracteres.`);
+  const current = await getScheduledSequenceRow(supabase, sequenceId);
+  if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Sequência de mensagens não encontrada.');
+  const status = text(current.row.status);
+  if (status === 'cancelled') {
+    const details = await getScheduledSequenceDetails(supabase, current.row);
+    return details.error || !details.sequence
+      ? details.error ?? errorResult('INTERNAL_ERROR', 'Não foi possível consultar a sequência cancelada.')
+      : { success: true, duplicate: true, scheduled_sequence: details.sequence };
+  }
+  if (status === 'completed') return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência já foi concluída e não pode ser cancelada.');
+  if (!['scheduled', 'running', 'paused'].includes(status)) return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência não pode ser cancelada no estado atual.');
+  const { data, error } = await supabase
+    .from('comm_whatsapp_scheduled_sequences')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), last_error: reason || null })
+    .eq('id', sequenceId)
+    .in('status', ['scheduled', 'running', 'paused'])
+    .select(SCHEDULED_SEQUENCE_SELECT)
+    .maybeSingle();
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível cancelar a sequência.');
+  if (!data) return errorResult('CONFLICT', 'A sequência foi alterada simultaneamente.');
+  const { error: stepsError } = await supabase.from('comm_whatsapp_scheduled_sequence_steps').update({ status: 'cancelled', last_error: reason || null }).eq('sequence_id', sequenceId).in('status', ['pending', 'processing']);
+  if (stepsError) return errorResult('INTERNAL_ERROR', 'A sequência foi cancelada, mas não foi possível finalizar todas as etapas.');
+  const { error: messagesError } = await supabase.from('comm_whatsapp_scheduled_messages').update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_reason: reason || 'Sequência cancelada.' }).eq('sequence_id', sequenceId).in('status', ['scheduled', 'failed']);
+  if (messagesError) return errorResult('INTERNAL_ERROR', 'A sequência foi cancelada, mas não foi possível finalizar todas as mensagens derivadas.');
+  const details = await getScheduledSequenceDetails(supabase, data as Record<string, unknown>);
+  return details.error || !details.sequence
+    ? details.error ?? errorResult('INTERNAL_ERROR', 'Não foi possível consultar a sequência cancelada.')
+    : { success: true, duplicate: false, scheduled_sequence: details.sequence };
+}
+
+async function retryScheduledWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
+  const sequenceId = text(params.scheduled_sequence_id);
+  if (!safeUuid(sequenceId)) return errorResult('INVALID_INPUT', 'scheduled_sequence_id inválido.');
+  const current = await getScheduledSequenceRow(supabase, sequenceId);
+  if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Sequência de mensagens não encontrada.');
+  if (text(current.row.status) === 'completed') return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência já foi concluída.');
+  if (!['paused', 'scheduled'].includes(text(current.row.status))) return errorResult('SCHEDULE_NOT_EDITABLE', 'Somente uma sequência pausada pode ser retomada.');
+  const { data: failedStep, error: stepError } = await supabase
+    .from('comm_whatsapp_scheduled_sequence_steps')
+    .select('id')
+    .eq('sequence_id', sequenceId)
+    .eq('status', 'failed')
+    .order('step_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (stepError) return errorResult('INTERNAL_ERROR', 'Não foi possível localizar a etapa que falhou.');
+  if (!failedStep) return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência não possui uma etapa falha para retomar.');
+  const { error: actionsError } = await supabase.from('comm_whatsapp_scheduled_sequence_actions').update({ status: 'pending', error_message: null }).eq('step_id', failedStep.id).eq('status', 'failed');
+  if (actionsError) return errorResult('INTERNAL_ERROR', 'Não foi possível rearmar as ações da sequência.');
+  const { error: failedStepUpdateError } = await supabase.from('comm_whatsapp_scheduled_sequence_steps').update({ status: 'pending', due_at: new Date().toISOString(), next_retry_at: null, last_error: null }).eq('id', failedStep.id).eq('status', 'failed');
+  if (failedStepUpdateError) return errorResult('INTERNAL_ERROR', 'Não foi possível rearmar a etapa da sequência.');
+  const { data: updated, error } = await supabase.from('comm_whatsapp_scheduled_sequences').update({ status: 'scheduled', last_error: null, paused_at: null }).eq('id', sequenceId).in('status', ['paused', 'scheduled']).select(SCHEDULED_SEQUENCE_SELECT).maybeSingle();
+  if (error || !updated) return errorResult('INTERNAL_ERROR', 'Não foi possível retomar a sequência.');
+  const details = await getScheduledSequenceDetails(supabase, updated as Record<string, unknown>);
+  return details.error || !details.sequence
+    ? details.error ?? errorResult('INTERNAL_ERROR', 'Não foi possível consultar a sequência retomada.')
+    : { success: true, duplicate: false, scheduled_sequence: details.sequence };
+}
 
 async function leadNamesById(supabase: SupabaseClient, rows: Array<Record<string, unknown>>): Promise<Map<string, string>> {
   const ids = [...new Set(rows.map((row) => text(row.lead_id)).filter(safeUuid))];
@@ -2385,6 +2791,8 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
   }
   if (toolName === 'kifer_list_scheduled_whatsapp_messages') return listScheduledWhatsAppMessages(supabase, args);
   if (toolName === 'kifer_get_scheduled_whatsapp_message') return getScheduledWhatsAppMessage(supabase, args);
+  if (toolName === 'kifer_list_scheduled_whatsapp_sequences') return listScheduledWhatsAppSequences(supabase, args);
+  if (toolName === 'kifer_get_scheduled_whatsapp_sequence') return getScheduledWhatsAppSequence(supabase, args);
   if (toolName === 'kifer_get_commercial_followup_audit') return getCommercialFollowUpAudit(supabase, args, params.actorId ?? '');
   if (toolName === 'kifer_list_leads_without_whatsapp_chat') return listLeadsWithoutWhatsAppChat(supabase, args);
   if (toolName === 'kifer_count_leads_without_whatsapp_chat') return countLeadsWithoutWhatsAppChat(supabase, args);
@@ -2473,9 +2881,12 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
     else if (toolName === 'kifer_upload_scheduled_whatsapp_media') { actionType = 'whatsapp_schedule_media_upload'; result = await uploadScheduledWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
+    else if (toolName === 'kifer_schedule_whatsapp_sequence') { actionType = 'whatsapp_schedule_sequence'; result = await scheduleWhatsAppSequence(supabase, args, actor); }
     else if (toolName === 'kifer_bulk_schedule_whatsapp_messages') { actionType = 'whatsapp_schedule_bulk'; result = await bulkScheduleWhatsAppMessages(supabase, args, actor); }
     else if (toolName === 'kifer_update_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_update'; result = await updateScheduledWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_cancel_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_cancel'; result = await cancelScheduledWhatsAppMessage(supabase, args); }
+    else if (toolName === 'kifer_cancel_scheduled_whatsapp_sequence') { actionType = 'whatsapp_schedule_sequence_cancel'; result = await cancelScheduledWhatsAppSequence(supabase, args); }
+    else if (toolName === 'kifer_retry_scheduled_whatsapp_sequence') { actionType = 'whatsapp_schedule_sequence_retry'; result = await retryScheduledWhatsAppSequence(supabase, args); }
     else if (toolName === 'kifer_create_reminder') { actionType = 'reminder_create'; result = await createReminder(supabase, args, actor); }
     else if (toolName === 'kifer_update_lead_status') { actionType = 'lead_status_update'; result = await updateLeadStatus(supabase, args, actor); }
     else if (toolName === 'kifer_create_interaction') { actionType = 'interaction_create'; result = await createInteraction(supabase, args, actor); }

@@ -45,6 +45,44 @@ const MCP_MEDIA_MIME_TYPES = [
   'text/plain', 'text/csv',
 ] as const;
 
+const SCHEDULED_SEQUENCE_ACTION_SCHEMA = {
+  oneOf: [
+    {
+      type: 'object', required: ['type'], additionalProperties: false,
+      properties: { type: { const: 'update_status' }, status_id: { type: 'string' }, status_name: { type: 'string', minLength: 1, maxLength: 160 } },
+    },
+    {
+      type: 'object', required: ['type'], additionalProperties: false,
+      properties: { type: { const: 'complete_reminder' }, reminder_id: { type: 'string' } },
+    },
+    {
+      type: 'object', required: ['type', 'title'], additionalProperties: false,
+      properties: {
+        type: { const: 'create_reminder' },
+        title: { type: 'string', minLength: 1, maxLength: 160 },
+        description: { type: 'string', maxLength: 4000 },
+        due_seconds: { type: 'integer', minimum: 0, maximum: 31622400, default: 0 },
+        priority: { type: 'string', enum: ['baixa', 'normal', 'alta'], default: 'normal' },
+      },
+    },
+    {
+      type: 'object', required: ['type'], additionalProperties: false,
+      properties: { type: { const: 'cancel_sequence' } },
+    },
+  ],
+} as const;
+
+const SCHEDULED_SEQUENCE_STEP_SCHEMA = {
+  type: 'object', required: ['delay_seconds'], additionalProperties: false,
+  properties: {
+    delay_seconds: { type: 'integer', minimum: 0, maximum: 31622400, description: 'Atraso em segundos em relação à etapa anterior; a primeira etapa deve ser zero.' },
+    message: { type: 'string', maxLength: 4096, description: 'Texto literal opcional; preserve --- e quebras de linha.' },
+    media: SCHEDULED_MEDIA_REFERENCE_SCHEMA,
+    reminder_id: { type: 'string', description: 'Lembrete usado por complete_reminder quando a ação não informa outro ID.' },
+    actions: { type: 'array', maxItems: 10, items: SCHEDULED_SEQUENCE_ACTION_SCHEMA },
+  },
+} as const;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -533,9 +571,42 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_schedule_whatsapp_sequence',
+    description: 'Agenda uma sequência de mensagens de WhatsApp no agendador nativo do Inbox. Cada etapa pode enviar texto/mídia e executar ações CRM ordenadas: alterar status, concluir o lembrete associado, criar o próximo Follow-up ou cancelar a sequência. Use somente quando o usuário solicitar explicitamente o agendamento; altera dados reais. Informe chat_id ou lead_id, nunca ambos. Para mídia, use somente referência retornada por kifer_upload_scheduled_whatsapp_media. A primeira etapa usa scheduled_at e delay_seconds=0; os demais delays são em segundos. client_request_id torna retries idempotentes. Ações CRM exigem lead vinculado à conversa.',
+    inputSchema: {
+      type: 'object', required: ['scheduled_at', 'steps', 'client_request_id'],
+      anyOf: [{ required: ['chat_id'] }, { required: ['lead_id'] }],
+      additionalProperties: false,
+      properties: {
+        chat_id: { type: 'string', description: 'ID de uma conversa existente. Informe chat_id ou lead_id, nunca ambos.' },
+        lead_id: { type: 'string', description: 'ID de um lead; o backend cria/reutiliza a conversa canônica pelo telefone cadastrado.' },
+        scheduled_at: { type: 'string', format: 'date-time', description: 'Data/hora futura da primeira etapa em ISO 8601.' },
+        label: { type: 'string', maxLength: 160 },
+        contract_id: { type: 'string' },
+        reminder_id: { type: 'string', description: 'Lembrete padrão da sequência, usado por complete_reminder sem reminder_id próprio.' },
+        cancel_on_inbound_message: { type: 'boolean', default: true, description: 'Cancela as etapas restantes se o contato responder antes da próxima etapa.' },
+        client_request_id: { type: 'string', minLength: 1, maxLength: 128, description: 'Identificador estável para impedir duplicidade em retries.' },
+        steps: { type: 'array', minItems: 1, maxItems: 30, items: SCHEDULED_SEQUENCE_STEP_SCHEMA },
+      },
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: 'kifer_list_scheduled_whatsapp_messages',
     description: 'Lista agendamentos existentes da fila nativa do Inbox. Use para conferir texto, status, horário e erros antes ou depois do envio. Somente leitura; o texto é retornado literalmente, inclusive --- e quebras de linha.',
     inputSchema: { type: 'object', additionalProperties: false, properties: { lead_id: { type: 'string' }, chat_id: { type: 'string' }, status: { type: 'string', enum: ['scheduled', 'sending', 'sent', 'failed', 'cancelled', 'expired'] }, data_inicial: { type: 'string', format: 'date-time' }, data_final: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', maxLength: 128 }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 100, default: 20 }, order_by: { type: 'string', enum: ['scheduled_at', 'created_at', 'updated_at', 'sent_at', 'status'], default: 'scheduled_at' }, ascending: { type: 'boolean', default: false } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_list_scheduled_whatsapp_sequences',
+    description: 'Lista sequências do agendador nativo do Inbox, incluindo etapas, ações CRM, status, próximo horário e erros. Somente leitura.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { lead_id: { type: 'string' }, chat_id: { type: 'string' }, status: { type: 'string', enum: ['scheduled', 'running', 'paused', 'completed', 'cancelled'] }, data_inicial: { type: 'string', format: 'date-time' }, data_final: { type: 'string', format: 'date-time' }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 }, order_by: { type: 'string', enum: ['scheduled_at', 'created_at', 'updated_at', 'status'], default: 'scheduled_at' }, ascending: { type: 'boolean', default: false } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_scheduled_whatsapp_sequence',
+    description: 'Consulta uma sequência do agendador pelo ID, com todas as etapas e ações CRM. Somente leitura.',
+    inputSchema: { type: 'object', required: ['scheduled_sequence_id'], additionalProperties: false, properties: { scheduled_sequence_id: { type: 'string' } } },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -572,6 +643,18 @@ const tools = [
     name: 'kifer_cancel_scheduled_whatsapp_message',
     description: 'Cancela logicamente uma mensagem agendada, preservando seu histórico. Use somente quando o usuário solicitar explicitamente o cancelamento. Esta ação altera dados reais, é idempotente e não cancela mensagens já enviadas.',
     inputSchema: { type: 'object', required: ['scheduled_message_id'], additionalProperties: false, properties: { scheduled_message_id: { type: 'string' }, observacao: { type: 'string', maxLength: 4000 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_cancel_scheduled_whatsapp_sequence',
+    description: 'Cancela logicamente uma sequência do agendador e suas etapas/mensagens derivadas ainda pendentes. Use somente quando o usuário solicitar explicitamente o cancelamento; é idempotente para sequências já canceladas.',
+    inputSchema: { type: 'object', required: ['scheduled_sequence_id'], additionalProperties: false, properties: { scheduled_sequence_id: { type: 'string' }, observacao: { type: 'string', maxLength: 4000 } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_retry_scheduled_whatsapp_sequence',
+    description: 'Retoma uma sequência pausada rearmando a última etapa que falhou e suas ações pendentes. Use somente quando o usuário solicitar explicitamente a retomada.',
+    inputSchema: { type: 'object', required: ['scheduled_sequence_id'], additionalProperties: false, properties: { scheduled_sequence_id: { type: 'string' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -616,7 +699,7 @@ const tools = [
 
 const ADMIN_READ_TOOLS = new Set([
   'kifer_list_records', 'kifer_get_record', 'kifer_search', 'kifer_get_lead_360', 'kifer_get_whatsapp_transcript',
-  'kifer_list_scheduled_whatsapp_messages', 'kifer_get_scheduled_whatsapp_message', 'kifer_get_commercial_followup_audit',
+  'kifer_list_scheduled_whatsapp_messages', 'kifer_get_scheduled_whatsapp_message', 'kifer_list_scheduled_whatsapp_sequences', 'kifer_get_scheduled_whatsapp_sequence', 'kifer_get_commercial_followup_audit',
   'kifer_list_leads_without_whatsapp_chat', 'kifer_list_reminders', 'kifer_get_next_follow_up',
   'kifer_list_automation_jobs', 'kifer_get_automation_job', 'kifer_get_automation_settings', 'kifer_get_operational_overview',
   'kifer_list_followup_flows', 'kifer_get_followup_flow', 'kifer_list_identity_conflicts', 'kifer_get_identity_conflict',
@@ -630,7 +713,7 @@ const ADMIN_READ_TOOLS = new Set([
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
-    'kifer_send_whatsapp_message', 'kifer_send_whatsapp_media', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
+    'kifer_send_whatsapp_message', 'kifer_send_whatsapp_media', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_schedule_whatsapp_sequence', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_sequence', 'kifer_retry_scheduled_whatsapp_sequence', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',

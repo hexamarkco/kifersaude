@@ -7,6 +7,7 @@ import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from '../autho
 const actor = { actor: 'chatgpt:admin@kifer.test', actorId: '11111111-1111-1111-1111-111111111111' };
 
 type Result = { data?: unknown; error?: unknown; count?: number | null };
+type RpcResult = Result | ((args: unknown) => Result | Promise<Result>);
 type Write = { table: string; operation: 'insert' | 'update'; value: unknown };
 type Filter = { table: string; operator: string; column?: string; value?: unknown };
 
@@ -36,14 +37,16 @@ const query = (table: string, result: Result = {}, selections?: string[], writes
   return builder;
 };
 
-const client = (handlers: Record<string, Result | Result[]>) => {
+const client = (handlers: Record<string, Result | Result[]>, rpcHandlers: Record<string, RpcResult> = {}) => {
   const calls: string[] = [];
+  const rpcCalls: Array<{ name: string; args: unknown }> = [];
   const selections: string[] = [];
   const writes: Write[] = [];
   const filters: Filter[] = [];
   const counts = new Map<string, number>();
   return {
     calls,
+    rpcCalls,
     selections,
     writes,
     filters,
@@ -60,6 +63,12 @@ const client = (handlers: Record<string, Result | Result[]>) => {
         createSignedUrl: async () => ({ data: { signedUrl: 'https://storage.test/signed-media' }, error: null }),
         upload: async () => ({ data: { path: 'mcp/test/anexo.pdf' }, error: null }),
       }),
+    },
+    rpc: async (name: string, args: unknown) => {
+      rpcCalls.push({ name, args });
+      const configured = rpcHandlers[name];
+      if (typeof configured === 'function') return configured(args);
+      return configured ?? { data: null, error: null };
     },
   };
 };
@@ -717,6 +726,41 @@ test('recusa chat inexistente, texto vazio, texto longo e horário passado ao ag
   assert.equal(empty?.error_code, 'MESSAGE_EMPTY');
   assert.equal(long?.error_code, 'MESSAGE_TOO_LONG');
   assert.equal(missingChat?.error_code, 'CHAT_NOT_FOUND');
+});
+
+test('agenda sequência com ações CRM e preserva a idempotência no RPC transacional', async () => {
+  const supabase = client(
+    {
+      comm_whatsapp_chats: { data: { id: actor.actorId, channel_id: '22222222-2222-2222-2222-222222222222', phone_digits: '5511999999999', phone_number: '+55 11 99999-9999', display_name: 'Lead', lead_id: actor.actorId, deleted_at: null } },
+      comm_whatsapp_scheduled_sequences: { data: null },
+      mcp_action_audit_log: {},
+    },
+    { create_scheduled_message_sequence_for_mcp: { data: '33333333-3333-3333-3333-333333333333', error: null } },
+  );
+  const result = await executeMcpWriteAction({
+    supabase: supabase as never,
+    toolName: 'kifer_schedule_whatsapp_sequence',
+    arguments: {
+      chat_id: actor.actorId,
+      scheduled_at: '2026-10-01T10:00:00-03:00',
+      client_request_id: 'sequence-1',
+      steps: [
+        { delay_seconds: 0, message: 'Primeira mensagem', actions: [{ type: 'update_status', status_name: 'Proposta Enviada' }] },
+        { delay_seconds: 86400, actions: [{ type: 'complete_reminder' }, { type: 'create_reminder', title: 'Próximo retorno', due_seconds: 172800, priority: 'alta' }] },
+      ],
+    },
+    actor,
+  });
+
+  assert.equal(result?.success, true);
+  assert.equal(result?.scheduled_sequence_id, '33333333-3333-3333-3333-333333333333');
+  assert.equal(supabase.rpcCalls[0]?.name, 'create_scheduled_message_sequence_for_mcp');
+  const rpcArgs = supabase.rpcCalls[0]?.args as { p_steps: Array<{ actions: Array<Record<string, unknown>> }> };
+  assert.deepEqual(rpcArgs.p_steps[0]?.actions, [{ type: 'update_status', status_name: 'Proposta Enviada' }]);
+  assert.deepEqual(rpcArgs.p_steps[1]?.actions, [
+    { type: 'complete_reminder' },
+    { type: 'create_reminder', title: 'Próximo retorno', due_seconds: 172800, priority: 'alta' },
+  ]);
 });
 
 const stubMcpSendEnvironment = () => {

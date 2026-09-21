@@ -3360,6 +3360,7 @@ export type Database = {
         Row: {
           channel_id: string
           delivery_status: string
+          delivery_status_history: Json
           error_message: string | null
           external_message_id: string
           id: string
@@ -3370,6 +3371,7 @@ export type Database = {
         Insert: {
           channel_id: string
           delivery_status: string
+          delivery_status_history?: Json
           error_message?: string | null
           external_message_id: string
           id?: string
@@ -3380,6 +3382,7 @@ export type Database = {
         Update: {
           channel_id?: string
           delivery_status?: string
+          delivery_status_history?: Json
           error_message?: string | null
           external_message_id?: string
           id?: string
@@ -3612,8 +3615,11 @@ export type Database = {
           recurrence: string
           recurrence_config: Json
           recurrence_ends_at: string | null
+          reminder_id: string | null
           scheduled_at: string
           sent_at: string | null
+          sequence_id: string | null
+          sequence_step_id: string | null
           status: string
           text_content: string | null
           updated_at: string
@@ -3652,8 +3658,11 @@ export type Database = {
           recurrence?: string
           recurrence_config?: Json
           recurrence_ends_at?: string | null
+          reminder_id?: string | null
           scheduled_at: string
           sent_at?: string | null
+          sequence_id?: string | null
+          sequence_step_id?: string | null
           status?: string
           text_content?: string | null
           updated_at?: string
@@ -3692,8 +3701,11 @@ export type Database = {
           recurrence?: string
           recurrence_config?: Json
           recurrence_ends_at?: string | null
+          reminder_id?: string | null
           scheduled_at?: string
           sent_at?: string | null
+          sequence_id?: string | null
+          sequence_step_id?: string | null
           status?: string
           text_content?: string | null
           updated_at?: string
@@ -3732,6 +3744,273 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_scheduled_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_messages_sequence_step_id_fkey"
+            columns: ["sequence_step_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_scheduled_sequence_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_scheduled_sequence_actions: {
+        Row: {
+          action_index: number
+          action_type: string
+          config: Json
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          status: string
+          step_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_index: number
+          action_type: string
+          config?: Json
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string
+          step_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_index?: number
+          action_type?: string
+          config?: Json
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string
+          step_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequence_actions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_scheduled_sequence_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_scheduled_sequence_steps: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          delay_seconds: number
+          due_at: string | null
+          id: string
+          last_error: string | null
+          media_file_name: string | null
+          media_mime_type: string | null
+          media_url: string | null
+          message_type: string | null
+          next_retry_at: string | null
+          reminder_id: string | null
+          sequence_id: string
+          started_at: string | null
+          status: string
+          step_index: number
+          text_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          delay_seconds?: number
+          due_at?: string | null
+          id?: string
+          last_error?: string | null
+          media_file_name?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          next_retry_at?: string | null
+          reminder_id?: string | null
+          sequence_id: string
+          started_at?: string | null
+          status?: string
+          step_index: number
+          text_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          delay_seconds?: number
+          due_at?: string | null
+          id?: string
+          last_error?: string | null
+          media_file_name?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          next_retry_at?: string | null
+          reminder_id?: string | null
+          sequence_id?: string
+          started_at?: string | null
+          status?: string
+          step_index?: number
+          text_content?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequence_steps_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_scheduled_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comm_whatsapp_scheduled_sequences: {
+        Row: {
+          cancel_on_inbound_message: boolean
+          cancelled_at: string | null
+          channel_id: string
+          chat_id: string | null
+          completed_at: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          current_step_index: number
+          display_name: string | null
+          id: string
+          label: string | null
+          last_error: string | null
+          lead_id: string | null
+          mcp_client_request_id: string | null
+          paused_at: string | null
+          phone_digits: string
+          phone_number: string | null
+          reminder_id: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_on_inbound_message?: boolean
+          cancelled_at?: string | null
+          channel_id: string
+          chat_id?: string | null
+          completed_at?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_step_index?: number
+          display_name?: string | null
+          id?: string
+          label?: string | null
+          last_error?: string | null
+          lead_id?: string | null
+          mcp_client_request_id?: string | null
+          paused_at?: string | null
+          phone_digits: string
+          phone_number?: string | null
+          reminder_id?: string | null
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_on_inbound_message?: boolean
+          cancelled_at?: string | null
+          channel_id?: string
+          chat_id?: string | null
+          completed_at?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_step_index?: number
+          display_name?: string | null
+          id?: string
+          label?: string | null
+          last_error?: string | null
+          lead_id?: string | null
+          mcp_client_request_id?: string | null
+          paused_at?: string | null
+          phone_digits?: string
+          phone_number?: string | null
+          reminder_id?: string | null
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comm_whatsapp_scheduled_sequences_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
             referencedColumns: ["id"]
           },
         ]
@@ -5188,7 +5467,7 @@ export type Database = {
           status: string
           status_id: string
           telefone: string
-          tipo_contratacao_id: string
+          tipo_contratacao_id: string | null
           ultima_tentativa_reativacao: string | null
           ultimo_contato: string | null
           updated_at: string | null
@@ -5225,7 +5504,7 @@ export type Database = {
           status?: string
           status_id: string
           telefone: string
-          tipo_contratacao_id: string
+          tipo_contratacao_id?: string | null
           ultima_tentativa_reativacao?: string | null
           ultimo_contato?: string | null
           updated_at?: string | null
@@ -5262,7 +5541,7 @@ export type Database = {
           status?: string
           status_id?: string
           telefone?: string
-          tipo_contratacao_id?: string
+          tipo_contratacao_id?: string | null
           ultima_tentativa_reativacao?: string | null
           ultimo_contato?: string | null
           updated_at?: string | null
@@ -7037,6 +7316,10 @@ export type Database = {
         Args: { p_message_id: string; p_reason?: string }
         Returns: boolean
       }
+      cancel_scheduled_message_sequence: {
+        Args: { p_reason?: string; p_sequence_id: string }
+        Returns: boolean
+      }
       canonicalize_cotador_hospital_network_entries: {
         Args: { entries: Json }
         Returns: Json
@@ -7136,6 +7419,38 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_scheduled_message_sequence_steps: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          action_config: Json
+          action_id: string
+          action_index: number
+          action_status: string
+          action_type: string
+          attempts: number
+          cancel_on_inbound_message: boolean
+          channel_id: string
+          chat_id: string
+          contract_id: string
+          delay_seconds: number
+          display_name: string
+          due_at: string
+          label: string
+          lead_id: string
+          media_file_name: string
+          media_mime_type: string
+          media_url: string
+          message_type: string
+          phone_digits: string
+          phone_number: string
+          reminder_id: string
+          sequence_id: string
+          sequence_reminder_id: string
+          step_id: string
+          step_index: number
+          text_content: string
+        }[]
+      }
       cleanup_comm_whatsapp_event_receipts: {
         Args: { p_batch_limit?: number; p_retention?: string }
         Returns: number
@@ -7151,6 +7466,15 @@ export type Database = {
         Returns: number
       }
       cleanup_logs_7d: { Args: never; Returns: undefined }
+      comm_whatsapp_append_delivery_status_history: {
+        Args: {
+          p_error_message?: string
+          p_history: Json
+          p_status: string
+          p_status_at: string
+        }
+        Returns: Json
+      }
       comm_whatsapp_apply_message_mutation: {
         Args: {
           p_channel_id: string
@@ -7777,6 +8101,10 @@ export type Database = {
               unread_count: number
             }[]
           }
+      comm_whatsapp_merge_delivery_status_history: {
+        Args: { p_history: Json; p_incoming_history: Json }
+        Returns: Json
+      }
       comm_whatsapp_message_preview_text: {
         Args: {
           p_media_caption: string
@@ -8428,6 +8756,38 @@ export type Database = {
         }
         Returns: string
       }
+      create_scheduled_message_sequence: {
+        Args: {
+          p_cancel_on_inbound_message?: boolean
+          p_channel_id: string
+          p_chat_id?: string
+          p_contract_id?: string
+          p_label?: string
+          p_lead_id?: string
+          p_phone_digits: string
+          p_reminder_id?: string
+          p_scheduled_at: string
+          p_steps: Json
+        }
+        Returns: string
+      }
+      create_scheduled_message_sequence_for_mcp: {
+        Args: {
+          p_cancel_on_inbound_message?: boolean
+          p_channel_id: string
+          p_chat_id?: string
+          p_contract_id?: string
+          p_created_by: string
+          p_label?: string
+          p_lead_id?: string
+          p_mcp_client_request_id: string
+          p_phone_digits: string
+          p_reminder_id?: string
+          p_scheduled_at: string
+          p_steps: Json
+        }
+        Returns: string
+      }
       current_user_access_role: { Args: never; Returns: string }
       current_user_can_edit_any_module: {
         Args: { module_ids: string[] }
@@ -9023,6 +9383,10 @@ export type Database = {
       resolve_cotador_hospital_region: {
         Args: { value: string }
         Returns: string
+      }
+      retry_scheduled_message_sequence: {
+        Args: { p_sequence_id: string }
+        Returns: boolean
       }
       safe_make_date: {
         Args: { day_value: number; month_value: number; year_value: number }

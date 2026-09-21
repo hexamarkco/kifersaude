@@ -26,6 +26,7 @@ import {
   isAdesaoContract,
 } from "../lib/contractSignupFee";
 import {
+  normalizeOperadoraLabel,
   normalizeSentenceCase,
   normalizeTitleCase,
 } from "../lib/textNormalization";
@@ -77,9 +78,6 @@ import {
   parseFormattedNumber,
 } from "../lib/inputFormatters";
 import { consultarEmpresaPorCNPJ } from "../lib/receitaService";
-
-const normalizeOperadoraName = (value?: string | null) =>
-  normalizeTitleCase(value) ?? value?.trim() ?? "";
 
 type CommissionInstallment = {
   valor: string;
@@ -203,7 +201,7 @@ const buildContractFormState = (
     lead_id: contract?.lead_id || leadToConvert?.id || "",
     status: contract?.status || "",
     modalidade: contract?.modalidade || leadToConvert?.tipo_contratacao || "",
-    operadora: normalizeOperadoraName(
+    operadora: normalizeOperadoraLabel(
       contract?.operadora || leadToConvert?.operadora_atual || "",
     ),
     produto_plano: contract?.produto_plano || "",
@@ -340,7 +338,7 @@ export default function ContractForm({
     const operadoraMap = new Map<string, Operadora>();
 
     operadoras.forEach((operadora) => {
-      const normalizedName = normalizeOperadoraName(operadora.nome);
+      const normalizedName = normalizeOperadoraLabel(operadora.nome);
       if (normalizedName && !operadoraMap.has(normalizedName)) {
         operadoraMap.set(normalizedName, { ...operadora, nome: normalizedName });
       }
@@ -708,9 +706,9 @@ export default function ContractForm({
   };
 
   const handleOperadoraChange = (operadoraNome: string) => {
-    const normalizedOperadora = normalizeOperadoraName(operadoraNome);
+    const normalizedOperadora = normalizeOperadoraLabel(operadoraNome);
     const operadora = operadoras.find(
-      (op) => normalizeOperadoraName(op.nome) === normalizedOperadora,
+      (op) => normalizeOperadoraLabel(op.nome) === normalizedOperadora,
     );
 
     if (operadora) {
@@ -1066,7 +1064,7 @@ export default function ContractForm({
         status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
         modalidade:
           normalizeSentenceCase(dataToSave.modalidade) ?? dataToSave.modalidade,
-        operadora: normalizeOperadoraName(dataToSave.operadora) || dataToSave.operadora,
+        operadora: normalizeOperadoraLabel(dataToSave.operadora) || dataToSave.operadora,
         produto_plano:
           normalizeSentenceCase(dataToSave.produto_plano) ??
           dataToSave.produto_plano,

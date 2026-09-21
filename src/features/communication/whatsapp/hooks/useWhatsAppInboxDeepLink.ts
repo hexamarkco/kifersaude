@@ -26,6 +26,7 @@ export const useWhatsAppInboxDeepLink = ({
 }) => {
   const selectedChatIdRef = useRef(selectedChatId);
   const lastProcessedUrlChatIdRef = useRef<string | null | undefined>(undefined);
+  const pendingUrlChatIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -46,8 +47,14 @@ export const useWhatsAppInboxDeepLink = ({
     lastProcessedUrlChatIdRef.current = requestedChatId;
 
     if (!requestedChatId || selectedChatIdRef.current === requestedChatId) {
+      pendingUrlChatIdRef.current = undefined;
       return;
     }
+
+    // A seleção abaixo ainda será aplicada depois que este efeito terminar.
+    // Enquanto isso, o efeito que espelha a seleção na URL não pode restaurar
+    // o chat anterior e cancelar o deep link.
+    pendingUrlChatIdRef.current = requestedChatId;
 
     const targetChat = latestChatsRef.current.find((chat) => chat.id === requestedChatId) ?? null;
     if (targetChat) {
@@ -64,11 +71,20 @@ export const useWhatsAppInboxDeepLink = ({
     const currentUrlChatId = searchParams.get('chatId');
 
     if (selectedChatId) {
-      chatIdFromUrlRef.current = selectedChatId;
-
       if (currentUrlChatId === selectedChatId) {
+        chatIdFromUrlRef.current = selectedChatId;
+        if (pendingUrlChatIdRef.current === selectedChatId) {
+          pendingUrlChatIdRef.current = undefined;
+        }
         return;
       }
+
+      if (pendingUrlChatIdRef.current === currentUrlChatId) {
+        return;
+      }
+
+      chatIdFromUrlRef.current = selectedChatId;
+      pendingUrlChatIdRef.current = undefined;
 
       const nextParams = new URLSearchParams(searchParams);
       nextParams.set('chatId', selectedChatId);

@@ -56,7 +56,7 @@ import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
-import { normalizeTitleCase } from "../../lib/textNormalization";
+import { normalizeOperadoraLabel } from "../../lib/textNormalization";
 import {
   formatContractManagerDate as formatDate,
   getContractDisplayName as resolveContractDisplayName,
@@ -68,9 +68,6 @@ import type {
   ContractHolder,
   ContractsManagerProps,
 } from "./shared/contractsManagerTypes";
-
-const normalizeOperadoraLabel = (value?: string | null) =>
-  normalizeTitleCase(value) ?? value?.trim() ?? "";
 
 export default function ContractsManager({
   leadToConvert,

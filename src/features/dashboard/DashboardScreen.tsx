@@ -15,6 +15,10 @@ import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
 import { getLeadStatusDistribution, getOperadoraDistribution } from "../../lib/analytics";
+import {
+  normalizeContractTypeLabel,
+  normalizeOperadoraLabel,
+} from "../../lib/textNormalization";
 import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
@@ -840,11 +844,16 @@ export default function DashboardScreen({
       .filter((option) => option.ativo)
       .map((option) => option.value);
     const availableOperators = Array.from(
-      new Set(contractsVisibleToUser.map((contract) => contract.operadora).filter(Boolean)),
+      new Set(contractsVisibleToUser.map((contract) => normalizeOperadoraLabel(contract.operadora)).filter(Boolean)),
     );
-    const availableContractTypes = (options.lead_tipo_contratacao || [])
-      .filter((option) => option.ativo)
-      .map((option) => option.value);
+    const availableContractTypes = Array.from(
+      new Set(
+        (options.lead_tipo_contratacao || [])
+          .filter((option) => option.ativo)
+          .map((option) => normalizeContractTypeLabel(option.label || option.value))
+          .filter(Boolean),
+      ),
+    );
     const availableStatuses = leadStatuses
       .filter((status) => status.ativo)
       .map((status) => status.nome);
@@ -861,16 +870,18 @@ export default function DashboardScreen({
         ? (searchParams.get("dashboardOwner") as string)
         : "";
 
+    const requestedOperator = normalizeOperadoraLabel(searchParams.get("dashboardOperator"));
     const resolvedOperator =
-      searchParams.get("dashboardOperator") &&
-      availableOperators.includes(searchParams.get("dashboardOperator") || "")
-        ? (searchParams.get("dashboardOperator") as string)
+      requestedOperator &&
+      availableOperators.includes(requestedOperator)
+        ? requestedOperator
         : "";
 
+    const requestedContractType = normalizeContractTypeLabel(searchParams.get("dashboardContractType"));
     const resolvedContractType =
-      searchParams.get("dashboardContractType") &&
-      availableContractTypes.includes(searchParams.get("dashboardContractType") || "")
-        ? (searchParams.get("dashboardContractType") as string)
+      requestedContractType &&
+      availableContractTypes.includes(requestedContractType)
+        ? requestedContractType
         : "";
 
     const resolvedStatus =
@@ -1075,12 +1086,24 @@ export default function DashboardScreen({
   );
 
   const operatorOptions = useMemo(
-    () => Array.from(new Set(contractsVisibleToUser.map((contract) => contract.operadora).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+    () => Array.from(new Set(contractsVisibleToUser.map((contract) => normalizeOperadoraLabel(contract.operadora)).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR')),
     [contractsVisibleToUser],
   );
 
   const contractTypeOptions = useMemo(
-    () => (options.lead_tipo_contratacao || []).filter((option) => option.ativo),
+    () => {
+      const seen = new Set<string>();
+
+      return (options.lead_tipo_contratacao || [])
+        .filter((option) => option.ativo)
+        .map((option) => normalizeContractTypeLabel(option.label || option.value))
+        .filter((label) => {
+          if (!label || seen.has(label)) return false;
+          seen.add(label);
+          return true;
+        })
+        .map((label) => ({ value: label, label }));
+    },
     [options.lead_tipo_contratacao],
   );
 
@@ -1108,7 +1131,7 @@ export default function DashboardScreen({
 
         if (
           deferredDashboardContractTypeFilter &&
-          lead.tipo_contratacao !== deferredDashboardContractTypeFilter
+          normalizeContractTypeLabel(lead.tipo_contratacao) !== deferredDashboardContractTypeFilter
         ) {
           return false;
         }
@@ -1176,14 +1199,14 @@ export default function DashboardScreen({
 
         if (
           deferredDashboardOperatorFilter &&
-          contract.operadora !== deferredDashboardOperatorFilter
+          normalizeOperadoraLabel(contract.operadora) !== deferredDashboardOperatorFilter
         ) {
           return false;
         }
 
         if (
           deferredDashboardContractTypeFilter &&
-          (!lead || lead.tipo_contratacao !== deferredDashboardContractTypeFilter)
+          (!lead || normalizeContractTypeLabel(lead.tipo_contratacao) !== deferredDashboardContractTypeFilter)
         ) {
           return false;
         }

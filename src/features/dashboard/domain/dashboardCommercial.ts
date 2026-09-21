@@ -2,6 +2,7 @@ import type { Contract } from '../../contracts';
 import type { Interaction } from '../../activity';
 import type { Lead, LeadStatusHistory } from '../../leads';
 import type { Reminder } from '../../reminders';
+import { normalizeOperadoraLabel } from '../../../lib/textNormalization';
 import { parseDashboardDateValue } from '../shared/dashboardUtils';
 import type {
   DashboardCommercialAnalysis,
@@ -29,17 +30,21 @@ const startOfDay = (value: Date) => {
   return date;
 };
 
-const endOfDay = (value: Date) => {
-  const date = new Date(value);
-  date.setHours(23, 59, 59, 999);
-  return date;
-};
-
 const parseDate = (value?: string | null) => parseDashboardDateValue(value);
 const leadDate = (lead: Lead) => lead.data_criacao || lead.created_at;
 const contractDate = (contract: Contract) => contract.data_inicio || contract.created_at;
 const percentage = (numerator: number, denominator: number) =>
   denominator > 0 ? (numerator / denominator) * 100 : null;
+
+const isAgendaOverdue = (value: string | null | undefined, now: Date) => {
+  const date = parseDate(value);
+  return Boolean(date && startOfDay(date).getTime() < startOfDay(now).getTime());
+};
+
+const isSameAgendaDay = (value: string | null | undefined, now: Date) => {
+  const date = parseDate(value);
+  return Boolean(date && startOfDay(date).getTime() === startOfDay(now).getTime());
+};
 
 const isInside = (value: string | null | undefined, range: DashboardDateRange | null) => {
   if (!range) return true;
@@ -68,7 +73,7 @@ const hasPendingNextStep = (
 
   return (remindersByLead.get(lead.id) ?? []).some((reminder) => {
     const date = parseDate(reminder.data_lembrete);
-    return Boolean(date && date >= startOfDay(now) && !reminder.concluido_em);
+    return Boolean(date && date >= startOfDay(now) && !reminder.lido);
   });
 };
 
@@ -185,13 +190,6 @@ export const buildDashboardCommercialAnalysis = ({
     historiesByLead.set(history.lead_id, items);
   });
   historiesByLead.forEach((items) => items.sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()));
-  const remindersByLead = new Map<string, Reminder[]>();
-  reminders.forEach((reminder) => {
-    if (!reminder.lead_id) return;
-    const items = remindersByLead.get(reminder.lead_id) ?? [];
-    items.push(reminder);
-    remindersByLead.set(reminder.lead_id, items);
-  });
   const statusColorByName = new Map(leadStatuses.map((status) => [status.nome, status.cor]));
   const orderedStatuses = [...leadStatuses]
     .filter((status) => status.ativo && !terminalStatusPattern.test(status.nome))
@@ -202,6 +200,19 @@ export const buildDashboardCommercialAnalysis = ({
     const items = contractsByLead.get(contract.lead_id) ?? [];
     items.push(contract);
     contractsByLead.set(contract.lead_id, items);
+  });
+  const contractLeadById = new Map(
+    contracts.filter((contract) => contract.lead_id).map((contract) => [contract.id, contract.lead_id as string]),
+  );
+  const resolveReminderLeadId = (reminder: Reminder) =>
+    reminder.lead_id ?? (reminder.contract_id ? contractLeadById.get(reminder.contract_id) : undefined);
+  const remindersByLead = new Map<string, Reminder[]>();
+  reminders.forEach((reminder) => {
+    const leadId = resolveReminderLeadId(reminder);
+    if (!leadId) return;
+    const items = remindersByLead.get(leadId) ?? [];
+    items.push(reminder);
+    remindersByLead.set(leadId, items);
   });
 
   const stageMetrics: DashboardStageMetric[] = orderedStatuses.map((status, index) => {
@@ -247,34 +258,31 @@ export const buildDashboardCommercialAnalysis = ({
     ? commissionInstallments.filter((item) => isInside(item.date, currentRange)).reduce((sum, item) => sum + item.value, 0)
     : null;
 
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  const pendingReminders = reminders.filter((reminder) => !reminder.concluido_em);
-  const overdueReminders = pendingReminders.filter((reminder) => {
-    const date = parseDate(reminder.data_lembrete);
-    return Boolean(date && date < todayStart);
-  });
-  const pendingToday = pendingReminders.filter((reminder) => {
-    const date = parseDate(reminder.data_lembrete);
-    return Boolean(date && date >= todayStart && date <= todayEnd);
-  });
-  const completedToday = reminders.filter((reminder) => {
-    const date = parseDate(reminder.concluido_em);
-    return Boolean(date && date >= todayStart && date <= todayEnd);
-  });
+  const pendingReminders = reminders.filter((reminder) => !reminder.lido);
+  const overdueReminders = pendingReminders.filter((reminder) => isAgendaOverdue(reminder.data_lembrete, now));
+  const pendingToday = pendingReminders.filter((reminder) => isSameAgendaDay(reminder.data_lembrete, now));
+  const completedToday = reminders.filter((reminder) => reminder.lido && isSameAgendaDay(reminder.data_lembrete, now));
+  const overdueReminderLeadIds = new Set(
+    overdueReminders
+      .map(resolveReminderLeadId)
+      .filter((leadId): leadId is string => Boolean(leadId)),
+  );
   const agendaItems = [...overdueReminders, ...pendingToday]
     .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime())
     .slice(0, 8)
-    .map((reminder) => ({
-      id: reminder.id,
-      title: reminder.titulo,
-      type: reminder.tipo,
-      date: reminder.data_lembrete,
-      leadId: reminder.lead_id ?? null,
-      leadName: reminder.lead_id ? leadsById.get(reminder.lead_id)?.nome_completo ?? null : null,
-      overdue: overdueReminders.some((item) => item.id === reminder.id),
-      completed: Boolean(reminder.concluido_em),
-    }));
+    .map((reminder) => {
+      const leadId = resolveReminderLeadId(reminder);
+      return {
+        id: reminder.id,
+        title: reminder.titulo,
+        type: reminder.tipo,
+        date: reminder.data_lembrete,
+        leadId: leadId ?? null,
+        leadName: leadId ? leadsById.get(leadId)?.nome_completo ?? null : null,
+        overdue: overdueReminders.some((item) => item.id === reminder.id),
+        completed: Boolean(reminder.concluido_em),
+      };
+    });
 
   const opportunityDetails: DashboardOpportunity[] = periodOpenLeads.map((lead) => {
     const leadInteractions = interactionsByLead.get(lead.id) ?? [];
@@ -282,7 +290,7 @@ export const buildDashboardCommercialAnalysis = ({
     const lastContact = getLatestDate([lead.ultimo_contato, interactionDate]);
     const idleDays = lastContact ? daysBetween(lastContact, now) : null;
     const hasNextStep = hasPendingNextStep(lead, remindersByLead, now);
-    const overdue = Boolean(parseDate(lead.proximo_retorno) && parseDate(lead.proximo_retorno)! < todayStart);
+    const overdue = overdueReminderLeadIds.has(lead.id);
     const advanced = advancedStagePattern.test(lead.status ?? '');
     const stale = idleDays === null || idleDays >= STALE_FOLLOW_UP_DAYS;
     const signal = overdue ? 'Follow-up vencido' : advanced ? 'Etapa avançada' : !hasNextStep ? 'Sem próximo passo' : stale ? 'Sem interação recente' : 'Atenção';
@@ -315,10 +323,7 @@ export const buildDashboardCommercialAnalysis = ({
   const withoutNextStepLeadIds = periodOpenLeads
     .filter((lead) => !hasPendingNextStep(lead, remindersByLead, now))
     .map((lead) => lead.id);
-  const overdueFollowUpCount = periodOpenLeads.filter((lead) => {
-    const date = parseDate(lead.proximo_retorno);
-    return Boolean(date && date < todayStart);
-  }).length;
+  const overdueFollowUpCount = overdueReminders.length;
 
   const stageHistoryByLead = new Map<string, LeadStatusHistory[]>();
   statusHistory.forEach((history) => {
@@ -376,9 +381,9 @@ export const buildDashboardCommercialAnalysis = ({
   const stuckValues = stuckLeads.map((lead) => getContractValue(contractsByLead.get(lead.id) ?? [], lead.id)).filter((value): value is number => value !== null);
 
   const origins = buildPerformanceRows([], (lead) => lead.origem || 'Não informado', currentLeads, currentContracts, leadsById);
-  const operatorLabels = [...new Set(currentContracts.map((contract) => contract.operadora).filter(Boolean))];
+  const operatorLabels = [...new Set(currentContracts.map((contract) => normalizeOperadoraLabel(contract.operadora)).filter(Boolean))];
   const operators: DashboardPerformanceRow[] = operatorLabels.map((label) => {
-    const matchingContracts = currentContracts.filter((contract) => contract.operadora === label);
+    const matchingContracts = currentContracts.filter((contract) => normalizeOperadoraLabel(contract.operadora) === label);
     const monthlyValue = matchingContracts.reduce((sum, contract) => sum + (contract.mensalidade_total ?? 0), 0);
     return {
       label,

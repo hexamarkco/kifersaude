@@ -10,6 +10,7 @@ import WhatsAppInboxNotificationToast from '../components/WhatsAppInboxNotificat
 import { browserNotificationService, type BrowserNotificationPermission } from '../lib/browserNotificationService';
 import { notificationService, type InboxMessageNotification } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
+import { crmTabPresenceService } from '../lib/crmTabPresence';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import {
@@ -107,6 +108,7 @@ export default function PainelWrapper() {
   );
 
   useEffect(() => {
+    const stopCrmTabPresence = crmTabPresenceService.start();
     const unsubscribeUnreadCount = notificationService.subscribeToUnreadCount(setUnreadReminders);
     const unsubscribeInboxUnreadCount = notificationService.subscribeToInboxUnreadCount(setUnreadInboxChats);
     notificationService.start(30000);
@@ -120,7 +122,7 @@ export default function PainelWrapper() {
     const unsubscribeInboxMessages = notificationService.subscribeToInboxMessages((notification) => {
       setActiveInboxNotifications((prev) => [...prev, notification]);
       audioService.playNotificationSound();
-      if (document.visibilityState === 'hidden') {
+      if (document.visibilityState === 'hidden' && !crmTabPresenceService.hasActiveTab()) {
         browserNotificationService.show({
           title: `WhatsApp: ${notification.displayName}`,
           body: notification.messagePreview,
@@ -130,6 +132,7 @@ export default function PainelWrapper() {
     });
 
     return () => {
+      stopCrmTabPresence();
       notificationService.stop();
       unsubscribe();
       unsubscribeInboxMessages();

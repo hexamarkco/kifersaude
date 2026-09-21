@@ -25,3 +25,28 @@ export const normalizeTitleCase = (value: string | null | undefined): string | n
     })
     .join(' ');
 };
+
+export const normalizeOperadoraLabel = (value: string | null | undefined): string =>
+  normalizeTitleCase(value) ?? '';
+
+const normalizeComparableText = (value: string): string =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+
+export const normalizeContractTypeLabel = (value: string | null | undefined): string => {
+  const normalized = normalizeTitleCase(value) ?? '';
+  const comparable = normalizeComparableText(normalized);
+
+  if (['pme', 'cnpj', 'mei', 'empresarial'].includes(comparable)) {
+    return 'PME';
+  }
+
+  if (['pf', 'pessoa fisica'].includes(comparable)) {
+    return 'Pessoa Física';
+  }
+
+  if (comparable === 'adesao') {
+    return 'Adesão';
+  }
+
+  return normalized;
+};

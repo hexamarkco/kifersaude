@@ -1,5 +1,6 @@
 import type { Contract } from '../features/contracts';
 import type { Lead } from '../features/leads';
+import { normalizeOperadoraLabel } from './textNormalization';
 
 export type DateRange = {
   start: Date;
@@ -161,7 +162,8 @@ export function getOperadoraDistribution(contracts: Contract[]): OperadoraDistri
   const activeContracts = contracts.filter(c => c.status === 'Ativo');
 
   const operadoraData = activeContracts.reduce((acc, contract) => {
-    const operadora = contract.operadora;
+    const operadora = normalizeOperadoraLabel(contract.operadora);
+    if (!operadora) return acc;
     if (!acc[operadora]) {
       acc[operadora] = { count: 0, revenue: 0 };
     }

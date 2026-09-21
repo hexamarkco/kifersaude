@@ -3,6 +3,7 @@ import { test } from 'vitest';
 
 import type { Contract } from '../../../contracts';
 import type { Lead } from '../../../leads';
+import type { Reminder } from '../../../reminders';
 import type { DashboardCommercialInput } from '../../shared/dashboardTypes';
 import { buildDashboardCommercialAnalysis } from '../dashboardCommercial';
 
@@ -76,4 +77,25 @@ test('flags advanced stale opportunities and uses linked monthly value when avai
   assert.equal(analysis.stuck.amount, 1500);
   assert.equal(analysis.stuck.valueAvailable, true);
   assert.equal(analysis.opportunities[0]?.signal, 'Etapa avançada');
+});
+
+test('only labels a lead with overdue follow-up when Agenda has an unread overdue reminder', () => {
+  const leadWithOldReturn = lead({ id: 'lead-overdue', nome_completo: 'Sem lembrete', status: 'Qualificação', proximo_retorno: '2026-09-10' });
+  const reminder: Reminder = {
+    id: 'reminder-1',
+    lead_id: 'lead-overdue',
+    tipo: 'Follow-up',
+    titulo: 'Retornar contato',
+    data_lembrete: '2026-09-10T12:00:00.000Z',
+    lido: false,
+    prioridade: 'normal',
+    created_at: '2026-09-10T10:00:00.000Z',
+  };
+
+  const withoutReminder = buildDashboardCommercialAnalysis(input({ leads: [leadWithOldReturn], reminders: [] }));
+  assert.notEqual(withoutReminder.opportunities[0]?.signal, 'Follow-up vencido');
+
+  const withReminder = buildDashboardCommercialAnalysis(input({ leads: [leadWithOldReturn], reminders: [reminder] }));
+  assert.equal(withReminder.opportunities[0]?.signal, 'Follow-up vencido');
+  assert.equal(withReminder.agenda.overdue, 1);
 });

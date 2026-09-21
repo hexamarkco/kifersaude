@@ -1,5 +1,5 @@
 import type { Contract } from '../../contracts';
-import type { Lead, LeadStatusConfig } from '../../leads';
+import type { Lead, LeadStatusConfig, LeadStatusHistory } from '../../leads';
 import type { Interaction } from '../../activity';
 import type { Reminder } from '../../reminders';
 import type { TabNavigationOptions } from '../../../types/navigation';
@@ -35,6 +35,7 @@ export type DashboardProps = {
 
 export type DashboardMetric = 'leads' | 'contratos' | 'comissoes';
 export type DashboardPeriodFilter =
+  | 'hoje'
   | '7d'
   | '30d'
   | 'mes-atual'
@@ -173,6 +174,131 @@ export type DashboardOperationsAnalysis = {
     interactions: boolean;
     reminders: boolean;
   };
+};
+
+export type DashboardStageMetric = {
+  status: string;
+  color: string | null;
+  count: number;
+  share: number;
+  averageDays: number;
+  monthlyValue: number | null;
+  nextStageConversion: number | null;
+};
+
+export type DashboardAgendaItem = {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  leadId: string | null;
+  leadName: string | null;
+  overdue: boolean;
+  completed: boolean;
+};
+
+export type DashboardOpportunity = {
+  leadId: string;
+  name: string;
+  status: string;
+  statusColor: string | null;
+  monthlyValue: number | null;
+  lastContact: string | null;
+  idleDays: number | null;
+  nextStep: string | null;
+  responsavel: string | null;
+  signal: string;
+  tone: 'danger' | 'warning' | 'info';
+};
+
+export type DashboardPerformanceRow = {
+  label: string;
+  leads: number;
+  proposals: number | null;
+  contracts: number;
+  conversion: number | null;
+  monthlyValue: number;
+  averageTicket: number | null;
+  commissionExpected: number;
+};
+
+export type DashboardStageConversion = {
+  from: string;
+  to: string;
+  rate: number | null;
+  numerator: number;
+  denominator: number;
+};
+
+export type DashboardCommercialAnalysis = {
+  salesCount: number;
+  monthlyRevenue: number;
+  commissionExpected: number;
+  commissionReceived: number | null;
+  averageTicket: number | null;
+  conversion: number | null;
+  leadsReceived: number;
+  goal: null;
+  currentRange: DashboardDateRange | null;
+  pipelineValue: number;
+  pipelineValueAvailable: boolean;
+  pipelineStages: DashboardStageMetric[];
+  stageMetrics: DashboardStageMetric[];
+  stageConversions: DashboardStageConversion[];
+  opportunities: DashboardOpportunity[];
+  agenda: {
+    pending: number;
+    overdue: number;
+    completed: number;
+    items: DashboardAgendaItem[];
+  };
+  followUp: {
+    openOpportunities: number;
+    withNextStep: number;
+    coverage: number | null;
+    withoutNextStep: number;
+    withoutNextStepLeadIds: string[];
+    overdue: number;
+  };
+  stuck: {
+    amount: number;
+    count: number;
+    leadIds: string[];
+    thresholdHours: number;
+    valueAvailable: boolean;
+  };
+  velocity: {
+    leadToProposalDays: number | null;
+    proposalToDecisionDays: number | null;
+    decisionToClosedDays: number | null;
+    leadToClosedDays: number | null;
+    ageBuckets: Array<{ label: string; count: number; leadIds: string[] }>;
+  };
+  origins: DashboardPerformanceRow[];
+  operators: DashboardPerformanceRow[];
+  recentProposals: DashboardOpportunity[];
+  lossReasonsAvailable: boolean;
+  dataCoverage: {
+    monthlyRevenue: boolean;
+    commissionExpected: boolean;
+    commissionsReceived: boolean;
+    opportunitiesValue: boolean;
+    proposals: boolean;
+    lossReasons: boolean;
+  };
+};
+
+export type DashboardCommercialInput = {
+  leads: Lead[];
+  contracts: Contract[];
+  reminders: Reminder[];
+  interactions: Interaction[];
+  statusHistory: LeadStatusHistory[];
+  leadStatuses: LeadStatusConfig[];
+  periodFilter: DashboardPeriodFilter;
+  customStartDate: string;
+  customEndDate: string;
+  now?: Date;
 };
 
 export type DashboardOperationsInput = {

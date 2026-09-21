@@ -27,13 +27,8 @@ import { DashboardDistributionSection } from "./components/DashboardDistribution
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
-import {
-  DashboardAttentionQueue,
-  DashboardAutomationCommand,
-  DashboardPerformanceOverview,
-  DashboardPipelineHealth,
-  DashboardSourcePerformance,
-} from "./components/DashboardOperationsSections";
+import { DashboardAutomationCommand } from "./components/DashboardOperationsSections";
+import { DashboardCommercialSections } from "./components/DashboardCommercialSections";
 import {
   DASHBOARD_CHART_PALETTE,
   mapOperadoraChartData,
@@ -56,7 +51,7 @@ import type {
   ReminderRequest,
   DashboardPeriodFilter,
 } from "./shared/dashboardTypes";
-import { buildDashboardOperationsAnalysis } from "./domain/dashboardOperations";
+import { buildDashboardCommercialAnalysis } from "./domain/dashboardCommercial";
 import {
   insertDashboardReminders,
   listDashboardReminderContractIds,
@@ -113,7 +108,7 @@ export default function DashboardScreen({
   } = usePanelMotion();
   const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>(() => {
     const urlValue = searchParams.get("periodFilter");
-    const validValues: DashboardPeriodFilter[] = ["7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
+    const validValues: DashboardPeriodFilter[] = ["hoje", "7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
 
     if (urlValue && validValues.some((value) => value === urlValue)) {
       return urlValue as DashboardPeriodFilter;
@@ -183,15 +178,27 @@ export default function DashboardScreen({
   const [dashboardOwnerFilter, setDashboardOwnerFilter] = useState(
     () => searchParams.get("dashboardOwner") || "",
   );
+  const [dashboardOperatorFilter, setDashboardOperatorFilter] = useState(
+    () => searchParams.get("dashboardOperator") || "",
+  );
+  const [dashboardContractTypeFilter, setDashboardContractTypeFilter] = useState(
+    () => searchParams.get("dashboardContractType") || "",
+  );
+  const [dashboardStatusFilter, setDashboardStatusFilter] = useState(
+    () => searchParams.get("dashboardStatus") || "",
+  );
   const deferredPeriodFilter = useDeferredValue(periodFilter);
   const deferredCustomStartDate = useDeferredValue(customStartDate);
   const deferredCustomEndDate = useDeferredValue(customEndDate);
   const deferredDashboardOriginFilter = useDeferredValue(dashboardOriginFilter);
   const deferredDashboardOwnerFilter = useDeferredValue(dashboardOwnerFilter);
+  const deferredDashboardOperatorFilter = useDeferredValue(dashboardOperatorFilter);
+  const deferredDashboardContractTypeFilter = useDeferredValue(dashboardContractTypeFilter);
+  const deferredDashboardStatusFilter = useDeferredValue(dashboardStatusFilter);
   const loadingUi = useAdaptiveLoading(loading);
   const resolvePeriodFilter = useCallback(() => {
     const urlValue = searchParams.get("periodFilter");
-    const validValues: DashboardPeriodFilter[] = ["7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
+    const validValues: DashboardPeriodFilter[] = ["hoje", "7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
 
     if (urlValue && validValues.some((value) => value === urlValue)) {
       return urlValue as DashboardPeriodFilter;
@@ -236,6 +243,9 @@ export default function DashboardScreen({
       nextEnd: string = customEndDate,
       nextOrigin: string = dashboardOriginFilter,
       nextOwner: string = dashboardOwnerFilter,
+      nextOperator: string = dashboardOperatorFilter,
+      nextContractType: string = dashboardContractTypeFilter,
+      nextStatus: string = dashboardStatusFilter,
     ) => {
       if (typeof window !== "undefined") {
         localStorage.setItem("dashboardPeriodFilter", nextPeriod);
@@ -267,6 +277,24 @@ export default function DashboardScreen({
         params.delete("dashboardOwner");
       }
 
+      if (nextOperator) {
+        params.set("dashboardOperator", nextOperator);
+      } else {
+        params.delete("dashboardOperator");
+      }
+
+      if (nextContractType) {
+        params.set("dashboardContractType", nextContractType);
+      } else {
+        params.delete("dashboardContractType");
+      }
+
+      if (nextStatus) {
+        params.set("dashboardStatus", nextStatus);
+      } else {
+        params.delete("dashboardStatus");
+      }
+
       if (params.toString() !== searchParams.toString()) {
         setSearchParams(params, { replace: true });
       }
@@ -276,6 +304,9 @@ export default function DashboardScreen({
       customStartDate,
       dashboardOriginFilter,
       dashboardOwnerFilter,
+      dashboardOperatorFilter,
+      dashboardContractTypeFilter,
+      dashboardStatusFilter,
       periodFilter,
       searchParams,
       setSearchParams,
@@ -808,6 +839,15 @@ export default function DashboardScreen({
     const availableOwners = (options.lead_responsavel || [])
       .filter((option) => option.ativo)
       .map((option) => option.value);
+    const availableOperators = Array.from(
+      new Set(contractsVisibleToUser.map((contract) => contract.operadora).filter(Boolean)),
+    );
+    const availableContractTypes = (options.lead_tipo_contratacao || [])
+      .filter((option) => option.ativo)
+      .map((option) => option.value);
+    const availableStatuses = leadStatuses
+      .filter((status) => status.ativo)
+      .map((status) => status.nome);
 
     const resolvedOrigin =
       searchParams.get("dashboardOrigin") &&
@@ -819,6 +859,24 @@ export default function DashboardScreen({
       searchParams.get("dashboardOwner") &&
       availableOwners.includes(searchParams.get("dashboardOwner") || "")
         ? (searchParams.get("dashboardOwner") as string)
+        : "";
+
+    const resolvedOperator =
+      searchParams.get("dashboardOperator") &&
+      availableOperators.includes(searchParams.get("dashboardOperator") || "")
+        ? (searchParams.get("dashboardOperator") as string)
+        : "";
+
+    const resolvedContractType =
+      searchParams.get("dashboardContractType") &&
+      availableContractTypes.includes(searchParams.get("dashboardContractType") || "")
+        ? (searchParams.get("dashboardContractType") as string)
+        : "";
+
+    const resolvedStatus =
+      searchParams.get("dashboardStatus") &&
+      availableStatuses.includes(searchParams.get("dashboardStatus") || "")
+        ? (searchParams.get("dashboardStatus") as string)
         : "";
 
     setPeriodFilter((current) =>
@@ -836,11 +894,23 @@ export default function DashboardScreen({
     setDashboardOwnerFilter((current) =>
       current === resolvedOwner ? current : resolvedOwner,
     );
+    setDashboardOperatorFilter((current) =>
+      current === resolvedOperator ? current : resolvedOperator,
+    );
+    setDashboardContractTypeFilter((current) =>
+      current === resolvedContractType ? current : resolvedContractType,
+    );
+    setDashboardStatusFilter((current) =>
+      current === resolvedStatus ? current : resolvedStatus,
+    );
   }, [
     isObserver,
     isOriginVisibleToObserver,
+    contractsVisibleToUser,
     leadOrigins,
+    leadStatuses,
     options.lead_responsavel,
+    options.lead_tipo_contratacao,
     resolveCustomDate,
     resolvePeriodFilter,
     searchParams,
@@ -853,6 +923,9 @@ export default function DashboardScreen({
     customStartDate,
     dashboardOriginFilter,
     dashboardOwnerFilter,
+    dashboardOperatorFilter,
+    dashboardContractTypeFilter,
+    dashboardStatusFilter,
     periodFilter,
     persistFilters,
   ]);
@@ -960,7 +1033,10 @@ export default function DashboardScreen({
     let start: Date;
     let end = endOfToday;
 
-    if (deferredPeriodFilter === "7d") {
+    if (deferredPeriodFilter === "hoje") {
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+    } else if (deferredPeriodFilter === "7d") {
       start = new Date(now);
       start.setDate(start.getDate() - 6);
       start.setHours(0, 0, 0, 0);
@@ -998,6 +1074,21 @@ export default function DashboardScreen({
     [options.lead_responsavel],
   );
 
+  const operatorOptions = useMemo(
+    () => Array.from(new Set(contractsVisibleToUser.map((contract) => contract.operadora).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+    [contractsVisibleToUser],
+  );
+
+  const contractTypeOptions = useMemo(
+    () => (options.lead_tipo_contratacao || []).filter((option) => option.ativo),
+    [options.lead_tipo_contratacao],
+  );
+
+  const statusOptions = useMemo(
+    () => leadStatuses.filter((status) => status.ativo).map((status) => ({ value: status.nome, label: status.nome })),
+    [leadStatuses],
+  );
+
   const dashboardScopedLeads = useMemo(
     () =>
       leads.filter((lead) => {
@@ -1015,11 +1106,27 @@ export default function DashboardScreen({
           return false;
         }
 
+        if (
+          deferredDashboardContractTypeFilter &&
+          lead.tipo_contratacao !== deferredDashboardContractTypeFilter
+        ) {
+          return false;
+        }
+
+        if (
+          deferredDashboardStatusFilter &&
+          lead.status !== deferredDashboardStatusFilter
+        ) {
+          return false;
+        }
+
         return true;
       }),
     [
       deferredDashboardOriginFilter,
       deferredDashboardOwnerFilter,
+      deferredDashboardContractTypeFilter,
+      deferredDashboardStatusFilter,
       leads,
     ],
   );
@@ -1067,12 +1174,36 @@ export default function DashboardScreen({
           return false;
         }
 
+        if (
+          deferredDashboardOperatorFilter &&
+          contract.operadora !== deferredDashboardOperatorFilter
+        ) {
+          return false;
+        }
+
+        if (
+          deferredDashboardContractTypeFilter &&
+          (!lead || lead.tipo_contratacao !== deferredDashboardContractTypeFilter)
+        ) {
+          return false;
+        }
+
+        if (
+          deferredDashboardStatusFilter &&
+          (!lead || lead.status !== deferredDashboardStatusFilter)
+        ) {
+          return false;
+        }
+
         return true;
       }),
     [
       contractsVisibleToUser,
       deferredDashboardOriginFilter,
       deferredDashboardOwnerFilter,
+      deferredDashboardOperatorFilter,
+      deferredDashboardContractTypeFilter,
+      deferredDashboardStatusFilter,
       leadsById,
     ],
   );
@@ -1087,14 +1218,29 @@ export default function DashboardScreen({
     });
   }, [dashboardScopedContracts, filterByPeriod]);
 
-  const dashboardOperations = useMemo(
+  const dashboardScopedLeadIds = useMemo(
+    () => {
+      const leadIds = new Set(dashboardScopedLeads.map((lead) => lead.id));
+      if (!deferredDashboardOperatorFilter) return leadIds;
+
+      const contractLeadIds = new Set(
+        dashboardScopedContracts
+          .map((contract) => contract.lead_id)
+          .filter((leadId): leadId is string => Boolean(leadId)),
+      );
+      return new Set([...leadIds].filter((leadId) => contractLeadIds.has(leadId)));
+    },
+    [dashboardScopedContracts, dashboardScopedLeads, deferredDashboardOperatorFilter],
+  );
+
+  const dashboardCommercial = useMemo(
     () =>
-      buildDashboardOperationsAnalysis({
+      buildDashboardCommercialAnalysis({
         leads: dashboardScopedLeads,
         contracts: dashboardScopedContracts,
-        reminders: reminders.filter((reminder) => !reminder.lead_id || leadsById.has(reminder.lead_id)),
-        interactions: interactions.filter((interaction) => !interaction.lead_id || leadsById.has(interaction.lead_id)),
-        statusHistory: statusHistory.filter((history) => leadsById.has(history.lead_id)),
+        reminders: reminders.filter((reminder) => !reminder.lead_id || dashboardScopedLeadIds.has(reminder.lead_id)),
+        interactions: interactions.filter((interaction) => !interaction.lead_id || dashboardScopedLeadIds.has(interaction.lead_id)),
+        statusHistory: statusHistory.filter((history) => dashboardScopedLeadIds.has(history.lead_id)),
         leadStatuses,
         periodFilter: deferredPeriodFilter,
         customStartDate: deferredCustomStartDate,
@@ -1102,13 +1248,13 @@ export default function DashboardScreen({
       }),
     [
       dashboardScopedContracts,
+      dashboardScopedLeadIds,
       dashboardScopedLeads,
       deferredCustomEndDate,
       deferredCustomStartDate,
       deferredPeriodFilter,
       interactions,
       leadStatuses,
-      leadsById,
       reminders,
       statusHistory,
     ],
@@ -2047,10 +2193,6 @@ export default function DashboardScreen({
     setSelectedLead(lead);
   };
 
-  const handleOpenLeadInList = (leadId: string) => {
-    onNavigateToTab?.("leads", { leadIdFilter: leadId });
-  };
-
   const handleAutomationNavigate = (tab: 'leads' | 'agenda' | 'config', status?: string) => {
     onNavigateToTab?.(tab, status ? { leadsStatusFilter: [status] } : undefined);
   };
@@ -2113,13 +2255,22 @@ export default function DashboardScreen({
           customEndDate={customEndDate}
           dashboardOriginFilter={dashboardOriginFilter}
           dashboardOwnerFilter={dashboardOwnerFilter}
+          dashboardOperatorFilter={dashboardOperatorFilter}
+          dashboardContractTypeFilter={dashboardContractTypeFilter}
+          dashboardStatusFilter={dashboardStatusFilter}
           visibleLeadOrigins={visibleLeadOrigins}
           responsavelOptions={responsavelOptions}
+          operatorOptions={operatorOptions}
+          contractTypeOptions={contractTypeOptions}
+          statusOptions={statusOptions}
           onPeriodFilterChange={handleDashboardPeriodFilterChange}
           onStartDateChange={handleStartDateChange}
           onEndDateChange={handleEndDateChange}
           onOriginFilterChange={setDashboardOriginFilter}
           onOwnerFilterChange={setDashboardOwnerFilter}
+          onOperatorFilterChange={setDashboardOperatorFilter}
+          onContractTypeFilterChange={setDashboardContractTypeFilter}
+          onStatusFilterChange={setDashboardStatusFilter}
           isCustomStartInvalid={isCustomStartInvalid}
           isCustomEndInvalid={isCustomEndInvalid}
         />
@@ -2130,12 +2281,14 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
-        <DashboardPerformanceOverview analysis={dashboardOperations} />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
-          <DashboardPipelineHealth analysis={dashboardOperations} onNavigateToStatus={handleLeadStatusSegmentClick} />
-          <DashboardAttentionQueue analysis={dashboardOperations} leadsById={leadsById} onNavigateToLead={handleOpenLeadInList} />
-        </div>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2" data-panel-animate>
+        <DashboardCommercialSections
+          analysis={dashboardCommercial}
+          showFinancialMetrics={!isObserver}
+          onNavigateToLead={handleNavigateToLead}
+          onNavigateToStatus={handleLeadStatusSegmentClick}
+          onNavigateToTab={onNavigateToTab}
+        />
+        <div className="grid grid-cols-1 gap-4" data-panel-animate>
           <DashboardTrendSection
             selectedMetric={selectedMetric}
             chartRangeInMonths={chartRangeInMonths}
@@ -2147,7 +2300,6 @@ export default function DashboardScreen({
             onSelectedMetricChange={setSelectedMetric}
             onChartRangeChange={setChartRangeInMonths}
           />
-          <DashboardSourcePerformance analysis={dashboardOperations} />
         </div>
         <Surface padding="sm" data-panel-animate>
           <SectionHeader

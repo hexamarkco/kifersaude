@@ -46,6 +46,7 @@ export const resolveDashboardDateRange = (
   };
 
   if (period === 'todo-periodo') return null;
+  if (period === 'hoje') return makeRange(today, today);
   if (period === '7d') return makeRange(new Date(today.getTime() - (6 * DAY_IN_MS)), today);
   if (period === '30d') return makeRange(new Date(today.getTime() - (29 * DAY_IN_MS)), today);
   if (period === 'mes-atual') return makeRange(new Date(today.getFullYear(), today.getMonth(), 1), today);

@@ -1,4 +1,4 @@
-import { Filter, Target, Users } from 'lucide-react';
+import { Filter, Layers3, Stethoscope, Tag, Target, Users } from 'lucide-react';
 
 import {
   Input,
@@ -23,13 +23,22 @@ type DashboardHeaderProps = {
   customEndDate: string;
   dashboardOriginFilter: string;
   dashboardOwnerFilter: string;
+  dashboardOperatorFilter: string;
+  dashboardContractTypeFilter: string;
+  dashboardStatusFilter: string;
   visibleLeadOrigins: OriginOption[];
   responsavelOptions: OwnerOption[];
+  operatorOptions: string[];
+  contractTypeOptions: OwnerOption[];
+  statusOptions: OwnerOption[];
   onPeriodFilterChange: (value: DashboardPeriodFilter) => void;
   onStartDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onEndDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onOriginFilterChange: (value: string) => void;
   onOwnerFilterChange: (value: string) => void;
+  onOperatorFilterChange: (value: string) => void;
+  onContractTypeFilterChange: (value: string) => void;
+  onStatusFilterChange: (value: string) => void;
   isCustomStartInvalid: boolean;
   isCustomEndInvalid: boolean;
 };
@@ -40,13 +49,22 @@ export function DashboardHeader({
   customEndDate,
   dashboardOriginFilter,
   dashboardOwnerFilter,
+  dashboardOperatorFilter,
+  dashboardContractTypeFilter,
+  dashboardStatusFilter,
   visibleLeadOrigins,
   responsavelOptions,
+  operatorOptions,
+  contractTypeOptions,
+  statusOptions,
   onPeriodFilterChange,
   onStartDateChange,
   onEndDateChange,
   onOriginFilterChange,
   onOwnerFilterChange,
+  onOperatorFilterChange,
+  onContractTypeFilterChange,
+  onStatusFilterChange,
   isCustomStartInvalid,
   isCustomEndInvalid,
 }: DashboardHeaderProps) {
@@ -128,6 +146,39 @@ export function DashboardHeader({
                 value: option.value,
                 label: option.label,
               }))}
+            />
+          </div>
+
+          <div className="min-w-0 xl:w-52">
+            <FilterSelect
+              icon={Stethoscope}
+              value={dashboardOperatorFilter}
+              onChange={onOperatorFilterChange}
+              placeholder="Todas as operadoras"
+              neutralValues={['']}
+              options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
+            />
+          </div>
+
+          <div className="min-w-0 xl:w-52">
+            <FilterSelect
+              icon={Tag}
+              value={dashboardContractTypeFilter}
+              onChange={onContractTypeFilterChange}
+              placeholder="Todos os tipos"
+              neutralValues={['']}
+              options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
+            />
+          </div>
+
+          <div className="min-w-0 xl:w-52">
+            <FilterSelect
+              icon={Layers3}
+              value={dashboardStatusFilter}
+              onChange={onStatusFilterChange}
+              placeholder="Todos os estágios"
+              neutralValues={['']}
+              options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
             />
           </div>
         </div>

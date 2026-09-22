@@ -26,6 +26,8 @@ import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
 import HolderImportPreparation from "./components/HolderImportPreparation";
 import { ContractBulkJsonImportDialog } from "./components/ContractBulkJsonImportDialog";
+import ContractStatusDropdown from "./components/ContractStatusDropdown";
+import { useContractStatus } from "./hooks/useContractStatus";
 import {
   Badge,
   Button,
@@ -58,7 +60,6 @@ import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
 import {
   normalizeOperadoraLabel,
-  normalizeSentenceCase,
 } from "../../lib/textNormalization";
 import {
   formatContractManagerDate as formatDate,
@@ -103,6 +104,13 @@ export default function ContractsManager({
     null,
   );
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const statusOptions = (options.contract_status || []).filter((option) => option.ativo);
+  const { changeStatus, savingIds } = useContractStatus((updated) => {
+    setContracts((current) => current.map((contract) =>
+      contract.id === updated.id ? { ...contract, ...updated } : contract,
+    ));
+    setSelectedContract((current) => current?.id === updated.id ? { ...current, ...updated } : current);
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
@@ -691,7 +699,15 @@ export default function ContractsManager({
                       </button>
                     </TableCell>
                     <TableCell>
-                      <Badge tone={getStatusTone(contract.status)} size="sm">{normalizeSentenceCase(contract.status) ?? contract.status}</Badge>
+                      <ContractStatusDropdown
+                        status={contract.status}
+                        code={contract.codigo_contrato}
+                        tone={getStatusTone(contract.status)}
+                        canEdit={canEditContracts}
+                        saving={savingIds.has(contract.id)}
+                        options={statusOptions}
+                        onChange={(status) => canEditContracts ? changeStatus(contract, status) : Promise.resolve()}
+                      />
                       <span className="mt-2 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                     </TableCell>
                     <TableCell>
@@ -736,9 +752,15 @@ export default function ContractsManager({
                         <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                           {contract.codigo_contrato}
                         </h3>
-                        <Badge tone={getStatusTone(contract.status)} size="sm" className="px-3 py-1 text-xs">
-                          {normalizeSentenceCase(contract.status) ?? contract.status}
-                        </Badge>
+                        <ContractStatusDropdown
+                          status={contract.status}
+                          code={contract.codigo_contrato}
+                          tone={getStatusTone(contract.status)}
+                          canEdit={canEditContracts}
+                          saving={savingIds.has(contract.id)}
+                          options={statusOptions}
+                          onChange={(status) => canEditContracts ? changeStatus(contract, status) : Promise.resolve()}
+                        />
                         <Badge tone="neutral" size="sm" className="px-3 py-1 text-xs">
                           {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}
                         </Badge>

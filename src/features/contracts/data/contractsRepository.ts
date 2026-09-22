@@ -77,6 +77,17 @@ export async function deleteContract(contractId: string): Promise<void> {
   }
 }
 
+export async function updateContractStatus(contractId: string, status: string) {
+  const { data, error } = await databaseClient
+    .from('contracts')
+    .update({ status })
+    .eq('id', contractId)
+    .select('id, status, updated_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function saveContractDependent(
   values: Database['public']['Tables']['dependents']['Insert'],
   dependentId?: string,

@@ -1354,6 +1354,47 @@ async function getScheduledWhatsAppSequence(supabase: SupabaseClient, params: Re
   return { success: true, scheduled_sequence: view };
 }
 
+async function updateScheduledWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  if (!safeUuid(actor.actorId)) return errorResult('UNAUTHORIZED', 'A edição exige OAuth de administrador.');
+  const allowed = new Set(['scheduled_sequence_id', 'expected_updated_at', 'scheduled_at', 'steps', 'label', 'cancel_on_inbound_message']);
+  if (Object.keys(params).some((key) => !allowed.has(key))) return errorResult('NOT_ALLOWED', 'Campos não permitidos para editar a sequência.');
+  const sequenceId = text(params.scheduled_sequence_id);
+  if (!safeUuid(sequenceId)) return errorResult('INVALID_INPUT', 'scheduled_sequence_id inválido.');
+  // Preserve database timestamp precision for optimistic concurrency.
+  const expectedUpdatedAt = text(params.expected_updated_at);
+  if (!parseDate(expectedUpdatedAt)) return errorResult('INVALID_INPUT', 'expected_updated_at deve ser o updated_at da consulta atual.');
+  const scheduledAt = parseDate(params.scheduled_at);
+  if (!scheduledAt || Date.parse(scheduledAt) < Date.now() + 60_000 || Date.parse(scheduledAt) > Date.now() + MAX_SCHEDULED_SEQUENCE_DELAY_SECONDS * 1000) {
+    return errorResult('INVALID_SCHEDULE_TIME', 'scheduled_at deve estar entre um minuto e 366 dias no futuro.');
+  }
+  if (params.label !== undefined && (typeof params.label !== 'string' || text(params.label).length > MAX_SHORT_TEXT_LENGTH)) return errorResult('INVALID_INPUT', 'label deve ser texto de até 160 caracteres.');
+  if (params.cancel_on_inbound_message !== undefined && typeof params.cancel_on_inbound_message !== 'boolean') return errorResult('INVALID_INPUT', 'cancel_on_inbound_message deve ser booleano.');
+  const current = await getScheduledSequenceRow(supabase, sequenceId);
+  if (current.error || !current.row) return current.error ?? errorResult('SCHEDULE_NOT_FOUND', 'Sequência não encontrada.');
+  if (current.row.status !== 'scheduled' || current.row.current_step_index !== 0) return errorResult('SCHEDULE_NOT_EDITABLE', 'Somente sequências ainda não iniciadas podem ser editadas.');
+  const normalized = await normalizeScheduledSequenceSteps(params, actor, supabase);
+  if (normalized.error || !normalized.steps) return normalized.error ?? errorResult('INVALID_INPUT', 'Etapas inválidas.');
+  if (!current.row.lead_id && normalized.steps.some((step) => step.actions.some((action) => action.type !== 'cancel_sequence'))) return errorResult('INVALID_INPUT', 'Ações de CRM exigem uma sequência vinculada a um lead.');
+  const { data, error } = await supabase.rpc('update_scheduled_message_sequence_for_mcp', {
+    p_actor_id: actor.actorId,
+    p_sequence_id: sequenceId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_scheduled_at: scheduledAt,
+    p_steps: normalized.steps,
+    p_label: params.label === undefined ? current.row.label : text(params.label) || null,
+    p_cancel_on_inbound_message: params.cancel_on_inbound_message ?? current.row.cancel_on_inbound_message,
+  });
+  if (error) {
+    if (error.code === '42501') return errorResult('UNAUTHORIZED', 'A edição exige OAuth de administrador ativo.');
+    if (error.code === '40001') return errorResult('CONFLICT', 'A sequência mudou. Consulte novamente antes de editar.');
+    if (error.code === 'P0002') return errorResult('SCHEDULE_NOT_FOUND', 'Sequência não encontrada.');
+    if (error.code === 'P0001') return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência já iniciou ou não aceita as etapas informadas. Consulte novamente.');
+    return errorResult('INTERNAL_ERROR', 'Não foi possível editar a sequência.');
+  }
+  if (data !== true) return errorResult('INTERNAL_ERROR', 'Não foi possível confirmar a edição da sequência.');
+  return { success: true, scheduled_sequence_id: sequenceId, scheduled_at: scheduledAt };
+}
+
 async function cancelScheduledWhatsAppSequence(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
   const sequenceId = text(params.scheduled_sequence_id);
   const reason = rawString(params.observacao);
@@ -2882,6 +2923,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_upload_scheduled_whatsapp_media') { actionType = 'whatsapp_schedule_media_upload'; result = await uploadScheduledWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_message') { actionType = 'whatsapp_schedule'; result = await scheduleWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_schedule_whatsapp_sequence') { actionType = 'whatsapp_schedule_sequence'; result = await scheduleWhatsAppSequence(supabase, args, actor); }
+    else if (toolName === 'kifer_update_scheduled_whatsapp_sequence') { actionType = 'whatsapp_schedule_sequence_update'; result = await updateScheduledWhatsAppSequence(supabase, args, actor); }
     else if (toolName === 'kifer_bulk_schedule_whatsapp_messages') { actionType = 'whatsapp_schedule_bulk'; result = await bulkScheduleWhatsAppMessages(supabase, args, actor); }
     else if (toolName === 'kifer_update_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_update'; result = await updateScheduledWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_cancel_scheduled_whatsapp_message') { actionType = 'whatsapp_schedule_cancel'; result = await cancelScheduledWhatsAppMessage(supabase, args); }

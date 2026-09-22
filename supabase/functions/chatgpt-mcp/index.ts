@@ -604,6 +604,23 @@ const tools = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_update_scheduled_whatsapp_sequence',
+    description: 'Edita uma sequência do agendador que ainda não começou. Consulte a sequência antes: envie updated_at como expected_updated_at e a lista completa de etapas em steps, que substitui as anteriores. Permite alterar horário, mensagens, mídias, ações, título e cancelamento por resposta. Sequências iniciadas ou alteradas desde a consulta são recusadas.',
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      required: ['scheduled_sequence_id', 'expected_updated_at', 'scheduled_at', 'steps'],
+      properties: {
+        scheduled_sequence_id: { type: 'string', format: 'uuid' },
+        expected_updated_at: { type: 'string', format: 'date-time' },
+        scheduled_at: { type: 'string', format: 'date-time' },
+        label: { type: 'string', maxLength: 160, description: 'Omitir preserva o título; texto vazio remove.' },
+        cancel_on_inbound_message: { type: 'boolean', description: 'Omitir preserva a configuração atual.' },
+        steps: { type: 'array', minItems: 1, maxItems: 30, items: SCHEDULED_SEQUENCE_STEP_SCHEMA },
+      },
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  },
+  {
     name: 'kifer_get_scheduled_whatsapp_sequence',
     description: 'Consulta uma sequência do agendador pelo ID, com todas as etapas e ações CRM. Somente leitura.',
     inputSchema: { type: 'object', required: ['scheduled_sequence_id'], additionalProperties: false, properties: { scheduled_sequence_id: { type: 'string' } } },
@@ -713,6 +730,7 @@ const ADMIN_READ_TOOLS = new Set([
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   const writeAction = new Set([
+    'kifer_update_scheduled_whatsapp_sequence',
     'kifer_send_whatsapp_message', 'kifer_send_whatsapp_media', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_schedule_whatsapp_sequence', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_sequence', 'kifer_retry_scheduled_whatsapp_sequence', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
     'kifer_update_automation_settings', 'kifer_update_followup_flow', 'kifer_pause_followup_flow', 'kifer_resume_followup_flow',
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',

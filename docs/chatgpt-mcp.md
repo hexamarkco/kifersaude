@@ -18,6 +18,8 @@ As ações de escrita exigem OAuth de administrador. O token legado do MCP perma
 
 ## Ferramentas de ação
 
+O agendador oferece `kifer_update_scheduled_whatsapp_sequence` para editar sequências ainda não iniciadas. Consulte `kifer_get_scheduled_whatsapp_sequence` primeiro e informe `scheduled_sequence_id`, o `updated_at` recebido como `expected_updated_at`, `scheduled_at` e a lista completa de `steps`. As etapas substituem as anteriores e aceitam o mesmo formato da criação (mensagem, mídia e ações de status/lembrete). `label` e `cancel_on_inbound_message` são opcionais: omitir preserva o valor atual; `label: ""` remove o título. Conflitos de versão exigem nova consulta. A RPC valida novamente o administrador e reutiliza os locks e restrições da edição no Inbox, recusando etapas já processadas. A operação fica registrada na auditoria MCP.
+
 | Tool | Schema fechado | Efeito |
 | --- | --- | --- |
 | `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia texto pela integração atual; em resultado `ambiguous`, consulte a conversa antes de tentar novamente com outra chave. |

@@ -763,6 +763,62 @@ test('agenda sequência com ações CRM e preserva a idempotência no RPC transa
   ]);
 });
 
+const sequenceEditArgs = () => ({
+  scheduled_sequence_id: actor.actorId,
+  expected_updated_at: '2026-09-22T12:00:00.123456+00:00',
+  scheduled_at: new Date(Date.now() + 86400000).toISOString(),
+  steps: [{ message: 'Texto atualizado', actions: [{ type: 'create_reminder', title: 'Retorno', due_seconds: 86400 }] }],
+});
+const editableSequence = { id: actor.actorId, lead_id: actor.actorId, status: 'scheduled', current_step_index: 0, label: 'Retorno comercial', cancel_on_inbound_message: false };
+
+test('edita sequência via RPC atômica, preservando opções omitidas e precisão da versão', async () => {
+  const supabase = client({ comm_whatsapp_scheduled_sequences: { data: editableSequence }, mcp_action_audit_log: {} }, {
+    update_scheduled_message_sequence_for_mcp: { data: true },
+  });
+  const args = sequenceEditArgs();
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_scheduled_whatsapp_sequence', arguments: args, actor });
+  assert.equal(result?.success, true);
+  const rpc = supabase.rpcCalls[0];
+  assert.equal(rpc.name, 'update_scheduled_message_sequence_for_mcp');
+  const payload = rpc.args as Record<string, unknown>;
+  assert.equal(payload.p_actor_id, actor.actorId);
+  assert.equal(payload.p_expected_updated_at, args.expected_updated_at);
+  assert.equal(payload.p_label, 'Retorno comercial');
+  assert.equal(payload.p_cancel_on_inbound_message, false);
+  assert.deepEqual((payload.p_steps as Array<{ actions: unknown }>)[0].actions, [{ type: 'create_reminder', title: 'Retorno', due_seconds: 86400, priority: 'normal' }]);
+  assert.equal(supabase.writes.some((write) => write.table === 'mcp_action_audit_log'), true);
+  assert.equal(supabase.writes.some((write) => write.table.startsWith('comm_whatsapp_')), false);
+});
+
+test('recusa edição de sequência iniciada e entradas inválidas antes da escrita', async () => {
+  for (const [row, overrides, expected] of [
+    [{ ...editableSequence, status: 'running' }, {}, 'SCHEDULE_NOT_EDITABLE'],
+    [editableSequence, { steps: [{ delay_seconds: 10, message: 'Inválido' }] }, 'INVALID_INPUT'],
+    [{ ...editableSequence, lead_id: null }, {}, 'INVALID_INPUT'],
+    [editableSequence, { expected_updated_at: '' }, 'INVALID_INPUT'],
+    [editableSequence, { chat_id: actor.actorId }, 'NOT_ALLOWED'],
+  ] as const) {
+    const supabase = client({ comm_whatsapp_scheduled_sequences: { data: row }, mcp_action_audit_log: {} });
+    const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_scheduled_whatsapp_sequence', arguments: { ...sequenceEditArgs(), ...overrides }, actor });
+    assert.equal(result?.error_code, expected);
+    assert.equal(supabase.rpcCalls.length, 0);
+  }
+});
+
+test('edição trata concorrência, início do processamento e revogação de autorização sem expor erro interno', async () => {
+  for (const [code, expected] of [['40001', 'CONFLICT'], ['P0001', 'SCHEDULE_NOT_EDITABLE'], ['42501', 'UNAUTHORIZED'], ['P0002', 'SCHEDULE_NOT_FOUND'], ['XX000', 'INTERNAL_ERROR']]) {
+    const supabase = client({ comm_whatsapp_scheduled_sequences: { data: editableSequence }, mcp_action_audit_log: {} }, {
+      update_scheduled_message_sequence_for_mcp: { error: { code, message: 'private internal details' } },
+    });
+    const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_scheduled_whatsapp_sequence', arguments: { ...sequenceEditArgs(), label: '', cancel_on_inbound_message: true }, actor });
+    assert.equal(result?.error_code, expected);
+    assert.equal(JSON.stringify(result).includes('private internal details'), false);
+    const payload = supabase.rpcCalls[0].args as Record<string, unknown>;
+    assert.equal(payload.p_label, null);
+    assert.equal(payload.p_cancel_on_inbound_message, true);
+  }
+});
+
 const stubMcpSendEnvironment = () => {
   vi.stubGlobal('Deno', { env: { get: (key: string) => key === 'SUPABASE_URL' ? 'https://project.supabase.co' : key === 'KIFER_MCP_WHATSAPP_INTERNAL_SECRET' ? 'internal-secret' : '' } });
 };

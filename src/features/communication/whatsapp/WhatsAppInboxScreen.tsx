@@ -158,6 +158,7 @@ import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import WhatsAppMessageDetailsModal from './components/WhatsAppMessageDetailsModal';
+import { ComposerSendLock } from './components/composerSendLock';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
@@ -2420,7 +2421,7 @@ export default function WhatsAppInboxScreen() {
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
   const activeSendOperationsRef = useRef(0);
-  const composerQueueSnapshotKeysRef = useRef<Set<string>>(new Set());
+  const composerSendLockRef = useRef(new ComposerSendLock());
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
@@ -2663,12 +2664,6 @@ export default function WhatsAppInboxScreen() {
 
     return next;
   }, [beginSendOperation]);
-
-  const releaseComposerQueueSnapshotKeySoon = useCallback((key: string) => {
-    window.setTimeout(() => {
-      composerQueueSnapshotKeysRef.current.delete(key);
-    }, 250);
-  }, []);
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -6493,9 +6488,9 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null, onSent?: () => void | Promise<void>) => {
+  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null, onSent?: () => void | Promise<void>): Promise<void> => {
     if (textSegments.length === 0) {
-      return;
+      return Promise.resolve();
     }
 
     const optimisticTimestamps = allocateOptimisticMessageTimestamps(chat.id, textSegments.length);
@@ -6529,7 +6524,7 @@ export default function WhatsAppInboxScreen() {
       return { segment, optimisticMessage, clientRequestId };
     });
 
-    enqueueChatSend(chat.id, async () => {
+    return enqueueChatSend(chat.id, async () => {
       let hadSuccessfulSend = false;
 
       for (const queued of queuedMessages) {
@@ -6616,18 +6611,16 @@ export default function WhatsAppInboxScreen() {
     }
 
     const snapshotKey = buildComposerQueueSnapshotKey(selectedChat.id, messageDraft, attachmentsSnapshot);
-    if (composerQueueSnapshotKeysRef.current.has(snapshotKey)) {
+    if (!composerSendLockRef.current.tryAcquire(snapshotKey)) {
       return;
     }
-
-    composerQueueSnapshotKeysRef.current.add(snapshotKey);
-    releaseComposerQueueSnapshotKeySoon(snapshotKey);
 
     resetComposerAfterQueue();
 
     try {
       const replyTargetSnapshot = replyTargetMessage;
       const quotePayload = replyTargetSnapshot ? getQuotePayloadFromMessage(replyTargetSnapshot) : null;
+      let queuedSend: Promise<void>;
       if (attachmentsSnapshot.length > 0) {
         const optimisticTimestamps = allocateOptimisticMessageTimestamps(selectedChat.id, attachmentsSnapshot.length);
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
@@ -6674,7 +6667,7 @@ export default function WhatsAppInboxScreen() {
           return { attachment, caption, optimisticMessage, clientRequestId };
         });
 
-        enqueueChatSend(selectedChat.id, async () => {
+        queuedSend = enqueueChatSend(selectedChat.id, async () => {
           let shouldStopQueue = false;
           let hadSuccessfulSend = false;
           let firstErrorMessage = '';
@@ -6789,15 +6782,20 @@ export default function WhatsAppInboxScreen() {
           }
         });
       } else {
-        sendTextSegments(selectedChat, textSegments, quotePayload);
+        queuedSend = sendTextSegments(selectedChat, textSegments, quotePayload);
       }
+      void queuedSend.then(
+        () => composerSendLockRef.current.release(snapshotKey),
+        () => composerSendLockRef.current.release(snapshotKey),
+      );
       setReplyTargetMessage(null);
     } catch (error) {
+      composerSendLockRef.current.release(snapshotKey);
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, updateOptimisticChatPreviewStatus]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, updateOptimisticChatPreviewStatus]);
 
   useEffect(() => {
     if (!voiceAttachment) {

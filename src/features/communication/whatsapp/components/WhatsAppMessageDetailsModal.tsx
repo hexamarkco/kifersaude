@@ -5,7 +5,7 @@ import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { cx } from '../../../../lib/cx';
 import { getMessageDeliveryStatusHistory, type MessageDeliveryStatusEvent } from '../domain/messageMetadata';
-import { formatMessageTime } from '../domain/messageTimeline';
+import { compareMessageDeliveryStatusEvents, formatMessageTime } from '../domain/messageTimeline';
 import type { CommWhatsAppMessage } from '../domain/types';
 
 type WhatsAppMessageDetailsModalProps = {
@@ -75,7 +75,7 @@ const buildTimeline = (message: CommWhatsAppMessage): TimelineEvent[] => {
   }
 
   return events
-    .sort((left, right) => new Date(left.at).getTime() - new Date(right.at).getTime())
+    .sort(compareMessageDeliveryStatusEvents)
     .map((event) => ({
       ...event,
       ...getStatusPresentation(event.status, message.message_type.trim().toLowerCase()),

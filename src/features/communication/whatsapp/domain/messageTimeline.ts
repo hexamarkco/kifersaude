@@ -1,6 +1,6 @@
 import { getDateKey, SAO_PAULO_TIMEZONE } from '../../../../lib/dateUtils';
 import { mergeCommWhatsAppMessages } from '../messageStatus';
-import { getMessageClientOrderAt } from './messageMetadata';
+import { getMessageClientOrderAt, type MessageDeliveryStatusEvent } from './messageMetadata';
 import { getMessageSearchPreviewText, normalizeInboxSearch } from './messagePresentation';
 import type { CommWhatsAppMessage } from './types';
 
@@ -24,6 +24,35 @@ export const getMessageTimestampMs = (value?: string | null) => {
   if (!value) return null;
   const timestamp = parseCommMessageDate(value).getTime();
   return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const deliveryStatusOrder: Record<string, number> = {
+  pending: 0,
+  queued: 1,
+  sending: 2,
+  sent: 3,
+  received: 4,
+  delivered: 5,
+  read: 6,
+  seen: 6,
+  viewed: 6,
+  played: 7,
+  failed: 8,
+  error: 8,
+  deleted: 9,
+};
+
+/** Sort status events by time, resolving identical timestamps by delivery progression. */
+export const compareMessageDeliveryStatusEvents = (
+  left: MessageDeliveryStatusEvent,
+  right: MessageDeliveryStatusEvent,
+) => {
+  const leftAt = getMessageTimestampMs(left.at);
+  const rightAt = getMessageTimestampMs(right.at);
+  if (leftAt !== null && rightAt !== null && leftAt !== rightAt) return leftAt - rightAt;
+
+  return (deliveryStatusOrder[left.status.trim().toLowerCase()] ?? 10)
+    - (deliveryStatusOrder[right.status.trim().toLowerCase()] ?? 10);
 };
 
 export const getComparableMessageTimestampMs = (

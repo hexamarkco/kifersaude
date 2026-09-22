@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
+import type { MessageDeliveryStatusEvent } from '../messageMetadata';
 import type { CommWhatsAppMessage } from '../types';
 import {
+  compareMessageDeliveryStatusEvents,
   compareMessageChronology,
   dedupeObviousDuplicateMessages,
   formatMessageDaySeparatorLabel,
@@ -35,6 +37,33 @@ test('parses timestamps with and without an explicit timezone', () => {
   );
   assert.equal(getMessageTimestampMs('invalid'), null);
   assert.equal(getMessageDayKey('invalid'), '');
+});
+
+test('orders delivery progression when status events share a timestamp', () => {
+  const at = '2026-09-21T22:06:00.000Z';
+  const events: MessageDeliveryStatusEvent[] = [
+    { status: 'delivered', at, error: null },
+    { status: 'sent', at, error: null },
+    { status: 'pending', at, error: null },
+  ];
+
+  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+    'pending',
+    'sent',
+    'delivered',
+  ]);
+});
+
+test('keeps actual delivery timestamps ahead of status tie-break order', () => {
+  const events: MessageDeliveryStatusEvent[] = [
+    { status: 'delivered', at: '2026-09-21T22:06:02.000Z', error: null },
+    { status: 'pending', at: '2026-09-21T22:06:00.000Z', error: null },
+  ];
+
+  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+    'pending',
+    'delivered',
+  ]);
 });
 
 test('uses optimistic client order before persisted message time', () => {

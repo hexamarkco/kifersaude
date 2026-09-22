@@ -42,6 +42,11 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - O financeiro modela somente ajustes de acréscimo/desconto em `contract_value_adjustments`; não existe ledger de pagamentos/chargebacks/bonificações que autorize inferir tools de registro desses eventos.
 - `kifer_update_contract_commission` altera apenas os campos de comissão e bônus já existentes no formulário; pagamento, chargeback e pagamento de bônus continuam sem tool porque não há ledger correspondente.
 
+## Aniversários
+
+- Um lead pode ter vários contratos. Lembretes automáticos de aniversário pertencem à pessoa e ao ano (`pessoa_tipo`, `pessoa_chave`, `ano`), nunca a cada contrato. O CPF normalizado identifica titulares e dependentes; dependentes sem CPF usam nome normalizado e data de nascimento completa. Pessoas distintas do mesmo lead mantêm aniversários próprios.
+- Triggers e geração anual no banco são os responsáveis pela criação; abrir o dashboard não cria lembretes de aniversário. A geração anual escolhe um cadastro por pessoa antes do upsert, vincula o contrato mais recente e preserva o estado de conclusão. Calendário e notificações também agrupam os cadastros repetidos.
+
 ## Permissão de contato
 
 - A política de saída é por canal, endpoint normalizado e escopo: `global` bloqueia todo envio; `commercial` bloqueia prospecção/follow-up comercial; `service_reply` e `transactional` são escopos distintos. O estado antigo de opt-out de campanhas permanece como compatibilidade sincronizada, não como segundo árbitro.

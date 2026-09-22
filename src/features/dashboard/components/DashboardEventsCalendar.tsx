@@ -36,6 +36,7 @@ type DashboardEventsCalendarProps = {
   onSelectedCalendarDateChange: (date: Date) => void;
   onNavigateToContract: DashboardContractNavigationHandler;
   onNavigateToLead: DashboardLeadNavigationHandler;
+  onNavigateToAgenda: () => void;
   onCreateReminder: DashboardReminderRequestHandler;
 };
 
@@ -67,6 +68,7 @@ export function DashboardEventsCalendar({
   onSelectedCalendarDateChange,
   onNavigateToContract,
   onNavigateToLead,
+  onNavigateToAgenda,
   onCreateReminder,
 }: DashboardEventsCalendarProps) {
   const year = calendarMonth.getFullYear();
@@ -260,6 +262,7 @@ export function DashboardEventsCalendar({
                   holderByContractId={holderByContractId}
                   onNavigateToContract={onNavigateToContract}
                   onNavigateToLead={onNavigateToLead}
+                  onNavigateToAgenda={onNavigateToAgenda}
                   onCreateReminder={onCreateReminder}
                 />
               ))}
@@ -277,6 +280,7 @@ type CalendarEventRowProps = {
   holderByContractId: Map<string, Holder>;
   onNavigateToContract: DashboardContractNavigationHandler;
   onNavigateToLead: DashboardLeadNavigationHandler;
+  onNavigateToAgenda: () => void;
   onCreateReminder: DashboardReminderRequestHandler;
 };
 
@@ -286,6 +290,7 @@ function CalendarEventRow({
   holderByContractId,
   onNavigateToContract,
   onNavigateToLead,
+  onNavigateToAgenda,
   onCreateReminder,
 }: CalendarEventRowProps) {
   if (event.kind === 'adjustment') {
@@ -410,18 +415,11 @@ function CalendarEventRow({
         )}
         <Button
           type="button"
-          onClick={() =>
-            onCreateReminder({
-              contractId: birthday.contract?.id,
-              leadId: birthday.contract?.lead_id,
-              title: `Aniversário de ${birthday.nome}`,
-              description: `Data: ${birthday.nextBirthday.toLocaleDateString('pt-BR')}`,
-            })
-          }
+          onClick={onNavigateToAgenda}
           variant="soft"
           size="sm"
         >
-          Criar lembrete
+          Ver agenda
         </Button>
       </div>
     </article>

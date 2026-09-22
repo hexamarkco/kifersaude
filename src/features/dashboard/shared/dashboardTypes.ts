@@ -6,6 +6,8 @@ import type { TabNavigationOptions } from '../../../types/navigation';
 
 export type Holder = {
   id: string;
+  cpf?: string | null;
+  created_at?: string | null;
   contract_id: string;
   nome_completo: string;
   data_nascimento: string;
@@ -16,6 +18,8 @@ export type Holder = {
 
 export type Dependent = {
   id: string;
+  cpf?: string | null;
+  created_at?: string | null;
   contract_id: string;
   nome_completo: string;
   data_nascimento: string;

@@ -1,4 +1,5 @@
 export type * from './domain/types';
+export { deduplicateBirthdayPeople } from './domain/birthdayPeople';
 export {
   createReminder,
   deleteReminder,

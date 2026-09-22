@@ -14,6 +14,8 @@ import type {
   CommWhatsAppPhoneContact,
   CommWhatsAppPresenceStatus,
   CommWhatsAppScheduledSequence,
+  CommWhatsAppScheduledSequenceAction,
+  CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 
@@ -66,6 +68,89 @@ export type CreateScheduledSequenceInput = {
     }>;
   }>;
 };
+
+type UpdateScheduledSequenceInput = Pick<
+  CreateScheduledSequenceInput,
+  'scheduledAt' | 'label' | 'cancelOnInboundMessage' | 'steps'
+>;
+
+type ScheduledSequenceRow = Omit<CommWhatsAppScheduledSequence, 'steps'> & {
+  steps?: Array<{
+    id: string;
+    step_index: number;
+    delay_seconds: number;
+    due_at: string | null;
+    reminder_id: string | null;
+    message_type: CommWhatsAppScheduledSequenceStep['messageType'];
+    text_content: string | null;
+    media_url: string | null;
+    media_mime_type: string | null;
+    media_file_name: string | null;
+    status: CommWhatsAppScheduledSequenceStep['status'];
+    last_error: string | null;
+    actions?: Array<{
+      id: string;
+      action_index: number;
+      action_type: CommWhatsAppScheduledSequenceAction['actionType'];
+      config: Record<string, unknown>;
+      status: CommWhatsAppScheduledSequenceAction['status'];
+      error_message: string | null;
+    }>;
+  }>;
+};
+
+function serializeScheduledSequenceSteps(steps: CreateScheduledSequenceInput['steps']) {
+  return steps.map((step) => ({
+    delay_seconds: Math.max(0, Math.floor(step.delaySeconds || 0)),
+    reminder_id: step.reminderId ?? null,
+    message: step.message
+      ? {
+          message_type: step.message.messageType,
+          text_content: step.message.textContent ?? null,
+          media_url: step.message.mediaUrl ?? null,
+          media_mime_type: step.message.mediaMimeType ?? null,
+          media_file_name: step.message.mediaFileName ?? null,
+        }
+      : null,
+    actions: step.actions.map((action) => ({
+      type: action.actionType,
+      ...action.config,
+    })),
+  }));
+}
+
+function mapScheduledSequenceRow(row: ScheduledSequenceRow): CommWhatsAppScheduledSequence {
+  const { steps, ...sequence } = row;
+  return {
+    ...sequence,
+    steps: steps
+      ?.map((step) => ({
+        id: step.id,
+        stepIndex: step.step_index,
+        delaySeconds: step.delay_seconds,
+        dueAt: step.due_at,
+        reminderId: step.reminder_id,
+        messageType: step.message_type,
+        textContent: step.text_content,
+        mediaUrl: step.media_url,
+        mediaMimeType: step.media_mime_type,
+        mediaFileName: step.media_file_name,
+        status: step.status,
+        lastError: step.last_error,
+        actions: (step.actions ?? [])
+          .map((action) => ({
+            id: action.id,
+            actionIndex: action.action_index,
+            actionType: action.action_type,
+            config: action.config,
+            status: action.status,
+            errorMessage: action.error_message,
+          }))
+          .sort((left, right) => left.actionIndex - right.actionIndex),
+      }))
+      .sort((left, right) => left.stepIndex - right.stepIndex),
+  };
+}
 
 function scheduledMediaUploadDescriptor(file: File): Omit<ScheduledMediaUpload, 'url' | 'sizeBytes' | 'filename'> {
   const declaredMimeType = file.type.trim().toLowerCase();
@@ -2717,29 +2802,11 @@ export const commWhatsAppService = {
   },
 
   async scheduleSequence(input: CreateScheduledSequenceInput): Promise<string> {
-    const steps = input.steps.map((step) => ({
-      delay_seconds: Math.max(0, Math.floor(step.delaySeconds || 0)),
-      reminder_id: step.reminderId ?? null,
-      message: step.message
-        ? {
-            message_type: step.message.messageType,
-            text_content: step.message.textContent ?? null,
-            media_url: step.message.mediaUrl ?? null,
-            media_mime_type: step.message.mediaMimeType ?? null,
-            media_file_name: step.message.mediaFileName ?? null,
-          }
-        : null,
-      actions: step.actions.map((action) => ({
-        type: action.actionType,
-        ...action.config,
-      })),
-    }));
-
     const { data, error } = await supabase.rpc('create_scheduled_message_sequence' as never, {
       p_channel_id: input.channelId,
       p_phone_digits: input.phoneDigits,
       p_scheduled_at: input.scheduledAt,
-      p_steps: steps,
+      p_steps: serializeScheduledSequenceSteps(input.steps),
       p_chat_id: input.chatId ?? null,
       p_lead_id: input.leadId ?? null,
       p_contract_id: input.contractId ?? null,
@@ -2753,6 +2820,20 @@ export const commWhatsAppService = {
     return data as string;
   },
 
+  async updateScheduledSequence(sequenceId: string, input: UpdateScheduledSequenceInput): Promise<boolean> {
+    const { data, error } = await supabase.rpc('update_scheduled_message_sequence' as never, {
+      p_sequence_id: sequenceId,
+      p_scheduled_at: input.scheduledAt,
+      p_steps: serializeScheduledSequenceSteps(input.steps),
+      p_label: input.label ?? null,
+      p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? true,
+    } as never);
+    if (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível atualizar a sequência.'));
+    }
+    return data as boolean;
+  },
+
   async listScheduledSequences(options?: {
     channelId?: string;
     chatId?: string;
@@ -2763,7 +2844,7 @@ export const commWhatsAppService = {
   }): Promise<CommWhatsAppScheduledSequence[]> {
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
-      .select('*, steps:comm_whatsapp_scheduled_sequence_steps(*)')
+      .select('*, steps:comm_whatsapp_scheduled_sequence_steps(*, actions:comm_whatsapp_scheduled_sequence_actions(*))')
       .order('scheduled_at', { ascending: false });
     if (options?.channelId) query = query.eq('channel_id', options.channelId);
     if (options?.chatId) query = query.eq('chat_id', options.chatId);
@@ -2773,7 +2854,7 @@ export const commWhatsAppService = {
     if (options?.limit) query = query.limit(options.limit);
     const { data, error } = await query;
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível listar as sequências.'));
-    return (data ?? []) as unknown as CommWhatsAppScheduledSequence[];
+    return ((data ?? []) as unknown as ScheduledSequenceRow[]).map(mapScheduledSequenceRow);
   },
 
   async cancelScheduledSequence(sequenceId: string, reason?: string): Promise<boolean> {

@@ -38,11 +38,6 @@ export type DashboardContractRealtimeRecord = Contract & {
 
 export type DashboardReminderInsert = Database['public']['Tables']['reminders']['Insert'];
 
-export type DashboardReminderSummary = Pick<
-  Database['public']['Tables']['reminders']['Row'],
-  'id' | 'contract_id' | 'lead_id' | 'titulo' | 'tipo' | 'data_lembrete'
->;
-
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
   const [leads, contracts] = await Promise.all([
     fetchAllPages<Lead>(async (from, to) => databaseClient
@@ -144,21 +139,6 @@ export function subscribeToDashboardContracts(
   return () => { void databaseClient.removeChannel(channel); };
 }
 
-export async function listDashboardRemindersInRange(
-  type: string,
-  startAt: string,
-  endAt: string,
-): Promise<DashboardReminderSummary[]> {
-  const { data, error } = await databaseClient
-    .from('reminders')
-    .select('id, contract_id, lead_id, titulo, tipo, data_lembrete')
-    .eq('tipo', type)
-    .gte('data_lembrete', startAt)
-    .lte('data_lembrete', endAt);
-  if (error) throw error;
-  return data;
-}
-
 export async function listDashboardReminderContractIds(
   type: string,
   contractIds: string[],
@@ -178,16 +158,5 @@ export async function insertDashboardReminders(
 ): Promise<void> {
   if (reminders.length === 0) return;
   const { error } = await databaseClient.from('reminders').insert(reminders);
-  if (error) throw error;
-}
-
-export async function upsertDashboardBirthdayReminders(
-  reminders: DashboardReminderInsert[],
-): Promise<void> {
-  if (reminders.length === 0) return;
-  const { error } = await databaseClient.from('reminders').upsert(reminders, {
-    onConflict: 'contract_id',
-    ignoreDuplicates: true,
-  });
   if (error) throw error;
 }

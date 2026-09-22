@@ -4,6 +4,8 @@ import type { Reminder } from '../domain/types';
 
 export type NotificationHolder = {
   id: string;
+  cpf: string;
+  created_at: string | null;
   contract_id: string;
   nome_completo: string;
   razao_social: string | null;
@@ -13,6 +15,8 @@ export type NotificationHolder = {
 
 export type NotificationDependent = {
   id: string;
+  cpf: string | null;
+  created_at: string | null;
   contract_id: string;
   nome_completo: string;
   data_nascimento: string;
@@ -45,11 +49,11 @@ export async function loadNotificationSummarySource(
       .overrideTypes<Contract[], { merge: false }>(),
     databaseClient
       .from('contract_holders')
-      .select('id, contract_id, nome_completo, razao_social, nome_fantasia, data_nascimento')
+      .select('id, contract_id, cpf, created_at, nome_completo, razao_social, nome_fantasia, data_nascimento')
       .overrideTypes<NotificationHolder[], { merge: false }>(),
     databaseClient
       .from('dependents')
-      .select('id, contract_id, nome_completo, data_nascimento')
+      .select('id, contract_id, cpf, created_at, nome_completo, data_nascimento')
       .overrideTypes<NotificationDependent[], { merge: false }>(),
   ]);
 

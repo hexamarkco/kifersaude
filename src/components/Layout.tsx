@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { Contract } from '../features/contracts';
 import {
+  deduplicateBirthdayPeople,
   loadNotificationSummarySource,
   subscribeToReminderChanges,
   type Reminder,
@@ -335,7 +336,7 @@ export default function Layout({
         holderName?: string | null;
       }[] = [];
 
-      holders.forEach((holder) => {
+      deduplicateBirthdayPeople(holders, activeContracts).forEach((holder) => {
         const birthDate = toDate(holder.data_nascimento);
         if (!birthDate) return;
         if (!isSameMonthDay(birthDate, startOfDay)) return;
@@ -349,7 +350,7 @@ export default function Layout({
         });
       });
 
-      dependents.forEach((dependent) => {
+      deduplicateBirthdayPeople(dependents, activeContracts).forEach((dependent) => {
         const birthDate = toDate(dependent.data_nascimento);
         if (!birthDate) return;
         if (!isSameMonthDay(birthDate, startOfDay)) return;

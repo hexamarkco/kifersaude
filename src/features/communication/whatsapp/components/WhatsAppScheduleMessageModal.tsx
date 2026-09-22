@@ -21,7 +21,9 @@ import type {
   CommWhatsAppScheduledMessage,
   CommWhatsAppScheduledMessageRecurrence,
   CommWhatsAppScheduledMessageType,
+  CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceActionType,
+  CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 
 type WhatsAppScheduleMessageModalProps = {
@@ -38,6 +40,7 @@ type WhatsAppScheduleMessageModalProps = {
   initialMediaFileName?: string | null;
   initialMessageType?: CommWhatsAppScheduledMessageType;
   scheduledMessage?: CommWhatsAppScheduledMessage;
+  scheduledSequence?: CommWhatsAppScheduledSequence;
   onScheduled?: () => void;
 };
 
@@ -87,6 +90,49 @@ const createSequenceAction = (type: CommWhatsAppScheduledSequenceActionType = 'u
   priority: 'normal',
 });
 
+function readConfigString(config: Record<string, unknown>, key: string): string {
+  const value = config[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function readConfigNumber(config: Record<string, unknown>, key: string, fallback: number): number {
+  const value = config[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function createSequenceStepDraft(step: CommWhatsAppScheduledSequenceStep): SequenceStepDraft {
+  return {
+    id: step.id ?? crypto.randomUUID(),
+    delayHours: step.delaySeconds / 3600,
+    text: step.textContent ?? '',
+    attachment: step.mediaUrl
+      ? {
+          url: step.mediaUrl,
+          mimeType: step.mediaMimeType ?? 'application/octet-stream',
+          filename: step.mediaFileName ?? 'Anexo',
+          type: step.messageType ?? 'document',
+        }
+      : null,
+    reminderId: step.reminderId ?? '',
+    actions: step.actions.map((action) => {
+      const config = action.config;
+      return {
+        id: action.id ?? crypto.randomUUID(),
+        type: action.actionType,
+        statusId: readConfigString(config, 'status_id'),
+        reminderId: readConfigString(config, 'reminder_id'),
+        statusName: readConfigString(config, 'status_name'),
+        title: readConfigString(config, 'title') || 'Próximo follow-up',
+        description: readConfigString(config, 'description'),
+        dueHours: Math.max(0, readConfigNumber(config, 'due_seconds', 86400) / 3600),
+        priority: ['baixa', 'normal', 'alta'].includes(readConfigString(config, 'priority'))
+          ? readConfigString(config, 'priority') as SequenceActionDraft['priority']
+          : 'normal',
+      };
+    }),
+  };
+}
+
 const RECURRENCE_OPTIONS: RecurrenceOption[] = [
   { value: 'none', label: 'Sem recorrência', description: 'Enviar apenas uma vez' },
   { value: 'daily', label: 'Diário', description: 'Repetir todos os dias' },
@@ -124,10 +170,11 @@ export default function WhatsAppScheduleMessageModal({
   initialMediaFileName,
   initialMessageType,
   scheduledMessage,
+  scheduledSequence,
   onScheduled,
 }: WhatsAppScheduleMessageModalProps) {
   const { leadStatuses } = useConfig();
-  const [mode, setMode] = useState<'single' | 'sequence'>('single');
+  const [mode, setMode] = useState<'single' | 'sequence'>(scheduledSequence ? 'sequence' : 'single');
   const initialAttachment: ScheduledAttachment | null = (scheduledMessage?.media_url ?? initialMediaUrl)
     ? {
       url: scheduledMessage?.media_url ?? initialMediaUrl ?? '',
@@ -145,23 +192,31 @@ export default function WhatsAppScheduleMessageModal({
   const mediaFileName = attachment?.filename ?? null;
   const messageType: CommWhatsAppScheduledMessageType = attachment?.type ?? 'text';
   const [scheduledAt, setScheduledAt] = useState(
-    scheduledMessage ? formatDateTimeLocal(new Date(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at)) : getDefaultScheduledAt,
+    scheduledMessage
+      ? formatDateTimeLocal(new Date(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at))
+      : scheduledSequence
+        ? formatDateTimeLocal(new Date(scheduledSequence.scheduled_at))
+        : getDefaultScheduledAt,
   );
   const [recurrence, setRecurrence] = useState<CommWhatsAppScheduledMessageRecurrence>(scheduledMessage?.recurrence ?? 'none');
   const [recurrenceEndsAt, setRecurrenceEndsAt] = useState(
     scheduledMessage?.recurrence_ends_at ? formatDateTimeLocal(new Date(scheduledMessage.recurrence_ends_at)) : '',
   );
-  const [label, setLabel] = useState(scheduledMessage?.label ?? '');
-  const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(scheduledMessage?.cancel_on_inbound_message ?? false);
+  const [label, setLabel] = useState(scheduledMessage?.label ?? scheduledSequence?.label ?? '');
+  const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(
+    scheduledMessage?.cancel_on_inbound_message ?? scheduledSequence?.cancel_on_inbound_message ?? false,
+  );
   const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
-  const [sequenceSteps, setSequenceSteps] = useState<SequenceStepDraft[]>(() => [{
-    id: crypto.randomUUID(),
-    delayHours: 0,
-    text: initialText ?? '',
-    attachment: initialAttachment,
-    reminderId: '',
-    actions: [],
-  }]);
+  const [sequenceSteps, setSequenceSteps] = useState<SequenceStepDraft[]>(() => scheduledSequence?.steps?.length
+    ? scheduledSequence.steps.map(createSequenceStepDraft)
+    : [{
+        id: crypto.randomUUID(),
+        delayHours: 0,
+        text: initialText ?? '',
+        attachment: initialAttachment,
+        reminderId: '',
+        actions: [],
+      }]);
   const [submitting, setSubmitting] = useState(false);
   const sequenceAttachmentRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -235,7 +290,7 @@ export default function WhatsAppScheduleMessageModal({
     setSubmitting(true);
     try {
       if (mode === 'sequence') {
-        await commWhatsAppService.scheduleSequence({
+        const sequenceInput = {
           channelId,
           chatId,
           phoneDigits,
@@ -243,7 +298,7 @@ export default function WhatsAppScheduleMessageModal({
           leadId,
           contractId,
           label: label.trim() || null,
-          cancelOnInboundMessage: true,
+          cancelOnInboundMessage,
           steps: sequenceSteps.map((step) => ({
             delaySeconds: Math.max(0, Math.round(step.delayHours * 3600)),
             reminderId: step.reminderId || null,
@@ -273,8 +328,15 @@ export default function WhatsAppScheduleMessageModal({
                     : {},
             })),
           })),
-        });
-        toast.success('Sequência de mensagens agendada com sucesso!');
+        };
+        if (scheduledSequence) {
+          const updated = await commWhatsAppService.updateScheduledSequence(scheduledSequence.id, sequenceInput);
+          if (!updated) throw new Error('A sequência não está mais disponível para edição. Atualize a lista e tente novamente.');
+          toast.success('Sequência atualizada!');
+        } else {
+          await commWhatsAppService.scheduleSequence(sequenceInput);
+          toast.success('Sequência de mensagens agendada com sucesso!');
+        }
         onScheduled?.();
         onClose();
         return;
@@ -344,6 +406,7 @@ export default function WhatsAppScheduleMessageModal({
     label,
     cancelOnInboundMessage,
     scheduledMessage,
+    scheduledSequence,
     sequenceSteps,
     onScheduled,
     onClose,
@@ -420,8 +483,12 @@ export default function WhatsAppScheduleMessageModal({
     <WorkspaceDialog
       isOpen={isOpen}
       onClose={handleClose}
-      title={scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}
-      description={scheduledMessage ? 'Atualize o conteúdo ou a programação do envio automático.' : 'Configure quando a mensagem deve ser enviada automaticamente.'}
+      title={scheduledSequence ? 'Editar sequência agendada' : scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}
+      description={scheduledSequence
+        ? 'Atualize as etapas, ações ou a programação da sequência.'
+        : scheduledMessage
+          ? 'Atualize o conteúdo ou a programação do envio automático.'
+          : 'Configure quando a mensagem deve ser enviada automaticamente.'}
       size="md"
     >
       <div className="space-y-4">
@@ -432,7 +499,7 @@ export default function WhatsAppScheduleMessageModal({
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
           onChange={(event) => void handleAttachmentChange(event)}
         />
-        {!scheduledMessage && (
+        {!scheduledMessage && !scheduledSequence && (
           <SegmentedControl
             items={[
               { id: 'single', label: 'Mensagem única' },
@@ -768,7 +835,9 @@ export default function WhatsAppScheduleMessageModal({
             onClick={handleSchedule}
             disabled={!isValid || submitting}
           >
-            {submitting ? (scheduledMessage ? 'Salvando...' : 'Agendando...') : (scheduledMessage ? 'Salvar alterações' : 'Agendar mensagem')}
+            {submitting
+              ? (scheduledMessage || scheduledSequence ? 'Salvando...' : 'Agendando...')
+              : (scheduledMessage || scheduledSequence ? 'Salvar alterações' : 'Agendar mensagem')}
           </Button>
         </div>
       </div>

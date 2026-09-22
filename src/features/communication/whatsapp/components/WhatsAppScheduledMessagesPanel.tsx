@@ -124,6 +124,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
+  const [editingSequence, setEditingSequence] = useState<CommWhatsAppScheduledSequence | null>(null);
   const [activeView, setActiveView] = useState<ScheduledMessagesView>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -474,6 +475,7 @@ export default function WhatsAppScheduledMessagesPanel({
                       key={sequence.id}
                       sequence={sequence}
                       cancelling={cancellingId === sequence.id}
+                      onEdit={() => setEditingSequence(sequence)}
                       onCancel={() => void handleCancelSequence(sequence.id)}
                       onRetry={() => void handleRetrySequence(sequence.id)}
                     />
@@ -524,6 +526,24 @@ export default function WhatsAppScheduledMessagesPanel({
           scheduledMessage={editingMessage}
           onScheduled={() => {
             setEditingMessage(null);
+            void loadMessages();
+          }}
+        />
+      ) : null}
+
+      {editingSequence ? (
+        <WhatsAppScheduleMessageModal
+          key={editingSequence.id}
+          isOpen
+          onClose={() => setEditingSequence(null)}
+          channelId={editingSequence.channel_id}
+          chatId={editingSequence.chat_id}
+          phoneDigits={editingSequence.phone_digits}
+          leadId={editingSequence.lead_id}
+          contractId={editingSequence.contract_id}
+          scheduledSequence={editingSequence}
+          onScheduled={() => {
+            setEditingSequence(null);
             void loadMessages();
           }}
         />
@@ -624,14 +644,19 @@ function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete 
 type ScheduledSequenceItemProps = {
   sequence: CommWhatsAppScheduledSequence;
   cancelling: boolean;
+  onEdit: () => void;
   onCancel: () => void;
   onRetry: () => void;
 };
 
-function ScheduledSequenceItem({ sequence, cancelling, onCancel, onRetry }: ScheduledSequenceItemProps) {
+function ScheduledSequenceItem({ sequence, cancelling, onEdit, onCancel, onRetry }: ScheduledSequenceItemProps) {
   const canCancel = sequence.status === 'scheduled' || sequence.status === 'running' || sequence.status === 'paused';
   const canRetry = sequence.status === 'paused';
   const stepCount = sequence.steps?.length;
+  const canEdit = sequence.status === 'scheduled'
+    && sequence.current_step_index === 0
+    && Boolean(stepCount)
+    && sequence.steps?.every((step) => step.status === 'pending' && step.actions.every((action) => action.status === 'pending'));
 
   return (
     <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-3">
@@ -666,6 +691,11 @@ function ScheduledSequenceItem({ sequence, cancelling, onCancel, onRetry }: Sche
 
         {(canCancel || canRetry) && (
           <div className="flex shrink-0 items-center gap-1">
+            {canEdit && (
+              <IconButton onClick={onEdit} disabled={cancelling} aria-label="Editar sequência agendada" title="Editar sequência agendada">
+                <Pencil className="kds-control-icon" />
+              </IconButton>
+            )}
             {canRetry && (
               <IconButton onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência">
                 {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <RotateCcw className="kds-control-icon" />}

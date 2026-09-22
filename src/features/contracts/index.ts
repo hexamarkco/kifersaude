@@ -21,6 +21,11 @@ export {
   saveContractHolder,
   subscribeToContractChanges,
 } from './data/contractsRepository';
+export {
+  formatContractEntityName,
+  formatContractModalityLabel,
+  formatContractPlanLabel,
+} from './shared/contractsManagerUtils';
 export { createContractHolderImport } from './data/holderImportRepository';
 export {
   deleteContractDependent,

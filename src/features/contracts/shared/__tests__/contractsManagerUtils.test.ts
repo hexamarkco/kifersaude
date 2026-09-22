@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  formatContractEntityName,
+  formatContractModalityLabel,
+  formatContractPlanLabel,
   formatContractManagerDate,
   getCompletedAgeAdjustmentCount,
   getCompletedAnnualAdjustmentCount,
@@ -203,5 +206,44 @@ test("contractsManagerUtils builds holder display names based on contract modali
       },
     ),
     "Joana Silva (+1)",
+  );
+});
+
+test("contract labels use consistent casing without changing modality meaning", () => {
+  assert.equal(formatContractModalityLabel("pme"), "PME");
+  assert.equal(formatContractModalityLabel("Pme"), "PME");
+  assert.equal(formatContractModalityLabel("MEI"), "MEI");
+  assert.equal(formatContractModalityLabel("CNPJ"), "CNPJ");
+  assert.equal(formatContractModalityLabel("pessoa física"), "Pessoa Física");
+  assert.equal(formatContractModalityLabel("ADESAO"), "Adesão");
+  assert.equal(
+    formatContractPlanLabel("a40 copart parcial - qc (m)"),
+    "A40 Copart Parcial - QC (M)",
+  );
+  assert.equal(
+    formatContractEntityName("PETER DUTRA DE CARVALHO"),
+    "Peter Dutra de Carvalho",
+  );
+});
+
+test("contract display names normalize casing and preserve company modality", () => {
+  const holdersByContractId = {
+    "2": [
+      {
+        id: "h2",
+        contract_id: "2",
+        nome_completo: "PETER DUTRA DE CARVALHO",
+        nome_fantasia: "DESCOMPLICA INTERMEDIACOES E CONSULTORIA",
+      },
+    ],
+  };
+
+  assert.equal(
+    getContractDisplayName({ id: "2", modalidade: "pme" }, holdersByContractId),
+    "Peter Dutra de Carvalho",
+  );
+  assert.equal(
+    getContractDisplayName({ id: "2", modalidade: "mei" }, holdersByContractId),
+    "Descomplica Intermediacoes e Consultoria",
   );
 });

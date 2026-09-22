@@ -56,9 +56,15 @@ import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
-import { normalizeOperadoraLabel } from "../../lib/textNormalization";
+import {
+  normalizeOperadoraLabel,
+  normalizeSentenceCase,
+} from "../../lib/textNormalization";
 import {
   formatContractManagerDate as formatDate,
+  formatContractEntityName,
+  formatContractModalityLabel,
+  formatContractPlanLabel,
   getContractDisplayName as resolveContractDisplayName,
   getContractManagerHighlightBadges,
   hasUpcomingImportantContractDate as hasUpcomingImportantDate,
@@ -685,12 +691,12 @@ export default function ContractsManager({
                       </button>
                     </TableCell>
                     <TableCell>
-                      <Badge tone={getStatusTone(contract.status)} size="sm">{contract.status}</Badge>
-                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.modalidade}</span>
+                      <Badge tone={getStatusTone(contract.status)} size="sm">{normalizeSentenceCase(contract.status) ?? contract.status}</Badge>
+                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                     </TableCell>
                     <TableCell>
                       <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
-                      <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.produto_plano || "Sem plano"}</span>
+                      <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}</span>
                     </TableCell>
                     <TableCell>
                       <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
@@ -699,7 +705,7 @@ export default function ContractsManager({
                     <TableCell>
                       <div className="flex flex-wrap gap-1">{renderDateBadges(contract, true)}</div>
                     </TableCell>
-                    <TableCell>{contract.responsavel || "Não atribuído"}</TableCell>
+                    <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
                       <TableCell align="right">
                         <div className="flex justify-end gap-1">
                           <IconButton onClick={() => setSelectedContract(contract)} variant="secondary" title="Abrir contrato" aria-label="Abrir contrato" size="md"><Eye aria-hidden="true" /></IconButton>
@@ -731,10 +737,10 @@ export default function ContractsManager({
                           {contract.codigo_contrato}
                         </h3>
                         <Badge tone={getStatusTone(contract.status)} size="sm" className="px-3 py-1 text-xs">
-                          {contract.status}
+                          {normalizeSentenceCase(contract.status) ?? contract.status}
                         </Badge>
                         <Badge tone="neutral" size="sm" className="px-3 py-1 text-xs">
-                          {contract.modalidade}
+                          {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}
                         </Badge>
                         {contract.comissao_multiplicador &&
                           contract.comissao_multiplicador !== 2.8 && (
@@ -757,7 +763,7 @@ export default function ContractsManager({
                         </div>
                         <div>
                           <span className="font-medium">Plano:</span>{" "}
-                          {contract.produto_plano}
+                          {formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}
                         </div>
                         {contract.mensalidade_total && (
                           <div>
@@ -833,7 +839,7 @@ export default function ContractsManager({
                       <div>
                         Responsável:{" "}
                         <span className="font-medium text-[var(--text-secondary)]">
-                          {contract.responsavel}
+                          {formatContractEntityName(contract.responsavel) ?? contract.responsavel}
                         </span>
                       </div>
                       <div className="mt-1">

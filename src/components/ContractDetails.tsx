@@ -10,6 +10,9 @@ import {
   getContractDetailsSnapshot,
   saveContractInteraction,
   updateContractEligibleLives,
+  formatContractEntityName,
+  formatContractModalityLabel,
+  formatContractPlanLabel,
   type ContractDocument,
 } from "../features/contracts";
 import type { Interaction } from "../features/activity";
@@ -46,6 +49,10 @@ import {
   FilterSelect,
 } from "../design-system";
 import { formatDateOnly } from "../lib/dateUtils";
+import {
+  normalizeOperadoraLabel,
+  normalizeSentenceCase,
+} from "../lib/textNormalization";
 import { getContractBonusSummary } from "../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../lib/contractCommission";
 import {
@@ -720,7 +727,7 @@ export default function ContractDetails({
     <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{contract.codigo_contrato}</DialogTitle>
-        <DialogDescription>{`${contract.operadora} - ${contract.produto_plano}`}</DialogDescription>
+        <DialogDescription>{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>
       </DialogHeader>
       <DialogBody>
       <div className="mb-4 flex items-center justify-end gap-2">
@@ -752,19 +759,19 @@ export default function ContractDetails({
             <div>
               <span className={detailLabelTextClass}>Status</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
-                {contract.status}
+                {normalizeSentenceCase(contract.status) ?? contract.status}
               </span>
             </div>
             <div>
               <span className={detailLabelTextClass}>Modalidade</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
-                {contract.modalidade}
+                {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}
               </span>
             </div>
             <div>
               <span className={detailLabelTextClass}>Responsável</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
-                {contract.responsavel}
+                {formatContractEntityName(contract.responsavel) ?? contract.responsavel}
               </span>
             </div>
             {contract.mensalidade_total && (

@@ -4,6 +4,71 @@ import type {
   ContractHolder,
   ContractManagerHighlightBadge,
 } from "./contractsManagerTypes";
+import {
+  normalizeSentenceCase,
+  normalizeTitleCase,
+} from "../../../lib/textNormalization";
+
+const CONTRACT_NAME_PARTICLES = new Set(["da", "das", "de", "do", "dos", "e"]);
+const CONTRACT_PLAN_ACRONYMS = new Set(["qc", "qp", "o10", "m"]);
+
+const normalizeComparableContractLabel = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+
+export const formatContractModalityLabel = (value?: string | null) => {
+  const normalized = normalizeTitleCase(value);
+  if (!normalized) {
+    return null;
+  }
+
+  switch (normalizeComparableContractLabel(normalized)) {
+    case "pme":
+      return "PME";
+    case "mei":
+      return "MEI";
+    case "cnpj":
+      return "CNPJ";
+    case "pf":
+    case "pessoa fisica":
+      return "Pessoa Física";
+    case "adesao":
+      return "Adesão";
+    case "empresarial":
+      return "Empresarial";
+    default:
+      return normalizeSentenceCase(normalized);
+  }
+};
+
+export const formatContractPlanLabel = (value?: string | null) => {
+  const normalized = normalizeTitleCase(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized
+    .replace(/\b[a-z]+\d+[a-z\d]*\b/gi, (code) => code.toLocaleUpperCase("pt-BR"))
+    .replace(
+      new RegExp(`\\b(?:${Array.from(CONTRACT_PLAN_ACRONYMS).join("|")})\\b`, "gi"),
+      (code) => code.toLocaleUpperCase("pt-BR"),
+    );
+};
+
+export const formatContractEntityName = (value?: string | null) => {
+  const normalized = normalizeTitleCase(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized
+    .split(" ")
+    .map((part, index) =>
+      index > 0 && CONTRACT_NAME_PARTICLES.has(part.toLocaleLowerCase("pt-BR"))
+        ? part.toLocaleLowerCase("pt-BR")
+        : part,
+    )
+    .join(" ");
+};
 
 const CLOSED_CONTRACT_STATUSES = new Set(["Cancelado", "Encerrado"]);
 const CONTRACT_AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
@@ -569,16 +634,18 @@ export const getContractDisplayName = (
   }
 
   const primaryHolder = contractHolders[0];
-  if (contract.modalidade === "MEI" || contract.modalidade === "CNPJ") {
-    return (
-      primaryHolder.nome_fantasia ||
-      primaryHolder.razao_social ||
-      primaryHolder.nome_completo
-    );
-  }
+  const modality = formatContractModalityLabel(contract.modalidade);
+  const rawName =
+    modality === "MEI" || modality === "CNPJ"
+      ? primaryHolder.nome_fantasia ||
+        primaryHolder.razao_social ||
+        primaryHolder.nome_completo
+      : primaryHolder.nome_completo;
 
   const additionalCount = contractHolders.length - 1;
-  return additionalCount > 0
-    ? `${primaryHolder.nome_completo} (+${additionalCount})`
-    : primaryHolder.nome_completo;
+  const displayName = formatContractEntityName(rawName) ?? rawName;
+
+  return modality !== "MEI" && modality !== "CNPJ" && additionalCount > 0
+    ? `${displayName} (+${additionalCount})`
+    : displayName;
 };

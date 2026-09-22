@@ -11,6 +11,8 @@ import {
   listContractConversionLeads,
   listContractValueAdjustments,
   saveContractRecord,
+  formatContractModalityLabel,
+  formatContractPlanLabel,
   type ContractJsonImportPayload,
   type ContractPersistenceInput,
 } from "../features/contracts";
@@ -1063,10 +1065,11 @@ export default function ContractForm({
         ...dataToSave,
         status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
         modalidade:
-          normalizeSentenceCase(dataToSave.modalidade) ?? dataToSave.modalidade,
+          formatContractModalityLabel(dataToSave.modalidade) ??
+          dataToSave.modalidade,
         operadora: normalizeOperadoraLabel(dataToSave.operadora) || dataToSave.operadora,
         produto_plano:
-          normalizeSentenceCase(dataToSave.produto_plano) ??
+          formatContractPlanLabel(dataToSave.produto_plano) ??
           dataToSave.produto_plano,
         abrangencia: normalizeSentenceCase(dataToSave.abrangencia),
         acomodacao: normalizeSentenceCase(dataToSave.acomodacao),

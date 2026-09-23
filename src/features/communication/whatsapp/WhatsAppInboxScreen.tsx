@@ -9896,7 +9896,7 @@ export default function WhatsAppInboxScreen() {
                 </div>
               ) : null}
 
-              <div className="whatsapp-inbox-composer-area border-t p-2.5 sm:p-3">
+              <div className="whatsapp-inbox-composer-area min-h-0 overflow-y-auto border-t p-2.5 sm:p-3">
                 <div className={`whatsapp-inbox-composer rounded-xl border transition-shadow ${composerFocused ? 'is-focused' : ''} ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
                   <input
                     ref={fileInputRef}

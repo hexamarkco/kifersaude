@@ -1617,7 +1617,7 @@ html,
   }
 
   .terracota-content-shell.is-full-bleed .terracota-panel-content {
-    height: 100dvh;
+    height: 100%;
     padding-inline: 0 !important;
   }
 }
@@ -1848,7 +1848,7 @@ html,
   }
 
   .terracota-content-shell.is-full-bleed .terracota-panel-content {
-    height: calc(100dvh - 4.75rem - env(safe-area-inset-bottom));
+    height: calc(100% - 4.75rem - env(safe-area-inset-bottom));
     margin-bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
 

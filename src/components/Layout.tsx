@@ -1290,15 +1290,15 @@ export default function Layout({
       )}
 
       <div
-        className={`terracota-content-shell relative z-10 flex min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}
+        className={`terracota-content-shell relative z-10 flex min-h-0 min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}
         style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
       >
-        <main className={`terracota-main flex-1 min-h-0 ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <main className={`terracota-main flex min-h-0 flex-1 flex-col ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}
             className={`terracota-panel-content ${
               useFullBleedContent
-                ? 'w-full h-[100dvh] min-h-0'
+                ? 'w-full h-full min-h-0'
                 : 'w-full py-8 px-2 sm:px-3 lg:px-4'
             }`}
           >

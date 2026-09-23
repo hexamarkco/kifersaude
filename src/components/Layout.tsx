@@ -947,7 +947,7 @@ export default function Layout({
 
   return (
     <div
-      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex min-h-screen ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
+      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex ${useFullBleedContent ? 'h-[100dvh] max-h-[100dvh]' : 'min-h-screen'} ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
     >
       <button
         ref={mobileMenuTriggerRef}

@@ -175,6 +175,8 @@ export default function LeadsManager({
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const leadsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
+  const leadsRequestIdRef = useRef(0);
+  const contractsRequestIdRef = useRef(0);
   const {
     motionEnabled,
     sectionDuration,
@@ -337,22 +339,35 @@ export default function LeadsManager({
 
   const fetchContractsForLeads = useCallback(
     async (leadIds: string[]) => {
+      const requestId = contractsRequestIdRef.current + 1;
+      contractsRequestIdRef.current = requestId;
+
       if (leadIds.length === 0) {
         setLeadContractIds(new Set());
         return;
       }
 
       try {
-        setLeadContractIds(await listContractLeadIds(leadIds));
+        const contractIds = await listContractLeadIds(leadIds);
+        if (requestId !== contractsRequestIdRef.current) {
+          return;
+        }
+
+        setLeadContractIds(contractIds);
       } catch (error) {
-        console.error("Erro ao carregar contratos dos leads:", error);
+        if (requestId === contractsRequestIdRef.current) {
+          console.error("Erro ao carregar contratos dos leads:", error);
+        }
       }
     },
     [],
   );
 
   const loadLeads = useCallback(async () => {
+    const requestId = leadsRequestIdRef.current + 1;
+    leadsRequestIdRef.current = requestId;
     setLoading(true);
+
     try {
       const data = await listLeads();
       const mappedLeads = data.map((lead) =>
@@ -368,13 +383,26 @@ export default function LeadsManager({
         ? mappedLeads.filter((lead) => isOriginVisibleToObserver(lead.origem))
         : mappedLeads;
 
+      if (requestId !== leadsRequestIdRef.current) {
+        return;
+      }
+
       setLeads(visibleLeads);
       const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
-      setNextReminderByLeadId(await listNextReminderByLeadId(leadIds));
+      const nextReminders = await listNextReminderByLeadId(leadIds);
+      if (requestId !== leadsRequestIdRef.current) {
+        return;
+      }
+
+      setNextReminderByLeadId(nextReminders);
     } catch (error) {
-      console.error("Erro ao carregar leads:", error);
+      if (requestId === leadsRequestIdRef.current) {
+        console.error("Erro ao carregar leads:", error);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === leadsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [
     isObserver,

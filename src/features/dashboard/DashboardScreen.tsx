@@ -99,6 +99,7 @@ export default function DashboardScreen({
   const dashboardRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const isInitialLoadRef = useRef(true);
+  const dataRequestIdRef = useRef(0);
   const lastAdjustmentReminderSync = useRef<string | null>(null);
   const {
     motionEnabled,
@@ -480,6 +481,9 @@ export default function DashboardScreen({
       return;
     }
 
+    const requestId = dataRequestIdRef.current + 1;
+    dataRequestIdRef.current = requestId;
+
     if (isInitialLoadRef.current) {
       setIsInitialLoad(true);
     }
@@ -491,6 +495,10 @@ export default function DashboardScreen({
         leads: leadsData,
         contracts: contractsData,
       } = await loadDashboardSnapshot();
+
+      if (requestId !== dataRequestIdRef.current) {
+        return;
+      }
 
       const mappedLeads = (leadsData || [])
         .map((lead) => mapLeadWithRelations(lead))
@@ -520,24 +528,34 @@ export default function DashboardScreen({
 
       void loadDashboardDecisionSnapshot()
         .then(({ reminders, interactions, statusHistory }) => {
+          if (requestId !== dataRequestIdRef.current) {
+            return;
+          }
+
           setReminders(reminders);
           setInteractions(interactions);
           setStatusHistory(statusHistory);
         })
         .catch((decisionError: unknown) => {
-          console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
+          if (requestId === dataRequestIdRef.current) {
+            console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
+          }
         });
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      const message =
-        error instanceof Error ? error.message : "Erro desconhecido.";
-      setError(`Não foi possível carregar os dados. ${message}`);
+      if (requestId === dataRequestIdRef.current) {
+        console.error("Erro ao carregar dados:", error);
+        const message =
+          error instanceof Error ? error.message : "Erro desconhecido.";
+        setError(`Não foi possível carregar os dados. ${message}`);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestIdRef.current) {
+        setLoading(false);
 
-      if (isInitialLoadRef.current) {
-        isInitialLoadRef.current = false;
-        setIsInitialLoad(false);
+        if (isInitialLoadRef.current) {
+          isInitialLoadRef.current = false;
+          setIsInitialLoad(false);
+        }
       }
     }
   }, [

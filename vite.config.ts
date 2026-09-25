@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => {
             }
 
             if (pkg === 'react-quill' || pkg === 'quill') {
-              return 'vendor';
+              return 'editor';
             }
 
             if (pkg === 'reactflow' || pkg.startsWith('d3-')) {

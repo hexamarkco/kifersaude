@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   addLeadInteraction,
   getLeadTimeline,
@@ -54,6 +54,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const timelineRequestIdRef = useRef(0);
   const [formData, setFormData] = useState({
     tipo: 'Observação',
     descricao: '',
@@ -107,26 +108,37 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   }, [interactions, reminders, statusHistory]);
 
   useEffect(() => {
-    loadLeadTimeline();
-  }, [lead.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     setFavorito(Boolean(lead.favorito));
   }, [lead.id, lead.favorito]);
 
-  const loadLeadTimeline = async () => {
+  const loadLeadTimeline = useCallback(async () => {
+    const requestId = timelineRequestIdRef.current + 1;
+    timelineRequestIdRef.current = requestId;
     setLoading(true);
+
     try {
       const timeline = await getLeadTimeline(lead.id);
+      if (requestId !== timelineRequestIdRef.current) {
+        return;
+      }
+
       setInteractions(timeline.interactions);
       setStatusHistory(timeline.statusHistory);
       setReminders(timeline.reminders);
     } catch (error) {
-      console.error('Erro ao carregar interações:', error);
+      if (requestId === timelineRequestIdRef.current) {
+        console.error('Erro ao carregar interações:', error);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === timelineRequestIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [lead.id]);
+
+  useEffect(() => {
+    void loadLeadTimeline();
+  }, [loadLeadTimeline]);
 
   const handleAddInteraction = async (e: React.FormEvent) => {
     e.preventDefault();

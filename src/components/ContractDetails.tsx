@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from "react";
 import {
   Contract,
   ContractHolder,
@@ -115,6 +115,7 @@ export default function ContractDetails({
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const dataRequestIdRef = useRef(0);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [showDependentForm, setShowDependentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -342,9 +343,16 @@ export default function ContractDetails({
   }, [dependents, holders, parseDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = useCallback(async () => {
+    const requestId = dataRequestIdRef.current + 1;
+    dataRequestIdRef.current = requestId;
     setLoading(true);
+
     try {
       const snapshot = await getContractDetailsSnapshot(contract.id);
+      if (requestId !== dataRequestIdRef.current) {
+        return;
+      }
+
       setHolders(snapshot.holders);
       setSelectedHolderId(
         (current) => current || snapshot.holders[0]?.id || null,
@@ -359,9 +367,13 @@ export default function ContractDetails({
         setDocuments(snapshot.documents);
       }
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      if (requestId === dataRequestIdRef.current) {
+        console.error("Erro ao carregar dados:", error);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [contract.id]);
 

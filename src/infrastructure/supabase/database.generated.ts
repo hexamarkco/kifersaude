@@ -9449,6 +9449,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_scheduled_message_sequence: {
+        Args: {
+          p_cancel_on_inbound_message?: boolean
+          p_label?: string
+          p_scheduled_at: string
+          p_sequence_id: string
+          p_steps: Json
+        }
+        Returns: boolean
+      }
+      update_scheduled_message_sequence_for_mcp: {
+        Args: {
+          p_actor_id: string
+          p_cancel_on_inbound_message: boolean
+          p_expected_updated_at: string
+          p_label: string
+          p_scheduled_at: string
+          p_sequence_id: string
+          p_steps: Json
+        }
+        Returns: boolean
+      }
       upsert_ai_autonomous_qualification_state: {
         Args: { p_chat_id: string; p_lead_id: string; p_state: Json }
         Returns: {

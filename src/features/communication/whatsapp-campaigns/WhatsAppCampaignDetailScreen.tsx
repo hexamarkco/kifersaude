@@ -126,9 +126,12 @@ export default function WhatsAppCampaignDetailScreen() {
   const detailRequestIdRef = useRef(0);
   const targetListRequestIdRef = useRef(0);
   const liveMetricsRequestIdRef = useRef(0);
+  const screenGenerationRef = useRef(0);
+  const activeCampaignIdRef = useRef<string | null>(null);
 
   const loadDetail = useCallback(async () => {
-    if (!campaignId) return;
+    if (!campaignId || activeCampaignIdRef.current !== campaignId) return;
+    const screenGeneration = screenGenerationRef.current;
     const requestId = detailRequestIdRef.current + 1;
     detailRequestIdRef.current = requestId;
     const targetRequestId = targetListRequestIdRef.current + 1;
@@ -151,25 +154,25 @@ export default function WhatsAppCampaignDetailScreen() {
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
-      if (requestId !== detailRequestIdRef.current) return;
+      if (screenGeneration !== screenGenerationRef.current || requestId !== detailRequestIdRef.current) return;
       setCampaign(nextCampaign);
-      if (targetRequestId === targetListRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && targetRequestId === targetListRequestIdRef.current) {
         setTargets(nextTargets.targets);
         setTargetsTotal(nextTargets.total);
         setTargetsPage(1);
         targetsPageRef.current = 0;
       }
-      if (metricsRequestId === liveMetricsRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && metricsRequestId === liveMetricsRequestIdRef.current) {
         setStatusCounts(nextStatusCounts);
         setFailureReasons(nextFailureReasons);
         setPendingWhatsAppValidation(nextPendingValidation);
       }
     } catch (error) {
-      if (requestId === detailRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar o detalhe do disparo.');
       }
     } finally {
-      if (requestId === detailRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
         setLoading(false);
         loadDetailInFlightRef.current = false;
       }
@@ -177,7 +180,8 @@ export default function WhatsAppCampaignDetailScreen() {
   }, [campaignId]);
 
   const goToTargetsPage = useCallback(async (page: number) => {
-    if (!campaignId || page < 1) return;
+    if (!campaignId || activeCampaignIdRef.current !== campaignId || page < 1) return;
+    const screenGeneration = screenGenerationRef.current;
     const requestId = targetListRequestIdRef.current + 1;
     targetListRequestIdRef.current = requestId;
     setLoadingTargetsPage(true);
@@ -193,17 +197,17 @@ export default function WhatsAppCampaignDetailScreen() {
         status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
         search: targetsFilters.search || undefined,
       });
-      if (requestId !== targetListRequestIdRef.current) return;
+      if (screenGeneration !== screenGenerationRef.current || requestId !== targetListRequestIdRef.current) return;
       setTargets(result.targets);
       setTargetsTotal(result.total);
       setTargetsPage(page);
       targetsPageRef.current = page - 1;
     } catch (error) {
-      if (requestId === targetListRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && requestId === targetListRequestIdRef.current) {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar esta página de contatos.');
       }
     } finally {
-      if (requestId === targetListRequestIdRef.current) {
+      if (screenGeneration === screenGenerationRef.current && requestId === targetListRequestIdRef.current) {
         setLoadingTargetsPage(false);
       }
     }
@@ -237,7 +241,9 @@ export default function WhatsAppCampaignDetailScreen() {
   // "loading" da tela nem resetar a paginacao, e sem toast em erro (e uma
   // atualizacao em segundo plano, nao uma acao do usuario).
   const refreshLiveData = useCallback(async () => {
-    if (!campaignId) return;
+    if (!campaignId || activeCampaignIdRef.current !== campaignId) return;
+    const screenGeneration = screenGenerationRef.current;
+    if (screenGeneration === 0) return;
     // O worker pode atualizar a linha da campanha mais de uma vez num unico
     // ciclo (ex.: status "running" no inicio e contadores no fim do lote),
     // cada atualizacao dispara este callback via Realtime. Sem essas travas,
@@ -264,6 +270,7 @@ export default function WhatsAppCampaignDetailScreen() {
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
+      if (screenGeneration !== screenGenerationRef.current) return;
       if (targetRequestId === targetListRequestIdRef.current) {
         setTargets(nextTargets.targets);
         setTargetsTotal(nextTargets.total);
@@ -288,6 +295,9 @@ export default function WhatsAppCampaignDetailScreen() {
   // envio ativo. Se o Realtime nao conectar (rede bloqueando websocket,
   // etc.), cai num polling de 20s como reserva.
   useEffect(() => {
+    const screenGeneration = ++screenGenerationRef.current;
+    activeCampaignIdRef.current = campaignId ?? null;
+
     if (!campaignId) {
       setIsLive(false);
       return;
@@ -313,6 +323,7 @@ export default function WhatsAppCampaignDetailScreen() {
         targetListRequestIdRef.current += 1;
         liveMetricsRequestIdRef.current += 1;
         loadDetailInFlightRef.current = false;
+        refreshLiveDataInFlightRef.current = false;
         if (hadLoadInFlight) setLoading(false);
         setCampaign(nextCampaign);
         void refreshLiveData();
@@ -340,10 +351,17 @@ export default function WhatsAppCampaignDetailScreen() {
 
     return () => {
       active = false;
+      if (activeCampaignIdRef.current === campaignId) {
+        activeCampaignIdRef.current = null;
+      }
+      if (screenGenerationRef.current === screenGeneration) {
+        screenGenerationRef.current += 1;
+      }
       detailRequestIdRef.current += 1;
       targetListRequestIdRef.current += 1;
       liveMetricsRequestIdRef.current += 1;
       loadDetailInFlightRef.current = false;
+      refreshLiveDataInFlightRef.current = false;
       window.clearTimeout(fallbackTimeoutId);
       if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
       unsubscribe();
@@ -403,26 +421,37 @@ export default function WhatsAppCampaignDetailScreen() {
 
   const runAction = async (action: 'pause' | 'resume' | 'cancel' | 'process') => {
     if (!campaign) return;
+    const screenGeneration = screenGenerationRef.current;
+    const campaignIdAtStart = campaign.id;
     setActionLoading(action);
     try {
       if (action === 'pause') {
         await commWhatsAppCampaignService.pauseCampaign(campaign.id);
+        if (screenGeneration !== screenGenerationRef.current || activeCampaignIdRef.current !== campaignIdAtStart) return;
         toast.success('Disparo pausado.');
       } else if (action === 'resume') {
         await commWhatsAppCampaignService.resumeCampaign(campaign);
+        if (screenGeneration !== screenGenerationRef.current || activeCampaignIdRef.current !== campaignIdAtStart) return;
         toast.success('Disparo retomado.');
       } else if (action === 'cancel') {
         await commWhatsAppCampaignService.cancelCampaign(campaign.id);
+        if (screenGeneration !== screenGenerationRef.current || activeCampaignIdRef.current !== campaignIdAtStart) return;
         toast.success('Disparo cancelado.');
       } else {
         const result = await commWhatsAppCampaignService.processCampaign(campaign.id);
+        if (screenGeneration !== screenGenerationRef.current || activeCampaignIdRef.current !== campaignIdAtStart) return;
         toast.success(`Lote processado: ${result.processed ?? 0} contato(s).`);
       }
+      if (screenGeneration !== screenGenerationRef.current || activeCampaignIdRef.current !== campaignIdAtStart) return;
       await loadDetail();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível executar a ação.');
+      if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignIdAtStart) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível executar a ação.');
+      }
     } finally {
-      setActionLoading(null);
+      if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignIdAtStart) {
+        setActionLoading(null);
+      }
     }
   };
 

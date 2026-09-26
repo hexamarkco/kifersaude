@@ -4340,6 +4340,14 @@ export default function WhatsAppInboxScreen() {
     setRetryPendingMessage(null);
     setStatusReminderLead(null);
     setStatusReminderPromptMessage(null);
+    setScheduleMessageModalOpen(false);
+    setScheduledMessagesPanelOpen(false);
+    setChatFilesOpen(false);
+    setMediaDrawerOpen(false);
+    setComposerRewriteModalOpen(false);
+    setComposerRewriteSource('');
+    setComposerRewriteDraft('');
+    setComposerAiMenuOpen(false);
   }, [selectedChatId]);
 
   useLayoutEffect(() => {

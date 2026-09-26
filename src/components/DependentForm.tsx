@@ -108,6 +108,7 @@ export default function DependentForm({
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
   const lastFetchedCpfKeyRef = useRef('');
+  const cpfRequestIdRef = useRef(0);
   const holderSelectOptions = useMemo(() => {
     const currentHolderLabel =
       holders.find((holder) => holder.id === formData.holder_id)?.nome_completo ||
@@ -145,6 +146,7 @@ export default function DependentForm({
   );
 
   useEffect(() => {
+    cpfRequestIdRef.current += 1;
     setFormData(initialFormData);
     setCpfLookupError(null);
     setCpfLoading(false);
@@ -153,8 +155,11 @@ export default function DependentForm({
 
   const handleConsultarCPF = useCallback(
     async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+      const requestId = cpfRequestIdRef.current + 1;
+      cpfRequestIdRef.current = requestId;
       const cleanCpf = formData.cpf.replace(/\D/g, '');
       if (cleanCpf.length !== 11) {
+        setCpfLoading(false);
         if (!silent) {
           setCpfLookupError('Informe um CPF válido para buscar.');
         }
@@ -163,6 +168,7 @@ export default function DependentForm({
 
       const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
       if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
+        setCpfLoading(false);
         return;
       }
 
@@ -171,6 +177,7 @@ export default function DependentForm({
 
       try {
         const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
+        if (requestId !== cpfRequestIdRef.current) return;
 
         setFormData((prev) => ({
           ...prev,
@@ -180,13 +187,15 @@ export default function DependentForm({
         lastFetchedCpfKeyRef.current = fetchKey;
       } catch (error) {
         console.error('Erro ao consultar CPF do dependente:', error);
-        if (!silent) {
+        if (requestId === cpfRequestIdRef.current && !silent) {
           setCpfLookupError(
             error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
           );
         }
       } finally {
-        setCpfLoading(false);
+        if (requestId === cpfRequestIdRef.current) {
+          setCpfLoading(false);
+        }
       }
     },
     [formData.cpf, formData.data_nascimento],
@@ -196,7 +205,9 @@ export default function DependentForm({
     const cleanCpf = formData.cpf.replace(/\D/g, '');
 
     if (cleanCpf.length !== 11) {
+      cpfRequestIdRef.current += 1;
       lastFetchedCpfKeyRef.current = '';
+      setCpfLoading(false);
       return;
     }
 

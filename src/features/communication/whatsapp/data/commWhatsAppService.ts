@@ -1093,7 +1093,7 @@ export const commWhatsAppService = {
 
     let query = supabase
       .from('comm_whatsapp_chats')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .is('deleted_at', null)
       .is('merged_into_chat_id', null)
       .or('unread_count.gt.0,manual_unread.eq.true');
@@ -1116,7 +1116,7 @@ export const commWhatsAppService = {
 
     const { count, error } = await supabase
       .from('comm_whatsapp_chats')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .is('deleted_at', null)
       .is('merged_into_chat_id', null)
       .eq('is_archived', true);

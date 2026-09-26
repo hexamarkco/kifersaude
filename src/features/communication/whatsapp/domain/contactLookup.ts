@@ -53,13 +53,18 @@ export const collectPhoneLookupKeys = (value?: string | null) => {
 export const addSavedContactsToNameMap = (
   target: Map<string, string>,
   contacts: CommWhatsAppPhoneContact[],
+  manualTarget?: Map<string, string>,
 ) => {
   for (const contact of contacts) {
     const name = contact.display_name?.trim();
     if (!contact.saved || !name) continue;
 
+    const destination = contact.contact_id?.startsWith('manual:')
+      ? manualTarget ?? target
+      : target;
+
     for (const key of collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)) {
-      target.set(key, name);
+      destination.set(key, name);
     }
   }
 };

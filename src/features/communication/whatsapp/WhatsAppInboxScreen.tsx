@@ -3548,8 +3548,10 @@ export default function WhatsAppInboxScreen() {
 
       if (contacts.length > 0) {
         const map = new Map(savedContactNameByPhoneRef.current);
-        addSavedContactsToNameMap(map, contacts);
+        const manualOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
+        addSavedContactsToNameMap(map, contacts, manualOverrides);
         savedContactNameByPhoneRef.current = map;
+        savedContactNameOverrideByPhoneRef.current = manualOverrides;
         setChats((current) => applyFrontendSavedContactNames(current));
       }
     }).catch((error) => {
@@ -5058,8 +5060,10 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     const map = new Map(savedContactNameByPhoneRef.current);
-    addSavedContactsToNameMap(map, savedContacts);
+    const manualOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
+    addSavedContactsToNameMap(map, savedContacts, manualOverrides);
     savedContactNameByPhoneRef.current = map;
+    savedContactNameOverrideByPhoneRef.current = manualOverrides;
     setChats((current) => applyFrontendSavedContactNames(current));
   }, [applyFrontendSavedContactNames, savedContacts]);
 

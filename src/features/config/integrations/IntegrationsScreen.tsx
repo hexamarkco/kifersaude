@@ -3,6 +3,7 @@ import {
   Save,
   Facebook,
   MessageCircle,
+  RefreshCcw,
   Sparkles,
   Tag,
 } from "lucide-react";
@@ -314,12 +315,14 @@ export default function IntegrationsScreen() {
     useState<IntegrationSetting | null>(null);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [loadingMetaPixel, setLoadingMetaPixel] = useState(true);
+  const [metaPixelLoadError, setMetaPixelLoadError] = useState(false);
   const [savingMetaPixel, setSavingMetaPixel] = useState(false);
 
   const [gtmIntegration, setGtmIntegration] =
     useState<IntegrationSetting | null>(null);
   const [gtmId, setGtmId] = useState("");
   const [loadingGtm, setLoadingGtm] = useState(true);
+  const [gtmLoadError, setGtmLoadError] = useState(false);
   const [savingGtm, setSavingGtm] = useState(false);
   const aiSettingsLoadRequestIdRef = useRef(0);
   const aiModelsRequestIdRef = useRef<Record<AiProvider, number>>({ openai: 0 });
@@ -439,11 +442,16 @@ export default function IntegrationsScreen() {
   const loadMetaPixel = useCallback(async () => {
     const requestId = ++metaPixelLoadRequestIdRef.current;
     setLoadingMetaPixel(true);
+    setMetaPixelLoadError(false);
     try {
       const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
       if (requestId !== metaPixelLoadRequestIdRef.current) return;
       setMetaPixelIntegration(data);
       setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
+    } catch (error) {
+      if (requestId !== metaPixelLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar configuração do Meta Pixel:", error);
+      setMetaPixelLoadError(true);
     } finally {
       if (requestId === metaPixelLoadRequestIdRef.current) {
         setLoadingMetaPixel(false);
@@ -454,11 +462,16 @@ export default function IntegrationsScreen() {
   const loadGtm = useCallback(async () => {
     const requestId = ++gtmLoadRequestIdRef.current;
     setLoadingGtm(true);
+    setGtmLoadError(false);
     try {
       const data = await configService.getIntegrationSetting(GTM_SLUG);
       if (requestId !== gtmLoadRequestIdRef.current) return;
       setGtmIntegration(data);
       setGtmId(toTrimmedString(data?.settings?.gtmId));
+    } catch (error) {
+      if (requestId !== gtmLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar configuração do Google Tag Manager:", error);
+      setGtmLoadError(true);
     } finally {
       if (requestId === gtmLoadRequestIdRef.current) {
         setLoadingGtm(false);
@@ -480,9 +493,6 @@ export default function IntegrationsScreen() {
       }
     };
   }, [loadAiIntegrations, loadGtm, loadMetaPixel]);
-
-  void loadingMetaPixel;
-  void loadingGtm;
 
   const handleSaveProvider = async (provider: AiProvider) => {
     const currentForm = aiProviderForms[provider];
@@ -645,6 +655,7 @@ export default function IntegrationsScreen() {
         });
       } else {
         setMetaPixelIntegration(data);
+        setMetaPixelLoadError(false);
         setMetaPixelMessage({
           type: "success",
           text: "Meta Pixel configurado com sucesso!",
@@ -664,6 +675,7 @@ export default function IntegrationsScreen() {
         });
       } else {
         setMetaPixelIntegration(data);
+        setMetaPixelLoadError(false);
         setMetaPixelMessage({
           type: "success",
           text: "Meta Pixel atualizado com sucesso!",
@@ -691,6 +703,7 @@ export default function IntegrationsScreen() {
         });
       } else {
         setGtmIntegration(data);
+        setGtmLoadError(false);
         setGtmMessage({
           type: "success",
           text: "GTM configurado com sucesso!",
@@ -710,6 +723,7 @@ export default function IntegrationsScreen() {
         });
       } else {
         setGtmIntegration(data);
+        setGtmLoadError(false);
         setGtmMessage({ type: "success", text: "GTM atualizado com sucesso!" });
       }
     }
@@ -983,12 +997,28 @@ export default function IntegrationsScreen() {
 
 
               <div>
+                {metaPixelLoadError ? (
+                  <Alert
+                    tone="danger"
+                    className="mb-3"
+                    title="Não foi possível carregar o Meta Pixel."
+                    action={
+                      <Button variant="secondary" size="sm" onClick={() => void loadMetaPixel()}>
+                        <RefreshCcw className="kds-control-icon" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    }
+                  >
+                    O valor anterior foi preservado. Verifique sua conexão ou sessão antes de editar.
+                  </Alert>
+                ) : null}
                 <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   Pixel ID
                 </label>
                 <Input
                   type="text"
                   value={metaPixelId}
+                  disabled={loadingMetaPixel}
                   onChange={(event) => setMetaPixelId(event.target.value)}
                   placeholder="1234567890"
                 />
@@ -999,13 +1029,14 @@ export default function IntegrationsScreen() {
 
               <Button
                 onClick={handleSaveMetaPixel}
-                loading={savingMetaPixel}
+                loading={savingMetaPixel || loadingMetaPixel}
+                disabled={loadingMetaPixel}
                 fullWidth
                 className="mt-4"
               >
-                {!savingMetaPixel && <Save className="kds-control-icon" />}
+                {!savingMetaPixel && !loadingMetaPixel && <Save className="kds-control-icon" />}
                 <span>
-                  {savingMetaPixel ? "Salvando..." : "Salvar Meta Pixel"}
+                  {loadingMetaPixel ? "Carregando..." : savingMetaPixel ? "Salvando..." : "Salvar Meta Pixel"}
                 </span>
               </Button>
             </Card>
@@ -1026,12 +1057,28 @@ export default function IntegrationsScreen() {
               </div>
 
               <div>
+                {gtmLoadError ? (
+                  <Alert
+                    tone="danger"
+                    className="mb-3"
+                    title="Não foi possível carregar o Google Tag Manager."
+                    action={
+                      <Button variant="secondary" size="sm" onClick={() => void loadGtm()}>
+                        <RefreshCcw className="kds-control-icon" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    }
+                  >
+                    O valor anterior foi preservado. Verifique sua conexão ou sessão antes de editar.
+                  </Alert>
+                ) : null}
                 <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   GTM ID
                 </label>
                 <Input
                   type="text"
                   value={gtmId}
+                  disabled={loadingGtm}
                   onChange={(event) => setGtmId(event.target.value)}
                   placeholder="GTM-XXXXXXX"
                 />
@@ -1042,12 +1089,13 @@ export default function IntegrationsScreen() {
 
               <Button
                 onClick={handleSaveGtm}
-                loading={savingGtm}
+                loading={savingGtm || loadingGtm}
+                disabled={loadingGtm}
                 fullWidth
                 className="mt-4"
               >
-                {!savingGtm && <Save className="kds-control-icon" />}
-                <span>{savingGtm ? "Salvando..." : "Salvar GTM"}</span>
+                {!savingGtm && !loadingGtm && <Save className="kds-control-icon" />}
+                <span>{loadingGtm ? "Carregando..." : savingGtm ? "Salvando..." : "Salvar GTM"}</span>
               </Button>
             </Card>
           </div>

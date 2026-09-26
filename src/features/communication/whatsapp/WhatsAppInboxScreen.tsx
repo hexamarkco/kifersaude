@@ -5860,7 +5860,7 @@ export default function WhatsAppInboxScreen() {
   }, [loadOperationalState, pollingEnabled]);
 
   useEffect(() => {
-    if (!pollingEnabled || !selectedChat) return;
+    if (!pollingEnabled || !selectedChatId) return;
 
     let timeoutId: number;
 
@@ -5876,7 +5876,7 @@ export default function WhatsAppInboxScreen() {
 
       timeoutId = window.setTimeout(() => {
         if (!loadingOlderMessages) {
-          void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
+          void loadMessages(getSelectedChatSnapshot(selectedChatId), 'poll');
         }
         scheduleNext();
       }, delay);
@@ -5885,7 +5885,7 @@ export default function WhatsAppInboxScreen() {
     scheduleNext();
 
     return () => window.clearTimeout(timeoutId);
-  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChat]);
+  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChatId]);
 
   useEffect(() => {
     if (!selectedChat || loadingOlderMessages) {

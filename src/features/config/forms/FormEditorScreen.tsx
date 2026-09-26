@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ChevronDown,
@@ -73,28 +73,64 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
   const [submissions, setSubmissions] = useState<PublicFormSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
+  const stepsLoadRequestIdRef = useRef(0);
+  const submissionsLoadRequestIdRef = useRef(0);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const publicUrl = `${window.location.origin}/forms/${form.slug}`;
 
   const loadSteps = useCallback(async () => {
+    const requestId = ++stepsLoadRequestIdRef.current;
     setLoadingSteps(true);
-    const data = await formsService.getFormSteps(form.id);
-    setSteps(data);
-    setLoadingSteps(false);
+    try {
+      const data = await formsService.getFormSteps(form.id);
+      if (requestId !== stepsLoadRequestIdRef.current) return;
+      setSteps(data);
+    } finally {
+      if (requestId === stepsLoadRequestIdRef.current) {
+        setLoadingSteps(false);
+      }
+    }
   }, [form.id]);
 
   const loadSubmissions = useCallback(async () => {
+    const requestId = ++submissionsLoadRequestIdRef.current;
     setLoadingSubmissions(true);
-    const data = await formsService.getFormSubmissions(form.id);
-    setSubmissions(data);
-    setLoadingSubmissions(false);
+    try {
+      const data = await formsService.getFormSubmissions(form.id);
+      if (requestId !== submissionsLoadRequestIdRef.current) return;
+      setSubmissions(data);
+    } finally {
+      if (requestId === submissionsLoadRequestIdRef.current) {
+        setLoadingSubmissions(false);
+      }
+    }
   }, [form.id]);
 
   useEffect(() => {
+    setSettings({
+      title: form.title,
+      slug: form.slug,
+      description: form.description ?? "",
+      success_headline: form.success_headline,
+      success_message: form.success_message,
+      request_geolocation: form.request_geolocation,
+      whatsapp_redirect: form.whatsapp_redirect,
+      whatsapp_message_template: form.whatsapp_message_template ?? "",
+      is_published: form.is_published,
+    });
+  }, [form]);
+
+  useEffect(() => {
+    setSteps([]);
+    setSubmissions([]);
     void loadSteps();
     void loadSubmissions();
+    return () => {
+      stepsLoadRequestIdRef.current += 1;
+      submissionsLoadRequestIdRef.current += 1;
+    };
   }, [loadSteps, loadSubmissions]);
 
   const questionSteps = steps.filter((step) => step.step_type !== "contact");

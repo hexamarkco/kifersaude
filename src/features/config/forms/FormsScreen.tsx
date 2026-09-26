@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, ExternalLink, FileText, Plus, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
@@ -47,18 +47,29 @@ export default function FormsScreen() {
   const [creating, setCreating] = useState(false);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  const formsLoadRequestIdRef = useRef(0);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const loadForms = useCallback(async () => {
+    const requestId = ++formsLoadRequestIdRef.current;
     setLoading(true);
-    const data = await formsService.getForms();
-    setForms(data);
-    setLoading(false);
+    try {
+      const data = await formsService.getForms();
+      if (requestId !== formsLoadRequestIdRef.current) return;
+      setForms(data);
+    } finally {
+      if (requestId === formsLoadRequestIdRef.current) {
+        setLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
     void loadForms();
+    return () => {
+      formsLoadRequestIdRef.current += 1;
+    };
   }, [loadForms]);
 
   const handleCreate = async () => {

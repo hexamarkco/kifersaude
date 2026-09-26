@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { UserProfile } from "../domain/types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
@@ -68,6 +68,7 @@ export default function UsersScreen() {
   const [editUserRole, setEditUserRole] = useState("observer");
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const usersLoadRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const loadingUi = useAdaptiveLoading(loading);
   const canManageUsers = getRoleModulePermission(
@@ -106,17 +107,27 @@ export default function UsersScreen() {
 
   useEffect(() => {
     void loadUsers();
+    return () => {
+      usersLoadRequestIdRef.current += 1;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUsers = async () => {
+    const requestId = ++usersLoadRequestIdRef.current;
     setLoading(true);
     try {
-      setUsers(await listUsers());
+      const nextUsers = await listUsers();
+      if (requestId !== usersLoadRequestIdRef.current) return;
+      setUsers(nextUsers);
     } catch (error) {
       console.error("Erro ao carregar usuários:", error);
-      showMessage("error", "Não foi possível carregar os usuários.");
+      if (requestId === usersLoadRequestIdRef.current) {
+        showMessage("error", "Não foi possível carregar os usuários.");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === usersLoadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 

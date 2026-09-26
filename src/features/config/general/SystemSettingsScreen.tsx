@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GitBranch, Share2 } from "lucide-react";
 import {
   AlertCircle,
@@ -63,6 +63,7 @@ export default function SystemSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const settingsLoadRequestIdRef = useRef(0);
   const [activeSection, setActiveSection] = useConfigParam(
     "section",
     ["general", "access", "leads", "contracts"] as const,
@@ -93,14 +94,24 @@ export default function SystemSettingsScreen() {
 
   useEffect(() => {
     void loadSettings();
+    return () => {
+      settingsLoadRequestIdRef.current += 1;
+    };
   }, []);
 
   const loadSettings = async () => {
+    const requestId = ++settingsLoadRequestIdRef.current;
     setLoading(true);
-    const data = await configService.getSystemSettings();
-    setSettings(data);
-    setSavedSettings(data);
-    setLoading(false);
+    try {
+      const data = await configService.getSystemSettings();
+      if (requestId !== settingsLoadRequestIdRef.current) return;
+      setSettings(data);
+      setSavedSettings(data);
+    } finally {
+      if (requestId === settingsLoadRequestIdRef.current) {
+        setLoading(false);
+      }
+    }
   };
 
   const showMessage = (type: "success" | "error", text: string) => {

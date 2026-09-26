@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   Check,
   ChevronDown,
@@ -71,33 +71,45 @@ export default function LinksScreen() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
   const [creating, setCreating] = useState(false);
+  const loadRequestIdRef = useRef(0);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const publicUrl = `${window.location.origin}${PUBLIC_LINKS_PATH}`;
 
   const loadData = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current;
     setLoading(true);
-    const [settings, items] = await Promise.all([
-      linksService.getLinkPageSettings(),
-      linksService.getLinkItems(),
-    ]);
+    try {
+      const [settings, items] = await Promise.all([
+        linksService.getLinkPageSettings(),
+        linksService.getLinkItems(),
+      ]);
 
-    setPageSettings(settings);
-    setProfileForm({
-      title: settings?.title ?? "Kifer Saúde",
-      subtitle: settings?.subtitle ?? "",
-      bio: settings?.bio ?? "",
-      avatar_url: settings?.avatar_url ?? "",
-      is_verified: settings?.is_verified ?? false,
-      is_published: settings?.is_published ?? true,
-    });
-    setLinks(items);
-    setLoading(false);
+      if (requestId !== loadRequestIdRef.current) return;
+
+      setPageSettings(settings);
+      setProfileForm({
+        title: settings?.title ?? "Kifer Saúde",
+        subtitle: settings?.subtitle ?? "",
+        bio: settings?.bio ?? "",
+        avatar_url: settings?.avatar_url ?? "",
+        is_verified: settings?.is_verified ?? false,
+        is_published: settings?.is_published ?? true,
+      });
+      setLinks(items);
+    } finally {
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
     void loadData();
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
   }, [loadData]);
 
   const handleCopyPublicUrl = async () => {

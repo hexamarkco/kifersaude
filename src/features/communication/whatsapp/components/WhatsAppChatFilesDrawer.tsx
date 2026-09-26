@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Download,
   ExternalLink,
@@ -466,34 +466,70 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
+  const loadRequestIdRef = useRef(0);
 
-  const load = async (append = false) => {
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
+
+  const load = useCallback(async (append = false) => {
     if (!chatId) return;
+
+    const requestId = ++loadRequestIdRef.current;
+    const targetChatId = chatId;
+    const targetMediaType = mediaType;
     const setter = append ? setLoadingMore : setLoading;
     setter(true);
     setError(null);
 
     try {
-      const last = append ? messages[messages.length - 1] : null;
-      const page = await whatsappMediaRepository.listPage(chatId, {
-        mediaType,
+      const last = append ? latestMessagesRef.current[latestMessagesRef.current.length - 1] : null;
+      const page = await whatsappMediaRepository.listPage(targetChatId, {
+        mediaType: targetMediaType,
         limit: 40,
         before: last ? { messageAt: last.message_at, id: last.id } : null,
       });
-      setMessages((current) => append ? [...current, ...page.messages] : page.messages);
+
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
+      const nextMessages = append
+        ? [
+            ...latestMessagesRef.current,
+            ...page.messages.filter((pageMessage) => !latestMessagesRef.current.some((message) => message.id === pageMessage.id)),
+          ]
+        : page.messages;
+      latestMessagesRef.current = nextMessages;
+      setMessages(nextMessages);
       setHasMore(page.hasMore);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os arquivos.');
+      if (requestId === loadRequestIdRef.current) {
+        setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os arquivos.');
+      }
     } finally {
-      setter(false);
+      if (requestId === loadRequestIdRef.current) {
+        setter(false);
+      }
     }
-  };
+  }, [chatId, mediaType]);
 
   useEffect(() => {
-    if (isOpen && chatId) void load(false);
-  // The selected type and chat intentionally reset the gallery page.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId, isOpen, mediaType]);
+    loadRequestIdRef.current += 1;
+
+    if (!isOpen || !chatId) {
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
+
+    void load(false);
+
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
+  }, [chatId, isOpen, load, mediaType]);
 
   const groups = groupMessagesByDay(messages);
   const filterLabel = mediaTabs.find((tab) => tab.id === mediaType)?.label.toLocaleLowerCase('pt-BR') ?? 'arquivos';

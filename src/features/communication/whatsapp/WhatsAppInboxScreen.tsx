@@ -66,10 +66,10 @@ import {
   type CommWhatsAppFollowUpNextAction,
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
+  type InboxAgendaSummaryReminder,
 } from './data';
 import { configService, type IntegrationSetting } from '../../config';
 import type { Lead } from '../../leads';
-import type { Reminder } from '../../reminders';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
@@ -257,7 +257,7 @@ type QuickReplyOption = {
 };
 type ChatAgendaSummary = {
   pendingCount: number;
-  nextReminder: Reminder | null;
+  nextReminder: InboxAgendaSummaryReminder | null;
 };
 type CreateLeadDraft = {
   chatId: string;

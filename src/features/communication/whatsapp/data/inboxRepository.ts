@@ -15,6 +15,11 @@ import type { CommWhatsAppChat, CommWhatsAppPresence } from '../domain/types';
 
 type SubscriptionStatusHandler = (status: 'connected' | 'unavailable') => void;
 
+export type InboxAgendaSummaryReminder = Pick<
+  Reminder,
+  'id' | 'tipo' | 'titulo' | 'data_lembrete' | 'lido'
+>;
+
 export function subscribeToInboxLead(
   leadId: string,
   onUpdate: (lead: Partial<Lead>) => void,
@@ -131,25 +136,25 @@ export function subscribeToInboxPresences(
 export async function listInboxAgendaReminders(
   leadId: string,
   contractIds: string[],
-): Promise<Reminder[]> {
+): Promise<InboxAgendaSummaryReminder[]> {
   const [leadReminders, contractReminders] = await Promise.all([
-    fetchAllPages<Reminder>(async (from, to) => databaseClient
+    fetchAllPages<InboxAgendaSummaryReminder>(async (from, to) => databaseClient
       .from('reminders')
-      .select('*')
+      .select('id, tipo, titulo, data_lembrete, lido')
       .eq('lead_id', leadId)
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
-      .overrideTypes<Reminder[], { merge: false }>()),
+      .overrideTypes<InboxAgendaSummaryReminder[], { merge: false }>()),
     contractIds.length > 0
-      ? fetchAllPages<Reminder>(async (from, to) => databaseClient
+      ? fetchAllPages<InboxAgendaSummaryReminder>(async (from, to) => databaseClient
           .from('reminders')
-          .select('*')
+          .select('id, tipo, titulo, data_lembrete, lido')
           .in('contract_id', contractIds)
           .order('data_lembrete', { ascending: true })
           .order('id', { ascending: true })
           .range(from, to)
-          .overrideTypes<Reminder[], { merge: false }>())
+          .overrideTypes<InboxAgendaSummaryReminder[], { merge: false }>())
       : Promise.resolve([]),
   ]);
 

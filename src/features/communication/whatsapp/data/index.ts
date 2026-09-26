@@ -11,6 +11,7 @@ export {
   clearInboxLeadAgenda,
   insertInboxLegacyFollowUpAudits,
   listInboxAgendaReminders,
+  type InboxAgendaSummaryReminder,
   markInboxRemindersRead,
   scheduleInboxFollowUp,
   subscribeToInboxChats,

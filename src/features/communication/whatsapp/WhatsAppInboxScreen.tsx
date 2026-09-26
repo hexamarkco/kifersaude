@@ -2473,6 +2473,7 @@ export default function WhatsAppInboxScreen() {
   const leadContractsRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
+  const followUpScheduleRequestIdRef = useRef(0);
   const composerRewriteRequestIdRef = useRef(0);
   const composerRewriteModalOpenRef = useRef(false);
   const composerRewriteSourceRef = useRef('');
@@ -4780,8 +4781,10 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     followUpGenerationRequestIdRef.current += 1;
+    followUpScheduleRequestIdRef.current += 1;
     setFollowUpModalOpen(false);
     setGeneratingFollowUp(false);
+    setSchedulingFollowUpNextAction(false);
     resetFollowUpComposer();
 
     if (!selectedChat?.lead_id) {
@@ -7925,7 +7928,9 @@ export default function WhatsAppInboxScreen() {
 
   const handleCloseFollowUpModal = useCallback(() => {
     followUpGenerationRequestIdRef.current += 1;
+    followUpScheduleRequestIdRef.current += 1;
     setGeneratingFollowUp(false);
+    setSchedulingFollowUpNextAction(false);
     setFollowUpModalOpen(false);
   }, []);
 
@@ -8595,6 +8600,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const requestId = ++followUpScheduleRequestIdRef.current;
+    const targetChatId = selectedChat.id;
     setSchedulingFollowUpNextAction(true);
     try {
       const description = [
@@ -8610,14 +8617,25 @@ export default function WhatsAppInboxScreen() {
         priority: followUpNextAction.priority,
       });
 
+      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       await loadChatAgendaSummary(leadId, leadContracts.map((contract) => contract.id));
+      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       toast.success(result.inserted === false ? 'Este follow-up já estava agendado.' : 'Próximo follow-up agendado.');
       setFollowUpNextAction(null);
     } catch (error) {
+      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao agendar proxima acao do follow-up', error);
       toast.error('Não foi possível agendar a próxima ação.');
     } finally {
-      setSchedulingFollowUpNextAction(false);
+      if (requestId === followUpScheduleRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
+        setSchedulingFollowUpNextAction(false);
+      }
     }
   }, [canEditAgenda, channelState?.connected_user_name, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat]);
 

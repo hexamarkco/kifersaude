@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -114,6 +115,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [liveRefreshError, setLiveRefreshError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const targetsPageRef = useRef(0);
   const targetsFiltersRef = useRef<{ pageSize: number; status: CommWhatsAppCampaignTargetStatus[]; search: string }>({
@@ -167,6 +169,7 @@ export default function WhatsAppCampaignDetailScreen() {
         setFailureReasons(nextFailureReasons);
         setPendingWhatsAppValidation(nextPendingValidation);
       }
+      setLiveRefreshError(null);
     } catch (error) {
       if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar o detalhe do disparo.');
@@ -281,7 +284,10 @@ export default function WhatsAppCampaignDetailScreen() {
         setPendingWhatsAppValidation(nextPendingValidation);
       }
     } catch (error) {
-      console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
+      if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignId) {
+        console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
+        setLiveRefreshError('A atualização automática falhou. Os dados exibidos podem estar desatualizados.');
+      }
     } finally {
       refreshLiveDataInFlightRef.current = false;
     }
@@ -481,6 +487,26 @@ export default function WhatsAppCampaignDetailScreen() {
           </div>
         )}
       />
+
+      {liveRefreshError && (
+        <Alert
+          tone="warning"
+          title="Atualização automática indisponível"
+          action={(
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadDetail()}
+              loading={loading}
+            >
+              Atualizar agora
+            </Button>
+          )}
+        >
+          {liveRefreshError}
+        </Alert>
+      )}
 
       {loading && !campaign ? (
         <Card className="h-48 animate-pulse" />

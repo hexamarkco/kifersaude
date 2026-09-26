@@ -157,7 +157,7 @@ Deno.serve(async (req: Request) => {
     if (chat.lead_id) {
       const { data: leadResult } = await supabaseAdmin
         .from('leads')
-        .select('id, nome_completo, status, origem, responsavel, cidade, email')
+        .select('id, nome_completo, status, cidade, email')
         .eq('id', chat.lead_id)
         .maybeSingle();
       if (leadResult) leadData = leadResult as LeadRow;

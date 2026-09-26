@@ -2663,10 +2663,9 @@ type CsvLeadDefaults = {
 
 const CSV_LEAD_ORIGIN_NAME = 'Disparo';
 
-// `leads.origem`/`tipo_contratacao`/`responsavel`/`status` sao colunas
-// legadas NOT NULL com FK por nome/valor para tabelas de configuracao (mesmo
-// padrao documentado em supabase/functions/public-lead-submit/index.ts).
-// Resolve tudo uma unica vez por lote de processamento, nao por alvo.
+// Resolve os IDs de origem, tipo, status e responsavel para que leads criados
+// a partir de CSV respeitem o modelo atual do CRM. A leitura dos responsaveis
+// acontece uma vez por lote de processamento, nao uma vez por alvo.
 // Deriva candidatos de "nome" a partir do perfil do criador da campanha
 // (user_profiles.username, e o prefixo do e-mail antes de @/./+), para casar
 // contra lead_responsaveis.label - a tabela hoje guarda primeiros nomes reais

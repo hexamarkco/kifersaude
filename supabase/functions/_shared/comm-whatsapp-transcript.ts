@@ -24,8 +24,6 @@ export type LeadRow = {
   id: string;
   nome_completo: string | null;
   status: string | null;
-  origem: string | null;
-  responsavel: string | null;
   cidade: string | null;
   email: string | null;
 };

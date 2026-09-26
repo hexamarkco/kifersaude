@@ -102,11 +102,9 @@ const hashIp = async (ip: string, serviceRoleKey: string): Promise<string> => {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-// `leads.origem`/`tipo_contratacao`/`responsavel` are legacy NOT NULL text
-// columns (FK'd to these config tables by name/value) that predate the
-// `*_id` columns and are never auto-synced by a trigger — unlike `status`,
-// which is. So every insert must resolve and set the text value directly,
-// not just the `*_id` column, or it can violate the NOT NULL/FK constraint.
+// Lead categorical fields are stored by foreign-key id in the current schema.
+// Resolve the configured rows once so public submissions remain assigned to a
+// valid origin, status, contract type and responsible person.
 const resolveOrigin = (origins: OriginRow[]): OriginRow | null => {
   const priorities = ['site', 'home', 'inicio', 'organico', 'organico site', 'landing'];
   const match = origins.find((origin) => priorities.some((term) => normalizeText(origin.nome).includes(term)));
@@ -226,13 +224,11 @@ Deno.serve(async (req: Request) => {
       nome_completo: payload.name,
       telefone: payload.phone,
       cidade: payload.city,
-      origem: originRow?.nome ?? undefined,
       origem_id: originRow?.id ?? null,
       status: status?.nome ?? undefined,
       status_id: status?.id ?? null,
-      tipo_contratacao: contractTypeRow?.value ?? undefined,
       tipo_contratacao_id: contractTypeRow?.id ?? null,
-      responsavel: responsible?.value ?? undefined,
+      responsavel_id: responsible?.id ?? null,
       observacoes: `Lead site | Tipo: ${payload.contractType} | Cidade: ${payload.city} | Beneficiarios: ${formatPublicLeadAgeSummary(payload.ageSummary)}`,
       data_criacao: now,
       ultimo_contato: now,

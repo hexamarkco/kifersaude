@@ -448,7 +448,7 @@ async function executeSequenceAction(
 
       const [{ data: statuses, error: statusError }, { data: lead, error: leadError }] = await Promise.all([
         admin.from('lead_status_config').select('id,nome').eq('ativo', true),
-        admin.from('leads').select('id,status_id,status,responsavel').eq('id', step.lead_id).maybeSingle(),
+        admin.from('leads').select('id,status_id,status').eq('id', step.lead_id).maybeSingle(),
       ]);
       if (statusError) throw new Error(`Não foi possível carregar os status: ${statusError.message}`);
       if (leadError || !lead) throw new Error('Lead não encontrado para a ação de status.');
@@ -468,7 +468,7 @@ async function executeSequenceAction(
           lead_id: step.lead_id,
           status_anterior: previousStatus,
           status_novo: target.nome,
-          responsavel: lead.responsavel ?? 'Automação de mensagens agendadas',
+          responsavel: 'Automação de mensagens agendadas',
           observacao: `Alteração executada pela sequência ${step.sequence_id}.`,
         });
         if (historyError) throw new Error(`Não foi possível registrar o histórico de status: ${historyError.message}`);

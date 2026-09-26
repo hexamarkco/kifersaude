@@ -1049,6 +1049,8 @@ export default function LeadsManager({
 
   const handleRealtimeLeadChange = useCallback(
     ({ eventType, current, previous }: LeadRealtimeChange) => {
+      leadsRequestIdRef.current += 1;
+
       const newLead = current
         ? mapLeadRelations(current, {
             origins: leadOrigins,
@@ -1233,9 +1235,9 @@ export default function LeadsManager({
   }, []);
 
   useEffect(() => {
-    loadLeads();
-
-    return subscribeToLeadChanges(handleRealtimeLeadChange);
+    const unsubscribe = subscribeToLeadChanges(handleRealtimeLeadChange);
+    void loadLeads();
+    return unsubscribe;
   }, [handleRealtimeLeadChange, loadLeads]);
 
   useEffect(() => {

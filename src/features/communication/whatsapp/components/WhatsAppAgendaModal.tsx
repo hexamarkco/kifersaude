@@ -161,7 +161,7 @@ export default function WhatsAppAgendaModal({
     position: { top: number; left: number };
   } | null>(null);
   const quickScheduleDropdownRef = useRef<HTMLDivElement>(null);
-  const quickScheduleButtonRef = useRef<HTMLButtonElement>(null);
+  const quickScheduleButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -226,11 +226,14 @@ export default function WhatsAppAgendaModal({
     if (!quickScheduleDropdown) return;
 
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      const activeTrigger = quickScheduleButtonRefs.current[quickScheduleDropdown.reminderId];
       if (
         quickScheduleDropdownRef.current &&
-        !quickScheduleDropdownRef.current.contains(event.target as Node) &&
-        quickScheduleButtonRef.current &&
-        !quickScheduleButtonRef.current.contains(event.target as Node)
+        target &&
+        !quickScheduleDropdownRef.current.contains(target) &&
+        activeTrigger &&
+        !activeTrigger.contains(target)
       ) {
         setQuickScheduleDropdown(null);
       }
@@ -239,7 +242,7 @@ export default function WhatsAppAgendaModal({
     const handleScroll = () => setQuickScheduleDropdown(null);
 
     document.addEventListener('mousedown', handleClickOutside);
-    const scrollContainer = document.querySelector('.overflow-auto, .overflow-y-auto');
+    const scrollContainer = document.querySelector('.whatsapp-agenda-dialog-body');
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     }
@@ -1280,7 +1283,9 @@ export default function WhatsAppAgendaModal({
               <>
                 <div className="relative">
                   <IconButton
-                    ref={quickScheduleButtonRef}
+                    ref={(node) => {
+                      quickScheduleButtonRefs.current[reminder.id] = node;
+                    }}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1444,6 +1449,7 @@ export default function WhatsAppAgendaModal({
         title="Agenda do WhatsApp"
         description="Mesma base da Agenda unificada, agora acessível dentro do inbox. Tudo o que você fizer aqui reflete em /painel/agenda."
         size="xl"
+        bodyClassName="whatsapp-agenda-dialog-body"
         footer={
           <div className="flex items-center justify-end gap-3">
             <Button variant="secondary" onClick={onClose}>

@@ -19,6 +19,7 @@ import {
   type CommWhatsAppDashboardRecentChat,
 } from '../data';
 import { toast } from '../../../../lib/toast';
+import { KeyedActionLock } from './keyedActionLock';
 
 type WhatsAppDashboardModalProps = {
   isOpen: boolean;
@@ -263,6 +264,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [view, setView] = useState<DashboardView>('priorities');
   const loadMetricsRequestIdRef = useRef(0);
   const dashboardSessionIdRef = useRef(0);
+  const dashboardActionLockRef = useRef(new KeyedActionLock());
 
   const loadMetrics = useCallback(async () => {
     const requestId = ++loadMetricsRequestIdRef.current;
@@ -324,6 +326,9 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
     if (exportingInbox) {
       return;
     }
+    if (!dashboardActionLockRef.current.tryAcquire('export')) {
+      return;
+    }
 
     const sessionId = dashboardSessionIdRef.current;
     setExportingInbox(true);
@@ -361,6 +366,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       console.error('[WhatsAppDashboardModal] erro ao exportar inbox', exportError);
       toast.error(exportError instanceof Error ? exportError.message : 'Não foi possível exportar as conversas do inbox.');
     } finally {
+      dashboardActionLockRef.current.release('export');
       if (sessionId === dashboardSessionIdRef.current) {
         setExportingInbox(false);
         setExportProgress(null);
@@ -370,6 +376,9 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
   const handleSyncAllChats = useCallback(async () => {
     if (syncingAll) {
+      return;
+    }
+    if (!dashboardActionLockRef.current.tryAcquire('sync')) {
       return;
     }
 
@@ -410,6 +419,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       console.error('[WhatsAppDashboardModal] erro ao forçar sincronização geral', syncError);
       toast.error(syncError instanceof Error ? syncError.message : 'Não foi possível sincronizar todas as conversas.');
     } finally {
+      dashboardActionLockRef.current.release('sync');
       if (sessionId === dashboardSessionIdRef.current) {
         setSyncingAll(false);
         setSyncAllProgress(null);

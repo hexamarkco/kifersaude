@@ -4878,6 +4878,7 @@ export default function WhatsAppInboxScreen() {
 
     chatsLoadKeyRef.current = loadKey;
     const requestId = ++chatsRequestIdRef.current;
+    let didApplyChatLoad = false;
     const loadPromise = (async () => {
       try {
         const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
@@ -5060,6 +5061,7 @@ export default function WhatsAppInboxScreen() {
           return hydratedData.find((chat) => !chat.is_archived)?.id ?? hydratedData[0]?.id ?? null;
         });
         chatPollBackoffRef.current = 0;
+        didApplyChatLoad = true;
       } catch (error) {
         if (requestId !== chatsRequestIdRef.current) {
           return;
@@ -5075,7 +5077,9 @@ export default function WhatsAppInboxScreen() {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
       }
     })().finally(() => {
-      latestChatsLoadedAtRef.current = Date.now();
+      if (didApplyChatLoad && requestId === chatsRequestIdRef.current) {
+        latestChatsLoadedAtRef.current = Date.now();
+      }
       if (chatsLoadPromiseRef.current === loadPromise) {
         chatsLoadPromiseRef.current = null;
         chatsLoadKeyRef.current = null;

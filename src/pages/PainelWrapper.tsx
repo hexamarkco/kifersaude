@@ -2,13 +2,16 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import type { Lead } from '../features/leads';
-import type { Reminder } from '../features/reminders';
 import Layout from '../components/Layout';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import WhatsAppInboxNotificationToast from '../components/WhatsAppInboxNotificationToast';
 import { browserNotificationService, type BrowserNotificationPermission } from '../lib/browserNotificationService';
-import { notificationService, type InboxMessageNotification } from '../lib/notificationService';
+import {
+  notificationService,
+  type InboxMessageNotification,
+  type NotificationReminder,
+} from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
 import { crmTabPresenceService } from '../lib/crmTabPresence';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,7 +55,7 @@ export default function PainelWrapper() {
   const [unreadReminders, setUnreadReminders] = useState(0);
   const [unreadInboxChats, setUnreadInboxChats] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
-  const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
+  const [activeNotifications, setActiveNotifications] = useState<NotificationReminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [activeInboxNotifications, setActiveInboxNotifications] = useState<InboxMessageNotification[]>([]);
   const [browserNotificationPermission, setBrowserNotificationPermission] = useState<BrowserNotificationPermission>(() => (
@@ -178,7 +181,7 @@ export default function PainelWrapper() {
     navigate(`/painel/${fallbackRoute}`, { replace: true });
   }, [configLoading, location.pathname, navigate, validTabIds]);
 
-  const handleCloseNotification = (reminder: Reminder) => {
+  const handleCloseNotification = (reminder: NotificationReminder) => {
     setActiveNotifications((prev) => prev.filter((item) => item !== reminder));
   };
 

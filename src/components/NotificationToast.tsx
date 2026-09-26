@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import type { Reminder } from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import type { NotificationReminder } from '../lib/notificationService';
 import {
   Toast,
 } from '../design-system';
 
 type NotificationToastProps = {
-  reminder: Reminder;
+  reminder: NotificationReminder;
   onClose: () => void;
   onViewReminders: () => void;
 };

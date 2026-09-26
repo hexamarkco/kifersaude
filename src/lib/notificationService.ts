@@ -8,7 +8,11 @@ import {
 } from '../features/communication/whatsapp';
 import { isReminderDue } from './dateUtils';
 
-export type NotificationCallback = (reminder: Reminder) => void;
+export type NotificationReminder = Pick<
+  Reminder,
+  'id' | 'titulo' | 'descricao' | 'data_lembrete' | 'prioridade'
+>;
+export type NotificationCallback = (reminder: NotificationReminder) => void;
 export type LeadNotificationCallback = (lead: Lead) => void;
 export type UnreadCountCallback = (count: number) => void;
 export type InboxUnreadCountCallback = (count: number) => void;
@@ -256,7 +260,7 @@ export class NotificationService {
       ] = await Promise.all([
         supabase
           .from('reminders')
-          .select('*')
+          .select('id, titulo, descricao, data_lembrete, prioridade')
           .eq('lido', false)
           .order('data_lembrete', { ascending: true }),
         whatsappConversationsRepository.getUnreadCount(),

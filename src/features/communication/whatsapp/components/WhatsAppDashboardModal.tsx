@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
 import {
@@ -261,24 +261,37 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncAllProgress, setSyncAllProgress] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView>('priorities');
+  const loadMetricsRequestIdRef = useRef(0);
 
   const loadMetrics = useCallback(async () => {
+    const requestId = ++loadMetricsRequestIdRef.current;
     setLoading(true);
     setError(null);
 
     try {
       const data = await whatsappDashboardService.getMetrics();
+      if (requestId !== loadMetricsRequestIdRef.current) {
+        return;
+      }
       setMetrics(data);
     } catch (loadError) {
+      if (requestId !== loadMetricsRequestIdRef.current) {
+        return;
+      }
       console.error('[WhatsAppDashboardModal] erro ao carregar métricas', loadError);
       setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar o Painel WhatsApp.');
     } finally {
-      setLoading(false);
+      if (requestId === loadMetricsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      loadMetricsRequestIdRef.current += 1;
+      return;
+    }
     void loadMetrics();
   }, [isOpen, loadMetrics]);
 

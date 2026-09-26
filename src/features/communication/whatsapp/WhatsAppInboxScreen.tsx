@@ -149,6 +149,7 @@ import {
 } from './domain/quickReplies';
 import ChatPreviewIcon from './components/ChatPreviewIcon';
 import LinkifiedText, { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
+import { KeyedActionLock } from './components/keyedActionLock';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import { ComposerSendLock } from './components/composerSendLock';
 import WhatsAppPresenceIndicator from './components/WhatsAppPresenceIndicator';
@@ -2327,7 +2328,10 @@ export default function WhatsAppInboxScreen() {
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
-  const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
+  const [reactingMessageIds, setReactingMessageIds] = useState<Set<string>>(new Set());
+  const reactingMessageLockRef = useRef(new KeyedActionLock());
+  const [starringMessageIds, setStarringMessageIds] = useState<Set<string>>(new Set());
+  const starringMessageLockRef = useRef(new KeyedActionLock());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
   const [savingMessageEdit, setSavingMessageEdit] = useState(false);
@@ -7064,8 +7068,20 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    if (!reactingMessageLockRef.current.tryAcquire(message.id)) {
+      return;
+    }
+
+    setReactingMessageIds((current) => new Set(current).add(message.id));
+
     const chatId = String(message.metadata?.chat_id ?? selectedChat?.external_chat_id ?? '').trim();
     if (!chatId) {
+      reactingMessageLockRef.current.release(message.id);
+      setReactingMessageIds((current) => {
+        const next = new Set(current);
+        next.delete(message.id);
+        return next;
+      });
       toast.error('Não foi possível identificar a conversa desta mensagem.');
       return;
     }
@@ -7073,7 +7089,6 @@ export default function WhatsAppInboxScreen() {
     const currentOwnReaction = getOwnReactionEmoji(message);
     const nextEmoji = currentOwnReaction === emoji ? null : emoji;
 
-    setReactingMessageId(message.id);
     setOpenReactionPickerMessageId(null);
     patchMessageReactionLocally(message, nextEmoji);
 
@@ -7088,7 +7103,12 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
     } finally {
-      setReactingMessageId((current) => (current === message.id ? null : current));
+      reactingMessageLockRef.current.release(message.id);
+      setReactingMessageIds((current) => {
+        const next = new Set(current);
+        next.delete(message.id);
+        return next;
+      });
     }
   }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
 
@@ -7096,6 +7116,12 @@ export default function WhatsAppInboxScreen() {
     if (!message.external_message_id) {
       return;
     }
+
+    if (!starringMessageLockRef.current.tryAcquire(message.id)) {
+      return;
+    }
+
+    setStarringMessageIds((current) => new Set(current).add(message.id));
 
     const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
       ? message.metadata as Record<string, unknown>
@@ -7123,6 +7149,13 @@ export default function WhatsAppInboxScreen() {
       });
       console.error('[WhatsAppInbox] erro ao atualizar estrela da mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar a estrela da mensagem.');
+    } finally {
+      starringMessageLockRef.current.release(message.id);
+      setStarringMessageIds((current) => {
+        const next = new Set(current);
+        next.delete(message.id);
+        return next;
+      });
     }
   }, [patchMessageLocally]);
 
@@ -9967,8 +10000,10 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={() => void handleToggleStarMessage(message)}
+                            disabled={starringMessageIds.has(message.id)}
+                            aria-busy={starringMessageIds.has(message.id)}
                             className={cx(
-                              'order-2 inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                              'order-2 inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] disabled:pointer-events-none disabled:opacity-60',
                               isMessageStarred(message)
                                 ? 'text-[var(--accent-gold)]'
                                 : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
@@ -9976,7 +10011,7 @@ export default function WhatsAppInboxScreen() {
                             aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
                             title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
                           >
-                            <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />
+                            {starringMessageIds.has(message.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />}
                         </button>
                         ) : null}
                         {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
@@ -11360,7 +11395,7 @@ export default function WhatsAppInboxScreen() {
                     key={`${openReactionPickerMessage.id}:${emoji}`}
                     type="button"
                     onClick={() => void handleReactToMessage(openReactionPickerMessage, emoji)}
-                    disabled={reactingMessageId === openReactionPickerMessage.id}
+                    disabled={reactingMessageIds.has(openReactionPickerMessage.id)}
                     className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-[1.45rem] leading-none transition ${selected ? 'bg-[var(--brand-primary-soft)] scale-105' : 'hover:bg-[var(--bg-hover)]'}`}
                     aria-label={`Reagir com ${emoji}`}
                   >
@@ -11420,9 +11455,10 @@ export default function WhatsAppInboxScreen() {
                       setOpenMessageActionMenuMessageId(null);
                       setMessageActionMenuPointerAnchor(null);
                     }}
-                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                    disabled={starringMessageIds.has(openMessageActionMenuMessage.id)}
+                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:pointer-events-none disabled:opacity-60"
                   >
-                    <Star className={cx('h-4 w-4 shrink-0', isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : '')} />
+                    {starringMessageIds.has(openMessageActionMenuMessage.id) ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Star className={cx('h-4 w-4 shrink-0', isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : '')} />}
                     <span>{isMessageStarred(openMessageActionMenuMessage) ? 'Remover estrela' : 'Estrelar mensagem'}</span>
                   </button>
                 </>

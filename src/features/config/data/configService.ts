@@ -86,7 +86,10 @@ const CONFIG_CATEGORY_TABLE_MAP: Record<ConfigCategory, string> = {
   contract_carencia: 'contract_carencias',
 };
 
-const fetchLegacyConfigOptions = async (category: ConfigCategory): Promise<ConfigOption[]> => {
+const fetchLegacyConfigOptions = async (
+  category: ConfigCategory,
+  throwOnError = false,
+): Promise<ConfigOption[]> => {
   try {
     const baseQuery = () =>
       supabase
@@ -108,6 +111,9 @@ const fetchLegacyConfigOptions = async (category: ConfigCategory): Promise<Confi
     return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
   } catch (error) {
     console.error('Error loading config options:', error);
+    if (throwOnError && !isTableMissingError(error, 'system_configurations')) {
+      throw error;
+    }
     return [];
   }
 };
@@ -321,7 +327,7 @@ if (typeof window !== 'undefined') {
 }
 
 export const configService = {
-  async getAccessProfiles(): Promise<AccessProfile[]> {
+  async getAccessProfiles(throwOnError = false): Promise<AccessProfile[]> {
     try {
       const { data, error, status } = await supabase
         .from(ACCESS_PROFILES_TABLE)
@@ -343,6 +349,9 @@ export const configService = {
       }
 
       console.error('Error loading access profiles:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     }
   },
@@ -580,7 +589,7 @@ export const configService = {
     }
   },
 
-  async getLeadStatusConfig(): Promise<LeadStatusConfig[]> {
+  async getLeadStatusConfig(throwOnError = false): Promise<LeadStatusConfig[]> {
     try {
       const { data, error } = await supabase
         .from('lead_status_config')
@@ -591,6 +600,9 @@ export const configService = {
       return data || [];
     } catch (error) {
       console.error('Error loading status config:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     }
   },
@@ -638,7 +650,7 @@ export const configService = {
     }
   },
 
-  async getLeadOrigens(): Promise<LeadOrigem[]> {
+  async getLeadOrigens(throwOnError = false): Promise<LeadOrigem[]> {
     try {
       const { data, error } = await supabase
         .from('lead_origens')
@@ -655,6 +667,9 @@ export const configService = {
       }));
     } catch (error) {
       console.error('Error loading origens:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     }
   },
@@ -720,7 +735,7 @@ export const configService = {
     }
   },
 
-  async getConfigOptions(category: ConfigCategory): Promise<ConfigOption[]> {
+  async getConfigOptions(category: ConfigCategory, throwOnError = false): Promise<ConfigOption[]> {
     const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
     if (table) {
@@ -733,7 +748,7 @@ export const configService = {
 
         if (error) {
           if (isTableMissingError(error, table)) {
-            return await fetchLegacyConfigOptions(category);
+            return await fetchLegacyConfigOptions(category, throwOnError);
           }
           throw error;
         }
@@ -741,14 +756,17 @@ export const configService = {
         return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
       } catch (error) {
         if (isTableMissingError(error, table)) {
-          return await fetchLegacyConfigOptions(category);
+          return await fetchLegacyConfigOptions(category, throwOnError);
         }
         console.error('Error loading config options:', error);
+        if (throwOnError) {
+          throw error;
+        }
         return [];
       }
     }
 
-    return await fetchLegacyConfigOptions(category);
+    return await fetchLegacyConfigOptions(category, throwOnError);
   },
 
   async createConfigOption(
@@ -875,7 +893,7 @@ export const configService = {
     return await deleteLegacyConfigOption(id);
   },
 
-  async getProfilePermissions(): Promise<ProfilePermission[]> {
+  async getProfilePermissions(throwOnError = false): Promise<ProfilePermission[]> {
     try {
       const { data, error, status } = await supabase
         .from(PROFILE_PERMISSIONS_TABLE)
@@ -897,6 +915,9 @@ export const configService = {
       }
 
       console.error('Error loading profile permissions:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     }
   },

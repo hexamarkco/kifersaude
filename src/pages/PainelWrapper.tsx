@@ -17,8 +17,11 @@ import { crmTabPresenceService } from '../lib/crmTabPresence';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import {
+  Alert,
   AppLoadingScreen,
+  Button,
 } from '../design-system';
+import { RefreshCw } from 'lucide-react';
 import type { TabNavigationOptions } from '../types/navigation';
 
 const ROUTE_TAB_MAP: Record<string, string> = {
@@ -49,7 +52,13 @@ const TAB_ROUTE_MAP: Record<string, string> = {
 
 export default function PainelWrapper() {
   const { isObserver, role } = useAuth();
-  const { leadOrigins, loading: configLoading, getRoleModulePermission } = useConfig();
+  const {
+    leadOrigins,
+    loading: configLoading,
+    loadError: configLoadError,
+    retryLoad: retryConfigLoad,
+    getRoleModulePermission,
+  } = useConfig();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadReminders, setUnreadReminders] = useState(0);
@@ -243,6 +252,25 @@ export default function PainelWrapper() {
 
   if (configLoading) {
     return <AppLoadingScreen />;
+  }
+
+  if (configLoadError) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-6">
+        <Alert
+          tone="danger"
+          title="Não foi possível carregar as configurações do sistema."
+          action={
+            <Button variant="secondary" size="sm" onClick={retryConfigLoad}>
+              <RefreshCw className="kds-control-icon" />
+              <span>Tentar novamente</span>
+            </Button>
+          }
+        >
+          Verifique sua conexão ou sessão e tente novamente. Seus dados não foram apagados.
+        </Alert>
+      </div>
+    );
   }
 
   return (

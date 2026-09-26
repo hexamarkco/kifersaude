@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   configService,
   type AccessProfile,
@@ -14,6 +14,8 @@ export type ConfigCategoryMap = Record<ConfigCategory, ConfigOption[]>;
 
 type ConfigContextType = {
   loading: boolean;
+  loadError: boolean;
+  retryLoad: () => void;
   leadStatuses: LeadStatusConfig[];
   leadOrigins: LeadOrigem[];
   options: ConfigCategoryMap;
@@ -47,52 +49,74 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [accessProfiles, setAccessProfiles] = useState<AccessProfile[]>([]);
   const [profilePermissions, setProfilePermissions] = useState<ProfilePermission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const loadRequestIdRef = useRef(0);
 
-  const loadLeadStatuses = async () => {
-    const data = await configService.getLeadStatusConfig();
+  const loadLeadStatuses = async (throwOnError = false, requestId?: number) => {
+    const data = await configService.getLeadStatusConfig(throwOnError);
+    if (requestId !== undefined && requestId !== loadRequestIdRef.current) return;
     setLeadStatuses(data);
   };
 
-  const loadLeadOrigins = async () => {
-    const data = await configService.getLeadOrigens();
+  const loadLeadOrigins = async (throwOnError = false, requestId?: number) => {
+    const data = await configService.getLeadOrigens(throwOnError);
+    if (requestId !== undefined && requestId !== loadRequestIdRef.current) return;
     setLeadOrigins(data);
   };
 
-  const loadCategory = async (category: ConfigCategory) => {
-    const data = await configService.getConfigOptions(category);
+  const loadCategory = async (category: ConfigCategory, throwOnError = false, requestId?: number) => {
+    const data = await configService.getConfigOptions(category, throwOnError);
+    if (requestId !== undefined && requestId !== loadRequestIdRef.current) return;
     setOptions(prev => ({ ...prev, [category]: data }));
   };
 
-  const loadProfilePermissions = async () => {
-    const data = await configService.getProfilePermissions();
+  const loadProfilePermissions = async (throwOnError = false, requestId?: number) => {
+    const data = await configService.getProfilePermissions(throwOnError);
+    if (requestId !== undefined && requestId !== loadRequestIdRef.current) return;
     setProfilePermissions(data);
   };
 
-  const loadAccessProfiles = async () => {
-    const data = await configService.getAccessProfiles();
+  const loadAccessProfiles = async (throwOnError = false, requestId?: number) => {
+    const data = await configService.getAccessProfiles(throwOnError);
+    if (requestId !== undefined && requestId !== loadRequestIdRef.current) return;
     setAccessProfiles(data);
   };
 
+  const retryLoad = useCallback(() => {
+    setLoadAttempt((current) => current + 1);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
+    const requestId = ++loadRequestIdRef.current;
 
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([
-        loadLeadStatuses(),
-        loadLeadOrigins(),
-        loadCategory('lead_tipo_contratacao'),
-        loadCategory('lead_responsavel'),
-        loadCategory('contract_status'),
-        loadCategory('contract_modalidade'),
-        loadCategory('contract_abrangencia'),
-        loadCategory('contract_acomodacao'),
-        loadCategory('contract_carencia'),
-        loadAccessProfiles(),
-        loadProfilePermissions(),
-      ]);
-      if (mounted) {
-        setLoading(false);
+      setLoadError(false);
+      try {
+        await Promise.all([
+          loadLeadStatuses(true, requestId),
+          loadLeadOrigins(true, requestId),
+          loadCategory('lead_tipo_contratacao', true, requestId),
+          loadCategory('lead_responsavel', true, requestId),
+          loadCategory('contract_status', true, requestId),
+          loadCategory('contract_modalidade', true, requestId),
+          loadCategory('contract_abrangencia', true, requestId),
+          loadCategory('contract_acomodacao', true, requestId),
+          loadCategory('contract_carencia', true, requestId),
+          loadAccessProfiles(true, requestId),
+          loadProfilePermissions(true, requestId),
+        ]);
+      } catch (error) {
+        console.error('Erro ao carregar configurações compartilhadas:', error);
+        if (mounted && requestId === loadRequestIdRef.current) {
+          setLoadError(true);
+        }
+      } finally {
+        if (mounted && requestId === loadRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
@@ -100,8 +124,9 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      loadRequestIdRef.current += 1;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const getAccessProfile = useMemo(() => {
     return (role: string | null | undefined) => {
@@ -140,16 +165,18 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
 
   const value: ConfigContextType = {
     loading,
+    loadError,
+    retryLoad,
     leadStatuses,
     leadOrigins,
     options,
     accessProfiles,
     profilePermissions,
-    refreshLeadStatuses: loadLeadStatuses,
-    refreshLeadOrigins: loadLeadOrigins,
-    refreshCategory: loadCategory,
-    refreshAccessProfiles: loadAccessProfiles,
-    refreshProfilePermissions: loadProfilePermissions,
+    refreshLeadStatuses: () => loadLeadStatuses(),
+    refreshLeadOrigins: () => loadLeadOrigins(),
+    refreshCategory: (category) => loadCategory(category),
+    refreshAccessProfiles: () => loadAccessProfiles(),
+    refreshProfilePermissions: () => loadProfilePermissions(),
     getRoleModulePermission,
     getAccessProfile,
   };

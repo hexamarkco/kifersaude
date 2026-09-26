@@ -2,6 +2,27 @@ import { databaseClient } from '../../../infrastructure/supabase';
 import type { Contract } from '../../contracts';
 import type { Reminder } from '../domain/types';
 
+export type NotificationReminder = Pick<Reminder, 'id' | 'titulo' | 'data_lembrete'>;
+
+export type NotificationContract = Pick<
+  Contract,
+  | 'id'
+  | 'status'
+  | 'created_at'
+  | 'codigo_contrato'
+  | 'previsao_recebimento_comissao'
+  | 'comissao_prevista'
+  | 'comissao_recebimento_adiantado'
+  | 'comissao_parcelas'
+  | 'mensalidade_total'
+  | 'previsao_pagamento_bonificacao'
+  | 'bonus_por_vida_aplicado'
+  | 'bonus_por_vida_configuracoes'
+  | 'bonus_por_vida_valor'
+  | 'vidas'
+  | 'vidas_elegiveis_bonus'
+>;
+
 export type NotificationHolder = {
   id: string;
   cpf: string;
@@ -23,8 +44,8 @@ export type NotificationDependent = {
 };
 
 export type NotificationSummarySource = {
-  reminders: Reminder[];
-  contracts: Contract[];
+  reminders: NotificationReminder[];
+  contracts: NotificationContract[];
   holders: NotificationHolder[];
   dependents: NotificationDependent[];
 };
@@ -44,17 +65,17 @@ export async function loadNotificationSummarySource(
   const [remindersResult, contractsResult] = await Promise.all([
     databaseClient
       .from('reminders')
-      .select('*')
+      .select('id,titulo,data_lembrete')
       .gte('data_lembrete', startAt)
       .lte('data_lembrete', endAt)
       .eq('lido', false)
       .order('data_lembrete', { ascending: true })
-      .overrideTypes<Reminder[], { merge: false }>(),
+      .overrideTypes<NotificationReminder[], { merge: false }>(),
     databaseClient
       .from('contracts')
-      .select('*')
+      .select('id,status,created_at,codigo_contrato,previsao_recebimento_comissao,comissao_prevista,comissao_recebimento_adiantado,comissao_parcelas,mensalidade_total,previsao_pagamento_bonificacao,bonus_por_vida_aplicado,bonus_por_vida_configuracoes,bonus_por_vida_valor,vidas,vidas_elegiveis_bonus')
       .eq('status', 'Ativo')
-      .overrideTypes<Contract[], { merge: false }>(),
+      .overrideTypes<NotificationContract[], { merge: false }>(),
   ]);
 
   const error = remindersResult.error

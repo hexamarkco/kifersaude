@@ -39,5 +39,7 @@ export {
   loadNotificationSummarySource,
   type NotificationDependent,
   type NotificationHolder,
+  type NotificationContract,
+  type NotificationReminder,
   type NotificationSummarySource,
 } from './data/notificationSummaryRepository';

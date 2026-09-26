@@ -23,12 +23,12 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import type { Contract } from '../features/contracts';
 import {
   deduplicateBirthdayPeople,
   loadNotificationSummarySource,
   subscribeToReminderChanges,
-  type Reminder,
+  type NotificationContract,
+  type NotificationReminder,
 } from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
@@ -103,19 +103,19 @@ export default function Layout({
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
-  const [todayReminders, setTodayReminders] = useState<Reminder[]>([]);
+  const [todayReminders, setTodayReminders] = useState<NotificationReminder[]>([]);
   const [todayPayments, setTodayPayments] = useState<{
     id: string;
     type: 'comissao' | 'bonificacao';
     value: number;
-    contract: Contract;
+    contract: NotificationContract;
     installmentLabel?: string;
   }[]>([]);
   const [todayBirthdays, setTodayBirthdays] = useState<{
     id: string;
     name: string;
     role: 'Titular' | 'Dependente';
-    contract?: Contract | null;
+    contract?: NotificationContract | null;
     holderName?: string | null;
   }[]>([]);
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -259,7 +259,7 @@ export default function Layout({
         id: string;
         type: 'comissao' | 'bonificacao';
         value: number;
-        contract: Contract;
+        contract: NotificationContract;
         installmentLabel?: string;
       }[] = [];
 
@@ -335,7 +335,7 @@ export default function Layout({
         id: string;
         name: string;
         role: 'Titular' | 'Dependente';
-        contract?: Contract | null;
+        contract?: NotificationContract | null;
         holderName?: string | null;
       }[] = [];
 

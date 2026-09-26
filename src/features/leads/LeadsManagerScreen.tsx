@@ -172,6 +172,10 @@ export default function LeadsManager({
   const [leadContractIds, setLeadContractIds] = useState<Set<string>>(
     new Set(),
   );
+  const [leadContractsLoadError, setLeadContractsLoadError] = useState<
+    string | null
+  >(null);
+  const [leadContractsLoading, setLeadContractsLoading] = useState(false);
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkResponsavel, setBulkResponsavel] = useState("");
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState("");
@@ -348,9 +352,12 @@ export default function LeadsManager({
     async (leadIds: string[]) => {
       const requestId = contractsRequestIdRef.current + 1;
       contractsRequestIdRef.current = requestId;
+      setLeadContractsLoadError(null);
+      setLeadContractsLoading(true);
 
       if (leadIds.length === 0) {
         setLeadContractIds(new Set());
+        setLeadContractsLoading(false);
         return;
       }
 
@@ -364,6 +371,13 @@ export default function LeadsManager({
       } catch (error) {
         if (requestId === contractsRequestIdRef.current) {
           console.error("Erro ao carregar contratos dos leads:", error);
+          setLeadContractsLoadError(
+            "Não foi possível verificar quais leads já possuem contrato. Os leads continuam disponíveis.",
+          );
+        }
+      } finally {
+        if (requestId === contractsRequestIdRef.current) {
+          setLeadContractsLoading(false);
         }
       }
     },
@@ -1457,6 +1471,27 @@ export default function LeadsManager({
             )}
           >
             {leadsLoadError} Os dados já carregados foram preservados.
+          </Alert>
+        )}
+        {leadContractsLoadError && (
+          <Alert
+            tone="warning"
+            title="Verificação de contratos indisponível"
+            action={(
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  void fetchContractsForLeads(leads.map((lead) => lead.id))
+                }
+                loading={leadContractsLoading}
+              >
+                Tentar novamente
+              </Button>
+            )}
+          >
+            {leadContractsLoadError}
           </Alert>
         )}
         <Surface className="space-y-5" data-panel-animate>

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   User as UserIcon,
   Pencil,
+  RefreshCw,
   Search,
 } from "lucide-react";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
@@ -56,6 +57,7 @@ export default function UsersScreen() {
   const { accessProfiles, getRoleModulePermission } = useConfig();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersLoadError, setUsersLoadError] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserUsername, setNewUserUsername] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -119,9 +121,11 @@ export default function UsersScreen() {
       const nextUsers = await listUsers();
       if (requestId !== usersLoadRequestIdRef.current) return;
       setUsers(nextUsers);
+      setUsersLoadError(false);
     } catch (error) {
       console.error("Erro ao carregar usuários:", error);
       if (requestId === usersLoadRequestIdRef.current) {
+        setUsersLoadError(true);
         showMessage("error", "Não foi possível carregar os usuários.");
       }
     } finally {
@@ -327,6 +331,21 @@ export default function UsersScreen() {
           }
         />
 
+        {usersLoadError ? (
+          <Alert
+            tone="danger"
+            title="Não foi possível carregar os usuários."
+            action={
+              <Button variant="secondary" size="sm" onClick={() => void loadUsers()}>
+                <RefreshCw className="kds-control-icon" />
+                <span>Tentar novamente</span>
+              </Button>
+            }
+          >
+            Verifique sua conexão ou sessão. Os usuários já carregados continuam preservados.
+          </Alert>
+        ) : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="w-full sm:max-w-sm">
             <Input
@@ -357,7 +376,7 @@ export default function UsersScreen() {
                 {filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="py-12 text-center text-[var(--text-muted)]">
-                      Nenhum usuário cadastrado
+                      {usersLoadError ? "A lista de usuários não pôde ser carregada." : "Nenhum usuário cadastrado"}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -400,7 +419,7 @@ export default function UsersScreen() {
               <Card variant="muted" padding="md" className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-muted)] opacity-40" />
                 <p className="text-[color:var(--text-muted)]">
-                  Nenhum usuário cadastrado
+                  {usersLoadError ? "A lista de usuários não pôde ser carregada." : "Nenhum usuário cadastrado"}
                 </p>
               </Card>
             ) : (

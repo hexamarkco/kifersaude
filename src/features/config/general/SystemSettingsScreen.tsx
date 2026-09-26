@@ -61,6 +61,7 @@ export default function SystemSettingsScreen() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [settingsLoadError, setSettingsLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const settingsLoadRequestIdRef = useRef(0);
@@ -102,11 +103,16 @@ export default function SystemSettingsScreen() {
   const loadSettings = async () => {
     const requestId = ++settingsLoadRequestIdRef.current;
     setLoading(true);
+    setSettingsLoadError(false);
     try {
       const data = await configService.getSystemSettings();
       if (requestId !== settingsLoadRequestIdRef.current) return;
       setSettings(data);
       setSavedSettings(data);
+    } catch (loadSettingsError) {
+      if (requestId !== settingsLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar configurações do sistema:", loadSettingsError);
+      setSettingsLoadError(true);
     } finally {
       if (requestId === settingsLoadRequestIdRef.current) {
         setLoading(false);
@@ -301,11 +307,19 @@ export default function SystemSettingsScreen() {
 
   if (!settings) {
     return (
-      <Alert tone="danger" className="p-8 text-center">
+      <Alert
+        tone="danger"
+        className="p-8 text-center"
+        title={settingsLoadError ? "Não foi possível carregar as configurações do sistema." : "Configurações do sistema indisponíveis."}
+        action={
+          <Button variant="secondary" size="sm" onClick={() => void loadSettings()}>
+            <RotateCcw className="kds-control-icon" />
+            <span>Tentar novamente</span>
+          </Button>
+        }
+      >
         <AlertCircle className="mx-auto mb-4 h-12 w-12" />
-        <p>
-          Erro ao carregar configurações do sistema.
-        </p>
+        <p>Verifique sua conexão ou sessão e tente novamente.</p>
       </Alert>
     );
   }

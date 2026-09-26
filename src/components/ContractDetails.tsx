@@ -116,6 +116,7 @@ export default function ContractDetails({
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const dataRequestIdRef = useRef(0);
+  const eligibleLivesUpdateRequestIdRef = useRef(0);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [showDependentForm, setShowDependentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -379,6 +380,9 @@ export default function ContractDetails({
 
   useEffect(() => {
     void loadData();
+    return () => {
+      dataRequestIdRef.current += 1;
+    };
   }, [loadData]);
 
   const calculateAdjustedValue = (baseValue: number): number => {
@@ -583,6 +587,9 @@ export default function ContractDetails({
   }, [adjustments, contract.created_at, contract.updated_at, interactions]);
 
   useEffect(() => {
+    const requestId = eligibleLivesUpdateRequestIdRef.current + 1;
+    eligibleLivesUpdateRequestIdRef.current = requestId;
+
     if (!contract.bonus_por_vida_aplicado) return;
 
     if (bonusSummary.hasConfigurations) {
@@ -601,6 +608,7 @@ export default function ContractDetails({
             ? bonusSummary.eligibleLives
             : bonusEligibleLivesFromRecords,
         );
+        if (requestId !== eligibleLivesUpdateRequestIdRef.current) return;
         onUpdate();
       } catch (error) {
         console.error("Erro ao atualizar vidas elegiveis para bonus:", error);
@@ -608,6 +616,10 @@ export default function ContractDetails({
     };
 
     updateEligibleLives();
+
+    return () => {
+      eligibleLivesUpdateRequestIdRef.current += 1;
+    };
   }, [
     bonusEligibleLivesFromRecords,
     bonusSummary.eligibleLives,

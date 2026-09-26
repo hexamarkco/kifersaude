@@ -4955,7 +4955,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const unsubscribe = subscribeToInboxReminders(() => {
+    const unsubscribe = subscribeToInboxReminders(leadPanel.id, leadContracts.map((contract) => contract.id), () => {
       void loadChatAgendaSummary(
         leadPanel.id,
         leadContracts.map((contract) => contract.id),

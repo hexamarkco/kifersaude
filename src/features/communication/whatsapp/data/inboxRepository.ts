@@ -34,11 +34,49 @@ export function subscribeToInboxLead(
   return () => { void databaseClient.removeChannel(channel); };
 }
 
-export function subscribeToInboxReminders(onChange: () => void): () => void {
-  const channel = databaseClient
-    .channel(`whatsapp-chat-agenda-summary-${crypto.randomUUID()}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, onChange)
-    .subscribe();
+export function subscribeToInboxReminders(
+  leadId: string,
+  contractIds: string[],
+  onChange: () => void,
+): () => void {
+  const normalizedLeadId = leadId.trim();
+  const normalizedContractIds = Array.from(
+    new Set(contractIds.map((contractId) => contractId.trim()).filter(Boolean)),
+  );
+
+  if (!normalizedLeadId && normalizedContractIds.length === 0) {
+    return () => undefined;
+  }
+
+  const channel = databaseClient.channel(`whatsapp-chat-agenda-summary-${crypto.randomUUID()}`);
+
+  if (normalizedLeadId) {
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'reminders',
+        filter: `lead_id=eq.${normalizedLeadId}`,
+      },
+      onChange,
+    );
+  }
+
+  if (normalizedContractIds.length > 0) {
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'reminders',
+        filter: `contract_id=in.(${normalizedContractIds.join(',')})`,
+      },
+      onChange,
+    );
+  }
+
+  channel.subscribe();
   return () => { void databaseClient.removeChannel(channel); };
 }
 

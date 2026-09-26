@@ -41,6 +41,7 @@ export class NotificationService {
   private leadChannelSubscription: RealtimeChannel | null = null;
   private inboxChannelSubscription: RealtimeChannel | null = null;
   private inboxSubscriptionRequestId = 0;
+  private lifecycleId = 0;
   private lastUnreadCount = 0;
   private lastInboxUnreadCount = 0;
 
@@ -49,13 +50,17 @@ export class NotificationService {
       return;
     }
 
-    this.check();
-    this.intervalId = window.setInterval(() => this.check(), intervalMs);
-    this.startLeadNotifications();
-    this.startInboxMessageNotifications();
+    const lifecycleId = ++this.lifecycleId;
+    this.intervalId = window.setInterval(() => {
+      void this.check(lifecycleId);
+    }, intervalMs);
+    void this.check(lifecycleId);
+    this.startLeadNotifications(lifecycleId);
+    this.startInboxMessageNotifications(lifecycleId);
   }
 
   stop() {
+    this.lifecycleId += 1;
     if (this.intervalId !== null) {
       clearInterval(this.intervalId);
       this.intervalId = null;
@@ -101,7 +106,7 @@ export class NotificationService {
     };
   }
 
-  private startLeadNotifications() {
+  private startLeadNotifications(lifecycleId: number) {
     if (this.leadChannelSubscription !== null) {
       return;
     }
@@ -116,6 +121,10 @@ export class NotificationService {
           table: 'leads',
         },
         (payload) => {
+          if (lifecycleId !== this.lifecycleId || this.intervalId === null) {
+            return;
+          }
+
           const newLead = payload.new as Lead;
           if (!this.notifiedLeads.has(newLead.id)) {
             this.notifiedLeads.add(newLead.id);
@@ -133,7 +142,7 @@ export class NotificationService {
     }
   }
 
-  private startInboxMessageNotifications() {
+  private startInboxMessageNotifications(lifecycleId: number) {
     if (this.inboxChannelSubscription !== null) {
       return;
     }
@@ -141,7 +150,12 @@ export class NotificationService {
     const requestId = ++this.inboxSubscriptionRequestId;
     void whatsappConversationsRepository.getOperationalState()
       .then((state) => {
-        if (requestId !== this.inboxSubscriptionRequestId || this.intervalId === null || this.inboxChannelSubscription !== null) {
+        if (
+          lifecycleId !== this.lifecycleId
+          || requestId !== this.inboxSubscriptionRequestId
+          || this.intervalId === null
+          || this.inboxChannelSubscription !== null
+        ) {
           return;
         }
 
@@ -160,6 +174,10 @@ export class NotificationService {
               filter: `channel_id=eq.${channelId}`,
             },
             (payload) => {
+              if (lifecycleId !== this.lifecycleId || this.intervalId === null) {
+                return;
+              }
+
               const chat = payload.new as CommWhatsAppChat | null;
               const previousChat = payload.old as Partial<CommWhatsAppChat> | null;
 
@@ -173,7 +191,8 @@ export class NotificationService {
             }
 
             if (
-              requestId === this.inboxSubscriptionRequestId
+              lifecycleId === this.lifecycleId
+              && requestId === this.inboxSubscriptionRequestId
               && this.intervalId !== null
               && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')
               && !realtimeWarningShown
@@ -184,6 +203,10 @@ export class NotificationService {
           });
       })
       .catch((error) => {
+        if (lifecycleId !== this.lifecycleId) {
+          return;
+        }
+
         console.warn('[Notifications] nao foi possivel obter o canal para filtrar subscription realtime.', error);
       });
   }
@@ -260,7 +283,7 @@ export class NotificationService {
     }));
   }
 
-  private async check() {
+  private async check(lifecycleId: number) {
     if (this.isChecking) return;
 
     this.isChecking = true;
@@ -277,6 +300,10 @@ export class NotificationService {
           .order('data_lembrete', { ascending: true }),
         whatsappConversationsRepository.getUnreadCount(),
       ]);
+
+      if (lifecycleId !== this.lifecycleId || this.intervalId === null) {
+        return;
+      }
 
       if (error) throw error;
 
@@ -299,7 +326,9 @@ export class NotificationService {
         }
       }
     } catch (error) {
-      console.error('Erro ao verificar lembretes:', error);
+      if (lifecycleId === this.lifecycleId && this.intervalId !== null) {
+        console.error('Erro ao verificar lembretes:', error);
+      }
     } finally {
       this.isChecking = false;
     }

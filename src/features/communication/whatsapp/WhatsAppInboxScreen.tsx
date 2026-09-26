@@ -7007,7 +7007,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
     } finally {
-      setReactingMessageId(null);
+      setReactingMessageId((current) => (current === message.id ? null : current));
     }
   }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
 
@@ -7249,7 +7249,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao apagar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível apagar a mensagem no WhatsApp.');
     } finally {
-      setDeletingMessageId(null);
+      setDeletingMessageId((current) => (current === message.id ? null : current));
     }
   }, [patchMessageLocally]);
 
@@ -7282,7 +7282,7 @@ export default function WhatsAppInboxScreen() {
       });
       toast.error(messageText);
     } finally {
-      setTranscribingMessageId(null);
+      setTranscribingMessageId((current) => (current === message.id ? null : current));
     }
   };
 
@@ -7344,12 +7344,16 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const targetChatId = selectedChat.id;
     setLinkLoadingLeadId(leadId);
     try {
-      const updatedChat = await whatsappContactsRepository.linkLead(selectedChat.id, leadId);
+      const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, leadId);
       upsertChatLocally(updatedChat);
-      setSelectedChatId(updatedChat.id);
-      await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
+      if (selectedChatIdRef.current === targetChatId) {
+        setSelectedChatId(updatedChat.id);
+        await loadLeadPanel(updatedChat);
+      }
+      await loadChats();
       toast.success('Lead vinculado a conversa.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao vincular lead', error);

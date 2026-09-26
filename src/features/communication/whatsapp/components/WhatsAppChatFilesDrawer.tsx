@@ -31,6 +31,7 @@ import {
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import { getMessageLinkPreview } from '../domain/messageMetadata';
 import type { CommWhatsAppMessage } from '../domain/types';
+import { KeyedActionLock } from './keyedActionLock';
 
 type ChatFilesDrawerProps = {
   chatId: string | null;
@@ -468,6 +469,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const [error, setError] = useState<string | null>(null);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const loadRequestIdRef = useRef(0);
+  const loadMoreLockRef = useRef(new KeyedActionLock());
 
   useEffect(() => {
     latestMessagesRef.current = messages;
@@ -476,8 +478,12 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const load = useCallback(async (append = false) => {
     if (!chatId) return;
 
-    const requestId = ++loadRequestIdRef.current;
     const targetChatId = chatId;
+    if (append && !loadMoreLockRef.current.tryAcquire(targetChatId)) {
+      return;
+    }
+
+    const requestId = ++loadRequestIdRef.current;
     const targetMediaType = mediaType;
     const setter = append ? setLoadingMore : setLoading;
     setter(true);
@@ -509,6 +515,9 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
         setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os arquivos.');
       }
     } finally {
+      if (append) {
+        loadMoreLockRef.current.release(targetChatId);
+      }
       if (requestId === loadRequestIdRef.current) {
         setter(false);
       }

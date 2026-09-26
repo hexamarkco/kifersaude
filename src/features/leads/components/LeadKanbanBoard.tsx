@@ -6,6 +6,7 @@ import { useConfig } from "../../../contexts/ConfigContext";
 import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
 import {
   ActionSurface,
+  Alert,
   Button,
   EmptyState,
   Input,
@@ -39,6 +40,7 @@ export default function LeadKanbanBoard({
   const { isObserver } = useAuth();
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads ?? []);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [wipLimits, setWipLimits] = useState<Record<string, number>>({});
   const loadLeadsRequestIdRef = useRef(0);
@@ -100,6 +102,7 @@ export default function LeadKanbanBoard({
 
     if (leads) {
       setLocalLeads(leads);
+      setLoadError(null);
       setLoading(false);
       return;
     }
@@ -108,6 +111,7 @@ export default function LeadKanbanBoard({
     try {
       if (statusColumns.length === 0) {
         setLocalLeads([]);
+        setLoadError(null);
         return;
       }
 
@@ -126,11 +130,13 @@ export default function LeadKanbanBoard({
       }
 
       setLocalLeads(fetchedLeads);
+      setLoadError(null);
     } catch (error) {
       if (requestId !== loadLeadsRequestIdRef.current) {
         return;
       }
       console.error("Erro ao carregar leads:", error);
+      setLoadError("Não foi possível carregar os leads do Kanban agora.");
     } finally {
       if (requestId === loadLeadsRequestIdRef.current) {
         setLoading(false);
@@ -160,6 +166,7 @@ export default function LeadKanbanBoard({
   useEffect(() => {
     if (leads) {
       setLocalLeads(leads);
+      setLoadError(null);
       setLoading(false);
     }
   }, [leads]);
@@ -257,7 +264,7 @@ export default function LeadKanbanBoard({
     }));
   };
 
-  if (loading) {
+  if (loading && localLeads.length === 0) {
     return (
       <Surface className="py-12">
         <LoadingState label="Carregando Kanban" />
@@ -280,6 +287,26 @@ export default function LeadKanbanBoard({
 
   return (
     <Surface className="kds-kanban-board p-4 sm:p-5">
+      {loadError && (
+        <Alert
+          tone="danger"
+          title="Não foi possível atualizar o Kanban"
+          action={(
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadLeads()}
+              loading={loading}
+            >
+              Tentar novamente
+            </Button>
+          )}
+          className="mb-5"
+        >
+          Os leads já carregados foram preservados. Tente novamente para atualizar as colunas.
+        </Alert>
+      )}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="kds-op-section-label">

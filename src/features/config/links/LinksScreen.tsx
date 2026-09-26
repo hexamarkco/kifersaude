@@ -8,6 +8,7 @@ import {
   ImageIcon,
   Loader,
   Plus,
+  RefreshCw,
   Save,
   Trash2,
   Upload,
@@ -21,6 +22,7 @@ import { linksService } from "../../../lib/linksService";
 import type { PublicLinkItem, PublicLinkPageSettings } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
+  Alert,
   Button,
   Card,
   Dialog,
@@ -50,6 +52,7 @@ const PUBLIC_LINKS_PATH = "/links";
 
 export default function LinksScreen() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [pageSettings, setPageSettings] = useState<PublicLinkPageSettings | null>(null);
   const [links, setLinks] = useState<PublicLinkItem[]>([]);
 
@@ -81,6 +84,7 @@ export default function LinksScreen() {
   const loadData = useCallback(async () => {
     const requestId = ++loadRequestIdRef.current;
     setLoading(true);
+    setLoadError(false);
     try {
       const [settings, items] = await Promise.all([
         linksService.getLinkPageSettings(),
@@ -99,6 +103,10 @@ export default function LinksScreen() {
         is_published: settings?.is_published ?? true,
       });
       setLinks(items);
+    } catch (loadDataError) {
+      if (requestId !== loadRequestIdRef.current) return;
+      console.error("Erro ao carregar a página de links:", loadDataError);
+      setLoadError(true);
     } finally {
       if (requestId === loadRequestIdRef.current) {
         setLoading(false);
@@ -336,13 +344,39 @@ export default function LinksScreen() {
     return <LoadingState label="Carregando página de links..." />;
   }
 
+  const pageHeader = (
+    <SectionHeader
+      eyebrow="Página pública"
+      title="Página de Links"
+      description="Configure a página estilo linktree em /links: perfil, redes sociais, WhatsApp e qualquer outro link que quiser divulgar."
+    />
+  );
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        {pageHeader}
+        <Card>
+          <Alert
+            tone="danger"
+            title="Não foi possível carregar a página de links."
+            action={
+              <Button onClick={() => void loadData()}>
+                <RefreshCw className="kds-control-icon" />
+                <span>Tentar novamente</span>
+              </Button>
+            }
+          >
+            Verifique sua conexão ou sessão e tente novamente. Nenhuma configuração foi apagada.
+          </Alert>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <SectionHeader
-        eyebrow="Página pública"
-        title="Página de Links"
-        description="Configure a página estilo linktree em /links: perfil, redes sociais, WhatsApp e qualquer outro link que quiser divulgar."
-      />
+      {pageHeader}
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -29,7 +29,7 @@ export const linksService = {
       return data as PublicLinkPageSettings | null;
     } catch (error) {
       console.error('Error loading link page settings:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -77,7 +77,7 @@ export const linksService = {
       return (data as PublicLinkItem[] | null) ?? [];
     } catch (error) {
       console.error('Error loading link items:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -145,7 +145,7 @@ export const linksService = {
 
   async getPublicLinkPage(): Promise<{ settings: PublicLinkPageSettings | null; items: PublicLinkItem[] }> {
     try {
-      const [{ data: settings }, { data: items }] = await Promise.all([
+      const [settingsResult, itemsResult] = await Promise.all([
         supabase.from(PAGE_SETTINGS_TABLE).select('*').eq('is_published', true).limit(1).maybeSingle(),
         supabase
           .from(LINK_ITEMS_TABLE)
@@ -155,13 +155,16 @@ export const linksService = {
           .order('created_at', { ascending: true }),
       ]);
 
+      if (settingsResult.error) throw settingsResult.error;
+      if (itemsResult.error) throw itemsResult.error;
+
       return {
-        settings: (settings as PublicLinkPageSettings | null) ?? null,
-        items: (items as PublicLinkItem[] | null) ?? [],
+        settings: (settingsResult.data as PublicLinkPageSettings | null) ?? null,
+        items: (itemsResult.data as PublicLinkItem[] | null) ?? [],
       };
     } catch (error) {
       console.error('Error loading public link page:', error);
-      return { settings: null, items: [] };
+      throw error;
     }
   },
 

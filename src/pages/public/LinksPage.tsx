@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, BadgeCheck } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck, RefreshCw } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
 import {
   Avatar,
   AvatarBadge,
+  Button,
   Heading,
   KIFER_THEME_COLORS,
   LinkButton,
@@ -26,6 +27,8 @@ const DEFAULT_THEME_COLOR = KIFER_THEME_COLORS.lightCanvas;
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [settings, setSettings] = useState<PublicLinkPageSettings | null>(null);
   const [items, setItems] = useState<PublicLinkItem[]>([]);
 
@@ -42,17 +45,32 @@ export default function LinksPage() {
   useEffect(() => {
     let mounted = true;
 
-    void linksService.getPublicLinkPage().then((result) => {
-      if (!mounted) return;
-      setSettings(result.settings);
-      setItems(result.items);
-      setLoading(false);
-    });
+    setLoading(true);
+    setLoadError(false);
+    setSettings(null);
+    setItems([]);
+
+    void linksService.getPublicLinkPage()
+      .then((result) => {
+        if (!mounted) return;
+        setSettings(result.settings);
+        setItems(result.items);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        console.error('Erro ao carregar página pública de links:', error);
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const handleLinkClick = (link: PublicLinkItem) => {
     void linksService.recordLinkClick(link.id);
@@ -78,6 +96,17 @@ export default function LinksPage() {
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
           </div>
+        ) : loadError ? (
+          <PublicEmptyState
+            icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}
+            title="Não foi possível carregar esta página."
+            description="Verifique sua conexão e tente novamente."
+          >
+            <Button variant="secondary" size="sm" onClick={() => setLoadAttempt((current) => current + 1)}>
+              <RefreshCw className="kds-control-icon" />
+              <span>Tentar novamente</span>
+            </Button>
+          </PublicEmptyState>
         ) : !settings ? (
           <PublicEmptyState
             icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}

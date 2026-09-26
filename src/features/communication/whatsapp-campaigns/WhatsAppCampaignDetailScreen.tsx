@@ -28,7 +28,7 @@ import {
   computeAdmissionIntervalMinutes,
   formatAdmissionInterval,
   type CommWhatsAppCampaign,
-  type CommWhatsAppCampaignTarget,
+  type CommWhatsAppCampaignTargetListItem,
   type CommWhatsAppCampaignTargetStatus,
 } from './commWhatsAppCampaignService';
 
@@ -102,7 +102,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<CommWhatsAppCampaign | null>(null);
-  const [targets, setTargets] = useState<CommWhatsAppCampaignTarget[]>([]);
+  const [targets, setTargets] = useState<CommWhatsAppCampaignTargetListItem[]>([]);
   const [targetsTotal, setTargetsTotal] = useState(0);
   const [targetsPage, setTargetsPage] = useState(1);
   const [targetsPageSize, setTargetsPageSize] = useState(DEFAULT_TARGETS_PAGE_SIZE);

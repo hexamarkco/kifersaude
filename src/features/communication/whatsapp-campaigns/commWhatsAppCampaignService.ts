@@ -124,6 +124,19 @@ export type CommWhatsAppCampaignTarget = {
   updated_at: string;
 };
 
+export type CommWhatsAppCampaignTargetListItem = Pick<
+  CommWhatsAppCampaignTarget,
+  | 'id'
+  | 'phone_number'
+  | 'phone_digits'
+  | 'display_name'
+  | 'status'
+  | 'current_step_index'
+  | 'next_send_at'
+  | 'last_attempt_at'
+  | 'error_message'
+>;
+
 export type CreateCampaignInput = {
   name: string;
   objective?: string;
@@ -245,6 +258,111 @@ export type CommWhatsAppCampaignWorkerHealth = {
   latestFailure: CommWhatsAppCampaignWorkerRun | null;
   recentRuns: CommWhatsAppCampaignWorkerRun[];
 };
+
+const CAMPAIGN_SELECT = [
+  'id',
+  'name',
+  'objective',
+  'status',
+  'audience_source',
+  'audience_config',
+  'message_text',
+  'scheduled_at',
+  'pacing_per_minute',
+  'daily_send_limit',
+  'send_window_start',
+  'send_window_end',
+  'active_weekdays',
+  'stop_on_reply',
+  'create_leads_from_csv',
+  'validate_whatsapp_numbers',
+  'total_targets',
+  'valid_targets',
+  'invalid_targets',
+  'pending_targets',
+  'sent_targets',
+  'failed_targets',
+  'responded_targets',
+  'stopped_targets',
+  'last_error',
+  'ab_test_enabled',
+  'ab_split_percent',
+  'recurrence_rule',
+  'recurrence_interval',
+  'recurrence_end_at',
+  'recurrence_next_run_at',
+  'recurrence_runs_completed',
+  'created_at',
+  'updated_at',
+].join(',');
+
+const CAMPAIGN_TARGET_LIST_SELECT = [
+  'id',
+  'phone_number',
+  'phone_digits',
+  'display_name',
+  'status',
+  'current_step_index',
+  'next_send_at',
+  'last_attempt_at',
+  'error_message',
+].join(',');
+
+const CAMPAIGN_STEP_SELECT = [
+  'id',
+  'campaign_id',
+  'step_index',
+  'stage_index',
+  'step_kind',
+  'status_to_set',
+  'message_text',
+  'delay_amount',
+  'delay_unit',
+  'media_url',
+  'media_type',
+  'media_filename',
+  'variant_label',
+  'created_at',
+  'updated_at',
+].join(',');
+
+const CAMPAIGN_WORKER_RUN_SELECT = [
+  'id',
+  'action',
+  'source',
+  'status',
+  'campaign_id',
+  'processed',
+  'sent',
+  'failed',
+  'stopped',
+  'duration_ms',
+  'error_message',
+  'started_at',
+  'finished_at',
+  'created_at',
+].join(',');
+
+const AI_SUGGESTION_SELECT = [
+  'id',
+  'chat_id',
+  'message_id',
+  'campaign_id',
+  'lead_id',
+  'phone_digits',
+  'intent',
+  'contact_permission',
+  'commercial_intent',
+  'confidence',
+  'recommended_action',
+  'reason',
+  'evidence',
+  'status',
+  'chat:comm_whatsapp_chats!inner(display_name,phone_number)',
+  'campaign:comm_whatsapp_campaigns(name)',
+].join(',');
+
+const CAMPAIGN_TEMPLATE_SELECT = 'id,name,steps,created_at,updated_at';
 
 const parseTimeToMinutes = (value: string | null | undefined): number | null => {
   if (!value) return null;
@@ -537,7 +655,7 @@ export const commWhatsAppCampaignService = {
   async listCampaigns(): Promise<CommWhatsAppCampaign[]> {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaigns')
-      .select('*')
+      .select(CAMPAIGN_SELECT)
       .order('created_at', { ascending: false })
       .limit(80);
 
@@ -545,13 +663,13 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os disparos do WhatsApp.'));
     }
 
-    return (data ?? []) as CommWhatsAppCampaign[];
+    return (data ?? []) as unknown as CommWhatsAppCampaign[];
   },
 
   async getCampaign(campaignId: string): Promise<CommWhatsAppCampaign> {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaigns')
-      .select('*')
+      .select(CAMPAIGN_SELECT)
       .eq('id', campaignId)
       .single();
 
@@ -559,7 +677,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar este disparo.'));
     }
 
-    return data as CommWhatsAppCampaign;
+    return data as unknown as CommWhatsAppCampaign;
   },
 
   async listCampaignTargets(
@@ -570,7 +688,7 @@ export const commWhatsAppCampaignService = {
       status?: CommWhatsAppCampaignTargetStatus[];
       search?: string;
     } = {},
-  ): Promise<{ targets: CommWhatsAppCampaignTarget[]; total: number }> {
+  ): Promise<{ targets: CommWhatsAppCampaignTargetListItem[]; total: number }> {
     const pageSize = Math.min(Math.max(options.pageSize ?? 50, 1), 200);
     const page = Math.max(options.page ?? 0, 0);
     const from = page * pageSize;
@@ -578,7 +696,7 @@ export const commWhatsAppCampaignService = {
 
     let query = supabase
       .from('comm_whatsapp_campaign_targets')
-      .select('*', { count: 'exact' })
+      .select(CAMPAIGN_TARGET_LIST_SELECT, { count: 'exact' })
       .eq('campaign_id', campaignId);
 
     if (options.status && options.status.length > 0) {
@@ -601,7 +719,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
     }
 
-    return { targets: (data ?? []) as CommWhatsAppCampaignTarget[], total: count ?? 0 };
+    return { targets: (data ?? []) as unknown as CommWhatsAppCampaignTargetListItem[], total: count ?? 0 };
   },
 
   async getCampaignFailureReasons(campaignId: string): Promise<Array<{ error_message: string; total_count: number }>> {
@@ -653,7 +771,7 @@ export const commWhatsAppCampaignService = {
   async getWorkerHealth(): Promise<CommWhatsAppCampaignWorkerHealth> {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_worker_runs')
-      .select('*')
+      .select(CAMPAIGN_WORKER_RUN_SELECT)
       .order('started_at', { ascending: false })
       .limit(12);
 
@@ -661,7 +779,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a saude do worker de disparos.'));
     }
 
-    const recentRuns = (data ?? []) as CommWhatsAppCampaignWorkerRun[];
+    const recentRuns = (data ?? []) as unknown as CommWhatsAppCampaignWorkerRun[];
     return {
       latestRun: recentRuns[0] ?? null,
       latestSuccess: recentRuns.find((run) => run.status === 'success') ?? null,
@@ -673,7 +791,7 @@ export const commWhatsAppCampaignService = {
   async listPendingAiSuggestions(): Promise<CommWhatsAppAiIntentSuggestion[]> {
     const { data, error } = await supabase
       .from('comm_whatsapp_ai_intent_suggestions')
-      .select('*, chat:comm_whatsapp_chats!inner(display_name,phone_number), campaign:comm_whatsapp_campaigns(name)')
+      .select(AI_SUGGESTION_SELECT)
       .eq('status', 'pending')
       .is('chat.deleted_at', null)
       .is('chat.merged_into_chat_id', null)
@@ -684,13 +802,13 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes de IA.'));
     }
 
-    return (data ?? []) as CommWhatsAppAiIntentSuggestion[];
+    return (data ?? []) as unknown as CommWhatsAppAiIntentSuggestion[];
   },
 
   async listCampaignSteps(campaignId: string): Promise<CommWhatsAppCampaignStep[]> {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_steps')
-      .select('*')
+      .select(CAMPAIGN_STEP_SELECT)
       .eq('campaign_id', campaignId)
       .order('step_index', { ascending: true });
 
@@ -698,7 +816,7 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a sequencia do disparo.'));
     }
 
-    return (data ?? []) as CommWhatsAppCampaignStep[];
+    return (data ?? []) as unknown as CommWhatsAppCampaignStep[];
   },
 
   async getActivationPreview(campaignId: string): Promise<CommWhatsAppCampaignActivationPreview> {
@@ -1165,7 +1283,7 @@ export const commWhatsAppCampaignService = {
   async listTemplates(): Promise<CommWhatsAppCampaignTemplate[]> {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_templates')
-      .select('*')
+      .select(CAMPAIGN_TEMPLATE_SELECT)
       .order('created_at', { ascending: false })
       .limit(50);
 

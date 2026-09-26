@@ -61,3 +61,12 @@ test('ignores a blank chat name and falls back to the synchronized saved name', 
     'Fabiola',
   );
 });
+
+test('prefers the synchronized saved name over a stale name copied into the chat', () => {
+  const synchronizedNames = new Map([['5511999999999', 'Fabiola']]);
+
+  assert.equal(
+    resolveSavedContactName('+55 (11) 99999-9999', 'Leve Saúde Operadora - Apoio Corretor', new Map(), synchronizedNames),
+    'Fabiola',
+  );
+});

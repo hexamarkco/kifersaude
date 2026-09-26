@@ -3488,7 +3488,7 @@ export default function WhatsAppInboxScreen() {
       return !failedAt || now - failedAt >= CHAT_IDENTITY_LOOKUP_FAILURE_COOLDOWN_MS;
     };
 
-    const selectedLookupKeys = selectedChat && !selectedChat.saved_contact_name?.trim()
+    const selectedLookupKeys = selectedChat
       ? collectPhoneLookupKeys(selectedChat.phone_digits || selectedChat.phone_number)
       : [];
     const canForceSyncSelectedContact = selectedLookupKeys.length > 0
@@ -3496,12 +3496,13 @@ export default function WhatsAppInboxScreen() {
     const forceSyncKeys = new Set(canForceSyncSelectedContact ? selectedLookupKeys : []);
 
     const targetChats = chats.filter((chat) => {
-      if (chat.saved_contact_name?.trim()) {
-        return false;
-      }
-
       const lookupKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
       const isSelectedChat = Boolean(selectedChat?.id && chat.id === selectedChat.id);
+
+      if (chat.saved_contact_name?.trim()) {
+        return isSelectedChat && canForceSyncSelectedContact;
+      }
+
       return lookupKeys.length > 0 && (lookupKeys.some(shouldAttemptLookupKey) || (isSelectedChat && canForceSyncSelectedContact));
     }).slice(0, CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE);
 

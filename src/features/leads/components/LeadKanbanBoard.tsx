@@ -17,6 +17,7 @@ import {
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
 import { toast } from "../../../lib/toast";
 import type { Lead } from "../domain/types";
+import { LeadStatusMutationLock } from "../shared/leadStatusMutationLock";
 import {
   listLeadsByStatuses,
   persistKanbanStatusChange,
@@ -41,6 +42,7 @@ export default function LeadKanbanBoard({
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [wipLimits, setWipLimits] = useState<Record<string, number>>({});
   const loadLeadsRequestIdRef = useRef(0);
+  const statusMutationLockRef = useRef(new LeadStatusMutationLock());
 
   const statusColumns = useMemo(
     () =>
@@ -189,7 +191,8 @@ export default function LeadKanbanBoard({
       return;
     }
 
-    const oldStatusName = draggedLead.status;
+    const lead = draggedLead;
+    const oldStatusName = lead.status;
     const newStatusObj = statusColumns.find((status) => status.id === newStatusId);
     const newStatusName = newStatusObj?.nome ?? "Desconhecido";
 
@@ -198,21 +201,28 @@ export default function LeadKanbanBoard({
       return;
     }
 
+    const mutationId = statusMutationLockRef.current.tryAcquire(lead.id);
+    if (mutationId === null) {
+      setDraggedLead(null);
+      return;
+    }
+
     const nowIso = new Date().toISOString();
-    const responsavelLabel = getResponsavelLabel(draggedLead);
+    const responsavelLabel = getResponsavelLabel(lead);
     loadLeadsRequestIdRef.current += 1;
+    setDraggedLead(null);
 
     setLocalLeads((current) =>
-      current.map((lead) =>
-        lead.id === draggedLead.id
-          ? { ...lead, status: newStatusName, ultimo_contato: nowIso }
-          : lead,
+      current.map((currentLead) =>
+        currentLead.id === lead.id
+          ? { ...currentLead, status: newStatusName, ultimo_contato: nowIso }
+          : currentLead,
       ),
     );
 
     try {
       await persistKanbanStatusChange({
-        lead: draggedLead,
+        lead,
         newStatus: newStatusName,
         responsible: responsavelLabel,
         timestamp: nowIso,
@@ -221,13 +231,21 @@ export default function LeadKanbanBoard({
       console.error("Erro ao atualizar status:", error);
       toast.error("Não foi possível atualizar o status do lead.");
       setLocalLeads((current) =>
-        current.map((lead) =>
-          lead.id === draggedLead.id ? { ...lead, status: oldStatusName } : lead,
+        current.map((currentLead) =>
+          currentLead.id === lead.id &&
+          currentLead.status === newStatusName &&
+          currentLead.ultimo_contato === nowIso
+            ? {
+                ...currentLead,
+                status: oldStatusName,
+                ultimo_contato: lead.ultimo_contato,
+              }
+            : currentLead,
         ),
       );
+    } finally {
+      statusMutationLockRef.current.release(lead.id, mutationId);
     }
-
-    setDraggedLead(null);
   };
 
   const getWipLimit = (statusId: string) => wipLimits[statusId] ?? 0;

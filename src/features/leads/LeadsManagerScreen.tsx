@@ -91,6 +91,7 @@ import { LeadsPageSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
+import { LeadStatusMutationLock } from "./shared/leadStatusMutationLock";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
 import { LeadsHeader } from "./components/LeadsHeader";
 import {
@@ -177,6 +178,7 @@ export default function LeadsManager({
   const hasAnimatedSectionsRef = useRef(false);
   const leadsRequestIdRef = useRef(0);
   const contractsRequestIdRef = useRef(0);
+  const leadStatusMutationLockRef = useRef(new LeadStatusMutationLock());
   const {
     motionEnabled,
     sectionDuration,
@@ -1148,6 +1150,13 @@ export default function LeadsManager({
     if (!lead) return;
 
     const oldStatus = lead.status;
+    if (oldStatus === newStatus) return;
+
+    const mutationId = leadStatusMutationLockRef.current.tryAcquire(leadId);
+    if (mutationId === null) {
+      return;
+    }
+
     const timestamp = new Date().toISOString();
 
     setLeads((current) =>
@@ -1160,7 +1169,31 @@ export default function LeadsManager({
 
     try {
       await persistLeadStatusChange({ lead, newStatus, timestamp });
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Não foi possível atualizar o status do lead.");
 
+      if (leadStatusMutationLockRef.current.isCurrent(leadId, mutationId)) {
+        setLeads((current) =>
+          current.map((leadItem) =>
+            leadItem.id === leadId &&
+            leadItem.status === newStatus &&
+            leadItem.ultimo_contato === timestamp
+              ? {
+                  ...leadItem,
+                  status: oldStatus,
+                  ultimo_contato: lead.ultimo_contato,
+                }
+              : leadItem,
+          ),
+        );
+      }
+
+      leadStatusMutationLockRef.current.release(leadId, mutationId);
+      throw error;
+    }
+
+    try {
       const normalizedStatus = newStatus.trim().toLowerCase();
 
       if (shouldPromptFirstReminderAfterQuote(newStatus)) {
@@ -1215,14 +1248,12 @@ export default function LeadsManager({
         }
       }
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      toast.error("Não foi possível atualizar o status do lead.");
-
-      setLeads((current) =>
-        current.map((l) => (l.id === leadId ? { ...l, status: oldStatus } : l)),
+      console.error("Erro ao sincronizar lembrete após atualizar status:", error);
+      toast.warning(
+        "O status foi atualizado, mas não foi possível sincronizar o lembrete.",
       );
-
-      throw error;
+    } finally {
+      leadStatusMutationLockRef.current.release(leadId, mutationId);
     }
   };
 

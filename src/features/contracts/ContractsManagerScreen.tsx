@@ -114,6 +114,7 @@ export default function ContractsManager({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
+  const contractsLoadRequestIdRef = useRef(0);
   const hasAnimatedSectionsRef = useRef(false);
   const {
     motionEnabled,
@@ -167,9 +168,9 @@ export default function ContractsManager({
   }, [contracts, responsavelOptions]);
 
   useEffect(() => {
-    loadContracts();
+    const unsubscribe = subscribeToContractChanges(({ eventType, current: changed, previous }) => {
+      contractsLoadRequestIdRef.current += 1;
 
-    return subscribeToContractChanges(({ eventType, current: changed, previous }) => {
       if (eventType === "INSERT" && changed) {
         setContracts((contracts) => [changed, ...contracts]);
       } else if (eventType === "UPDATE" && changed) {
@@ -184,6 +185,10 @@ export default function ContractsManager({
         );
       }
     });
+
+    void loadContracts();
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -201,18 +206,28 @@ export default function ContractsManager({
   }, [initialOperadoraFilter]);
 
   const loadContracts = async () => {
+    const requestId = ++contractsLoadRequestIdRef.current;
     setLoading(true);
     try {
       const snapshot = await listContractsSearchSnapshot();
+
+      if (requestId !== contractsLoadRequestIdRef.current) {
+        return null;
+      }
+
       setContracts(snapshot.contracts);
       setHolders(snapshot.holdersByContractId);
       setDependentsByContract(snapshot.dependentsByContractId);
       return snapshot.contracts;
     } catch (error) {
-      console.error("Erro ao carregar contratos:", error);
+      if (requestId === contractsLoadRequestIdRef.current) {
+        console.error("Erro ao carregar contratos:", error);
+      }
       return null;
     } finally {
-      setLoading(false);
+      if (requestId === contractsLoadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 

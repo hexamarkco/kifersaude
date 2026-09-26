@@ -5209,7 +5209,10 @@ export default function WhatsAppInboxScreen() {
 
         const refreshedChats = applyPendingChatInboxState(
           applyFrontendSavedContactNames(
-            applyPrefetchedLeadNames(mergedData.map((chat) => preserveUsefulChatPreview(chat, previousChatsById.get(chat.id) ?? null))),
+            applyPrefetchedLeadNames(mergedData.map((chat) => {
+              const previousChat = previousChatsById.get(chat.id) ?? null;
+              return preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge(chat, previousChat), previousChat);
+            })),
           ),
           pendingChatInboxStateRef.current,
         );
@@ -5372,7 +5375,10 @@ export default function WhatsAppInboxScreen() {
         const previousChatsById = new Map(previousChats.map((chat) => [chat.id, chat] as const));
         const transformed = applyPendingChatInboxState(
           applyFrontendSavedContactNames(
-            applyPrefetchedLeadNames(page.map((chat) => preserveUsefulChatPreview(chat, previousChatsById.get(chat.id) ?? null))),
+            applyPrefetchedLeadNames(page.map((chat) => {
+              const previousChat = previousChatsById.get(chat.id) ?? null;
+              return preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge(chat, previousChat), previousChat);
+            })),
           ),
           pendingChatInboxStateRef.current,
         );

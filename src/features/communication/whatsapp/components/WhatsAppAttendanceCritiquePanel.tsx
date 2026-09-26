@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Sparkles, XCircle } from 'lucide-react';
 
 import {
@@ -48,12 +48,17 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
   const [showHistory, setShowHistory] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const critiqueActionRequestIdRef = useRef(0);
+  const chatIdRef = useRef(chatId);
+  chatIdRef.current = chatId;
 
   useEffect(() => {
+    critiqueActionRequestIdRef.current += 1;
     setCritiques([]);
     setSelectedId(null);
     setShowHistory(false);
     setGenerateError(null);
+    setGenerating(false);
     setListError(null);
   }, [chatId]);
 
@@ -86,18 +91,28 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
 
   const handleGenerate = async () => {
     if (!chatId || generating) return;
+    const targetChatId = chatId;
+    const requestId = ++critiqueActionRequestIdRef.current;
     setGenerating(true);
     setGenerateError(null);
 
     try {
-      const critique = await whatsappFollowUpService.critiqueAttendance({ chatId });
+      const critique = await whatsappFollowUpService.critiqueAttendance({ chatId: targetChatId });
+      if (requestId !== critiqueActionRequestIdRef.current || chatIdRef.current !== targetChatId) {
+        return;
+      }
       setCritiques((prev) => [critique, ...prev]);
       setSelectedId(critique.id);
       setShowHistory(false);
     } catch (error) {
+      if (requestId !== critiqueActionRequestIdRef.current || chatIdRef.current !== targetChatId) {
+        return;
+      }
       setGenerateError(error instanceof Error ? error.message : 'Nao foi possivel gerar a analise do atendimento.');
     } finally {
-      setGenerating(false);
+      if (requestId === critiqueActionRequestIdRef.current && chatIdRef.current === targetChatId) {
+        setGenerating(false);
+      }
     }
   };
 

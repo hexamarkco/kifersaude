@@ -2431,6 +2431,7 @@ export default function WhatsAppInboxScreen() {
   const chatInboxActionLockRef = useRef(new KeyedActionLock());
   const autonomousAttendanceLockRef = useRef(new KeyedActionLock());
   const contactSaveLockRef = useRef(new KeyedActionLock());
+  const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
@@ -5213,6 +5214,9 @@ export default function WhatsAppInboxScreen() {
     if (archivedChatsLoading || archivedChatsLoadingMore || !archivedChatsHasMore) {
       return;
     }
+    if (!archivedChatsLoadMoreLockRef.current.tryAcquire('archived')) {
+      return;
+    }
 
     setArchivedChatsLoadingMore(true);
     const nextPageIndex = archivedChatsPage;
@@ -5267,6 +5271,7 @@ export default function WhatsAppInboxScreen() {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mais conversas arquivadas.');
       }
     } finally {
+      archivedChatsLoadMoreLockRef.current.release('archived');
       if (chatsRequestId === chatsRequestIdRef.current) {
         setArchivedChatsLoadingMore(false);
       }

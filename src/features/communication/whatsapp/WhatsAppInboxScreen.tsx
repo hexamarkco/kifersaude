@@ -2407,6 +2407,7 @@ export default function WhatsAppInboxScreen() {
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
+  const [leadPanelError, setLeadPanelError] = useState<string | null>(null);
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
@@ -2418,6 +2419,7 @@ export default function WhatsAppInboxScreen() {
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [leadSearchResults, setLeadSearchResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [leadSearchLoading, setLeadSearchLoading] = useState(false);
+  const [leadSearchError, setLeadSearchError] = useState<string | null>(null);
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
   const [leadMutationLoadingChatId, setLeadMutationLoadingChatId] = useState<string | null>(null);
   const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
@@ -3786,6 +3788,7 @@ export default function WhatsAppInboxScreen() {
 
     if (!chat?.lead_id) {
       setLeadPanel(null);
+      setLeadPanelError(null);
       setLeadPanelLoading(false);
       setLeadContracts([]);
       setLeadContractsLoading(false);
@@ -3794,6 +3797,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     setLeadPanelLoading(true);
+    setLeadPanelError(null);
     try {
       const lead = await whatsappContactsRepository.getLeadPanel(chat.id);
       if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
@@ -3830,6 +3834,7 @@ export default function WhatsAppInboxScreen() {
       }
       console.error('[WhatsAppInbox] erro ao carregar painel do lead', error);
       setLeadPanel(null);
+      setLeadPanelError(error instanceof Error ? error.message : 'Não foi possível carregar as informações do lead.');
       setLeadContracts([]);
       setLeadContractsLoading(false);
       setLeadContractsError(null);
@@ -3939,6 +3944,7 @@ export default function WhatsAppInboxScreen() {
     const normalizedPhone = phoneNumber?.trim() || null;
 
     setLeadSearchLoading(true);
+    setLeadSearchError(null);
     try {
       const results = await whatsappContactsRepository.searchLeads({
         query: normalizedQuery,
@@ -3958,6 +3964,7 @@ export default function WhatsAppInboxScreen() {
 
       console.error('[WhatsAppInbox] erro ao buscar leads para o drawer', error);
       setLeadSearchResults([]);
+      setLeadSearchError(error instanceof Error ? error.message : 'Não foi possível buscar leads agora.');
     } finally {
       if (requestId === leadSearchRequestIdRef.current) {
         setLeadSearchLoading(false);
@@ -4911,6 +4918,7 @@ export default function WhatsAppInboxScreen() {
       chatAgendaSummaryRequestIdRef.current += 1;
       chatAgendaSummaryLeadIdRef.current = null;
       setLeadPanel(null);
+      setLeadPanelError(null);
       setLeadPanelLoading(false);
       setLeadContracts([]);
       setLeadContractsLoading(false);
@@ -4924,6 +4932,7 @@ export default function WhatsAppInboxScreen() {
     if (leadPanel?.id !== selectedChat.lead_id) {
       chatAgendaSummaryLeadIdRef.current = null;
       setLeadPanel(null);
+      setLeadPanelError(null);
       setLeadContracts([]);
       setLeadContractsError(null);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
@@ -4935,6 +4944,7 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!selectedChat?.lead_id) {
       setLeadPanel(null);
+      setLeadPanelError(null);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
       setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(false);
@@ -11685,6 +11695,7 @@ export default function WhatsAppInboxScreen() {
             chatId={selectedChat?.id ?? null}
             chatDisplayName={selectedChatDisplayName}
             linkedLead={leadPanel}
+            leadPanelError={leadPanelError}
             autoLinked={selectedChatWasAutoLinked}
             loading={leadPanelLoading}
             contracts={leadContracts}
@@ -11701,8 +11712,11 @@ export default function WhatsAppInboxScreen() {
             searchQuery={leadSearchQuery}
             onSearchQueryChange={setLeadSearchQuery}
             searchResults={leadSearchResults}
+            searchError={leadSearchError}
             suggestedLead={suggestedLead}
             searchLoading={leadSearchLoading}
+            onRetryLeadPanel={() => void loadLeadPanel(selectedChat)}
+            onRetrySearch={() => void refreshDrawerSearch(leadSearchQuery, selectedChat?.phone_number)}
             onCreateLead={selectedChat && !selectedChat.is_group && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
             onLinkLead={(leadId) => void handleLinkLead(leadId)}
             linkLoadingLeadId={linkLoadingLeadId}

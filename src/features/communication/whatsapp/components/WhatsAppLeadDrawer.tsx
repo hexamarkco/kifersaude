@@ -51,6 +51,7 @@ type WhatsAppLeadDrawerProps = {
   chatId: string | null;
   chatDisplayName: string;
   linkedLead: CommWhatsAppLeadPanel | null;
+  leadPanelError: string | null;
   autoLinked: boolean;
   loading: boolean;
   contracts: CommWhatsAppLeadContractSummary[];
@@ -67,8 +68,11 @@ type WhatsAppLeadDrawerProps = {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   searchResults: CommWhatsAppLeadSearchResult[];
+  searchError: string | null;
   suggestedLead: CommWhatsAppLeadSearchResult | null;
   searchLoading: boolean;
+  onRetryLeadPanel: () => void;
+  onRetrySearch: () => void;
   onCreateLead: (() => void) | undefined;
   onLinkLead: (leadId: string) => void;
   linkLoadingLeadId: string | null;
@@ -108,6 +112,7 @@ export default function WhatsAppLeadDrawer({
   chatId,
   chatDisplayName,
   linkedLead,
+  leadPanelError,
   autoLinked,
   loading,
   contracts,
@@ -124,8 +129,11 @@ export default function WhatsAppLeadDrawer({
   searchQuery,
   onSearchQueryChange,
   searchResults,
+  searchError,
   suggestedLead,
   searchLoading,
+  onRetryLeadPanel,
+  onRetrySearch,
   onCreateLead,
   onLinkLead,
   linkLoadingLeadId,
@@ -462,6 +470,18 @@ export default function WhatsAppLeadDrawer({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Carregando informações do chat...
             </div>
+          ) : leadPanelError ? (
+            <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-[var(--text-primary)]">Não foi possível carregar o lead.</p>
+                <p className="mt-1 text-sm leading-6">O lead pode continuar vinculado a esta conversa. Tente novamente antes de criar ou vincular outro lead.</p>
+                <Button variant="secondary" size="sm" className="mt-3" onClick={onRetryLeadPanel}>
+                  <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                  Tentar novamente
+                </Button>
+              </div>
+            </Surface>
           ) : linkedLead ? (
             <div className="space-y-5">
               <Surface variant="muted" padding="sm" className="comm-whatsapp-lead-link-state flex flex-wrap items-center justify-between gap-3">
@@ -669,7 +689,19 @@ export default function WhatsAppLeadDrawer({
                   </Surface>
                 )}
 
-                {searchLoading ? (
+                {searchError ? (
+                  <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--text-primary)]">Não foi possível buscar leads.</p>
+                      <p className="mt-1 text-sm leading-6">O resultado vazio não confirma que não existem leads. Tente novamente.</p>
+                      <Button variant="secondary" size="sm" className="mt-3" onClick={onRetrySearch}>
+                        <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  </Surface>
+                ) : searchLoading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] px-4 py-6 text-sm text-[var(--text-muted)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Buscando leads...

@@ -105,7 +105,7 @@ export default function SystemSettingsScreen() {
     setLoading(true);
     setSettingsLoadError(false);
     try {
-      const data = await configService.getSystemSettings();
+      const data = await configService.getSystemSettings(true);
       if (requestId !== settingsLoadRequestIdRef.current) return;
       setSettings(data);
       setSavedSettings(data);

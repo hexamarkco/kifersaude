@@ -408,7 +408,7 @@ export const configService = {
     }
   },
 
-  async getSystemSettings(): Promise<SystemSettings | null> {
+  async getSystemSettings(throwOnError = false): Promise<SystemSettings | null> {
     try {
       const { data, error } = await supabase
         .from('system_settings')
@@ -420,6 +420,9 @@ export const configService = {
       return data;
     } catch (error) {
       console.error('Error loading system settings:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return null;
     }
   },

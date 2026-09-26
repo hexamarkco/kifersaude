@@ -4895,6 +4895,7 @@ export default function WhatsAppInboxScreen() {
 
     chatsLoadKeyRef.current = loadKey;
     const requestId = ++chatsRequestIdRef.current;
+    setArchivedChatsLoadingMore(false);
     let didApplyChatLoad = false;
     const loadPromise = (async () => {
       try {
@@ -5127,6 +5128,7 @@ export default function WhatsAppInboxScreen() {
 
     setArchivedChatsLoadingMore(true);
     const nextPageIndex = archivedChatsPage;
+    const chatsRequestId = chatsRequestIdRef.current;
 
     try {
       const page = await whatsappConversationsRepository.list({
@@ -5137,6 +5139,10 @@ export default function WhatsAppInboxScreen() {
         limit: CHAT_PAGE_SIZE,
         offset: nextPageIndex * CHAT_PAGE_SIZE,
       });
+
+      if (chatsRequestId !== chatsRequestIdRef.current) {
+        return;
+      }
 
       setArchivedChatsHasMore(page.length >= CHAT_PAGE_SIZE);
       setArchivedChatsPage(nextPageIndex + 1);
@@ -5164,12 +5170,18 @@ export default function WhatsAppInboxScreen() {
         return sorted;
       });
     } catch (error) {
+      if (chatsRequestId !== chatsRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao carregar mais arquivados', error);
       if (!isSupabaseConnectivityError(error)) {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mais conversas arquivadas.');
       }
     } finally {
-      setArchivedChatsLoadingMore(false);
+      if (chatsRequestId === chatsRequestIdRef.current) {
+        setArchivedChatsLoadingMore(false);
+      }
     }
   }, [
     applyFrontendSavedContactNames,

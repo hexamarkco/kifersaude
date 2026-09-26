@@ -66,7 +66,7 @@ export function ContractBulkJsonImportDialog({
   };
 
   const handleValidate = async () => {
-    if (!file) return;
+    if (!file || loading || importing) return;
     setLoading(true);
     setError(null);
     try {
@@ -79,7 +79,7 @@ export function ContractBulkJsonImportDialog({
   };
 
   const handleImport = async () => {
-    if (!payload) return;
+    if (!payload || loading || importing) return;
     setImporting(true);
     setError(null);
     try {
@@ -93,8 +93,14 @@ export function ContractBulkJsonImportDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !importing && onClose()} size="lg">
-      <DialogHeader onClose={() => { if (!importing) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(open) => !open && !loading && !importing && onClose()}
+      closeOnOverlay={!loading && !importing}
+      closeOnEscape={!loading && !importing}
+      size="lg"
+    >
+      <DialogHeader onClose={loading || importing ? undefined : onClose}>
         <DialogTitle>Importar contratos em massa</DialogTitle>
         <DialogDescription>
           Valide o arquivo e revise a lista antes de importar. O lote não associa leads nem importa titulares, dependentes, parcelas de comissão ou faixas de bônus; esses dados podem ser completados depois.
@@ -156,7 +162,7 @@ export function ContractBulkJsonImportDialog({
         {error && <Alert tone="danger" title="Não foi possível importar o arquivo">{error}</Alert>}
       </DialogBody>
       <DialogFooter>
-        <Button type="button" variant="secondary" onClick={onClose} disabled={importing}>Cancelar</Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={loading || importing}>Cancelar</Button>
         {payload ? (
           <Button type="button" onClick={() => void handleImport()} disabled={importing}>
             {importing ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="kds-control-icon" />}

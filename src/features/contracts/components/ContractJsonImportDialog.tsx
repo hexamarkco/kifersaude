@@ -62,7 +62,7 @@ export function ContractJsonImportDialog({
   };
 
   const handleReadFile = async () => {
-    if (!file) return;
+    if (!file || loading) return;
     const fileError = getFileError(file);
     if (fileError) {
       setError(fileError);
@@ -84,8 +84,14 @@ export function ContractJsonImportDialog({
   const holderFieldCount = payload?.holder ? Object.keys(payload.holder).length : 0;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="md">
-      <DialogHeader onClose={() => { if (!loading) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(open) => !open && !loading && onClose()}
+      closeOnOverlay={!loading}
+      closeOnEscape={!loading}
+      size="md"
+    >
+      <DialogHeader onClose={loading ? undefined : onClose}>
         <DialogTitle>Importar contrato por JSON</DialogTitle>
         <DialogDescription>
           Selecione um JSON no formato esperado. Os campos serão aplicados ao formulário para revisão; nada é salvo até você confirmar o contrato.

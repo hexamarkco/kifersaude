@@ -138,7 +138,7 @@ import {
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, applySavedContactNameFromLookup, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -2440,6 +2440,7 @@ export default function WhatsAppInboxScreen() {
   const [savedContactsTotal, setSavedContactsTotal] = useState(0);
   const [savedContactsHasMore, setSavedContactsHasMore] = useState(false);
   const [savedContactsPage, setSavedContactsPage] = useState(1);
+  const [savedContactNameRevision, setSavedContactNameRevision] = useState(0);
   const [crmStartResults, setCrmStartResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [crmStartLoading, setCrmStartLoading] = useState(false);
   const [startChatSourcesError, setStartChatSourcesError] = useState<string | null>(null);
@@ -2842,13 +2843,42 @@ export default function WhatsAppInboxScreen() {
     () => (search ? rankChatsBySearch(chats.filter(chatMatchesActiveFilters), search, operationalState?.channel?.connected_user_name ?? null) : []),
     [chatMatchesActiveFilters, chats, operationalState?.channel?.connected_user_name, search],
   );
+  const savedContactLookupMaps = useMemo(
+    () => ({
+      localOverrides: savedContactNameOverrideByPhoneRef.current,
+      synchronizedNames: savedContactNameByPhoneRef.current,
+      revision: savedContactNameRevision,
+    }),
+    [savedContactNameRevision],
+  );
   const remoteChatSearchResults = useMemo(
-    () => (search ? rankChatsBySearch(chatSearchResults.filter(chatMatchesActiveFilters), search, operationalState?.channel?.connected_user_name ?? null) : []),
-    [chatMatchesActiveFilters, chatSearchResults, operationalState?.channel?.connected_user_name, search],
+    () => (search
+      ? rankChatsBySearch(
+          chatSearchResults
+            .map((chat) => applySavedContactNameFromLookup(
+              chat,
+              savedContactLookupMaps.localOverrides,
+              savedContactLookupMaps.synchronizedNames,
+            ))
+            .filter(chatMatchesActiveFilters),
+          search,
+          operationalState?.channel?.connected_user_name ?? null,
+        )
+      : []),
+    [chatMatchesActiveFilters, chatSearchResults, operationalState?.channel?.connected_user_name, savedContactLookupMaps, search],
   );
   const filteredMessageSearchResults = useMemo(
-    () => messageSearchResults.filter((result) => chatMatchesActiveFilters(result.chat)),
-    [chatMatchesActiveFilters, messageSearchResults],
+    () => messageSearchResults
+      .map((result) => ({
+        ...result,
+        chat: applySavedContactNameFromLookup(
+          result.chat,
+          savedContactLookupMaps.localOverrides,
+          savedContactLookupMaps.synchronizedNames,
+        ),
+      }))
+      .filter((result) => chatMatchesActiveFilters(result.chat)),
+    [chatMatchesActiveFilters, messageSearchResults, savedContactLookupMaps],
   );
   const sidebarChats = useMemo(
     () => (search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats),
@@ -3473,23 +3503,11 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const applyFrontendSavedContactNames = useCallback((items: CommWhatsAppChat[]) => {
-    return items.map((chat) => {
-      const phone = chat.phone_digits || chat.phone_number;
-      const savedName = getSavedContactNameForPhone(
-        phone,
-        savedContactNameOverrideByPhoneRef.current,
-        savedContactNameByPhoneRef.current,
-      );
-      if (!savedName) {
-        return chat;
-      }
-
-      return {
-        ...chat,
-        saved_contact_name: savedName,
-        display_name: savedName,
-      };
-    });
+    return items.map((chat) => applySavedContactNameFromLookup(
+      chat,
+      savedContactNameOverrideByPhoneRef.current,
+      savedContactNameByPhoneRef.current,
+    ));
   }, []);
 
   useEffect(() => {
@@ -3566,6 +3584,7 @@ export default function WhatsAppInboxScreen() {
         addSavedContactsToNameMap(map, contacts, manualOverrides);
         savedContactNameByPhoneRef.current = map;
         savedContactNameOverrideByPhoneRef.current = manualOverrides;
+        setSavedContactNameRevision((current) => current + 1);
         setChats((current) => applyFrontendSavedContactNames(current));
       }
     }).catch((error) => {
@@ -5085,6 +5104,7 @@ export default function WhatsAppInboxScreen() {
     addSavedContactsToNameMap(map, savedContacts, manualOverrides);
     savedContactNameByPhoneRef.current = map;
     savedContactNameOverrideByPhoneRef.current = manualOverrides;
+    setSavedContactNameRevision((current) => current + 1);
     setChats((current) => applyFrontendSavedContactNames(current));
   }, [applyFrontendSavedContactNames, savedContacts]);
 
@@ -8240,6 +8260,7 @@ export default function WhatsAppInboxScreen() {
       });
       savedContactNameByPhoneRef.current = savedContactMap;
       savedContactNameOverrideByPhoneRef.current = savedContactOverrides;
+      setSavedContactNameRevision((current) => current + 1);
       setChats((current) => applyFrontendSavedContactNames(current));
       setSaveContactDialogOpen(false);
       void refreshStartChatSources(startChatQuery, 1, false);

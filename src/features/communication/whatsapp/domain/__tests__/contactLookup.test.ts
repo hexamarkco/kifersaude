@@ -3,11 +3,12 @@ import { test } from 'vitest';
 
 import {
   addSavedContactsToNameMap,
+  applySavedContactNameFromLookup,
   collectPhoneLookupKeys,
   getSavedContactNameForPhone,
   resolveSavedContactName,
 } from '../contactLookup';
-import type { CommWhatsAppPhoneContact } from '../types';
+import type { CommWhatsAppChat, CommWhatsAppPhoneContact } from '../types';
 
 test('creates Brazilian lookup variants with and without country code and ninth digit', () => {
   assert.deepEqual(
@@ -100,4 +101,27 @@ test('prefers the synchronized saved name over a stale name copied into the chat
     resolveSavedContactName('+55 (11) 99999-9999', 'Leve Saúde Operadora - Apoio Corretor', new Map(), synchronizedNames),
     'Fabiola',
   );
+});
+
+test('aplica o nome salvo também em um resultado de busca que veio com nome antigo', () => {
+  const chat = {
+    id: 'chat-1',
+    channel_id: 'channel-1',
+    external_chat_id: '5511999999999@s.whatsapp.net',
+    phone_number: '+55 (11) 99999-9999',
+    phone_digits: '5511999999999',
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: null,
+    push_name: 'Mariangela 🤍',
+    is_group: false,
+  } as CommWhatsAppChat;
+
+  const result = applySavedContactNameFromLookup(
+    chat,
+    new Map([['5511999999999', 'Mariangela']]),
+    new Map([['5511999999999', 'Mariangela - Cliente']]),
+  );
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
 });

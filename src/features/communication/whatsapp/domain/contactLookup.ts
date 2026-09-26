@@ -1,4 +1,4 @@
-import type { CommWhatsAppPhoneContact } from './types';
+import type { CommWhatsAppChat, CommWhatsAppPhoneContact } from './types';
 
 export const collectPhoneLookupKeys = (value?: string | null) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -112,4 +112,29 @@ export const resolveSavedContactName = (
   }
 
   return null;
+};
+
+export const applySavedContactNameFromLookup = (
+  chat: CommWhatsAppChat,
+  localOverrides: ReadonlyMap<string, string>,
+  synchronizedNames: ReadonlyMap<string, string>,
+) => {
+  if (chat.is_group) {
+    return chat;
+  }
+
+  const savedName = getSavedContactNameForPhone(
+    chat.phone_digits || chat.phone_number,
+    localOverrides,
+    synchronizedNames,
+  );
+  if (!savedName) {
+    return chat;
+  }
+
+  return {
+    ...chat,
+    saved_contact_name: savedName,
+    display_name: savedName,
+  };
 };

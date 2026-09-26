@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ChevronLeft,
@@ -42,24 +42,35 @@ export default function CommissionCalendarScreen() {
     return date;
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const contractsRequestIdRef = useRef(0);
   const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
+    const requestId = ++contractsRequestIdRef.current;
     const fetchContracts = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        setContracts(await listActiveCommissionContracts());
+        const nextContracts = await listActiveCommissionContracts();
+        if (requestId !== contractsRequestIdRef.current) return;
+        setContracts(nextContracts);
       } catch (fetchContractsError) {
+        if (requestId !== contractsRequestIdRef.current) return;
         console.error("Erro ao carregar comissoes:", fetchContractsError);
         setError("Não foi possível carregar as informações financeiras.");
       } finally {
-        setLoading(false);
+        if (requestId === contractsRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     void fetchContracts();
+
+    return () => {
+      contractsRequestIdRef.current += 1;
+    };
   }, []);
 
   const events = useMemo(() => buildCommissionEvents(contracts), [contracts]);
@@ -91,14 +102,16 @@ export default function CommissionCalendarScreen() {
 
   const goToPreviousMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
+      (previousMonth) =>
+        new Date(previousMonth.getFullYear(), previousMonth.getMonth() - 1, 1),
     );
     setSelectedDate(null);
   };
 
   const goToNextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+      (previousMonth) =>
+        new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 1),
     );
     setSelectedDate(null);
   };

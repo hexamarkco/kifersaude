@@ -116,6 +116,20 @@ test('assina somente os lembretes do lead e dos contratos do chat', () => {
   assert.equal(mocks.removeChannel.mock.calls.length, 1);
 });
 
+test('combina eventos sobrepostos em uma única atualização da agenda', async () => {
+  resetMocks();
+  let changes = 0;
+  const unsubscribe = subscribeToInboxReminders('lead-1', ['contract-1'], () => {
+    changes += 1;
+  });
+
+  mocks.subscription.on.mock.calls.forEach(([, , callback]) => callback());
+  await Promise.resolve();
+
+  assert.equal(changes, 1);
+  unsubscribe();
+});
+
 test('não cria assinatura quando o chat não tem lead nem contrato', () => {
   resetMocks();
   const unsubscribe = subscribeToInboxReminders(' ', [], vi.fn());

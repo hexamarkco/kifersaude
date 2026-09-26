@@ -54,6 +54,21 @@ export function subscribeToInboxReminders(
   }
 
   const channel = databaseClient.channel(`whatsapp-chat-agenda-summary-${crypto.randomUUID()}`);
+  let changeQueued = false;
+  let active = true;
+  const notifyChange = () => {
+    if (!active || changeQueued) {
+      return;
+    }
+
+    changeQueued = true;
+    void Promise.resolve().then(() => {
+      changeQueued = false;
+      if (active) {
+        onChange();
+      }
+    });
+  };
 
   if (normalizedLeadId) {
     channel.on(
@@ -64,7 +79,7 @@ export function subscribeToInboxReminders(
         table: 'reminders',
         filter: `lead_id=eq.${normalizedLeadId}`,
       },
-      onChange,
+      notifyChange,
     );
   }
 
@@ -77,12 +92,15 @@ export function subscribeToInboxReminders(
         table: 'reminders',
         filter: `contract_id=in.(${normalizedContractIds.join(',')})`,
       },
-      onChange,
+      notifyChange,
     );
   }
 
   channel.subscribe();
-  return () => { void databaseClient.removeChannel(channel); };
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export function subscribeToInboxChats(

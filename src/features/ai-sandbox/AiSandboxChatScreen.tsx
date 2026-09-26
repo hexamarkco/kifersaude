@@ -144,6 +144,7 @@ export default function AiSandboxChatScreen() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
   const pendingTimerRef = useRef<{ intervalId: number; conversationId: string } | null>(null);
+  const conversationsLoadRequestIdRef = useRef(0);
   const sendRequestIdRef = useRef(0);
   const startingApproachRequestIdRef = useRef(0);
   const scenarioRequestIdRef = useRef(0);
@@ -205,15 +206,26 @@ export default function AiSandboxChatScreen() {
 
   useEffect(() => () => clearPendingTimer(), [clearPendingTimer]);
 
+  const invalidateConversationsLoad = useCallback(() => {
+    conversationsLoadRequestIdRef.current += 1;
+    setConversationsLoading(false);
+  }, []);
+
   const loadConversations = useCallback(async () => {
+    const requestId = ++conversationsLoadRequestIdRef.current;
     setConversationsLoading(true);
     try {
       const rows = await aiSandboxChatService.listConversations();
+      if (requestId !== conversationsLoadRequestIdRef.current) return;
       setConversations(rows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar simulações.');
+      if (requestId === conversationsLoadRequestIdRef.current) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar simulações.');
+      }
     } finally {
-      setConversationsLoading(false);
+      if (requestId === conversationsLoadRequestIdRef.current) {
+        setConversationsLoading(false);
+      }
     }
   }, []);
 
@@ -267,10 +279,11 @@ export default function AiSandboxChatScreen() {
         setRunningScenario(false);
       },
       onConversationUpdated: (conversation) => {
+        invalidateConversationsLoad();
         setConversations((previous) => previous.map((item) => item.id === conversation.id ? conversation : item));
       },
     });
-  }, [activeConversationId, mergeMessage]);
+  }, [activeConversationId, invalidateConversationsLoad, mergeMessage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -340,6 +353,7 @@ export default function AiSandboxChatScreen() {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       await aiSandboxChatService.deleteConversation(conversationId);
+      invalidateConversationsLoad();
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
       if (activeConversationIdRef.current === conversationId) {
         handleNewConversation();
@@ -416,6 +430,7 @@ export default function AiSandboxChatScreen() {
       if (!conversationId) {
         const conversation = await aiSandboxChatService.createConversation(text, user.id);
         conversationId = conversation.id;
+        invalidateConversationsLoad();
         setConversations((prev) => [conversation, ...prev]);
         if (requestId === sendRequestIdRef.current && activeConversationIdRef.current === originConversationId) {
           activeConversationIdRef.current = conversation.id;
@@ -460,6 +475,7 @@ export default function AiSandboxChatScreen() {
     try {
       const conversation = await aiSandboxChatService.createConversation(name || 'Abordagem', user.id);
       targetConversationId = conversation.id;
+      invalidateConversationsLoad();
       setConversations((prev) => [conversation, ...prev]);
       const canClaimConversation = requestId === startingApproachRequestIdRef.current
         && activeConversationIdRef.current === originConversationId;
@@ -499,6 +515,7 @@ export default function AiSandboxChatScreen() {
     try {
       const conversation = await aiSandboxChatService.createAutomatedConversation(scenarioLabel, user.id);
       targetConversationId = conversation.id;
+      invalidateConversationsLoad();
       setConversations((previous) => [conversation, ...previous]);
       const canClaimConversation = requestId === scenarioRequestIdRef.current
         && activeConversationIdRef.current === originConversationId;

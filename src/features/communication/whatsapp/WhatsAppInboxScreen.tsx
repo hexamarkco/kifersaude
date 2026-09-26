@@ -4355,11 +4355,26 @@ export default function WhatsAppInboxScreen() {
     }
   }, [openChatMenuChat, openChatMenuChatId]);
 
+  const clearScheduledMessageStatusRefreshes = useCallback(() => {
+    for (const timeoutId of statusRefreshTimeoutsRef.current) {
+      window.clearTimeout(timeoutId);
+    }
+    statusRefreshTimeoutsRef.current = [];
+    lastPendingStatusRefreshKeyRef.current = '';
+  }, []);
+
   useEffect(() => {
     leadMutationRequestIdRef.current += 1;
     setLinkLoadingLeadId(null);
+    clearScheduledMessageStatusRefreshes();
     setThreadActionsMenuOpen(false);
-  }, [selectedChatId]);
+  }, [clearScheduledMessageStatusRefreshes, selectedChatId]);
+
+  useEffect(() => {
+    if (!pollingEnabled) {
+      clearScheduledMessageStatusRefreshes();
+    }
+  }, [clearScheduledMessageStatusRefreshes, pollingEnabled]);
 
   useEffect(() => {
     // Modais que editam dados da conversa anterior não podem permanecer
@@ -5894,12 +5909,9 @@ export default function WhatsAppInboxScreen() {
       cancelVoiceRecordingRef.current();
       archivedChatsCountRequestIdRef.current += 1;
       archivedSectionLoadRequestIdRef.current += 1;
-      for (const timeoutId of statusRefreshTimeoutsRef.current) {
-        window.clearTimeout(timeoutId);
-      }
-      statusRefreshTimeoutsRef.current = [];
+      clearScheduledMessageStatusRefreshes();
     },
-    [],
+    [clearScheduledMessageStatusRefreshes],
   );
 
   useEffect(() => {

@@ -9,4 +9,5 @@ export const whatsappMediaRepository = {
   send: commWhatsAppService.sendMediaMessage,
   sendRemote: commWhatsAppService.sendRemoteMediaMessage,
   resolveObjectUrl: commWhatsAppService.resolveMediaObjectUrl,
+  releaseObjectUrl: commWhatsAppService.releaseMediaObjectUrl,
 };

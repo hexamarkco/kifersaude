@@ -814,7 +814,15 @@ export type CommWhatsAppAttendanceCritique = {
 
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
-const mediaObjectUrlCache = new Map<string, Promise<string>>();
+type MediaObjectUrlCacheEntry = {
+  promise: Promise<string>;
+  objectUrl: string | null;
+  referenceCount: number;
+  releaseTimer: number | null;
+};
+
+const mediaObjectUrlCache = new Map<string, MediaObjectUrlCacheEntry>();
+const MEDIA_OBJECT_URL_RELEASE_GRACE_MS = 30_000;
 const localMediaPreviewByMessageId = new Map<string, string>();
 
 const sanitizeSearch = (value: string) =>
@@ -2651,52 +2659,105 @@ export const commWhatsAppService = {
       return params.mediaUrl?.trim() || null;
     }
 
-    if (!mediaObjectUrlCache.has(mediaId)) {
-      mediaObjectUrlCache.set(
-        mediaId,
-        (async () => {
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            throw new Error(await getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a midia do WhatsApp.'));
-          }
-
-          if (!session?.access_token) {
-            throw new Error('Sua sessao expirou. Entre novamente para carregar a midia.');
-          }
-
-          const response = await fetch(
-            `${supabaseFunctionsUrl}/comm-whatsapp-media?mediaId=${encodeURIComponent(mediaId)}`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            },
-          );
-
-          if (!response.ok) {
-            const payload = await response.json().catch(() => ({}));
-            throw new Error(
-              typeof payload?.error === 'string' && payload.error.trim()
-                ? payload.error.trim()
-                : 'Nao foi possivel carregar a midia do WhatsApp.',
-            );
-          }
-
-          const blob = await response.blob();
-          return URL.createObjectURL(blob);
-        })().catch((error) => {
-          mediaObjectUrlCache.delete(mediaId);
-          throw error;
-        }),
-      );
+    const cached = mediaObjectUrlCache.get(mediaId);
+    if (cached) {
+      cached.referenceCount += 1;
+      if (cached.releaseTimer !== null) {
+        window.clearTimeout(cached.releaseTimer);
+        cached.releaseTimer = null;
+      }
+      return cached.promise;
     }
 
-    return mediaObjectUrlCache.get(mediaId) ?? null;
+    const entry: MediaObjectUrlCacheEntry = {
+      promise: Promise.resolve(''),
+      objectUrl: null,
+      referenceCount: 1,
+      releaseTimer: null,
+    };
+    const promise = (async () => {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw new Error(await getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a midia do WhatsApp.'));
+      }
+
+      if (!session?.access_token) {
+        throw new Error('Sua sessao expirou. Entre novamente para carregar a midia.');
+      }
+
+      const response = await fetch(
+        `${supabaseFunctionsUrl}/comm-whatsapp-media?mediaId=${encodeURIComponent(mediaId)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof payload?.error === 'string' && payload.error.trim()
+            ? payload.error.trim()
+            : 'Nao foi possivel carregar a midia do WhatsApp.',
+        );
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      entry.objectUrl = objectUrl;
+      return objectUrl;
+    })().catch((error) => {
+      if (mediaObjectUrlCache.get(mediaId) === entry) {
+        mediaObjectUrlCache.delete(mediaId);
+      }
+      throw error;
+    });
+
+    entry.promise = promise;
+    mediaObjectUrlCache.set(mediaId, entry);
+
+    return promise;
+  },
+
+  releaseMediaObjectUrl(mediaId?: string | null) {
+    const normalizedMediaId = mediaId?.trim();
+    if (!normalizedMediaId) {
+      return;
+    }
+
+    const entry = mediaObjectUrlCache.get(normalizedMediaId);
+    if (!entry) {
+      return;
+    }
+
+    entry.referenceCount = Math.max(0, entry.referenceCount - 1);
+    if (entry.referenceCount > 0 || entry.releaseTimer !== null) {
+      return;
+    }
+
+    entry.releaseTimer = window.setTimeout(() => {
+      entry.releaseTimer = null;
+      if (mediaObjectUrlCache.get(normalizedMediaId) !== entry || entry.referenceCount > 0) {
+        return;
+      }
+
+      mediaObjectUrlCache.delete(normalizedMediaId);
+      if (entry.objectUrl) {
+        URL.revokeObjectURL(entry.objectUrl);
+        entry.objectUrl = null;
+        return;
+      }
+
+      void entry.promise
+        .then((objectUrl) => URL.revokeObjectURL(objectUrl))
+        .catch(() => undefined);
+    }, MEDIA_OBJECT_URL_RELEASE_GRACE_MS);
   },
 
   async uploadScheduledMessageMedia(file: File): Promise<ScheduledMediaUpload> {

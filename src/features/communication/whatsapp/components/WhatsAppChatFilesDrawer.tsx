@@ -209,6 +209,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
   useEffect(() => {
     let active = true;
     setUrl(null);
+    const mediaId = message.media_id?.trim() || null;
 
     void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => {
@@ -218,15 +219,25 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
         if (active) setUrl(null);
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (mediaId) {
+        whatsappMediaRepository.releaseObjectUrl(mediaId);
+      }
+    };
   }, [message.media_id, message.media_url]);
 
   const downloadMedia = async () => {
     if (downloading) return;
     setDownloading(true);
+    const mediaId = message.media_id?.trim() || null;
+    let retainedForDownload = false;
 
     try {
       const resolvedUrl = url ?? await whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url });
+      if (!url && mediaId) {
+        retainedForDownload = true;
+      }
       if (!resolvedUrl) return;
       const link = document.createElement('a');
       link.href = resolvedUrl;
@@ -235,6 +246,9 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
       link.click();
       link.remove();
     } finally {
+      if (retainedForDownload && mediaId) {
+        whatsappMediaRepository.releaseObjectUrl(mediaId);
+      }
       setDownloading(false);
     }
   };
@@ -293,12 +307,20 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
     setPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    const mediaId = message.media_id?.trim() || null;
 
     void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => { if (active) setUrl(resolved); })
       .catch(() => { if (active) setUrl(null); });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+      const audio = audioRef.current;
+      audio?.pause();
+      if (mediaId) {
+        whatsappMediaRepository.releaseObjectUrl(mediaId);
+      }
+    };
   }, [message.media_id, message.media_url]);
 
   useEffect(() => {

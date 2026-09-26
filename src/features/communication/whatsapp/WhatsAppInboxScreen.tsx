@@ -625,7 +625,9 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
     setLoading(true);
     setError(null);
+    let retainedMediaObjectUrl = false;
 
+    retainedMediaObjectUrl = true;
     void whatsappMediaRepository
       .resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
       .then((resolved) => {
@@ -644,6 +646,9 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
     return () => {
       active = false;
+      if (retainedMediaObjectUrl) {
+        whatsappMediaRepository.releaseObjectUrl(message.media_id);
+      }
     };
   }, [message.external_message_id, message.media_id, message.media_url, retryNonce]);
 
@@ -8775,17 +8780,30 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
+    const mediaId = message.media_id?.trim() || null;
     try {
       const url = await whatsappMediaRepository.resolveObjectUrl({
         mediaId: message.media_id,
         mediaUrl: message.media_url,
       });
       if (!url) {
+        if (mediaId) {
+          whatsappMediaRepository.releaseObjectUrl(mediaId);
+        }
         toast.error('Arquivo indisponível no momento.');
         return;
       }
       window.open(url, '_blank', 'noopener,noreferrer');
+
+      // A nova aba precisa de um tempo para iniciar o carregamento antes que
+      // a URL temporária seja liberada do cache local.
+      if (mediaId) {
+        window.setTimeout(() => whatsappMediaRepository.releaseObjectUrl(mediaId), 60_000);
+      }
     } catch (error) {
+      if (mediaId) {
+        whatsappMediaRepository.releaseObjectUrl(mediaId);
+      }
       console.error('[WhatsAppInbox] erro ao abrir arquivo do chat', error);
       toast.error('Não foi possível abrir este arquivo.');
     }

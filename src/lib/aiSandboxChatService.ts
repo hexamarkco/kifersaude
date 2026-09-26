@@ -105,26 +105,36 @@ export const aiSandboxChatService = {
   },
 
   subscribeToConversation(conversationId: string, handlers: SandboxRealtimeHandlers): () => void {
+    let active = true;
     const channel = supabase
       .channel(`ai-sandbox-conversation-${conversationId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_sandbox_messages', filter: `conversation_id=eq.${conversationId}` },
-        (payload) => handlers.onMessageInserted(payload.new as AiSandboxMessage),
+        (payload) => {
+          if (active) handlers.onMessageInserted(payload.new as AiSandboxMessage);
+        },
       )
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_sandbox_test_runs', filter: `conversation_id=eq.${conversationId}` },
-        (payload) => handlers.onTestRunInserted(payload.new as AiSandboxTestRun),
+        (payload) => {
+          if (active) handlers.onTestRunInserted(payload.new as AiSandboxTestRun);
+        },
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'ai_sandbox_conversations', filter: `id=eq.${conversationId}` },
-        (payload) => handlers.onConversationUpdated(payload.new as AiSandboxConversation),
+        (payload) => {
+          if (active) handlers.onConversationUpdated(payload.new as AiSandboxConversation);
+        },
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
   },
 
   async renameConversation(conversationId: string, title: string): Promise<void> {

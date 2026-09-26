@@ -19,6 +19,11 @@ type Query = {
   overrideTypes: MockFunction<[], Promise<{ data: unknown[]; error: null }>>;
 };
 
+type Channel = {
+  on: MockFunction<[string, Record<string, unknown>, (payload?: unknown) => void], Channel>;
+  subscribe: MockFunction<[], Channel>;
+};
+
 type FetchPage = (
   from: number,
   to: number,
@@ -55,22 +60,36 @@ const mocks = vi.hoisted(() => {
     return page.data ?? [];
   });
 
+  const subscription = {} as Channel;
+  subscription.on = createMock<[string, Record<string, unknown>, (payload?: unknown) => void], Channel>();
+  subscription.subscribe = createMock<[], Channel>();
+  subscription.on.mockReturnValue(subscription);
+  subscription.subscribe.mockReturnValue(subscription);
+
   return {
+    channel: createMock<[string], Channel>(),
     fetchAllPages,
     from: createMock<[string], Query>(),
+    removeChannel: createMock<[Channel], void>(),
     query,
+    subscription,
   };
 });
 
 mocks.from.mockReturnValue(mocks.query);
+mocks.channel.mockReturnValue(mocks.subscription);
 
 vi.mock('../../../../infrastructure/supabase', () => ({
   databaseClient: {
+    channel: mocks.channel,
     from: mocks.from,
+    removeChannel: mocks.removeChannel,
   },
   fetchAllPages: mocks.fetchAllPages,
   supabase: {
+    channel: mocks.channel,
     from: mocks.from,
+    removeChannel: mocks.removeChannel,
   },
 }));
 
@@ -79,6 +98,7 @@ import {
   listLeads,
   listLeadsByStatuses,
   persistLeadStatusChange,
+  subscribeToLeadChanges,
   updateLeadDetails,
 } from '../leadsRepository';
 
@@ -143,4 +163,26 @@ test('persiste o status usando também a chave do status atual', async () => {
       ultimo_contato: '2026-09-26T12:05:00.000Z',
     },
   ]);
+});
+
+test('ignora eventos tardios de leads depois do unsubscribe', () => {
+  mocks.subscription.on.mock.calls.splice(0);
+  let changes = 0;
+  const unsubscribe = subscribeToLeadChanges(() => {
+    changes += 1;
+  });
+  const callback = mocks.subscription.on.mock.calls[0]?.[2];
+  const payload = {
+    eventType: 'UPDATE',
+    new: { id: 'lead-1', nome_completo: 'Lead de teste' },
+    old: {},
+  };
+
+  callback?.(payload);
+  assert.equal(changes, 1);
+
+  unsubscribe();
+  callback?.(payload);
+  assert.equal(changes, 1);
+  assert.equal(mocks.removeChannel.mock.calls.length, 1);
 });

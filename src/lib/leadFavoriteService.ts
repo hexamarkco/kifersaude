@@ -29,12 +29,15 @@ export const useFavoritedLeadIds = (): Set<string> => {
       setIds(new Set(data.map((row) => row.id as string)));
     })();
 
+    let active = true;
     const channel = supabase
       .channel(`lead-favorito-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
         (payload) => {
+          if (!active) return;
+
           const newRow = payload.new as { id?: string; favorito?: boolean } | null;
           const oldRow = payload.old as { id?: string } | null;
           const leadId = newRow?.id ?? oldRow?.id;
@@ -59,6 +62,7 @@ export const useFavoritedLeadIds = (): Set<string> => {
 
     return () => {
       cancelled = true;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, []);

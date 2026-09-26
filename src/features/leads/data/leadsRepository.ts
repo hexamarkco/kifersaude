@@ -369,12 +369,15 @@ export async function upsertLeadFollowUpReminder(input: {
 export function subscribeToLeadChanges(
   onChange: (change: LeadRealtimeChange) => void,
 ): () => void {
+  let active = true;
   const channel = supabase
     .channel('leads-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'leads' },
       (payload: RealtimePostgresChangesPayload<Lead>) => {
+        if (!active) return;
+
         onChange({
           eventType: payload.eventType,
           current: payload.eventType === 'DELETE' ? null : payload.new,
@@ -385,6 +388,7 @@ export function subscribeToLeadChanges(
     .subscribe();
 
   return () => {
+    active = false;
     void supabase.removeChannel(channel);
   };
 }

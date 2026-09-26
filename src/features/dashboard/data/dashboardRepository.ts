@@ -147,41 +147,57 @@ export async function loadDashboardCalendarSnapshot(
 export function subscribeToDashboardLeads(
   onChange: (payload: DashboardRealtimePayload<Lead>) => void,
 ): () => void {
+  let active = true;
   const channel = databaseClient
     .channel('dashboard-leads-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'leads' },
-      (payload) => onChange({
-        eventType: payload.eventType,
-        new: payload.eventType === 'DELETE' ? null : payload.new as unknown as Lead,
-        old: payload.eventType === 'INSERT' ? null : payload.old as unknown as Lead,
-      }),
+      (payload) => {
+        if (!active) return;
+
+        onChange({
+          eventType: payload.eventType,
+          new: payload.eventType === 'DELETE' ? null : payload.new as unknown as Lead,
+          old: payload.eventType === 'INSERT' ? null : payload.old as unknown as Lead,
+        });
+      },
     )
     .subscribe();
-  return () => { void databaseClient.removeChannel(channel); };
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export function subscribeToDashboardContracts(
   onChange: (payload: DashboardRealtimePayload<DashboardContractRealtimeRecord>) => void,
 ): () => void {
+  let active = true;
   const channel = databaseClient
     .channel('dashboard-contracts-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'contracts' },
-      (payload) => onChange({
-        eventType: payload.eventType,
-        new: payload.eventType === 'DELETE'
-          ? null
-          : payload.new as unknown as DashboardContractRealtimeRecord,
-        old: payload.eventType === 'INSERT'
-          ? null
-          : payload.old as unknown as DashboardContractRealtimeRecord,
-      }),
+      (payload) => {
+        if (!active) return;
+
+        onChange({
+          eventType: payload.eventType,
+          new: payload.eventType === 'DELETE'
+            ? null
+            : payload.new as unknown as DashboardContractRealtimeRecord,
+          old: payload.eventType === 'INSERT'
+            ? null
+            : payload.old as unknown as DashboardContractRealtimeRecord,
+        });
+      },
     )
     .subscribe();
-  return () => { void databaseClient.removeChannel(channel); };
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export async function listDashboardReminderContractIds(

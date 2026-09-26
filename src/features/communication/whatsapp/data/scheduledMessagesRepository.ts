@@ -235,6 +235,7 @@ export function subscribeToScheduledMessages(
   channelId: string,
   onChange: () => void,
 ): () => void {
+  let active = true;
   const channel = supabase
     .channel(`comm-whatsapp-scheduled-messages-${channelId}-${crypto.randomUUID()}`)
     .on(
@@ -245,8 +246,13 @@ export function subscribeToScheduledMessages(
         table: 'comm_whatsapp_scheduled_messages',
         filter: `channel_id=eq.${channelId}`,
       },
-      onChange,
+      () => {
+        if (active) onChange();
+      },
     )
     .subscribe();
-  return () => { void supabase.removeChannel(channel); };
+  return () => {
+    active = false;
+    void supabase.removeChannel(channel);
+  };
 }

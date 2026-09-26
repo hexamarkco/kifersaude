@@ -136,12 +136,15 @@ export async function saveContractHolder(
 export function subscribeToContractChanges(
   onChange: (change: ContractRealtimeChange) => void,
 ): () => void {
+  let active = true;
   const channel = databaseClient
     .channel('contracts-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'contracts' },
       (payload: RealtimePostgresChangesPayload<Contract>) => {
+        if (!active) return;
+
         onChange({
           eventType: payload.eventType,
           current: payload.eventType === 'DELETE' ? null : payload.new,
@@ -153,6 +156,7 @@ export function subscribeToContractChanges(
     .subscribe();
 
   return () => {
+    active = false;
     void databaseClient.removeChannel(channel);
   };
 }

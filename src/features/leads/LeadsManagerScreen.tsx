@@ -98,6 +98,7 @@ import { LeadsHeader } from "./components/LeadsHeader";
 import {
   getLeadFirstName,
   getWhatsappLink,
+  getStableLeadIdsSignature,
   isWithinDateRange,
 } from "./shared/leadsManagerUtils";
 import type {
@@ -384,6 +385,11 @@ export default function LeadsManager({
     [],
   );
 
+  const leadIdsForContractLookupSignature = useMemo(
+    () => getStableLeadIdsSignature(leads.map((lead) => lead.id)),
+    [leads],
+  );
+
   const loadLeads = useCallback(async () => {
     const requestId = leadsRequestIdRef.current + 1;
     leadsRequestIdRef.current = requestId;
@@ -443,11 +449,13 @@ export default function LeadsManager({
   ]);
 
   useEffect(() => {
-    void fetchContractsForLeads(leads.map((lead) => lead.id));
+    void fetchContractsForLeads(
+      leadIdsForContractLookupSignature ? leadIdsForContractLookupSignature.split("|") : [],
+    );
     return () => {
       contractsRequestIdRef.current += 1;
     };
-  }, [fetchContractsForLeads, leads]);
+  }, [fetchContractsForLeads, leadIdsForContractLookupSignature]);
 
   useEffect(() => {
     setCurrentPage(1);

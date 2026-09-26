@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   getLeadFirstName,
+  getStableLeadIdsSignature,
   getWhatsappLink,
   isWithinDateRange,
 } from "../leadsManagerUtils";
@@ -30,4 +31,11 @@ test("leadsManagerUtils builds a WhatsApp link with the Brazilian prefix", () =>
 test("leadsManagerUtils returns the first name with a safe fallback", () => {
   assert.equal(getLeadFirstName("Maria de Souza"), "Maria");
   assert.equal(getLeadFirstName("   "), "cliente");
+});
+
+test("leadsManagerUtils creates a stable signature for contract lookups", () => {
+  assert.equal(
+    getStableLeadIdsSignature(["lead-2", "lead-1", "lead-2", " ", null]),
+    "lead-1|lead-2",
+  );
 });

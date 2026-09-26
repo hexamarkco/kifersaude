@@ -55,3 +55,13 @@ export const getLeadFirstName = (fullName: string | null | undefined) => {
   const [firstName] = trimmed.split(/\s+/);
   return firstName || "cliente";
 };
+
+export const getStableLeadIdsSignature = (
+  leadIds: Array<string | null | undefined>,
+) => Array.from(
+  new Set(
+    leadIds
+      .map((leadId) => leadId?.trim())
+      .filter((leadId): leadId is string => Boolean(leadId)),
+  ),
+).sort().join("|");

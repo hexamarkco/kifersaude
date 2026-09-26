@@ -219,6 +219,12 @@ export default function WhatsAppScheduleMessageModal({
       }]);
   const [submitting, setSubmitting] = useState(false);
   const sequenceAttachmentRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [uploadingSequenceStepIds, setUploadingSequenceStepIds] = useState<Record<string, boolean>>({});
+  const attachmentUploadRequestIdRef = useRef(0);
+  const sequenceAttachmentUploadRequestIdsRef = useRef<Record<string, number>>({});
+  const uploadSessionRef = useRef(0);
+  const hasUploadingSequenceAttachment = Object.values(uploadingSequenceStepIds).some(Boolean);
+  const hasUploadingAttachment = uploadingAttachment || hasUploadingSequenceAttachment;
 
   useEffect(() => {
     if (!leadId || mode !== 'sequence') {
@@ -237,6 +243,23 @@ export default function WhatsAppScheduleMessageModal({
       active = false;
     };
   }, [leadId, mode]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      uploadSessionRef.current += 1;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const sequenceAttachmentUploadRequestIds = sequenceAttachmentUploadRequestIdsRef.current;
+    return () => {
+      uploadSessionRef.current += 1;
+      attachmentUploadRequestIdRef.current += 1;
+      for (const stepId of Object.keys(sequenceAttachmentUploadRequestIds)) {
+        sequenceAttachmentUploadRequestIds[stepId] += 1;
+      }
+    };
+  }, []);
 
   const hasContent = useMemo(() => {
     return text.trim().length > 0 || Boolean(mediaUrl);
@@ -285,7 +308,7 @@ export default function WhatsAppScheduleMessageModal({
   }, [hasContent, mode, scheduledAtIso, recurrence, recurrenceEndsAtIso, sequenceIsValid]);
 
   const handleSchedule = useCallback(async () => {
-    if (!isValid || submitting) return;
+    if (!isValid || submitting || hasUploadingAttachment) return;
 
     setSubmitting(true);
     try {
@@ -410,20 +433,26 @@ export default function WhatsAppScheduleMessageModal({
     sequenceSteps,
     onScheduled,
     onClose,
+    hasUploadingAttachment,
   ]);
 
   const handleClose = useCallback(() => {
-    if (submitting) return;
+    if (submitting || hasUploadingAttachment) return;
+    uploadSessionRef.current += 1;
     onClose();
-  }, [submitting, onClose]);
+  }, [hasUploadingAttachment, onClose, submitting]);
 
   const handleAttachmentChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const [file] = Array.from(event.target.files ?? []);
     event.target.value = '';
     if (!file || uploadingAttachment || submitting) return;
+    const requestId = attachmentUploadRequestIdRef.current + 1;
+    attachmentUploadRequestIdRef.current = requestId;
+    const sessionId = uploadSessionRef.current;
     setUploadingAttachment(true);
     try {
       const uploaded = await commWhatsAppService.uploadScheduledMessageMedia(file);
+      if (requestId !== attachmentUploadRequestIdRef.current || sessionId !== uploadSessionRef.current) return;
       setAttachment({
         url: uploaded.url,
         mimeType: uploaded.mimeType,
@@ -432,9 +461,12 @@ export default function WhatsAppScheduleMessageModal({
       });
       toast.success('Anexo adicionado ao agendamento.');
     } catch (error) {
+      if (requestId !== attachmentUploadRequestIdRef.current || sessionId !== uploadSessionRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível anexar o arquivo.');
     } finally {
-      setUploadingAttachment(false);
+      if (requestId === attachmentUploadRequestIdRef.current) {
+        setUploadingAttachment(false);
+      }
     }
   }, [submitting, uploadingAttachment]);
 
@@ -462,9 +494,14 @@ export default function WhatsAppScheduleMessageModal({
   const uploadSequenceAttachment = useCallback(async (stepId: string, event: ChangeEvent<HTMLInputElement>) => {
     const [file] = Array.from(event.target.files ?? []);
     event.target.value = '';
-    if (!file || submitting) return;
+    if (!file || submitting || uploadingSequenceStepIds[stepId]) return;
+    const requestId = (sequenceAttachmentUploadRequestIdsRef.current[stepId] ?? 0) + 1;
+    sequenceAttachmentUploadRequestIdsRef.current[stepId] = requestId;
+    const sessionId = uploadSessionRef.current;
+    setUploadingSequenceStepIds((current) => ({ ...current, [stepId]: true }));
     try {
       const uploaded = await commWhatsAppService.uploadScheduledMessageMedia(file);
+      if (requestId !== sequenceAttachmentUploadRequestIdsRef.current[stepId] || sessionId !== uploadSessionRef.current) return;
       updateSequenceStep(stepId, {
         attachment: {
           url: uploaded.url,
@@ -475,9 +512,14 @@ export default function WhatsAppScheduleMessageModal({
       });
       toast.success('Anexo adicionado à etapa.');
     } catch (error) {
+      if (requestId !== sequenceAttachmentUploadRequestIdsRef.current[stepId] || sessionId !== uploadSessionRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível anexar a mídia.');
+    } finally {
+      if (requestId === sequenceAttachmentUploadRequestIdsRef.current[stepId]) {
+        setUploadingSequenceStepIds((current) => ({ ...current, [stepId]: false }));
+      }
     }
-  }, [submitting, updateSequenceStep]);
+  }, [submitting, updateSequenceStep, uploadingSequenceStepIds]);
 
   return (
     <WorkspaceDialog
@@ -497,6 +539,7 @@ export default function WhatsAppScheduleMessageModal({
           type="file"
           className="hidden"
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+          disabled={submitting || uploadingAttachment}
           onChange={(event) => void handleAttachmentChange(event)}
         />
         {!scheduledMessage && !scheduledSequence && (
@@ -558,7 +601,7 @@ export default function WhatsAppScheduleMessageModal({
             size="sm"
             className="mt-3"
             loading={uploadingAttachment}
-            disabled={submitting}
+            disabled={submitting || uploadingAttachment}
             onClick={() => attachmentInputRef.current?.click()}
           >
             {!uploadingAttachment && <Upload className="kds-control-icon" />}
@@ -655,13 +698,14 @@ export default function WhatsAppScheduleMessageModal({
                     type="file"
                     className="hidden"
                     accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                    disabled={submitting || Boolean(uploadingSequenceStepIds[step.id])}
                     onChange={(event) => void uploadSequenceAttachment(step.id, event)}
                   />
                   <div className="mt-2 flex items-center gap-2">
-                    <Button type="button" variant="secondary" size="sm" disabled={submitting} onClick={() => sequenceAttachmentRefs.current[step.id]?.click()}>
-                      <Upload className="kds-control-icon" /> {step.attachment ? 'Substituir mídia' : 'Anexar mídia'}
+                    <Button type="button" variant="secondary" size="sm" loading={Boolean(uploadingSequenceStepIds[step.id])} disabled={submitting || Boolean(uploadingSequenceStepIds[step.id])} onClick={() => sequenceAttachmentRefs.current[step.id]?.click()}>
+                      {!uploadingSequenceStepIds[step.id] && <Upload className="kds-control-icon" />} {step.attachment ? 'Substituir mídia' : 'Anexar mídia'}
                     </Button>
-                    {step.attachment && <span className="flex min-w-0 items-center gap-1 text-xs text-[var(--text-muted)]"><span className="truncate">{step.attachment.filename}</span><IconButton type="button" aria-label="Remover mídia" onClick={() => updateSequenceStep(step.id, { attachment: null })}><X className="kds-control-icon" /></IconButton></span>}
+                    {step.attachment && <span className="flex min-w-0 items-center gap-1 text-xs text-[var(--text-muted)]"><span className="truncate">{step.attachment.filename}</span><IconButton type="button" aria-label="Remover mídia" disabled={submitting || Boolean(uploadingSequenceStepIds[step.id])} onClick={() => updateSequenceStep(step.id, { attachment: null })}><X className="kds-control-icon" /></IconButton></span>}
                   </div>
                 </div>
 
@@ -827,13 +871,13 @@ export default function WhatsAppScheduleMessageModal({
           <Button
             variant="ghost"
             onClick={handleClose}
-            disabled={submitting}
+            disabled={submitting || hasUploadingAttachment}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSchedule}
-            disabled={!isValid || submitting}
+            disabled={!isValid || submitting || hasUploadingAttachment}
           >
             {submitting
               ? (scheduledMessage || scheduledSequence ? 'Salvando...' : 'Agendando...')

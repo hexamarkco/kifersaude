@@ -57,6 +57,7 @@ type WhatsAppLeadDrawerProps = {
   contractsError: string | null;
   statusOptions: LeadStatusConfig[];
   responsavelOptions: ConfigOption[];
+  leadMutationLoading: boolean;
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>;
   onResponsavelChange: (leadId: string, responsavelValue: string) => Promise<void>;
   onRefreshContracts: () => void;
@@ -113,6 +114,7 @@ export default function WhatsAppLeadDrawer({
   contractsError,
   statusOptions,
   responsavelOptions,
+  leadMutationLoading,
   onStatusChange,
   onResponsavelChange,
   onRefreshContracts,
@@ -464,9 +466,16 @@ export default function WhatsAppLeadDrawer({
                   )}
                 </div>
                 {onUnlinkLead && (
-                  <Button variant="secondary" size="sm" onClick={onUnlinkLead} className="shrink-0">
-                    <Unlink className="kds-control-icon" />
-                    Desvincular
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={onUnlinkLead}
+                    loading={leadMutationLoading}
+                    disabled={leadMutationLoading}
+                    className="shrink-0"
+                  >
+                    {!leadMutationLoading && <Unlink className="kds-control-icon" />}
+                    {leadMutationLoading ? 'Atualizando...' : 'Desvincular'}
                   </Button>
                 )}
               </Surface>
@@ -483,6 +492,7 @@ export default function WhatsAppLeadDrawer({
                 contractsError={contractsError}
                 onRefreshContracts={onRefreshContracts}
                 onViewLead={onViewLead}
+                disabled={leadMutationLoading}
               />
 
               {canViewAgenda ? (

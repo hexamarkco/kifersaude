@@ -816,6 +816,7 @@ export default function DashboardScreen({
         });
 
     return () => {
+      dataRequestIdRef.current += 1;
       unsubscribeLeads();
       unsubscribeContracts();
     };

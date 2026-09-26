@@ -166,6 +166,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   );
 
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
@@ -333,6 +334,9 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -440,13 +444,14 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
       console.error('Erro ao salvar lead:', error);
       toast.error('Não foi possível salvar o lead. Tente novamente.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
-      <DialogHeader onClose={onClose}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
+      <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
         <DialogDescription>
           {lead ? 'Atualize os dados comerciais e o próximo follow-up.' : 'Registre o contato e defina o primeiro acompanhamento.'}

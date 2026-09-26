@@ -120,6 +120,7 @@ export default function Layout({
   }[]>([]);
   const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
   const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const notificationsRequestIdRef = useRef(0);
   const menuItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const collapsedDropdownRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -228,6 +229,8 @@ export default function Layout({
   const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
   const loadNotificationsSummary = useCallback(async () => {
+    const requestId = notificationsRequestIdRef.current + 1;
+    notificationsRequestIdRef.current = requestId;
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
@@ -370,14 +373,19 @@ export default function Layout({
         return reminderDate ? isSameDay(reminderDate, startOfDay) : false;
       });
 
+      if (requestId !== notificationsRequestIdRef.current) return;
       setTodayReminders(remindersForToday);
       setTodayPayments(payments);
       setTodayBirthdays(birthdays);
     } catch (error) {
-      console.error('Erro ao carregar central de notificações:', error);
-      setNotificationsError('Não foi possível carregar o resumo do dia.');
+      if (requestId === notificationsRequestIdRef.current) {
+        console.error('Erro ao carregar central de notificações:', error);
+        setNotificationsError('Não foi possível carregar o resumo do dia.');
+      }
     } finally {
-      setNotificationsLoading(false);
+      if (requestId === notificationsRequestIdRef.current) {
+        setNotificationsLoading(false);
+      }
     }
   }, []);
 
@@ -481,6 +489,7 @@ export default function Layout({
 
     return () => {
       clearInterval(interval);
+      notificationsRequestIdRef.current += 1;
     };
   }, [loadNotificationsSummary, showNotificationsDropdown]);
 

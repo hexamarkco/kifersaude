@@ -312,6 +312,8 @@ export default function ContractForm({
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const lastFetchedCnpjRef = useRef("");
+  const cnpjLookupRequestIdRef = useRef(0);
+  const adjustmentsRequestIdRef = useRef(0);
   const contractStatusOptions = useMemo(
     () => (options.contract_status || []).filter((option) => option.ativo),
     [options.contract_status],
@@ -486,6 +488,8 @@ export default function ContractForm({
   );
 
   useEffect(() => {
+    cnpjLookupRequestIdRef.current += 1;
+    adjustmentsRequestIdRef.current += 1;
     setFormData(initialFormData);
     setCommissionInstallments(buildCommissionInstallments(contract));
     setBonusDistribution(buildBonusDistribution(contract));
@@ -579,6 +583,8 @@ export default function ContractForm({
     const normalizedCnpj = formData.cnpj.replace(/\D/g, "");
 
     if (!modalidadeRequerCNPJ || normalizedCnpj.length !== 14) {
+      cnpjLookupRequestIdRef.current += 1;
+      setCnpjLoading(false);
       if (normalizedCnpj.length < 14) {
         lastFetchedCnpjRef.current = "";
       }
@@ -740,8 +746,11 @@ export default function ContractForm({
   };
 
   const handleConsultarCNPJ = async () => {
+    const requestId = cnpjLookupRequestIdRef.current + 1;
+    cnpjLookupRequestIdRef.current = requestId;
     const normalizedCnpj = formData.cnpj.replace(/\D/g, "");
     if (normalizedCnpj.length !== 14) {
+      setCnpjLoading(false);
       return;
     }
 
@@ -750,6 +759,7 @@ export default function ContractForm({
 
     try {
       const empresa = await consultarEmpresaPorCNPJ(formData.cnpj);
+      if (requestId !== cnpjLookupRequestIdRef.current) return;
       const enderecoCompleto = [
         empresa.endereco,
         empresa.numero,
@@ -771,19 +781,27 @@ export default function ContractForm({
       lastFetchedCnpjRef.current = normalizedCnpj;
     } catch (error) {
       console.error("Erro ao consultar CNPJ do contrato:", error);
-      setCnpjLookupError(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível consultar CNPJ",
-      );
+      if (requestId === cnpjLookupRequestIdRef.current) {
+        setCnpjLookupError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível consultar CNPJ",
+        );
+      }
     } finally {
-      setCnpjLoading(false);
+      if (requestId === cnpjLookupRequestIdRef.current) {
+        setCnpjLoading(false);
+      }
     }
   };
 
   const loadAdjustments = async (contractId: string) => {
+    const requestId = adjustmentsRequestIdRef.current + 1;
+    adjustmentsRequestIdRef.current = requestId;
     try {
-      setAdjustments(await listContractValueAdjustments(contractId));
+      const nextAdjustments = await listContractValueAdjustments(contractId);
+      if (requestId !== adjustmentsRequestIdRef.current) return;
+      setAdjustments(nextAdjustments);
     } catch (error) {
       console.error("Erro ao carregar ajustes:", error);
     }

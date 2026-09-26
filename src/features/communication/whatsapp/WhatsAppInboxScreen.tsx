@@ -131,6 +131,10 @@ import {
   sortChatsByInboxOrder,
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
+import {
+  QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
+  shouldContinueQueuedTextSendAfterFailure,
+} from './domain/messageSendQueue';
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
@@ -6897,8 +6901,19 @@ export default function WhatsAppInboxScreen() {
 
     return enqueueChatSend(chat.id, async () => {
       let hadSuccessfulSend = false;
+      let stopAfterDefinitiveFailure = false;
 
       for (const queued of queuedMessages) {
+        if (stopAfterDefinitiveFailure) {
+          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+            delivery_status: 'failed',
+            status_updated_at: new Date().toISOString(),
+            error_message: QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
+          });
+          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, 'failed');
+          continue;
+        }
+
         try {
           const sendResult = await whatsappMessagesRepository.sendText(chat.external_chat_id, queued.segment, {
             clientRequestId: queued.clientRequestId,
@@ -6931,6 +6946,9 @@ export default function WhatsAppInboxScreen() {
             error_message: message,
           });
           updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, status);
+          stopAfterDefinitiveFailure = !shouldContinueQueuedTextSendAfterFailure(
+            error instanceof CommWhatsAppAmbiguousSendError,
+          );
         }
       }
 

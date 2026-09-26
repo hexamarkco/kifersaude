@@ -23,8 +23,8 @@ import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadRemi
 import { getBadgeStyle } from '../../../../lib/colorUtils';
 import {
   listRemindersForLeadContext,
+  type ReminderContextItem,
   updateReminder,
-  type Reminder,
 } from '../../../reminders';
 import { toast } from '../../../../lib/toast';
 import type {
@@ -147,7 +147,7 @@ export default function WhatsAppLeadDrawer({
   );
 
   const agendaRequestIdRef = useRef(0);
-  const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
+  const [agendaReminders, setAgendaReminders] = useState<ReminderContextItem[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaError, setAgendaError] = useState<string | null>(null);
   const [schedulerOpen, setSchedulerOpen] = useState(false);
@@ -228,7 +228,7 @@ export default function WhatsAppLeadDrawer({
       const { leadReminders, contractReminders } =
         await listRemindersForLeadContext(leadId, contractIds);
 
-      const next = new Map<string, Reminder>();
+      const next = new Map<string, ReminderContextItem>();
       [...leadReminders, ...contractReminders].forEach((reminder) => {
         next.set(reminder.id, reminder);
       });
@@ -295,7 +295,7 @@ export default function WhatsAppLeadDrawer({
     }
   }, [linkedLead?.id, loadAgendaReminders]);
 
-  const openAgendaReschedule = (reminder: Reminder) => {
+  const openAgendaReschedule = (reminder: ReminderContextItem) => {
     setAgendaRescheduleTargetId(reminder.id);
     setAgendaRescheduleValue(formatDateTimeForInput(reminder.data_lembrete));
   };
@@ -305,7 +305,7 @@ export default function WhatsAppLeadDrawer({
     setAgendaRescheduleValue('');
   };
 
-  const handleAgendaToggleReadAction = async (reminder: Reminder) => {
+  const handleAgendaToggleReadAction = async (reminder: ReminderContextItem) => {
     if (!agendaMutationLockRef.current.tryAcquire(reminder.id)) {
       return;
     }
@@ -327,7 +327,7 @@ export default function WhatsAppLeadDrawer({
     }
   };
 
-  const handleAgendaRescheduleSubmit = async (reminder: Reminder) => {
+  const handleAgendaRescheduleSubmit = async (reminder: ReminderContextItem) => {
     if (!agendaRescheduleValue) {
       toast.warning('Informe a nova data e hora do lembrete.');
       return;
@@ -355,7 +355,7 @@ export default function WhatsAppLeadDrawer({
     }
   };
 
-  const renderAgendaReminderItem = (reminder: Reminder) => {
+  const renderAgendaReminderItem = (reminder: ReminderContextItem) => {
     const isRescheduling = agendaRescheduleLoading[reminder.id];
     const isToggling = agendaActionLoading[reminder.id];
     const isOpen = agendaRescheduleTargetId === reminder.id;

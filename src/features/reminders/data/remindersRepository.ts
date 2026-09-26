@@ -12,6 +12,11 @@ import { normalizeReminderTitle, normalizeReminderType } from '../shared/reminde
 
 type ReminderPatch = Database['public']['Tables']['reminders']['Update'];
 
+export type ReminderContextItem = Pick<
+  Reminder,
+  'id' | 'tipo' | 'titulo' | 'descricao' | 'data_lembrete' | 'lido'
+>;
+
 export type ReminderCreateInput =
   Database['public']['Tables']['reminders']['Insert'];
 
@@ -22,6 +27,12 @@ export type ReminderRealtimeChange = {
 };
 
 const normalizeReminder = (reminder: Reminder): Reminder => ({
+  ...reminder,
+  tipo: normalizeReminderType(reminder.tipo),
+  titulo: normalizeReminderTitle(reminder.titulo),
+});
+
+const normalizeReminderContext = (reminder: ReminderContextItem): ReminderContextItem => ({
   ...reminder,
   tipo: normalizeReminderType(reminder.tipo),
   titulo: normalizeReminderTitle(reminder.titulo),
@@ -58,25 +69,26 @@ export async function listReminders(): Promise<Reminder[]> {
 const listRemindersByRelation = (
   relation: 'lead_id' | 'contract_id',
   ids: string[],
-): Promise<Reminder[]> => {
+): Promise<ReminderContextItem[]> => {
   if (ids.length === 0) return Promise.resolve([]);
-  return fetchAllPages<Reminder>(async (from, to) => {
+  return fetchAllPages<ReminderContextItem>(async (from, to) => {
     const result = await databaseClient
       .from('reminders')
-      .select('*')
+      .select('id, tipo, titulo, descricao, data_lembrete, lido')
       .in(relation, ids)
+      .eq('lido', false)
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
-      .overrideTypes<Reminder[], { merge: false }>();
+      .overrideTypes<ReminderContextItem[], { merge: false }>();
     return result;
-  }).then((reminders) => reminders.map(normalizeReminder));
+  }).then((reminders) => reminders.map(normalizeReminderContext));
 };
 
 export async function listRemindersForLeadContext(
   leadId: string,
   contractIds: string[],
-): Promise<{ leadReminders: Reminder[]; contractReminders: Reminder[] }> {
+): Promise<{ leadReminders: ReminderContextItem[]; contractReminders: ReminderContextItem[] }> {
   const [leadReminders, contractReminders] = await Promise.all([
     listRemindersByRelation('lead_id', [leadId]),
     listRemindersByRelation('contract_id', contractIds),

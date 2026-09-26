@@ -176,6 +176,7 @@ export default function WhatsAppAgendaModal({
   const [dedupingGroupKey, setDedupingGroupKey] = useState<string | null>(null);
   const [isDedupingAll, setIsDedupingAll] = useState(false);
   const dedupeActionLockRef = useRef(new KeyedActionLock());
+  const quickSchedulingReminderIdRef = useRef<string | null>(null);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
@@ -439,8 +440,10 @@ export default function WhatsAppAgendaModal({
 
         return next;
       });
+      return true;
     } catch (syncError) {
       console.error('[WhatsAppAgendaModal] erro ao sincronizar proximo follow-up:', syncError);
+      return false;
     }
   }, []);
 
@@ -527,11 +530,11 @@ export default function WhatsAppAgendaModal({
   const handleMarkAsRead = useCallback(async (
     reminderId: string,
     currentStatus: boolean,
-    options?: { queueNextReminderPrompt?: boolean },
+    options?: { queueNextReminderPrompt?: boolean; allowQuickSchedule?: boolean; suppressErrorToast?: boolean },
   ) => {
     if (
       updatingReminderIdsRef.current.has(reminderId)
-      || quickSchedulingAction?.reminderId === reminderId
+      || (quickSchedulingAction?.reminderId === reminderId && !options?.allowQuickSchedule)
     ) {
       return false;
     }
@@ -600,7 +603,9 @@ export default function WhatsAppAgendaModal({
       return true;
     } catch (updateError) {
       console.error('[WhatsAppAgendaModal] erro ao atualizar lembrete:', updateError);
-      toast.error('Não foi possível atualizar este item.');
+      if (!options?.suppressErrorToast) {
+        toast.error('Não foi possível atualizar este item.');
+      }
       return false;
     } finally {
       updatingReminderIdsRef.current.delete(reminderId);
@@ -609,7 +614,7 @@ export default function WhatsAppAgendaModal({
   }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, quickSchedulingAction?.reminderId, reminders, updateLeadNextReturnDate]);
 
   const handleQuickSchedule = useCallback(async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
-    if (reminder.lido) {
+    if (reminder.lido || quickSchedulingReminderIdRef.current) {
       return;
     }
 
@@ -622,17 +627,10 @@ export default function WhatsAppAgendaModal({
     const nextReminderDate = addBusinessDaysSkippingWeekends(reminder.data_lembrete, daysAhead);
     const nextReminderDateIso = nextReminderDate.toISOString();
 
+    quickSchedulingReminderIdRef.current = reminder.id;
     setQuickSchedulingAction({ reminderId: reminder.id, daysAhead });
 
     try {
-      const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
-        queueNextReminderPrompt: false,
-      });
-
-      if (!markedAsRead) {
-        return;
-      }
-
       const createdReminder = await createReminder({
         lead_id: leadId,
         contract_id: reminder.contract_id ?? null,
@@ -646,19 +644,33 @@ export default function WhatsAppAgendaModal({
         tempo_estimado_minutos: reminder.tempo_estimado_minutos ?? null,
       });
 
-      if (createdReminder) {
-        pendingRefreshIdsRef.current.add(createdReminder.id);
-        setReminders((current) =>
-          [...current, createdReminder].sort(compareRemindersByDueAtThenAlphabetical),
-        );
+      if (!createdReminder) {
+        toast.error('Não foi possível confirmar o novo lembrete. O lembrete atual continua pendente.');
+        return;
       }
 
-      await updateLeadNextReturnDate(leadId);
-      toast.success(`Novo lembrete criado para +${daysAhead} dia(s) util(eis).`);
+      pendingRefreshIdsRef.current.add(createdReminder.id);
+      setReminders((current) =>
+        [...current, createdReminder].sort(compareRemindersByDueAtThenAlphabetical),
+      );
+
+      const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
+        queueNextReminderPrompt: false,
+        allowQuickSchedule: true,
+        suppressErrorToast: true,
+      });
+      const synchronized = await updateLeadNextReturnDate(leadId);
+
+      if (!markedAsRead || !synchronized) {
+        toast.warning('Novo lembrete criado, mas alguns dados do anterior ainda precisam de atenção.');
+      } else {
+        toast.success(`Novo lembrete criado para +${daysAhead} dia(s) util(eis).`);
+      }
     } catch (scheduleError) {
       console.error('[WhatsAppAgendaModal] erro ao criar lembrete rapido:', scheduleError);
       toast.error('Não foi possível criar o novo lembrete rápido.');
     } finally {
+      quickSchedulingReminderIdRef.current = null;
       setQuickSchedulingAction(null);
     }
   }, [compareRemindersByDueAtThenAlphabetical, getLeadIdForReminder, handleMarkAsRead, updateLeadNextReturnDate]);

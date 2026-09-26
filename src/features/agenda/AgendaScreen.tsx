@@ -163,6 +163,7 @@ export default function AgendaScreen() {
   const [savingTask, setSavingTask] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const quickSchedulingReminderIdRef = useRef<string | null>(null);
   const loadRemindersRequestIdRef = useRef(0);
   const leadInfoRequestIdRef = useRef(0);
   const openLeadRequestIdRef = useRef(0);
@@ -362,8 +363,10 @@ export default function AgendaScreen() {
 
         return next;
       });
+      return true;
     } catch (syncError) {
       console.error("Erro ao sincronizar proximo follow-up do lead:", syncError);
+      return false;
     }
   };
 
@@ -435,7 +438,7 @@ export default function AgendaScreen() {
   const handleMarkAsRead = async (
     reminderId: string,
     currentStatus: boolean,
-    options?: { queueNextReminderPrompt?: boolean },
+    options?: { queueNextReminderPrompt?: boolean; suppressErrorToast?: boolean },
   ) => {
     try {
       pendingRefreshIdsRef.current.add(reminderId);
@@ -504,13 +507,15 @@ export default function AgendaScreen() {
       return true;
     } catch (updateError) {
       console.error("Erro ao atualizar lembrete:", updateError);
-      toast.error("Erro ao atualizar lembrete.");
+      if (!options?.suppressErrorToast) {
+        toast.error("Erro ao atualizar lembrete.");
+      }
       return false;
     }
   };
 
   const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
-    if (reminder.lido) {
+    if (reminder.lido || quickSchedulingReminderIdRef.current) {
       return;
     }
 
@@ -523,17 +528,10 @@ export default function AgendaScreen() {
     const nextReminderDate = addBusinessDaysSkippingWeekends(reminder.data_lembrete, daysAhead);
     const nextReminderDateIso = nextReminderDate.toISOString();
 
+    quickSchedulingReminderIdRef.current = reminder.id;
     setQuickSchedulingAction({ reminderId: reminder.id, daysAhead });
 
     try {
-      const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
-        queueNextReminderPrompt: false,
-      });
-
-      if (!markedAsRead) {
-        return;
-      }
-
       const createdReminder = await createReminder({
         lead_id: leadId,
         contract_id: reminder.contract_id ?? undefined,
@@ -545,23 +543,32 @@ export default function AgendaScreen() {
         prioridade: reminder.prioridade,
       });
 
-      if (createdReminder) {
-        pendingRefreshIdsRef.current.add(createdReminder.id);
+      if (!createdReminder) {
+        toast.error("Não foi possível confirmar o novo lembrete. O lembrete atual continua pendente.");
+        return;
       }
 
-      await updateLeadNextReturnDate(leadId);
+      pendingRefreshIdsRef.current.add(createdReminder.id);
+      setReminders((current) =>
+        [...current, createdReminder].sort(
+          (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
+        ),
+      );
 
-      if (createdReminder) {
-        setReminders((current) =>
-          [...current, createdReminder].sort(
-            (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
-          ),
-        );
+      const markedAsRead = await handleMarkAsRead(reminder.id, reminder.lido, {
+        queueNextReminderPrompt: false,
+        suppressErrorToast: true,
+      });
+      const synchronized = await updateLeadNextReturnDate(leadId);
+
+      if (!markedAsRead || !synchronized) {
+        toast.warning("Novo lembrete criado, mas alguns dados do anterior ainda precisam de atenção.");
       }
     } catch (scheduleError) {
       console.error("Erro ao agendar lembrete rápido:", scheduleError);
       toast.error("Não foi possível criar o novo lembrete rápido.");
     } finally {
+      quickSchedulingReminderIdRef.current = null;
       setQuickSchedulingAction(null);
     }
   };

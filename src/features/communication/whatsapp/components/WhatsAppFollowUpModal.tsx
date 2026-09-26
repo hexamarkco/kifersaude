@@ -100,6 +100,8 @@ export default function WhatsAppFollowUpModal({
   const [localCustomInstructions, setLocalCustomInstructions] = useState(customInstructions);
   const recognitionRef = useRef<unknown>(null);
   const wasOpenRef = useRef(false);
+  const sessionIdRef = useRef(0);
+  const refinementRequestIdRef = useRef(0);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
   const hasVariations = variations.length > 0;
   const hasAiInsight = Boolean(aiContextRationale || emotionalContext?.detected);
@@ -122,6 +124,18 @@ export default function WhatsAppFollowUpModal({
 
     return () => window.clearTimeout(timeoutId);
   }, [customInstructions, isOpen, localCustomInstructions, onChangeCustomInstructions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const sessionId = ++sessionIdRef.current;
+    return () => {
+      if (sessionId === sessionIdRef.current) {
+        sessionIdRef.current += 1;
+        refinementRequestIdRef.current += 1;
+      }
+    };
+  }, [isOpen]);
 
   const commitCustomInstructions = (nextValue = localCustomInstructions) => {
     if (nextValue !== customInstructions) {
@@ -176,6 +190,20 @@ export default function WhatsAppFollowUpModal({
       setIsRecording(false);
     };
     recognitionRef.current = recognitionInstance;
+
+    return () => {
+      recognitionInstance.onresult = null;
+      recognitionInstance.onerror = null;
+      recognitionInstance.onend = null;
+      try {
+        recognitionInstance.stop();
+      } catch {
+        // A captura ainda não iniciada pode rejeitar stop(); não há nada a limpar.
+      }
+      if (recognitionRef.current === recognitionInstance) {
+        recognitionRef.current = null;
+      }
+    };
   }, []);
 
   const handleSimpleRefinement = async (refinementTone: CommWhatsAppRewriteTone) => {
@@ -184,17 +212,23 @@ export default function WhatsAppFollowUpModal({
       return;
     }
 
+    const sessionId = sessionIdRef.current;
+    const requestId = ++refinementRequestIdRef.current;
     setRefiningActionId(refinementTone);
     try {
       const result = await whatsappFollowUpService.rewrite({
         message: currentMessage,
         tone: refinementTone,
       });
+      if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
       onChangeValue(result.text ?? currentMessage);
     } catch (error) {
+      if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar a mensagem sugerida.');
     } finally {
-      setRefiningActionId(null);
+      if (sessionId === sessionIdRef.current && requestId === refinementRequestIdRef.current) {
+        setRefiningActionId(null);
+      }
     }
   };
 
@@ -204,9 +238,12 @@ export default function WhatsAppFollowUpModal({
       return;
     }
 
+    const sessionId = sessionIdRef.current;
+    const requestId = ++refinementRequestIdRef.current;
     setRefiningActionId(action.id);
     try {
       if (!chatId) {
+        if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
         toast.error('Selecione uma conversa para refinar com contexto.');
         return;
       }
@@ -215,11 +252,15 @@ export default function WhatsAppFollowUpModal({
         currentMessage,
         adjustmentInstruction: action.instruction,
       });
+      if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
       onChangeValue(result.text ?? currentMessage);
     } catch (error) {
+      if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
     } finally {
-      setRefiningActionId(null);
+      if (sessionId === sessionIdRef.current && requestId === refinementRequestIdRef.current) {
+        setRefiningActionId(null);
+      }
     }
   };
 
@@ -233,21 +274,27 @@ export default function WhatsAppFollowUpModal({
       setIsRecording(false);
 
       if (transcript) {
+        const sessionId = sessionIdRef.current;
+        const requestId = ++refinementRequestIdRef.current;
         setIsCorrecting(true);
         try {
           const corrected = await whatsappFollowUpService.rewrite({
             message: transcript,
             tone: 'grammar',
           });
+          if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
           const nextInstructions = localCustomInstructions + (localCustomInstructions ? ' ' : '') + corrected.text;
           setLocalCustomInstructions(nextInstructions);
           onChangeCustomInstructions(nextInstructions);
         } catch {
+          if (sessionId !== sessionIdRef.current || requestId !== refinementRequestIdRef.current) return;
           const nextInstructions = localCustomInstructions + (localCustomInstructions ? ' ' : '') + transcript;
           setLocalCustomInstructions(nextInstructions);
           onChangeCustomInstructions(nextInstructions);
         } finally {
-          setIsCorrecting(false);
+          if (sessionId === sessionIdRef.current && requestId === refinementRequestIdRef.current) {
+            setIsCorrecting(false);
+          }
         }
       }
     } else {

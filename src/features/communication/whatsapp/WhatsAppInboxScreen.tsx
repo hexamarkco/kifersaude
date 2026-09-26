@@ -7913,6 +7913,8 @@ export default function WhatsAppInboxScreen() {
   }, [quickReplyIntegration]);
 
   const handleCloseFollowUpModal = useCallback(() => {
+    followUpGenerationRequestIdRef.current += 1;
+    setGeneratingFollowUp(false);
     setFollowUpModalOpen(false);
   }, []);
 

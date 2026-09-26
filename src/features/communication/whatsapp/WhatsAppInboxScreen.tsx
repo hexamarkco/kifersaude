@@ -6251,6 +6251,14 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    // O bootstrap já carrega chats e estado operacional na primeira entrada.
+    // Enquanto ele ainda não concluiu, este efeito não deve repetir a mesma
+    // consulta; depois da primeira carga concluída, ele continua funcionando
+    // como atualização rápida ao voltar para a janela.
+    if (latestChatsLoadedAtRef.current === 0) {
+      return;
+    }
+
     // BUG FIX (BUG #6): throttle do refocus refresh. Evita disparar
     // loadChats() em cima de uma mutation otimista recente. A janela de
     // 3s alinha com o objetivo do polling normal sem multiplicar fontes.

@@ -228,7 +228,17 @@ export const mergeUniqueChats = (...collections: CommWhatsAppChat[][]) => {
   const chatsById = new Map<string, CommWhatsAppChat>();
   collections.forEach((items) => {
     items.forEach((chat) => {
-      if (!chatsById.has(chat.id)) chatsById.set(chat.id, chat);
+      const current = chatsById.get(chat.id);
+      if (!current) {
+        chatsById.set(chat.id, chat);
+        return;
+      }
+
+      // A busca local costuma chegar antes da resposta remota, mas pode estar
+      // com uma identidade antiga. Mesclar a segunda cópia evita descartar um
+      // nome salvo que acabou de chegar do banco e mantém a prévia mais nova.
+      const stabilized = stabilizeChatIdentityForLocalMerge(chat, current);
+      chatsById.set(chat.id, preserveUsefulChatPreview(stabilized, current));
     });
   });
   return Array.from(chatsById.values());

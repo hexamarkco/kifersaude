@@ -164,11 +164,36 @@ test('ranks accent-insensitive names before phone-only matches', () => {
   assert.deepEqual(rankChatsBySearch([nameMatch, phoneMatch], '99999').map((chat) => chat.id), ['phone']);
 });
 
-test('keeps the first copy when chat collections overlap', () => {
-  const first = createChat({ id: 'same', display_name: 'Primeiro' });
-  const duplicate = createChat({ id: 'same', display_name: 'Segundo' });
+test('merges duplicate search results without losing a saved contact name', () => {
+  const first = createChat({
+    id: 'same',
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: null,
+  });
+  const duplicate = createChat({
+    id: 'same',
+    display_name: 'Mariangela',
+    saved_contact_name: 'Mariangela',
+  });
 
-  assert.equal(mergeUniqueChats([first], [duplicate])[0].display_name, 'Primeiro');
+  const result = mergeUniqueChats([first], [duplicate])[0];
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
+test('keeps the current preview when a duplicate search result is older', () => {
+  const first = createChat({
+    id: 'same',
+    last_message_text: 'Mensagem mais recente',
+    last_message_at: '2026-09-08T12:05:00.000Z',
+  });
+  const duplicate = createChat({
+    id: 'same',
+    last_message_text: 'Mensagem antiga',
+    last_message_at: '2026-09-08T12:00:00.000Z',
+  });
+
+  assert.equal(mergeUniqueChats([first], [duplicate])[0].last_message_text, 'Mensagem mais recente');
 });
 
 test('uses the group name and never falls back to a phone identity for groups', () => {

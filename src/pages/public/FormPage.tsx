@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, Check, MapPin, MessageCircle, Moon, ShieldCheck, Sun } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, MessageCircle, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react';
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
@@ -64,6 +64,8 @@ export default function FormPage() {
   const { slug } = useParams<{ slug: string }>();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [form, setForm] = useState<PublicForm | null>(null);
   const [steps, setSteps] = useState<PublicFormStep[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
@@ -113,17 +115,40 @@ export default function FormPage() {
     }
 
     let mounted = true;
-    void formsService.getPublicForm(slug).then((result) => {
-      if (!mounted) return;
-      setForm(result.form);
-      setSteps(result.steps);
-      setLoading(false);
-    });
+    setLoading(true);
+    setLoadError(false);
+    setForm(null);
+    setSteps([]);
+    setStepIndex(0);
+    setAnswers({});
+    setTextDraft('');
+    setMultiDraft([]);
+    setContact(EMPTY_CONTACT);
+    setGeo(EMPTY_GEO);
+    setHoneypot('');
+    setSubmitted(false);
+
+    void formsService.getPublicForm(slug)
+      .then((result) => {
+        if (!mounted) return;
+        setForm(result.form);
+        setSteps(result.steps);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        console.error('Erro ao carregar formulário público:', error);
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      });
 
     return () => {
       mounted = false;
     };
-  }, [slug]);
+  }, [loadAttempt, slug]);
 
   const sequence = useMemo<WizardEntry[]>(() => {
     const questions = steps.filter((step) => step.step_type !== 'contact');
@@ -298,6 +323,17 @@ export default function FormPage() {
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
           </div>
+        ) : loadError ? (
+          <PublicEmptyState
+            icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}
+            title="Não foi possível carregar este formulário."
+            description="Verifique sua conexão e tente novamente."
+          >
+            <Button variant="secondary" size="sm" onClick={() => setLoadAttempt((current) => current + 1)}>
+              <RefreshCw className="kds-control-icon" />
+              <span>Tentar novamente</span>
+            </Button>
+          </PublicEmptyState>
         ) : !form ? (
           <PublicEmptyState
             icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}

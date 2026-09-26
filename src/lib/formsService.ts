@@ -206,7 +206,7 @@ export const formsService = {
       return { form: form as PublicForm, steps: (steps as PublicFormStep[] | null) ?? [] };
     } catch (error) {
       console.error('Error loading public form:', error);
-      return { form: null, steps: [] };
+      throw error;
     }
   },
 

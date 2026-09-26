@@ -18,6 +18,7 @@ type ListQuery = {
   select: MockFunction<[string], ListQuery>;
   eq: MockFunction<[string, string], ListQuery>;
   order: MockFunction<[string, { ascending: boolean }], Promise<QueryResult>>;
+  maybeSingle: MockFunction<[], Promise<QueryResult>>;
 };
 
 type SubmissionQuery = {
@@ -35,6 +36,7 @@ const mocks = vi.hoisted(() => {
   formsQuery.select = createMock<[string], ListQuery>();
   formsQuery.eq = createMock<[string, string], ListQuery>();
   formsQuery.order = createMock<[string, { ascending: boolean }], Promise<QueryResult>>();
+  formsQuery.maybeSingle = createMock<[], Promise<QueryResult>>();
   formsQuery.select.mockReturnValue(formsQuery);
   formsQuery.eq.mockReturnValue(formsQuery);
 
@@ -42,6 +44,7 @@ const mocks = vi.hoisted(() => {
   stepsQuery.select = createMock<[string], ListQuery>();
   stepsQuery.eq = createMock<[string, string], ListQuery>();
   stepsQuery.order = createMock<[string, { ascending: boolean }], Promise<QueryResult>>();
+  stepsQuery.maybeSingle = createMock<[], Promise<QueryResult>>();
   stepsQuery.select.mockReturnValue(stepsQuery);
   stepsQuery.eq.mockReturnValue(stepsQuery);
 
@@ -75,6 +78,7 @@ import { formsService } from '../formsService';
 const resetQuery = () => {
   mocks.from.mockClear();
   mocks.formsQuery.order.mockClear();
+  mocks.formsQuery.maybeSingle.mockClear();
   mocks.stepsQuery.order.mockClear();
   mocks.submissionsQuery.order.mockClear();
   mocks.submissionsQuery.limit.mockClear();
@@ -102,4 +106,12 @@ test('propaga falha ao carregar as respostas do formulário', async () => {
   mocks.submissionsQuery.limit.mockResolvedValue({ data: null, error });
 
   await assert.rejects(formsService.getFormSubmissions('form-1'), error);
+});
+
+test('propaga falha ao carregar um formulário público', async () => {
+  resetQuery();
+  const error = new Error('formulário indisponível');
+  mocks.formsQuery.maybeSingle.mockResolvedValue({ data: null, error });
+
+  await assert.rejects(formsService.getPublicForm('formulario'), error);
 });

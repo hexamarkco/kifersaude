@@ -226,6 +226,7 @@ export default function AiSandboxChatScreen() {
     }
     let cancelled = false;
     setMessagesLoading(true);
+    setGeneratingReply(false);
     setActiveTestRun(null);
     Promise.all([
       aiSandboxChatService.listMessages(activeConversationId),
@@ -303,6 +304,7 @@ export default function AiSandboxChatScreen() {
 
   const handleNewConversation = () => {
     clearPendingTimer();
+    setGeneratingReply(false);
     activeConversationIdRef.current = null;
     setActiveConversationId(null);
     setMessages([]);
@@ -315,6 +317,7 @@ export default function AiSandboxChatScreen() {
   const handleSelectConversation = (conversationId: string) => {
     if (conversationId === activeConversationId) return;
     clearPendingTimer();
+    setGeneratingReply(false);
     activeConversationIdRef.current = conversationId;
     setActiveConversationId(conversationId);
   };
@@ -332,6 +335,7 @@ export default function AiSandboxChatScreen() {
   };
 
   const triggerGenerateReply = useCallback(async (conversationId: string) => {
+    if (activeConversationIdRef.current !== conversationId) return;
     setGeneratingReply(true);
     try {
       const generated = await aiSandboxChatService.generateReply(conversationId);
@@ -384,6 +388,7 @@ export default function AiSandboxChatScreen() {
     const text = draft.trim();
     if (!text || sendingDraft || !user) return;
 
+    const handoffAtSend = isHandedOff;
     setError(null);
     setSendingDraft(true);
     setDraft('');
@@ -400,11 +405,12 @@ export default function AiSandboxChatScreen() {
       }
 
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
+      if (activeConversationIdRef.current !== conversationId) return;
       mergeMessage(leadMessage);
 
       // Depois do handoff a IA nao responde mais — o lead pode mandar mais
       // mensagens (ex: agradecendo), mas ninguem gera resposta automatica.
-      if (isHandedOff) return;
+      if (handoffAtSend) return;
 
       // Reinicia a contagem a cada mensagem nova do lead — dá tempo de quem está
       // testando mandar mensagens picotadas antes da IA responder de uma vez.
@@ -441,7 +447,6 @@ export default function AiSandboxChatScreen() {
       setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
     } finally {
       setStartingApproach(false);
-      setGeneratingReply(false);
     }
   };
 

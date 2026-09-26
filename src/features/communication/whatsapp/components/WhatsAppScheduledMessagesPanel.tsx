@@ -11,6 +11,7 @@ import type {
   CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceStatus,
 } from '../domain/types';
+import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
 type WhatsAppScheduledMessagesPanelProps = {
@@ -122,7 +123,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
   const [sequences, setSequences] = useState<CommWhatsAppScheduledSequence[]>([]);
   const [loading, setLoading] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [activeActionIds, setActiveActionIds] = useState<Set<string>>(() => new Set());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
   const [editingSequence, setEditingSequence] = useState<CommWhatsAppScheduledSequence | null>(null);
   const [activeView, setActiveView] = useState<ScheduledMessagesView>('upcoming');
@@ -130,6 +131,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const loadRequestIdRef = useRef(0);
+  const scheduledActionLockRef = useRef(new KeyedActionLock());
 
   const isFiltered = Boolean(chatId || phoneDigits);
 
@@ -197,8 +199,37 @@ export default function WhatsAppScheduledMessagesPanel({
     };
   }, [loadMessages]);
 
+  const beginScheduledAction = useCallback((id: string) => {
+    if (!scheduledActionLockRef.current.tryAcquire(id)) {
+      return false;
+    }
+
+    setActiveActionIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
+    return true;
+  }, []);
+
+  const endScheduledAction = useCallback((id: string) => {
+    scheduledActionLockRef.current.release(id);
+    setActiveActionIds((current) => {
+      if (!current.has(id)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   const handleCancel = useCallback(async (id: string) => {
-    setCancellingId(id);
+    if (!beginScheduledAction(id)) {
+      return;
+    }
+
     try {
       await commWhatsAppService.cancelScheduledMessage(id, 'Cancelado pelo usuário');
       toast.success('Mensagem agendada cancelada');
@@ -207,12 +238,15 @@ export default function WhatsAppScheduledMessagesPanel({
       const message = error instanceof Error ? error.message : 'Erro ao cancelar';
       toast.error(message);
     } finally {
-      setCancellingId(null);
+      endScheduledAction(id);
     }
-  }, [loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, loadMessages]);
 
   const handleDelete = useCallback(async (id: string) => {
-    setCancellingId(id);
+    if (!beginScheduledAction(id)) {
+      return;
+    }
+
     try {
       await commWhatsAppService.deleteScheduledMessage(id);
       toast.success('Mensagem agendada excluída');
@@ -221,12 +255,15 @@ export default function WhatsAppScheduledMessagesPanel({
       const message = error instanceof Error ? error.message : 'Erro ao excluir';
       toast.error(message);
     } finally {
-      setCancellingId(null);
+      endScheduledAction(id);
     }
-  }, [loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, loadMessages]);
 
   const handleCancelSequence = useCallback(async (id: string) => {
-    setCancellingId(id);
+    if (!beginScheduledAction(id)) {
+      return;
+    }
+
     try {
       await commWhatsAppService.cancelScheduledSequence(id, 'Cancelada pelo usuário');
       toast.success('Sequência cancelada');
@@ -235,12 +272,15 @@ export default function WhatsAppScheduledMessagesPanel({
       const message = error instanceof Error ? error.message : 'Erro ao cancelar sequência';
       toast.error(message);
     } finally {
-      setCancellingId(null);
+      endScheduledAction(id);
     }
-  }, [loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, loadMessages]);
 
   const handleRetrySequence = useCallback(async (id: string) => {
-    setCancellingId(id);
+    if (!beginScheduledAction(id)) {
+      return;
+    }
+
     try {
       await commWhatsAppService.retryScheduledSequence(id);
       toast.success('Sequência retomada');
@@ -249,9 +289,9 @@ export default function WhatsAppScheduledMessagesPanel({
       const message = error instanceof Error ? error.message : 'Erro ao retomar sequência';
       toast.error(message);
     } finally {
-      setCancellingId(null);
+      endScheduledAction(id);
     }
-  }, [loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, loadMessages]);
 
   const viewCounts = useMemo(() => {
     const counts: Record<ScheduledMessagesView, number> = {
@@ -492,7 +532,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledSequenceItem
                       key={sequence.id}
                       sequence={sequence}
-                      cancelling={cancellingId === sequence.id}
+                      cancelling={activeActionIds.has(sequence.id)}
                       onEdit={() => setEditingSequence(sequence)}
                       onCancel={() => void handleCancelSequence(sequence.id)}
                       onRetry={() => void handleRetrySequence(sequence.id)}
@@ -518,7 +558,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledMessageItem
                       key={message.id}
                       message={message}
-                      cancelling={cancellingId === message.id}
+                      cancelling={activeActionIds.has(message.id)}
                       onEdit={() => setEditingMessage(message)}
                       onCancel={() => void handleCancel(message.id)}
                       onDelete={() => void handleDelete(message.id)}

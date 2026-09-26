@@ -18,8 +18,8 @@ import {
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { CommissionCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
-import type { Contract } from "../contracts";
 import { listActiveCommissionContracts } from "./data/commissionRepository";
+import type { CommissionContract } from "./domain/types";
 import CommissionMonthGrid from "./components/CommissionMonthGrid";
 import CommissionSelectedDatePanel from "./components/CommissionSelectedDatePanel";
 import {
@@ -33,7 +33,7 @@ import {
 } from "./shared/commissionCalendarUtils";
 
 export default function CommissionCalendarScreen() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts] = useState<CommissionContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => {

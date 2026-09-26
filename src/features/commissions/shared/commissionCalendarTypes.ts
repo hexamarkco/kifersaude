@@ -1,4 +1,4 @@
-import type { Contract } from "../../contracts";
+import type { CommissionContract } from "../domain/types";
 
 export type CommissionEventType = "comissao" | "bonificacao";
 
@@ -7,7 +7,7 @@ export type CommissionEvent = {
   date: string;
   type: CommissionEventType;
   value: number;
-  contract: Contract;
+  contract: CommissionContract;
   installmentIndex?: number;
   installmentCount?: number;
 };

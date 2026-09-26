@@ -1,4 +1,4 @@
-import type { Contract } from "../../contracts";
+import type { CommissionContract } from "../domain/types";
 import { getContractBonusSummary } from "../../../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../../../lib/contractCommission";
 import type { CommissionEvent } from "./commissionCalendarTypes";
@@ -50,7 +50,7 @@ const buildSingleCommissionEvent = ({
   installmentIndex,
   value,
 }: {
-  contract: Contract;
+  contract: CommissionContract;
   date: Date;
   installmentCount?: number;
   installmentIndex?: number;
@@ -68,7 +68,7 @@ const buildSingleCommissionEvent = ({
 });
 
 export const buildCommissionEvents = (
-  contracts: Contract[],
+  contracts: CommissionContract[],
 ): CommissionEvent[] => {
   const mappedEvents: CommissionEvent[] = [];
 

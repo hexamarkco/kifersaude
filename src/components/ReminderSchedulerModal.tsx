@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import type { Lead } from '../features/leads';
 import { touchLeadContact } from '../features/leads';
@@ -95,6 +95,7 @@ export default function ReminderSchedulerModal({
   const [type, setType] = useState<ManualReminderType>(defaultType);
   const [priority, setPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>(defaultPriority);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const formattedLeadPhone = useMemo(() => {
     if (!lead.telefone) return null;
@@ -107,6 +108,8 @@ export default function ReminderSchedulerModal({
   }, [lead.telefone]);
 
   const handleSchedule = async () => {
+    if (savingRef.current) return;
+
     if (!scheduledFor) {
       toast.warning('Por favor, informe a data e hora do lembrete.');
       return;
@@ -118,52 +121,73 @@ export default function ReminderSchedulerModal({
       return;
     }
 
+    const reminderDateUTC = convertLocalToUTC(scheduledFor);
+    if (!reminderDateUTC) {
+      toast.warning('Data do lembrete inválida. Verifique e tente novamente.');
+      return;
+    }
+
+    const trimmedDescription = description.trim();
+    const finalDescription = trimmedDescription ? trimmedDescription : null;
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
-      const reminderDateUTC = convertLocalToUTC(scheduledFor);
-
-      if (!reminderDateUTC) {
-      toast.warning('Data do lembrete inválida. Verifique e tente novamente.');
+      try {
+        await createReminder({
+          lead_id: lead.id,
+          tipo: type,
+          titulo: trimmedTitle,
+          descricao: finalDescription,
+          data_lembrete: reminderDateUTC,
+          lido: false,
+          prioridade: priority,
+        });
+      } catch (error) {
+        console.error('Erro ao criar lembrete manual:', error);
+        toast.error('Erro ao criar lembrete. Tente novamente.');
         return;
       }
 
-      const trimmedDescription = description.trim();
-      const finalDescription = trimmedDescription ? trimmedDescription : null;
+      let nextReturnDate = reminderDateUTC;
+      let synchronizationFailed = false;
 
-      await createReminder({
-        lead_id: lead.id,
-        tipo: type,
-        titulo: trimmedTitle,
-        descricao: finalDescription,
-        data_lembrete: reminderDateUTC,
-        lido: false,
-        prioridade: priority,
-      });
+      try {
+        nextReturnDate = (await syncLeadNextReturnFromUpcomingReminder(lead.id)) || reminderDateUTC;
+      } catch (error) {
+        synchronizationFailed = true;
+        console.error('Lembrete criado, mas nao foi possivel sincronizar a proxima data do lead:', error);
+      }
 
-      const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(lead.id);
+      try {
+        await touchLeadContact(lead.id);
+      } catch (error) {
+        synchronizationFailed = true;
+        console.error('Lembrete criado, mas nao foi possivel atualizar o contato do lead:', error);
+      }
 
-      await touchLeadContact(lead.id);
+      if (synchronizationFailed) {
+        toast.warning('Lembrete criado, mas alguns dados do lead ainda nao foram sincronizados.');
+      }
 
       onScheduled?.({
-        reminderDate: nextReturnDate || reminderDateUTC,
+        reminderDate: nextReturnDate,
         type,
         title: trimmedTitle,
         description: finalDescription,
         priority,
       });
       onClose();
-    } catch (error) {
-      console.error('Erro ao criar lembrete manual:', error);
-      toast.error('Erro ao criar lembrete. Tente novamente.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
-      <DialogHeader onClose={onClose}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm">
+      <DialogHeader onClose={saving ? undefined : onClose}>
         <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription className="flex items-center gap-1.5"><LeadFavoriteBadge favorito={lead.favorito} />{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
       </DialogHeader>
       <DialogBody className="space-y-5">

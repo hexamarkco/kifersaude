@@ -164,6 +164,8 @@ export default function AgendaScreen() {
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
+  const leadInfoRequestIdRef = useRef(0);
+  const openLeadRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
@@ -235,7 +237,7 @@ export default function AgendaScreen() {
   useEffect(() => {
     void loadReminders({ showLoading: true });
 
-    return subscribeToReminderChanges(({ current, previous }) => {
+    const unsubscribe = subscribeToReminderChanges(({ current, previous }) => {
       const affectedId = current?.id ?? previous?.id;
 
       if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
@@ -245,6 +247,13 @@ export default function AgendaScreen() {
 
       void loadReminders();
     });
+
+    return () => {
+      loadRemindersRequestIdRef.current += 1;
+      leadInfoRequestIdRef.current += 1;
+      openLeadRequestIdRef.current += 1;
+      unsubscribe();
+    };
   }, [loadReminders]);
 
   const getLeadIdForReminder = useCallback(
@@ -277,6 +286,7 @@ export default function AgendaScreen() {
         return cachedLead;
       }
 
+      const requestId = ++leadInfoRequestIdRef.current;
       setLoadingLeadId(leadId);
 
       try {
@@ -295,7 +305,9 @@ export default function AgendaScreen() {
         console.error("Erro ao carregar dados do lead:", leadError);
         return null;
       } finally {
-        setLoadingLeadId(null);
+        if (requestId === leadInfoRequestIdRef.current) {
+          setLoadingLeadId(null);
+        }
       }
     },
     [leadsMap],
@@ -316,7 +328,12 @@ export default function AgendaScreen() {
       return;
     }
 
+    const requestId = ++openLeadRequestIdRef.current;
     const leadData = await fetchLeadInfo(leadId);
+
+    if (requestId !== openLeadRequestIdRef.current) {
+      return;
+    }
 
     if (!leadData) {
       toast.error("Não foi possível localizar os dados deste lead.");

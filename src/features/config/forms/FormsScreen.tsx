@@ -46,7 +46,7 @@ export default function FormsScreen() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set());
   const formsLoadRequestIdRef = useRef(0);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -72,7 +72,23 @@ export default function FormsScreen() {
     };
   }, [loadForms]);
 
+  const setFormBusy = (formId: string, busy: boolean) => {
+    setBusyIds((current) => {
+      const next = new Set(current);
+      if (busy) {
+        next.add(formId);
+      } else {
+        next.delete(formId);
+      }
+      return next;
+    });
+  };
+
   const handleCreate = async () => {
+    if (creating) {
+      return;
+    }
+
     const title = createTitle.trim();
     const slug = slugify(createSlug || createTitle);
 
@@ -86,47 +102,62 @@ export default function FormsScreen() {
     }
 
     setCreating(true);
-    const { data: form, error } = await formsService.createForm({ slug, title, is_published: false });
+    try {
+      const { data: form, error } = await formsService.createForm({ slug, title, is_published: false });
 
-    if (error || !form) {
-      toast.error(
-        error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível criar o formulário.",
-      );
+      if (error || !form) {
+        toast.error(
+          error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível criar o formulário.",
+        );
+        return;
+      }
+
+      const { error: stepError } = await formsService.createStep({
+        form_id: form.id,
+        step_type: "contact",
+        title: "Quase lá! Como podemos te chamar?",
+        is_required: true,
+        position: 0,
+        options: [],
+      });
+      if (stepError) {
+        toast.error("Formulário criado, mas não foi possível preparar a etapa de contato.");
+      }
+
+      setIsCreateModalOpen(false);
+      setCreateTitle("");
+      setCreateSlug("");
+      setSlugTouched(false);
+      await loadForms();
+      setSelectedFormId(form.id);
+      toast.success("Formulário criado. Agora monte as perguntas.");
+    } catch (createError) {
+      console.error("Erro ao criar formulário:", createError);
+      toast.error("Não foi possível criar o formulário.");
+    } finally {
       setCreating(false);
-      return;
     }
-
-    const { error: stepError } = await formsService.createStep({
-      form_id: form.id,
-      step_type: "contact",
-      title: "Quase lá! Como podemos te chamar?",
-      is_required: true,
-      position: 0,
-      options: [],
-    });
-    if (stepError) {
-      toast.error("Formulário criado, mas não foi possível preparar a etapa de contato.");
-    }
-
-    setCreating(false);
-    setIsCreateModalOpen(false);
-    setCreateTitle("");
-    setCreateSlug("");
-    setSlugTouched(false);
-    await loadForms();
-    setSelectedFormId(form.id);
-    toast.success("Formulário criado. Agora monte as perguntas.");
   };
 
   const handleTogglePublish = async (form: PublicForm) => {
-    setBusyId(form.id);
-    const { error } = await formsService.updateForm(form.id, { is_published: !form.is_published });
-    if (error) {
-      toast.error("Não foi possível atualizar o formulário.");
-    } else {
-      await loadForms();
+    if (busyIds.has(form.id)) {
+      return;
     }
-    setBusyId(null);
+
+    setFormBusy(form.id, true);
+    try {
+      const { error } = await formsService.updateForm(form.id, { is_published: !form.is_published });
+      if (error) {
+        toast.error("Não foi possível atualizar o formulário.");
+      } else {
+        await loadForms();
+      }
+    } catch (updateError) {
+      console.error("Erro ao atualizar publicação do formulário:", updateError);
+      toast.error("Não foi possível atualizar o formulário.");
+    } finally {
+      setFormBusy(form.id, false);
+    }
   };
 
   const handleCopyLink = async (form: PublicForm) => {
@@ -149,15 +180,25 @@ export default function FormsScreen() {
     });
     if (!confirmed) return;
 
-    setBusyId(form.id);
-    const { error } = await formsService.deleteForm(form.id);
-    if (error) {
-      toast.error("Não foi possível excluir o formulário.");
-    } else {
-      await loadForms();
-      toast.success("Formulário excluído.");
+    if (busyIds.has(form.id)) {
+      return;
     }
-    setBusyId(null);
+
+    setFormBusy(form.id, true);
+    try {
+      const { error } = await formsService.deleteForm(form.id);
+      if (error) {
+        toast.error("Não foi possível excluir o formulário.");
+      } else {
+        await loadForms();
+        toast.success("Formulário excluído.");
+      }
+    } catch (deleteError) {
+      console.error("Erro ao excluir formulário:", deleteError);
+      toast.error("Não foi possível excluir o formulário.");
+    } finally {
+      setFormBusy(form.id, false);
+    }
   };
 
   if (loading) {
@@ -210,7 +251,7 @@ export default function FormsScreen() {
         ) : (
           <div className="space-y-3">
             {forms.map((form) => {
-              const isBusy = busyId === form.id;
+              const isBusy = busyIds.has(form.id);
               const publicUrl = `${window.location.origin}/forms/${form.slug}`;
 
               return (
@@ -288,12 +329,14 @@ export default function FormsScreen() {
 
       <Dialog
         open={isCreateModalOpen}
+        closeOnOverlay={!creating}
+        closeOnEscape={!creating}
         onOpenChange={(open) => {
-          if (!open) setIsCreateModalOpen(false);
+          if (!open && !creating) setIsCreateModalOpen(false);
         }}
         size="sm"
       >
-        <DialogHeader onClose={() => setIsCreateModalOpen(false)}>
+        <DialogHeader onClose={() => { if (!creating) setIsCreateModalOpen(false); }} showCloseButton={!creating}>
           <DialogTitle>Novo formulário</DialogTitle>
         </DialogHeader>
         <DialogBody>
@@ -308,6 +351,7 @@ export default function FormsScreen() {
             <Field label="Título">
               <Input
                 value={createTitle}
+                disabled={creating}
                 onChange={(event) => {
                   const value = event.target.value;
                   setCreateTitle(value);
@@ -319,6 +363,7 @@ export default function FormsScreen() {
             <Field label="Endereço público" description={`kifersaude.com.br/forms/${createSlug || "seu-formulario"}`}>
               <Input
                 value={createSlug}
+                disabled={creating}
                 onChange={(event) => {
                   setSlugTouched(true);
                   setCreateSlug(slugify(event.target.value));
@@ -329,7 +374,7 @@ export default function FormsScreen() {
           </form>
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+          <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)} disabled={creating}>
             Cancelar
           </Button>
           <Button type="submit" form="form-create-form" disabled={creating}>

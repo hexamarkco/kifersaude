@@ -298,6 +298,7 @@ export default function ContractForm({
     BonusDistributionRow[]
   >(() => buildBonusDistribution(contract));
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [contractId, setContractId] = useState<string | null>(
     contract?.id || null,
@@ -937,6 +938,9 @@ export default function ContractForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -1144,6 +1148,7 @@ export default function ContractForm({
       console.error("Erro ao salvar contrato:", error);
       toast.error("Erro ao salvar contrato.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -1171,8 +1176,8 @@ export default function ContractForm({
 
   return (
     <>
-      <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
-        <DialogHeader onClose={onClose}>
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
+        <DialogHeader onClose={saving ? undefined : onClose}>
           <DialogTitle>
             {contract
               ? "Editar Contrato"
@@ -1197,6 +1202,7 @@ export default function ContractForm({
             size="sm"
             className="mt-3"
             onClick={() => setShowJsonImport(true)}
+            disabled={saving}
           >
             <FileUp className="kds-control-icon" />
             Importar JSON
@@ -2224,7 +2230,7 @@ export default function ContractForm({
         </form>
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
           <Button type="submit" form="contract-form" loading={saving}>

@@ -262,6 +262,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [syncAllProgress, setSyncAllProgress] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView>('priorities');
   const loadMetricsRequestIdRef = useRef(0);
+  const dashboardSessionIdRef = useRef(0);
 
   const loadMetrics = useCallback(async () => {
     const requestId = ++loadMetricsRequestIdRef.current;
@@ -289,11 +290,31 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
   useEffect(() => {
     if (!isOpen) {
+      dashboardSessionIdRef.current += 1;
       loadMetricsRequestIdRef.current += 1;
+      setExportingInbox(false);
+      setExportProgress(null);
+      setSyncingAll(false);
+      setSyncAllProgress(null);
       return;
     }
+    const sessionId = ++dashboardSessionIdRef.current;
     void loadMetrics();
+    return () => {
+      if (sessionId === dashboardSessionIdRef.current) {
+        dashboardSessionIdRef.current += 1;
+      }
+    };
   }, [isOpen, loadMetrics]);
+
+  const handleClose = useCallback(() => {
+    dashboardSessionIdRef.current += 1;
+    setExportingInbox(false);
+    setExportProgress(null);
+    setSyncingAll(false);
+    setSyncAllProgress(null);
+    onClose();
+  }, [onClose]);
 
   const channelHealth = getChannelHealth(metrics);
   const ChannelHealthIcon = channelHealth.connected ? CheckCircle2 : WifiOff;
@@ -304,12 +325,14 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       return;
     }
 
+    const sessionId = dashboardSessionIdRef.current;
     setExportingInbox(true);
     setExportProgress('Preparando conversas...');
 
     try {
       const payload = await whatsappDashboardService.exportConversations({
         onProgress: (progress) => {
+          if (sessionId !== dashboardSessionIdRef.current) return;
           if (progress.chatsExported > 0 || progress.messagesExported > 0) {
             setExportProgress(`Exportando ${progress.chatsExported}/${progress.chatsLoaded} conversas (${progress.messagesExported} mensagens)`);
             return;
@@ -318,6 +341,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           setExportProgress(`${progress.chatsLoaded} conversas encontradas`);
         },
       });
+
+      if (sessionId !== dashboardSessionIdRef.current) return;
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
       const objectUrl = URL.createObjectURL(blob);
@@ -332,11 +357,14 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
       toast.success(`Exportação concluída: ${payload.summary.chats} conversas e ${payload.summary.messages} mensagens.`);
     } catch (exportError) {
+      if (sessionId !== dashboardSessionIdRef.current) return;
       console.error('[WhatsAppDashboardModal] erro ao exportar inbox', exportError);
       toast.error(exportError instanceof Error ? exportError.message : 'Não foi possível exportar as conversas do inbox.');
     } finally {
-      setExportingInbox(false);
-      setExportProgress(null);
+      if (sessionId === dashboardSessionIdRef.current) {
+        setExportingInbox(false);
+        setExportProgress(null);
+      }
     }
   }, [exportingInbox]);
 
@@ -345,12 +373,14 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       return;
     }
 
+    const sessionId = dashboardSessionIdRef.current;
     setSyncingAll(true);
     setSyncAllProgress('Preparando sincronização geral...');
 
     try {
       const result = await whatsappConversationsRepository.syncAll({
         onProgress: (progress) => {
+          if (sessionId !== dashboardSessionIdRef.current) return;
           setSyncAllProgress(
             `${progress.chatsProcessed} conversa(s) verificadas · ${progress.importedMessages} mensagem(ns) recuperada(s)`
             + (progress.discoveredChats > 0 ? ` · ${progress.discoveredChats} conversa(s) nova(s) encontrada(s)` : ''),
@@ -358,7 +388,10 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
         },
       });
 
+      if (sessionId !== dashboardSessionIdRef.current) return;
       await loadMetrics();
+
+      if (sessionId !== dashboardSessionIdRef.current) return;
 
       if (result.importedMessages > 0 || result.discoveredChats > 0) {
         toast.success(
@@ -373,18 +406,21 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
         toast.warning(`${result.identityConflicts} conflito(s) de identidade foram sinalizados durante a sincronização. Revise-os no inbox.`);
       }
     } catch (syncError) {
+      if (sessionId !== dashboardSessionIdRef.current) return;
       console.error('[WhatsAppDashboardModal] erro ao forçar sincronização geral', syncError);
       toast.error(syncError instanceof Error ? syncError.message : 'Não foi possível sincronizar todas as conversas.');
     } finally {
-      setSyncingAll(false);
-      setSyncAllProgress(null);
+      if (sessionId === dashboardSessionIdRef.current) {
+        setSyncingAll(false);
+        setSyncAllProgress(null);
+      }
     }
   }, [loadMetrics, syncingAll]);
 
   return (
     <WorkspaceDialog
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Painel WhatsApp"
       description="Dashboard operacional para decidir onde olhar agora no inbox."
       size="xl"
@@ -411,7 +447,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               {!loading && <RefreshCw className="kds-control-icon" />}
               Atualizar
             </Button>
-            <Button variant="secondary" onClick={onClose}>Fechar</Button>
+            <Button variant="secondary" onClick={handleClose}>Fechar</Button>
           </div>
         </div>
       )}

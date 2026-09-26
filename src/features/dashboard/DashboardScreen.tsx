@@ -97,6 +97,12 @@ export default function DashboardScreen({
     string | null
   >(null);
   const [calendarSnapshotLoading, setCalendarSnapshotLoading] = useState(false);
+  const [adjustmentReminderSyncError, setAdjustmentReminderSyncError] =
+    useState(false);
+  const [adjustmentReminderSyncLoading, setAdjustmentReminderSyncLoading] =
+    useState(false);
+  const [adjustmentReminderSyncRetryToken, setAdjustmentReminderSyncRetryToken] =
+    useState(0);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<
     "leads" | "contratos" | "comissoes"
@@ -2008,7 +2014,7 @@ export default function DashboardScreen({
   );
 
   useEffect(() => {
-    if (!showSupportingAnalysis) {
+    if (!showSupportingAnalysis || activeContractsForReminders.length === 0) {
       return;
     }
 
@@ -2018,16 +2024,40 @@ export default function DashboardScreen({
       return;
     }
 
+    let active = true;
+    setAdjustmentReminderSyncLoading(true);
+    setAdjustmentReminderSyncError(false);
+
     ensureAdjustmentReminders()
       .then((didRun) => {
+        if (!active) return;
         if (didRun) {
           lastAdjustmentReminderSync.current = todayKey;
+          setAdjustmentReminderSyncError(false);
+        } else {
+          setAdjustmentReminderSyncError(true);
         }
       })
       .catch((error) => {
+        if (!active) return;
         console.error("Erro ao processar lembretes de reajuste:", error);
+        setAdjustmentReminderSyncError(true);
+      })
+      .finally(() => {
+        if (active) {
+          setAdjustmentReminderSyncLoading(false);
+        }
       });
-  }, [ensureAdjustmentReminders, showSupportingAnalysis]);
+
+    return () => {
+      active = false;
+    };
+  }, [
+    activeContractsForReminders.length,
+    adjustmentReminderSyncRetryToken,
+    ensureAdjustmentReminders,
+    showSupportingAnalysis,
+  ]);
 
   const donutChartData = useMemo(
     () =>
@@ -2267,6 +2297,28 @@ export default function DashboardScreen({
                 )}
               >
                 {calendarSnapshotError}
+              </Alert>
+            )}
+
+            {adjustmentReminderSyncError && !isObserver && (
+              <Alert
+                tone="warning"
+                title="Lembretes de reajuste não sincronizados"
+                action={(
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      setAdjustmentReminderSyncRetryToken((current) => current + 1)
+                    }
+                    loading={adjustmentReminderSyncLoading}
+                  >
+                    Tentar novamente
+                  </Button>
+                )}
+              >
+                O calendário continua disponível, mas alguns lembretes podem não ter sido gravados na Agenda.
               </Alert>
             )}
 

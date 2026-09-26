@@ -3,6 +3,7 @@ import { test } from 'vitest';
 
 import {
   applyChatPresenceUpdate,
+  applySavedContactName,
   getSafeChatDisplayName,
   mergeUniqueChats,
   preserveUsefulChatPreview,
@@ -104,6 +105,18 @@ test('keeps known identity fields while merging a partial update for the same le
   assert.equal(result.lead_name, 'Maria da Silva');
   assert.equal(result.lead_link_source, 'manual');
   assert.equal(result.lead_linked_by, 'user-1');
+});
+
+test('applies a known saved name to a chat returned by a stale projection', () => {
+  const staleChat = createChat({
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: null,
+  });
+
+  const result = applySavedContactName(staleChat, 'Mariangela');
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
 test('ranks accent-insensitive names before phone-only matches', () => {

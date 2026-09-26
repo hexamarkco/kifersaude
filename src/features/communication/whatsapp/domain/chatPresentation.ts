@@ -73,6 +73,22 @@ export const getValidWhatsAppDisplayName = (value: unknown) => {
   return /[\p{L}\p{N}]/u.test(normalized) ? normalized : '';
 };
 
+export const applySavedContactName = (
+  chat: CommWhatsAppChat,
+  savedContactName?: string | null,
+): CommWhatsAppChat => {
+  const normalizedName = getValidWhatsAppDisplayName(savedContactName);
+  if (!normalizedName || chat.is_group) {
+    return chat;
+  }
+
+  return {
+    ...chat,
+    saved_contact_name: normalizedName,
+    display_name: normalizedName,
+  };
+};
+
 export const getSafeChatDisplayName = (
   chat: CommWhatsAppChat | null,
   connectedUserName?: string | null,

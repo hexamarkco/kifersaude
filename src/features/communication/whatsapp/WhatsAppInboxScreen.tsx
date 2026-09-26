@@ -122,6 +122,7 @@ import {
 } from './domain/messageTimeline';
 import {
   applyChatPresenceUpdate,
+  applySavedContactName,
   getSafeChatDisplayName,
   mergeUniqueChats,
   preserveUsefulChatPreview,
@@ -3005,7 +3006,16 @@ export default function WhatsAppInboxScreen() {
       }
 
       const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
-      const stableNextChat = stabilizeChatIdentityForLocalMerge(nextChat, previousChat);
+      const knownSavedContactName = resolveSavedContactName(
+        nextChat.phone_digits || nextChat.phone_number,
+        nextChat.saved_contact_name,
+        savedContactNameOverrideByPhoneRef.current,
+        savedContactNameByPhoneRef.current,
+      );
+      const stableNextChat = stabilizeChatIdentityForLocalMerge(
+        applySavedContactName(nextChat, knownSavedContactName),
+        previousChat,
+      );
       const hydratedNextChat = preserveUsefulChatPreview(stableNextChat, previousChat);
       const exists = Boolean(previousChat);
       const updated = exists

@@ -149,6 +149,20 @@ function formatDateTimeLocal(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function formatDateTimeLocalOrFallback(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback;
+
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? formatDateTimeLocal(date) : fallback;
+}
+
+function toIsoStringOrNull(value: string): string | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
 function getDefaultScheduledAt(): string {
   const now = new Date();
   now.setHours(now.getHours() + 1);
@@ -193,14 +207,14 @@ export default function WhatsAppScheduleMessageModal({
   const messageType: CommWhatsAppScheduledMessageType = attachment?.type ?? 'text';
   const [scheduledAt, setScheduledAt] = useState(
     scheduledMessage
-      ? formatDateTimeLocal(new Date(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at))
+      ? formatDateTimeLocalOrFallback(scheduledMessage.next_run_at ?? scheduledMessage.scheduled_at, getDefaultScheduledAt())
       : scheduledSequence
-        ? formatDateTimeLocal(new Date(scheduledSequence.scheduled_at))
+        ? formatDateTimeLocalOrFallback(scheduledSequence.scheduled_at, getDefaultScheduledAt())
         : getDefaultScheduledAt,
   );
   const [recurrence, setRecurrence] = useState<CommWhatsAppScheduledMessageRecurrence>(scheduledMessage?.recurrence ?? 'none');
   const [recurrenceEndsAt, setRecurrenceEndsAt] = useState(
-    scheduledMessage?.recurrence_ends_at ? formatDateTimeLocal(new Date(scheduledMessage.recurrence_ends_at)) : '',
+    formatDateTimeLocalOrFallback(scheduledMessage?.recurrence_ends_at, ''),
   );
   const [label, setLabel] = useState(scheduledMessage?.label ?? scheduledSequence?.label ?? '');
   const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(
@@ -218,6 +232,7 @@ export default function WhatsAppScheduleMessageModal({
         actions: [],
       }]);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const sequenceAttachmentRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploadingSequenceStepIds, setUploadingSequenceStepIds] = useState<Record<string, boolean>>({});
   const attachmentUploadRequestIdRef = useRef(0);
@@ -287,13 +302,12 @@ export default function WhatsAppScheduleMessageModal({
   }, [sequenceSteps]);
 
   const scheduledAtIso = useMemo(() => {
-    if (!scheduledAt) return null;
-    return new Date(scheduledAt).toISOString();
+    return toIsoStringOrNull(scheduledAt);
   }, [scheduledAt]);
 
   const recurrenceEndsAtIso = useMemo(() => {
-    if (!recurrenceEndsAt || recurrence === 'none') return null;
-    return new Date(recurrenceEndsAt).toISOString();
+    if (recurrence === 'none') return null;
+    return toIsoStringOrNull(recurrenceEndsAt);
   }, [recurrenceEndsAt, recurrence]);
 
   const isValid = useMemo(() => {
@@ -303,13 +317,17 @@ export default function WhatsAppScheduleMessageModal({
     if (!hasContent) return false;
     if (!scheduledAtIso) return false;
     if (new Date(scheduledAtIso) <= new Date()) return false;
-    if (recurrence !== 'none' && !recurrenceEndsAtIso) return false;
+    if (recurrence !== 'none') {
+      if (!recurrenceEndsAtIso) return false;
+      if (new Date(recurrenceEndsAtIso) <= new Date(scheduledAtIso)) return false;
+    }
     return true;
   }, [hasContent, mode, scheduledAtIso, recurrence, recurrenceEndsAtIso, sequenceIsValid]);
 
   const handleSchedule = useCallback(async () => {
-    if (!isValid || submitting || hasUploadingAttachment) return;
+    if (!isValid || submitting || submittingRef.current || hasUploadingAttachment) return;
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       if (mode === 'sequence') {
@@ -407,6 +425,7 @@ export default function WhatsAppScheduleMessageModal({
       const message = error instanceof Error ? error.message : 'Erro ao agendar mensagem';
       toast.error(message);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }, [
@@ -437,7 +456,7 @@ export default function WhatsAppScheduleMessageModal({
   ]);
 
   const handleClose = useCallback(() => {
-    if (submitting || hasUploadingAttachment) return;
+    if (submitting || submittingRef.current || hasUploadingAttachment) return;
     uploadSessionRef.current += 1;
     onClose();
   }, [hasUploadingAttachment, onClose, submitting]);

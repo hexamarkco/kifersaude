@@ -148,6 +148,7 @@ export class NotificationService {
         const channelId = state?.channel?.id;
         if (!channelId) return;
 
+        let realtimeWarningShown = false;
         this.inboxChannelSubscription = supabase
           .channel('comm-whatsapp-inbox-notifications')
           .on(
@@ -166,7 +167,18 @@ export class NotificationService {
             }
           )
           .subscribe((status) => {
-            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            if (status === 'SUBSCRIBED') {
+              realtimeWarningShown = false;
+              return;
+            }
+
+            if (
+              requestId === this.inboxSubscriptionRequestId
+              && this.intervalId !== null
+              && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')
+              && !realtimeWarningShown
+            ) {
+              realtimeWarningShown = true;
               console.warn('[Notifications] realtime de mensagens do inbox indisponivel; polling do contador permanece ativo.');
             }
           });

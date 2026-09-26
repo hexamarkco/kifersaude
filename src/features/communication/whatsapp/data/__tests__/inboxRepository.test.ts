@@ -10,7 +10,7 @@ type MockFunction<Args extends unknown[], Result> = {
 
 type Subscription = {
   on: MockFunction<[string, Record<string, unknown>, () => void], Subscription>;
-  subscribe: MockFunction<[], Subscription>;
+  subscribe: MockFunction<[callback?: (status: string) => void], Subscription>;
 };
 
 type Query = {
@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => {
   );
   const subscription = {} as Subscription;
   subscription.on = createMock<[string, Record<string, unknown>, () => void], Subscription>();
-  subscription.subscribe = createMock<[], Subscription>();
+  subscription.subscribe = createMock<[callback?: (status: string) => void], Subscription>();
   subscription.on.mockReturnValue(subscription);
   subscription.subscribe.mockReturnValue(subscription);
 
@@ -79,7 +79,11 @@ vi.mock('../../../../../infrastructure/supabase', () => ({
   fetchAllPages: mocks.fetchAllPages,
 }));
 
-import { listInboxAgendaReminders, subscribeToInboxReminders } from '../inboxRepository';
+import {
+  listInboxAgendaReminders,
+  subscribeToInboxChats,
+  subscribeToInboxReminders,
+} from '../inboxRepository';
 
 const resetMocks = () => {
   mocks.channel.mock.calls.length = 0;
@@ -137,6 +141,23 @@ test('não cria assinatura quando o chat não tem lead nem contrato', () => {
   assert.equal(mocks.channel.mock.calls.length, 0);
   unsubscribe();
   assert.equal(mocks.removeChannel.mock.calls.length, 0);
+});
+
+test('trata um canal fechado como indisponível e ignora eventos depois do unsubscribe', () => {
+  resetMocks();
+  const statuses: Array<'connected' | 'unavailable'> = [];
+  const onStatus = (status: 'connected' | 'unavailable') => statuses.push(status);
+  const unsubscribe = subscribeToInboxChats('channel-1', vi.fn(), onStatus);
+  const statusCallback = mocks.subscription.subscribe.mock.calls[0]?.[0];
+
+  assert.equal(typeof statusCallback, 'function');
+  statusCallback?.('CLOSED');
+  statusCallback?.('TIMED_OUT');
+  assert.deepEqual(statuses, ['unavailable']);
+
+  unsubscribe();
+  statusCallback?.('CHANNEL_ERROR');
+  assert.deepEqual(statuses, ['unavailable']);
 });
 
 test('carrega somente os campos usados no resumo da agenda', async () => {

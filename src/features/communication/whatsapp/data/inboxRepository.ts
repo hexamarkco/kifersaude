@@ -15,6 +15,34 @@ import type { CommWhatsAppChat, CommWhatsAppPresence } from '../domain/types';
 
 type SubscriptionStatusHandler = (status: 'connected' | 'unavailable') => void;
 
+const isUnavailableRealtimeStatus = (status: string) => (
+  status === 'CHANNEL_ERROR'
+  || status === 'TIMED_OUT'
+  || status === 'CLOSED'
+);
+
+const createRealtimeStatusHandler = (
+  onStatus: SubscriptionStatusHandler | undefined,
+  isActive: () => boolean,
+) => {
+  let lastStatus: 'connected' | 'unavailable' | null = null;
+
+  return (status: string) => {
+    if (!onStatus || !isActive()) return;
+
+    const nextStatus = status === 'SUBSCRIBED'
+      ? 'connected'
+      : isUnavailableRealtimeStatus(status)
+        ? 'unavailable'
+        : null;
+
+    if (!nextStatus || nextStatus === lastStatus) return;
+
+    lastStatus = nextStatus;
+    onStatus(nextStatus);
+  };
+};
+
 export type InboxAgendaSummaryReminder = Pick<
   Reminder,
   'id' | 'tipo' | 'titulo' | 'data_lembrete' | 'lido'
@@ -25,6 +53,8 @@ export function subscribeToInboxLead(
   onUpdate: (lead: Partial<Lead>) => void,
   onStatus?: SubscriptionStatusHandler,
 ): () => void {
+  let active = true;
+  const handleStatus = createRealtimeStatusHandler(onStatus, () => active);
   const channel = databaseClient
     .channel(`comm-whatsapp-selected-lead-${leadId}-${crypto.randomUUID()}`)
     .on(
@@ -32,11 +62,11 @@ export function subscribeToInboxLead(
       { event: 'UPDATE', schema: 'public', table: 'leads', filter: `id=eq.${leadId}` },
       (payload) => onUpdate(payload.new as Partial<Lead>),
     )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') onStatus?.('connected');
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onStatus?.('unavailable');
-    });
-  return () => { void databaseClient.removeChannel(channel); };
+    .subscribe(handleStatus);
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export function subscribeToInboxReminders(
@@ -108,6 +138,8 @@ export function subscribeToInboxChats(
   onChange: (payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => void,
   onStatus?: SubscriptionStatusHandler,
 ): () => void {
+  let active = true;
+  const handleStatus = createRealtimeStatusHandler(onStatus, () => active);
   const channel = databaseClient
     .channel(`comm-whatsapp-chats-${crypto.randomUUID()}`)
     .on(
@@ -120,11 +152,11 @@ export function subscribeToInboxChats(
       },
       onChange,
     )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') onStatus?.('connected');
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onStatus?.('unavailable');
-    });
-  return () => { void databaseClient.removeChannel(channel); };
+    .subscribe(handleStatus);
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export function subscribeToInboxPresences(
@@ -132,6 +164,8 @@ export function subscribeToInboxPresences(
   onChange: (payload: RealtimePostgresChangesPayload<CommWhatsAppPresence>) => void,
   onStatus?: SubscriptionStatusHandler,
 ): () => void {
+  let active = true;
+  const handleStatus = createRealtimeStatusHandler(onStatus, () => active);
   const channel = databaseClient
     .channel(`comm-whatsapp-presences-${crypto.randomUUID()}`)
     .on(
@@ -144,11 +178,11 @@ export function subscribeToInboxPresences(
       },
       onChange,
     )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') onStatus?.('connected');
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onStatus?.('unavailable');
-    });
-  return () => { void databaseClient.removeChannel(channel); };
+    .subscribe(handleStatus);
+  return () => {
+    active = false;
+    void databaseClient.removeChannel(channel);
+  };
 }
 
 export async function listInboxAgendaReminders(

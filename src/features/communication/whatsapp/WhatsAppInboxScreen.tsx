@@ -2280,6 +2280,7 @@ export default function WhatsAppInboxScreen() {
   const canEditAgenda = agendaPermission.can_edit;
   const favoritedLeadIds = useFavoritedLeadIds();
   const [loading, setLoading] = useState(true);
+  const [chatLoadError, setChatLoadError] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
@@ -5165,6 +5166,8 @@ export default function WhatsAppInboxScreen() {
 
         const nextSignature = buildChatsSignature(hydratedData);
 
+        setChatLoadError(false);
+
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
           setChats(hydratedData);
@@ -5215,6 +5218,10 @@ export default function WhatsAppInboxScreen() {
         }
 
         console.error('[WhatsAppInbox] erro ao carregar chats', error);
+
+        if (latestChatsRef.current.length === 0) {
+          setChatLoadError(true);
+        }
 
         if (isSupabaseConnectivityError(error)) {
           chatPollBackoffRef.current = Math.min(chatPollBackoffRef.current + 1, 10);
@@ -5336,6 +5343,11 @@ export default function WhatsAppInboxScreen() {
     archivedChatsLoadingMore,
     archivedChatsPage,
   ]);
+
+  const handleRetryChatLoad = useCallback(() => {
+    setLoading(true);
+    void loadChats().finally(() => setLoading(false));
+  }, [loadChats]);
 
   const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
     setArchivedSectionOpen(nextArchivedSectionOpen);
@@ -9593,6 +9605,21 @@ export default function WhatsAppInboxScreen() {
                 <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
+              </div>
+            ) : chatLoadError ? (
+              <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--danger)] p-6 text-center" role="alert">
+                <AlertTriangle className="h-8 w-8 text-[var(--danger)]" />
+                <div className="space-y-1">
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
+                    Não foi possível carregar as conversas
+                  </p>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Verifique sua conexão ou sessão e tente novamente. Seus chats não foram apagados.
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={handleRetryChatLoad}>
+                  Tentar novamente
+                </Button>
               </div>
             ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">

@@ -75,6 +75,7 @@ vi.mock('../../../../infrastructure/supabase', () => ({
 import {
   listPendingRemindersForLead,
   listReminderContracts,
+  listReminderLeads,
   listReminders,
   listRemindersForLeadContext,
 } from '../remindersRepository';
@@ -124,4 +125,14 @@ test('carrega somente o contexto necessario dos contratos relacionados', async (
   await listReminderContracts(['contract-1']);
 
   assert.deepEqual(mocks.query.select.mock.calls[0], ['id, lead_id, codigo_contrato']);
+});
+
+test('carrega somente o contexto necessario dos leads relacionados', async () => {
+  mocks.query.select.mock.calls.splice(0);
+
+  await listReminderLeads(['lead-1']);
+
+  assert.deepEqual(mocks.query.select.mock.calls[0], [
+    'id, nome_completo, telefone, status, responsavel_id, favorito, proximo_retorno, ultimo_contato',
+  ]);
 });

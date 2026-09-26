@@ -45,6 +45,7 @@ import {
   updateReminders,
   type ReminderListItem,
   type ReminderContractContext,
+  type ReminderLeadContext,
   type ManualReminderPrompt,
 } from "../reminders";
 import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
@@ -143,7 +144,7 @@ export default function AgendaScreen() {
     date.setHours(0, 0, 0, 0);
     return date;
   });
-  const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [leadsMap, setLeadsMap] = useState<Map<string, ReminderLeadContext>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -215,7 +216,7 @@ export default function AgendaScreen() {
         ]),
       );
       const fetchedLeads = await listReminderLeads(leadIds);
-      const nextLeadsMap = new Map<string, Lead>();
+      const nextLeadsMap = new Map<string, ReminderLeadContext>();
 
       fetchedLeads.forEach((lead) => {
         nextLeadsMap.set(lead.id, lead);
@@ -354,7 +355,18 @@ export default function AgendaScreen() {
     }
 
     const requestId = ++openLeadRequestIdRef.current;
-    const leadData = await fetchLeadInfo(leadId);
+    setLoadingLeadId(leadId);
+    let leadData: Lead | null = null;
+
+    try {
+      leadData = await getReminderLead(leadId);
+    } catch (leadError) {
+      console.error("Erro ao carregar dados completos do lead:", leadError);
+    } finally {
+      if (requestId === openLeadRequestIdRef.current) {
+        setLoadingLeadId(null);
+      }
+    }
 
     if (requestId !== openLeadRequestIdRef.current) {
       return;

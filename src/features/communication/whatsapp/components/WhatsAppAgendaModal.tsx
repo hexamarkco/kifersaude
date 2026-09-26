@@ -60,6 +60,7 @@ import {
   updateReminder,
   type ManualReminderPrompt,
   type ReminderContractContext,
+  type ReminderLeadContext,
   type ReminderListItem,
 } from '../../../reminders';
 import type { Lead } from '../../../leads';
@@ -105,7 +106,7 @@ type SchedulerDraft = {
 type WhatsAppAgendaCacheSnapshot = {
   reminders: ReminderListItem[];
   contracts: ReminderContractContext[];
-  leads: Lead[];
+  leads: ReminderLeadContext[];
   updatedAt: string;
 };
 
@@ -149,7 +150,7 @@ export default function WhatsAppAgendaModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(getDefaultSelectedDate);
-  const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
+  const [leadsMap, setLeadsMap] = useState<Map<string, ReminderLeadContext>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const [markingLostLeadIds, setMarkingLostLeadIds] = useState<Set<string>>(() => new Set());
@@ -199,7 +200,7 @@ export default function WhatsAppAgendaModal({
     });
     setContractsMap(nextContractsMap);
 
-    const nextLeadsMap = new Map<string, Lead>();
+    const nextLeadsMap = new Map<string, ReminderLeadContext>();
     snapshot.leads.forEach((lead) => {
       nextLeadsMap.set(lead.id, lead);
     });

@@ -18,6 +18,7 @@ export {
   type ReminderCreateInput,
   type ReminderContextItem,
   type ReminderContractContext,
+  type ReminderLeadContext,
   type ReminderListItem,
   type ReminderPendingItem,
   type ReminderRealtimeChange,

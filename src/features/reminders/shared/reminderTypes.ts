@@ -22,7 +22,7 @@ export const normalizeReminderTitle = (title: string) =>
     .replace(/^(?:retomar )?follow[ -]?up de whatsapp$/iu, "Follow-up");
 
 export type ManualReminderPrompt = {
-  lead: Lead;
+  lead: Pick<Lead, "id" | "nome_completo" | "telefone" | "responsavel" | "favorito">;
   promptMessage: string;
   defaultTitle?: string;
   defaultDescription?: string;

@@ -39,6 +39,19 @@ export type ReminderContractContext = Pick<
   'id' | 'lead_id' | 'codigo_contrato'
 >;
 
+export type ReminderLeadContext = Pick<
+  Lead,
+  | 'id'
+  | 'nome_completo'
+  | 'telefone'
+  | 'status'
+  | 'responsavel'
+  | 'responsavel_id'
+  | 'favorito'
+  | 'proximo_retorno'
+  | 'ultimo_contato'
+>;
+
 export type ReminderCreateInput =
   Database['public']['Tables']['reminders']['Insert'];
 
@@ -178,7 +191,11 @@ export const listReminderContracts = (ids: string[]) =>
   });
 
 export const listReminderLeads = (ids: string[]) =>
-  listByIds<Lead>({ table: 'leads', ids, select: '*' });
+  listByIds<ReminderLeadContext>({
+    table: 'leads',
+    ids,
+    select: 'id, nome_completo, telefone, status, responsavel_id, favorito, proximo_retorno, ultimo_contato',
+  });
 
 export async function getReminderLead(leadId: string): Promise<Lead | null> {
   const { data, error } = await databaseClient

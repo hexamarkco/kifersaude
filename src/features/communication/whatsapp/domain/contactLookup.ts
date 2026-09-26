@@ -101,17 +101,12 @@ export const resolveSavedContactName = (
     return localOverrideName;
   }
 
-  const synchronizedName = getSavedContactNameForPhone(phone, synchronizedNames);
-  if (synchronizedName) {
-    return synchronizedName;
-  }
-
   const normalizedCurrentChatName = currentChatName?.trim();
   if (normalizedCurrentChatName) {
     return normalizedCurrentChatName;
   }
 
-  return null;
+  return getSavedContactNameForPhone(phone, synchronizedNames);
 };
 
 export const applySavedContactNameFromLookup = (
@@ -123,8 +118,9 @@ export const applySavedContactNameFromLookup = (
     return chat;
   }
 
-  const savedName = getSavedContactNameForPhone(
+  const savedName = resolveSavedContactName(
     chat.phone_digits || chat.phone_number,
+    chat.saved_contact_name,
     localOverrides,
     synchronizedNames,
   );

@@ -150,6 +150,7 @@ import {
 import ChatPreviewIcon from './components/ChatPreviewIcon';
 import LinkifiedText, { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
 import { KeyedActionLock } from './components/keyedActionLock';
+import { KeyedPromiseQueue } from './components/keyedPromiseQueue';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import { ComposerSendLock } from './components/composerSendLock';
 import WhatsAppPresenceIndicator from './components/WhatsAppPresenceIndicator';
@@ -2478,6 +2479,7 @@ export default function WhatsAppInboxScreen() {
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
   const chatsLoadKeyRef = useRef<string | null>(null);
   const pollingMessagesChatIdRef = useRef<string | null>(null);
+  const messageLoadQueueRef = useRef(new KeyedPromiseQueue());
   const olderMessagesRequestIdRef = useRef(0);
   const quotedMessageNavigationRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
@@ -5331,19 +5333,20 @@ export default function WhatsAppInboxScreen() {
       pollingMessagesChatIdRef.current = targetChatId;
     }
 
-    const requestId = ++messagesRequestIdRef.current;
+    const runLoad = async () => {
+      const requestId = ++messagesRequestIdRef.current;
 
-    const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
+      const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
 
-    if (shouldShowBlockingLoader) {
-      setLoadingMessages(true);
-    }
+      if (shouldShowBlockingLoader) {
+        setLoadingMessages(true);
+      }
 
-    try {
-      let data: CommWhatsAppMessage[] = [];
-      let hasMore = false;
-      let threadChat: CommWhatsAppChat | null = null;
-      let threadLead: CommWhatsAppLeadPanel | null = null;
+      try {
+        let data: CommWhatsAppMessage[] = [];
+        let hasMore = false;
+        let threadChat: CommWhatsAppChat | null = null;
+        let threadLead: CommWhatsAppLeadPanel | null = null;
 
       if (reason === 'initial') {
         const thread = await whatsappConversationsRepository.getThread(targetChatId, {
@@ -5454,22 +5457,25 @@ export default function WhatsAppInboxScreen() {
           cache.delete(oldestKey);
         }
       }
-    } catch (error) {
-      if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
+      } catch (error) {
+        if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+          return;
+        }
 
-      console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
-    } finally {
-      if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setLoadingMessages(false);
-      }
+        console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
+        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
+      } finally {
+        if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
+          setLoadingMessages(false);
+        }
 
-      if (reason === 'poll' && pollingMessagesChatIdRef.current === targetChatId) {
-        pollingMessagesChatIdRef.current = null;
+        if (reason === 'poll' && pollingMessagesChatIdRef.current === targetChatId) {
+          pollingMessagesChatIdRef.current = null;
+        }
       }
-    }
+    };
+
+    return messageLoadQueueRef.current.enqueue(targetChatId, runLoad);
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder, upsertChatLocally]);
 
   loadMessagesRef.current = loadMessages;

@@ -119,6 +119,8 @@ export default function ContractDetails({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [documentsLoadError, setDocumentsLoadError] = useState(false);
+  const [eligibleLivesUpdateError, setEligibleLivesUpdateError] = useState<string | null>(null);
+  const [eligibleLivesRetryToken, setEligibleLivesRetryToken] = useState(0);
   const dataRequestIdRef = useRef(0);
   const eligibleLivesUpdateRequestIdRef = useRef(0);
   const [showHolderForm, setShowHolderForm] = useState(false);
@@ -602,16 +604,28 @@ export default function ContractDetails({
     const requestId = eligibleLivesUpdateRequestIdRef.current + 1;
     eligibleLivesUpdateRequestIdRef.current = requestId;
 
-    if (!contract.bonus_por_vida_aplicado) return;
-
-    if (bonusSummary.hasConfigurations) {
-      if (contract.vidas_elegiveis_bonus === bonusSummary.eligibleLives) return;
-    } else {
-      if (totalLivesInRecords === 0) return;
-      if (contract.vidas_elegiveis_bonus === bonusEligibleLivesFromRecords)
-        return;
+    if (!contract.bonus_por_vida_aplicado) {
+      setEligibleLivesUpdateError(null);
+      return;
     }
 
+    if (bonusSummary.hasConfigurations) {
+      if (contract.vidas_elegiveis_bonus === bonusSummary.eligibleLives) {
+        setEligibleLivesUpdateError(null);
+        return;
+      }
+    } else {
+      if (totalLivesInRecords === 0) {
+        setEligibleLivesUpdateError(null);
+        return;
+      }
+      if (contract.vidas_elegiveis_bonus === bonusEligibleLivesFromRecords) {
+        setEligibleLivesUpdateError(null);
+        return;
+      }
+    }
+
+    setEligibleLivesUpdateError(null);
     const updateEligibleLives = async () => {
       try {
         await updateContractEligibleLives(
@@ -621,9 +635,15 @@ export default function ContractDetails({
             : bonusEligibleLivesFromRecords,
         );
         if (requestId !== eligibleLivesUpdateRequestIdRef.current) return;
+        setEligibleLivesUpdateError(null);
         onUpdate();
       } catch (error) {
         console.error("Erro ao atualizar vidas elegiveis para bonus:", error);
+        if (requestId === eligibleLivesUpdateRequestIdRef.current) {
+          setEligibleLivesUpdateError(
+            "Não foi possível atualizar as vidas elegíveis para o bônus. O total exibido pode estar desatualizado.",
+          );
+        }
       }
     };
 
@@ -639,6 +659,7 @@ export default function ContractDetails({
     contract.bonus_por_vida_aplicado,
     contract.id,
     contract.vidas_elegiveis_bonus,
+    eligibleLivesRetryToken,
     onUpdate,
     totalLivesInRecords,
   ]);
@@ -830,6 +851,27 @@ export default function ContractDetails({
 
       <div className="p-1">
         <div className={`mb-6 ${detailPanelMutedClass} p-4`}>
+          {eligibleLivesUpdateError ? (
+            <Alert tone="warning" role="alert" className="mb-4 items-start">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Bônus por vida precisa de atualização.</p>
+                  <p className="mt-1 text-sm">{eligibleLivesUpdateError}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => setEligibleLivesRetryToken((current) => current + 1)}
+                  >
+                    <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                    Tentar novamente
+                  </Button>
+                </div>
+              </div>
+            </Alert>
+          ) : null}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <span className={detailLabelTextClass}>Status</span>

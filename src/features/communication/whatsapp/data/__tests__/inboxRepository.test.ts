@@ -9,7 +9,7 @@ type MockFunction<Args extends unknown[], Result> = {
 };
 
 type Subscription = {
-  on: MockFunction<[string, Record<string, unknown>, () => void], Subscription>;
+  on: MockFunction<[string, Record<string, unknown>, (payload?: unknown) => void], Subscription>;
   subscribe: MockFunction<[callback?: (status: string) => void], Subscription>;
 };
 
@@ -32,7 +32,7 @@ const mocks = vi.hoisted(() => {
     vi.fn() as unknown as MockFunction<Args, Result>
   );
   const subscription = {} as Subscription;
-  subscription.on = createMock<[string, Record<string, unknown>, () => void], Subscription>();
+  subscription.on = createMock<[string, Record<string, unknown>, (payload?: unknown) => void], Subscription>();
   subscription.subscribe = createMock<[callback?: (status: string) => void], Subscription>();
   subscription.on.mockReturnValue(subscription);
   subscription.subscribe.mockReturnValue(subscription);
@@ -81,7 +81,9 @@ vi.mock('../../../../../infrastructure/supabase', () => ({
 
 import {
   listInboxAgendaReminders,
+  subscribeToInboxLead,
   subscribeToInboxChats,
+  subscribeToInboxPresences,
   subscribeToInboxReminders,
 } from '../inboxRepository';
 
@@ -158,6 +160,38 @@ test('trata um canal fechado como indisponível e ignora eventos depois do unsub
   unsubscribe();
   statusCallback?.('CHANNEL_ERROR');
   assert.deepEqual(statuses, ['unavailable']);
+});
+
+test('ignora eventos tardios de chats, presenças e lead depois do unsubscribe', () => {
+  resetMocks();
+  let leadChanges = 0;
+  let chatChanges = 0;
+  let presenceChanges = 0;
+
+  const unsubscribeLead = subscribeToInboxLead('lead-1', () => {
+    leadChanges += 1;
+  });
+  const unsubscribeChats = subscribeToInboxChats('channel-1', () => {
+    chatChanges += 1;
+  });
+  const unsubscribePresences = subscribeToInboxPresences('channel-1', () => {
+    presenceChanges += 1;
+  });
+  const callbacks = mocks.subscription.on.mock.calls.map(([, , callback]) => callback);
+
+  callbacks[0]?.({ new: { id: 'lead-1' } });
+  callbacks[1]?.({});
+  callbacks[2]?.({});
+  assert.deepEqual([leadChanges, chatChanges, presenceChanges], [1, 1, 1]);
+
+  unsubscribeLead();
+  unsubscribeChats();
+  unsubscribePresences();
+
+  callbacks[0]?.({ new: { id: 'lead-1' } });
+  callbacks[1]?.({});
+  callbacks[2]?.({});
+  assert.deepEqual([leadChanges, chatChanges, presenceChanges], [1, 1, 1]);
 });
 
 test('carrega somente os campos usados no resumo da agenda', async () => {

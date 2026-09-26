@@ -60,7 +60,11 @@ export function subscribeToInboxLead(
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'leads', filter: `id=eq.${leadId}` },
-      (payload) => onUpdate(payload.new as Partial<Lead>),
+      (payload) => {
+        if (active) {
+          onUpdate(payload.new as Partial<Lead>);
+        }
+      },
     )
     .subscribe(handleStatus);
   return () => {
@@ -150,7 +154,11 @@ export function subscribeToInboxChats(
         table: 'comm_whatsapp_chats',
         filter: `channel_id=eq.${channelId}`,
       },
-      onChange,
+      (payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {
+        if (active) {
+          onChange(payload);
+        }
+      },
     )
     .subscribe(handleStatus);
   return () => {
@@ -176,7 +184,11 @@ export function subscribeToInboxPresences(
         table: 'comm_whatsapp_presences',
         filter: `channel_id=eq.${channelId}`,
       },
-      onChange,
+      (payload: RealtimePostgresChangesPayload<CommWhatsAppPresence>) => {
+        if (active) {
+          onChange(payload);
+        }
+      },
     )
     .subscribe(handleStatus);
   return () => {

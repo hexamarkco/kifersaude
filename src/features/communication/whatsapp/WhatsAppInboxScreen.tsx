@@ -2431,6 +2431,7 @@ export default function WhatsAppInboxScreen() {
   const chatInboxActionLockRef = useRef(new KeyedActionLock());
   const autonomousAttendanceLockRef = useRef(new KeyedActionLock());
   const contactSaveLockRef = useRef(new KeyedActionLock());
+  const savedContactsLoadMoreLockRef = useRef(new KeyedActionLock());
   const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
@@ -4940,8 +4941,12 @@ export default function WhatsAppInboxScreen() {
     if (!savedContactsHasMore || savedContactsLoadingMore || savedContactsLoading) {
       return;
     }
+    if (!savedContactsLoadMoreLockRef.current.tryAcquire('saved-contacts')) {
+      return;
+    }
 
-    void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true);
+    void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true)
+      .finally(() => savedContactsLoadMoreLockRef.current.release('saved-contacts'));
   }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
 
   useEffect(() => {

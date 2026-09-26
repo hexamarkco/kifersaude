@@ -131,6 +131,12 @@ type LeadRow = {
   ultimo_contato: string | null;
 };
 
+type CampaignResponsibleOption = {
+  id: string;
+  label: string | null;
+  value: string | null;
+};
+
 type InboundMessageRow = {
   id: string;
   chat_id: string;
@@ -265,6 +271,52 @@ const toRecord = (value: unknown): Record<string, unknown> => (
 );
 
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const loadCampaignResponsibleOptions = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+): Promise<CampaignResponsibleOption[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('lead_responsaveis')
+    .select('id,label,value');
+
+  if (error) {
+    throw new Error(`Erro ao carregar responsaveis dos leads: ${error.message}`);
+  }
+
+  return (data ?? []) as CampaignResponsibleOption[];
+};
+
+const resolveCampaignResponsibleIds = (
+  selectedValues: string[],
+  options: CampaignResponsibleOption[],
+): string[] => {
+  const selected = new Set(selectedValues.map((value) => normalizeLeadStatusName(value)).filter(Boolean));
+  if (selected.size === 0) return [];
+
+  const ids = new Set<string>();
+  for (const option of options) {
+    const optionId = option.id.trim();
+    if (!optionId) continue;
+
+    if (
+      selected.has(normalizeLeadStatusName(optionId))
+      || selected.has(normalizeLeadStatusName(option.value ?? ''))
+      || selected.has(normalizeLeadStatusName(option.label ?? ''))
+    ) {
+      ids.add(optionId);
+    }
+  }
+
+  return Array.from(ids);
+};
+
+const getCampaignResponsibleName = (
+  responsibleId: string | null,
+  optionsById: Map<string, CampaignResponsibleOption>,
+): string | null => {
+  const option = responsibleId ? optionsById.get(responsibleId) : null;
+  return option?.label?.trim() || option?.value?.trim() || null;
+};
 
 const chunkArray = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
@@ -810,12 +862,15 @@ async function materializeCrmTargets(
   const excludeRecentCampaignDays = Number.isFinite(rawRecentCampaignDays)
     ? Math.min(Math.max(Math.floor(rawRecentCampaignDays), 0), 365)
     : 0;
+  const responsibleOptions = await loadCampaignResponsibleOptions(supabaseAdmin);
+  const responsibleIds = resolveCampaignResponsibleIds(responsaveis, responsibleOptions);
+  const responsibleById = new Map(responsibleOptions.map((option) => [option.id, option]));
 
   const leads: LeadRow[] = [];
   for (let from = 0; ; from += CRM_TARGET_PAGE_SIZE) {
     let query = supabaseAdmin
       .from('leads')
-      .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado,ultimo_contato')
+      .select('id,nome_completo,telefone,status,responsavel_id,arquivado,ultimo_contato')
       .eq('arquivado', false)
       .not('telefone', 'is', null)
       .order('created_at', { ascending: true })
@@ -826,7 +881,9 @@ async function materializeCrmTargets(
     }
 
     if (responsaveis.length > 0) {
-      query = query.in('responsavel', responsaveis);
+      query = query.in('responsavel_id', responsibleIds.length > 0
+        ? responsibleIds
+        : ['00000000-0000-0000-0000-000000000000']);
     }
 
     if (lastContactBefore) {
@@ -855,7 +912,7 @@ async function materializeCrmTargets(
       source_kind: 'crm',
       source_payload: {
         status: lead.status,
-        responsavel: lead.responsavel,
+        responsavel: getCampaignResponsibleName(lead.responsavel_id, responsibleById),
         responsavel_id: lead.responsavel_id,
       },
     }];
@@ -2318,7 +2375,7 @@ async function getLeadById(supabaseAdmin: ReturnType<typeof createAdminClient>, 
   if (!leadId) return null;
   const { data, error } = await supabaseAdmin
     .from('leads')
-    .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado')
+    .select('id,nome_completo,telefone,status,responsavel_id,arquivado,responsible:lead_responsaveis(label,value)')
     .eq('id', leadId)
     .maybeSingle();
 
@@ -2326,7 +2383,17 @@ async function getLeadById(supabaseAdmin: ReturnType<typeof createAdminClient>, 
     throw new Error(`Erro ao carregar lead do alvo: ${error.message}`);
   }
 
-  return (data as LeadRow | null | undefined) ?? null;
+  if (!data) return null;
+
+  const rawLead = data as unknown as Omit<LeadRow, 'responsavel'> & {
+    responsible: CampaignResponsibleOption | CampaignResponsibleOption[] | null;
+  };
+  const responsible = Array.isArray(rawLead.responsible) ? rawLead.responsible[0] : rawLead.responsible;
+
+  return {
+    ...rawLead,
+    responsavel: responsible?.label?.trim() || responsible?.value?.trim() || null,
+  };
 }
 
 async function getCampaignSteps(
@@ -2587,13 +2654,10 @@ async function applyCampaignStatusChangeStep(params: {
 }
 
 type CsvLeadDefaults = {
-  origemNome: string;
   origemId: string | null;
   statusNome: string | null;
   statusId: string | null;
-  tipoContratacaoValue: string | null;
   tipoContratacaoId: string | null;
-  responsavelValue: string | null;
   responsavelId: string | null;
 };
 
@@ -2702,13 +2766,10 @@ async function resolveCsvLeadDefaults(
   }
 
   return {
-    origemNome: origemRow?.nome ?? CSV_LEAD_ORIGIN_NAME,
     origemId: origemRow?.id ?? null,
     statusNome: defaultStatus?.nome ?? null,
     statusId: defaultStatus?.id ?? null,
-    tipoContratacaoValue: defaultContractType?.value ?? null,
     tipoContratacaoId: defaultContractType?.id ?? null,
-    responsavelValue: defaultResponsible?.value ?? null,
     responsavelId: defaultResponsible?.id ?? null,
   };
 }
@@ -2775,13 +2836,10 @@ async function resolveOrCreateCsvTargetLead(
       .insert({
         nome_completo: displayName,
         telefone: stripBrazilCountryCode(phoneDigits),
-        origem: defaults.origemNome,
         origem_id: defaults.origemId,
         status: defaults.statusNome ?? undefined,
         status_id: defaults.statusId,
-        tipo_contratacao: defaults.tipoContratacaoValue ?? undefined,
         tipo_contratacao_id: defaults.tipoContratacaoId,
-        responsavel: defaults.responsavelValue ?? undefined,
         responsavel_id: defaults.responsavelId,
         observacoes: `Lead criado automaticamente pelo disparo "${campaign.name}".`,
         data_criacao: now,

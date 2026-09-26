@@ -1,5 +1,6 @@
 import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
 import { getSupabaseErrorMessage, supabase } from '../../../infrastructure/supabase';
+import { getResponsibleDisplayName, resolveResponsibleIds, type CampaignResponsibleOption } from './domain/responsibleFilter';
 
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CommWhatsAppCampaignAudienceSource = 'crm' | 'csv' | 'manual' | 'mixed';
@@ -861,6 +862,18 @@ export const commWhatsAppCampaignService = {
       const statuses = readStringArrayFilter(filters, 'statuses', 'status');
       const responsaveis = readStringArrayFilter(filters, 'responsaveis', 'responsavel');
 
+      const { data: responsibleOptions, error: responsibleOptionsError } = await supabase
+        .from('lead_responsaveis')
+        .select('id,label,value');
+
+      if (responsibleOptionsError) {
+        throw new Error(await getSupabaseErrorMessage(responsibleOptionsError, 'Nao foi possivel carregar os responsaveis do CRM.'));
+      }
+
+      const normalizedResponsibleOptions = (responsibleOptions ?? []) as CampaignResponsibleOption[];
+      const responsibleIds = resolveResponsibleIds(responsaveis, normalizedResponsibleOptions);
+      const noResponsibleMatch = ['00000000-0000-0000-0000-000000000000'];
+
       let countQuery = supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
@@ -868,7 +881,7 @@ export const commWhatsAppCampaignService = {
         .not('telefone', 'is', null);
       let sampleQuery = supabase
         .from('leads')
-        .select('nome_completo,telefone,status,responsavel')
+        .select('nome_completo,telefone,status,responsavel_id')
         .eq('arquivado', false)
         .not('telefone', 'is', null)
         .order('created_at', { ascending: true })
@@ -880,8 +893,9 @@ export const commWhatsAppCampaignService = {
       }
 
       if (responsaveis.length > 0) {
-        countQuery = countQuery.in('responsavel', responsaveis);
-        sampleQuery = sampleQuery.in('responsavel', responsaveis);
+        const ids = responsibleIds.length > 0 ? responsibleIds : noResponsibleMatch;
+        countQuery = countQuery.in('responsavel_id', ids);
+        sampleQuery = sampleQuery.in('responsavel_id', ids);
       }
 
       const [{ count, error: countError }, { data: sampleRows, error: sampleError }] = await Promise.all([countQuery, sampleQuery]);
@@ -894,7 +908,7 @@ export const commWhatsAppCampaignService = {
           name: lead.nome_completo || 'Lead sem nome',
           phone: lead.telefone || '',
           status: lead.status,
-          responsavel: lead.responsavel,
+          responsavel: getResponsibleDisplayName(lead.responsavel_id, normalizedResponsibleOptions),
         };
         return { ...entry, resolvedMessage: resolveSampleMessage(firstStepTemplate, entry) };
       });

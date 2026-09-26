@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
-import { Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
+import { Alert, Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
@@ -123,6 +123,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
   const [sequences, setSequences] = useState<CommWhatsAppScheduledSequence[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [activeActionIds, setActiveActionIds] = useState<Set<string>>(() => new Set());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
   const [editingSequence, setEditingSequence] = useState<CommWhatsAppScheduledSequence | null>(null);
@@ -139,6 +140,7 @@ export default function WhatsAppScheduledMessagesPanel({
     if (!isOpen) return;
     const requestId = ++loadRequestIdRef.current;
     setLoading(true);
+    setLoadError(false);
     try {
       const allMessages: CommWhatsAppScheduledMessage[] = [];
       let offset = 0;
@@ -180,9 +182,11 @@ export default function WhatsAppScheduledMessagesPanel({
       }
 
       setSequences(sequenceData);
+      setLoadError(false);
     } catch (error) {
       if (requestId === loadRequestIdRef.current) {
         console.error('[ScheduledMessagesPanel] error loading', error);
+        setLoadError(true);
       }
     } finally {
       if (requestId === loadRequestIdRef.current) {
@@ -435,6 +439,19 @@ export default function WhatsAppScheduledMessagesPanel({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
             </div>
+          ) : loadError ? (
+            <Alert
+              tone="danger"
+              title="Não foi possível carregar os agendamentos."
+              action={
+                <Button variant="secondary" size="sm" onClick={() => void loadMessages()}>
+                  <RotateCcw className="kds-control-icon" />
+                  <span>Tentar novamente</span>
+                </Button>
+              }
+            >
+              Verifique sua conexão ou sessão. Nenhum agendamento foi apagado.
+            </Alert>
           ) : messages.length === 0 && sequences.length === 0 ? (
             <div className="text-center py-12">
               <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />

@@ -74,6 +74,7 @@ vi.mock('../../../../infrastructure/supabase', () => ({
 
 import {
   listPendingRemindersForLead,
+  listReminderContracts,
   listReminders,
   listRemindersForLeadContext,
 } from '../remindersRepository';
@@ -115,4 +116,12 @@ test('carrega somente id e titulo para selecionar lembretes pendentes', async ()
     id: 'reminder-1',
     titulo: 'Follow-up: cliente',
   }]);
+});
+
+test('carrega somente o contexto necessario dos contratos relacionados', async () => {
+  mocks.query.select.mock.calls.splice(0);
+
+  await listReminderContracts(['contract-1']);
+
+  assert.deepEqual(mocks.query.select.mock.calls[0], ['id, lead_id, codigo_contrato']);
 });

@@ -59,9 +59,9 @@ import {
   subscribeToReminderChanges,
   updateReminder,
   type ManualReminderPrompt,
+  type ReminderContractContext,
   type ReminderListItem,
 } from '../../../reminders';
-import type { Contract } from '../../../contracts';
 import type { Lead } from '../../../leads';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { toast } from '../../../../lib/toast';
@@ -104,7 +104,7 @@ type SchedulerDraft = {
 
 type WhatsAppAgendaCacheSnapshot = {
   reminders: ReminderListItem[];
-  contracts: Contract[];
+  contracts: ReminderContractContext[];
   leads: Lead[];
   updatedAt: string;
 };
@@ -150,7 +150,7 @@ export default function WhatsAppAgendaModal({
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(getDefaultSelectedDate);
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
-  const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
+  const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const [markingLostLeadIds, setMarkingLostLeadIds] = useState<Set<string>>(() => new Set());
   const [quickSchedulingAction, setQuickSchedulingAction] = useState<{
@@ -193,7 +193,7 @@ export default function WhatsAppAgendaModal({
     setReminders(snapshot.reminders);
     setError(null);
 
-    const nextContractsMap = new Map<string, Contract>();
+    const nextContractsMap = new Map<string, ReminderContractContext>();
     snapshot.contracts.forEach((contract) => {
       nextContractsMap.set(contract.id, contract);
     });

@@ -34,6 +34,11 @@ export type ReminderListItem = Pick<
   | 'tempo_estimado_minutos'
 >;
 
+export type ReminderContractContext = Pick<
+  Contract,
+  'id' | 'lead_id' | 'codigo_contrato'
+>;
+
 export type ReminderCreateInput =
   Database['public']['Tables']['reminders']['Insert'];
 
@@ -142,6 +147,7 @@ export async function listPendingRemindersForLead(leadId: string): Promise<Remin
 async function listByIds<T>(params: {
   table: 'contracts' | 'leads';
   ids: string[];
+  select: string;
 }): Promise<T[]> {
   const ids = [...new Set(params.ids.filter(Boolean))];
   if (ids.length === 0) {
@@ -152,22 +158,27 @@ async function listByIds<T>(params: {
     batchesOf(ids).map(async (batch) => {
       const result = await databaseClient
         .from(params.table)
-        .select('*')
-        .in('id', batch);
+        .select(params.select)
+        .in('id', batch)
+        .overrideTypes<T[], { merge: false }>();
       if (result.error) {
         throw result.error;
       }
-      return result.data as T[];
+      return result.data ?? [];
     }),
   );
   return pages.flat();
 }
 
 export const listReminderContracts = (ids: string[]) =>
-  listByIds<Contract>({ table: 'contracts', ids });
+  listByIds<ReminderContractContext>({
+    table: 'contracts',
+    ids,
+    select: 'id, lead_id, codigo_contrato',
+  });
 
 export const listReminderLeads = (ids: string[]) =>
-  listByIds<Lead>({ table: 'leads', ids });
+  listByIds<Lead>({ table: 'leads', ids, select: '*' });
 
 export async function getReminderLead(leadId: string): Promise<Lead | null> {
   const { data, error } = await databaseClient

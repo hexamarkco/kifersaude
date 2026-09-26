@@ -29,7 +29,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import type { Contract } from "../contracts";
 import type { Lead } from "../leads";
 import {
   createReminder,
@@ -45,6 +44,7 @@ import {
   updateReminder,
   updateReminders,
   type ReminderListItem,
+  type ReminderContractContext,
   type ManualReminderPrompt,
 } from "../reminders";
 import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
@@ -144,7 +144,7 @@ export default function AgendaScreen() {
     return date;
   });
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
-  const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
+  const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
@@ -196,7 +196,7 @@ export default function AgendaScreen() {
         ),
       );
       const fetchedContracts = await listReminderContracts(contractIds);
-      const nextContractsMap = new Map<string, Contract>();
+      const nextContractsMap = new Map<string, ReminderContractContext>();
 
       fetchedContracts.forEach((contract) => {
         nextContractsMap.set(contract.id, contract);

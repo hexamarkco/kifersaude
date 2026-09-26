@@ -36,6 +36,7 @@ import type { ConfigOption } from '../../../config';
 import type { Contract } from '../../../contracts';
 import type { LeadStatusConfig } from '../../../leads';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
+import { KeyedActionLock } from './keyedActionLock';
 
 type LeadDrawerTab = 'info' | 'critique';
 
@@ -154,6 +155,7 @@ export default function WhatsAppLeadDrawer({
   const [agendaRescheduleValue, setAgendaRescheduleValue] = useState('');
   const [agendaActionLoading, setAgendaActionLoading] = useState<Record<string, boolean>>({});
   const [agendaRescheduleLoading, setAgendaRescheduleLoading] = useState<Record<string, boolean>>({});
+  const agendaMutationLockRef = useRef(new KeyedActionLock());
   const agendaContextKey = [
     isOpen ? 'open' : 'closed',
     chatId ?? '',
@@ -304,6 +306,10 @@ export default function WhatsAppLeadDrawer({
   };
 
   const handleAgendaToggleReadAction = async (reminder: Reminder) => {
+    if (!agendaMutationLockRef.current.tryAcquire(reminder.id)) {
+      return;
+    }
+
     setAgendaActionLoading((current) => ({ ...current, [reminder.id]: true }));
 
     try {
@@ -317,12 +323,17 @@ export default function WhatsAppLeadDrawer({
         delete next[reminder.id];
         return next;
       });
+      agendaMutationLockRef.current.release(reminder.id);
     }
   };
 
   const handleAgendaRescheduleSubmit = async (reminder: Reminder) => {
     if (!agendaRescheduleValue) {
       toast.warning('Informe a nova data e hora do lembrete.');
+      return;
+    }
+
+    if (!agendaMutationLockRef.current.tryAcquire(reminder.id)) {
       return;
     }
 
@@ -340,6 +351,7 @@ export default function WhatsAppLeadDrawer({
         delete next[reminder.id];
         return next;
       });
+      agendaMutationLockRef.current.release(reminder.id);
     }
   };
 

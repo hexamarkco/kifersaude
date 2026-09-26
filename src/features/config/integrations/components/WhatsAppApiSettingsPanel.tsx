@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Copy,
   Info,
@@ -63,9 +63,14 @@ export default function WhatsAppApiSettingsPanel() {
   const [webhookDiagnostics, setWebhookDiagnostics] = useState<
     NonNullable<ChannelAdminState["config"]["webhookDiagnostics"]>
   >({});
+  const settingsLoadRequestIdRef = useRef(0);
+  const channelStateRequestIdRef = useRef(0);
 
-  const loadChannelState = useCallback(async () => {
-    const payload = await loadWhatsAppChannelState("getConfig");
+  const loadChannelState = useCallback(async (action: "getConfig" | "refreshHealth") => {
+    const requestId = ++channelStateRequestIdRef.current;
+    const payload = await loadWhatsAppChannelState(action);
+    if (requestId !== channelStateRequestIdRef.current) return false;
+
     setTokenConfigured(payload.config?.tokenConfigured === true);
     setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
     setWebhookAuthentication(
@@ -77,17 +82,20 @@ export default function WhatsAppApiSettingsPanel() {
     setWebhookDiagnostics(payload.config?.webhookDiagnostics ?? {});
     setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
     setChannelPhone(payload.channel?.phone_number?.trim() || "");
+    return true;
   }, []);
 
   const loadSettings = useCallback(async () => {
+    const requestId = ++settingsLoadRequestIdRef.current;
     setLoading(true);
     setStatusMessage(null);
 
     try {
       const [integration] = await Promise.all([
         configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
-        loadChannelState(),
+        loadChannelState("getConfig"),
       ]);
+      if (requestId !== settingsLoadRequestIdRef.current) return;
       const normalized = normalizeAutoContactSettings(integration?.settings);
 
       setAutoContactIntegration(integration);
@@ -95,18 +103,25 @@ export default function WhatsAppApiSettingsPanel() {
 
       setEnabled(normalized.enabled);
     } catch (error) {
+      if (requestId !== settingsLoadRequestIdRef.current) return;
       console.error("[WhatsAppApiSettings] Error loading settings:", error);
       setStatusMessage({
         type: "error",
         text: "Erro ao carregar configurações.",
       });
     } finally {
-      setLoading(false);
+      if (requestId === settingsLoadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [loadChannelState]);
 
   useEffect(() => {
     void loadSettings();
+    return () => {
+      settingsLoadRequestIdRef.current += 1;
+      channelStateRequestIdRef.current += 1;
+    };
   }, [loadSettings]);
 
   const handleSave = async () => {
@@ -166,7 +181,7 @@ export default function WhatsAppApiSettingsPanel() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setEnabled(normalized.enabled);
-      await loadChannelState();
+      await loadChannelState("getConfig");
 
       setStatusMessage({
         type: "success",
@@ -181,18 +196,10 @@ export default function WhatsAppApiSettingsPanel() {
     setRefreshingHealth(true);
 
     try {
-      const payload = await loadWhatsAppChannelState("refreshHealth");
-      setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
-      setWebhookAuthentication(
-        payload.config?.webhookAuthentication === "header"
-          ? "header"
-          : "legacy_query",
-      );
-      setWebhookHeaderName(payload.config?.webhookHeaderName?.trim() || "");
-      setWebhookDiagnostics(payload.config?.webhookDiagnostics ?? {});
-      setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
-      setChannelPhone(payload.channel?.phone_number?.trim() || "");
-      toast.success("Saúde do canal atualizada.");
+      const applied = await loadChannelState("refreshHealth");
+      if (applied) {
+        toast.success("Saúde do canal atualizada.");
+      }
     } catch (error) {
       console.error("[WhatsAppApiSettings] Error refreshing health:", error);
       toast.error("Não foi possível atualizar a saúde do canal.");

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Save,
   Facebook,
@@ -321,6 +321,10 @@ export default function IntegrationsScreen() {
   const [gtmId, setGtmId] = useState("");
   const [loadingGtm, setLoadingGtm] = useState(true);
   const [savingGtm, setSavingGtm] = useState(false);
+  const aiSettingsLoadRequestIdRef = useRef(0);
+  const aiModelsRequestIdRef = useRef<Record<AiProvider, number>>({ openai: 0 });
+  const metaPixelLoadRequestIdRef = useRef(0);
+  const gtmLoadRequestIdRef = useRef(0);
 
   const setAiMessage = (message: MessageState) => {
     if (!message) return;
@@ -343,6 +347,7 @@ export default function IntegrationsScreen() {
   const loadingUi = useAdaptiveLoading(loadingAi);
 
   const loadProviderModels = useCallback(async (provider: AiProvider) => {
+    const requestId = ++aiModelsRequestIdRef.current[provider];
     setAiProviderModels((prev) => ({
       ...prev,
       [provider]: {
@@ -354,6 +359,7 @@ export default function IntegrationsScreen() {
 
     try {
       const data = await loadAiProviderModels(provider);
+      if (requestId !== aiModelsRequestIdRef.current[provider]) return;
       const payload = isRecord(data) ? data : {};
       const options = normalizeModelOptions(payload.models);
 
@@ -369,6 +375,7 @@ export default function IntegrationsScreen() {
         },
       }));
     } catch (error) {
+      if (requestId !== aiModelsRequestIdRef.current[provider]) return;
       console.error(`Erro ao carregar modelos de ${provider}:`, error);
       setAiProviderModels((prev) => ({
         ...prev,
@@ -382,6 +389,7 @@ export default function IntegrationsScreen() {
   }, []);
 
   const loadAiIntegrations = useCallback(async () => {
+    const requestId = ++aiSettingsLoadRequestIdRef.current;
     setLoadingAi(true);
     setAiMessage(null);
 
@@ -390,6 +398,7 @@ export default function IntegrationsScreen() {
         configService.getIntegrationSetting(AI_PROVIDER_OPENAI_SLUG),
         configService.getIntegrationSetting(AI_ROUTING_SLUG),
       ]);
+      if (requestId !== aiSettingsLoadRequestIdRef.current) return;
 
       const nextProviderIntegrations: Record<
         AiProvider,
@@ -414,36 +423,62 @@ export default function IntegrationsScreen() {
         }
       }
     } catch (error) {
+      if (requestId !== aiSettingsLoadRequestIdRef.current) return;
       console.error("Erro ao carregar configurações de IA:", error);
       setAiMessage({
         type: "error",
         text: "Não foi possível carregar as configurações de IA.",
       });
     } finally {
-      setLoadingAi(false);
+      if (requestId === aiSettingsLoadRequestIdRef.current) {
+        setLoadingAi(false);
+      }
     }
   }, [loadProviderModels]);
 
   const loadMetaPixel = useCallback(async () => {
+    const requestId = ++metaPixelLoadRequestIdRef.current;
     setLoadingMetaPixel(true);
-    const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
-    setMetaPixelIntegration(data);
-    setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
-    setLoadingMetaPixel(false);
+    try {
+      const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
+      if (requestId !== metaPixelLoadRequestIdRef.current) return;
+      setMetaPixelIntegration(data);
+      setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
+    } finally {
+      if (requestId === metaPixelLoadRequestIdRef.current) {
+        setLoadingMetaPixel(false);
+      }
+    }
   }, []);
 
   const loadGtm = useCallback(async () => {
+    const requestId = ++gtmLoadRequestIdRef.current;
     setLoadingGtm(true);
-    const data = await configService.getIntegrationSetting(GTM_SLUG);
-    setGtmIntegration(data);
-    setGtmId(toTrimmedString(data?.settings?.gtmId));
-    setLoadingGtm(false);
+    try {
+      const data = await configService.getIntegrationSetting(GTM_SLUG);
+      if (requestId !== gtmLoadRequestIdRef.current) return;
+      setGtmIntegration(data);
+      setGtmId(toTrimmedString(data?.settings?.gtmId));
+    } finally {
+      if (requestId === gtmLoadRequestIdRef.current) {
+        setLoadingGtm(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
     void loadAiIntegrations();
     void loadMetaPixel();
     void loadGtm();
+    const aiModelsRequestIds = aiModelsRequestIdRef.current;
+    return () => {
+      aiSettingsLoadRequestIdRef.current += 1;
+      metaPixelLoadRequestIdRef.current += 1;
+      gtmLoadRequestIdRef.current += 1;
+      for (const provider of AI_PROVIDER_ORDER) {
+        aiModelsRequestIds[provider] += 1;
+      }
+    };
   }, [loadAiIntegrations, loadGtm, loadMetaPixel]);
 
   void loadingMetaPixel;
@@ -497,6 +532,7 @@ export default function IntegrationsScreen() {
       if (settingsPayload.enabled) {
         void loadProviderModels(provider);
       } else {
+        aiModelsRequestIdRef.current[provider] += 1;
         setAiProviderModels((prev) => ({
           ...prev,
           [provider]: {

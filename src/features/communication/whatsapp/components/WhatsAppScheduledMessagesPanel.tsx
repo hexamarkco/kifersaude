@@ -149,6 +149,7 @@ export default function WhatsAppScheduledMessagesPanel({
         const data = await commWhatsAppService.listScheduledMessages({
           ...(channelId ? { channelId } : {}),
           ...(chatId ? { chatId } : {}),
+          ...(phoneDigits && !chatId ? { phoneDigits } : {}),
           limit: SCHEDULED_MESSAGES_PAGE_SIZE,
           offset,
         });

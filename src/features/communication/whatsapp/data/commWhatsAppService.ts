@@ -2945,6 +2945,7 @@ export const commWhatsAppService = {
   async listScheduledMessages(options?: {
     channelId?: string;
     chatId?: string;
+    phoneDigits?: string;
     status?: string;
     createdBy?: string;
     leadId?: string;
@@ -2961,6 +2962,9 @@ export const commWhatsAppService = {
     }
     if (options?.chatId) {
       query = query.eq('chat_id', options.chatId);
+    }
+    if (options?.phoneDigits) {
+      query = query.eq('phone_digits', options.phoneDigits);
     }
     if (options?.status) {
       query = query.eq('status', options.status);

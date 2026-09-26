@@ -311,6 +311,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
   const handleClose = useCallback(() => {
     dashboardSessionIdRef.current += 1;
+    loadMetricsRequestIdRef.current += 1;
     setExportingInbox(false);
     setExportProgress(null);
     setSyncingAll(false);

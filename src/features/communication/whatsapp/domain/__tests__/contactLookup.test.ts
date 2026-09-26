@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { addSavedContactsToNameMap, collectPhoneLookupKeys, getSavedContactNameForPhone } from '../contactLookup';
+import {
+  addSavedContactsToNameMap,
+  collectPhoneLookupKeys,
+  getSavedContactNameForPhone,
+  resolveSavedContactName,
+} from '../contactLookup';
 import type { CommWhatsAppPhoneContact } from '../types';
 
 test('creates Brazilian lookup variants with and without country code and ninth digit', () => {
@@ -44,6 +49,15 @@ test('prioritizes a locally saved name over a stale synchronized name', () => {
 
   assert.equal(
     getSavedContactNameForPhone('+55 (11) 99999-9999', localOverrides, synchronizedNames),
+    'Fabiola',
+  );
+});
+
+test('ignores a blank chat name and falls back to the synchronized saved name', () => {
+  const synchronizedNames = new Map([['5511999999999', 'Fabiola']]);
+
+  assert.equal(
+    resolveSavedContactName('+55 (11) 99999-9999', '   ', new Map(), synchronizedNames),
     'Fabiola',
   );
 });

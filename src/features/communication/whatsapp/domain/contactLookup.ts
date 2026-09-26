@@ -84,3 +84,22 @@ export const getSavedContactNameForPhone = (
 
   return null;
 };
+
+export const resolveSavedContactName = (
+  phone: string | null | undefined,
+  currentChatName: string | null | undefined,
+  localOverrides: ReadonlyMap<string, string>,
+  synchronizedNames: ReadonlyMap<string, string>,
+) => {
+  const localOverrideName = getSavedContactNameForPhone(phone, localOverrides);
+  if (localOverrideName) {
+    return localOverrideName;
+  }
+
+  const normalizedCurrentChatName = currentChatName?.trim();
+  if (normalizedCurrentChatName) {
+    return normalizedCurrentChatName;
+  }
+
+  return getSavedContactNameForPhone(phone, synchronizedNames);
+};

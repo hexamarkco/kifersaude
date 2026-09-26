@@ -131,7 +131,7 @@ import {
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, collectPhoneLookupKeys, getSavedContactNameForPhone } from './domain/contactLookup';
+import { addSavedContactsToNameMap, collectPhoneLookupKeys, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -3447,10 +3447,12 @@ export default function WhatsAppInboxScreen() {
   const applyFrontendSavedContactNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
       const phone = chat.phone_digits || chat.phone_number;
-      const localOverrideName = getSavedContactNameForPhone(phone, savedContactNameOverrideByPhoneRef.current);
-      const savedName = localOverrideName
-        ?? chat.saved_contact_name?.trim()
-        ?? getSavedContactNameForPhone(phone, savedContactNameByPhoneRef.current);
+      const savedName = resolveSavedContactName(
+        phone,
+        chat.saved_contact_name,
+        savedContactNameOverrideByPhoneRef.current,
+        savedContactNameByPhoneRef.current,
+      );
       if (!savedName) {
         return chat;
       }

@@ -2462,6 +2462,7 @@ export default function WhatsAppInboxScreen() {
   const selectedChatIdRef = useRef<string | null>(null);
   const suppressAutoChatSelectionRef = useRef(false);
   const historyRecoveryCursorByChatIdRef = useRef<Map<string, { nextOffset: number; timeTo: number }>>(new Map());
+  const historyRecoveryLockRef = useRef(new KeyedActionLock());
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
@@ -8402,6 +8403,10 @@ export default function WhatsAppInboxScreen() {
     }
 
     const targetChat = selectedChat;
+    if (!historyRecoveryLockRef.current.tryAcquire(targetChat.id)) {
+      return;
+    }
+
     setSyncingHistoryChatId(targetChat.id);
 
     try {
@@ -8445,6 +8450,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao recuperar historico do chat', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível recuperar mais mensagens deste chat.');
     } finally {
+      historyRecoveryLockRef.current.release(targetChat.id);
       setSyncingHistoryChatId((current) => (current === targetChat.id ? null : current));
     }
   }, [historyRecoveryDisabledReason, loadChats, loadMessages, selectedChat]);
@@ -9715,7 +9721,7 @@ export default function WhatsAppInboxScreen() {
                       variant="ghost"
                       aria-label="Recuperar mensagens antigas do chat"
                       title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
-                      disabled={Boolean(historyRecoveryDisabledReason)}
+                      disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}
                      size="md">
                       {syncingHistoryChatId === selectedChat.id ? <Loader2 className="animate-spin" /> : <Download aria-hidden="true" />}
                     </IconButton>
@@ -11683,7 +11689,7 @@ export default function WhatsAppInboxScreen() {
                   setThreadActionsMenuOpen(false);
                   void handleRecoverChatHistory();
                 }}
-                disabled={Boolean(historyRecoveryDisabledReason)}
+                disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}
                 className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
                 title={historyRecoveryDisabledReason ?? undefined}
               >

@@ -2311,6 +2311,8 @@ export default function WhatsAppInboxScreen() {
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [quickReplyIntegration, setQuickReplyIntegration] = useState<IntegrationSetting | null>(null);
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
+  const [quickRepliesLoadError, setQuickRepliesLoadError] = useState(false);
+  const [quickRepliesLoadRetryToken, setQuickRepliesLoadRetryToken] = useState(0);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
   const [chatPendingDeletion, setChatPendingDeletion] = useState<CommWhatsAppChat | null>(null);
@@ -2962,9 +2964,11 @@ export default function WhatsAppInboxScreen() {
     composerFocused
     && activeQuickReplyMatch !== null
     && activeQuickReplyKey !== dismissedQuickReplyKey;
-  const quickReplyEmptyStateMessage = quickReplyOptions.length === 0
-    ? 'Nenhuma mensagem rapida cadastrada ainda.'
-    : 'Nenhum atalho encontrado para esse termo.';
+  const quickReplyEmptyStateMessage = quickRepliesLoadError
+    ? 'Não foi possível carregar as mensagens rápidas.'
+    : quickReplyOptions.length === 0
+      ? 'Nenhuma mensagem rapida cadastrada ainda.'
+      : 'Nenhum atalho encontrado para esse termo.';
   const hasActiveChatFilters =
     chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
   const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length + leadResponsavelFilters.length;
@@ -4258,6 +4262,7 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     let active = true;
     const requestId = ++quickRepliesLoadRequestIdRef.current;
+    setQuickRepliesLoadError(false);
 
     void configService
       .getIntegrationSetting(WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG)
@@ -4269,12 +4274,14 @@ export default function WhatsAppInboxScreen() {
         const normalized = normalizeWhatsAppQuickRepliesSettings(integration?.settings);
         setQuickReplyIntegration(integration);
         setQuickReplies(normalized.quickReplies);
+        setQuickRepliesLoadError(false);
       })
       .catch((error) => {
         console.error('[WhatsAppInbox] erro ao carregar mensagens rápidas', error);
         if (active && requestId === quickRepliesLoadRequestIdRef.current) {
           setQuickReplyIntegration(null);
-          setQuickReplies(DEFAULT_QUICK_REPLIES);
+          setQuickReplies([]);
+          setQuickRepliesLoadError(true);
         }
       });
 
@@ -4282,7 +4289,7 @@ export default function WhatsAppInboxScreen() {
       active = false;
       quickRepliesLoadRequestIdRef.current += 1;
     };
-  }, []);
+  }, [quickRepliesLoadRetryToken]);
 
   useEffect(() => () => {
     quickRepliesSaveRequestIdRef.current += 1;
@@ -11157,9 +11164,26 @@ export default function WhatsAppInboxScreen() {
                             ) : (
                               <div className="px-4 py-4 text-sm text-[var(--text-secondary)]">
                                 <p className="font-medium">{quickReplyEmptyStateMessage}</p>
-                                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                                  Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
-                                </p>
+                                {quickRepliesLoadError ? (
+                                  <div className="mt-2 flex items-center justify-between gap-3">
+                                    <p className="text-xs leading-5 text-[var(--text-muted)]">
+                                      Tente novamente ou use <strong>Gerenciar</strong> para conferir as mensagens salvas.
+                                    </p>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => setQuickRepliesLoadRetryToken((current) => current + 1)}
+                                    >
+                                      Tentar novamente
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                                    Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>

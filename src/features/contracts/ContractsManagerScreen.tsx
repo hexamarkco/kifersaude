@@ -31,6 +31,7 @@ import { useContractStatus } from "./hooks/useContractStatus";
 import {
   Badge,
   Button,
+  Alert,
   Input,
   OperationalMetricChip,
   PageHeader,
@@ -91,6 +92,7 @@ export default function ContractsManager({
     Record<string, ContractDependentSearch[]>
   >({});
   const [loading, setLoading] = useState(true);
+  const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
@@ -219,6 +221,7 @@ export default function ContractsManager({
   const loadContracts = async () => {
     const requestId = ++contractsLoadRequestIdRef.current;
     setLoading(true);
+    setContractsLoadError(null);
     try {
       const snapshot = await listContractsSearchSnapshot();
 
@@ -229,10 +232,12 @@ export default function ContractsManager({
       setContracts(snapshot.contracts);
       setHolders(snapshot.holdersByContractId);
       setDependentsByContract(snapshot.dependentsByContractId);
+      setContractsLoadError(null);
       return snapshot.contracts;
     } catch (error) {
       if (requestId === contractsLoadRequestIdRef.current) {
         console.error("Erro ao carregar contratos:", error);
+        setContractsLoadError("Não foi possível carregar os contratos agora.");
       }
       return null;
     } finally {
@@ -573,6 +578,20 @@ export default function ContractsManager({
           ) : undefined}
           data-panel-animate
         />
+
+        {contractsLoadError && (
+          <Alert
+            tone="danger"
+            title="Não foi possível carregar os contratos"
+            action={(
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadContracts()} loading={loading}>
+                Tentar novamente
+              </Button>
+            )}
+          >
+            Os dados exibidos anteriormente foram preservados. Tente novamente para atualizar a carteira.
+          </Alert>
+        )}
 
         <Surface className="space-y-5" data-panel-animate>
           <Toolbar>

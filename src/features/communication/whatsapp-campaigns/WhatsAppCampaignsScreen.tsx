@@ -320,6 +320,8 @@ export default function WhatsAppCampaignsScreen() {
   const [sendingTest, setSendingTest] = useState(false);
   const mediaFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const campaignListRequestIdRef = useRef(0);
+  const campaignEditRequestIdRef = useRef(0);
+  const activationPreviewRequestIdRef = useRef(0);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -445,11 +447,13 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const openNewCampaignModal = () => {
+    campaignEditRequestIdRef.current += 1;
     resetCampaignForm();
     setCampaignModalOpen(true);
   };
 
   const closeCampaignModal = () => {
+    campaignEditRequestIdRef.current += 1;
     setCampaignModalOpen(false);
     resetCampaignForm();
   };
@@ -467,9 +471,13 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const openEditCampaignModal = async (campaign: CommWhatsAppCampaign) => {
+    const requestId = ++campaignEditRequestIdRef.current;
     setLoadingCampaignEdit(true);
     try {
       const campaignSteps = await commWhatsAppCampaignService.listCampaignSteps(campaign.id);
+      if (requestId !== campaignEditRequestIdRef.current) {
+        return;
+      }
       const filters = campaign.audience_config?.filters && typeof campaign.audience_config.filters === 'object'
         ? campaign.audience_config.filters as Record<string, unknown>
         : {};
@@ -551,9 +559,13 @@ export default function WhatsAppCampaignsScreen() {
       setWizardStep(0);
       setCampaignModalOpen(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar este disparo para edição.');
+      if (requestId === campaignEditRequestIdRef.current) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar este disparo para edição.');
+      }
     } finally {
-      setLoadingCampaignEdit(false);
+      if (requestId === campaignEditRequestIdRef.current) {
+        setLoadingCampaignEdit(false);
+      }
     }
   };
 
@@ -821,21 +833,32 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const openActivationPreview = async (campaign: CommWhatsAppCampaign) => {
+    const requestId = ++activationPreviewRequestIdRef.current;
     setCampaignActionId(campaign.id);
     setLoadingActivationPreview(true);
     try {
       const preview = await commWhatsAppCampaignService.getActivationPreview(campaign.id);
+      if (requestId !== activationPreviewRequestIdRef.current) {
+        return;
+      }
       setActivationPreview(preview);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível montar a revisão do disparo.');
+      if (requestId === activationPreviewRequestIdRef.current) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível montar a revisão do disparo.');
+      }
     } finally {
-      setCampaignActionId(null);
-      setLoadingActivationPreview(false);
+      if (requestId === activationPreviewRequestIdRef.current) {
+        setCampaignActionId(null);
+        setLoadingActivationPreview(false);
+      }
     }
   };
 
   const closeActivationPreview = () => {
+    activationPreviewRequestIdRef.current += 1;
     setActivationPreview(null);
+    setCampaignActionId(null);
+    setLoadingActivationPreview(false);
   };
 
   const handleConfirmActivateCampaign = async () => {

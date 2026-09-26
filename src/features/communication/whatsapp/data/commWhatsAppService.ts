@@ -36,6 +36,30 @@ const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'text/plain', 'text/csv',
 ]);
 
+const SCHEDULED_SEQUENCE_SELECT = [
+  'id',
+  'channel_id',
+  'chat_id',
+  'phone_digits',
+  'phone_number',
+  'display_name',
+  'lead_id',
+  'contract_id',
+  'reminder_id',
+  'label',
+  'status',
+  'scheduled_at',
+  'current_step_index',
+  'cancel_on_inbound_message',
+  'last_error',
+  'paused_at',
+  'cancelled_at',
+  'completed_at',
+  'created_at',
+  'updated_at',
+  'steps:comm_whatsapp_scheduled_sequence_steps(id,step_index,delay_seconds,due_at,reminder_id,message_type,text_content,media_url,media_mime_type,media_file_name,status,last_error,actions:comm_whatsapp_scheduled_sequence_actions(id,action_index,action_type,config,status,error_message))',
+].join(',');
+
 type ScheduledMediaUpload = {
   url: string;
   type: 'image' | 'video' | 'document' | 'audio';
@@ -2913,7 +2937,7 @@ export const commWhatsAppService = {
   }): Promise<CommWhatsAppScheduledSequence[]> {
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
-      .select('*, steps:comm_whatsapp_scheduled_sequence_steps(*, actions:comm_whatsapp_scheduled_sequence_actions(*))')
+      .select(SCHEDULED_SEQUENCE_SELECT)
       .order('scheduled_at', { ascending: false });
     if (options?.channelId) query = query.eq('channel_id', options.channelId);
     if (options?.chatId) query = query.eq('chat_id', options.chatId);

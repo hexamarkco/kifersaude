@@ -175,12 +175,13 @@ export async function touchLeadContact(
 export async function persistLeadStatusChange(params: {
   lead: Lead;
   newStatus: string;
+  newStatusId: string;
   timestamp: string;
 }): Promise<void> {
-  const { lead, newStatus, timestamp } = params;
+  const { lead, newStatus, newStatusId, timestamp } = params;
   const { error } = await supabase
     .from('leads')
-    .update({ status: newStatus, ultimo_contato: timestamp })
+    .update({ status: newStatus, status_id: newStatusId, ultimo_contato: timestamp })
     .eq('id', lead.id);
   if (error) {
     throw error;
@@ -207,13 +208,14 @@ export async function persistLeadStatusChange(params: {
 export async function persistKanbanStatusChange(params: {
   lead: Lead;
   newStatus: string;
+  newStatusId: string;
   responsible: string;
   timestamp: string;
 }): Promise<void> {
-  const { lead, newStatus, responsible, timestamp } = params;
+  const { lead, newStatus, newStatusId, responsible, timestamp } = params;
   const { error } = await databaseClient
     .from('leads')
-    .update({ status: newStatus, ultimo_contato: timestamp })
+    .update({ status: newStatus, status_id: newStatusId, ultimo_contato: timestamp })
     .eq('id', lead.id);
   if (error) throw error;
 

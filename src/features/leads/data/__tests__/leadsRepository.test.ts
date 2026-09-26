@@ -11,7 +11,9 @@ type MockFunction<Args extends unknown[], Result> = {
 type Query = {
   select: MockFunction<[string], Query>;
   update: MockFunction<[Record<string, unknown>], Query>;
+  eq: MockFunction<[string, string], Query>;
   in: MockFunction<[string, string[]], Query>;
+  insert: MockFunction<[unknown], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   range: MockFunction<[number, number], Query>;
   overrideTypes: MockFunction<[], Promise<{ data: unknown[]; error: null }>>;
@@ -32,13 +34,17 @@ const mocks = vi.hoisted(() => {
   const query = {} as Query;
   query.select = createMock<[string], Query>();
   query.update = createMock<[Record<string, unknown>], Query>();
+  query.eq = createMock<[string, string], Query>();
   query.in = createMock<[string, string[]], Query>();
+  query.insert = createMock<[unknown], Query>();
   query.order = createMock<[string, { ascending: boolean }], Query>();
   query.range = createMock<[number, number], Query>();
   query.overrideTypes = createMock<[], Promise<{ data: unknown[]; error: null }>>();
   query.select.mockReturnValue(query);
   query.update.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
   query.in.mockReturnValue(query);
+  query.insert.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
   query.overrideTypes.mockReturnValue(Promise.resolve({ data: [], error: null }));
@@ -68,7 +74,13 @@ vi.mock('../../../../infrastructure/supabase', () => ({
   },
 }));
 
-import { listLeads, listLeadsByStatuses, updateLeadDetails } from '../leadsRepository';
+import type { Lead } from '../../domain/types';
+import {
+  listLeads,
+  listLeadsByStatuses,
+  persistLeadStatusChange,
+  updateLeadDetails,
+} from '../leadsRepository';
 
 test('carrega somente os campos usados pela lista de leads', async () => {
   await listLeads();
@@ -99,4 +111,36 @@ test('atualiza o responsável usando a chave estrangeira atual', async () => {
     { responsavel_id: 'owner-1', proximo_retorno: null },
   ]);
   assert.deepEqual(mocks.query.in.mock.calls[0], ['id', ['lead-1']]);
+});
+
+test('persiste o status usando também a chave do status atual', async () => {
+  mocks.query.update.mock.calls.splice(0);
+  mocks.query.eq.mock.calls.splice(0);
+  mocks.query.insert.mock.calls.splice(0);
+
+  await persistLeadStatusChange({
+    lead: {
+      id: 'lead-1',
+      nome_completo: 'Lead de teste',
+      telefone: '5511999999999',
+      status: 'Novo',
+      status_id: 'status-old',
+      responsavel: 'Luiza',
+      data_criacao: '2026-09-26T12:00:00.000Z',
+      arquivado: false,
+      created_at: '2026-09-26T12:00:00.000Z',
+      updated_at: '2026-09-26T12:00:00.000Z',
+    } as Lead,
+    newStatus: 'Atendimento',
+    newStatusId: 'status-new',
+    timestamp: '2026-09-26T12:05:00.000Z',
+  });
+
+  assert.deepEqual(mocks.query.update.mock.calls[0], [
+    {
+      status: 'Atendimento',
+      status_id: 'status-new',
+      ultimo_contato: '2026-09-26T12:05:00.000Z',
+    },
+  ]);
 });

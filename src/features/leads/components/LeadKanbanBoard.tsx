@@ -201,7 +201,13 @@ export default function LeadKanbanBoard({
     const lead = draggedLead;
     const oldStatusName = lead.status;
     const newStatusObj = statusColumns.find((status) => status.id === newStatusId);
-    const newStatusName = newStatusObj?.nome ?? "Desconhecido";
+    if (!newStatusObj) {
+      setDraggedLead(null);
+      toast.error("Não foi possível identificar o novo status do lead.");
+      return;
+    }
+
+    const newStatusName = newStatusObj.nome;
 
     if (oldStatusName === newStatusName) {
       setDraggedLead(null);
@@ -222,7 +228,7 @@ export default function LeadKanbanBoard({
     setLocalLeads((current) =>
       current.map((currentLead) =>
         currentLead.id === lead.id
-          ? { ...currentLead, status: newStatusName, ultimo_contato: nowIso }
+          ? { ...currentLead, status: newStatusName, status_id: newStatusObj.id, ultimo_contato: nowIso }
           : currentLead,
       ),
     );
@@ -231,6 +237,7 @@ export default function LeadKanbanBoard({
       await persistKanbanStatusChange({
         lead,
         newStatus: newStatusName,
+        newStatusId: newStatusObj?.id ?? null,
         responsible: responsavelLabel,
         timestamp: nowIso,
       });
@@ -245,6 +252,7 @@ export default function LeadKanbanBoard({
             ? {
                 ...currentLead,
                 status: oldStatusName,
+                status_id: lead.status_id,
                 ultimo_contato: lead.ultimo_contato,
               }
             : currentLead,

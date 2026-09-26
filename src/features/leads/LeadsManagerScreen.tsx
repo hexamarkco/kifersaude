@@ -1235,23 +1235,30 @@ export default function LeadsManager({
     const oldStatus = lead.status;
     if (oldStatus === newStatus) return;
 
+    const newStatusConfig = leadStatuses.find((status) => status.nome === newStatus);
+    if (!newStatusConfig) {
+      toast.error("Não foi possível identificar o novo status do lead.");
+      return;
+    }
+
     const mutationId = leadStatusMutationLockRef.current.tryAcquire(leadId);
     if (mutationId === null) {
       return;
     }
 
     const timestamp = new Date().toISOString();
+    const newStatusId = newStatusConfig.id;
 
     setLeads((current) =>
       current.map((l) =>
         l.id === leadId
-          ? { ...l, status: newStatus, ultimo_contato: timestamp }
+          ? { ...l, status: newStatus, status_id: newStatusId, ultimo_contato: timestamp }
           : l,
       ),
     );
 
     try {
-      await persistLeadStatusChange({ lead, newStatus, timestamp });
+      await persistLeadStatusChange({ lead, newStatus, newStatusId, timestamp });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Não foi possível atualizar o status do lead.");
@@ -1265,6 +1272,7 @@ export default function LeadsManager({
               ? {
                   ...leadItem,
                   status: oldStatus,
+                  status_id: lead.status_id,
                   ultimo_contato: lead.ultimo_contato,
                 }
               : leadItem,

@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Pencil,
   Plus,
+  RefreshCw,
   Save,
   Trash2,
   Users,
@@ -67,12 +68,14 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
   const [steps, setSteps] = useState<PublicFormStep[]>([]);
   const [loadingSteps, setLoadingSteps] = useState(true);
+  const [stepsLoadError, setStepsLoadError] = useState(false);
   const [stepMutationInFlight, setStepMutationInFlight] = useState(false);
   const [stepDialog, setStepDialog] = useState<{ step: PublicFormStep | null } | null>(null);
   const [savingStep, setSavingStep] = useState(false);
 
   const [submissions, setSubmissions] = useState<PublicFormSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
+  const [submissionsLoadError, setSubmissionsLoadError] = useState(false);
   const stepsLoadRequestIdRef = useRef(0);
   const submissionsLoadRequestIdRef = useRef(0);
   const stepMutationInFlightRef = useRef(false);
@@ -84,10 +87,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   const loadSteps = useCallback(async () => {
     const requestId = ++stepsLoadRequestIdRef.current;
     setLoadingSteps(true);
+    setStepsLoadError(false);
     try {
       const data = await formsService.getFormSteps(form.id);
       if (requestId !== stepsLoadRequestIdRef.current) return;
       setSteps(data);
+    } catch (loadStepsError) {
+      if (requestId !== stepsLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar etapas do formulário:", loadStepsError);
+      setStepsLoadError(true);
     } finally {
       if (requestId === stepsLoadRequestIdRef.current) {
         setLoadingSteps(false);
@@ -98,10 +106,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   const loadSubmissions = useCallback(async () => {
     const requestId = ++submissionsLoadRequestIdRef.current;
     setLoadingSubmissions(true);
+    setSubmissionsLoadError(false);
     try {
       const data = await formsService.getFormSubmissions(form.id);
       if (requestId !== submissionsLoadRequestIdRef.current) return;
       setSubmissions(data);
+    } catch (loadSubmissionsError) {
+      if (requestId !== submissionsLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar respostas do formulário:", loadSubmissionsError);
+      setSubmissionsLoadError(true);
     } finally {
       if (requestId === submissionsLoadRequestIdRef.current) {
         setLoadingSubmissions(false);
@@ -412,6 +425,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
         {loadingSteps ? (
           <LoadingState compact label="Carregando perguntas..." />
+        ) : stepsLoadError && steps.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as perguntas.</p>
+            <p className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</p>
+            <Button variant="secondary" size="sm" onClick={() => void loadSteps()}>
+              <RefreshCw className="kds-control-icon" />
+              <span>Tentar novamente</span>
+            </Button>
+          </div>
         ) : questionSteps.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">Nenhuma pergunta ainda. Adicione a primeira acima.</p>
         ) : (
@@ -480,6 +502,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
         {loadingSubmissions ? (
           <LoadingState compact label="Carregando respostas..." />
+        ) : submissionsLoadError && submissions.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as respostas.</p>
+            <p className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</p>
+            <Button variant="secondary" size="sm" onClick={() => void loadSubmissions()}>
+              <RefreshCw className="kds-control-icon" />
+              <span>Tentar novamente</span>
+            </Button>
+          </div>
         ) : submissions.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">Nenhuma resposta recebida ainda.</p>
         ) : (

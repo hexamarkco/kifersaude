@@ -342,7 +342,19 @@ export default function WhatsAppAgendaModal({
     pendingRefreshIdsRef.current.clear();
     void loadReminders({ showLoading: true });
 
-    return subscribeToReminderChanges(({ current, previous }) => {
+    let refreshTimer: number | null = null;
+    const scheduleRefresh = () => {
+      loadRemindersRequestIdRef.current += 1;
+      if (refreshTimer !== null) {
+        window.clearTimeout(refreshTimer);
+      }
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        void loadReminders();
+      }, 350);
+    };
+
+    const unsubscribe = subscribeToReminderChanges(({ current, previous }) => {
       const affectedId = current?.id ?? previous?.id;
 
       if (affectedId && pendingRefreshIdsRef.current.has(affectedId)) {
@@ -350,8 +362,16 @@ export default function WhatsAppAgendaModal({
         return;
       }
 
-      void loadReminders();
+      scheduleRefresh();
     });
+
+    return () => {
+      loadRemindersRequestIdRef.current += 1;
+      if (refreshTimer !== null) {
+        window.clearTimeout(refreshTimer);
+      }
+      unsubscribe();
+    };
   }, [isOpen, loadReminders]);
 
   useEffect(() => {

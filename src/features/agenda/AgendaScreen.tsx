@@ -244,6 +244,19 @@ export default function AgendaScreen() {
   }, []);
 
   useEffect(() => {
+    let refreshTimer: number | null = null;
+
+    const scheduleRefresh = () => {
+      loadRemindersRequestIdRef.current += 1;
+      if (refreshTimer !== null) {
+        window.clearTimeout(refreshTimer);
+      }
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        void loadReminders();
+      }, 350);
+    };
+
     void loadReminders({ showLoading: true });
 
     const unsubscribe = subscribeToReminderChanges(({ current, previous }) => {
@@ -254,11 +267,14 @@ export default function AgendaScreen() {
         return;
       }
 
-      void loadReminders();
+      scheduleRefresh();
     });
 
     return () => {
       loadRemindersRequestIdRef.current += 1;
+      if (refreshTimer !== null) {
+        window.clearTimeout(refreshTimer);
+      }
       leadInfoRequestIdRef.current += 1;
       openLeadRequestIdRef.current += 1;
       unsubscribe();

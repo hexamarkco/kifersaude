@@ -10,6 +10,9 @@ import type { Lead } from '../domain/types';
 
 type LeadDetailsUpdate = Pick<Lead, 'responsavel' | 'proximo_retorno'>;
 
+const LEAD_LIST_SELECT =
+  'id, nome_completo, telefone, email, cep, endereco, cidade, regiao, estado, origem_id, tipo_contratacao_id, status_id, responsavel_id, operadora_atual, status, data_criacao, ultimo_contato, proximo_retorno, observacoes, blackout_dates, daily_send_limit, skip_automation, arquivado, favorito, created_at, updated_at, canal';
+
 export type LeadRealtimeChange = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
   current: Lead | null;
@@ -28,7 +31,7 @@ export async function listLeads(): Promise<Lead[]> {
   return fetchAllPages<Lead>(async (from, to) => {
     const result = await databaseClient
       .from('leads')
-      .select('*')
+      .select(LEAD_LIST_SELECT)
       .order('created_at', { ascending: false })
       .range(from, to)
       .overrideTypes<Lead[], { merge: false }>();
@@ -41,7 +44,7 @@ export async function listLeadsByStatuses(statuses: string[]): Promise<Lead[]> {
   return fetchAllPages<Lead>(async (from, to) => {
     const result = await databaseClient
       .from('leads')
-      .select('*')
+      .select(LEAD_LIST_SELECT)
       .in('status', statuses)
       .order('created_at', { ascending: false })
       .range(from, to)

@@ -116,6 +116,8 @@ export default function ContractsManager({
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
   const contractsLoadRequestIdRef = useRef(0);
   const hasAnimatedSectionsRef = useRef(false);
+  const deletingContractIdsRef = useRef(new Set<string>());
+  const [deletingContractIds, setDeletingContractIds] = useState<Set<string>>(new Set());
   const {
     motionEnabled,
     sectionDuration,
@@ -352,6 +354,8 @@ export default function ContractsManager({
     resolveContractDisplayName(contract, holders);
 
   const handleDeleteContract = async (contract: Contract) => {
+    if (deletingContractIdsRef.current.has(contract.id)) return;
+
     const confirmed = await requestConfirmation({
       title: "Excluir contrato",
       description: `Deseja excluir o contrato ${contract.codigo_contrato}? Esta ação não pode ser desfeita.`,
@@ -361,6 +365,10 @@ export default function ContractsManager({
     });
 
     if (!confirmed) return;
+    if (deletingContractIdsRef.current.has(contract.id)) return;
+
+    deletingContractIdsRef.current.add(contract.id);
+    setDeletingContractIds((current) => new Set(current).add(contract.id));
 
     try {
       await deleteContract(contract.id);
@@ -375,6 +383,13 @@ export default function ContractsManager({
     } catch (error) {
       console.error("Erro ao excluir contrato:", error);
       toast.error("Erro ao excluir contrato.");
+    } finally {
+      deletingContractIdsRef.current.delete(contract.id);
+      setDeletingContractIds((current) => {
+        const next = new Set(current);
+        next.delete(contract.id);
+        return next;
+      });
     }
   };
 
@@ -748,7 +763,7 @@ export default function ContractsManager({
                       <TableCell align="right">
                         <div className="flex justify-end gap-1">
                           <IconButton onClick={() => setSelectedContract(contract)} variant="secondary" title="Abrir contrato" aria-label="Abrir contrato" size="md"><Eye aria-hidden="true" /></IconButton>
-                          {canEditContracts && <IconButton onClick={() => handleDeleteContract(contract)} variant="danger" title="Excluir contrato" aria-label="Excluir contrato" size="md"><Trash2 aria-hidden="true" /></IconButton>}
+                          {canEditContracts && <IconButton onClick={() => handleDeleteContract(contract)} variant="danger" title="Excluir contrato" aria-label="Excluir contrato" size="md" loading={deletingContractIds.has(contract.id)}><Trash2 aria-hidden="true" /></IconButton>}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -912,6 +927,7 @@ export default function ContractsManager({
                         size="sm"
                         className="w-full sm:w-auto"
                         type="button"
+                        loading={deletingContractIds.has(contract.id)}
                       >
                         <Trash2 className="kds-control-icon" />
                         <span>Excluir</span>

@@ -180,6 +180,8 @@ export default function LeadsManager({
   const contractsRequestIdRef = useRef(0);
   const leadStatusMutationLockRef = useRef(new LeadStatusMutationLock());
   const bulkMutationInFlightRef = useRef(false);
+  const deletingLeadIdsRef = useRef(new Set<string>());
+  const [deletingLeadIds, setDeletingLeadIds] = useState<Set<string>>(new Set());
   const {
     motionEnabled,
     sectionDuration,
@@ -979,6 +981,8 @@ export default function LeadsManager({
   };
 
   const handleDeleteLead = async (lead: Lead) => {
+    if (deletingLeadIdsRef.current.has(lead.id)) return;
+
     const confirmed = await requestConfirmation({
       title: "Excluir lead",
       description: `Deseja excluir o lead ${lead.nome_completo}? Esta ação não pode ser desfeita.`,
@@ -988,6 +992,10 @@ export default function LeadsManager({
     });
 
     if (!confirmed) return;
+    if (deletingLeadIdsRef.current.has(lead.id)) return;
+
+    deletingLeadIdsRef.current.add(lead.id);
+    setDeletingLeadIds((current) => new Set(current).add(lead.id));
 
     try {
       await deleteLead(lead.id);
@@ -1000,6 +1008,13 @@ export default function LeadsManager({
     } catch (error) {
       console.error("Erro ao excluir lead:", error);
       toast.error("Não foi possível excluir o lead.");
+    } finally {
+      deletingLeadIdsRef.current.delete(lead.id);
+      setDeletingLeadIds((current) => {
+        const next = new Set(current);
+        next.delete(lead.id);
+        return next;
+      });
     }
   };
 
@@ -1843,7 +1858,7 @@ export default function LeadsManager({
                             <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Abrir lead" aria-label="Abrir lead" size="md"><MessageCircle aria-hidden="true" /></IconButton>
                             {canEditLeads && <IconButton onClick={() => openReminderScheduler(lead)} variant="soft" title="Agendar lembrete" aria-label="Agendar lembrete" size="md"><Bell aria-hidden="true" /></IconButton>}
                             {canEditLeads && <IconButton onClick={() => handleConvertToContract(lead)} variant="soft" title="Converter em contrato" aria-label="Converter em contrato" size="md"><FileText aria-hidden="true" /></IconButton>}
-                            {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md"><Trash2 aria-hidden="true" /></IconButton>}
+                            {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md" loading={deletingLeadIds.has(lead.id)}><Trash2 aria-hidden="true" /></IconButton>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -2025,6 +2040,7 @@ export default function LeadsManager({
                           className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
                           aria-label="Excluir lead"
                           type="button"
+                          loading={deletingLeadIds.has(lead.id)}
                         >
                           <Trash2 className="kds-control-icon" />
                           <span className="hidden sm:inline">Excluir</span>

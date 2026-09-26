@@ -2436,6 +2436,7 @@ export default function WhatsAppInboxScreen() {
   const [savedContactsPage, setSavedContactsPage] = useState(1);
   const [crmStartResults, setCrmStartResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [crmStartLoading, setCrmStartLoading] = useState(false);
+  const [startChatSourcesError, setStartChatSourcesError] = useState<string | null>(null);
   const [manualStartPhone, setManualStartPhone] = useState('');
   const [startingChatKey, setStartingChatKey] = useState<string | null>(null);
   const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
@@ -3982,6 +3983,7 @@ export default function WhatsAppInboxScreen() {
       setSavedContactsLoading(true);
       setCrmStartLoading(true);
     }
+    setStartChatSourcesError(null);
 
     try {
       const contactsPagePromise = whatsappContactsRepository.listSaved({
@@ -4005,13 +4007,16 @@ export default function WhatsAppInboxScreen() {
       setSavedContactsHasMore(contactsPage.hasMore);
       setSavedContactsPage(page);
       setCrmStartResults(leads);
+      setStartChatSourcesError(null);
     } catch (error) {
       if (requestId !== startChatSourcesRequestIdRef.current) {
         return;
       }
 
       console.error('[WhatsAppInbox] erro ao carregar fontes para novo chat', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar os contatos salvos.');
+      const message = error instanceof Error ? error.message : 'Não foi possível carregar os contatos salvos.';
+      toast.error(message);
+      setStartChatSourcesError(message);
       if (!appendSavedContacts) {
         setCrmStartResults([]);
       }
@@ -5005,6 +5010,7 @@ export default function WhatsAppInboxScreen() {
       setSavedContactsLoading(false);
       setSavedContactsLoadingMore(false);
       setCrmStartLoading(false);
+      setStartChatSourcesError(null);
       return;
     }
 
@@ -5031,6 +5037,10 @@ export default function WhatsAppInboxScreen() {
     void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true)
       .finally(() => savedContactsLoadMoreLockRef.current.release('saved-contacts'));
   }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
+
+  const handleRetryStartChatSources = useCallback(() => {
+    void refreshStartChatSources(startChatQuery, 1, false, false);
+  }, [refreshStartChatSources, startChatQuery]);
 
   useEffect(() => {
     const map = new Map(savedContactNameByPhoneRef.current);
@@ -11746,6 +11756,8 @@ export default function WhatsAppInboxScreen() {
             contactsLoading={savedContactsLoading}
             contactsLoadingMore={savedContactsLoadingMore}
             onLoadMoreContacts={handleLoadMoreSavedContacts}
+            loadError={startChatSourcesError}
+            onRetry={handleRetryStartChatSources}
             crmLeads={crmStartResults}
             crmLoading={crmStartLoading}
             statusOptions={leadStatuses}

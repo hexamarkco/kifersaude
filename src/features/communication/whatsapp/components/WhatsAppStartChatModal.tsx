@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
+import { AlertTriangle, Loader2, MessageSquarePlus, Phone, RefreshCw, Search, UserCircle2, UserRound } from 'lucide-react';
 
 import {
   ActionSurface,
@@ -36,6 +36,8 @@ type WhatsAppStartChatModalProps = {
   contactsLoading: boolean;
   contactsLoadingMore: boolean;
   onLoadMoreContacts: () => void;
+  loadError: string | null;
+  onRetry: () => void;
   crmLeads: CommWhatsAppLeadSearchResult[];
   crmLoading: boolean;
   statusOptions: LeadStatusConfig[];
@@ -72,6 +74,8 @@ export default function WhatsAppStartChatModal({
   contactsLoading,
   contactsLoadingMore,
   onLoadMoreContacts,
+  loadError,
+  onRetry,
   crmLeads,
   crmLoading,
   statusOptions,
@@ -145,7 +149,19 @@ export default function WhatsAppStartChatModal({
               </div>
             )}
             <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
-              {(source === 'saved' ? contactsLoading : crmLoading) ? (
+              {loadError ? (
+                <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[var(--text-primary)]">Não foi possível carregar as opções.</p>
+                    <p className="mt-1 text-sm leading-6">A lista vazia não confirma que não existem contatos ou leads.</p>
+                    <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry} disabled={starting}>
+                      <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                      Tentar novamente
+                    </Button>
+                  </div>
+                </Surface>
+              ) : (source === 'saved' ? contactsLoading : crmLoading) ? (
                 <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Carregando {source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...

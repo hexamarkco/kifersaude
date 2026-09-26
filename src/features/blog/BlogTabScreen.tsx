@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
 } from "react";
@@ -41,24 +42,35 @@ export default function BlogTabScreen() {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingContent, setUploadingContent] = useState(false);
   const [formData, setFormData] = useState(createEmptyBlogFormData);
+  const postsRequestIdRef = useRef(0);
   const loadingUi = useAdaptiveLoading(loading);
 
   const loadPosts = useCallback(async () => {
+    const requestId = postsRequestIdRef.current + 1;
+    postsRequestIdRef.current = requestId;
     setLoading(true);
 
     try {
-      setPosts(await listBlogPosts());
+      const nextPosts = await listBlogPosts();
+      if (requestId !== postsRequestIdRef.current) return;
+      setPosts(nextPosts);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Não foi possível carregar os posts: ${message}`);
-      setLoading(false);
-      return;
+      if (requestId === postsRequestIdRef.current) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Não foi possível carregar os posts: ${message}`);
+      }
+    } finally {
+      if (requestId === postsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
     void loadPosts();
+    return () => {
+      postsRequestIdRef.current += 1;
+    };
   }, [loadPosts]);
 
   const resetForm = useCallback(() => {
@@ -175,18 +187,24 @@ export default function BlogTabScreen() {
       }
 
       setUploadingCover(true);
-      const result = await uploadBlogImage(file);
-      setUploadingCover(false);
+      try {
+        const result = await uploadBlogImage(file);
 
-      if (result.success && result.url) {
-        setFormData((currentFormData) => ({
-          ...currentFormData,
-          cover_image_url: result.url!,
-        }));
-        return;
+        if (result.success && result.url) {
+          setFormData((currentFormData) => ({
+            ...currentFormData,
+            cover_image_url: result.url!,
+          }));
+          return;
+        }
+
+        toast.error(result.error || "Não foi possível fazer o upload da imagem.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Não foi possível fazer o upload da imagem: ${message}`);
+      } finally {
+        setUploadingCover(false);
       }
-
-      toast.error(result.error || "Não foi possível fazer o upload da imagem.");
     },
     [],
   );
@@ -200,19 +218,25 @@ export default function BlogTabScreen() {
       }
 
       setUploadingContent(true);
-      const result = await uploadBlogImage(file);
-      setUploadingContent(false);
+      try {
+        const result = await uploadBlogImage(file);
 
-      if (result.success && result.url) {
-        const imageHtml = `<img src="${result.url}" alt="Imagem do artigo" />`;
-        setFormData((currentFormData) => ({
-          ...currentFormData,
-          content: `${currentFormData.content}${imageHtml}`,
-        }));
-        return;
+        if (result.success && result.url) {
+          const imageHtml = `<img src="${result.url}" alt="Imagem do artigo" />`;
+          setFormData((currentFormData) => ({
+            ...currentFormData,
+            content: `${currentFormData.content}${imageHtml}`,
+          }));
+          return;
+        }
+
+        toast.error(result.error || "Não foi possível fazer o upload da imagem.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Não foi possível fazer o upload da imagem: ${message}`);
+      } finally {
+        setUploadingContent(false);
       }
-
-      toast.error(result.error || "Não foi possível fazer o upload da imagem.");
     },
     [],
   );

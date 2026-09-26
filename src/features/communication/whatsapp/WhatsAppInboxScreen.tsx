@@ -2473,6 +2473,10 @@ export default function WhatsAppInboxScreen() {
   const leadContractsRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
+  const composerRewriteRequestIdRef = useRef(0);
+  const composerRewriteModalOpenRef = useRef(false);
+  const composerRewriteSourceRef = useRef('');
+  const messageDraftRef = useRef('');
   const replySuggestionRequestIdRef = useRef(0);
   const replySuggestionKeyRef = useRef('');
   const leadSearchRequestIdRef = useRef(0);
@@ -2530,6 +2534,10 @@ export default function WhatsAppInboxScreen() {
     composerDraftsByChatId,
   } = useComposerDraft(selectedChatId);
   const mobileViewportBaselineRef = useRef({ height: 0, width: 0 });
+
+  useEffect(() => {
+    messageDraftRef.current = messageDraft;
+  }, [messageDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -4344,6 +4352,9 @@ export default function WhatsAppInboxScreen() {
     setScheduledMessagesPanelOpen(false);
     setChatFilesOpen(false);
     setMediaDrawerOpen(false);
+    composerRewriteRequestIdRef.current += 1;
+    composerRewriteModalOpenRef.current = false;
+    composerRewriteSourceRef.current = '';
     setComposerRewriteModalOpen(false);
     setComposerRewriteSource('');
     setComposerRewriteDraft('');
@@ -7919,6 +7930,9 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const handleCloseComposerRewriteModal = useCallback(() => {
+    composerRewriteRequestIdRef.current += 1;
+    composerRewriteModalOpenRef.current = false;
+    composerRewriteSourceRef.current = '';
     setComposerRewriteModalOpen(false);
     setComposerRewriteSource('');
     setComposerRewriteDraft('');
@@ -7955,29 +7969,46 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const requestId = ++composerRewriteRequestIdRef.current;
+    const targetChatId = selectedChat?.id ?? null;
+    const sourceSnapshot = sourceText;
     setRewritingComposer(true);
 
     try {
       const result = await whatsappFollowUpService.rewrite({
         message: sourceText,
-        chatId: selectedChat?.id ?? null,
+        chatId: targetChatId,
         tone,
         customInstructions,
       });
+      if (requestId !== composerRewriteRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       const rewrittenText = result.text.trim();
       if (options.applyToComposer) {
+        if (messageDraftRef.current !== sourceSnapshot) {
+          return;
+        }
         applyTextToComposer(rewrittenText);
         if (options.successMessage) {
           toast.success(options.successMessage);
         }
       } else {
+        if (!composerRewriteModalOpenRef.current || composerRewriteSourceRef.current !== sourceSnapshot) {
+          return;
+        }
         setComposerRewriteDraft(rewrittenText);
       }
     } catch (error) {
+      if (requestId !== composerRewriteRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao reescrever mensagem do composer', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem com IA.');
     } finally {
-      setRewritingComposer(false);
+      if (requestId === composerRewriteRequestIdRef.current) {
+        setRewritingComposer(false);
+      }
     }
   }, [applyTextToComposer, selectedChat?.id]);
 
@@ -8000,6 +8031,9 @@ export default function WhatsAppInboxScreen() {
     }
 
     const sourceText = messageDraft;
+    composerRewriteRequestIdRef.current += 1;
+    composerRewriteModalOpenRef.current = true;
+    composerRewriteSourceRef.current = sourceText;
     setComposerRewriteSource(sourceText);
     setComposerRewriteDraft('');
     setComposerRewriteCustomInstructions('');

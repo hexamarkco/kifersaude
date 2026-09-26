@@ -151,7 +151,7 @@ export default function WhatsAppAgendaModal({
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
-  const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
+  const [markingLostLeadIds, setMarkingLostLeadIds] = useState<Set<string>>(() => new Set());
   const [quickSchedulingAction, setQuickSchedulingAction] = useState<{
     reminderId: string;
     daysAhead: 1 | 2 | 3 | 4 | 5;
@@ -177,6 +177,7 @@ export default function WhatsAppAgendaModal({
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const markingLostLeadIdsRef = useRef<Set<string>>(new Set());
   const [updatingReminderIds, setUpdatingReminderIds] = useState<Set<string>>(new Set());
   const updatingReminderIdsRef = useRef<Set<string>>(new Set());
   const [deletingReminderIds, setDeletingReminderIds] = useState<Set<string>>(new Set());
@@ -459,25 +460,29 @@ export default function WhatsAppAgendaModal({
       return;
     }
 
-    const leadInfo = leadsMap.get(leadId) ?? (await fetchLeadInfo(leadId));
-    const leadName = leadInfo?.nome_completo ?? 'este lead';
-    const previousStatus = leadInfo?.status ?? 'Sem status';
-
-    const confirmed = await requestConfirmation({
-      title: 'Marcar lead como perdido',
-      description: `Deseja marcar ${leadName} como perdido e remover os lembretes pendentes?`,
-      confirmLabel: 'Marcar como perdido',
-      cancelLabel: 'Cancelar',
-      tone: 'danger',
-    });
-
-    if (!confirmed) {
+    if (markingLostLeadIdsRef.current.has(leadId)) {
       return;
     }
 
-    setMarkingLostLeadId(leadId);
+    markingLostLeadIdsRef.current.add(leadId);
+    setMarkingLostLeadIds(new Set(markingLostLeadIdsRef.current));
 
     try {
+      const leadInfo = leadsMap.get(leadId) ?? (await fetchLeadInfo(leadId));
+      const leadName = leadInfo?.nome_completo ?? 'este lead';
+      const previousStatus = leadInfo?.status ?? 'Sem status';
+      const confirmed = await requestConfirmation({
+        title: 'Marcar lead como perdido',
+        description: `Deseja marcar ${leadName} como perdido e remover os lembretes pendentes?`,
+        confirmLabel: 'Marcar como perdido',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
       const nowIso = new Date().toISOString();
 
       const remindersForLead = reminders.filter((item) => getLeadIdForReminder(item) === leadId);
@@ -512,7 +517,8 @@ export default function WhatsAppAgendaModal({
       console.error('[WhatsAppAgendaModal] erro ao marcar lead como perdido:', markError);
       toast.error('Não foi possível marcar o lead como perdido.');
     } finally {
-      setMarkingLostLeadId(null);
+      markingLostLeadIdsRef.current.delete(leadId);
+      setMarkingLostLeadIds(new Set(markingLostLeadIdsRef.current));
     }
   }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, reminders, requestConfirmation]);
 
@@ -1214,6 +1220,7 @@ export default function WhatsAppAgendaModal({
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
     const matchesCurrentLead = currentLeadMatchesReminder(reminder);
     const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
+    const isMarkingLostLead = leadId ? markingLostLeadIds.has(leadId) : false;
 
     return (
       <Surface
@@ -1442,11 +1449,11 @@ export default function WhatsAppAgendaModal({
                 className="shrink-0"
                 title="Marcar lead como perdido e limpar lembretes"
                 aria-label="Marcar lead como perdido e limpar lembretes"
-                disabled={markingLostLeadId === leadId}
-                loading={markingLostLeadId === leadId}
+                disabled={isMarkingLostLead}
+                loading={isMarkingLostLead}
                 size="md"
               >
-                {markingLostLeadId !== leadId && <X aria-hidden="true" />}
+                {!isMarkingLostLead && <X aria-hidden="true" />}
               </IconButton>
             ) : null}
 

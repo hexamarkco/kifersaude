@@ -131,6 +131,7 @@ export default function WhatsAppBatchFollowUpModal({
   const [configOpen, setConfigOpen] = useState(false);
   const [batchId, setBatchId] = useState<string | null>(null);
   const cancelRequestedRef = useRef(false);
+  const sessionIdRef = useRef(0);
 
   const currentStep = phase === 'loading' ? 0 : phase === 'generating' ? 1 : phase === 'sending' ? 3 : phase === 'sent' ? 4 : items.some((i) => i.status === 'pending') ? 1 : 2;
 
@@ -146,6 +147,7 @@ export default function WhatsAppBatchFollowUpModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    const sessionId = ++sessionIdRef.current;
     cancelRequestedRef.current = false;
     setPhase('loading');
     setActiveItemIndex(null);
@@ -156,6 +158,7 @@ export default function WhatsAppBatchFollowUpModal({
     void (async () => {
       try {
         const pendingChats = await whatsappFollowUpService.listPendingChats();
+        if (sessionId !== sessionIdRef.current) return;
         const seenReminderIds = new Set<string>();
         const mapped: BatchItemState[] = pendingChats.filter((chat) => {
           if (seenReminderIds.has(chat.reminder_id)) return false;
@@ -196,10 +199,15 @@ export default function WhatsAppBatchFollowUpModal({
         setPhase('ready');
         if (mapped.length === 0) toast.info('Nenhum follow-up pendente para hoje.');
       } catch (error) {
+        if (sessionId !== sessionIdRef.current) return;
         toast.error(error instanceof Error ? error.message : 'Erro ao carregar follow-ups pendentes.');
         onClose();
       }
     })();
+    return () => {
+      sessionIdRef.current += 1;
+      cancelRequestedRef.current = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -235,6 +243,8 @@ export default function WhatsAppBatchFollowUpModal({
   const handleGenerateItem = async (index: number) => {
     const item = items[index];
     if (!item) return;
+    const sessionId = sessionIdRef.current;
+    const targetReminderId = item.reminderId;
 
     setItems((prev) => updateItemInList(prev, index, { status: 'generating', error: null }));
 
@@ -246,35 +256,43 @@ export default function WhatsAppBatchFollowUpModal({
         triggerSource: 'batch',
       });
 
-      setItems((prev) =>
-        updateItemInList(prev, index, {
-          status: 'ready',
-          generatedText: result.text ?? '',
-          variations: result.variations ?? [],
-          aiContextRationale: result.aiContext?.rationale ?? null,
-          emotionalContext: result.aiContext?.emotionalContext ?? null,
-          currentAction: result.currentAction ?? 'send',
-          currentActionReason: result.currentActionReason ?? null,
-          opportunityRecommendation: result.opportunityRecommendation ?? 'continue',
-          scheduleRecommendation: result.scheduleRecommendation ?? null,
-          generationId: result.generationId ?? null,
-          approvedScheduleAction: result.scheduleRecommendation?.action === 'schedule' && Boolean(result.scheduleRecommendation.suggestedDate)
-            ? 'schedule'
-            : 'no_schedule',
-          approvedScheduleDate: result.scheduleRecommendation?.action === 'schedule'
-            ? result.scheduleRecommendation.suggestedDate ?? null
-            : null,
-          finalStatus: null,
-          error: null,
-        }),
-      );
+      if (sessionId !== sessionIdRef.current) return;
+      setItems((prev) => prev.map((currentItem) => (
+        currentItem.reminderId === targetReminderId
+          ? {
+              ...currentItem,
+              status: 'ready' as const,
+              generatedText: result.text ?? '',
+              variations: result.variations ?? [],
+              aiContextRationale: result.aiContext?.rationale ?? null,
+              emotionalContext: result.aiContext?.emotionalContext ?? null,
+              currentAction: result.currentAction ?? 'send',
+              currentActionReason: result.currentActionReason ?? null,
+              opportunityRecommendation: result.opportunityRecommendation ?? 'continue',
+              scheduleRecommendation: result.scheduleRecommendation ?? null,
+              generationId: result.generationId ?? null,
+              approvedScheduleAction: result.scheduleRecommendation?.action === 'schedule' && Boolean(result.scheduleRecommendation.suggestedDate)
+                ? 'schedule' as const
+                : 'no_schedule' as const,
+              approvedScheduleDate: result.scheduleRecommendation?.action === 'schedule'
+                ? result.scheduleRecommendation.suggestedDate ?? null
+                : null,
+              finalStatus: null,
+              error: null,
+            }
+          : currentItem
+      )));
     } catch (error) {
-      setItems((prev) =>
-        updateItemInList(prev, index, {
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Erro ao gerar follow-up.',
-        }),
-      );
+      if (sessionId !== sessionIdRef.current) return;
+      setItems((prev) => prev.map((currentItem) => (
+        currentItem.reminderId === targetReminderId
+          ? {
+              ...currentItem,
+              status: 'failed' as const,
+              error: error instanceof Error ? error.message : 'Erro ao gerar follow-up.',
+            }
+          : currentItem
+      )));
     }
   };
 
@@ -293,17 +311,28 @@ export default function WhatsAppBatchFollowUpModal({
   const handleSimpleRefinement = async (tone: CommWhatsAppRewriteTone) => {
     const idx = activeItemIndex;
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
+    const sessionId = sessionIdRef.current;
+    const targetReminderId = activeItem.reminderId;
+    const sourceText = activeItem.generatedText.trim();
     setRefiningActionId(tone);
     try {
       const result = await whatsappFollowUpService.rewrite({
-        message: activeItem.generatedText.trim(),
+        message: sourceText,
         tone,
       });
-      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text ?? activeItem.generatedText }));
+      if (sessionId !== sessionIdRef.current) return;
+      setItems((prev) => prev.map((item) => (
+        item.reminderId === targetReminderId && item.generatedText.trim() === sourceText
+          ? { ...item, generatedText: result.text ?? item.generatedText }
+          : item
+      )));
     } catch (error) {
+      if (sessionId !== sessionIdRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar a mensagem.');
     } finally {
-      setRefiningActionId(null);
+      if (sessionId === sessionIdRef.current) {
+        setRefiningActionId(null);
+      }
     }
   };
 
@@ -312,23 +341,35 @@ export default function WhatsAppBatchFollowUpModal({
   const handleContextRefinement = async (action: typeof CONTEXT_REFINEMENT_ACTIONS[number]) => {
     const idx = activeItemIndex;
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
+    const sessionId = sessionIdRef.current;
+    const targetReminderId = activeItem.reminderId;
+    const sourceText = activeItem.generatedText.trim();
     setRefiningActionId(action.id);
     try {
       const result = await whatsappFollowUpService.refine(activeItem.chatId, {
-        currentMessage: activeItem.generatedText.trim(),
+        currentMessage: sourceText,
         adjustmentInstruction: action.instruction,
       });
-      setItems((prev) => updateItemInList(prev, idx, { generatedText: result.text ?? activeItem.generatedText }));
+      if (sessionId !== sessionIdRef.current) return;
+      setItems((prev) => prev.map((item) => (
+        item.reminderId === targetReminderId && item.generatedText.trim() === sourceText
+          ? { ...item, generatedText: result.text ?? item.generatedText }
+          : item
+      )));
     } catch (error) {
+      if (sessionId !== sessionIdRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
     } finally {
-      setRefiningActionId(null);
+      if (sessionId === sessionIdRef.current) {
+        setRefiningActionId(null);
+      }
     }
   };
 
   // ---- Bulk generate ----
 
   const handleGenerateAll = async () => {
+    const sessionId = sessionIdRef.current;
     const targetIndices = items
       .map((it, idx) => (it.status === 'pending' && it.selected ? idx : -1))
       .filter((idx) => idx !== -1);
@@ -366,6 +407,8 @@ export default function WhatsAppBatchFollowUpModal({
         ),
       );
 
+      if (sessionId !== sessionIdRef.current) return;
+
       results.forEach((result, pos) => {
         const idx = batch[pos];
         if (result.status === 'fulfilled') {
@@ -401,6 +444,7 @@ export default function WhatsAppBatchFollowUpModal({
       setItems([...updatedItems]);
     }
 
+    if (sessionId !== sessionIdRef.current) return;
     setItems(updatedItems);
     setPhase('ready');
 
@@ -416,6 +460,7 @@ export default function WhatsAppBatchFollowUpModal({
   // ---- Send ----
 
   const handleSendSelected = async () => {
+    const sessionId = sessionIdRef.current;
     const readyItems = items.filter((it) => it.status === 'ready' && it.selected);
     if (readyItems.length === 0 || !onSendBatchFollowUps) {
       if (!onSendBatchFollowUps) toast.error('Envio não disponível.');
@@ -452,6 +497,7 @@ export default function WhatsAppBatchFollowUpModal({
         })),
         {
           onProgress: (progress) => {
+            if (sessionId !== sessionIdRef.current) return;
             setItems((prev) => prev.map((item) => (
               item.reminderId === progress.reminderId
                 ? {
@@ -468,8 +514,10 @@ export default function WhatsAppBatchFollowUpModal({
         },
       );
 
+      if (sessionId !== sessionIdRef.current) return;
       setSentSummary(summary);
     } catch (error) {
+      if (sessionId !== sessionIdRef.current) return;
       console.error('[WhatsAppBatchFollowUpModal] erro ao enviar:', error);
       setItems((prev) => prev.map((item) => (
         item.sendStatus === 'queued' || item.sendStatus === 'sending'
@@ -484,13 +532,16 @@ export default function WhatsAppBatchFollowUpModal({
       });
     }
 
-    setPhase('sent');
+    if (sessionId === sessionIdRef.current) {
+      setPhase('sent');
+    }
   };
 
   // ---- Close / cancel ----
 
   const handleClose = () => {
-    if (phase === 'generating') cancelRequestedRef.current = true;
+    sessionIdRef.current += 1;
+    cancelRequestedRef.current = true;
     onClose();
   };
 

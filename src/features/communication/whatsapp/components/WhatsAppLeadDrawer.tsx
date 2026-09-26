@@ -152,6 +152,15 @@ export default function WhatsAppLeadDrawer({
   const [agendaRescheduleValue, setAgendaRescheduleValue] = useState('');
   const [agendaActionLoading, setAgendaActionLoading] = useState<Record<string, boolean>>({});
   const [agendaRescheduleLoading, setAgendaRescheduleLoading] = useState<Record<string, boolean>>({});
+  const agendaContextKey = [
+    isOpen ? 'open' : 'closed',
+    chatId ?? '',
+    linkedLead?.id ?? '',
+    contracts.map((contract) => contract.id).filter(Boolean).sort().join(','),
+    canViewAgenda ? 'view' : 'hidden',
+  ].join('|');
+  const agendaContextKeyRef = useRef(agendaContextKey);
+  agendaContextKeyRef.current = agendaContextKey;
 
   const agendaLead = useMemo(() => {
     if (!linkedLead) {
@@ -193,6 +202,10 @@ export default function WhatsAppLeadDrawer({
   );
 
   const loadAgendaReminders = useCallback(async () => {
+    if (agendaContextKey !== agendaContextKeyRef.current) {
+      return;
+    }
+
     if (!linkedLead || !canViewAgenda) {
       agendaRequestIdRef.current += 1;
       setAgendaReminders([]);
@@ -216,24 +229,24 @@ export default function WhatsAppLeadDrawer({
         next.set(reminder.id, reminder);
       });
 
-      if (requestId !== agendaRequestIdRef.current) {
+      if (requestId !== agendaRequestIdRef.current || agendaContextKey !== agendaContextKeyRef.current) {
         return;
       }
 
       setAgendaReminders(Array.from(next.values()));
     } catch (error) {
-      if (requestId !== agendaRequestIdRef.current) {
+      if (requestId !== agendaRequestIdRef.current || agendaContextKey !== agendaContextKeyRef.current) {
         return;
       }
 
       console.error('[WhatsAppLeadDrawer] erro ao carregar agenda do chat', error);
       setAgendaError('Não foi possível carregar a agenda deste chat agora.');
     } finally {
-      if (requestId === agendaRequestIdRef.current) {
+      if (requestId === agendaRequestIdRef.current && agendaContextKey === agendaContextKeyRef.current) {
         setAgendaLoading(false);
       }
     }
-  }, [canViewAgenda, contracts, linkedLead]);
+  }, [agendaContextKey, canViewAgenda, contracts, linkedLead]);
 
   useEffect(() => {
     if (!isOpen) {

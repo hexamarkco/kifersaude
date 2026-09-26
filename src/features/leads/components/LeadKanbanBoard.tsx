@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Mail, Phone, Users } from "lucide-react";
 
 import { useAuth } from "../../../contexts/AuthContext";
@@ -40,6 +40,7 @@ export default function LeadKanbanBoard({
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
   const [wipLimits, setWipLimits] = useState<Record<string, number>>({});
+  const loadLeadsRequestIdRef = useRef(0);
 
   const statusColumns = useMemo(
     () =>
@@ -93,6 +94,8 @@ export default function LeadKanbanBoard({
   );
 
   const loadLeads = useCallback(async () => {
+    const requestId = ++loadLeadsRequestIdRef.current;
+
     if (leads) {
       setLocalLeads(leads);
       setLoading(false);
@@ -108,6 +111,10 @@ export default function LeadKanbanBoard({
 
       const data = await listLeadsByStatuses(statusColumns.map((column) => column.nome));
 
+      if (requestId !== loadLeadsRequestIdRef.current) {
+        return;
+      }
+
       let fetchedLeads: Lead[] = data || [];
 
       if (isObserver) {
@@ -118,9 +125,14 @@ export default function LeadKanbanBoard({
 
       setLocalLeads(fetchedLeads);
     } catch (error) {
+      if (requestId !== loadLeadsRequestIdRef.current) {
+        return;
+      }
       console.error("Erro ao carregar leads:", error);
     } finally {
-      setLoading(false);
+      if (requestId === loadLeadsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [isObserver, isOriginVisibleToObserver, leads, statusColumns]);
 
@@ -181,6 +193,7 @@ export default function LeadKanbanBoard({
 
     const nowIso = new Date().toISOString();
     const responsavelLabel = getResponsavelLabel(draggedLead);
+    loadLeadsRequestIdRef.current += 1;
 
     setLocalLeads((current) =>
       current.map((lead) =>
@@ -347,7 +360,10 @@ export default function LeadKanbanBoard({
                                 leadId={lead.id}
                                 favorito={Boolean(lead.favorito)}
                                 size="sm"
-                                onToggled={(next) => setLocalLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
+                                onToggled={(next) => {
+                                  loadLeadsRequestIdRef.current += 1;
+                                  setLocalLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)));
+                                }}
                               />
                               <h5
                                 className="kds-op-lead-title truncate"

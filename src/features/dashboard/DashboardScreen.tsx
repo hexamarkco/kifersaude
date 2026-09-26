@@ -114,6 +114,7 @@ export default function DashboardScreen({
   const isInitialLoadRef = useRef(true);
   const dataRequestIdRef = useRef(0);
   const calendarSnapshotRequestIdRef = useRef(0);
+  const calendarSnapshotLoadedKeyRef = useRef<string | null>(null);
   const lastAdjustmentReminderSync = useRef<string | null>(null);
   const {
     motionEnabled,
@@ -834,56 +835,6 @@ export default function DashboardScreen({
     }
   }, [contracts, selectedContract]);
 
-  const loadCalendarSnapshot = useCallback(async () => {
-    if (
-      isObserver ||
-      !showSupportingAnalysis ||
-      holders.length > 0 ||
-      dependents.length > 0
-    ) {
-      return;
-    }
-
-    const requestId = calendarSnapshotRequestIdRef.current + 1;
-    calendarSnapshotRequestIdRef.current = requestId;
-    setCalendarSnapshotLoading(true);
-    setCalendarSnapshotError(null);
-
-    try {
-      const {
-        holders: loadedHolders,
-        dependents: loadedDependents,
-      } = await loadDashboardCalendarSnapshot();
-      if (requestId !== calendarSnapshotRequestIdRef.current) {
-        return;
-      }
-      setHolders(loadedHolders);
-      setDependents(loadedDependents);
-    } catch (calendarError: unknown) {
-      if (requestId !== calendarSnapshotRequestIdRef.current) {
-        return;
-      }
-      console.error(
-        "Erro ao carregar os detalhes de calendário do dashboard:",
-        calendarError,
-      );
-      setCalendarSnapshotError(
-        "Não foi possível carregar os detalhes do calendário agora.",
-      );
-    } finally {
-      if (requestId === calendarSnapshotRequestIdRef.current) {
-        setCalendarSnapshotLoading(false);
-      }
-    }
-  }, [dependents.length, holders.length, isObserver, showSupportingAnalysis]);
-
-  useEffect(() => {
-    void loadCalendarSnapshot();
-    return () => {
-      calendarSnapshotRequestIdRef.current += 1;
-    };
-  }, [loadCalendarSnapshot]);
-
   useEffect(() => {
     if (!selectedLead) return;
     const refreshed = leads.find((lead) => lead.id === selectedLead.id);
@@ -1380,6 +1331,69 @@ export default function DashboardScreen({
       ),
     [dashboardScopedContracts],
   );
+  const calendarActiveContractIds = useMemo(
+    () => calendarActiveContracts.map((contract) => contract.id),
+    [calendarActiveContracts],
+  );
+  const calendarSnapshotContractKey = useMemo(
+    () => [...calendarActiveContractIds].sort().join(","),
+    [calendarActiveContractIds],
+  );
+  const loadCalendarSnapshot = useCallback(async () => {
+    if (isObserver || !showSupportingAnalysis) {
+      return;
+    }
+
+    if (calendarSnapshotLoadedKeyRef.current === calendarSnapshotContractKey) {
+      return;
+    }
+
+    const requestId = calendarSnapshotRequestIdRef.current + 1;
+    calendarSnapshotRequestIdRef.current = requestId;
+    setCalendarSnapshotLoading(true);
+    setCalendarSnapshotError(null);
+
+    try {
+      const {
+        holders: loadedHolders,
+        dependents: loadedDependents,
+      } = await loadDashboardCalendarSnapshot(calendarActiveContractIds);
+      if (requestId !== calendarSnapshotRequestIdRef.current) {
+        return;
+      }
+      setHolders(loadedHolders);
+      setDependents(loadedDependents);
+      calendarSnapshotLoadedKeyRef.current = calendarSnapshotContractKey;
+    } catch (calendarError: unknown) {
+      if (requestId !== calendarSnapshotRequestIdRef.current) {
+        return;
+      }
+      console.error(
+        "Erro ao carregar os detalhes de calendário do dashboard:",
+        calendarError,
+      );
+      setCalendarSnapshotError(
+        "Não foi possível carregar os detalhes do calendário agora.",
+      );
+    } finally {
+      if (requestId === calendarSnapshotRequestIdRef.current) {
+        setCalendarSnapshotLoading(false);
+      }
+    }
+  }, [
+    calendarActiveContractIds,
+    calendarSnapshotContractKey,
+    isObserver,
+    showSupportingAnalysis,
+  ]);
+
+  useEffect(() => {
+    void loadCalendarSnapshot();
+    return () => {
+      calendarSnapshotRequestIdRef.current += 1;
+    };
+  }, [loadCalendarSnapshot]);
+
   const addVariationToSeries = useCallback(
     (series: { label: string; value: number; date: Date }[]) =>
       series.map((point, index) => {

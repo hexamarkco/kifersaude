@@ -38,6 +38,24 @@ export type DashboardContractRealtimeRecord = Contract & {
 
 export type DashboardReminderInsert = Database['public']['Tables']['reminders']['Insert'];
 
+type DashboardCalendarHolder = Pick<
+  Holder,
+  'id' | 'contract_id' | 'nome_completo' | 'data_nascimento' | 'cnpj' | 'razao_social' | 'nome_fantasia'
+>;
+
+type DashboardCalendarDependent = Pick<
+  Dependent,
+  'id' | 'contract_id' | 'nome_completo' | 'data_nascimento'
+>;
+
+const chunk = <T>(items: T[], size = 100): T[][] => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
   const [leads, contracts] = await Promise.all([
     fetchAllPages<Lead>(async (from, to) => databaseClient
@@ -82,21 +100,41 @@ export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecision
   return { reminders, interactions, statusHistory };
 }
 
-export async function loadDashboardCalendarSnapshot(): Promise<DashboardCalendarSnapshot> {
-  const [holders, dependents] = await Promise.all([
-    fetchAllPages<Holder>(async (from, to) => databaseClient
-      .from('contract_holders')
-      .select('*')
-      .range(from, to)
-      .overrideTypes<Holder[], { merge: false }>()),
-    fetchAllPages<Dependent>(async (from, to) => databaseClient
-      .from('dependents')
-      .select('*')
-      .range(from, to)
-      .overrideTypes<Dependent[], { merge: false }>()),
+export async function loadDashboardCalendarSnapshot(
+  contractIds: string[],
+): Promise<DashboardCalendarSnapshot> {
+  const uniqueContractIds = [...new Set(contractIds)].filter(Boolean);
+  if (uniqueContractIds.length === 0) {
+    return { holders: [], dependents: [] };
+  }
+
+  const [holderPages, dependentPages] = await Promise.all([
+    Promise.all(
+      chunk(uniqueContractIds).map((contractIdChunk) =>
+        fetchAllPages<DashboardCalendarHolder>(async (from, to) => databaseClient
+          .from('contract_holders')
+          .select('id, contract_id, nome_completo, data_nascimento, cnpj, razao_social, nome_fantasia')
+          .in('contract_id', contractIdChunk)
+          .range(from, to)
+          .overrideTypes<DashboardCalendarHolder[], { merge: false }>()),
+      ),
+    ),
+    Promise.all(
+      chunk(uniqueContractIds).map((contractIdChunk) =>
+        fetchAllPages<DashboardCalendarDependent>(async (from, to) => databaseClient
+          .from('dependents')
+          .select('id, contract_id, nome_completo, data_nascimento')
+          .in('contract_id', contractIdChunk)
+          .range(from, to)
+          .overrideTypes<DashboardCalendarDependent[], { merge: false }>()),
+      ),
+    ),
   ]);
 
-  return { holders, dependents };
+  return {
+    holders: holderPages.flat(),
+    dependents: dependentPages.flat(),
+  };
 }
 
 export function subscribeToDashboardLeads(

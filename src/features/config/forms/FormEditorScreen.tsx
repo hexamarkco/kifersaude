@@ -67,7 +67,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
   const [steps, setSteps] = useState<PublicFormStep[]>([]);
   const [loadingSteps, setLoadingSteps] = useState(true);
-  const [busyStepId, setBusyStepId] = useState<string | null>(null);
+  const [stepMutationInFlight, setStepMutationInFlight] = useState(false);
   const [stepDialog, setStepDialog] = useState<{ step: PublicFormStep | null } | null>(null);
   const [savingStep, setSavingStep] = useState(false);
 
@@ -75,6 +75,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
   const stepsLoadRequestIdRef = useRef(0);
   const submissionsLoadRequestIdRef = useRef(0);
+  const stepMutationInFlightRef = useRef(false);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -171,24 +172,40 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     setSavingSettings(false);
   };
 
+  const startStepMutation = () => {
+    if (stepMutationInFlightRef.current) return false;
+    stepMutationInFlightRef.current = true;
+    setStepMutationInFlight(true);
+    return true;
+  };
+
+  const finishStepMutation = () => {
+    stepMutationInFlightRef.current = false;
+    setStepMutationInFlight(false);
+  };
+
   const handleSaveContactStep = async (title: string, description: string) => {
-    if (!contactStep) return;
-    setBusyStepId(contactStep.id);
-    const { error } = await formsService.updateStep(contactStep.id, {
-      title: title.trim() || contactStep.title,
-      description: description.trim() || null,
-    });
-    if (error) {
+    if (!contactStep || !startStepMutation()) return;
+    try {
+      const { error } = await formsService.updateStep(contactStep.id, {
+        title: title.trim() || contactStep.title,
+        description: description.trim() || null,
+      });
+      if (error) {
+        toast.error("Não foi possível salvar a etapa de contato.");
+      } else {
+        await loadSteps();
+      }
+    } catch {
       toast.error("Não foi possível salvar a etapa de contato.");
-    } else {
-      await loadSteps();
+    } finally {
+      finishStepMutation();
     }
-    setBusyStepId(null);
   };
 
   const persistOrder = async (orderedQuestionIds: string[]) => {
     const ids = contactStep ? [...orderedQuestionIds, contactStep.id] : orderedQuestionIds;
-    await formsService.reorderSteps(ids);
+    return formsService.reorderSteps(ids);
   };
 
   const moveStep = async (index: number, direction: -1 | 1) => {
@@ -199,41 +216,60 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIndex, 0, moved);
 
-    setBusyStepId(moved.id);
-    await persistOrder(reordered.map((step) => step.id));
-    await loadSteps();
-    setBusyStepId(null);
+    if (!startStepMutation()) return;
+    try {
+      const { error } = await persistOrder(reordered.map((step) => step.id));
+      if (error) {
+        toast.error("Não foi possível atualizar a ordem das perguntas.");
+        return;
+      }
+      await loadSteps();
+    } catch {
+      toast.error("Não foi possível atualizar a ordem das perguntas.");
+    } finally {
+      finishStepMutation();
+    }
   };
 
   const handleSaveStep = async (payload: StepEditorPayload) => {
+    if (!startStepMutation()) return;
     setSavingStep(true);
-
-    if (stepDialog?.step) {
-      const { error } = await formsService.updateStep(stepDialog.step.id, payload);
-      if (error) {
-        toast.error("Não foi possível salvar a pergunta.");
+    try {
+      const currentStep = stepDialog?.step;
+      if (currentStep) {
+        const { error } = await formsService.updateStep(currentStep.id, payload);
+        if (error) {
+          toast.error("Não foi possível salvar a pergunta.");
+        } else {
+          await loadSteps();
+          setStepDialog(null);
+          toast.success("Pergunta atualizada.");
+        }
       } else {
-        await loadSteps();
-        setStepDialog(null);
-        toast.success("Pergunta atualizada.");
+        const { data: created, error } = await formsService.createStep({
+          form_id: form.id,
+          position: questionSteps.length,
+          ...payload,
+        });
+        if (error || !created) {
+          toast.error("Não foi possível adicionar a pergunta.");
+        } else {
+          const { error: orderError } = await persistOrder([...questionSteps.map((step) => step.id), created.id]);
+          await loadSteps();
+          setStepDialog(null);
+          if (orderError) {
+            toast.error("A pergunta foi adicionada, mas não foi possível concluir a ordem.");
+          } else {
+            toast.success("Pergunta adicionada.");
+          }
+        }
       }
-    } else {
-      const { data: created, error } = await formsService.createStep({
-        form_id: form.id,
-        position: questionSteps.length,
-        ...payload,
-      });
-      if (error || !created) {
-        toast.error("Não foi possível adicionar a pergunta.");
-      } else {
-        await persistOrder([...questionSteps.map((step) => step.id), created.id]);
-        await loadSteps();
-        setStepDialog(null);
-        toast.success("Pergunta adicionada.");
-      }
+    } catch {
+      toast.error("Não foi possível salvar a pergunta.");
+    } finally {
+      setSavingStep(false);
+      finishStepMutation();
     }
-
-    setSavingStep(false);
   };
 
   const handleDeleteStep = async (step: PublicFormStep) => {
@@ -246,16 +282,26 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     });
     if (!confirmed) return;
 
-    setBusyStepId(step.id);
-    const { error } = await formsService.deleteStep(step.id);
-    if (error) {
-      toast.error("Não foi possível excluir a pergunta.");
-    } else {
-      await persistOrder(questionSteps.filter((item) => item.id !== step.id).map((item) => item.id));
+    if (!startStepMutation()) return;
+    try {
+      const { error } = await formsService.deleteStep(step.id);
+      if (error) {
+        toast.error("Não foi possível excluir a pergunta.");
+        return;
+      }
+
+      const { error: orderError } = await persistOrder(questionSteps.filter((item) => item.id !== step.id).map((item) => item.id));
       await loadSteps();
-      toast.success("Pergunta removida.");
+      if (orderError) {
+        toast.error("A pergunta foi removida, mas não foi possível concluir a ordem.");
+      } else {
+        toast.success("Pergunta removida.");
+      }
+    } catch {
+      toast.error("Não foi possível excluir a pergunta.");
+    } finally {
+      finishStepMutation();
     }
-    setBusyStepId(null);
   };
 
   const handleCopyLink = async () => {
@@ -270,7 +316,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <IconButton variant="secondary" onClick={onBack} size="sm" aria-label="Voltar para formulários" title="Voltar">
+        <IconButton variant="secondary" onClick={onBack} disabled={stepMutationInFlight} size="sm" aria-label="Voltar para formulários" title="Voltar">
           <ArrowLeft aria-hidden="true" />
         </IconButton>
         <SectionHeader eyebrow="Formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" />
@@ -358,7 +404,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
             <h3 className="kds-card-title">Perguntas</h3>
             <p className="kds-card-subtitle">Uma pergunta por tela. A última etapa (contato) é sempre fixa.</p>
           </div>
-          <Button onClick={() => setStepDialog({ step: null })}>
+          <Button onClick={() => setStepDialog({ step: null })} disabled={stepMutationInFlight}>
             <Plus className="kds-control-icon" />
             <span>Nova pergunta</span>
           </Button>
@@ -371,15 +417,14 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
         ) : (
           <div className="space-y-3">
             {questionSteps.map((step, index) => {
-              const isBusy = busyStepId === step.id;
               return (
                 <Card key={step.id} variant="muted" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, -1)} disabled={index === 0 || isBusy} aria-label="Mover para cima">
+                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, -1)} disabled={index === 0 || stepMutationInFlight} aria-label="Mover para cima">
                         <ChevronUp />
                       </IconButton>
-                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, 1)} disabled={index === questionSteps.length - 1 || isBusy} aria-label="Mover para baixo">
+                      <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, 1)} disabled={index === questionSteps.length - 1 || stepMutationInFlight} aria-label="Mover para baixo">
                         <ChevronDown />
                       </IconButton>
                     </div>
@@ -396,11 +441,11 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
-                    <Button variant="secondary" size="sm" disabled={isBusy} onClick={() => setStepDialog({ step })}>
+                    <Button variant="secondary" size="sm" disabled={stepMutationInFlight} onClick={() => setStepDialog({ step })}>
                       <Pencil className="kds-control-icon" />
                       <span>Editar</span>
                     </Button>
-                    <IconButton variant="danger" disabled={isBusy} size="sm" onClick={() => void handleDeleteStep(step)} aria-label={`Excluir etapa ${step.title}`} title="Excluir etapa">
+                    <IconButton variant="danger" disabled={stepMutationInFlight} size="sm" onClick={() => void handleDeleteStep(step)} aria-label={`Excluir etapa ${step.title}`} title="Excluir etapa">
                       <Trash2 aria-hidden="true" />
                     </IconButton>
                   </div>
@@ -413,7 +458,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
         {contactStep && (
           <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Etapa final (fixa)</p>
-            <ContactStepEditor step={contactStep} busy={busyStepId === contactStep.id} onSave={handleSaveContactStep} />
+            <ContactStepEditor step={contactStep} busy={stepMutationInFlight} onSave={handleSaveContactStep} />
             {form.request_geolocation && (
               <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                 <MapPin className="h-3.5 w-3.5" />
@@ -475,7 +520,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
         open={Boolean(stepDialog)}
         initialStep={stepDialog?.step ?? null}
         saving={savingStep}
-        onClose={() => setStepDialog(null)}
+        onClose={() => { if (!stepMutationInFlight) setStepDialog(null); }}
         onSave={(payload) => void handleSaveStep(payload)}
       />
       {ConfirmationDialog}

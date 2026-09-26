@@ -160,33 +160,40 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
   const isChoiceType = stepType === "single_choice" || stepType === "multi_choice";
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()} size="md">
-      <DialogHeader onClose={onClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => !nextOpen && !saving && onClose()}
+      closeOnOverlay={!saving}
+      closeOnEscape={!saving}
+      size="md"
+    >
+      <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{initialStep ? "Editar pergunta" : "Nova pergunta"}</DialogTitle>
       </DialogHeader>
       <DialogBody>
         <div className="space-y-4">
           <Field label="Tipo de pergunta">
-            <Select value={stepType} onChange={(event) => handleTypeChange(event.target.value as PublicFormStepType)} options={QUESTION_TYPE_OPTIONS} />
+            <Select disabled={saving} value={stepType} onChange={(event) => handleTypeChange(event.target.value as PublicFormStepType)} options={QUESTION_TYPE_OPTIONS} />
           </Field>
 
           <Field label="Título">
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex: Você já tem plano de saúde?" />
+            <Input disabled={saving} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex: Você já tem plano de saúde?" />
           </Field>
 
           <Field label="Descrição (opcional)">
-            <Textarea rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Texto de apoio exibido abaixo do título" />
+            <Textarea disabled={saving} rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Texto de apoio exibido abaixo do título" />
           </Field>
 
           {stepType === "short_text" && (
             <Field label="Placeholder do campo (opcional)">
-              <Input value={placeholder} onChange={(event) => setPlaceholder(event.target.value)} placeholder="Ex: Digite sua cidade" />
+              <Input disabled={saving} value={placeholder} onChange={(event) => setPlaceholder(event.target.value)} placeholder="Ex: Digite sua cidade" />
             </Field>
           )}
 
           <Field label="Mapear resposta para">
             <Select
               value={fieldKey}
+              disabled={saving}
               onChange={(event) => setFieldKey(event.target.value as "none" | PublicFormFieldKey)}
               options={fieldKeyOptionsFor(stepType)}
             />
@@ -199,6 +206,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                   <div key={option.id} className="flex items-center gap-2">
                     <Input
                       value={option.label}
+                      disabled={saving}
                       onChange={(event) => updateOptionLabel(option.id, event.target.value)}
                       placeholder={`Opção ${index + 1}`}
                       className="flex-1"
@@ -206,6 +214,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                     {fieldKey === "tipo_contratacao" && (
                       <Select
                         value={option.value ?? ""}
+                        disabled={saving}
                         onChange={(event) => updateOptionValue(option.id, event.target.value)}
                         options={[{ value: "", label: "Tipo..." }, ...CONTRACT_TYPE_OPTIONS]}
                         className="w-40"
@@ -215,7 +224,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                       type="button"
                       variant="danger"
                       className="shrink-0"
-                      disabled={options.length <= 2}
+                      disabled={saving || options.length <= 2}
                       size="sm"
                       onClick={() => removeOption(option.id)}
                       aria-label={`Remover opção ${option.value || option.id}`}
@@ -225,7 +234,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                     </IconButton>
                   </div>
                 ))}
-                <Button type="button" variant="secondary" size="sm" onClick={addOption}>
+                <Button type="button" variant="secondary" size="sm" onClick={addOption} disabled={saving}>
                   <Plus className="kds-control-icon" />
                   <span>Adicionar opção</span>
                 </Button>
@@ -233,11 +242,11 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
             </Field>
           )}
 
-          <Switch checked={isRequired} onChange={(event) => setIsRequired(event.target.checked)} label="Resposta obrigatória" />
+          <Switch disabled={saving} checked={isRequired} onChange={(event) => setIsRequired(event.target.checked)} label="Resposta obrigatória" />
         </div>
       </DialogBody>
       <DialogFooter>
-        <Button type="button" variant="secondary" onClick={onClose}>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={saving}>

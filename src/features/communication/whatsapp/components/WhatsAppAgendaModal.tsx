@@ -65,6 +65,7 @@ import type { Contract } from '../../../contracts';
 import type { Lead } from '../../../leads';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { toast } from '../../../../lib/toast';
+import { KeyedActionLock } from './keyedActionLock';
 
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
@@ -174,6 +175,7 @@ export default function WhatsAppAgendaModal({
   const [duplicateKeepSelection, setDuplicateKeepSelection] = useState<Record<string, string>>({});
   const [dedupingGroupKey, setDedupingGroupKey] = useState<string | null>(null);
   const [isDedupingAll, setIsDedupingAll] = useState(false);
+  const dedupeActionLockRef = useRef(new KeyedActionLock());
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
@@ -964,41 +966,49 @@ export default function WhatsAppAgendaModal({
       return;
     }
 
-    const confirmed = await requestConfirmation({
-      title: 'Remover duplicados',
-      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) de ${group.leadName} (${group.tipo}, ${group.dateLabel})? O lembrete marcado como "Manter" será preservado.`,
-      confirmLabel: 'Remover duplicados',
-      cancelLabel: 'Cancelar',
-      tone: 'danger',
-    });
-
-    if (!confirmed) {
+    if (!dedupeActionLockRef.current.tryAcquire('dedupe')) {
       return;
     }
 
-    setDedupingGroupKey(group.key);
-
     try {
-      idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
+      const confirmed = await requestConfirmation({
+        title: 'Remover duplicados',
+        description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) de ${group.leadName} (${group.tipo}, ${group.dateLabel})? O lembrete marcado como "Manter" será preservado.`,
+        confirmLabel: 'Remover duplicados',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDedupingGroupKey(group.key);
+
       try {
-        await deleteReminders(idsToDelete);
-      } catch (deleteError) {
-        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
-        throw deleteError;
-      }
+        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
+        try {
+          await deleteReminders(idsToDelete);
+        } catch (deleteError) {
+          idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
+          throw deleteError;
+        }
 
-      if (group.leadId) {
-        await updateLeadNextReturnDate(group.leadId);
-      }
+        if (group.leadId) {
+          await updateLeadNextReturnDate(group.leadId);
+        }
 
-      const idsToDeleteSet = new Set(idsToDelete);
-      setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
-      toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
-    } catch (dedupError) {
-      console.error('[WhatsAppAgendaModal] erro ao remover duplicados:', dedupError);
-      toast.error('Não foi possível remover os duplicados deste grupo.');
+        const idsToDeleteSet = new Set(idsToDelete);
+        setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
+        toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
+      } catch (dedupError) {
+        console.error('[WhatsAppAgendaModal] erro ao remover duplicados:', dedupError);
+        toast.error('Não foi possível remover os duplicados deste grupo.');
+      } finally {
+        setDedupingGroupKey(null);
+      }
     } finally {
-      setDedupingGroupKey(null);
+      dedupeActionLockRef.current.release('dedupe');
     }
   }, [getKeepIdForGroup, requestConfirmation, updateLeadNextReturnDate]);
 
@@ -1012,43 +1022,51 @@ export default function WhatsAppAgendaModal({
       return;
     }
 
-    const confirmed = await requestConfirmation({
-      title: 'Deduplicar agenda',
-      description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) em ${duplicateReminderGroupList.length} grupo(s)? Os itens marcados como "Manter" serão preservados.`,
-      confirmLabel: 'Deduplicar tudo',
-      cancelLabel: 'Cancelar',
-      tone: 'danger',
-    });
-
-    if (!confirmed) {
+    if (!dedupeActionLockRef.current.tryAcquire('dedupe')) {
       return;
     }
 
-    setIsDedupingAll(true);
-
     try {
-      idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
-      try {
-        await deleteReminders(idsToDelete);
-      } catch (deleteError) {
-        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
-        throw deleteError;
+      const confirmed = await requestConfirmation({
+        title: 'Deduplicar agenda',
+        description: `Remover ${idsToDelete.length} lembrete(s) duplicado(s) em ${duplicateReminderGroupList.length} grupo(s)? Os itens marcados como "Manter" serão preservados.`,
+        confirmLabel: 'Deduplicar tudo',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
       }
 
-      const affectedLeadIds = Array.from(
-        new Set(duplicateReminderGroupList.map((group) => group.leadId).filter(Boolean)),
-      );
-      await Promise.all(affectedLeadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+      setIsDedupingAll(true);
 
-      const idsToDeleteSet = new Set(idsToDelete);
-      setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
-      toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
-      setIsDuplicatesModalOpen(false);
-    } catch (dedupError) {
-      console.error('[WhatsAppAgendaModal] erro ao deduplicar agenda:', dedupError);
-      toast.error('Não foi possível concluir a deduplicação.');
+      try {
+        idsToDelete.forEach((id) => pendingRefreshIdsRef.current.add(id));
+        try {
+          await deleteReminders(idsToDelete);
+        } catch (deleteError) {
+          idsToDelete.forEach((id) => pendingRefreshIdsRef.current.delete(id));
+          throw deleteError;
+        }
+
+        const affectedLeadIds = Array.from(
+          new Set(duplicateReminderGroupList.map((group) => group.leadId).filter(Boolean)),
+        );
+        await Promise.all(affectedLeadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+
+        const idsToDeleteSet = new Set(idsToDelete);
+        setReminders((current) => current.filter((item) => !idsToDeleteSet.has(item.id)));
+        toast.success(`${idsToDelete.length} lembrete(s) duplicado(s) removido(s).`);
+        setIsDuplicatesModalOpen(false);
+      } catch (dedupError) {
+        console.error('[WhatsAppAgendaModal] erro ao deduplicar agenda:', dedupError);
+        toast.error('Não foi possível concluir a deduplicação.');
+      } finally {
+        setIsDedupingAll(false);
+      }
     } finally {
-      setIsDedupingAll(false);
+      dedupeActionLockRef.current.release('dedupe');
     }
   }, [duplicateReminderGroupList, getKeepIdForGroup, requestConfirmation, updateLeadNextReturnDate]);
 

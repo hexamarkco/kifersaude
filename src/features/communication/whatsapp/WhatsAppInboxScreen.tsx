@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import {
+  Alert,
   Badge,
   Button,
   ButtonGroup,
@@ -2293,6 +2294,8 @@ export default function WhatsAppInboxScreen() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageLoadError, setMessageLoadError] = useState<string | null>(null);
+  const [messageLoadRetrying, setMessageLoadRetrying] = useState(false);
   const [chatMessageSearchOpen, setChatMessageSearchOpen] = useState(false);
   const [chatMessageSearchDraft, setChatMessageSearchDraft] = useState('');
   const [chatMessageSearchResults, setChatMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
@@ -5420,6 +5423,7 @@ export default function WhatsAppInboxScreen() {
     const targetChatId = chat?.id ?? selectedChatIdRef.current;
     if (!targetChatId) {
       setMessages([]);
+      setMessageLoadError(null);
       return;
     }
 
@@ -5435,6 +5439,10 @@ export default function WhatsAppInboxScreen() {
       const requestId = ++messagesRequestIdRef.current;
 
       const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
+
+      if (reason === 'initial') {
+        setMessageLoadError(null);
+      }
 
       if (shouldShowBlockingLoader) {
         setLoadingMessages(true);
@@ -5474,6 +5482,8 @@ export default function WhatsAppInboxScreen() {
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
+
+      setMessageLoadError(null);
 
       if (threadChat) {
         upsertChatLocally(threadChat);
@@ -5561,7 +5571,10 @@ export default function WhatsAppInboxScreen() {
         }
 
         console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
+        setMessageLoadError('Não foi possível carregar as mensagens desta conversa.');
+        if (reason !== 'initial') {
+          toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
+        }
       } finally {
         if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
           setLoadingMessages(false);
@@ -5577,6 +5590,19 @@ export default function WhatsAppInboxScreen() {
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder, upsertChatLocally]);
 
   loadMessagesRef.current = loadMessages;
+
+  const handleRetryMessageLoad = useCallback(async () => {
+    if (!selectedChat) {
+      return;
+    }
+
+    setMessageLoadRetrying(true);
+    try {
+      await loadMessages(getSelectedChatSnapshot(selectedChat.id), 'initial');
+    } finally {
+      setMessageLoadRetrying(false);
+    }
+  }, [getSelectedChatSnapshot, loadMessages, selectedChat]);
 
   const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
     const targetChat = result.chat;
@@ -5962,6 +5988,7 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
+      setMessageLoadError(null);
       setLoadingMessages(false);
       setThreadReconcileChatId(null);
       lastSelectedChatPreviewRefreshKeyRef.current = '';
@@ -5994,6 +6021,7 @@ export default function WhatsAppInboxScreen() {
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setThreadReconcileChatId(null);
+    setMessageLoadError(null);
     lastSelectedChatPreviewRefreshKeyRef.current = '';
 
     // Se já temos o último resultado desta conversa em cache, exibimos na hora
@@ -9494,6 +9522,26 @@ export default function WhatsAppInboxScreen() {
     archivedSectionOpen,
   }), [archivedSectionOpen, selectedChat, selectedChatId]);
 
+  const messageLoadErrorNotice = messageLoadError ? (
+    <Alert
+      tone="danger"
+      title="Não foi possível carregar as mensagens"
+      action={(
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => void handleRetryMessageLoad()}
+          loading={messageLoadRetrying}
+        >
+          Tentar novamente
+        </Button>
+      )}
+    >
+      O histórico desta conversa não foi apagado. Tente novamente para atualizar a tela.
+    </Alert>
+  ) : null;
+
   return (
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className="comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
@@ -10131,6 +10179,7 @@ export default function WhatsAppInboxScreen() {
                 onScroll={handleMessagesScroll}
                 className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
               >
+                {messageLoadErrorNotice}
                 {(hasOlderMessages || loadingOlderMessages) && (
                   <div className="sticky top-0 z-[1] flex justify-center pb-3">
                     <Button
@@ -10156,12 +10205,12 @@ export default function WhatsAppInboxScreen() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Carregando mensagens...
                   </div>
-                ) : threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
+                ) : !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Atualizando histórico desta conversa...
                   </div>
-                ) : messages.length === 0 ? (
+                ) : !messageLoadError && messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     Nenhuma mensagem carregada para esta conversa.
                   </div>

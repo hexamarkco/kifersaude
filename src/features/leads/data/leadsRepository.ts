@@ -135,7 +135,7 @@ export async function registerLeadContact(
   type: 'Email' | 'Mensagem Automática',
   timestamp: string,
 ): Promise<void> {
-  await supabase.from('interactions').insert([
+  const { error: interactionError } = await supabase.from('interactions').insert([
     {
       lead_id: lead.id,
       tipo: type,
@@ -143,6 +143,9 @@ export async function registerLeadContact(
       responsavel: lead.responsavel,
     },
   ]);
+  if (interactionError) {
+    throw interactionError;
+  }
 
   const { error } = await supabase
     .from('leads')

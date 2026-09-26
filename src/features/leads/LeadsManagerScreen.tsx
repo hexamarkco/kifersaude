@@ -1032,6 +1032,7 @@ export default function LeadsManager({
   const registerContact = useCallback(
     async (lead: Lead, tipo: "Email" | "Mensagem Automática") => {
       const timestamp = new Date().toISOString();
+      const previousLastContact = lead.ultimo_contato;
 
       setLeads((current) =>
         current.map((l) =>
@@ -1049,6 +1050,21 @@ export default function LeadsManager({
         await registerLeadContact(lead, tipo, timestamp);
       } catch (error) {
         console.error("Erro ao registrar contato:", error);
+        toast.error("Não foi possível registrar este contato no lead.");
+        setLeads((current) =>
+          current.map((currentLead) => (
+            currentLead.id === lead.id && currentLead.ultimo_contato === timestamp
+              ? { ...currentLead, ultimo_contato: previousLastContact }
+              : currentLead
+          )),
+        );
+        setSelectedLead((current) => (
+          current
+            && current.id === lead.id
+            && current.ultimo_contato === timestamp
+            ? { ...current, ultimo_contato: previousLastContact }
+            : current
+        ));
       }
     },
     [],

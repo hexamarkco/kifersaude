@@ -7666,7 +7666,16 @@ export default function WhatsAppInboxScreen() {
       if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
-      await loadLeadPanel(selectedChat);
+      await Promise.all([
+        loadLeadPanel(selectedChat),
+        loadChats(),
+      ]);
+    } catch (error) {
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
+      console.error('[WhatsAppInbox] erro ao atualizar responsável do lead', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o responsável do lead.');
     } finally {
       leadMutationLockRef.current.release(targetChatId);
       setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));

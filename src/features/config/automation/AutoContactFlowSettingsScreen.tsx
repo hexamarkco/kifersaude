@@ -164,6 +164,12 @@ export default function AutoContactFlowSettingsScreen() {
   const autoSaveSkipRef = useRef(false);
   const autoSaveTimerRef = useRef<number | null>(null);
   const autoSaveInFlightRef = useRef(false);
+  const autoSaveQueuedRef = useRef(false);
+  const autoSaveRunnerRef = useRef<((skipStateUpdates?: boolean) => void) | null>(null);
+  const autoSaveUnmountedRef = useRef(false);
+  const autoSaveDraftVersionRef = useRef(0);
+  const settingsLoadRequestIdRef = useRef(0);
+  const dailyAutomationRequestIdRef = useRef(0);
   const timezoneOptions = useMemo(
     () => [
       { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
@@ -177,29 +183,40 @@ export default function AutoContactFlowSettingsScreen() {
 
   useEffect(() => {
     void loadAutoContactSettings();
+    return () => {
+      settingsLoadRequestIdRef.current += 1;
+      dailyAutomationRequestIdRef.current += 1;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAutoContactSettings = async () => {
+    const requestId = ++settingsLoadRequestIdRef.current;
     setLoadingFlow(true);
 
-    const [integration, statusConfig] = await Promise.all([
-      configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
-      configService.getLeadStatusConfig(),
-    ]);
-    const normalized = normalizeAutoContactSettings(integration?.settings);
+    try {
+      const [integration, statusConfig] = await Promise.all([
+        configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
+        configService.getLeadStatusConfig(),
+      ]);
+      if (requestId !== settingsLoadRequestIdRef.current) return;
 
-    setAutoContactIntegration(integration);
-    setAutoContactSettings(normalized);
-    setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
-    setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-    const normalizedFlows = normalized.flows ?? [];
-    setFlowDrafts(filterDerivedFlows(normalizedFlows));
-    setSchedulingDraft(normalized.scheduling);
-    setMonitoringDraft(normalized.monitoring);
-    setLoggingDraft(normalized.logging);
-    setLeadStatuses(statusConfig);
+      const normalized = normalizeAutoContactSettings(integration?.settings);
 
-    setLoadingFlow(false);
+      setAutoContactIntegration(integration);
+      setAutoContactSettings(normalized);
+      setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
+      setMessageTemplatesDraft(normalized.messageTemplates ?? []);
+      const normalizedFlows = normalized.flows ?? [];
+      setFlowDrafts(filterDerivedFlows(normalizedFlows));
+      setSchedulingDraft(normalized.scheduling);
+      setMonitoringDraft(normalized.monitoring);
+      setLoggingDraft(normalized.logging);
+      setLeadStatuses(statusConfig);
+    } finally {
+      if (requestId === settingsLoadRequestIdRef.current) {
+        setLoadingFlow(false);
+      }
+    }
   };
 
   const buildAutomationSettingsPayload = useCallback(
@@ -216,16 +233,23 @@ export default function AutoContactFlowSettingsScreen() {
   );
 
   const loadDailyAutomationCount = useCallback(async () => {
+    const requestId = ++dailyAutomationRequestIdRef.current;
     setDailyAutomationLoading(true);
     setDailyAutomationError(null);
 
     try {
-      setDailyAutomationCount(await countDailyAutomationInteractions());
+      const count = await countDailyAutomationInteractions();
+      if (requestId !== dailyAutomationRequestIdRef.current) return;
+      setDailyAutomationCount(count);
     } catch (error) {
       console.error("Erro ao carregar contador diário de automações:", error);
-      setDailyAutomationError("Não foi possível carregar o contador diário.");
+      if (requestId === dailyAutomationRequestIdRef.current) {
+        setDailyAutomationError("Não foi possível carregar o contador diário.");
+      }
     } finally {
-      setDailyAutomationLoading(false);
+      if (requestId === dailyAutomationRequestIdRef.current) {
+        setDailyAutomationLoading(false);
+      }
     }
   }, []);
 
@@ -1520,12 +1544,17 @@ export default function AutoContactFlowSettingsScreen() {
   const handleAutoSaveSettings = useCallback(
     async (skipStateUpdates = false) => {
       if (!autoContactIntegration || !autoSaveReadyRef.current) return;
-      if (autoSaveInFlightRef.current) return;
+      if (autoSaveInFlightRef.current) {
+        autoSaveQueuedRef.current = true;
+        return;
+      }
 
       autoSaveInFlightRef.current = true;
       if (!skipStateUpdates) {
         setAutoSaveState("saving");
       }
+
+      const saveVersion = autoSaveDraftVersionRef.current;
 
       const currentSettings =
         autoContactSettings || normalizeAutoContactSettings(null);
@@ -1535,34 +1564,53 @@ export default function AutoContactFlowSettingsScreen() {
         logging: loggingDraft,
       });
 
-      const { data, error } = await configService.updateIntegrationSetting(
-        autoContactIntegration.id,
-        {
-          settings: newSettings,
-        },
-      );
+      try {
+        const { data, error } = await configService.updateIntegrationSetting(
+          autoContactIntegration.id,
+          {
+            settings: newSettings,
+          },
+        );
+        const hasNewerDraft = saveVersion !== autoSaveDraftVersionRef.current;
+        if (hasNewerDraft) {
+          autoSaveQueuedRef.current = true;
+        }
+        const hasQueuedSave = autoSaveQueuedRef.current;
 
-      if (error) {
-        if (!skipStateUpdates) {
+        if (error) {
+          if (!skipStateUpdates && !hasQueuedSave) {
+            setAutoSaveState("error");
+          }
+        } else if (!skipStateUpdates && !hasQueuedSave) {
+          const updatedIntegration = data ?? autoContactIntegration;
+          const normalized = normalizeAutoContactSettings(
+            updatedIntegration.settings,
+          );
+
+          setAutoContactIntegration(updatedIntegration);
+          setAutoContactSettings(normalized);
+          autoSaveSkipRef.current = true;
+          setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
+          setSchedulingDraft(normalized.scheduling);
+          setMonitoringDraft(normalized.monitoring);
+          setLoggingDraft(normalized.logging);
+          setAutoSaveState("saved");
+        }
+      } catch (error) {
+        console.error("Erro ao salvar configurações de automação:", error);
+        if (!skipStateUpdates && !autoSaveQueuedRef.current) {
           setAutoSaveState("error");
         }
-      } else if (!skipStateUpdates) {
-        const updatedIntegration = data ?? autoContactIntegration;
-        const normalized = normalizeAutoContactSettings(
-          updatedIntegration.settings,
-        );
+      } finally {
+        autoSaveInFlightRef.current = false;
 
-        setAutoContactIntegration(updatedIntegration);
-        setAutoContactSettings(normalized);
-        autoSaveSkipRef.current = true;
-        setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
-        setSchedulingDraft(normalized.scheduling);
-        setMonitoringDraft(normalized.monitoring);
-        setLoggingDraft(normalized.logging);
-        setAutoSaveState("saved");
+        if (autoSaveQueuedRef.current) {
+          autoSaveQueuedRef.current = false;
+          window.setTimeout(() => {
+            autoSaveRunnerRef.current?.(autoSaveUnmountedRef.current);
+          }, 0);
+        }
       }
-
-      autoSaveInFlightRef.current = false;
     },
     [
       autoContactIntegration,
@@ -1573,6 +1621,11 @@ export default function AutoContactFlowSettingsScreen() {
       schedulingDraft,
     ],
   );
+
+  useEffect(() => {
+    autoSaveDraftVersionRef.current += 1;
+    autoSaveRunnerRef.current = handleAutoSaveSettings;
+  }, [handleAutoSaveSettings]);
 
   useEffect(() => {
     if (!autoContactIntegration || !autoSaveReadyRef.current) return;
@@ -1605,12 +1658,13 @@ export default function AutoContactFlowSettingsScreen() {
 
   useEffect(() => {
     return () => {
+      autoSaveUnmountedRef.current = true;
       if (autoSaveTimerRef.current) {
         window.clearTimeout(autoSaveTimerRef.current);
-        void handleAutoSaveSettings(true);
       }
+      autoSaveRunnerRef.current?.(true);
     };
-  }, [handleAutoSaveSettings]);
+  }, []);
 
   const hasFlowSnapshot = autoContactIntegration !== null;
 

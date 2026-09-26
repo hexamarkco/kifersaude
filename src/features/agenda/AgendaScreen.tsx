@@ -162,12 +162,16 @@ export default function AgendaScreen() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [savingTask, setSavingTask] = useState(false);
+  const [updatingReminderIds, setUpdatingReminderIds] = useState<Set<string>>(new Set());
+  const [markingAllFiltered, setMarkingAllFiltered] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const quickSchedulingReminderIdRef = useRef<string | null>(null);
   const reschedulingInFlightIdRef = useRef<string | null>(null);
   const deletingReminderRef = useRef(false);
   const savingTaskRef = useRef(false);
+  const updatingReminderIdsRef = useRef<Set<string>>(new Set());
+  const markingAllFilteredRef = useRef(false);
   const loadRemindersRequestIdRef = useRef(0);
   const leadInfoRequestIdRef = useRef(0);
   const openLeadRequestIdRef = useRef(0);
@@ -444,6 +448,13 @@ export default function AgendaScreen() {
     currentStatus: boolean,
     options?: { queueNextReminderPrompt?: boolean; suppressErrorToast?: boolean },
   ) => {
+    if (markingAllFilteredRef.current || updatingReminderIdsRef.current.has(reminderId)) {
+      return false;
+    }
+
+    updatingReminderIdsRef.current.add(reminderId);
+    setUpdatingReminderIds(new Set(updatingReminderIdsRef.current));
+
     try {
       pendingRefreshIdsRef.current.add(reminderId);
       const queueNextReminderPrompt = options?.queueNextReminderPrompt ?? true;
@@ -515,11 +526,14 @@ export default function AgendaScreen() {
         toast.error("Erro ao atualizar lembrete.");
       }
       return false;
+    } finally {
+      updatingReminderIdsRef.current.delete(reminderId);
+      setUpdatingReminderIds(new Set(updatingReminderIdsRef.current));
     }
   };
 
   const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
-    if (reminder.lido || quickSchedulingReminderIdRef.current) {
+    if (reminder.lido || quickSchedulingReminderIdRef.current || markingAllFilteredRef.current) {
       return;
     }
 
@@ -720,6 +734,10 @@ export default function AgendaScreen() {
   };
 
   const handleMarkAllFilteredAsRead = async () => {
+    if (markingAllFilteredRef.current || updatingReminderIdsRef.current.size > 0) {
+      return;
+    }
+
     const unreadFiltered = filteredReminders.filter((item) => !item.lido);
 
     if (unreadFiltered.length === 0) {
@@ -736,6 +754,9 @@ export default function AgendaScreen() {
     if (!confirmed) {
       return;
     }
+
+    markingAllFilteredRef.current = true;
+    setMarkingAllFiltered(true);
 
     try {
       const completionDate = new Date().toISOString();
@@ -759,7 +780,11 @@ export default function AgendaScreen() {
         ),
       );
 
-      await Promise.all(leadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+      const syncResults = await Promise.all(leadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+
+      if (syncResults.some((result) => !result)) {
+        toast.warning("Os itens foram marcados como lidos, mas alguns leads ainda não foram sincronizados.");
+      }
 
       setReminders((current) =>
         current.map((item) =>
@@ -775,6 +800,9 @@ export default function AgendaScreen() {
     } catch (updateError) {
       console.error("Erro ao atualizar lembretes:", updateError);
       toast.error("Erro ao atualizar os itens filtrados.");
+    } finally {
+      markingAllFilteredRef.current = false;
+      setMarkingAllFiltered(false);
     }
   };
 
@@ -1314,7 +1342,7 @@ export default function AgendaScreen() {
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <IconButton type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
+                        <IconButton type="button" disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
                           {isQuickSchedulingCurrentReminder ? <Loader2 className="animate-spin" /> : (
                             <CalendarClock className="kds-control-icon" aria-hidden="true" />
                           )}
@@ -1330,7 +1358,7 @@ export default function AgendaScreen() {
                                 setQuickScheduleDropdownId(null);
                                 handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
                               })}
-                              disabled={isQuickSchedulingCurrentReminder}
+                              disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered}
                               variant="ghost"
                               size="sm"
                               className="w-full justify-start text-left"
@@ -1347,17 +1375,18 @@ export default function AgendaScreen() {
                 <IconButton
                   onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
                   variant={reminder.lido ? "secondary" : "soft"}
-                  
+                  loading={updatingReminderIds.has(reminder.id)}
+                  disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder || Boolean(reschedulingInFlightId) || markingAllFiltered}
                   title={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
                   aria-label={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
                  size="md">
-                  <Check aria-hidden="true" />
+                  {!updatingReminderIds.has(reminder.id) && <Check aria-hidden="true" />}
                 </IconButton>
                 {!reminder.lido && (
                   <IconButton
                     onClick={handleCardAction(() => setReschedulingReminderId(reminder.id))}
                     variant="secondary"
-                    
+                    disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder || Boolean(reschedulingInFlightId) || markingAllFiltered}
                     title="Reagendar item"
                     aria-label="Reagendar item"
                    size="md">
@@ -1502,8 +1531,11 @@ export default function AgendaScreen() {
                   className="shrink-0 whitespace-nowrap"
                   aria-label="Marcar itens filtrados como lidos"
                   title="Marcar itens filtrados como lidos"
+                  disabled={markingAllFiltered || updatingReminderIds.size > 0}
+                  loading={markingAllFiltered}
                 >
-                  Marcar <span className="hidden sm:inline">como </span>lidos
+                  {!markingAllFiltered && <>Marcar <span className="hidden sm:inline">como </span>lidos</>}
+                  {markingAllFiltered && "Marcando..."}
                 </Button>
               )}
               {hasActiveFilters > 0 && (

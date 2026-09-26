@@ -15,7 +15,7 @@ type Subscription = {
 
 type Query = {
   select: MockFunction<[string], Query>;
-  eq: MockFunction<[string, string], Query>;
+  eq: MockFunction<[string, unknown], Query>;
   in: MockFunction<[string, string[]], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   range: MockFunction<[number, number], Query>;
@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => {
 
   const query = {} as Query;
   query.select = createMock<[string], Query>();
-  query.eq = createMock<[string, string], Query>();
+  query.eq = createMock<[string, unknown], Query>();
   query.in = createMock<[string, string[]], Query>();
   query.order = createMock<[string, { ascending: boolean }], Query>();
   query.range = createMock<[number, number], Query>();
@@ -134,5 +134,9 @@ test('carrega somente os campos usados no resumo da agenda', async () => {
   assert.equal(
     mocks.query.select.mock.calls.every(([fields]) => fields === 'id, tipo, titulo, data_lembrete, lido'),
     true,
+  );
+  assert.equal(
+    mocks.query.eq.mock.calls.filter(([field, value]) => field === 'lido' && value === false).length,
+    2,
   );
 });

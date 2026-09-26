@@ -2407,6 +2407,7 @@ export default function WhatsAppInboxScreen() {
   const [statusReminderLead, setStatusReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
   const [statusReminderPromptMessage, setStatusReminderPromptMessage] = useState<string | null>(null);
   const [chatAgendaSummaryLoading, setChatAgendaSummaryLoading] = useState(false);
+  const [chatAgendaSummaryError, setChatAgendaSummaryError] = useState<string | null>(null);
   const [chatAgendaSummary, setChatAgendaSummary] = useState<ChatAgendaSummary>({ pendingCount: 0, nextReminder: null });
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [leadSearchResults, setLeadSearchResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
@@ -3880,6 +3881,7 @@ export default function WhatsAppInboxScreen() {
     if (!leadId) {
       chatAgendaSummaryLeadIdRef.current = null;
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(false);
       return;
     }
@@ -3905,12 +3907,16 @@ export default function WhatsAppInboxScreen() {
         pendingCount: pendingReminders.length,
         nextReminder: pendingReminders[0] ?? null,
       });
+      setChatAgendaSummaryError(null);
     } catch (error) {
       if (requestId !== chatAgendaSummaryRequestIdRef.current || chatAgendaSummaryLeadIdRef.current !== leadId) {
         return;
       }
       console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryError(
+        error instanceof Error ? error.message : 'Não foi possível consultar os lembretes deste chat.',
+      );
     } finally {
       if (requestId === chatAgendaSummaryRequestIdRef.current && chatAgendaSummaryLeadIdRef.current === leadId) {
         setChatAgendaSummaryLoading(false);
@@ -4230,6 +4236,10 @@ export default function WhatsAppInboxScreen() {
       return null;
     }
 
+    if (chatAgendaSummaryError) {
+      return 'Agenda: não foi possível consultar';
+    }
+
     if (!chatAgendaSummary.nextReminder) {
       return chatAgendaSummary.pendingCount > 0 ? `Agenda: ${chatAgendaSummary.pendingCount} pendente(s).` : 'Agenda em dia';
     }
@@ -4237,7 +4247,7 @@ export default function WhatsAppInboxScreen() {
     const reminder = chatAgendaSummary.nextReminder;
     const prefix = isOverdue(reminder.data_lembrete) ? 'Próximo lembrete atrasado' : 'Próximo lembrete';
     return `${prefix}: ${reminder.titulo} · ${formatDateTimeFullBR(reminder.data_lembrete)}`;
-  }, [chatAgendaSummary, chatAgendaSummaryLoading, leadPanel?.id]);
+  }, [chatAgendaSummary, chatAgendaSummaryError, chatAgendaSummaryLoading, leadPanel?.id]);
 
   useEffect(() => {
     latestChatsRef.current = chats;
@@ -4897,6 +4907,7 @@ export default function WhatsAppInboxScreen() {
       setLeadContractsLoading(false);
       setLeadContractsError(null);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(false);
       return;
     }
@@ -4907,6 +4918,7 @@ export default function WhatsAppInboxScreen() {
       setLeadContracts([]);
       setLeadContractsError(null);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(true);
     }
   }, [leadPanel?.id, resetFollowUpComposer, selectedChat?.id, selectedChat?.lead_id]);
@@ -4915,6 +4927,7 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChat?.lead_id) {
       setLeadPanel(null);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(false);
       return;
     }
@@ -9891,8 +9904,13 @@ export default function WhatsAppInboxScreen() {
                   {nextChatReminderSummary ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge
-                        tone={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete) ? 'danger' : 'neutral'}
+                        tone={chatAgendaSummaryError
+                          ? 'warning'
+                          : chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete)
+                            ? 'danger'
+                            : 'neutral'}
                         icon={Calendar}
+                        title={chatAgendaSummaryError ? 'Abra as informações do lead para tentar carregar a agenda novamente.' : undefined}
                       >
                         <span className="min-w-0 max-w-full truncate">{nextChatReminderSummary}</span>
                       </Badge>

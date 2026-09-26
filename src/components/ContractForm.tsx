@@ -285,6 +285,7 @@ export default function ContractForm({
   onSave,
 }: ContractFormProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsLoadError, setLeadsLoadError] = useState(false);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [operadorasLoadError, setOperadorasLoadError] = useState(false);
   const { options, leadStatuses } = useConfig();
@@ -306,6 +307,7 @@ export default function ContractForm({
     contract?.id || null,
   );
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
+  const [adjustmentsLoadError, setAdjustmentsLoadError] = useState(false);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [showJsonImport, setShowJsonImport] = useState(false);
   const [importedHolderData, setImportedHolderData] = useState<Partial<ContractHolder> | null>(null);
@@ -709,6 +711,7 @@ export default function ContractForm({
 
   const loadLeads = async () => {
     const requestId = ++leadsRequestIdRef.current;
+    setLeadsLoadError(false);
     try {
       const nextLeads = await listContractConversionLeads(convertibleLeadStatuses);
       if (requestId !== leadsRequestIdRef.current) return;
@@ -716,6 +719,7 @@ export default function ContractForm({
     } catch (error) {
       if (requestId === leadsRequestIdRef.current) {
         console.error("Erro ao carregar leads:", error);
+        setLeadsLoadError(true);
       }
     }
   };
@@ -820,12 +824,16 @@ export default function ContractForm({
   const loadAdjustments = async (contractId: string) => {
     const requestId = adjustmentsRequestIdRef.current + 1;
     adjustmentsRequestIdRef.current = requestId;
+    setAdjustmentsLoadError(false);
     try {
       const nextAdjustments = await listContractValueAdjustments(contractId);
       if (requestId !== adjustmentsRequestIdRef.current) return;
       setAdjustments(nextAdjustments);
     } catch (error) {
-      console.error("Erro ao carregar ajustes:", error);
+      if (requestId === adjustmentsRequestIdRef.current) {
+        console.error("Erro ao carregar ajustes:", error);
+        setAdjustmentsLoadError(true);
+      }
     }
   };
 
@@ -1239,16 +1247,27 @@ export default function ContractForm({
               </Field>
 
               <Field label="Lead Vinculado">
-                <FilterSelect
-                  icon={User}
-                  value={formData.lead_id}
-                  onChange={(value) =>
-                    setFormData({ ...formData, lead_id: value })
-                  }
-                  placeholder="Lead vinculado"
-                  includePlaceholderOption={false}
-                  options={leadSelectOptions}
-                />
+                <div className="space-y-2">
+                  <FilterSelect
+                    icon={User}
+                    value={formData.lead_id}
+                    onChange={(value) =>
+                      setFormData({ ...formData, lead_id: value })
+                    }
+                    placeholder="Lead vinculado"
+                    includePlaceholderOption={false}
+                    options={leadSelectOptions}
+                  />
+                  {leadsLoadError && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--danger)]" role="alert">
+                      <span>Não foi possível carregar os leads.</span>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => void loadLeads()}>
+                        <RefreshCw className="kds-control-icon" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Field>
 
               <Field label="Status *">
@@ -1571,7 +1590,20 @@ export default function ContractForm({
                     </Button>
                   </div>
 
-                  {adjustments.length > 0 ? (
+                  {adjustmentsLoadError ? (
+                    <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[var(--danger)]" role="alert">
+                      <span>Não foi possível carregar os ajustes deste contrato.</span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => contract?.id && void loadAdjustments(contract.id)}
+                      >
+                        <RefreshCw className="kds-control-icon" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    </div>
+                  ) : adjustments.length > 0 ? (
                     <div className="space-y-2 mb-3">
                       {adjustments.map((adj) => (
                         <Surface

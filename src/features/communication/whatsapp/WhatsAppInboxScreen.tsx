@@ -130,6 +130,7 @@ import {
   sortChatsByInboxOrder,
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
+import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
 import { addSavedContactsToNameMap, collectPhoneLookupKeys, resolveSavedContactName } from './domain/contactLookup';
 import {
@@ -5215,10 +5216,12 @@ export default function WhatsAppInboxScreen() {
         const preservedSelectedChat = currentSelectedChatId
           ? previousChats.find((chat) => chat.id === currentSelectedChatId) ?? null
           : null;
-        const shouldPreserveSelectedChat = Boolean(
-          preservedSelectedChat
-            && !refreshedChats.some((chat) => chat.id === preservedSelectedChat.id),
-        );
+        const shouldPreserveSelectedChat = shouldPreserveSelectedChatAfterLoad({
+          selectedChat: preservedSelectedChat,
+          refreshedChatIds: new Set(refreshedChats.map((chat) => chat.id)),
+          requestedSections,
+          unexpectedlyEmptySections,
+        });
         const hydratedData = sortChatsByInboxOrder(
           shouldPreserveSelectedChat && preservedSelectedChat
             ? [...refreshedChats, preservedSelectedChat]

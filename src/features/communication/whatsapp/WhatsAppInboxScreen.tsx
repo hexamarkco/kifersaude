@@ -5658,7 +5658,10 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await Promise.all([loadChats({ sections: ['active'] }), loadOperationalState(), refreshArchivedChatsCount()]);
+      // Recarrega a seção que está visível. Quando filtros mudam com
+      // "Arquivadas" aberta, buscar apenas "Ativas" deixava a lista visível
+      // com dados do filtro anterior até o usuário alternar de seção.
+      await Promise.all([loadChats(), loadOperationalState(), refreshArchivedChatsCount()]);
       if (active) {
         setLoading(false);
       }

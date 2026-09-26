@@ -2282,6 +2282,7 @@ export default function WhatsAppInboxScreen() {
   const favoritedLeadIds = useFavoritedLeadIds();
   const [loading, setLoading] = useState(true);
   const [chatLoadError, setChatLoadError] = useState(false);
+  const [chatRefreshError, setChatRefreshError] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
@@ -5190,6 +5191,7 @@ export default function WhatsAppInboxScreen() {
         const nextSignature = buildChatsSignature(hydratedData);
 
         setChatLoadError(false);
+        setChatRefreshError(null);
 
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
@@ -5244,6 +5246,13 @@ export default function WhatsAppInboxScreen() {
 
         if (latestChatsRef.current.length === 0) {
           setChatLoadError(true);
+          setChatRefreshError(null);
+        } else {
+          setChatRefreshError(
+            isSupabaseConnectivityError(error)
+              ? 'Não foi possível atualizar as conversas. A lista exibida pode estar desatualizada.'
+              : 'A atualização das conversas falhou. A lista exibida pode estar desatualizada.',
+          );
         }
 
         if (isSupabaseConnectivityError(error)) {
@@ -9668,6 +9677,26 @@ export default function WhatsAppInboxScreen() {
                   {archivedChatsLoading ? 'Carregando...' : archivedChatsCountValue > 0 ? `${archivedChatsCountValue} ${archivedChatsCountValue === 1 ? 'chat' : 'chats'}` : '0 chats'}
                 </span>
               </div>
+            ) : null}
+            {chatRefreshError && !chatLoadError ? (
+              <Alert
+                tone="warning"
+                title="Conversas não atualizadas"
+                action={(
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRetryChatLoad}
+                    loading={loading}
+                  >
+                    Atualizar
+                  </Button>
+                )}
+                className="m-3"
+              >
+                {chatRefreshError}
+              </Alert>
             ) : null}
             {loading ? (
                 <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">

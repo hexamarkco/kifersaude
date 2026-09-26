@@ -1,8 +1,9 @@
 import type { Contract } from '../../contracts';
-import type { Lead, LeadStatusHistory } from '../../leads';
-import type { Interaction } from '../../activity';
-import type { Reminder } from '../../reminders';
+import type { Lead } from '../../leads';
 import type {
+  DashboardInteraction,
+  DashboardReminder,
+  DashboardStatusHistory,
   DashboardDateRange,
   DashboardAttentionItem,
   DashboardOperationsAnalysis,
@@ -111,7 +112,7 @@ export const buildDashboardOperationsAnalysis = ({
   const wonPrevious = comparisonRange === null ? null : historiesInPrevious.filter((item) => wonStatusPattern.test(item.status_novo)).length;
   const lostPrevious = comparisonRange === null ? null : historiesInPrevious.filter((item) => lostStatusPattern.test(item.status_novo)).length;
 
-  const historiesByLead = new Map<string, LeadStatusHistory[]>();
+  const historiesByLead = new Map<string, DashboardStatusHistory[]>();
   statusHistory.forEach((history) => {
     const current = historiesByLead.get(history.lead_id) ?? [];
     current.push(history);
@@ -119,7 +120,7 @@ export const buildDashboardOperationsAnalysis = ({
   });
   historiesByLead.forEach((history) => history.sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()));
 
-  const interactionsByLead = new Map<string, Interaction[]>();
+  const interactionsByLead = new Map<string, DashboardInteraction[]>();
   interactions.forEach((interaction) => {
     if (!interaction.lead_id) return;
     const current = interactionsByLead.get(interaction.lead_id) ?? [];
@@ -128,7 +129,7 @@ export const buildDashboardOperationsAnalysis = ({
   });
   interactionsByLead.forEach((items) => items.sort((left, right) => new Date(right.data_interacao).getTime() - new Date(left.data_interacao).getTime()));
 
-  const remindersByLead = new Map<string, Reminder[]>();
+  const remindersByLead = new Map<string, DashboardReminder[]>();
   reminders.forEach((reminder) => {
     if (!reminder.lead_id) return;
     const current = remindersByLead.get(reminder.lead_id) ?? [];

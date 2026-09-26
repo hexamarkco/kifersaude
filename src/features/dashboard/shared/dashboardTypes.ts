@@ -37,6 +37,18 @@ export type DashboardProps = {
   onCreateReminder?: (options: ReminderRequest) => void;
 };
 
+export type DashboardReminder = Pick<
+  Reminder,
+  'id' | 'lead_id' | 'contract_id' | 'tipo' | 'titulo' | 'data_lembrete' | 'lido' | 'concluido_em'
+>;
+
+export type DashboardInteraction = Pick<Interaction, 'lead_id' | 'data_interacao'>;
+
+export type DashboardStatusHistory = Pick<
+  LeadStatusHistory,
+  'id' | 'lead_id' | 'status_anterior' | 'status_novo' | 'responsavel' | 'created_at'
+>;
+
 export type DashboardMetric = 'leads' | 'contratos' | 'comissoes';
 export type DashboardPeriodFilter =
   | 'hoje'
@@ -295,9 +307,9 @@ export type DashboardCommercialAnalysis = {
 export type DashboardCommercialInput = {
   leads: Lead[];
   contracts: Contract[];
-  reminders: Reminder[];
-  interactions: Interaction[];
-  statusHistory: LeadStatusHistory[];
+  reminders: DashboardReminder[];
+  interactions: DashboardInteraction[];
+  statusHistory: DashboardStatusHistory[];
   leadStatuses: LeadStatusConfig[];
   periodFilter: DashboardPeriodFilter;
   customStartDate: string;
@@ -308,9 +320,9 @@ export type DashboardCommercialInput = {
 export type DashboardOperationsInput = {
   leads: Lead[];
   contracts: Contract[];
-  reminders: Reminder[];
-  interactions: Interaction[];
-  statusHistory: import('../../leads').LeadStatusHistory[];
+  reminders: DashboardReminder[];
+  interactions: DashboardInteraction[];
+  statusHistory: DashboardStatusHistory[];
   leadStatuses: LeadStatusConfig[];
   periodFilter: DashboardPeriodFilter;
   customStartDate: string;

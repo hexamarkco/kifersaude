@@ -1,16 +1,17 @@
 import type { Contract } from '../../contracts';
-import type { Interaction } from '../../activity';
-import type { Lead, LeadStatusHistory } from '../../leads';
-import type { Reminder } from '../../reminders';
+import type { Lead } from '../../leads';
 import { normalizeOperadoraLabel } from '../../../lib/textNormalization';
 import { parseDashboardDateValue } from '../shared/dashboardUtils';
 import type {
   DashboardCommercialAnalysis,
   DashboardCommercialInput,
   DashboardDateRange,
+  DashboardInteraction,
   DashboardOpportunity,
   DashboardPerformanceRow,
+  DashboardReminder,
   DashboardStageMetric,
+  DashboardStatusHistory,
 } from '../shared/dashboardTypes';
 import { resolveDashboardDateRange } from './dashboardOperations';
 
@@ -65,7 +66,7 @@ const getLatestDate = (values: Array<string | null | undefined>) => {
 
 const hasPendingNextStep = (
   lead: Lead,
-  remindersByLead: Map<string, Reminder[]>,
+  remindersByLead: Map<string, DashboardReminder[]>,
   now: Date,
 ) => {
   const nextReturn = parseDate(lead.proximo_retorno);
@@ -148,7 +149,7 @@ const buildPerformanceRows = (
 };
 
 const getTransitionDate = (
-  histories: LeadStatusHistory[],
+  histories: DashboardStatusHistory[],
   matcher: RegExp,
 ) => histories
   .filter((history) => matcher.test(history.status_novo))
@@ -176,14 +177,14 @@ export const buildDashboardCommercialAnalysis = ({
     ? openLeads.filter((lead) => isInside(leadDate(lead), currentRange))
     : openLeads;
   const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
-  const interactionsByLead = new Map<string, Interaction[]>();
+  const interactionsByLead = new Map<string, DashboardInteraction[]>();
   interactions.forEach((interaction) => {
     if (!interaction.lead_id) return;
     const items = interactionsByLead.get(interaction.lead_id) ?? [];
     items.push(interaction);
     interactionsByLead.set(interaction.lead_id, items);
   });
-  const historiesByLead = new Map<string, LeadStatusHistory[]>();
+  const historiesByLead = new Map<string, DashboardStatusHistory[]>();
   statusHistory.forEach((history) => {
     const items = historiesByLead.get(history.lead_id) ?? [];
     items.push(history);
@@ -204,9 +205,9 @@ export const buildDashboardCommercialAnalysis = ({
   const contractLeadById = new Map(
     contracts.filter((contract) => contract.lead_id).map((contract) => [contract.id, contract.lead_id as string]),
   );
-  const resolveReminderLeadId = (reminder: Reminder) =>
+  const resolveReminderLeadId = (reminder: DashboardReminder) =>
     reminder.lead_id ?? (reminder.contract_id ? contractLeadById.get(reminder.contract_id) : undefined);
-  const remindersByLead = new Map<string, Reminder[]>();
+  const remindersByLead = new Map<string, DashboardReminder[]>();
   reminders.forEach((reminder) => {
     const leadId = resolveReminderLeadId(reminder);
     if (!leadId) return;
@@ -325,7 +326,7 @@ export const buildDashboardCommercialAnalysis = ({
     .map((lead) => lead.id);
   const overdueFollowUpCount = overdueReminders.length;
 
-  const stageHistoryByLead = new Map<string, LeadStatusHistory[]>();
+  const stageHistoryByLead = new Map<string, DashboardStatusHistory[]>();
   statusHistory.forEach((history) => {
     if (!isInside(history.created_at, currentRange)) return;
     const items = stageHistoryByLead.get(history.lead_id) ?? [];

@@ -46,6 +46,9 @@ import {
 } from "./shared/dashboardUtils";
 import type {
   DashboardProps,
+  DashboardInteraction,
+  DashboardReminder,
+  DashboardStatusHistory,
   AdjustmentItem,
   AgeBand,
   BirthdayEvent,
@@ -82,9 +85,9 @@ export default function DashboardScreen({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Holder[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
-  const [reminders, setReminders] = useState<import('../reminders').Reminder[]>([]);
-  const [interactions, setInteractions] = useState<import('../activity').Interaction[]>([]);
-  const [statusHistory, setStatusHistory] = useState<import('../leads').LeadStatusHistory[]>([]);
+  const [reminders, setReminders] = useState<DashboardReminder[]>([]);
+  const [interactions, setInteractions] = useState<DashboardInteraction[]>([]);
+  const [statusHistory, setStatusHistory] = useState<DashboardStatusHistory[]>([]);
   const [hiddenLeadIdsForObserver, setHiddenLeadIdsForObserver] = useState<
     Set<string>
   >(new Set());

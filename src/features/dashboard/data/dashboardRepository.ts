@@ -4,10 +4,14 @@ import {
   type Database,
 } from '../../../infrastructure/supabase';
 import type { Contract } from '../../contracts';
-import type { Interaction } from '../../activity';
-import type { Lead, LeadStatusHistory } from '../../leads';
-import type { Reminder } from '../../reminders';
-import type { Dependent, Holder } from '../shared/dashboardTypes';
+import type { Lead } from '../../leads';
+import type {
+  DashboardInteraction,
+  DashboardReminder,
+  DashboardStatusHistory,
+  Dependent,
+  Holder,
+} from '../shared/dashboardTypes';
 
 export type DashboardSnapshot = {
   leads: Lead[];
@@ -15,9 +19,9 @@ export type DashboardSnapshot = {
 };
 
 export type DashboardDecisionSnapshot = {
-  reminders: Reminder[];
-  interactions: Interaction[];
-  statusHistory: LeadStatusHistory[];
+  reminders: DashboardReminder[];
+  interactions: DashboardInteraction[];
+  statusHistory: DashboardStatusHistory[];
 };
 
 export type DashboardCalendarSnapshot = {
@@ -77,24 +81,24 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
 
 export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecisionSnapshot> {
   const [reminders, interactions, statusHistory] = await Promise.all([
-    fetchAllPages<Reminder>(async (from, to) => databaseClient
+    fetchAllPages<DashboardReminder>(async (from, to) => databaseClient
       .from('reminders')
-      .select('*')
+      .select('id,lead_id,contract_id,tipo,titulo,data_lembrete,lido,concluido_em')
       .order('data_lembrete', { ascending: false })
       .range(from, to)
-      .overrideTypes<Reminder[], { merge: false }>()),
-    fetchAllPages<Interaction>(async (from, to) => databaseClient
+      .overrideTypes<DashboardReminder[], { merge: false }>()),
+    fetchAllPages<DashboardInteraction>(async (from, to) => databaseClient
       .from('interactions')
-      .select('*')
+      .select('lead_id,data_interacao')
       .order('data_interacao', { ascending: false })
       .range(from, to)
-      .overrideTypes<Interaction[], { merge: false }>()),
-    fetchAllPages<LeadStatusHistory>(async (from, to) => databaseClient
+      .overrideTypes<DashboardInteraction[], { merge: false }>()),
+    fetchAllPages<DashboardStatusHistory>(async (from, to) => databaseClient
       .from('lead_status_history')
-      .select('*')
+      .select('id,lead_id,status_anterior,status_novo,responsavel,created_at')
       .order('created_at', { ascending: false })
       .range(from, to)
-      .overrideTypes<LeadStatusHistory[], { merge: false }>()),
+      .overrideTypes<DashboardStatusHistory[], { merge: false }>()),
   ]);
 
   return { reminders, interactions, statusHistory };

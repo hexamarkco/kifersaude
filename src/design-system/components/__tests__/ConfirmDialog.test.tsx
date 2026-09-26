@@ -22,7 +22,7 @@ test('bloqueia o fechamento enquanto a confirmação está em andamento', () => 
   assert.ok(dialog);
   assert.equal(dialog.querySelector('[aria-label="Fechar"]'), null);
   assert.equal(Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Cancelar'))?.disabled, true);
-  assert.equal(dialog.querySelector('button[data-loading="true"]')?.disabled, true);
+  assert.equal(dialog.querySelector<HTMLButtonElement>('button[data-loading="true"]')?.disabled, true);
 
   act(() => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));

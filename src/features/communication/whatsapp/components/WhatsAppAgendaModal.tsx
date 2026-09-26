@@ -177,6 +177,10 @@ export default function WhatsAppAgendaModal({
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const [updatingReminderIds, setUpdatingReminderIds] = useState<Set<string>>(new Set());
+  const updatingReminderIdsRef = useRef<Set<string>>(new Set());
+  const [deletingReminderIds, setDeletingReminderIds] = useState<Set<string>>(new Set());
+  const deletingReminderIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -517,6 +521,16 @@ export default function WhatsAppAgendaModal({
     currentStatus: boolean,
     options?: { queueNextReminderPrompt?: boolean },
   ) => {
+    if (
+      updatingReminderIdsRef.current.has(reminderId)
+      || quickSchedulingAction?.reminderId === reminderId
+    ) {
+      return false;
+    }
+
+    updatingReminderIdsRef.current.add(reminderId);
+    setUpdatingReminderIds(new Set(updatingReminderIdsRef.current));
+
     try {
       pendingRefreshIdsRef.current.add(reminderId);
       const queueNextReminderPrompt = options?.queueNextReminderPrompt ?? true;
@@ -580,8 +594,11 @@ export default function WhatsAppAgendaModal({
       console.error('[WhatsAppAgendaModal] erro ao atualizar lembrete:', updateError);
       toast.error('Não foi possível atualizar este item.');
       return false;
+    } finally {
+      updatingReminderIdsRef.current.delete(reminderId);
+      setUpdatingReminderIds(new Set(updatingReminderIdsRef.current));
     }
-  }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, reminders, updateLeadNextReturnDate]);
+  }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, quickSchedulingAction?.reminderId, reminders, updateLeadNextReturnDate]);
 
   const handleQuickSchedule = useCallback(async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
     if (reminder.lido) {
@@ -639,19 +656,26 @@ export default function WhatsAppAgendaModal({
   }, [compareRemindersByDueAtThenAlphabetical, getLeadIdForReminder, handleMarkAsRead, updateLeadNextReturnDate]);
 
   const handleDeleteReminder = useCallback(async (reminder: Reminder) => {
-    const confirmed = await requestConfirmation({
-      title: 'Remover item',
-      description: `Deseja remover "${reminder.titulo}"? Esta ação não pode ser desfeita.`,
-      confirmLabel: 'Remover',
-      cancelLabel: 'Cancelar',
-      tone: 'danger',
-    });
-
-    if (!confirmed) {
+    if (deletingReminderIdsRef.current.has(reminder.id)) {
       return;
     }
 
+    deletingReminderIdsRef.current.add(reminder.id);
+    setDeletingReminderIds(new Set(deletingReminderIdsRef.current));
+
     try {
+      const confirmed = await requestConfirmation({
+        title: 'Remover item',
+        description: `Deseja remover "${reminder.titulo}"? Esta ação não pode ser desfeita.`,
+        confirmLabel: 'Remover',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
       pendingRefreshIdsRef.current.add(reminder.id);
       try {
         await deleteReminder(reminder.id);
@@ -670,6 +694,9 @@ export default function WhatsAppAgendaModal({
     } catch (deleteError) {
       console.error('[WhatsAppAgendaModal] erro ao remover lembrete:', deleteError);
       toast.error('Não foi possível remover este item.');
+    } finally {
+      deletingReminderIdsRef.current.delete(reminder.id);
+      setDeletingReminderIds(new Set(deletingReminderIdsRef.current));
     }
   }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate]);
 
@@ -1356,11 +1383,13 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
                 variant={reminder.lido ? 'secondary' : 'soft'}
                 className="shrink-0"
+                loading={updatingReminderIds.has(reminder.id)}
+                disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder}
                 title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
                 aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
                 size="md"
               >
-                <Check aria-hidden="true" />
+                {!updatingReminderIds.has(reminder.id) && <Check aria-hidden="true" />}
               </IconButton>
             ) : null}
 
@@ -1426,11 +1455,13 @@ export default function WhatsAppAgendaModal({
                 onClick={() => void handleDeleteReminder(reminder)}
                 variant="danger"
                 className="shrink-0"
+                loading={deletingReminderIds.has(reminder.id)}
+                disabled={deletingReminderIds.has(reminder.id)}
                 title="Excluir item"
                 aria-label="Excluir item"
                 size="md"
               >
-                <Trash2 aria-hidden="true" />
+                {!deletingReminderIds.has(reminder.id) && <Trash2 aria-hidden="true" />}
               </IconButton>
             ) : null}
           </div>

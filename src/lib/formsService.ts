@@ -42,7 +42,7 @@ export const formsService = {
       return (data as PublicForm[] | null) ?? [];
     } catch (error) {
       console.error('Error loading forms:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -112,7 +112,7 @@ export const formsService = {
       return (data as PublicFormStep[] | null) ?? [];
     } catch (error) {
       console.error('Error loading form steps:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -180,7 +180,7 @@ export const formsService = {
       return (data as PublicFormSubmission[] | null) ?? [];
     } catch (error) {
       console.error('Error loading form submissions:', error);
-      return [];
+      throw error;
     }
   },
 

@@ -186,6 +186,7 @@ import {
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
+import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 
 const LeadForm = lazy(() => import('../../../components/LeadForm'));
 const ReminderSchedulerModal = lazy(() => import('../../../components/ReminderSchedulerModal'));
@@ -251,7 +252,6 @@ type MediaUploadProgress = {
   fileName: string;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
-type ChatActivityFilter = 'all' | 'unread';
 type QuickReplyOption = {
   id: string;
   name: string;
@@ -2807,29 +2807,14 @@ export default function WhatsAppInboxScreen() {
     query: chatMessageSearch,
   });
 
-  const chatMatchesActiveFilters = useCallback((chat: CommWhatsAppChat) => {
-    if (chatActivityFilter === 'unread' && chat.unread_count <= 0 && !chat.manual_unread) {
-      return false;
-    }
-
-    if (leadStatusFilters.length > 0) {
-      const chatLeadStatus = String(chat.lead_status ?? '').trim().toLowerCase();
-      const acceptedStatuses = new Set(leadStatusFilters.map((status) => status.trim().toLowerCase()).filter(Boolean));
-      if (!chatLeadStatus || !acceptedStatuses.has(chatLeadStatus)) {
-        return false;
-      }
-    }
-
-    if (leadResponsavelFilters.length > 0) {
-      const chatResponsavelId = String(chat.lead_responsavel_id ?? '').trim();
-      const acceptedResponsavelIds = new Set(leadResponsavelFilters.map((id) => id.trim()).filter(Boolean));
-      if (!chatResponsavelId || !acceptedResponsavelIds.has(chatResponsavelId)) {
-        return false;
-      }
-    }
-
-    return true;
-  }, [chatActivityFilter, leadStatusFilters, leadResponsavelFilters]);
+  const chatMatchesActiveFilters = useMemo(
+    () => createChatFilterMatcher({
+      activityFilter: chatActivityFilter,
+      leadStatusFilters,
+      leadResponsavelFilters,
+    }),
+    [chatActivityFilter, leadStatusFilters, leadResponsavelFilters],
+  );
 
   const scopedChats = useMemo(() => {
     const matchesCurrentSection = (chat: CommWhatsAppChat) => (archivedSectionOpen ? chat.is_archived : !chat.is_archived);

@@ -165,6 +165,16 @@ test('ignores presence updates that cannot change the loaded chat list', () => {
     }),
     chats,
   );
+
+  const cleared = applyChatPresenceUpdate(chats, {
+    chatId: chat.id,
+    status: null,
+    lastSeenAt: null,
+    updatedAt: null,
+  });
+  assert.equal(cleared[0]?.presence_status, null);
+  assert.equal(cleared[0]?.presence_last_seen_at, null);
+  assert.equal(cleared[0]?.presence_updated_at, null);
 });
 
 test('updates only the matching chat when presence really changes', () => {

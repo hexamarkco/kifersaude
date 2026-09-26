@@ -5975,7 +5975,7 @@ export default function WhatsAppInboxScreen() {
 
     void commWhatsAppService.ensureChatPresence(selectedChat.id)
       .then((result) => {
-        if (!active || !result.presence) return;
+        if (!active) return;
         setChats((current) => applyChatPresenceUpdate(current, {
           chatId: selectedChat.id,
           status: result.presence?.status ?? null,

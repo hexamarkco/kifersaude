@@ -2472,6 +2472,8 @@ export default function WhatsAppInboxScreen() {
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
+  const archivedChatsCountRequestIdRef = useRef(0);
+  const archivedSectionLoadRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
   const followUpScheduleRequestIdRef = useRef(0);
   const composerRewriteRequestIdRef = useRef(0);
@@ -5142,10 +5144,18 @@ export default function WhatsAppInboxScreen() {
   loadChatsRef.current = loadChats;
 
   const refreshArchivedChatsCount = useCallback(async () => {
+    const requestId = ++archivedChatsCountRequestIdRef.current;
+
     try {
       const count = await whatsappConversationsRepository.getArchivedCount();
+      if (requestId !== archivedChatsCountRequestIdRef.current) {
+        return;
+      }
       setArchivedChatsCount(count);
     } catch (error) {
+      if (requestId !== archivedChatsCountRequestIdRef.current) {
+        return;
+      }
       if (!isSupabaseConnectivityError(error)) {
         console.warn('[WhatsAppInbox] erro ao carregar contagem de arquivados', error);
       }
@@ -5245,13 +5255,20 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (nextArchivedSectionOpen) {
+      const loadRequestId = ++archivedSectionLoadRequestIdRef.current;
       setArchivedChatsLoading(true);
       setArchivedChatsLoadingMore(false);
       void loadChats({ sections: ['archived', 'active'], partialArchived: true })
         .catch(() => undefined)
-        .finally(() => setArchivedChatsLoading(false));
+        .finally(() => {
+          if (loadRequestId === archivedSectionLoadRequestIdRef.current) {
+            setArchivedChatsLoading(false);
+          }
+        });
       void refreshArchivedChatsCount();
     } else {
+      archivedSectionLoadRequestIdRef.current += 1;
+      setArchivedChatsLoading(false);
       void loadChats({ sections: ['active'] });
     }
   }, [chatMatchesActiveFilters, loadChats, refreshArchivedChatsCount]);
@@ -5860,6 +5877,8 @@ export default function WhatsAppInboxScreen() {
     () => () => {
       mediaUploadAbortControllerRef.current?.abort();
       cancelVoiceRecordingRef.current();
+      archivedChatsCountRequestIdRef.current += 1;
+      archivedSectionLoadRequestIdRef.current += 1;
       for (const timeoutId of statusRefreshTimeoutsRef.current) {
         window.clearTimeout(timeoutId);
       }

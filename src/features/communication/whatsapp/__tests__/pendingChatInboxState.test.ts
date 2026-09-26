@@ -5,6 +5,7 @@ import type { CommWhatsAppChat } from '../domain/types';
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
+  clearPendingChatReadFields,
   mergePendingChatInboxState,
   type PendingChatInboxStatePatch,
 } from '../pendingChatInboxState';
@@ -119,4 +120,29 @@ test('keeps archive patch when outbound activity reaches the server', () => {
 
   assert.equal(result.is_archived, true);
   assert.equal(state.has(activeChat.id), true);
+});
+
+test('clears stale read fields without dropping a pending outgoing preview', () => {
+  const state = new Map<string, PendingChatInboxStatePatch>();
+  const chat = baseChat();
+
+  mergePendingChatInboxState(state, chat.id, {
+    unread_count: 0,
+    manual_unread: false,
+    manual_unread_at: null,
+    last_read_at: chat.last_message_at,
+    last_message_text: 'Mensagem pendente',
+    last_message_direction: 'outbound',
+    last_message_at: '2026-05-27T10:01:00.000Z',
+    last_message_delivery_status: 'pending',
+  });
+
+  clearPendingChatReadFields(state, chat.id);
+
+  const pending = state.get(chat.id);
+  assert.ok(pending);
+  assert.equal(pending.unread_count, undefined);
+  assert.equal(pending.last_read_at, undefined);
+  assert.equal(pending.last_message_text, 'Mensagem pendente');
+  assert.equal(pending.last_message_delivery_status, 'pending');
 });

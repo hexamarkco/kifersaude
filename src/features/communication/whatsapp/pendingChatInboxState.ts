@@ -226,6 +226,31 @@ export const clearPendingChatReadState = (
   pendingStateByChatId.set(chatId, rest as PendingChatInboxStatePatch);
 };
 
+export const clearPendingChatReadFields = (
+  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
+  chatId: string,
+) => {
+  const current = pendingStateByChatId.get(chatId);
+  if (!current) {
+    return;
+  }
+
+  const {
+    unread_count: _unreadCount,
+    manual_unread: _manualUnread,
+    manual_unread_at: _manualUnreadAt,
+    last_read_at: _lastReadAt,
+    ...rest
+  } = current;
+  const remainingKeys = Object.keys(rest).filter((key) => !PENDING_CHAT_INBOX_META_KEYS.includes(key as keyof PendingChatInboxStateMetadata));
+  if (remainingKeys.length === 0) {
+    pendingStateByChatId.delete(chatId);
+    return;
+  }
+
+  pendingStateByChatId.set(chatId, rest as PendingChatInboxStatePatch);
+};
+
 export const buildPendingChatInboxStatePatch = (
   chat: CommWhatsAppChat,
   options: {

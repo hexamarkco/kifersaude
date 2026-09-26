@@ -171,6 +171,7 @@ import {
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
+  clearPendingChatReadFields,
   clearPendingChatReadState,
   mergePendingChatInboxState,
   stripPendingChatInboxMetadata,
@@ -2438,6 +2439,7 @@ export default function WhatsAppInboxScreen() {
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
+  const chatReadMutationVersionByChatIdRef = useRef<Map<string, number>>(new Map());
   const pendingChatReadKeysRef = useRef<Set<string>>(new Set());
   const attemptedChatReadAtByKeyRef = useRef<Map<string, number>>(new Map());
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
@@ -3150,6 +3152,8 @@ export default function WhatsAppInboxScreen() {
   }, [lightboxMessageId, mediaViewerMessages]);
 
   const applyOptimisticChatSummary = useCallback((chat: CommWhatsAppChat, summaryText: string, messageAt: string) => {
+    const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(chat.id) ?? 0) + 1;
+    chatReadMutationVersionByChatIdRef.current.set(chat.id, readMutationVersion);
     const readPatch: PendingChatInboxStatePatch = {
       unread_count: 0,
       manual_unread: false,
@@ -3181,7 +3185,16 @@ export default function WhatsAppInboxScreen() {
 
     void whatsappConversationsRepository.markRead(chat.id, {
       messageAt,
+    }).then(() => {
+      if (chatReadMutationVersionByChatIdRef.current.get(chat.id) !== readMutationVersion) {
+        return;
+      }
+      chatReadMutationVersionByChatIdRef.current.delete(chat.id);
     }).catch((error) => {
+      if (chatReadMutationVersionByChatIdRef.current.get(chat.id) !== readMutationVersion) {
+        return;
+      }
+      chatReadMutationVersionByChatIdRef.current.delete(chat.id);
       console.error('[WhatsAppInbox] erro ao avancar leitura apos envio', error);
     });
   }, [upsertChatLocally]);
@@ -6186,6 +6199,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) ?? 0) + 1;
+    chatReadMutationVersionByChatIdRef.current.set(currentChat.id, readMutationVersion);
     pendingChatReadKeysRef.current.add(readKey);
     attemptedChatReadAtByKeyRef.current.set(readKey, Date.now());
 
@@ -6212,6 +6227,10 @@ export default function WhatsAppInboxScreen() {
     void whatsappConversationsRepository.markRead(currentChat.id, {
       messageAt: readAt,
     }).then((result) => {
+      if (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) !== readMutationVersion) {
+        return;
+      }
+
       const latestChat = latestChatsRef.current.find((chat) => chat.id === currentChat.id) ?? currentChat;
 
       console.debug('[WhatsAppInbox][mark-read] request:success', {
@@ -6258,8 +6277,14 @@ export default function WhatsAppInboxScreen() {
       } else {
         attemptedChatReadAtByKeyRef.current.delete(readKey);
       }
+      chatReadMutationVersionByChatIdRef.current.delete(currentChat.id);
     }).catch((error) => {
+      if (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) !== readMutationVersion) {
+        return;
+      }
+
       clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
+      chatReadMutationVersionByChatIdRef.current.delete(currentChat.id);
       console.error('[WhatsAppInbox][mark-read] request:error', {
         source,
         chatId: currentChat.id,
@@ -8564,6 +8589,12 @@ export default function WhatsAppInboxScreen() {
     let hasFieldsToApply = false;
 
     try {
+      if (typeof options.markAsUnread === 'boolean') {
+        const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(chat.id) ?? 0) + 1;
+        chatReadMutationVersionByChatIdRef.current.set(chat.id, readMutationVersion);
+        clearPendingChatReadFields(pendingChatInboxStateRef.current, chat.id);
+      }
+
       const fieldsOnlyPatch = stripPendingChatInboxMetadata(buildPendingChatInboxStatePatch(chat, options));
       const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
       hasFieldsToApply = Object.keys(fieldsOnlyPatch).length > 0;

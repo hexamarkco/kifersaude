@@ -155,6 +155,7 @@ export default function AgendaScreen() {
   } | null>(null);
   const [quickScheduleDropdownId, setQuickScheduleDropdownId] = useState<string | null>(null);
   const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
+  const [reschedulingInFlightId, setReschedulingInFlightId] = useState<string | null>(null);
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
@@ -164,6 +165,8 @@ export default function AgendaScreen() {
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const quickSchedulingReminderIdRef = useRef<string | null>(null);
+  const reschedulingInFlightIdRef = useRef<string | null>(null);
+  const deletingReminderRef = useRef(false);
   const savingTaskRef = useRef(false);
   const loadRemindersRequestIdRef = useRef(0);
   const leadInfoRequestIdRef = useRef(0);
@@ -582,11 +585,12 @@ export default function AgendaScreen() {
   };
 
   const confirmDeleteReminder = async () => {
-    if (!reminderPendingDeletion) {
+    if (!reminderPendingDeletion || deletingReminderRef.current) {
       return;
     }
 
     const reminderToDelete = reminderPendingDeletion;
+    deletingReminderRef.current = true;
     setIsDeletingReminder(true);
 
     try {
@@ -608,12 +612,17 @@ export default function AgendaScreen() {
       console.error("Erro ao remover lembrete:", deleteError);
       toast.error("Erro ao remover lembrete.");
     } finally {
+      deletingReminderRef.current = false;
       setIsDeletingReminder(false);
       setReminderPendingDeletion(null);
     }
   };
 
   const handleRescheduleReminder = async (reminderId: string, newDate: Date) => {
+    if (reschedulingInFlightIdRef.current) {
+      return;
+    }
+
     try {
       const reminder = reminders.find((item) => item.id === reminderId);
       if (!reminder) {
@@ -625,6 +634,8 @@ export default function AgendaScreen() {
       newDateTime.setHours(reminderDateTime.getHours(), reminderDateTime.getMinutes(), 0, 0);
       const newDateIso = newDateTime.toISOString();
 
+      reschedulingInFlightIdRef.current = reminderId;
+      setReschedulingInFlightId(reminderId);
       pendingRefreshIdsRef.current.add(reminderId);
       try {
         await updateReminder(reminderId, { data_lembrete: newDateIso });
@@ -652,6 +663,9 @@ export default function AgendaScreen() {
     } catch (rescheduleError) {
       console.error("Erro ao reagendar lembrete:", rescheduleError);
       toast.error("Não foi possível reagendar o item.");
+    } finally {
+      reschedulingInFlightIdRef.current = null;
+      setReschedulingInFlightId(null);
     }
   };
 
@@ -790,6 +804,10 @@ export default function AgendaScreen() {
   };
 
   const handleDayClick = async (date: Date) => {
+    if (reschedulingInFlightIdRef.current) {
+      return;
+    }
+
     if (reschedulingReminderId) {
       await handleRescheduleReminder(reschedulingReminderId, date);
       return;
@@ -1118,6 +1136,7 @@ export default function AgendaScreen() {
           onClick={() => {
             void handleDayClick(cellDate);
           }}
+          disabled={Boolean(reschedulingInFlightId)}
           className={`kds-action-surface kds-calendar-day border transition-colors ${stateClass}`}
           aria-pressed={isSelected}
           aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${totalCount} item(ns)`}
@@ -1630,11 +1649,11 @@ export default function AgendaScreen() {
             open
             aria-label="Remover item da agenda"
             onOpenChange={(open) => {
-              if (!open) setReminderPendingDeletion(null);
+              if (!open && !isDeletingReminder) setReminderPendingDeletion(null);
             }}
             size="sm"
           >
-            <DialogHeader onClose={() => setReminderPendingDeletion(null)}>
+            <DialogHeader onClose={isDeletingReminder ? undefined : () => setReminderPendingDeletion(null)}>
               <DialogTitle>Remover item</DialogTitle>
               <DialogDescription>Esta ação não pode ser desfeita.</DialogDescription>
             </DialogHeader>

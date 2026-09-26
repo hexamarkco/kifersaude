@@ -144,6 +144,9 @@ export default function AiSandboxChatScreen() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
   const pendingTimerRef = useRef<{ intervalId: number; conversationId: string } | null>(null);
+  const sendRequestIdRef = useRef(0);
+  const startingApproachRequestIdRef = useRef(0);
+  const scenarioRequestIdRef = useRef(0);
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
@@ -304,7 +307,13 @@ export default function AiSandboxChatScreen() {
 
   const handleNewConversation = () => {
     clearPendingTimer();
+    sendRequestIdRef.current += 1;
+    startingApproachRequestIdRef.current += 1;
+    scenarioRequestIdRef.current += 1;
     setGeneratingReply(false);
+    setSendingDraft(false);
+    setStartingApproach(false);
+    setRunningScenario(false);
     activeConversationIdRef.current = null;
     setActiveConversationId(null);
     setMessages([]);
@@ -317,7 +326,13 @@ export default function AiSandboxChatScreen() {
   const handleSelectConversation = (conversationId: string) => {
     if (conversationId === activeConversationId) return;
     clearPendingTimer();
+    sendRequestIdRef.current += 1;
+    startingApproachRequestIdRef.current += 1;
+    scenarioRequestIdRef.current += 1;
     setGeneratingReply(false);
+    setSendingDraft(false);
+    setStartingApproach(false);
+    setRunningScenario(false);
     activeConversationIdRef.current = conversationId;
     setActiveConversationId(conversationId);
   };
@@ -326,7 +341,7 @@ export default function AiSandboxChatScreen() {
     try {
       await aiSandboxChatService.deleteConversation(conversationId);
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-      if (activeConversationId === conversationId) {
+      if (activeConversationIdRef.current === conversationId) {
         handleNewConversation();
       }
     } catch (err) {
@@ -388,6 +403,8 @@ export default function AiSandboxChatScreen() {
     const text = draft.trim();
     if (!text || sendingDraft || !user) return;
 
+    const requestId = ++sendRequestIdRef.current;
+    const originConversationId = activeConversationIdRef.current;
     const handoffAtSend = isHandedOff;
     setError(null);
     setSendingDraft(true);
@@ -400,8 +417,10 @@ export default function AiSandboxChatScreen() {
         const conversation = await aiSandboxChatService.createConversation(text, user.id);
         conversationId = conversation.id;
         setConversations((prev) => [conversation, ...prev]);
-        activeConversationIdRef.current = conversation.id;
-        setActiveConversationId(conversation.id);
+        if (requestId === sendRequestIdRef.current && activeConversationIdRef.current === originConversationId) {
+          activeConversationIdRef.current = conversation.id;
+          setActiveConversationId(conversation.id);
+        }
       }
 
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);
@@ -416,71 +435,107 @@ export default function AiSandboxChatScreen() {
       // testando mandar mensagens picotadas antes da IA responder de uma vez.
       startReplyCountdown(conversationId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar mensagem.');
-      setDraft(text);
+      const targetConversationId = activeConversationId ?? originConversationId;
+      if (requestId === sendRequestIdRef.current && activeConversationIdRef.current === targetConversationId) {
+        setError(err instanceof Error ? err.message : 'Erro ao enviar mensagem.');
+        setDraft(text);
+      }
     } finally {
-      setSendingDraft(false);
+      if (requestId === sendRequestIdRef.current) {
+        setSendingDraft(false);
+      }
     }
   };
 
   const handleStartWithApproach = async () => {
     if (!user || startingApproach) return;
 
+    const requestId = ++startingApproachRequestIdRef.current;
+    const originConversationId = activeConversationIdRef.current;
+    let targetConversationId: string | null = null;
     setError(null);
     setStartingApproach(true);
     const name = leadNameForApproach.trim();
 
     try {
       const conversation = await aiSandboxChatService.createConversation(name || 'Abordagem', user.id);
+      targetConversationId = conversation.id;
       setConversations((prev) => [conversation, ...prev]);
-      activeConversationIdRef.current = conversation.id;
-      setActiveConversationId(conversation.id);
-      setMessages([]);
-      setLeadNameForApproach('');
+      const canClaimConversation = requestId === startingApproachRequestIdRef.current
+        && activeConversationIdRef.current === originConversationId;
+      if (canClaimConversation) {
+        activeConversationIdRef.current = conversation.id;
+        setActiveConversationId(conversation.id);
+        setMessages([]);
+        setLeadNameForApproach('');
+      }
 
       await aiSandboxChatService.startWithApproach(conversation.id, name || undefined);
-      if (activeConversationIdRef.current !== conversation.id) return;
+      if (requestId !== startingApproachRequestIdRef.current || activeConversationIdRef.current !== conversation.id) return;
 
       const rows = await aiSandboxChatService.listMessages(conversation.id);
-      if (activeConversationIdRef.current === conversation.id) setMessages(rows);
+      if (requestId === startingApproachRequestIdRef.current && activeConversationIdRef.current === conversation.id) {
+        setMessages(rows);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
+      if (requestId === startingApproachRequestIdRef.current
+        && (activeConversationIdRef.current === targetConversationId || activeConversationIdRef.current === originConversationId)) {
+        setError(err instanceof Error ? err.message : 'Erro ao iniciar abordagem.');
+      }
     } finally {
-      setStartingApproach(false);
+      if (requestId === startingApproachRequestIdRef.current) {
+        setStartingApproach(false);
+      }
     }
   };
 
   const handleRunTestScenario = async (scenarioKey: string, scenarioLabel: string, personaPrompt: string) => {
     if (!user) return;
+    const requestId = ++scenarioRequestIdRef.current;
+    const originConversationId = activeConversationIdRef.current;
+    let targetConversationId: string | null = null;
     setRunningScenario(true);
     setError(null);
     try {
       const conversation = await aiSandboxChatService.createAutomatedConversation(scenarioLabel, user.id);
+      targetConversationId = conversation.id;
       setConversations((previous) => [conversation, ...previous]);
-      activeConversationIdRef.current = conversation.id;
-      setActiveConversationId(conversation.id);
-      setMessages([]);
-      setActiveTestRun(null);
+      const canClaimConversation = requestId === scenarioRequestIdRef.current
+        && activeConversationIdRef.current === originConversationId;
+      if (canClaimConversation) {
+        activeConversationIdRef.current = conversation.id;
+        setActiveConversationId(conversation.id);
+        setMessages([]);
+        setActiveTestRun(null);
+      }
 
       const result = await aiSandboxChatService.runScenario(scenarioKey, scenarioLabel, personaPrompt, conversation.id);
       const [rows, testRun] = await Promise.all([
         aiSandboxChatService.listMessages(conversation.id),
         aiSandboxChatService.getLatestTestRun(conversation.id),
       ]);
-      if (activeConversationIdRef.current === conversation.id) {
+      if (requestId === scenarioRequestIdRef.current && activeConversationIdRef.current === conversation.id) {
         setMessages(rows);
         setActiveTestRun(testRun);
       }
       await loadConversations();
+      if (requestId !== scenarioRequestIdRef.current || activeConversationIdRef.current !== conversation.id) {
+        return;
+      }
       if (result.passed) {
         toast.success(`Teste "${scenarioLabel}" passou!`);
       } else {
         toast.error(`Teste "${scenarioLabel}" falhou: ${result.violations.join('; ')}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao rodar teste.');
+      if (requestId === scenarioRequestIdRef.current
+        && (activeConversationIdRef.current === targetConversationId || activeConversationIdRef.current === originConversationId)) {
+        setError(err instanceof Error ? err.message : 'Erro ao rodar teste.');
+      }
     } finally {
-      setRunningScenario(false);
+      if (requestId === scenarioRequestIdRef.current) {
+        setRunningScenario(false);
+      }
     }
   };
 

@@ -81,10 +81,6 @@ export default defineConfig(({ mode }) => {
               return 'supabase';
             }
 
-            if (pkg === 'react-quill' || pkg === 'quill') {
-              return 'editor';
-            }
-
             if (pkg === 'reactflow' || pkg.startsWith('d3-')) {
               return 'flow';
             }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   ConfirmDialog,
@@ -12,30 +12,42 @@ type ConfirmationOptions = {
   tone?: 'danger' | 'default';
 };
 
-type ConfirmationState = ConfirmationOptions & {
-  resolver: (confirmed: boolean) => void;
-};
+type ConfirmationState = ConfirmationOptions;
 
 export function useConfirmationModal() {
   const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
+  const pendingResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
 
   const requestConfirmation = useCallback(
     (options: ConfirmationOptions) =>
       new Promise<boolean>((resolve) => {
-        setConfirmationState({ ...options, resolver: resolve });
+        pendingResolverRef.current?.(false);
+        pendingResolverRef.current = resolve;
+        setConfirmationState(options);
       }),
     [],
   );
 
-  const handleCancel = useCallback(() => {
-    confirmationState?.resolver(false);
+  const resolveConfirmation = useCallback((confirmed: boolean) => {
+    pendingResolverRef.current?.(confirmed);
+    pendingResolverRef.current = null;
     setConfirmationState(null);
-  }, [confirmationState]);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    resolveConfirmation(false);
+  }, [resolveConfirmation]);
 
   const handleConfirm = useCallback(() => {
-    confirmationState?.resolver(true);
-    setConfirmationState(null);
-  }, [confirmationState]);
+    resolveConfirmation(true);
+  }, [resolveConfirmation]);
+
+  useEffect(() => {
+    return () => {
+      pendingResolverRef.current?.(false);
+      pendingResolverRef.current = null;
+    };
+  }, []);
 
   const ConfirmationDialogElement = useMemo(
     () => (

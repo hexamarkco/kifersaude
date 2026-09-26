@@ -179,6 +179,7 @@ export default function LeadsManager({
   const leadsRequestIdRef = useRef(0);
   const contractsRequestIdRef = useRef(0);
   const leadStatusMutationLockRef = useRef(new LeadStatusMutationLock());
+  const bulkMutationInFlightRef = useRef(false);
   const {
     motionEnabled,
     sectionDuration,
@@ -901,6 +902,7 @@ export default function LeadsManager({
 
   const handleBulkDetailsApply = async () => {
     if (selectedLeadIds.length === 0) return;
+    if (bulkMutationInFlightRef.current) return;
 
     const updates: Partial<Lead> = {};
     const proximoRetorno = bulkProximoRetorno
@@ -916,6 +918,7 @@ export default function LeadsManager({
 
     if (Object.keys(updates).length === 0) return;
 
+    bulkMutationInFlightRef.current = true;
     setIsBulkUpdating(true);
 
     setLeads((current) =>
@@ -939,6 +942,7 @@ export default function LeadsManager({
       );
       loadLeads();
     } finally {
+      bulkMutationInFlightRef.current = false;
       setIsBulkUpdating(false);
       clearSelection();
     }
@@ -946,27 +950,32 @@ export default function LeadsManager({
 
   const handleBulkStatusApply = async () => {
     if (!bulkStatus || selectedLeadIds.length === 0) return;
+    if (bulkMutationInFlightRef.current) return;
 
+    bulkMutationInFlightRef.current = true;
     setIsBulkUpdating(true);
     let hasError = false;
 
-    for (const leadId of selectedLeadIds) {
-      try {
-        await handleStatusChange(leadId, bulkStatus);
-      } catch (error) {
-        console.error("Erro ao atualizar status do lead em massa:", error);
-        hasError = true;
+    try {
+      for (const leadId of selectedLeadIds) {
+        try {
+          await handleStatusChange(leadId, bulkStatus);
+        } catch (error) {
+          console.error("Erro ao atualizar status do lead em massa:", error);
+          hasError = true;
+        }
       }
-    }
 
-    if (hasError) {
-      toast.warning(
-        "Alguns leads não puderam ter o status atualizado. Verifique e tente novamente.",
-      );
+      if (hasError) {
+        toast.warning(
+          "Alguns leads não puderam ter o status atualizado. Verifique e tente novamente.",
+        );
+      }
+    } finally {
+      bulkMutationInFlightRef.current = false;
+      setIsBulkUpdating(false);
+      clearSelection();
     }
-
-    setIsBulkUpdating(false);
-    clearSelection();
   };
 
   const handleDeleteLead = async (lead: Lead) => {

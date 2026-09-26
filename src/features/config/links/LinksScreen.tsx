@@ -72,6 +72,7 @@ export default function LinksScreen() {
   const [createForm, setCreateForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
   const [creating, setCreating] = useState(false);
   const loadRequestIdRef = useRef(0);
+  const busyIdRef = useRef<string | null>(null);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -203,43 +204,77 @@ export default function LinksScreen() {
     setEditingForm(EMPTY_LINK_FORM);
   };
 
+  const beginLinkMutation = (linkId: string) => {
+    if (busyIdRef.current) {
+      return false;
+    }
+
+    busyIdRef.current = linkId;
+    setBusyId(linkId);
+    return true;
+  };
+
+  const finishLinkMutation = () => {
+    busyIdRef.current = null;
+    setBusyId(null);
+  };
+
   const confirmEditing = async () => {
-    if (!editingId) return;
+    const targetId = editingId;
+    if (!targetId) return;
 
     if (!editingForm.title.trim() || !editingForm.url.trim()) {
       toast.error("Informe o título e a URL do link.");
       return;
     }
 
-    setBusyId(editingId);
-    const { error } = await linksService.updateLinkItem(editingId, {
-      title: editingForm.title.trim(),
-      url: editingForm.url.trim(),
-      icon: editingForm.icon,
-    });
+    if (!beginLinkMutation(targetId)) return;
 
-    if (error) {
+    try {
+      const { error } = await linksService.updateLinkItem(targetId, {
+        title: editingForm.title.trim(),
+        url: editingForm.url.trim(),
+        icon: editingForm.icon,
+      });
+
+      if (error) {
+        toast.error("Não foi possível atualizar o link.");
+      } else {
+        await loadData();
+        if (editingId === targetId) {
+          cancelEditing();
+        }
+        toast.success("Link atualizado com sucesso.");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar link:", error);
       toast.error("Não foi possível atualizar o link.");
-    } else {
-      await loadData();
-      cancelEditing();
-      toast.success("Link atualizado com sucesso.");
+    } finally {
+      finishLinkMutation();
     }
-    setBusyId(null);
   };
 
   const handleToggleActive = async (link: PublicLinkItem) => {
-    setBusyId(link.id);
-    const { error } = await linksService.updateLinkItem(link.id, { is_active: !link.is_active });
-    if (error) {
+    if (!beginLinkMutation(link.id)) return;
+
+    try {
+      const { error } = await linksService.updateLinkItem(link.id, { is_active: !link.is_active });
+      if (error) {
+        toast.error("Não foi possível atualizar o link.");
+      } else {
+        await loadData();
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status do link:", error);
       toast.error("Não foi possível atualizar o link.");
-    } else {
-      await loadData();
+    } finally {
+      finishLinkMutation();
     }
-    setBusyId(null);
   };
 
   const handleDelete = async (link: PublicLinkItem) => {
+    if (busyIdRef.current) return;
+
     const confirmed = await requestConfirmation({
       title: "Excluir link",
       description: `Deseja remover "${link.title}"? Esta ação não pode ser desfeita.`,
@@ -249,15 +284,22 @@ export default function LinksScreen() {
     });
     if (!confirmed) return;
 
-    setBusyId(link.id);
-    const { error } = await linksService.deleteLinkItem(link.id);
-    if (error) {
+    if (!beginLinkMutation(link.id)) return;
+
+    try {
+      const { error } = await linksService.deleteLinkItem(link.id);
+      if (error) {
+        toast.error("Não foi possível remover o link.");
+      } else {
+        await loadData();
+        toast.success("Link removido com sucesso.");
+      }
+    } catch (error) {
+      console.error("Erro ao remover link:", error);
       toast.error("Não foi possível remover o link.");
-    } else {
-      await loadData();
-      toast.success("Link removido com sucesso.");
+    } finally {
+      finishLinkMutation();
     }
-    setBusyId(null);
   };
 
   const moveLink = async (index: number, direction: -1 | 1) => {
@@ -268,14 +310,26 @@ export default function LinksScreen() {
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIndex, 0, moved);
 
+    if (!beginLinkMutation(moved.id)) return;
+
     setLinks(reordered);
-    setBusyId(moved.id);
-    const { error } = await linksService.reorderLinkItems(reordered.map((item) => item.id));
-    if (error) {
+    try {
+      const { error } = await linksService.reorderLinkItems(reordered.map((item) => item.id));
+      if (error) {
+        toast.error("Não foi possível reordenar os links.");
+        await loadData().catch((reloadError) => {
+          console.error("Erro ao recarregar links após falha na reordenação:", reloadError);
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao reordenar links:", error);
       toast.error("Não foi possível reordenar os links.");
-      await loadData();
+      await loadData().catch((reloadError) => {
+        console.error("Erro ao recarregar links após falha na reordenação:", reloadError);
+      });
+    } finally {
+      finishLinkMutation();
     }
-    setBusyId(null);
   };
 
   if (loading) {
@@ -429,6 +483,7 @@ export default function LinksScreen() {
           <div className="space-y-3">
             {links.map((link, index) => {
               const isBusy = busyId === link.id;
+              const hasBusyMutation = busyId !== null;
               const isEditing = editingId === link.id;
               const Icon = getLinkIcon(link.icon);
 
@@ -446,7 +501,7 @@ export default function LinksScreen() {
                         size="sm"
                         variant="ghost"
                         onClick={() => void moveLink(index, -1)}
-                        disabled={index === 0 || isBusy}
+                        disabled={index === 0 || hasBusyMutation}
                         aria-label="Mover para cima"
                       >
                         <ChevronUp />
@@ -456,7 +511,7 @@ export default function LinksScreen() {
                         size="sm"
                         variant="ghost"
                         onClick={() => void moveLink(index, 1)}
-                        disabled={index === links.length - 1 || isBusy}
+                        disabled={index === links.length - 1 || hasBusyMutation}
                         aria-label="Mover para baixo"
                       >
                         <ChevronDown />
@@ -476,7 +531,7 @@ export default function LinksScreen() {
                               setEditingForm((prev) => ({ ...prev, title: event.target.value }))
                             }
                             placeholder="Título"
-                            disabled={isBusy}
+                            disabled={hasBusyMutation}
                           />
                           <Input
                             value={editingForm.url}
@@ -516,7 +571,7 @@ export default function LinksScreen() {
                       <Switch
                         checked={link.is_active}
                         onChange={() => void handleToggleActive(link)}
-                        disabled={isBusy}
+                        disabled={hasBusyMutation}
                         label="Ativo"
                       />
                     )}
@@ -526,7 +581,8 @@ export default function LinksScreen() {
                         <IconButton
                           onClick={() => void confirmEditing()}
                           variant="success"
-                          disabled={isBusy}
+                          disabled={hasBusyMutation}
+                          loading={isBusy}
                           size="sm"
                           aria-label={`Salvar alterações em ${link.title}`}
                           title="Salvar alterações"
@@ -546,13 +602,14 @@ export default function LinksScreen() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Button onClick={() => startEditing(link)} variant="secondary" size="sm" disabled={isBusy}>
+                        <Button onClick={() => startEditing(link)} variant="secondary" size="sm" disabled={hasBusyMutation}>
                           Editar
                         </Button>
                         <IconButton
                           onClick={() => void handleDelete(link)}
                           variant="danger"
-                          disabled={isBusy}
+                          disabled={hasBusyMutation}
+                          loading={isBusy}
                           size="sm"
                           aria-label={`Excluir ${link.title}`}
                           title="Excluir link"

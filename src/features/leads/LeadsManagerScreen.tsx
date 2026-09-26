@@ -52,6 +52,7 @@ import { convertLocalToUTC, formatDateTimeFullBR } from "../../lib/dateUtils";
 import { toast } from "../../lib/toast";
 import { useConfig } from "../../contexts/ConfigContext";
 import {
+  Alert,
   Badge,
   Button,
   Checkbox,
@@ -119,6 +120,7 @@ export default function LeadsManager({
     Map<string, string>
   >(new Map());
   const [loading, setLoading] = useState(true);
+  const [leadsLoadError, setLeadsLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? "");
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [filterStatus, setFilterStatus] = useState<string[]>(
@@ -372,6 +374,8 @@ export default function LeadsManager({
     const requestId = leadsRequestIdRef.current + 1;
     leadsRequestIdRef.current = requestId;
     setLoading(true);
+    setLeadsLoadError(null);
+    let leadsLoaded = false;
 
     try {
       const data = await listLeads();
@@ -393,6 +397,7 @@ export default function LeadsManager({
       }
 
       setLeads(visibleLeads);
+      leadsLoaded = true;
       const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
       const nextReminders = await listNextReminderByLeadId(leadIds);
       if (requestId !== leadsRequestIdRef.current) {
@@ -403,6 +408,11 @@ export default function LeadsManager({
     } catch (error) {
       if (requestId === leadsRequestIdRef.current) {
         console.error("Erro ao carregar leads:", error);
+        setLeadsLoadError(
+          leadsLoaded
+            ? "Os leads foram carregados, mas não foi possível atualizar os próximos retornos."
+            : "Não foi possível carregar os leads agora.",
+        );
       }
     } finally {
       if (requestId === leadsRequestIdRef.current) {
@@ -1430,6 +1440,25 @@ export default function LeadsManager({
           onViewModeChange={setViewMode}
           onCreateLead={handleCreateLead}
         />
+        {leadsLoadError && (
+          <Alert
+            tone="danger"
+            title="Não foi possível atualizar os leads"
+            action={(
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void loadLeads()}
+                loading={loading}
+              >
+                Tentar novamente
+              </Button>
+            )}
+          >
+            {leadsLoadError} Os dados já carregados foram preservados.
+          </Alert>
+        )}
         <Surface className="space-y-5" data-panel-animate>
           <Toolbar>
             <ToolbarSearch className="relative">

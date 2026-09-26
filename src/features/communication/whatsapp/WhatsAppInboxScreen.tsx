@@ -4326,6 +4326,22 @@ export default function WhatsAppInboxScreen() {
     setThreadActionsMenuOpen(false);
   }, [selectedChatId]);
 
+  useEffect(() => {
+    // Modais que editam dados da conversa anterior não podem permanecer
+    // ativos depois que o usuário troca de chat. Caso contrário, a ação
+    // confirmada pode usar o selectedChat atual em vez do chat que abriu o
+    // modal (especialmente ao salvar um contato).
+    setSaveContactDialogOpen(false);
+    setSaveContactName('');
+    setCreateLeadDraft(null);
+    setEditingMessage(null);
+    setEditingMessageDraft('');
+    setMessagePendingDeletion(null);
+    setRetryPendingMessage(null);
+    setStatusReminderLead(null);
+    setStatusReminderPromptMessage(null);
+  }, [selectedChatId]);
+
   useLayoutEffect(() => {
     if (!openReactionPickerMessageId || typeof window === 'undefined') {
       setReactionPickerPosition((current) => (current === null ? current : null));

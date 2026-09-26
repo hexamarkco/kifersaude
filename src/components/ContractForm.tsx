@@ -46,6 +46,7 @@ import {
   Building2,
   WalletCards,
   FileUp,
+  RefreshCw,
 } from "lucide-react";
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
@@ -285,6 +286,7 @@ export default function ContractForm({
 }: ContractFormProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const [operadorasLoadError, setOperadorasLoadError] = useState(false);
   const { options, leadStatuses } = useConfig();
   const initialFormData = useMemo(
     () => buildContractFormState(contract, leadToConvert),
@@ -720,13 +722,15 @@ export default function ContractForm({
 
   const loadOperadoras = async () => {
     const requestId = ++operadorasRequestIdRef.current;
+    setOperadorasLoadError(false);
     try {
-      const data = await configService.getOperadoras();
+      const data = await configService.getOperadoras(true);
       if (requestId !== operadorasRequestIdRef.current) return;
       setOperadoras(data.filter((op) => op.ativo));
     } catch (error) {
       if (requestId === operadorasRequestIdRef.current) {
         console.error("Erro ao carregar operadoras:", error);
+        setOperadorasLoadError(true);
       }
     }
   };
@@ -1379,14 +1383,25 @@ export default function ContractForm({
                 label="Operadora *"
                 description="Comissão e bônus serão preenchidos automaticamente"
               >
-                <FilterSelect
-                  icon={Search}
-                  value={formData.operadora}
-                  onChange={(value) => handleOperadoraChange(value)}
-                  placeholder="Selecione uma operadora"
-                  includePlaceholderOption={false}
-                  options={operadoraSelectOptions}
-                />
+                <div className="space-y-2">
+                  <FilterSelect
+                    icon={Search}
+                    value={formData.operadora}
+                    onChange={(value) => handleOperadoraChange(value)}
+                    placeholder="Selecione uma operadora"
+                    includePlaceholderOption={false}
+                    options={operadoraSelectOptions}
+                  />
+                  {operadorasLoadError && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--danger)]" role="alert">
+                      <span>Não foi possível carregar as operadoras.</span>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => void loadOperadoras()}>
+                        <RefreshCw className="kds-control-icon" />
+                        <span>Tentar novamente</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Field>
 
               <Field label="Produto/Plano *">

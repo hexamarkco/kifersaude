@@ -13,6 +13,7 @@ import type {
   CommWhatsAppMessage,
   CommWhatsAppPhoneContact,
   CommWhatsAppPresenceStatus,
+  CommWhatsAppScheduledMessage,
   CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceAction,
   CommWhatsAppScheduledSequenceStep,
@@ -2951,10 +2952,12 @@ export const commWhatsAppService = {
     leadId?: string;
     limit?: number;
     offset?: number;
-  }): Promise<Array<Record<string, unknown>>> {
+  }): Promise<CommWhatsAppScheduledMessage[]> {
     let query = supabase
       .from('comm_whatsapp_scheduled_messages')
-      .select('*')
+      .select(
+        'id, channel_id, chat_id, phone_digits, phone_number, display_name, message_type, text_content, media_url, media_mime_type, media_file_name, scheduled_at, recurrence, recurrence_config, next_run_at, recurrence_ends_at, cancel_on_inbound_message, status, error_message, lead_id, contract_id, label',
+      )
       .order('scheduled_at', { ascending: false });
 
     if (options?.channelId) {
@@ -2985,7 +2988,7 @@ export const commWhatsAppService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel listar mensagens agendadas.'));
     }
 
-    return data ?? [];
+    return (data ?? []) as unknown as CommWhatsAppScheduledMessage[];
   },
 
   async updateScheduledMessage(id: string, input: {

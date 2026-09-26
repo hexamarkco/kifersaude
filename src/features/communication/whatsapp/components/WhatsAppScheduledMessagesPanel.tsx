@@ -153,7 +153,7 @@ export default function WhatsAppScheduledMessagesPanel({
           limit: SCHEDULED_MESSAGES_PAGE_SIZE,
           offset,
         });
-        const page = data as unknown as CommWhatsAppScheduledMessage[];
+        const page = data;
         allMessages.push(...page);
 
         if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;

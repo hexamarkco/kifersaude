@@ -46,6 +46,32 @@ function getPackageName(id: string): string | null {
   return parts[0];
 }
 
+function reactQuillInterop(): Plugin {
+  // react-quill 2 ships CommonJS compiled with TypeScript's default-import
+  // helper. Vite's production React namespace needs a small ESM bridge so
+  // the lazy blog chunk receives React and ReactDOM through `.default`.
+  const reactQuillRoot = '/node_modules/react-quill/';
+  const reactShim = path.resolve(__dirname, 'src/features/blog/components/reactQuillReactShim.ts');
+  const reactDomShim = path.resolve(__dirname, 'src/features/blog/components/reactQuillReactDomShim.ts');
+
+  return {
+    name: 'kifer-react-quill-interop',
+    enforce: 'pre',
+    transform(code, id) {
+      const normalizedId = id.replace(/\\/g, '/');
+      if (!normalizedId.includes(reactQuillRoot) || !normalizedId.endsWith('/lib/index.js')) {
+        return null;
+      }
+
+      const transformedCode = code
+        .replaceAll('require("react")', `require(${JSON.stringify(reactShim)})`)
+        .replaceAll('require("react-dom")', `require(${JSON.stringify(reactDomShim)})`);
+
+      return transformedCode === code ? null : { code: transformedCode, map: null };
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -58,7 +84,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __KIFER_DEPLOYMENT_ENV__: JSON.stringify(deploymentEnvironment),
     },
-    plugins: [react(), seoDiscoveryAssets(siteUrl, indexable)],
+    plugins: [react(), reactQuillInterop(), seoDiscoveryAssets(siteUrl, indexable)],
     build: {
       rollupOptions: {
         output: {
@@ -110,7 +136,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      exclude: ['lucide-react'],
+      exclude: ['lucide-react', 'react-quill'],
     },
     resolve: {
       alias: {

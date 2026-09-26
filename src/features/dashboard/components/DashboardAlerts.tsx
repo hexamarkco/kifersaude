@@ -7,6 +7,7 @@ import {
 
 type DashboardAlertsProps = {
   error: string | null;
+  supportingError: string | null;
   loading: boolean;
   isCustomPeriodValid: boolean;
   onRetry: () => void;
@@ -14,6 +15,7 @@ type DashboardAlertsProps = {
 
 export function DashboardAlerts({
   error,
+  supportingError,
   loading,
   isCustomPeriodValid,
   onRetry,
@@ -35,6 +37,26 @@ export function DashboardAlerts({
             />
             <p className="text-sm text-[var(--danger-text)]">
               {error}
+            </p>
+          </div>
+        </Alert>
+      )}
+
+      {supportingError && (
+        <Alert
+          tone="warning"
+          action={(
+            <Button type="button" onClick={onRetry} variant="secondary" disabled={loading}>
+              Atualizar indicadores
+            </Button>
+          )}
+        >
+          <div className="flex items-start space-x-3">
+            <div
+              className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--accent-gold-hover)]"
+            />
+            <p className="text-sm text-[var(--accent-gold-hover)]">
+              {supportingError}
             </p>
           </div>
         </Alert>

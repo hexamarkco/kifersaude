@@ -90,6 +90,9 @@ export default function DashboardScreen({
   >(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [decisionSnapshotError, setDecisionSnapshotError] = useState<
+    string | null
+  >(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<
     "leads" | "contratos" | "comissoes"
@@ -490,6 +493,7 @@ export default function DashboardScreen({
 
     setLoading(true);
     setError(null);
+    setDecisionSnapshotError(null);
     try {
       const {
         leads: leadsData,
@@ -532,6 +536,7 @@ export default function DashboardScreen({
             return;
           }
 
+          setDecisionSnapshotError(null);
           setReminders(reminders);
           setInteractions(interactions);
           setStatusHistory(statusHistory);
@@ -539,6 +544,9 @@ export default function DashboardScreen({
         .catch((decisionError: unknown) => {
           if (requestId === dataRequestIdRef.current) {
             console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
+            setDecisionSnapshotError(
+              "Os dados principais estão disponíveis, mas alguns indicadores podem estar incompletos porque não foi possível carregar o histórico de interações e retornos.",
+            );
           }
         });
     } catch (error) {
@@ -2163,6 +2171,7 @@ export default function DashboardScreen({
 
         <DashboardAlerts
           error={error}
+          supportingError={decisionSnapshotError}
           loading={loading}
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}

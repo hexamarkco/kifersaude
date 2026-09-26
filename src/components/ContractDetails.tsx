@@ -128,6 +128,8 @@ export default function ContractDetails({
   );
   const [selectedHolderId, setSelectedHolderId] = useState<string | null>(null);
   const [showInteractionForm, setShowInteractionForm] = useState(false);
+  const [savingInteraction, setSavingInteraction] = useState(false);
+  const savingInteractionRef = useRef(false);
   const initialInteractionData = {
     tipo: "Observacao",
     descricao: "",
@@ -684,6 +686,10 @@ export default function ContractDetails({
 
   const handleAddInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingInteractionRef.current) return;
+
+    savingInteractionRef.current = true;
+    setSavingInteraction(true);
 
     try {
       await saveContractInteraction(
@@ -699,6 +705,9 @@ export default function ContractDetails({
     } catch (error) {
       console.error("Erro ao adicionar interacao:", error);
       toast.error("Erro ao adicionar interação.");
+    } finally {
+      savingInteractionRef.current = false;
+      setSavingInteraction(false);
     }
   };
 
@@ -1547,6 +1556,7 @@ export default function ContractDetails({
                   setShowInteractionForm(!showInteractionForm);
                 }}
                 size="sm"
+                disabled={savingInteraction}
               >
                 <Plus className="kds-control-icon" />
                 <span>Nova interação</span>
@@ -1564,6 +1574,7 @@ export default function ContractDetails({
                   <FilterSelect
                     icon={MessageCircle}
                     value={interactionData.tipo}
+                    disabled={savingInteraction}
                     onChange={(value) =>
                       setInteractionData({ ...interactionData, tipo: value })
                     }
@@ -1582,6 +1593,7 @@ export default function ContractDetails({
                   <FilterSelect
                     icon={User}
                     value={interactionData.responsavel}
+                    disabled={savingInteraction}
                     onChange={(value) =>
                       setInteractionData({
                         ...interactionData,
@@ -1601,6 +1613,7 @@ export default function ContractDetails({
                 <Textarea
                   required
                   value={interactionData.descricao}
+                  disabled={savingInteraction}
                   onChange={(e) =>
                     setInteractionData({
                       ...interactionData,
@@ -1620,11 +1633,16 @@ export default function ContractDetails({
                     setInteractionData(initialInteractionData);
                   }}
                   variant="ghost"
+                  disabled={savingInteraction}
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  {editingInteraction ? "Salvar alterações" : "Adicionar"}
+                <Button type="submit" loading={savingInteraction}>
+                  {savingInteraction
+                    ? "Salvando..."
+                    : editingInteraction
+                      ? "Salvar alterações"
+                      : "Adicionar"}
                 </Button>
               </div>
             </form>

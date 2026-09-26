@@ -3,10 +3,25 @@ import type { Interaction } from '../../activity';
 import type { Reminder } from '../../reminders';
 import type { LeadStatusHistory } from '../domain/types';
 
+export type LeadTimelineInteraction = Pick<
+  Interaction,
+  'id' | 'tipo' | 'descricao' | 'responsavel' | 'data_interacao'
+>;
+
+export type LeadTimelineStatusHistory = Pick<
+  LeadStatusHistory,
+  'id' | 'status_anterior' | 'status_novo' | 'responsavel' | 'observacao' | 'created_at'
+>;
+
+export type LeadTimelineReminder = Pick<
+  Reminder,
+  'id' | 'titulo' | 'descricao' | 'data_lembrete' | 'lido'
+>;
+
 export type LeadTimelineSnapshot = {
-  interactions: Interaction[];
-  statusHistory: LeadStatusHistory[];
-  reminders: Reminder[];
+  interactions: LeadTimelineInteraction[];
+  statusHistory: LeadTimelineStatusHistory[];
+  reminders: LeadTimelineReminder[];
 };
 
 export type LeadInteractionInput = Pick<
@@ -20,22 +35,22 @@ export async function getLeadTimeline(
   const [interactionsResult, statusResult, remindersResult] = await Promise.all([
     databaseClient
       .from('interactions')
-      .select('*')
+      .select('id, tipo, descricao, responsavel, data_interacao')
       .eq('lead_id', leadId)
       .order('data_interacao', { ascending: false })
-      .overrideTypes<Interaction[], { merge: false }>(),
+      .overrideTypes<LeadTimelineInteraction[], { merge: false }>(),
     databaseClient
       .from('lead_status_history')
-      .select('*')
+      .select('id, status_anterior, status_novo, responsavel, observacao, created_at')
       .eq('lead_id', leadId)
       .order('created_at', { ascending: false })
-      .overrideTypes<LeadStatusHistory[], { merge: false }>(),
+      .overrideTypes<LeadTimelineStatusHistory[], { merge: false }>(),
     databaseClient
       .from('reminders')
-      .select('*')
+      .select('id, titulo, descricao, data_lembrete, lido')
       .eq('lead_id', leadId)
       .order('data_lembrete', { ascending: false })
-      .overrideTypes<Reminder[], { merge: false }>(),
+      .overrideTypes<LeadTimelineReminder[], { merge: false }>(),
   ]);
 
   if (interactionsResult.error) throw interactionsResult.error;

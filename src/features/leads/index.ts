@@ -18,7 +18,10 @@ export {
 export {
   addLeadInteraction,
   getLeadTimeline,
+  type LeadTimelineInteraction,
+  type LeadTimelineReminder,
   type LeadInteractionInput,
   type LeadTimelineSnapshot,
+  type LeadTimelineStatusHistory,
 } from './data/leadDetailsRepository';
 export { default as LeadsManagerScreen } from './LeadsManagerScreen';

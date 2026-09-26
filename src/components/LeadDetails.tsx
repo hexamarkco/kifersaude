@@ -3,10 +3,10 @@ import {
   addLeadInteraction,
   getLeadTimeline,
   type Lead,
-  type LeadStatusHistory,
+  type LeadTimelineInteraction,
+  type LeadTimelineReminder,
+  type LeadTimelineStatusHistory,
 } from '../features/leads';
-import type { Interaction } from '../features/activity';
-import type { Reminder } from '../features/reminders';
 import { MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,9 +49,9 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const { getRoleModulePermission } = useConfig();
   const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
   const [favorito, setFavorito] = useState(Boolean(lead.favorito));
-  const [interactions, setInteractions] = useState<Interaction[]>([]);
-  const [statusHistory, setStatusHistory] = useState<LeadStatusHistory[]>([]);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [interactions, setInteractions] = useState<LeadTimelineInteraction[]>([]);
+  const [statusHistory, setStatusHistory] = useState<LeadTimelineStatusHistory[]>([]);
+  const [reminders, setReminders] = useState<LeadTimelineReminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const timelineRequestIdRef = useRef(0);

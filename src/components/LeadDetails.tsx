@@ -56,6 +56,8 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const [loading, setLoading] = useState(true);
   const [timelineLoadError, setTimelineLoadError] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [savingInteraction, setSavingInteraction] = useState(false);
+  const savingInteractionRef = useRef(false);
   const timelineRequestIdRef = useRef(0);
   const timelineMountedRef = useRef(false);
   const [formData, setFormData] = useState({
@@ -156,6 +158,12 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
   const handleAddInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingInteractionRef.current) {
+      return;
+    }
+
+    savingInteractionRef.current = true;
+    setSavingInteraction(true);
 
     try {
       await addLeadInteraction(lead.id, formData);
@@ -167,6 +175,9 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);
       toast.error('Não foi possível adicionar a interação.');
+    } finally {
+      savingInteractionRef.current = false;
+      setSavingInteraction(false);
     }
   };
 
@@ -344,6 +355,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   <FilterSelect
                     icon={Clock}
                     value={formData.tipo}
+                    disabled={savingInteraction}
                     onChange={(value) => setFormData({ ...formData, tipo: value })}
                     placeholder="Tipo de interação"
                     includePlaceholderOption={false}
@@ -360,6 +372,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   <FilterSelect
                     icon={UserCircle}
                     value={formData.responsavel}
+                    disabled={savingInteraction}
                     onChange={(value) => setFormData({ ...formData, responsavel: value })}
                     placeholder="Responsável"
                     includePlaceholderOption={false}
@@ -375,6 +388,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   id="lead-interaction-description"
                   required
                   value={formData.descricao}
+                  disabled={savingInteraction}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   rows={3}
                   placeholder="Descreva o que foi tratado nesta interação..."
@@ -385,12 +399,13 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                   type="button"
                   onClick={() => setShowForm(false)}
                   variant="ghost"
+                  disabled={savingInteraction}
                   className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  Adicionar
+                <Button type="submit" className="w-full sm:w-auto" loading={savingInteraction}>
+                  {savingInteraction ? 'Adicionando...' : 'Adicionar'}
                 </Button>
               </div>
             </form>

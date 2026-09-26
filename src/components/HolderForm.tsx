@@ -184,8 +184,14 @@ export default function HolderForm({
   );
   const lastFetchedCepRef = useRef('');
   const lastFetchedCpfKeyRef = useRef('');
+  const cepRequestIdRef = useRef(0);
+  const cpfRequestIdRef = useRef(0);
+  const cnpjRequestIdRef = useRef(0);
 
   useEffect(() => {
+    cepRequestIdRef.current += 1;
+    cpfRequestIdRef.current += 1;
+    cnpjRequestIdRef.current += 1;
     setFormData(initialFormData);
     setSelectedHolderId(holder?.id || null);
     setCpfLookupError(null);
@@ -244,8 +250,12 @@ export default function HolderForm({
 
   const handleCepSearch = async (cepValue?: string) => {
     const targetCep = cepValue ?? formData.cep;
+    const requestId = cepRequestIdRef.current + 1;
+    cepRequestIdRef.current = requestId;
+    const targetCepDigits = targetCep.replace(/\D/g, '');
 
-    if (!targetCep || targetCep.replace(/\D/g, '').length !== 8) {
+    if (!targetCep || targetCepDigits.length !== 8) {
+      setLoadingCep(false);
       return;
     }
 
@@ -253,23 +263,29 @@ export default function HolderForm({
     try {
       const data = await consultarCep(targetCep);
       const nextState = data?.uf?.trim().toUpperCase() || '';
+      if (requestId !== cepRequestIdRef.current) return;
 
       if (data) {
-        setFormData((prev) => ({
-          ...prev,
-          cep: formatCep(targetCep),
-          endereco: data.logradouro || prev.endereco,
-          bairro: data.bairro || prev.bairro,
-          complemento: data.complemento || prev.complemento,
-          cidade: data.localidade || prev.cidade,
-          estado: nextState || prev.estado,
-        }));
-        lastFetchedCepRef.current = targetCep.replace(/\D/g, '');
+        setFormData((prev) => {
+          if (prev.cep.replace(/\D/g, '') !== targetCepDigits) return prev;
+          return {
+            ...prev,
+            cep: formatCep(targetCep),
+            endereco: data.logradouro || prev.endereco,
+            bairro: data.bairro || prev.bairro,
+            complemento: data.complemento || prev.complemento,
+            cidade: data.localidade || prev.cidade,
+            estado: nextState || prev.estado,
+          };
+        });
+        lastFetchedCepRef.current = targetCepDigits;
       }
     } catch (error) {
       console.error('Erro ao consultar CEP do titular:', error);
     } finally {
-      setLoadingCep(false);
+      if (requestId === cepRequestIdRef.current) {
+        setLoadingCep(false);
+      }
     }
   };
 
@@ -284,7 +300,9 @@ export default function HolderForm({
     }
 
     if (normalizedCep.length < 8) {
+      cepRequestIdRef.current += 1;
       lastFetchedCepRef.current = '';
+      setLoadingCep(false);
     }
   };
 
@@ -300,8 +318,11 @@ export default function HolderForm({
 
   const handleConsultarCPF = useCallback(
     async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+      const requestId = cpfRequestIdRef.current + 1;
+      cpfRequestIdRef.current = requestId;
       const cleanCpf = formData.cpf.replace(/\D/g, '');
       if (cleanCpf.length !== 11) {
+        setCpfLoading(false);
         if (!silent) {
           setCpfLookupError('Informe um CPF válido para buscar.');
         }
@@ -310,6 +331,7 @@ export default function HolderForm({
 
       const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
       if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
+        setCpfLoading(false);
         return;
       }
 
@@ -318,6 +340,10 @@ export default function HolderForm({
 
       try {
         const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
+        if (requestId !== cpfRequestIdRef.current) return;
+        if (pessoa.cep) {
+          cepRequestIdRef.current += 1;
+        }
 
         setFormData((prev) => ({
           ...prev,
@@ -339,13 +365,15 @@ export default function HolderForm({
         }
       } catch (error) {
         console.error('Erro ao consultar CPF:', error);
-        if (!silent) {
+        if (requestId === cpfRequestIdRef.current && !silent) {
           setCpfLookupError(
             error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
           );
         }
       } finally {
-        setCpfLoading(false);
+        if (requestId === cpfRequestIdRef.current) {
+          setCpfLoading(false);
+        }
       }
     },
     [formData.cpf, formData.data_nascimento],
@@ -355,7 +383,9 @@ export default function HolderForm({
     const cleanCpf = formData.cpf.replace(/\D/g, '');
 
     if (cleanCpf.length !== 11) {
+      cpfRequestIdRef.current += 1;
       lastFetchedCpfKeyRef.current = '';
+      setCpfLoading(false);
       return;
     }
 
@@ -363,7 +393,10 @@ export default function HolderForm({
   }, [formData.cpf, formData.data_nascimento, handleConsultarCPF]);
 
   const handleConsultarCNPJ = async () => {
+    const requestId = cnpjRequestIdRef.current + 1;
+    cnpjRequestIdRef.current = requestId;
     if (!formData.cnpj) {
+      setCnpjLoading(false);
       return;
     }
 
@@ -372,6 +405,10 @@ export default function HolderForm({
 
     try {
       const empresa = await consultarEmpresaPorCNPJ(formData.cnpj);
+      if (requestId !== cnpjRequestIdRef.current) return;
+      if (empresa.cep) {
+        cepRequestIdRef.current += 1;
+      }
 
       setFormData((prev) => ({
         ...prev,
@@ -391,11 +428,15 @@ export default function HolderForm({
       }
     } catch (error) {
       console.error('Erro ao consultar CNPJ:', error);
-      setCnpjLookupError(
-        error instanceof Error ? error.message : 'Nao foi possivel consultar CNPJ',
-      );
+      if (requestId === cnpjRequestIdRef.current) {
+        setCnpjLookupError(
+          error instanceof Error ? error.message : 'Nao foi possivel consultar CNPJ',
+        );
+      }
     } finally {
-      setCnpjLoading(false);
+      if (requestId === cnpjRequestIdRef.current) {
+        setCnpjLoading(false);
+      }
     }
   };
 

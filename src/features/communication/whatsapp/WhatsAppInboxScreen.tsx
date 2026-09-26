@@ -4608,8 +4608,8 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const panelWidth = 272;
       const viewportPadding = 16;
+      const panelWidth = Math.min(292, window.innerWidth - viewportPadding * 2);
       const nextLeft = Math.min(
         Math.max(viewportPadding, triggerRect.left),
         window.innerWidth - panelWidth - viewportPadding,

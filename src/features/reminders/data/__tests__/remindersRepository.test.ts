@@ -72,7 +72,7 @@ vi.mock('../../../../infrastructure/supabase', () => ({
   fetchAllPages: mocks.fetchAllPages,
 }));
 
-import { listRemindersForLeadContext } from '../remindersRepository';
+import { listReminders, listRemindersForLeadContext } from '../remindersRepository';
 
 test('carrega somente lembretes pendentes do contexto e normaliza valores legados', async () => {
   const result = await listRemindersForLeadContext('lead-1', ['contract-1']);
@@ -89,4 +89,14 @@ test('carrega somente lembretes pendentes do contexto e normaliza valores legado
   assert.equal(result.leadReminders[0]?.tipo, 'Follow-up');
   assert.equal(result.leadReminders[0]?.titulo, 'Follow-up: cliente');
   assert.equal(result.contractReminders[0]?.lido, false);
+});
+
+test('carrega somente os campos usados pelas listas da agenda', async () => {
+  mocks.query.select.mock.calls.splice(0);
+
+  await listReminders();
+
+  assert.deepEqual(mocks.query.select.mock.calls[0], [
+    'id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, tags, tempo_estimado_minutos',
+  ]);
 });

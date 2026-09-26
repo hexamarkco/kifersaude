@@ -59,7 +59,7 @@ import {
   subscribeToReminderChanges,
   updateReminder,
   type ManualReminderPrompt,
-  type Reminder,
+  type ReminderListItem,
 } from '../../../reminders';
 import type { Contract } from '../../../contracts';
 import type { Lead } from '../../../leads';
@@ -103,7 +103,7 @@ type SchedulerDraft = {
 };
 
 type WhatsAppAgendaCacheSnapshot = {
-  reminders: Reminder[];
+  reminders: ReminderListItem[];
   contracts: Contract[];
   leads: Lead[];
   updatedAt: string;
@@ -143,7 +143,7 @@ export default function WhatsAppAgendaModal({
   onOpenLeadChat,
   onSendBatchFollowUps,
 }: WhatsAppAgendaModalProps) {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,7 +213,7 @@ export default function WhatsAppAgendaModal({
   );
 
   const getLeadIdForReminder = useCallback(
-    (reminder?: Reminder | null) => {
+    (reminder?: ReminderListItem | null) => {
       if (!reminder) {
         return null;
       }
@@ -394,7 +394,7 @@ export default function WhatsAppAgendaModal({
   );
 
   const compareRemindersByDueAtThenAlphabetical = useCallback(
-    (left: Reminder, right: Reminder) => {
+    (left: ReminderListItem, right: ReminderListItem) => {
       const leftDueAt = new Date(left.data_lembrete).getTime();
       const rightDueAt = new Date(right.data_lembrete).getTime();
       const leftHasValidDate = Number.isFinite(leftDueAt);
@@ -458,7 +458,7 @@ export default function WhatsAppAgendaModal({
     window.open(whatsappLink, '_blank', 'noopener,noreferrer');
   };
 
-  const handleMarkLeadAsLost = useCallback(async (reminder: Reminder) => {
+  const handleMarkLeadAsLost = useCallback(async (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
 
     if (!leadId) {
@@ -614,7 +614,7 @@ export default function WhatsAppAgendaModal({
     }
   }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, quickSchedulingAction?.reminderId, reminders, updateLeadNextReturnDate]);
 
-  const handleQuickSchedule = useCallback(async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
+  const handleQuickSchedule = useCallback(async (reminder: ReminderListItem, daysAhead: 1 | 2 | 3 | 4 | 5) => {
     if (reminder.lido || quickSchedulingReminderIdRef.current) {
       return;
     }
@@ -676,7 +676,7 @@ export default function WhatsAppAgendaModal({
     }
   }, [compareRemindersByDueAtThenAlphabetical, getLeadIdForReminder, handleMarkAsRead, updateLeadNextReturnDate]);
 
-  const handleDeleteReminder = useCallback(async (reminder: Reminder) => {
+  const handleDeleteReminder = useCallback(async (reminder: ReminderListItem) => {
     if (deletingReminderIdsRef.current.has(reminder.id)) {
       return;
     }
@@ -721,7 +721,7 @@ export default function WhatsAppAgendaModal({
     }
   }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate]);
 
-  const handleOpenReminderChat = useCallback(async (reminder: Reminder) => {
+  const handleOpenReminderChat = useCallback(async (reminder: ReminderListItem) => {
     if (!onOpenLeadChat) {
       return;
     }
@@ -756,7 +756,7 @@ export default function WhatsAppAgendaModal({
     }
   }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, onClose, onOpenLeadChat]);
 
-  const handleOpenScheduler = useCallback(async (reminder: Reminder) => {
+  const handleOpenScheduler = useCallback(async (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
     if (!leadId) {
       toast.error('Este item não possui lead para receber um novo lembrete.');
@@ -837,7 +837,7 @@ export default function WhatsAppAgendaModal({
     }
   }, [closeAddTaskModal, compareRemindersByDueAtThenAlphabetical, newTaskDescription, newTaskTitle, selectedDate]);
 
-  const currentLeadMatchesReminder = useCallback((reminder: Reminder) => {
+  const currentLeadMatchesReminder = useCallback((reminder: ReminderListItem) => {
     if (!currentLeadId) {
       return false;
     }
@@ -864,7 +864,7 @@ export default function WhatsAppAgendaModal({
   // no mesmo grupo de "hoje", pois e exatamente isso que o envio automatico de
   // follow-up em lote considera "devido agora" (data <= hoje). Ja um lembrete
   // futuro so conta como duplicado de outro no mesmo dia futuro.
-  const getDuplicateBucketDateKey = useCallback((reminder: Reminder) => {
+  const getDuplicateBucketDateKey = useCallback((reminder: ReminderListItem) => {
     const todayKey = getDateKey(new Date());
     const reminderDateKey = getDateKey(reminder.data_lembrete);
 
@@ -879,7 +879,7 @@ export default function WhatsAppAgendaModal({
   // de um no mesmo grupo significa risco real de follow-up duplicado no envio
   // em lote (o mesmo lead receberia 2 mensagens do mesmo tipo).
   const duplicateReminderGroups = useMemo(() => {
-    const groups = new Map<string, Reminder[]>();
+    const groups = new Map<string, ReminderListItem[]>();
 
     reminders.forEach((reminder) => {
       if (reminder.lido) {
@@ -921,7 +921,7 @@ export default function WhatsAppAgendaModal({
     leadName: string;
     tipo: string;
     dateLabel: string;
-    reminders: Reminder[];
+    reminders: ReminderListItem[];
   };
 
   const duplicateReminderGroupList = useMemo<DuplicateReminderGroup[]>(() => {
@@ -1130,7 +1130,7 @@ export default function WhatsAppAgendaModal({
     [filteredReminders, selectedDateKey],
   );
   const visiblePendingReminders = useMemo(() => {
-    const next = new Map<string, Reminder>();
+    const next = new Map<string, ReminderListItem>();
     [...overdueReminders, ...pendingSelectedReminders].forEach((reminder) => {
       next.set(reminder.id, reminder);
     });
@@ -1236,7 +1236,7 @@ export default function WhatsAppAgendaModal({
     return <Icon className="h-5 w-5" />;
   };
 
-  const getReminderCardVariant = (reminder: Reminder): 'success' | 'danger' | 'default' => {
+  const getReminderCardVariant = (reminder: ReminderListItem): 'success' | 'danger' | 'default' => {
     if (reminder.lido) {
       return 'success';
     }
@@ -1248,7 +1248,7 @@ export default function WhatsAppAgendaModal({
     return 'default';
   };
 
-  const renderReminderCard = (reminder: Reminder) => {
+  const renderReminderCard = (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
     const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;

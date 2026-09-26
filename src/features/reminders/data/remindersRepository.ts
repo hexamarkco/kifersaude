@@ -17,6 +17,21 @@ export type ReminderContextItem = Pick<
   'id' | 'tipo' | 'titulo' | 'descricao' | 'data_lembrete' | 'lido'
 >;
 
+export type ReminderListItem = Pick<
+  Reminder,
+  | 'id'
+  | 'contract_id'
+  | 'lead_id'
+  | 'tipo'
+  | 'titulo'
+  | 'descricao'
+  | 'data_lembrete'
+  | 'lido'
+  | 'prioridade'
+  | 'tags'
+  | 'tempo_estimado_minutos'
+>;
+
 export type ReminderCreateInput =
   Database['public']['Tables']['reminders']['Insert'];
 
@@ -27,6 +42,12 @@ export type ReminderRealtimeChange = {
 };
 
 const normalizeReminder = (reminder: Reminder): Reminder => ({
+  ...reminder,
+  tipo: normalizeReminderType(reminder.tipo),
+  titulo: normalizeReminderTitle(reminder.titulo),
+});
+
+const normalizeReminderListItem = (reminder: ReminderListItem): ReminderListItem => ({
   ...reminder,
   tipo: normalizeReminderType(reminder.tipo),
   titulo: normalizeReminderTitle(reminder.titulo),
@@ -52,18 +73,20 @@ const batchesOf = <T>(items: T[], size = 100): T[][] => {
   return result;
 };
 
-export async function listReminders(): Promise<Reminder[]> {
-  const reminders = await fetchAllPages<Reminder>(async (from, to) => {
+export async function listReminders(): Promise<ReminderListItem[]> {
+  const reminders = await fetchAllPages<ReminderListItem>(async (from, to) => {
     const result = await databaseClient
       .from('reminders')
-      .select('*')
+      .select(
+        'id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, tags, tempo_estimado_minutos',
+      )
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
-      .overrideTypes<Reminder[], { merge: false }>();
+      .overrideTypes<ReminderListItem[], { merge: false }>();
     return result;
   });
-  return reminders.map(normalizeReminder);
+  return reminders.map(normalizeReminderListItem);
 }
 
 const listRemindersByRelation = (

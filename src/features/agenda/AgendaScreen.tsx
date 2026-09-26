@@ -44,7 +44,7 @@ import {
   subscribeToReminderChanges,
   updateReminder,
   updateReminders,
-  type Reminder,
+  type ReminderListItem,
   type ManualReminderPrompt,
 } from "../reminders";
 import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
@@ -124,7 +124,7 @@ const AGENDA_DAY_SECTION_STYLES = {
 };
 
 export default function AgendaScreen() {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>("nao-lidos");
@@ -156,7 +156,7 @@ export default function AgendaScreen() {
   const [quickScheduleDropdownId, setQuickScheduleDropdownId] = useState<string | null>(null);
   const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
   const [reschedulingInFlightId, setReschedulingInFlightId] = useState<string | null>(null);
-  const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
+  const [reminderPendingDeletion, setReminderPendingDeletion] = useState<ReminderListItem | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -266,7 +266,7 @@ export default function AgendaScreen() {
   }, [loadReminders]);
 
   const getLeadIdForReminder = useCallback(
-    (reminder?: Reminder | null) => {
+    (reminder?: ReminderListItem | null) => {
       if (!reminder) {
         return null;
       }
@@ -378,7 +378,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const handleMarkLeadAsLost = async (reminder: Reminder) => {
+  const handleMarkLeadAsLost = async (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
 
     if (!leadId) {
@@ -535,7 +535,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
+  const handleQuickSchedule = async (reminder: ReminderListItem, daysAhead: 1 | 2 | 3 | 4 | 5) => {
     if (reminder.lido || quickSchedulingReminderIdRef.current || markingAllFilteredRef.current) {
       return;
     }
@@ -861,7 +861,7 @@ export default function AgendaScreen() {
   };
 
   const compareRemindersByDueAtThenAlphabetical = useCallback(
-    (left: Reminder, right: Reminder) => {
+    (left: ReminderListItem, right: ReminderListItem) => {
       const leftDueAt = new Date(left.data_lembrete).getTime();
       const rightDueAt = new Date(right.data_lembrete).getTime();
       const leftHasValidDate = Number.isFinite(leftDueAt);
@@ -906,7 +906,7 @@ export default function AgendaScreen() {
   }, [reminders]);
 
   const matchesNonStatusFilters = useCallback(
-    (reminder: Reminder) => {
+    (reminder: ReminderListItem) => {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
       const todayEnd = new Date(now);
@@ -990,7 +990,7 @@ export default function AgendaScreen() {
   }, [currentMonth, filteredReminders]);
 
   const remindersByDay = useMemo(() => {
-    const map = new Map<string, Reminder[]>();
+    const map = new Map<string, ReminderListItem[]>();
 
     filteredMonthReminders.forEach((reminder) => {
       const dateKey = getDateKey(reminder.data_lembrete);
@@ -1128,7 +1128,7 @@ export default function AgendaScreen() {
     return <Icon className="h-5 w-5" />;
   };
 
-  const getReminderCardClass = (reminder: Reminder) => {
+  const getReminderCardClass = (reminder: ReminderListItem) => {
     if (reminder.lido) {
       return "kds-surface-success";
     }
@@ -1210,7 +1210,7 @@ export default function AgendaScreen() {
     );
   };
 
-  const renderReminderCard = (reminder: Reminder) => {
+  const renderReminderCard = (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
     const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;

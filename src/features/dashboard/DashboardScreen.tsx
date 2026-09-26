@@ -25,7 +25,7 @@ import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { DashboardPageSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
-import { Button, SectionHeader, Surface } from "../../design-system";
+import { Alert, Button, SectionHeader, Surface } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -93,6 +93,10 @@ export default function DashboardScreen({
   const [decisionSnapshotError, setDecisionSnapshotError] = useState<
     string | null
   >(null);
+  const [calendarSnapshotError, setCalendarSnapshotError] = useState<
+    string | null
+  >(null);
+  const [calendarSnapshotLoading, setCalendarSnapshotLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<
     "leads" | "contratos" | "comissoes"
@@ -103,6 +107,7 @@ export default function DashboardScreen({
   const hasAnimatedSectionsRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const dataRequestIdRef = useRef(0);
+  const calendarSnapshotRequestIdRef = useRef(0);
   const lastAdjustmentReminderSync = useRef<string | null>(null);
   const {
     motionEnabled,
@@ -823,26 +828,55 @@ export default function DashboardScreen({
     }
   }, [contracts, selectedContract]);
 
-  useEffect(() => {
-    if (!showSupportingAnalysis || (holders.length > 0 || dependents.length > 0)) {
+  const loadCalendarSnapshot = useCallback(async () => {
+    if (
+      isObserver ||
+      !showSupportingAnalysis ||
+      holders.length > 0 ||
+      dependents.length > 0
+    ) {
       return;
     }
 
-    let cancelled = false;
-    void loadDashboardCalendarSnapshot()
-      .then(({ holders: loadedHolders, dependents: loadedDependents }) => {
-        if (cancelled) return;
-        setHolders(loadedHolders);
-        setDependents(loadedDependents);
-      })
-      .catch((calendarError: unknown) => {
-        console.error("Erro ao carregar os detalhes de calendário do dashboard:", calendarError);
-      });
+    const requestId = calendarSnapshotRequestIdRef.current + 1;
+    calendarSnapshotRequestIdRef.current = requestId;
+    setCalendarSnapshotLoading(true);
+    setCalendarSnapshotError(null);
 
+    try {
+      const {
+        holders: loadedHolders,
+        dependents: loadedDependents,
+      } = await loadDashboardCalendarSnapshot();
+      if (requestId !== calendarSnapshotRequestIdRef.current) {
+        return;
+      }
+      setHolders(loadedHolders);
+      setDependents(loadedDependents);
+    } catch (calendarError: unknown) {
+      if (requestId !== calendarSnapshotRequestIdRef.current) {
+        return;
+      }
+      console.error(
+        "Erro ao carregar os detalhes de calendário do dashboard:",
+        calendarError,
+      );
+      setCalendarSnapshotError(
+        "Não foi possível carregar os detalhes do calendário agora.",
+      );
+    } finally {
+      if (requestId === calendarSnapshotRequestIdRef.current) {
+        setCalendarSnapshotLoading(false);
+      }
+    }
+  }, [dependents.length, holders.length, isObserver, showSupportingAnalysis]);
+
+  useEffect(() => {
+    void loadCalendarSnapshot();
     return () => {
-      cancelled = true;
+      calendarSnapshotRequestIdRef.current += 1;
     };
-  }, [dependents.length, holders.length, showSupportingAnalysis]);
+  }, [loadCalendarSnapshot]);
 
   useEffect(() => {
     if (!selectedLead) return;
@@ -2215,6 +2249,26 @@ export default function DashboardScreen({
               onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
               onOperadoraSegmentClick={handleOperadoraSegmentClick}
             />
+
+            {calendarSnapshotError && !isObserver && (
+              <Alert
+                tone="warning"
+                title="Calendário detalhado indisponível"
+                action={(
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void loadCalendarSnapshot()}
+                    loading={calendarSnapshotLoading}
+                  >
+                    Tentar novamente
+                  </Button>
+                )}
+              >
+                {calendarSnapshotError}
+              </Alert>
+            )}
 
             {!isObserver && (
               <DashboardEventsCalendar

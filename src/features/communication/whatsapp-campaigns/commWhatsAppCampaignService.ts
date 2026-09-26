@@ -969,14 +969,14 @@ export const commWhatsAppCampaignService = {
         recurrence_end_at: input.recurrenceEndAt || null,
         created_by: userId,
       })
-      .select('*')
+      .select(CAMPAIGN_SELECT)
       .single();
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel criar o disparo.'));
     }
 
-    const createdCampaign = campaign as CommWhatsAppCampaign;
+    const createdCampaign = campaign as unknown as CommWhatsAppCampaign;
     const csvTargetsWithDuplicates = (input.csvTargets ?? [])
       .map((target) => ({
         campaign_id: createdCampaign.id,
@@ -1301,7 +1301,7 @@ export const commWhatsAppCampaignService = {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_templates')
       .insert({ name: name.trim(), steps: stages, created_by: userId })
-      .select('*')
+      .select(CAMPAIGN_TEMPLATE_SELECT)
       .single();
 
     if (error) {

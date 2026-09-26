@@ -15,7 +15,7 @@ import {
 import { toast } from '../../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { useConfig } from '../../../../contexts/ConfigContext';
-import { listPendingRemindersForLead, type Reminder } from '../../../reminders';
+import { listPendingRemindersForLead, type ReminderPendingItem } from '../../../reminders';
 import { commWhatsAppService } from '../data';
 import type {
   CommWhatsAppScheduledMessage,
@@ -220,7 +220,7 @@ export default function WhatsAppScheduleMessageModal({
   const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(
     scheduledMessage?.cancel_on_inbound_message ?? scheduledSequence?.cancel_on_inbound_message ?? false,
   );
-  const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
+  const [pendingReminders, setPendingReminders] = useState<ReminderPendingItem[]>([]);
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStepDraft[]>(() => scheduledSequence?.steps?.length
     ? scheduledSequence.steps.map(createSequenceStepDraft)
     : [{

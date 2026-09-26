@@ -17,6 +17,8 @@ export type ReminderContextItem = Pick<
   'id' | 'tipo' | 'titulo' | 'descricao' | 'data_lembrete' | 'lido'
 >;
 
+export type ReminderPendingItem = Pick<Reminder, 'id' | 'titulo'>;
+
 export type ReminderListItem = Pick<
   Reminder,
   | 'id'
@@ -56,6 +58,11 @@ const normalizeReminderListItem = (reminder: ReminderListItem): ReminderListItem
 const normalizeReminderContext = (reminder: ReminderContextItem): ReminderContextItem => ({
   ...reminder,
   tipo: normalizeReminderType(reminder.tipo),
+  titulo: normalizeReminderTitle(reminder.titulo),
+});
+
+const normalizeReminderPending = (reminder: ReminderPendingItem): ReminderPendingItem => ({
+  ...reminder,
   titulo: normalizeReminderTitle(reminder.titulo),
 });
 
@@ -119,16 +126,17 @@ export async function listRemindersForLeadContext(
   return { leadReminders, contractReminders };
 }
 
-export async function listPendingRemindersForLead(leadId: string): Promise<Reminder[]> {
+export async function listPendingRemindersForLead(leadId: string): Promise<ReminderPendingItem[]> {
   const { data, error } = await databaseClient
     .from('reminders')
-    .select('*')
+    .select('id, titulo')
     .eq('lead_id', leadId)
     .eq('lido', false)
     .order('data_lembrete', { ascending: true })
-    .order('id', { ascending: true });
+    .order('id', { ascending: true })
+    .overrideTypes<ReminderPendingItem[], { merge: false }>();
   if (error) throw error;
-  return (data ?? []).map((reminder) => normalizeReminder(reminder as Reminder));
+  return (data ?? []).map(normalizeReminderPending);
 }
 
 async function listByIds<T>(params: {

@@ -72,7 +72,11 @@ vi.mock('../../../../infrastructure/supabase', () => ({
   fetchAllPages: mocks.fetchAllPages,
 }));
 
-import { listReminders, listRemindersForLeadContext } from '../remindersRepository';
+import {
+  listPendingRemindersForLead,
+  listReminders,
+  listRemindersForLeadContext,
+} from '../remindersRepository';
 
 test('carrega somente lembretes pendentes do contexto e normaliza valores legados', async () => {
   const result = await listRemindersForLeadContext('lead-1', ['contract-1']);
@@ -99,4 +103,16 @@ test('carrega somente os campos usados pelas listas da agenda', async () => {
   assert.deepEqual(mocks.query.select.mock.calls[0], [
     'id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, tags, tempo_estimado_minutos',
   ]);
+});
+
+test('carrega somente id e titulo para selecionar lembretes pendentes', async () => {
+  mocks.query.select.mock.calls.splice(0);
+
+  const result = await listPendingRemindersForLead('lead-1');
+
+  assert.deepEqual(mocks.query.select.mock.calls[0], ['id, titulo']);
+  assert.deepEqual(result.map(({ id, titulo }) => ({ id, titulo })), [{
+    id: 'reminder-1',
+    titulo: 'Follow-up: cliente',
+  }]);
 });

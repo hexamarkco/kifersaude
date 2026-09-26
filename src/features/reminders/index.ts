@@ -18,6 +18,7 @@ export {
   type ReminderCreateInput,
   type ReminderContextItem,
   type ReminderListItem,
+  type ReminderPendingItem,
   type ReminderRealtimeChange,
 } from './data/remindersRepository';
 export {

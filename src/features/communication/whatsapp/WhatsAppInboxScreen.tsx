@@ -2537,6 +2537,8 @@ export default function WhatsAppInboxScreen() {
   const leadMutationLockRef = useRef(new KeyedActionLock());
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const archivedChatsCountRequestIdRef = useRef(0);
+  const archivedChatsCountLoadLockRef = useRef(new KeyedActionLock());
+  const operationalStateLoadLockRef = useRef(new KeyedActionLock());
   const archivedSectionLoadRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
   const followUpScheduleRequestIdRef = useRef(0);
@@ -4877,6 +4879,10 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const loadOperationalState = useCallback(async () => {
+    if (!operationalStateLoadLockRef.current.tryAcquire('operational-state')) {
+      return;
+    }
+
     const requestId = ++operationalStateRequestIdRef.current;
 
     try {
@@ -4898,6 +4904,8 @@ export default function WhatsAppInboxScreen() {
         error instanceof Error ? error.message : 'Não foi possível carregar o estado operacional do WhatsApp.',
       );
       setOperationalStateLoaded(true);
+    } finally {
+      operationalStateLoadLockRef.current.release('operational-state');
     }
   }, []);
 
@@ -5313,6 +5321,10 @@ export default function WhatsAppInboxScreen() {
   loadChatsRef.current = loadChats;
 
   const refreshArchivedChatsCount = useCallback(async () => {
+    if (!archivedChatsCountLoadLockRef.current.tryAcquire('archived-count')) {
+      return;
+    }
+
     const requestId = ++archivedChatsCountRequestIdRef.current;
 
     try {
@@ -5328,6 +5340,8 @@ export default function WhatsAppInboxScreen() {
       if (!isSupabaseConnectivityError(error)) {
         console.warn('[WhatsAppInbox] erro ao carregar contagem de arquivados', error);
       }
+    } finally {
+      archivedChatsCountLoadLockRef.current.release('archived-count');
     }
   }, []);
 
@@ -6041,8 +6055,22 @@ export default function WhatsAppInboxScreen() {
     () => () => {
       mediaUploadAbortControllerRef.current?.abort();
       cancelVoiceRecordingRef.current();
+      chatsRequestIdRef.current += 1;
+      messagesRequestIdRef.current += 1;
+      operationalStateRequestIdRef.current += 1;
+      leadPanelRequestIdRef.current += 1;
+      leadContractsRequestIdRef.current += 1;
+      chatAgendaSummaryRequestIdRef.current += 1;
       archivedChatsCountRequestIdRef.current += 1;
       archivedSectionLoadRequestIdRef.current += 1;
+      followUpGenerationRequestIdRef.current += 1;
+      followUpScheduleRequestIdRef.current += 1;
+      composerRewriteRequestIdRef.current += 1;
+      replySuggestionRequestIdRef.current += 1;
+      leadSearchRequestIdRef.current += 1;
+      startChatSourcesRequestIdRef.current += 1;
+      quickRepliesLoadRequestIdRef.current += 1;
+      quickRepliesSaveRequestIdRef.current += 1;
       clearScheduledMessageStatusRefreshes();
 
       for (const [messageId, previewUrl] of localOutgoingMediaPreviewUrlsRef.current.entries()) {

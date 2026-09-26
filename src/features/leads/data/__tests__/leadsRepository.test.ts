@@ -10,6 +10,7 @@ type MockFunction<Args extends unknown[], Result> = {
 
 type Query = {
   select: MockFunction<[string], Query>;
+  update: MockFunction<[Record<string, unknown>], Query>;
   in: MockFunction<[string, string[]], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   range: MockFunction<[number, number], Query>;
@@ -30,11 +31,13 @@ const mocks = vi.hoisted(() => {
   );
   const query = {} as Query;
   query.select = createMock<[string], Query>();
+  query.update = createMock<[Record<string, unknown>], Query>();
   query.in = createMock<[string, string[]], Query>();
   query.order = createMock<[string, { ascending: boolean }], Query>();
   query.range = createMock<[number, number], Query>();
   query.overrideTypes = createMock<[], Promise<{ data: unknown[]; error: null }>>();
   query.select.mockReturnValue(query);
+  query.update.mockReturnValue(query);
   query.in.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
@@ -65,7 +68,7 @@ vi.mock('../../../../infrastructure/supabase', () => ({
   },
 }));
 
-import { listLeads, listLeadsByStatuses } from '../leadsRepository';
+import { listLeads, listLeadsByStatuses, updateLeadDetails } from '../leadsRepository';
 
 test('carrega somente os campos usados pela lista de leads', async () => {
   await listLeads();
@@ -81,4 +84,19 @@ test('mantém o mesmo recorte de campos ao filtrar leads por status', async () =
 
   assert.deepEqual(mocks.query.select.mock.calls[0], [LEAD_LIST_SELECT]);
   assert.deepEqual(mocks.query.in.mock.calls[0], ['status', ['Novo', 'Em atendimento']]);
+});
+
+test('atualiza o responsável usando a chave estrangeira atual', async () => {
+  mocks.query.update.mock.calls.splice(0);
+  mocks.query.in.mock.calls.splice(0);
+
+  await updateLeadDetails(['lead-1'], {
+    responsavel_id: 'owner-1',
+    proximo_retorno: null,
+  });
+
+  assert.deepEqual(mocks.query.update.mock.calls[0], [
+    { responsavel_id: 'owner-1', proximo_retorno: null },
+  ]);
+  assert.deepEqual(mocks.query.in.mock.calls[0], ['id', ['lead-1']]);
 });

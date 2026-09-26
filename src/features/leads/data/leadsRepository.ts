@@ -8,7 +8,7 @@ import {
 } from '../../../infrastructure/supabase';
 import type { Lead } from '../domain/types';
 
-type LeadDetailsUpdate = Pick<Lead, 'responsavel' | 'proximo_retorno'>;
+type LeadDetailsUpdate = Pick<Lead, 'responsavel_id' | 'proximo_retorno'>;
 
 const LEAD_LIST_SELECT =
   'id, nome_completo, telefone, email, cep, endereco, cidade, regiao, estado, origem_id, tipo_contratacao_id, status_id, responsavel_id, operadora_atual, status, data_criacao, ultimo_contato, proximo_retorno, observacoes, blackout_dates, daily_send_limit, skip_automation, arquivado, favorito, created_at, updated_at, canal';

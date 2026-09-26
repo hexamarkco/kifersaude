@@ -942,9 +942,13 @@ export default function LeadsManager({
     const proximoRetorno = bulkProximoRetorno
       ? convertLocalToUTC(bulkProximoRetorno) || null
       : undefined;
+    const selectedResponsavel = responsavelOptions.find(
+      (option) => option.value === bulkResponsavel,
+    );
 
-    if (bulkResponsavel) {
-      updates.responsavel = bulkResponsavel;
+    if (selectedResponsavel) {
+      updates.responsavel = selectedResponsavel.label;
+      updates.responsavel_id = selectedResponsavel.id;
     }
     if (proximoRetorno !== undefined) {
       updates.proximo_retorno = proximoRetorno;
@@ -967,7 +971,14 @@ export default function LeadsManager({
     );
 
     try {
-      await updateLeadDetails(selectedLeadIds, updates);
+      await updateLeadDetails(selectedLeadIds, {
+        ...(selectedResponsavel
+          ? { responsavel_id: selectedResponsavel.id }
+          : {}),
+        ...(proximoRetorno !== undefined
+          ? { proximo_retorno: proximoRetorno }
+          : {}),
+      });
       toast.success("Dados aplicados com sucesso aos leads selecionados.");
     } catch (error) {
       console.error("Erro ao aplicar dados em massa:", error);

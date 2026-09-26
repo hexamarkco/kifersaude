@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import assert from 'node:assert/strict';
+import { test } from 'vitest';
 import { getResponsibleDisplayName, resolveResponsibleIds } from './responsibleFilter';
 
 const options = [
@@ -6,17 +7,15 @@ const options = [
   { id: 'owner-nick', label: 'Nick', value: 'Nick' },
 ];
 
-describe('responsibleFilter', () => {
-  it('converte valor exibido e filtros antigos por nome para ids do banco', () => {
-    expect(resolveResponsibleIds(['Luiza', 'owner-nick'], options)).toEqual(['owner-luiza', 'owner-nick']);
-  });
+test('converte valor exibido e filtros antigos por nome para ids do banco', () => {
+  assert.deepEqual(resolveResponsibleIds(['Luiza', 'owner-nick'], options), ['owner-luiza', 'owner-nick']);
+});
 
-  it('ignora responsáveis inexistentes sem remover o filtro', () => {
-    expect(resolveResponsibleIds(['Nao cadastrado'], options)).toEqual([]);
-  });
+test('ignora responsáveis inexistentes sem remover o filtro', () => {
+  assert.deepEqual(resolveResponsibleIds(['Nao cadastrado'], options), []);
+});
 
-  it('resolve o nome mostrado a partir do id persistido no lead', () => {
-    expect(getResponsibleDisplayName('owner-nick', options)).toBe('Nick');
-    expect(getResponsibleDisplayName('owner-unknown', options)).toBeNull();
-  });
+test('resolve o nome mostrado a partir do id persistido no lead', () => {
+  assert.equal(getResponsibleDisplayName('owner-nick', options), 'Nick');
+  assert.equal(getResponsibleDisplayName('owner-unknown', options), null);
 });

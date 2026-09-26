@@ -871,7 +871,7 @@ const loadLeadContext = async (
 
   const { data, error } = await supabaseAdmin
     .from('leads')
-    .select('*')
+    .select('id, nome_completo, telefone, email, cidade, status_id, origem_id, responsavel_id')
     .eq('id', leadId)
     .maybeSingle();
 
@@ -888,13 +888,13 @@ const loadLeadContext = async (
   const responsavelId = toTrimmedString(data.responsavel_id);
 
   const [statusLookup, origemLookup, responsavelLookup] = await Promise.all([
-    !toTrimmedString(data.status) && statusId
+    statusId
       ? supabaseAdmin.from('lead_status_config').select('nome').eq('id', statusId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    !toTrimmedString(data.origem) && origemId
+    origemId
       ? supabaseAdmin.from('lead_origens').select('nome').eq('id', origemId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    !toTrimmedString(data.responsavel) && responsavelId
+    responsavelId
       ? supabaseAdmin.from('lead_responsaveis').select('label, value').eq('id', responsavelId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
@@ -921,10 +921,9 @@ const loadLeadContext = async (
     telefone: toTrimmedString(data.telefone) || null,
     email: toTrimmedString(data.email) || null,
     cidade: toTrimmedString(data.cidade) || null,
-    origem: toTrimmedString(data.origem) || toTrimmedString(origemData?.nome) || null,
-    status: toTrimmedString(data.status) || toTrimmedString(statusData?.nome) || null,
+    origem: toTrimmedString(origemData?.nome) || null,
+    status: toTrimmedString(statusData?.nome) || null,
     responsavel:
-      toTrimmedString(data.responsavel) ||
       toTrimmedString(responsavelData?.label) ||
       toTrimmedString(responsavelData?.value) ||
       null,

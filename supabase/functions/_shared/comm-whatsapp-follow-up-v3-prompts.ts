@@ -2,7 +2,7 @@
 // Esta chamada NÃO escreve mensagem para o cliente.
 // Ela interpreta a negociação e define o melhor próximo movimento.
 
-import type { CommercialAnalysis, FollowUpStrategy, AnalysisAndStrategyResult } from './comm-whatsapp-follow-up-v3-types.ts';
+import type { CommercialAnalysis, FollowUpStrategy } from './comm-whatsapp-follow-up-v3-types.ts';
 
 export const ANALYSIS_SYSTEM_PROMPT = [
   'Você é um analista comercial especializado. Sua tarefa é INTERPRETAR uma conversa de vendas de planos de saúde e definir a melhor estratégia de follow-up.',

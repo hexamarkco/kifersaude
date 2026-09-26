@@ -1,7 +1,6 @@
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
-import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import {
   buildWhapiDirectChatId,
   checkWhapiContactStatus,
@@ -30,7 +29,6 @@ import {
   CAMPAIGN_INTENT_CLASSIFICATION_SCHEMA,
   mapCampaignPermissionToLegacyIntent,
   normalizeCampaignIntentClassification,
-  type CampaignIntentClassification,
 } from '../_shared/campaign-intent-classification.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
 import { composePrompt } from '../_shared/prompt-composer.ts';
@@ -142,8 +140,6 @@ type InboundMessageRow = {
   transcription_text: string | null;
   message_at: string;
 };
-
-type IntentClassification = CampaignIntentClassification;
 
 type WorkerRunSource = NonNullable<WorkerRequestBody['source']>;
 
@@ -348,8 +344,6 @@ const getNextRetryAt = (attempts: number) => {
   const minutes = RETRY_BACKOFF_MINUTES[Math.min(retryIndex, RETRY_BACKOFF_MINUTES.length - 1)] ?? 120;
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 };
-
-const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
 
 const getDelayMs = (step: CampaignStepRow) => {
   const amount = Math.max(Number(step.delay_amount) || 0, 0);
@@ -1758,7 +1752,6 @@ async function executeStageBurst(params: {
     return lastCompanionIndex >= 0 ? allSteps[lastCompanionIndex + 1] ?? null : null;
   })();
 
-  let lastSuccessfullySentStepIndex = companions[0].step_index - 1;
   const whapi = createWhapiClient(params.token);
 
   for (let i = 0; i < companions.length; i++) {
@@ -1886,7 +1879,6 @@ async function executeStageBurst(params: {
     if (sendingTransition.oldStatus !== 'pending') {
       // Already processed (sent/failed/cancelled) — skip
       if (sendingTransition.oldStatus === 'sent') {
-        lastSuccessfullySentStepIndex = step.step_index;
         continue;
       }
       // Failed or uncertain — stop burst
@@ -2064,8 +2056,6 @@ async function executeStageBurst(params: {
       externalMessageId,
       deliveryStatus,
     });
-
-    lastSuccessfullySentStepIndex = step.step_index;
 
     // ── Inter-message delay (except after last message) ──
     if (i < companions.length - 1) {

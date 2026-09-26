@@ -119,6 +119,21 @@ async function syncContactsToCache(params: {
   const fetchedContacts = await fetchWhapiContacts({ token: params.token });
   const nowIso = getNowIso();
 
+  const { data: manualOverrides, error: manualOverridesError } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .select('phone_digits')
+    .eq('channel_id', params.channelId)
+    .eq('saved', true)
+    .like('contact_id', 'manual:%');
+
+  if (manualOverridesError) {
+    throw new Error(`Erro ao localizar sobrescritas manuais dos contatos do WhatsApp: ${manualOverridesError.message}`);
+  }
+
+  const manualOverridePhoneKeys = new Set(
+    (manualOverrides ?? []).flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || '')),
+  );
+
   const rows = fetchedContacts
     .filter((contact) => extractWhapiContactSaved(contact))
     .map((contact) => {
@@ -129,6 +144,12 @@ async function syncContactsToCache(params: {
       const displayName = extractWhapiSavedContactName(contact);
 
       if (!phoneNumber || !contactId || !displayName) {
+        return null;
+      }
+
+      // A name saved through the Inbox is a local user decision. Keep the
+      // manual row authoritative even when Whapi still returns the old name.
+      if (getCommWhatsAppPhoneLookupKeys(phoneNumber).some((key) => manualOverridePhoneKeys.has(key))) {
         return null;
       }
 
@@ -323,16 +344,10 @@ async function saveContactToCache(params: {
     throw new Error('Nome invalido para salvar o contato.');
   }
 
-  const existing = await findCachedContactByPhone({
-    supabaseAdmin: params.supabaseAdmin,
-    channelId: params.channelId,
-    phoneNumber: normalizedPhone,
-  });
-
   const nowIso = getNowIso();
   const row = {
     channel_id: params.channelId,
-    contact_id: existing?.contact_id || `manual:${normalizedPhone}`,
+    contact_id: `manual:${normalizedPhone}`,
     phone_number: normalizedPhone,
     phone_digits: normalizedPhone,
     display_name: displayName,
@@ -348,6 +363,19 @@ async function saveContactToCache(params: {
 
   if (error) {
     throw new Error(`Erro ao salvar contato no cache do WhatsApp: ${error.message}`);
+  }
+
+  const phoneLookupKeys = getCommWhatsAppPhoneLookupKeys(normalizedPhone);
+  const { error: externalDuplicateError } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .delete()
+    .eq('channel_id', params.channelId)
+    .eq('saved', true)
+    .in('phone_digits', phoneLookupKeys)
+    .not('contact_id', 'like', 'manual:%');
+
+  if (externalDuplicateError) {
+    throw new Error(`Erro ao consolidar o contato salvo do WhatsApp: ${externalDuplicateError.message}`);
   }
 
   await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {

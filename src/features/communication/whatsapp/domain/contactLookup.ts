@@ -63,3 +63,24 @@ export const addSavedContactsToNameMap = (
     }
   }
 };
+
+export const getSavedContactNameForPhone = (
+  phone: string | null | undefined,
+  primary: ReadonlyMap<string, string>,
+  fallback?: ReadonlyMap<string, string>,
+) => {
+  const keys = collectPhoneLookupKeys(phone);
+  const primaryName = keys
+    .map((key) => primary.get(key) ?? null)
+    .find((value): value is string => Boolean(value?.trim()));
+  if (primaryName) return primaryName.trim();
+
+  if (fallback) {
+    const fallbackName = keys
+      .map((key) => fallback.get(key) ?? null)
+      .find((value): value is string => Boolean(value?.trim()));
+    if (fallbackName) return fallbackName.trim();
+  }
+
+  return null;
+};

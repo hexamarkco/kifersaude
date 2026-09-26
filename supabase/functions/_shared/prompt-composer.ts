@@ -21,7 +21,6 @@ import {
 import {
   loadFeatureConfig,
   loadGlobalConfig,
-  type ResolvedAIFeatureConfig,
 } from './ai-config-resolver.ts';
 
 // ============================================================

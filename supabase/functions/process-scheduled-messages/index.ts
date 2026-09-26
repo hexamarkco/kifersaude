@@ -4,7 +4,6 @@ import { assertContactPermissionForSend, ContactPermissionBlockedError } from '.
 import {
   corsHeaders,
   ensureCommWhatsAppSettings,
-  ensurePrimaryChannel,
   extractWhapiMessageId,
   fetchWhapiWithTimeout,
   getNowIso,
@@ -819,7 +818,7 @@ async function processBatch(
   let failed = sequenceResult.failed;
   const errors: string[] = [...sequenceResult.errors];
 
-  const settings = await ensureCommWhatsAppSettings(admin);
+  await ensureCommWhatsAppSettings(admin);
   const rawToken = Deno.env.get('WHAPI_TOKEN') || '';
   const token = sanitizeWhapiToken(rawToken);
   if (!token) {

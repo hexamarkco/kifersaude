@@ -294,8 +294,6 @@ function detectRepetition(text: string, previousTexts: string[]): boolean {
 }
 
 function detectKnownInfoRepetition(text: string, analysis: CommercialAnalysis): boolean {
-  const lower = text.toLowerCase();
-
   // Se o cliente já disse a cidade e a mensagem pergunta a cidade
   const cityMentioned = analysis.knownFacts.some((f) => /mora em|cidade de/i.test(f));
   if (cityMentioned && /\b(qual.*cidade|mora em qual|que cidade)\b/i.test(text)) return true;

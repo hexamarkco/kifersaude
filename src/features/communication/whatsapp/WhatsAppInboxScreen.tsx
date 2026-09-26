@@ -131,7 +131,7 @@ import {
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, collectPhoneLookupKeys } from './domain/contactLookup';
+import { addSavedContactsToNameMap, collectPhoneLookupKeys, getSavedContactNameForPhone } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -2430,6 +2430,7 @@ export default function WhatsAppInboxScreen() {
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const savedContactNameByPhoneRef = useRef<Map<string, string>>(new Map());
+  const savedContactNameOverrideByPhoneRef = useRef<Map<string, string>>(new Map());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
   const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: MessageLoadReason) => Promise<unknown> | void>(() => {});
@@ -3353,13 +3354,11 @@ export default function WhatsAppInboxScreen() {
 
   const applyFrontendSavedContactNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
-      if (chat.saved_contact_name?.trim()) {
-        return chat;
-      }
-
-      const savedName = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number)
-        .map((key) => savedContactNameByPhoneRef.current.get(key) ?? null)
-        .find((value): value is string => Boolean(value?.trim()));
+      const phone = chat.phone_digits || chat.phone_number;
+      const localOverrideName = getSavedContactNameForPhone(phone, savedContactNameOverrideByPhoneRef.current);
+      const savedName = localOverrideName
+        ?? chat.saved_contact_name?.trim()
+        ?? getSavedContactNameForPhone(phone, savedContactNameByPhoneRef.current);
       if (!savedName) {
         return chat;
       }
@@ -3367,6 +3366,7 @@ export default function WhatsAppInboxScreen() {
       return {
         ...chat,
         saved_contact_name: savedName,
+        display_name: savedName,
       };
     });
   }, []);
@@ -4869,6 +4869,7 @@ export default function WhatsAppInboxScreen() {
       statuses: leadStatusFilters.map((status) => status.trim()).filter(Boolean).sort(),
       responsaveis: leadResponsavelFilters.map((id) => id.trim()).filter(Boolean).sort(),
       sections: [...requestedSections].sort(),
+      partialArchived,
     });
 
     if (chatsLoadPromiseRef.current && chatsLoadKeyRef.current === loadKey) {
@@ -7684,6 +7685,17 @@ export default function WhatsAppInboxScreen() {
         });
         toast.success('Contato salvo com sucesso.');
       }
+      const phoneKeys = collectPhoneLookupKeys(selectedChat.phone_digits || selectedChat.phone_number);
+      const savedContactMap = new Map(savedContactNameByPhoneRef.current);
+      const savedContactOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
+      phoneKeys.forEach((key) => {
+        savedContactMap.set(key, name);
+        savedContactOverrides.set(key, name);
+        resolvedSavedContactPhoneKeysRef.current.add(key);
+      });
+      savedContactNameByPhoneRef.current = savedContactMap;
+      savedContactNameOverrideByPhoneRef.current = savedContactOverrides;
+      setChats((current) => applyFrontendSavedContactNames(current));
       setSaveContactDialogOpen(false);
       void refreshStartChatSources(startChatQuery, 1, false);
       void loadChats();
@@ -7693,7 +7705,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSavingContact(false);
     }
-  }, [saveContactName, selectedChat, loadChats, refreshStartChatSources, startChatQuery]);
+  }, [applyFrontendSavedContactNames, saveContactName, selectedChat, loadChats, refreshStartChatSources, startChatQuery]);
 
   const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
     if (!target) {

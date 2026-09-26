@@ -2482,6 +2482,8 @@ export default function WhatsAppInboxScreen() {
   const replySuggestionKeyRef = useRef('');
   const leadSearchRequestIdRef = useRef(0);
   const startChatSourcesRequestIdRef = useRef(0);
+  const quickRepliesLoadRequestIdRef = useRef(0);
+  const quickRepliesSaveRequestIdRef = useRef(0);
   const startChatContactsSyncedRef = useRef(false);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const {
@@ -4190,11 +4192,12 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     let active = true;
+    const requestId = ++quickRepliesLoadRequestIdRef.current;
 
     void configService
       .getIntegrationSetting(WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG)
       .then((integration) => {
-        if (!active) {
+        if (!active || requestId !== quickRepliesLoadRequestIdRef.current) {
           return;
         }
 
@@ -4204,7 +4207,7 @@ export default function WhatsAppInboxScreen() {
       })
       .catch((error) => {
         console.error('[WhatsAppInbox] erro ao carregar mensagens rápidas', error);
-        if (active) {
+        if (active && requestId === quickRepliesLoadRequestIdRef.current) {
           setQuickReplyIntegration(null);
           setQuickReplies(DEFAULT_QUICK_REPLIES);
         }
@@ -4212,7 +4215,13 @@ export default function WhatsAppInboxScreen() {
 
     return () => {
       active = false;
+      quickRepliesLoadRequestIdRef.current += 1;
     };
+  }, []);
+
+  useEffect(() => () => {
+    quickRepliesSaveRequestIdRef.current += 1;
+    quickRepliesLoadRequestIdRef.current += 1;
   }, []);
 
   useEffect(() => {
@@ -7890,7 +7899,19 @@ export default function WhatsAppInboxScreen() {
     setQuickRepliesModalOpen(true);
   }, []);
 
+  const handleCloseQuickReplySettings = useCallback(() => {
+    quickRepliesSaveRequestIdRef.current += 1;
+    setSavingQuickReplies(false);
+    setQuickRepliesModalOpen(false);
+  }, []);
+
   const handleSaveQuickReplies = useCallback(async (nextQuickReplies: WhatsAppQuickReply[]) => {
+    if (savingQuickReplies) {
+      return;
+    }
+
+    quickRepliesLoadRequestIdRef.current += 1;
+    const requestId = ++quickRepliesSaveRequestIdRef.current;
     setSavingQuickReplies(true);
 
     try {
@@ -7910,6 +7931,10 @@ export default function WhatsAppInboxScreen() {
         throw result.error;
       }
 
+      if (requestId !== quickRepliesSaveRequestIdRef.current) {
+        return;
+      }
+
       const savedIntegration = result.data ?? quickReplyIntegration;
       const normalized = normalizeWhatsAppQuickRepliesSettings(savedIntegration?.settings ?? settingsPayload);
 
@@ -7919,12 +7944,18 @@ export default function WhatsAppInboxScreen() {
       setDismissedQuickReplyKey(null);
       toast.success('Mensagens rápidas salvas com sucesso.');
     } catch (error) {
+      if (requestId !== quickRepliesSaveRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao salvar mensagens rápidas', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível salvar as mensagens rápidas.');
     } finally {
-      setSavingQuickReplies(false);
+      if (requestId === quickRepliesSaveRequestIdRef.current) {
+        setSavingQuickReplies(false);
+      }
     }
-  }, [quickReplyIntegration]);
+  }, [quickReplyIntegration, savingQuickReplies]);
 
   const handleCloseFollowUpModal = useCallback(() => {
     followUpGenerationRequestIdRef.current += 1;
@@ -10818,7 +10849,7 @@ export default function WhatsAppInboxScreen() {
               isOpen
               quickReplies={quickReplies}
               saving={savingQuickReplies}
-              onClose={() => setQuickRepliesModalOpen(false)}
+              onClose={handleCloseQuickReplySettings}
               onSave={handleSaveQuickReplies}
             />
           ) : null}

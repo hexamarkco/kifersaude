@@ -105,6 +105,10 @@ export default function WhatsAppQuickRepliesModal({
   };
 
   const handleSave = async () => {
+    if (saving) {
+      return;
+    }
+
     const populatedQuickReplies = draftQuickReplies.filter((quickReply) => (
       quickReply.name.trim() || quickReply.shortcut.trim() || quickReply.text.trim()
     ));
@@ -124,6 +128,9 @@ export default function WhatsAppQuickRepliesModal({
       <WorkspaceDialog
         isOpen={isOpen}
         onClose={onClose}
+        closeOnOverlay={!saving}
+        closeOnEscape={!saving}
+        showCloseButton={!saving}
         title="Mensagens rápidas"
         description="Cadastre atalhos independentes do inbox. Use {{ para inserir variáveis dinâmicas na mensagem."
         size="xl"
@@ -152,7 +159,7 @@ export default function WhatsAppQuickRepliesModal({
                 {draftQuickReplies.length} cadastrada(s)
               </p>
             </div>
-            <Button variant="secondary" size="sm" onClick={handleAddQuickReply}>
+            <Button variant="secondary" size="sm" onClick={handleAddQuickReply} disabled={saving}>
               <Plus className="kds-control-icon" />
               Nova
             </Button>
@@ -172,6 +179,7 @@ export default function WhatsAppQuickRepliesModal({
                   key={quickReply.id}
                   type="button"
                   onClick={() => setSelectedQuickReplyId(quickReply.id)}
+                  disabled={saving}
                   className={`w-full rounded-xl border px-3 py-3 text-left transition ${isSelected ? 'border-[var(--brand-primary)] bg-[var(--bg-surface)] shadow-sm' : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--brand-primary-soft)]'}`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -208,7 +216,7 @@ export default function WhatsAppQuickRepliesModal({
                   variant="danger"
                   size="sm"
                   onClick={() => handleRemoveQuickReply(selectedQuickReply.id)}
-                  disabled={draftQuickReplies.length === 0}
+                  disabled={saving || draftQuickReplies.length === 0}
                 >
                   <Trash2 className="kds-control-icon" />
                   Remover
@@ -231,6 +239,7 @@ export default function WhatsAppQuickRepliesModal({
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { name: event.target.value })}
                     placeholder="Ex.: Contato inicial"
                     size="sm"
+                    disabled={saving}
                   />
                 </div>
                 <div>
@@ -242,6 +251,7 @@ export default function WhatsAppQuickRepliesModal({
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { shortcut: sanitizeWhatsAppQuickReplyShortcut(event.target.value) })}
                     placeholder="contato-inicial"
                     size="sm"
+                    disabled={saving}
                     leftIcon={undefined}
                     rightSlot={<span className="font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
                   />
@@ -261,6 +271,7 @@ export default function WhatsAppQuickRepliesModal({
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                   rows={10}
                   size="sm"
+                  disabled={saving}
                   placeholder="Digite a mensagem. Para inserir variáveis, digite {{"
                 />
               </div>

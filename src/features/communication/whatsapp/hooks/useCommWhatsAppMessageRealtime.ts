@@ -34,6 +34,7 @@ export const useCommWhatsAppMessageRealtime = (
         setIsRealtimeHealthy(false);
       }
     }, 900);
+    let lastStatus: 'connected' | 'unavailable' | null = null;
 
     const channel = databaseClient
       .channel(`comm-whatsapp-messages-${selectedChatId}-${Math.random().toString(36).slice(2)}`)
@@ -55,13 +56,19 @@ export const useCommWhatsAppMessageRealtime = (
         if (status === 'SUBSCRIBED') {
           window.clearTimeout(readyFallbackTimeoutId);
           setReadyChatId(selectedChatId);
-          setIsRealtimeHealthy(true);
+          if (lastStatus !== 'connected') {
+            setIsRealtimeHealthy(true);
+          }
+          lastStatus = 'connected';
         }
 
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('[WhatsAppInbox] realtime de mensagens indisponivel; polling permanece ativo.');
+          if (lastStatus !== 'unavailable') {
+            setIsRealtimeHealthy(false);
+            console.warn('[WhatsAppInbox] realtime de mensagens indisponivel; polling permanece ativo.');
+            lastStatus = 'unavailable';
+          }
           setReadyChatId(selectedChatId);
-          setIsRealtimeHealthy(false);
         }
       });
 

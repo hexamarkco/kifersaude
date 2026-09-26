@@ -473,7 +473,10 @@ export default function AgendaScreen() {
       }
 
       if (leadId) {
-        await updateLeadNextReturnDate(leadId);
+        const synchronized = await updateLeadNextReturnDate(leadId);
+        if (!synchronized && !options?.suppressErrorToast) {
+          toast.warning('Lembrete atualizado, mas o próximo retorno do lead ainda precisa ser sincronizado.');
+        }
       }
 
       if (completionDate && leadId && reminder && queueNextReminderPrompt) {
@@ -618,7 +621,10 @@ export default function AgendaScreen() {
 
       const leadId = getLeadIdForReminder(reminderToDelete);
       if (leadId) {
-        await updateLeadNextReturnDate(leadId);
+        const synchronized = await updateLeadNextReturnDate(leadId);
+        if (!synchronized) {
+          toast.warning('Lembrete removido, mas o próximo retorno do lead ainda precisa ser sincronizado.');
+        }
       }
 
       setReminders((current) => current.filter((item) => item.id !== reminderToDelete.id));
@@ -660,7 +666,10 @@ export default function AgendaScreen() {
 
       const leadId = getLeadIdForReminder(reminder);
       if (leadId) {
-        await updateLeadNextReturnDate(leadId);
+        const synchronized = await updateLeadNextReturnDate(leadId);
+        if (!synchronized) {
+          toast.warning('Lembrete reagendado, mas o próximo retorno do lead ainda precisa ser sincronizado.');
+        }
       }
 
       setReschedulingReminderId(null);

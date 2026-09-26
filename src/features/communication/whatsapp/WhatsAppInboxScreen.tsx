@@ -2332,6 +2332,7 @@ export default function WhatsAppInboxScreen() {
   const reactingMessageLockRef = useRef(new KeyedActionLock());
   const [starringMessageIds, setStarringMessageIds] = useState<Set<string>>(new Set());
   const starringMessageLockRef = useRef(new KeyedActionLock());
+  const editingMessageLockRef = useRef(new KeyedActionLock());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
   const [savingMessageEdit, setSavingMessageEdit] = useState(false);
@@ -7261,14 +7262,21 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const targetMessage = editingMessage;
+    if (!editingMessageLockRef.current.tryAcquire(targetMessage.id)) {
+      return;
+    }
+
     const nextText = editingMessageDraft.trim();
     if (!nextText) {
+      editingMessageLockRef.current.release(targetMessage.id);
       toast.error('Digite o novo texto da mensagem.');
       return;
     }
 
-    const previousText = getMessageEditableText(editingMessage);
+    const previousText = getMessageEditableText(targetMessage);
     if (previousText === nextText) {
+      editingMessageLockRef.current.release(targetMessage.id);
       handleCloseEditMessageModal();
       return;
     }
@@ -7276,18 +7284,18 @@ export default function WhatsAppInboxScreen() {
     setSavingMessageEdit(true);
 
     try {
-      const result = await whatsappMessagesRepository.edit(editingMessage.id, nextText);
+      const result = await whatsappMessagesRepository.edit(targetMessage.id, nextText);
       const editedText = result.editedText || nextText;
       const editedAt = result.editedAt || new Date().toISOString();
-      const metadata = editingMessage.metadata && typeof editingMessage.metadata === 'object' && !Array.isArray(editingMessage.metadata)
-        ? editingMessage.metadata as Record<string, unknown>
+      const metadata = targetMessage.metadata && typeof targetMessage.metadata === 'object' && !Array.isArray(targetMessage.metadata)
+        ? targetMessage.metadata as Record<string, unknown>
         : {};
       const existingHistory = Array.isArray(metadata.edit_history) ? metadata.edit_history : [];
-      const isMediaMessage = editingMessage.message_type.trim().toLowerCase() !== 'text';
+      const isMediaMessage = targetMessage.message_type.trim().toLowerCase() !== 'text';
 
-      patchMessageLocally(editingMessage.id, {
+      patchMessageLocally(targetMessage.id, {
         text_content: editedText,
-        media_caption: isMediaMessage ? editedText : editingMessage.media_caption,
+        media_caption: isMediaMessage ? editedText : targetMessage.media_caption,
         status_updated_at: editedAt,
         metadata: {
           ...metadata,
@@ -7307,9 +7315,9 @@ export default function WhatsAppInboxScreen() {
         },
       });
 
-      const editedMessageAt = getMessageTimestampMs(editingMessage.message_at);
+      const editedMessageAt = getMessageTimestampMs(targetMessage.message_at);
       setChats((current) => current.map((chat) => (
-        chat.id === editingMessage.chat_id
+        chat.id === targetMessage.chat_id
         && editedMessageAt !== null
         && getMessageTimestampMs(chat.last_message_at) === editedMessageAt
           ? { ...chat, last_message_text: editedText, updated_at: editedAt }
@@ -7322,6 +7330,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao editar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível editar a mensagem no WhatsApp.');
     } finally {
+      editingMessageLockRef.current.release(targetMessage.id);
       setSavingMessageEdit(false);
     }
   }, [editingMessage, editingMessageDraft, handleCloseEditMessageModal, patchMessageLocally]);

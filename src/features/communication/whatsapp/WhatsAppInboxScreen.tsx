@@ -2475,6 +2475,7 @@ export default function WhatsAppInboxScreen() {
   const olderMessagesLoadLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const statusRefreshGenerationRef = useRef(0);
+  const statusRefreshInFlightGenerationRef = useRef<number | null>(null);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
   const activeSendOperationsRef = useRef(0);
@@ -4451,6 +4452,7 @@ export default function WhatsAppInboxScreen() {
 
   const clearScheduledMessageStatusRefreshes = useCallback(() => {
     statusRefreshGenerationRef.current += 1;
+    statusRefreshInFlightGenerationRef.current = null;
     for (const timeoutId of statusRefreshTimeoutsRef.current) {
       window.clearTimeout(timeoutId);
     }
@@ -5856,7 +5858,15 @@ export default function WhatsAppInboxScreen() {
           return;
         }
 
+        // As tentativas continuam programadas para cobrir atrasos do provedor,
+        // mas nunca fazemos duas consultas de status da mesma remessa ao
+        // mesmo tempo quando uma tentativa anterior ainda está pendente.
+        if (statusRefreshInFlightGenerationRef.current === generation) {
+          return;
+        }
+
         const idsToCheck = Array.from(remainingIds);
+        statusRefreshInFlightGenerationRef.current = generation;
 
         void whatsappMessagesRepository.refreshStatuses({
           chatId: params.chat.external_chat_id,
@@ -5901,6 +5911,10 @@ export default function WhatsAppInboxScreen() {
         }).catch((error) => {
           if (generation === statusRefreshGenerationRef.current) {
             console.error('[WhatsAppInbox] erro ao atualizar status ativo da mensagem', error);
+          }
+        }).finally(() => {
+          if (statusRefreshInFlightGenerationRef.current === generation) {
+            statusRefreshInFlightGenerationRef.current = null;
           }
         });
       }, delayMs);

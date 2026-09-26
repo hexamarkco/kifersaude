@@ -319,6 +319,7 @@ export default function WhatsAppCampaignsScreen() {
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
   const mediaFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const campaignListRequestIdRef = useRef(0);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -361,6 +362,8 @@ export default function WhatsAppCampaignsScreen() {
   }, [csvTargets, csvValidTargets]);
 
   const loadCampaigns = useCallback(async () => {
+    const requestId = campaignListRequestIdRef.current + 1;
+    campaignListRequestIdRef.current = requestId;
     setLoading(true);
     try {
       const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth, nextTemplates] = await Promise.all([
@@ -370,32 +373,35 @@ export default function WhatsAppCampaignsScreen() {
         commWhatsAppCampaignService.getWorkerHealth(),
         commWhatsAppCampaignService.listTemplates(),
       ]);
+      if (requestId !== campaignListRequestIdRef.current) return;
       setCampaigns(nextCampaigns);
       setStats(nextStats);
       setAiSuggestions(nextSuggestions);
       setWorkerHealth(nextWorkerHealth);
       setTemplates(nextTemplates);
     } catch (error) {
+      if (requestId !== campaignListRequestIdRef.current) return;
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar os disparos.');
     } finally {
-      setLoading(false);
+      if (requestId === campaignListRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void loadCampaigns();
-  }, [loadCampaigns]);
-
-  useEffect(() => {
     let refreshTimer: number | null = null;
     const scheduleRefresh = () => {
+      campaignListRequestIdRef.current += 1;
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       refreshTimer = window.setTimeout(() => void loadCampaigns(), 350);
     };
 
     const unsubscribe = subscribeToCampaignListChanges(scheduleRefresh);
+    void loadCampaigns();
 
     return () => {
+      campaignListRequestIdRef.current += 1;
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       unsubscribe();
     };

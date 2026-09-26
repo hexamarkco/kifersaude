@@ -58,11 +58,11 @@ export default function PainelWrapper() {
   const [browserNotificationPermission, setBrowserNotificationPermission] = useState<BrowserNotificationPermission>(() => (
     browserNotificationService.getPermission()
   ));
-  const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
   const [leadIdFilter, setLeadIdFilter] = useState<string | undefined>();
   const [contractOperadoraFilter, setContractOperadoraFilter] = useState<string | undefined>();
+  const hasActiveNotification = activeNotifications.length > 0;
 
   const validTabIds = useMemo(() => {
     const entries: Array<[string, boolean]> = [
@@ -115,7 +115,6 @@ export default function PainelWrapper() {
 
     const unsubscribe = notificationService.subscribe((reminder) => {
       setActiveNotifications((prev) => [...prev, reminder]);
-      setHasActiveNotification(true);
       audioService.playNotificationSound();
     });
 
@@ -179,11 +178,8 @@ export default function PainelWrapper() {
     navigate(`/painel/${fallbackRoute}`, { replace: true });
   }, [configLoading, location.pathname, navigate, validTabIds]);
 
-  const handleCloseNotification = (index: number) => {
-    setActiveNotifications((prev) => prev.filter((_, i) => i !== index));
-    if (activeNotifications.length <= 1) {
-      setHasActiveNotification(false);
-    }
+  const handleCloseNotification = (reminder: Reminder) => {
+    setActiveNotifications((prev) => prev.filter((item) => item !== reminder));
   };
 
   const handleViewReminders = () => {
@@ -201,7 +197,6 @@ export default function PainelWrapper() {
     }
 
     if (tab === 'agenda') {
-      setHasActiveNotification(false);
       setActiveNotifications([]);
     }
     if (tab === 'leads') {
@@ -220,12 +215,12 @@ export default function PainelWrapper() {
     }
   };
 
-  const handleCloseLeadNotification = (index: number) => {
-    setActiveLeadNotifications((prev) => prev.filter((_, i) => i !== index));
+  const handleCloseLeadNotification = (lead: Lead) => {
+    setActiveLeadNotifications((prev) => prev.filter((item) => item !== lead));
   };
 
-  const handleCloseInboxNotification = (index: number) => {
-    setActiveInboxNotifications((prev) => prev.filter((_, i) => i !== index));
+  const handleCloseInboxNotification = (notification: InboxMessageNotification) => {
+    setActiveInboxNotifications((prev) => prev.filter((item) => item !== notification));
   };
 
   const handleViewLead = () => {
@@ -273,30 +268,30 @@ export default function PainelWrapper() {
         }} />
       </Layout>
 
-      {activeNotifications.map((reminder, index) => (
+      {activeNotifications.map((reminder) => (
         <NotificationToast
-          key={`${reminder.id}-${index}`}
+          key={reminder.id}
           reminder={reminder}
-          onClose={() => handleCloseNotification(index)}
+          onClose={() => handleCloseNotification(reminder)}
           onViewReminders={handleViewReminders}
         />
       ))}
 
-      {activeLeadNotifications.map((lead, index) => (
+      {activeLeadNotifications.map((lead) => (
         <LeadNotificationToast
-          key={`${lead.id}-${index}`}
+          key={lead.id}
           lead={lead}
-          onClose={() => handleCloseLeadNotification(index)}
+          onClose={() => handleCloseLeadNotification(lead)}
           onViewLead={handleViewLead}
         />
       ))}
 
-      {activeInboxNotifications.map((notification, index) => (
+      {activeInboxNotifications.map((notification) => (
         <WhatsAppInboxNotificationToast
-          key={`${notification.chatId}-${notification.messageAt ?? index}-${index}`}
+          key={`${notification.chatId}-${notification.messageAt ?? notification.messagePreview}`}
           notification={notification}
           browserNotificationPermission={browserNotificationPermission}
-          onClose={() => handleCloseInboxNotification(index)}
+          onClose={() => handleCloseInboxNotification(notification)}
           onViewChat={() => handleViewInboxChat(notification)}
           onEnableBrowserNotifications={handleEnableBrowserNotifications}
         />

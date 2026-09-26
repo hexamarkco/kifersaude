@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import type { Reminder } from '../features/reminders';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -14,22 +14,39 @@ type NotificationToastProps = {
 
 export default function NotificationToast({ reminder, onClose, onViewReminders }: NotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+  const hasClosedRef = useRef(false);
   const isDarkThemeActive =
     typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   useEffect(() => {
-    setTimeout(() => setIsVisible(true), 10);
+    const showTimer = window.setTimeout(() => setIsVisible(true), 10);
 
-    const timer = setTimeout(() => {
+    const autoCloseTimer = window.setTimeout(() => {
       handleClose();
     }, 10000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(autoCloseTimer);
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
+    if (hasClosedRef.current) {
+      return;
+    }
+
+    hasClosedRef.current = true;
     setIsVisible(false);
-    setTimeout(onClose, 300);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onClose();
+    }, 300);
   };
 
   const handleViewReminders = () => {

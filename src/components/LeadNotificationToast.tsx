@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import type { Lead } from '../features/leads';
 import {
@@ -19,6 +19,8 @@ export default function LeadNotificationToast({
 }: LeadNotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+  const hasClosedRef = useRef(false);
   const isDarkThemeActive =
     typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
@@ -35,15 +37,25 @@ export default function LeadNotificationToast({
     }, 10000);
 
     return () => {
-      clearTimeout(showTimer);
-      clearTimeout(autoCloseTimer);
+      window.clearTimeout(showTimer);
+      window.clearTimeout(autoCloseTimer);
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClose = () => {
+    if (hasClosedRef.current) {
+      return;
+    }
+
+    hasClosedRef.current = true;
     setIsExiting(true);
-    setTimeout(() => {
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
       onClose();
     }, 300);
   };

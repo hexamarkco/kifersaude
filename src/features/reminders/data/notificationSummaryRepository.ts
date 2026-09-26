@@ -29,11 +29,19 @@ export type NotificationSummarySource = {
   dependents: NotificationDependent[];
 };
 
+const batchesOf = <T>(items: T[], size = 100): T[][] => {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    result.push(items.slice(index, index + size));
+  }
+  return result;
+};
+
 export async function loadNotificationSummarySource(
   startAt: string,
   endAt: string,
 ): Promise<NotificationSummarySource> {
-  const [remindersResult, contractsResult, holdersResult, dependentsResult] = await Promise.all([
+  const [remindersResult, contractsResult] = await Promise.all([
     databaseClient
       .from('reminders')
       .select('*')
@@ -47,26 +55,54 @@ export async function loadNotificationSummarySource(
       .select('*')
       .eq('status', 'Ativo')
       .overrideTypes<Contract[], { merge: false }>(),
-    databaseClient
-      .from('contract_holders')
-      .select('id, contract_id, cpf, created_at, nome_completo, razao_social, nome_fantasia, data_nascimento')
-      .overrideTypes<NotificationHolder[], { merge: false }>(),
-    databaseClient
-      .from('dependents')
-      .select('id, contract_id, cpf, created_at, nome_completo, data_nascimento')
-      .overrideTypes<NotificationDependent[], { merge: false }>(),
   ]);
 
   const error = remindersResult.error
-    ?? contractsResult.error
-    ?? holdersResult.error
-    ?? dependentsResult.error;
+    ?? contractsResult.error;
   if (error) throw error;
 
+  const reminders = remindersResult.data ?? [];
+  const contracts = contractsResult.data ?? [];
+  const activeContractIds = [...new Set(contracts.map((contract) => contract.id).filter(Boolean))];
+
+  if (activeContractIds.length === 0) {
+    return {
+      reminders,
+      contracts,
+      holders: [],
+      dependents: [],
+    };
+  }
+
+  const [holderPages, dependentPages] = await Promise.all([
+    Promise.all(
+      batchesOf(activeContractIds).map((contractIdBatch) =>
+        databaseClient
+          .from('contract_holders')
+          .select('id, contract_id, cpf, created_at, nome_completo, razao_social, nome_fantasia, data_nascimento')
+          .in('contract_id', contractIdBatch)
+          .overrideTypes<NotificationHolder[], { merge: false }>(),
+      ),
+    ),
+    Promise.all(
+      batchesOf(activeContractIds).map((contractIdBatch) =>
+        databaseClient
+          .from('dependents')
+          .select('id, contract_id, cpf, created_at, nome_completo, data_nascimento')
+          .in('contract_id', contractIdBatch)
+          .overrideTypes<NotificationDependent[], { merge: false }>(),
+      ),
+    ),
+  ]);
+
+  const peopleError = holderPages.find((page) => page.error)?.error
+    ?? dependentPages.find((page) => page.error)?.error;
+  if (peopleError) throw peopleError;
+
   return {
-    reminders: remindersResult.data ?? [],
-    contracts: contractsResult.data ?? [],
-    holders: holdersResult.data ?? [],
-    dependents: dependentsResult.data ?? [],
+    reminders,
+    contracts,
+    holders: holderPages.flatMap((page) => page.data ?? []),
+    dependents: dependentPages.flatMap((page) => page.data ?? []),
   };
 }

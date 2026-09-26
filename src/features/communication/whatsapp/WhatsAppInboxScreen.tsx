@@ -163,6 +163,7 @@ import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft } from './hooks/useComposerDraft';
 import { useVoiceRecording } from './hooks/useVoiceRecording';
 import { useChatSearch } from './hooks/useChatSearch';
+import { useChatMessageSearch } from './hooks/useChatMessageSearch';
 import { useClickOutside } from './hooks/useClickOutside';
 import {
   mergeCommWhatsAppMessage,
@@ -2301,8 +2302,6 @@ export default function WhatsAppInboxScreen() {
   const [messageLoadRetrying, setMessageLoadRetrying] = useState(false);
   const [chatMessageSearchOpen, setChatMessageSearchOpen] = useState(false);
   const [chatMessageSearchDraft, setChatMessageSearchDraft] = useState('');
-  const [chatMessageSearchResults, setChatMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
-  const [searchingChatMessages, setSearchingChatMessages] = useState(false);
   const [threadReconcileChatId, setThreadReconcileChatId] = useState<string | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -2520,7 +2519,6 @@ export default function WhatsAppInboxScreen() {
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
   const messageSearchSelectionRequestIdRef = useRef(0);
-  const chatMessageSearchRequestIdRef = useRef(0);
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -2795,6 +2793,16 @@ export default function WhatsAppInboxScreen() {
   );
 
   const chatMessageSearch = chatMessageSearchDraft.trim();
+  const {
+    results: chatMessageSearchResults,
+    searching: searchingChatMessages,
+    error: chatMessageSearchError,
+    retry: retryChatMessageSearch,
+  } = useChatMessageSearch({
+    chatId: selectedChat?.id ?? null,
+    enabled: chatMessageSearchOpen,
+    query: chatMessageSearch,
+  });
 
   const chatMatchesActiveFilters = useCallback((chat: CommWhatsAppChat) => {
     if (chatActivityFilter === 'unread' && chat.unread_count <= 0 && !chat.manual_unread) {
@@ -5764,60 +5772,9 @@ export default function WhatsAppInboxScreen() {
   }, [handleSelectMessageSearchResult]);
 
   useEffect(() => {
-    chatMessageSearchRequestIdRef.current += 1;
     setChatMessageSearchDraft('');
-    setChatMessageSearchResults([]);
-    setSearchingChatMessages(false);
     setChatMessageSearchOpen(false);
   }, [selectedChatId]);
-
-  useEffect(() => {
-    if (!chatMessageSearchOpen || !selectedChat?.id || !chatMessageSearch) {
-      chatMessageSearchRequestIdRef.current += 1;
-      setChatMessageSearchResults([]);
-      setSearchingChatMessages(false);
-      return;
-    }
-
-    const requestId = ++chatMessageSearchRequestIdRef.current;
-    setSearchingChatMessages(true);
-
-    const timeoutId = window.setTimeout(() => {
-      void whatsappMessagesRepository.search({
-        search: chatMessageSearch,
-        chatIds: [selectedChat.id],
-        archivedFilter: 'all',
-        limit: 50,
-      }).then((results) => {
-        if (requestId !== chatMessageSearchRequestIdRef.current || selectedChatIdRef.current !== selectedChat.id) {
-          return;
-        }
-
-        const seen = new Set<string>();
-        setChatMessageSearchResults(results.filter((result) => {
-          if (seen.has(result.message.id)) {
-            return false;
-          }
-
-          seen.add(result.message.id);
-          return true;
-        }));
-      }).catch((error) => {
-        if (requestId !== chatMessageSearchRequestIdRef.current || selectedChatIdRef.current !== selectedChat.id) {
-          return;
-        }
-
-        console.error('[WhatsAppInbox] erro ao buscar mensagens no chat', error);
-        setChatMessageSearchResults([]);
-      }).finally(() => {
-        if (requestId === chatMessageSearchRequestIdRef.current && selectedChatIdRef.current === selectedChat.id) {
-          setSearchingChatMessages(false);
-        }
-      });
-    }, 250);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [chatMessageSearch, chatMessageSearchOpen, selectedChat?.id]);
 
   useEffect(() => {
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -10193,7 +10150,6 @@ export default function WhatsAppInboxScreen() {
                       type="button"
                         onClick={() => {
                           setChatMessageSearchDraft('');
-                          setChatMessageSearchResults([]);
                           setChatMessageSearchOpen(false);
                         }}
                         variant="ghost"
@@ -10208,14 +10164,30 @@ export default function WhatsAppInboxScreen() {
                       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
                         <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
                           <span>
-                            {searchingChatMessages
+                            {chatMessageSearchError
+                              ? 'Busca indisponível'
+                              : searchingChatMessages
                               ? 'Buscando neste chat...'
                               : `${chatMessageSearchResults.length} resultado${chatMessageSearchResults.length === 1 ? '' : 's'}`}
                           </span>
                           {searchingChatMessages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                         </div>
 
-                        {!searchingChatMessages && chatMessageSearchResults.length === 0 ? (
+                        {chatMessageSearchError ? (
+                          <div className="flex items-start gap-2 px-3 py-3 text-sm text-[var(--text-secondary)]" role="alert">
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-warning)]" aria-hidden="true" />
+                            <div className="min-w-0">
+                              <p>{chatMessageSearchError}</p>
+                              <button
+                                type="button"
+                                className="mt-2 font-medium text-[var(--text-link)] hover:underline"
+                                onClick={retryChatMessageSearch}
+                              >
+                                Tentar novamente
+                              </button>
+                            </div>
+                          </div>
+                        ) : !searchingChatMessages && chatMessageSearchResults.length === 0 ? (
                           <div className="px-3 py-3 text-sm text-[var(--text-secondary)]">
                             Nenhuma mensagem encontrada neste chat.
                           </div>

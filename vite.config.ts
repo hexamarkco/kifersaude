@@ -81,6 +81,13 @@ export default defineConfig(({ mode }) => {
               return 'supabase';
             }
 
+            // O editor de blog já é carregado por uma rota lazy. Deixe o
+            // Rollup decidir o chunk destes pacotes para não puxar Quill para
+            // o vendor inicial nem recriar o ciclo editor ↔ vendor.
+            if (pkg === 'react-quill' || pkg === 'quill') {
+              return undefined;
+            }
+
             if (pkg === 'reactflow' || pkg.startsWith('d3-')) {
               return 'flow';
             }

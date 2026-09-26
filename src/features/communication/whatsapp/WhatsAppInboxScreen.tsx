@@ -131,6 +131,7 @@ import {
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
+import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
 import { addSavedContactsToNameMap, collectPhoneLookupKeys, resolveSavedContactName } from './domain/contactLookup';
 import {
@@ -6022,6 +6023,7 @@ export default function WhatsAppInboxScreen() {
     // (sem o spinner de "carregando mensagens") enquanto a atualização roda em segundo
     // plano — evita o efeito de "sempre demora" ao reabrir uma conversa recém-vista.
     const cached = messagesCacheByChatIdRef.current.get(selectedChatId);
+    setLoadingMessages(shouldShowBlockingMessageLoader(Boolean(cached)));
     if (cached) {
       messagesSignatureRef.current = cached.signature;
       setHasOlderMessages(cached.hasOlderMessages);

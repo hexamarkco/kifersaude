@@ -4943,6 +4943,8 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     if (!leadDrawerOpen || !selectedChat || selectedChat.lead_id) {
+      leadSearchRequestIdRef.current += 1;
+      setLeadSearchLoading(false);
       return;
     }
 
@@ -4950,12 +4952,19 @@ export default function WhatsAppInboxScreen() {
       void refreshDrawerSearch(leadSearchQuery, selectedChat.phone_number);
     }, 250);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(timeoutId);
+      leadSearchRequestIdRef.current += 1;
+    };
   }, [leadDrawerOpen, leadSearchQuery, refreshDrawerSearch, selectedChat]);
 
   useEffect(() => {
     if (!startChatModalOpen) {
       startChatContactsSyncedRef.current = false;
+      startChatSourcesRequestIdRef.current += 1;
+      setSavedContactsLoading(false);
+      setSavedContactsLoadingMore(false);
+      setCrmStartLoading(false);
       return;
     }
 
@@ -4965,7 +4974,10 @@ export default function WhatsAppInboxScreen() {
       void refreshStartChatSources(startChatQuery, 1, false, forceSavedContactsSync);
     }, 250);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(timeoutId);
+      startChatSourcesRequestIdRef.current += 1;
+    };
   }, [refreshStartChatSources, startChatModalOpen, startChatQuery]);
 
   const handleLoadMoreSavedContacts = useCallback(() => {

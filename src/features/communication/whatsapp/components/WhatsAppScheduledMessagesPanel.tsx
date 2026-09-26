@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
 import { Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
@@ -129,11 +129,13 @@ export default function WhatsAppScheduledMessagesPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const loadRequestIdRef = useRef(0);
 
   const isFiltered = Boolean(chatId || phoneDigits);
 
   const loadMessages = useCallback(async () => {
     if (!isOpen) return;
+    const requestId = ++loadRequestIdRef.current;
     setLoading(true);
     try {
       const allMessages: CommWhatsAppScheduledMessage[] = [];
@@ -153,6 +155,10 @@ export default function WhatsAppScheduledMessagesPanel({
         offset += page.length;
       }
 
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
       setMessages(
         chatId
           ? allMessages
@@ -167,16 +173,28 @@ export default function WhatsAppScheduledMessagesPanel({
         ...(phoneDigits && !chatId ? { phoneDigits } : {}),
         limit: SCHEDULED_MESSAGES_PAGE_SIZE,
       });
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
       setSequences(sequenceData);
     } catch (error) {
-      console.error('[ScheduledMessagesPanel] error loading', error);
+      if (requestId === loadRequestIdRef.current) {
+        console.error('[ScheduledMessagesPanel] error loading', error);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [channelId, chatId, phoneDigits, isOpen]);
 
   useEffect(() => {
     void loadMessages();
+
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
   }, [loadMessages]);
 
   const handleCancel = useCallback(async (id: string) => {

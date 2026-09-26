@@ -313,6 +313,8 @@ export default function ContractForm({
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const lastFetchedCnpjRef = useRef("");
   const cnpjLookupRequestIdRef = useRef(0);
+  const leadsRequestIdRef = useRef(0);
+  const operadorasRequestIdRef = useRef(0);
   const adjustmentsRequestIdRef = useRef(0);
   const contractStatusOptions = useMemo(
     () => (options.contract_status || []).filter((option) => option.ativo),
@@ -489,6 +491,8 @@ export default function ContractForm({
 
   useEffect(() => {
     cnpjLookupRequestIdRef.current += 1;
+    leadsRequestIdRef.current += 1;
+    operadorasRequestIdRef.current += 1;
     adjustmentsRequestIdRef.current += 1;
     setFormData(initialFormData);
     setCommissionInstallments(buildCommissionInstallments(contract));
@@ -701,16 +705,29 @@ export default function ContractForm({
   ]);
 
   const loadLeads = async () => {
+    const requestId = ++leadsRequestIdRef.current;
     try {
-      setLeads(await listContractConversionLeads(convertibleLeadStatuses));
+      const nextLeads = await listContractConversionLeads(convertibleLeadStatuses);
+      if (requestId !== leadsRequestIdRef.current) return;
+      setLeads(nextLeads);
     } catch (error) {
-      console.error("Erro ao carregar leads:", error);
+      if (requestId === leadsRequestIdRef.current) {
+        console.error("Erro ao carregar leads:", error);
+      }
     }
   };
 
   const loadOperadoras = async () => {
-    const data = await configService.getOperadoras();
-    setOperadoras(data.filter((op) => op.ativo));
+    const requestId = ++operadorasRequestIdRef.current;
+    try {
+      const data = await configService.getOperadoras();
+      if (requestId !== operadorasRequestIdRef.current) return;
+      setOperadoras(data.filter((op) => op.ativo));
+    } catch (error) {
+      if (requestId === operadorasRequestIdRef.current) {
+        console.error("Erro ao carregar operadoras:", error);
+      }
+    }
   };
 
   const handleOperadoraChange = (operadoraNome: string) => {

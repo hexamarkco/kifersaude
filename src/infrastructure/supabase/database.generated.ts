@@ -8298,6 +8298,14 @@ export type Database = {
         Args: { p_phone: string }
         Returns: string[]
       }
+      comm_whatsapp_preferred_saved_contact_name: {
+        Args: {
+          p_channel_id: string
+          p_chat_id: string
+          p_phone_digits: string
+        }
+        Returns: string
+      }
       comm_whatsapp_reconcile_lid_identifier:
         | {
             Args: {

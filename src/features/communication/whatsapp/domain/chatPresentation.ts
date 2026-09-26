@@ -122,6 +122,7 @@ export const getSafeChatDisplayName = (
 export const stabilizeChatIdentityForLocalMerge = (
   incoming: CommWhatsAppChat,
   previous?: CommWhatsAppChat | null,
+  preferredSavedContactName?: string | null,
 ): CommWhatsAppChat => {
   if (incoming.is_group) {
     return {
@@ -141,8 +142,13 @@ export const stabilizeChatIdentityForLocalMerge = (
       display_name: getValidWhatsAppDisplayName(incoming.display_name) || 'Grupo',
     };
   }
-  const savedContactName = getValidWhatsAppDisplayName(incoming.saved_contact_name)
-    || getValidWhatsAppDisplayName(previous?.saved_contact_name);
+  // Eventos de realtime podem carregar uma identidade antiga do provedor.
+  // Depois que um nome foi salvo no Inbox, ele deve continuar estável durante
+  // esse merge. Um nome manual explicitamente informado pelo chamador (por
+  // exemplo, após renomear o contato) continua vencendo o valor anterior.
+  const savedContactName = getValidWhatsAppDisplayName(preferredSavedContactName)
+    || getValidWhatsAppDisplayName(previous?.saved_contact_name)
+    || getValidWhatsAppDisplayName(incoming.saved_contact_name);
   const leadName = getValidWhatsAppDisplayName(incoming.lead_name)
     || getValidWhatsAppDisplayName(previous?.lead_name);
   const leadStatus = String(incoming.lead_status ?? '').trim() || String(previous?.lead_status ?? '').trim() || null;

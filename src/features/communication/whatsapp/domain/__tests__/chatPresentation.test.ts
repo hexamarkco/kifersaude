@@ -119,6 +119,38 @@ test('applies a known saved name to a chat returned by a stale projection', () =
   assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
+test('preserves the saved name when a stale realtime identity arrives', () => {
+  const previous = createChat({
+    display_name: 'Mariangela',
+    saved_contact_name: 'Mariangela',
+  });
+  const incoming = createChat({
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: 'Mariangela - Cliente',
+  });
+
+  const result = stabilizeChatIdentityForLocalMerge(incoming, previous);
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
+test('allows an explicit manual rename to replace the previous saved name', () => {
+  const previous = createChat({
+    display_name: 'Mariangela',
+    saved_contact_name: 'Mariangela',
+  });
+  const incoming = createChat({
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: 'Mariangela - Cliente',
+  });
+
+  const result = stabilizeChatIdentityForLocalMerge(incoming, previous, 'Mariangela - Cliente');
+
+  assert.equal(result.display_name, 'Mariangela - Cliente');
+  assert.equal(result.saved_contact_name, 'Mariangela - Cliente');
+});
+
 test('ranks accent-insensitive names before phone-only matches', () => {
   const nameMatch = createChat({
     id: 'name',

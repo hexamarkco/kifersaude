@@ -34,6 +34,9 @@ export const useChatSearch = ({
   const [messageSearchResults, setMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
   const [searchingChats, setSearchingChats] = useState(false);
   const [searchingMessages, setSearchingMessages] = useState(false);
+  const [chatSearchError, setChatSearchError] = useState<string | null>(null);
+  const [messageSearchError, setMessageSearchError] = useState<string | null>(null);
+  const [searchRetryNonce, setSearchRetryNonce] = useState(0);
 
   const chatSearchRequestIdRef = useRef(0);
   const messageSearchRequestIdRef = useRef(0);
@@ -46,6 +49,8 @@ export const useChatSearch = ({
       setMessageSearchResults([]);
       setSearchingChats(false);
       setSearchingMessages(false);
+      setChatSearchError(null);
+      setMessageSearchError(null);
     }
 
     setSearchState(nextSearch);
@@ -66,6 +71,8 @@ export const useChatSearch = ({
     }
 
     const requestId = ++chatSearchRequestIdRef.current;
+    setChatSearchResults([]);
+    setChatSearchError(null);
     setSearchingChats(true);
 
     void whatsappConversationsRepository.list({
@@ -89,12 +96,22 @@ export const useChatSearch = ({
 
       console.error('[WhatsAppInbox] erro ao buscar conversas', error);
       setChatSearchResults([]);
+      setChatSearchError('Não foi possível buscar as conversas agora. Tente novamente.');
     }).finally(() => {
       if (requestId === chatSearchRequestIdRef.current) {
         setSearchingChats(false);
       }
     });
-  }, [activityFilter, leadStatusFilters, leadResponsavelFilters, pendingChatInboxStateRef, search, setSearch, sortChats]);
+  }, [
+    activityFilter,
+    leadStatusFilters,
+    leadResponsavelFilters,
+    pendingChatInboxStateRef,
+    search,
+    searchRetryNonce,
+    setSearch,
+    sortChats,
+  ]);
 
   useEffect(() => {
     if (!search) {
@@ -103,6 +120,8 @@ export const useChatSearch = ({
     }
 
     const requestId = ++messageSearchRequestIdRef.current;
+    setMessageSearchResults([]);
+    setMessageSearchError(null);
     setSearchingMessages(true);
 
     void whatsappMessagesRepository.search({
@@ -130,12 +149,17 @@ export const useChatSearch = ({
 
       console.error('[WhatsAppInbox] erro ao buscar mensagens', error);
       setMessageSearchResults([]);
+      setMessageSearchError('Não foi possível buscar as mensagens agora. Tente novamente.');
     }).finally(() => {
       if (requestId === messageSearchRequestIdRef.current) {
         setSearchingMessages(false);
       }
     });
-  }, [search, setSearch]);
+  }, [search, searchRetryNonce, setSearch]);
+
+  const retrySearch = useCallback(() => {
+    setSearchRetryNonce((current) => current + 1);
+  }, []);
 
   return {
     searchDraft,
@@ -144,7 +168,10 @@ export const useChatSearch = ({
     messageSearchResults,
     searchingChats,
     searchingMessages,
+    chatSearchError,
+    messageSearchError,
     setSearchDraft,
     setSearch,
+    retrySearch,
   };
 };

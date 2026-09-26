@@ -2558,8 +2558,11 @@ export default function WhatsAppInboxScreen() {
     messageSearchResults,
     searchingChats,
     searchingMessages,
+    chatSearchError,
+    messageSearchError,
     setSearchDraft,
     setSearch,
+    retrySearch,
   } = useChatSearch({
     activityFilter: chatActivityFilter,
     leadStatusFilters,
@@ -9757,7 +9760,7 @@ export default function WhatsAppInboxScreen() {
                   Tentar novamente
                 </Button>
               </div>
-            ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
+            ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages && !chatSearchError && !messageSearchError ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
                 <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
@@ -9771,6 +9774,21 @@ export default function WhatsAppInboxScreen() {
               </div>
             ) : (
               <>
+                {chatSearchError || messageSearchError ? (
+                  <Alert
+                    tone="warning"
+                    title="Busca incompleta"
+                    action={(
+                      <Button type="button" variant="secondary" size="sm" onClick={retrySearch}>
+                        Tentar novamente
+                      </Button>
+                    )}
+                    className="m-3"
+                  >
+                    {chatSearchError ?? messageSearchError}
+                    {chatSearchError && messageSearchError ? ' Algumas mensagens também não puderam ser consultadas.' : ''}
+                  </Alert>
+                ) : null}
                 {sidebarChats.length > 0 ? (
                   <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     Conversas

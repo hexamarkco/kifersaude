@@ -164,6 +164,7 @@ export default function AgendaScreen() {
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const quickSchedulingReminderIdRef = useRef<string | null>(null);
+  const savingTaskRef = useRef(false);
   const loadRemindersRequestIdRef = useRef(0);
   const leadInfoRequestIdRef = useRef(0);
   const openLeadRequestIdRef = useRef(0);
@@ -657,10 +658,11 @@ export default function AgendaScreen() {
   const handleAddTask = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!newTaskTitle.trim()) {
+    if (savingTaskRef.current || !newTaskTitle.trim()) {
       return;
     }
 
+    savingTaskRef.current = true;
     setSavingTask(true);
     setError(null);
 
@@ -677,14 +679,19 @@ export default function AgendaScreen() {
         prioridade: "normal",
       });
 
-      if (createdTask) {
-        pendingRefreshIdsRef.current.add(createdTask.id);
-        setReminders((current) =>
-          [...current, createdTask].sort(
-            (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
-          ),
-        );
+      if (!createdTask) {
+        const message = "Não foi possível confirmar a tarefa. Tente novamente.";
+        setError(message);
+        toast.error(message);
+        return;
       }
+
+      pendingRefreshIdsRef.current.add(createdTask.id);
+      setReminders((current) =>
+        [...current, createdTask].sort(
+          (left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime(),
+        ),
+      );
 
       setNewTaskTitle("");
       setNewTaskDescription("");
@@ -693,6 +700,7 @@ export default function AgendaScreen() {
       console.error("Erro ao criar tarefa:", insertError);
       setError("Não foi possível criar a tarefa.");
     } finally {
+      savingTaskRef.current = false;
       setSavingTask(false);
     }
   };
@@ -1652,11 +1660,11 @@ export default function AgendaScreen() {
           <Dialog
             open
             aria-label="Criar nova tarefa"
-            onOpenChange={(open) => !open && closeAddTaskModal()}
+            onOpenChange={(open) => !open && !savingTask && closeAddTaskModal()}
             size="sm"
           >
             <form onSubmit={(event) => void handleAddTask(event)} className="flex min-h-0 flex-1 flex-col">
-              <DialogHeader onClose={closeAddTaskModal}>
+              <DialogHeader onClose={savingTask ? undefined : closeAddTaskModal}>
                 <DialogTitle>Nova tarefa</DialogTitle>
                 <DialogDescription>{selectedDateLabel}</DialogDescription>
               </DialogHeader>
@@ -1685,7 +1693,7 @@ export default function AgendaScreen() {
                 </Field>
               </DialogBody>
               <DialogFooter>
-                <Button type="button" onClick={closeAddTaskModal} variant="secondary" size="md">
+                <Button type="button" onClick={closeAddTaskModal} disabled={savingTask} variant="secondary" size="md">
                   Cancelar
                 </Button>
                 <Button type="submit" variant="primary" size="md" disabled={savingTask} loading={savingTask}>

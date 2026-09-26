@@ -177,6 +177,7 @@ export default function WhatsAppAgendaModal({
   const [isDedupingAll, setIsDedupingAll] = useState(false);
   const dedupeActionLockRef = useRef(new KeyedActionLock());
   const quickSchedulingReminderIdRef = useRef<string | null>(null);
+  const savingTaskRef = useRef(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
@@ -793,10 +794,11 @@ export default function WhatsAppAgendaModal({
   const handleAddTask = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!newTaskTitle.trim()) {
+    if (savingTaskRef.current || !newTaskTitle.trim()) {
       return;
     }
 
+    savingTaskRef.current = true;
     setSavingTask(true);
     setError(null);
 
@@ -813,10 +815,15 @@ export default function WhatsAppAgendaModal({
         prioridade: 'normal',
       });
 
-      if (createdTask) {
-        pendingRefreshIdsRef.current.add(createdTask.id);
-        setReminders((current) => [...current, createdTask].sort(compareRemindersByDueAtThenAlphabetical));
+      if (!createdTask) {
+        const message = 'Não foi possível confirmar a tarefa. Tente novamente.';
+        setError(message);
+        toast.error(message);
+        return;
       }
+
+      pendingRefreshIdsRef.current.add(createdTask.id);
+      setReminders((current) => [...current, createdTask].sort(compareRemindersByDueAtThenAlphabetical));
 
       closeAddTaskModal();
       toast.success('Tarefa adicionada na agenda.');
@@ -825,6 +832,7 @@ export default function WhatsAppAgendaModal({
       setError('Não foi possível criar a tarefa.');
       toast.error('Não foi possível criar a tarefa.');
     } finally {
+      savingTaskRef.current = false;
       setSavingTask(false);
     }
   }, [closeAddTaskModal, compareRemindersByDueAtThenAlphabetical, newTaskDescription, newTaskTitle, selectedDate]);
@@ -1754,7 +1762,7 @@ export default function WhatsAppAgendaModal({
       {isAddTaskModalOpen ? (
         <WorkspaceDialog
           isOpen
-          onClose={closeAddTaskModal}
+          onClose={() => { if (!savingTask) closeAddTaskModal(); }}
           title="Nova tarefa"
           description={selectedDateLabel}
           size="sm"
@@ -1790,7 +1798,7 @@ export default function WhatsAppAgendaModal({
             </div>
 
             <div className="flex items-center justify-end gap-3">
-              <Button type="button" onClick={closeAddTaskModal} variant="secondary" size="md">
+              <Button type="button" onClick={closeAddTaskModal} disabled={savingTask} variant="secondary" size="md">
                 Cancelar
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={savingTask} loading={savingTask}>

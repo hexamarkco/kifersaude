@@ -18,6 +18,7 @@ import type {
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
+import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
 
 export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 
@@ -823,7 +824,7 @@ type MediaObjectUrlCacheEntry = {
 
 const mediaObjectUrlCache = new Map<string, MediaObjectUrlCacheEntry>();
 const MEDIA_OBJECT_URL_RELEASE_GRACE_MS = 30_000;
-const localMediaPreviewByMessageId = new Map<string, string>();
+const localMediaPreviewCache = createLocalMediaPreviewCache();
 
 const sanitizeSearch = (value: string) =>
   value
@@ -1103,13 +1104,19 @@ export const commWhatsAppService = {
   },
 
   rememberLocalMediaPreview(messageId: string, objectUrl: string) {
-    if (!messageId || !objectUrl) return;
-    localMediaPreviewByMessageId.set(messageId, objectUrl);
+    localMediaPreviewCache.remember(messageId, objectUrl);
   },
 
   getRememberedLocalMediaPreview(messageId?: string | null) {
-    if (!messageId) return null;
-    return localMediaPreviewByMessageId.get(messageId) ?? null;
+    return localMediaPreviewCache.get(messageId);
+  },
+
+  retainLocalMediaPreview(messageId?: string | null) {
+    return localMediaPreviewCache.retain(messageId);
+  },
+
+  releaseLocalMediaPreview(messageId?: string | null) {
+    localMediaPreviewCache.release(messageId);
   },
 
   async getOperationalState(): Promise<CommWhatsAppOperationalState | null> {

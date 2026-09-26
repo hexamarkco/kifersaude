@@ -591,9 +591,12 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
   useEffect(() => {
     let active = true;
+    let retainedLocalPreview = false;
+    let retainedMediaObjectUrl = false;
 
-    const rememberedPreview = whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id);
+    const rememberedPreview = whatsappMediaRepository.retainLocalPreview(message.external_message_id);
     if (rememberedPreview) {
+      retainedLocalPreview = true;
       setMediaUrl(rememberedPreview);
       setLoading(false);
       setError(null);
@@ -601,6 +604,9 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       if (!message.media_id || (message.external_message_id && message.media_id === message.external_message_id)) {
         return () => {
           active = false;
+          if (retainedLocalPreview) {
+            whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
+          }
         };
       }
     }
@@ -611,6 +617,9 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       setError(null);
       return () => {
         active = false;
+        if (retainedLocalPreview) {
+          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
+        }
       };
     }
 
@@ -620,12 +629,14 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       setError(null);
       return () => {
         active = false;
+        if (retainedLocalPreview) {
+          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
+        }
       };
     }
 
     setLoading(true);
     setError(null);
-    let retainedMediaObjectUrl = false;
 
     retainedMediaObjectUrl = true;
     void whatsappMediaRepository
@@ -633,6 +644,10 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       .then((resolved) => {
         if (!active) return;
         setMediaUrl(resolved);
+        if (resolved && retainedLocalPreview) {
+          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
+          retainedLocalPreview = false;
+        }
       })
       .catch((resolveError) => {
         if (!active) return;
@@ -646,6 +661,9 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
     return () => {
       active = false;
+      if (retainedLocalPreview) {
+        whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
+      }
       if (retainedMediaObjectUrl) {
         whatsappMediaRepository.releaseObjectUrl(message.media_id);
       }

@@ -313,9 +313,9 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
       .then((resolved) => { if (active) setUrl(resolved); })
       .catch(() => { if (active) setUrl(null); });
 
+    const audio = audioRef.current;
     return () => {
       active = false;
-      const audio = audioRef.current;
       audio?.pause();
       if (mediaId) {
         whatsappMediaRepository.releaseObjectUrl(mediaId);

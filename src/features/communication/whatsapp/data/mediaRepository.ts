@@ -4,6 +4,8 @@ import { commWhatsAppService } from './commWhatsAppService';
 export const whatsappMediaRepository = {
   rememberLocalPreview: commWhatsAppService.rememberLocalMediaPreview,
   getRememberedLocalPreview: commWhatsAppService.getRememberedLocalMediaPreview,
+  retainLocalPreview: commWhatsAppService.retainLocalMediaPreview,
+  releaseLocalPreview: commWhatsAppService.releaseLocalMediaPreview,
   listPage: commWhatsAppService.listChatMediaPage,
   retry: commWhatsAppService.retryMediaMessage,
   send: commWhatsAppService.sendMediaMessage,

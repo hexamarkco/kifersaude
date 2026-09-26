@@ -134,7 +134,7 @@ import {
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, collectPhoneLookupKeys, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -3473,9 +3473,8 @@ export default function WhatsAppInboxScreen() {
   const applyFrontendSavedContactNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
       const phone = chat.phone_digits || chat.phone_number;
-      const savedName = resolveSavedContactName(
+      const savedName = getSavedContactNameForPhone(
         phone,
-        chat.saved_contact_name,
         savedContactNameOverrideByPhoneRef.current,
         savedContactNameByPhoneRef.current,
       );
@@ -3518,10 +3517,6 @@ export default function WhatsAppInboxScreen() {
     const targetChats = chats.filter((chat) => {
       const lookupKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
       const isSelectedChat = Boolean(selectedChat?.id && chat.id === selectedChat.id);
-
-      if (chat.saved_contact_name?.trim()) {
-        return isSelectedChat && canForceSyncSelectedContact;
-      }
 
       return lookupKeys.length > 0 && (lookupKeys.some(shouldAttemptLookupKey) || (isSelectedChat && canForceSyncSelectedContact));
     }).slice(0, CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE);

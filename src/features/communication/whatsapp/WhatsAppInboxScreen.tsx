@@ -2745,7 +2745,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (chat) =>
-            `${chat.id}:${chat.updated_at}:${chat.external_chat_id}:${chat.phone_number}:${chat.phone_digits}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.push_name ?? ''}:${chat.lead_id ?? ''}:${chat.lead_name ?? ''}:${chat.lead_status ?? ''}:${chat.autonomous_attendance_status}:${chat.lead_link_source ?? ''}:${chat.merged_into_chat_id ?? ''}:${chat.auto_link_blocked}:${chat.identity_conflict}:${chat.deleted_at ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
+            `${chat.id}:${chat.updated_at}:${chat.external_chat_id}:${chat.phone_number}:${chat.phone_digits}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.push_name ?? ''}:${chat.lead_id ?? ''}:${chat.lead_name ?? ''}:${chat.lead_status ?? ''}:${chat.autonomous_attendance_status}:${chat.presence_status ?? ''}:${chat.presence_last_seen_at ?? ''}:${chat.presence_updated_at ?? ''}:${chat.lead_link_source ?? ''}:${chat.merged_into_chat_id ?? ''}:${chat.auto_link_blocked}:${chat.identity_conflict}:${chat.deleted_at ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
         )
         .join('|'),
     [],
@@ -2997,7 +2997,12 @@ export default function WhatsAppInboxScreen() {
         : [hydratedNextChat, ...current];
 
       const sorted = sortChatsByInboxOrder(updated);
-      chatsSignatureRef.current = buildChatsSignature(sorted);
+      const nextSignature = buildChatsSignature(sorted);
+      if (nextSignature === chatsSignatureRef.current) {
+        return current;
+      }
+
+      chatsSignatureRef.current = nextSignature;
       return sorted;
     });
   }, [buildChatsSignature]);
@@ -5971,16 +5976,12 @@ export default function WhatsAppInboxScreen() {
     void commWhatsAppService.ensureChatPresence(selectedChat.id)
       .then((result) => {
         if (!active || !result.presence) return;
-        setChats((current) => current.map((chat) => (
-          chat.id !== selectedChat.id
-            ? chat
-            : {
-                ...chat,
-                presence_status: result.presence?.status ?? null,
-                presence_last_seen_at: result.presence?.last_seen_at ?? null,
-                presence_updated_at: result.presence?.observed_at ?? null,
-              }
-        )));
+        setChats((current) => applyChatPresenceUpdate(current, {
+          chatId: selectedChat.id,
+          status: result.presence?.status ?? null,
+          lastSeenAt: result.presence?.last_seen_at ?? null,
+          updatedAt: result.presence?.observed_at ?? null,
+        }));
       })
       .catch((error) => {
         if (!active || isSupabaseConnectivityError(error)) return;

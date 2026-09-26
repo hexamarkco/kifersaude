@@ -76,6 +76,7 @@ export const useVoiceRecording = ({
   const voiceWaveformPayloadRef = useRef('');
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const autoSendVoiceRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const clearVoiceTimer = useCallback(() => {
     if (voiceTimerRef.current !== null) {
@@ -219,11 +220,13 @@ export const useVoiceRecording = ({
       voiceWaveformPayloadRef.current = '';
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (discardVoiceRecordingRef.current) {
+      if (discardVoiceRecordingRef.current || !isMountedRef.current) {
         for (const track of stream.getTracks()) {
           track.stop();
         }
-        setVoiceRecordingState('idle');
+        if (isMountedRef.current) {
+          setVoiceRecordingState('idle');
+        }
         return;
       }
 
@@ -303,6 +306,9 @@ export const useVoiceRecording = ({
       stopVoiceStream();
       voiceRecorderRef.current = null;
       clearVoiceTimer();
+      if (!isMountedRef.current) {
+        return;
+      }
       setVoiceRecordingState('idle');
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
@@ -347,13 +353,33 @@ export const useVoiceRecording = ({
 
   const cleanup = useCallback(() => {
     clearVoiceTimer();
-    stopVoiceStream();
+
+    const recorder = voiceRecorderRef.current;
     voiceRecorderRef.current = null;
+    discardVoiceRecordingRef.current = true;
+
+    if (recorder && recorder.state !== 'inactive') {
+      // O componente pode desmontar enquanto o MediaRecorder ainda está
+      // gravando. Removemos os callbacks antes de parar para evitar que o
+      // evento assíncrono tente salvar anexo ou atualizar estado desmontado.
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.onerror = null;
+      try {
+        recorder.stop();
+      } catch {
+        // O navegador pode já ter finalizado o recorder entre a checagem e o stop.
+      }
+    }
+
+    stopVoiceStream();
     voiceChunksRef.current = [];
   }, [clearVoiceTimer, stopVoiceStream]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       cleanup();
     };
   }, [cleanup]);

@@ -36,7 +36,7 @@ vi.mock('../../../../../infrastructure/supabase', () => ({
   },
 }));
 
-const noopMessageChange = vi.fn();
+const noopMessageChange = vi.fn() as unknown as MockFunction;
 
 const RealtimeHarness = () => {
   const state = useCommWhatsAppMessageRealtime('chat-1', noopMessageChange);
@@ -90,4 +90,25 @@ test('deduplica falhas do realtime, recupera após reconexão e ignora callbacks
 
   assert.equal(warnings.length, 2);
   console.warn = originalWarn;
+});
+
+test('ignora mensagem atrasada depois que a conversa é desmontada', () => {
+  mocks.channel.mockClear();
+  mocks.removeChannel.mockClear();
+  mocks.subscription.on.mockClear();
+  mocks.subscription.subscribe.mockClear();
+  noopMessageChange.mockClear();
+
+  const view = render(<RealtimeHarness />);
+  const messageCallback = mocks.subscription.on.mock.calls[0]?.[2] as ((payload: unknown) => void) | undefined;
+  const payload = { eventType: 'INSERT', new: { id: 'message-1' } };
+
+  assert.equal(typeof messageCallback, 'function');
+  act(() => messageCallback?.(payload));
+  assert.equal(noopMessageChange.mock.calls.length, 1);
+
+  view.unmount();
+  act(() => messageCallback?.(payload));
+  assert.equal(noopMessageChange.mock.calls.length, 1);
+  assert.equal(mocks.removeChannel.mock.calls.length, 1);
 });

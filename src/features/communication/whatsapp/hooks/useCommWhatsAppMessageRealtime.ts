@@ -46,7 +46,11 @@ export const useCommWhatsAppMessageRealtime = (
           table: 'comm_whatsapp_messages',
           filter: `chat_id=eq.${selectedChatId}`,
         },
-        onMessageChange,
+        (payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {
+          if (active) {
+            onMessageChange(payload);
+          }
+        },
       )
       .subscribe((status) => {
         if (!active) {

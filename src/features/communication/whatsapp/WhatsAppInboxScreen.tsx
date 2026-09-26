@@ -2332,6 +2332,8 @@ export default function WhatsAppInboxScreen() {
   const reactingMessageLockRef = useRef(new KeyedActionLock());
   const [starringMessageIds, setStarringMessageIds] = useState<Set<string>>(new Set());
   const starringMessageLockRef = useRef(new KeyedActionLock());
+  const deletingMessageLockRef = useRef(new KeyedActionLock());
+  const transcriptionMessageLockRef = useRef(new KeyedActionLock());
   const editingMessageLockRef = useRef(new KeyedActionLock());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
@@ -7360,6 +7362,10 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    if (!deletingMessageLockRef.current.tryAcquire(message.id)) {
+      return;
+    }
+
     setDeletingMessageId(message.id);
 
     try {
@@ -7392,11 +7398,16 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao apagar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível apagar a mensagem no WhatsApp.');
     } finally {
+      deletingMessageLockRef.current.release(message.id);
       setDeletingMessageId((current) => (current === message.id ? null : current));
     }
   }, [patchMessageLocally]);
 
   const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
+    if (!transcriptionMessageLockRef.current.tryAcquire(message.id)) {
+      return;
+    }
+
     setTranscribingMessageId(message.id);
     patchMessageLocally(message.id, {
       transcription_status: 'processing',
@@ -7425,6 +7436,7 @@ export default function WhatsAppInboxScreen() {
       });
       toast.error(messageText);
     } finally {
+      transcriptionMessageLockRef.current.release(message.id);
       setTranscribingMessageId((current) => (current === message.id ? null : current));
     }
   };

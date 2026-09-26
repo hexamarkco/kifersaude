@@ -179,16 +179,25 @@ export default function ContractsManager({
             contract.id === changed.id ? changed : contract,
           ),
         );
+        setSelectedContract((current) =>
+          current?.id === changed.id ? changed : current,
+        );
       } else if (eventType === "DELETE" && previous) {
         setContracts((contracts) =>
           contracts.filter((contract) => contract.id !== previous.id),
+        );
+        setSelectedContract((current) =>
+          current?.id === previous.id ? null : current,
         );
       }
     });
 
     void loadContracts();
 
-    return unsubscribe;
+    return () => {
+      contractsLoadRequestIdRef.current += 1;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -233,12 +242,11 @@ export default function ContractsManager({
 
   const handleContractsUpdated = async () => {
     const updatedContracts = await loadContracts();
-    if (!updatedContracts || !selectedContract) return;
-    const refreshed =
-      updatedContracts.find(
-        (contractItem) => contractItem.id === selectedContract.id,
-      ) || null;
-    setSelectedContract(refreshed);
+    if (!updatedContracts) return;
+    setSelectedContract((current) => {
+      if (!current) return current;
+      return updatedContracts.find((contractItem) => contractItem.id === current.id) || null;
+    });
   };
 
   const handleBulkJsonImport = async (

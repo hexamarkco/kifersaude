@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, ExternalLink, FileText, Plus, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
 import type { PublicForm } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -37,6 +38,7 @@ const slugify = (value: string): string =>
 
 export default function FormsScreen() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState<PublicForm[]>([]);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
@@ -54,10 +56,15 @@ export default function FormsScreen() {
   const loadForms = useCallback(async () => {
     const requestId = ++formsLoadRequestIdRef.current;
     setLoading(true);
+    setLoadError(false);
     try {
       const data = await formsService.getForms();
       if (requestId !== formsLoadRequestIdRef.current) return;
       setForms(data);
+    } catch (loadFormsError) {
+      if (requestId !== formsLoadRequestIdRef.current) return;
+      console.error("Erro ao carregar formulários:", loadFormsError);
+      setLoadError(true);
     } finally {
       if (requestId === formsLoadRequestIdRef.current) {
         setLoading(false);
@@ -205,6 +212,36 @@ export default function FormsScreen() {
     return <LoadingState label="Carregando formulários..." />;
   }
 
+  const pageHeader = (
+    <SectionHeader
+      eyebrow="Página pública"
+      title="Formulários de captação"
+      description="Crie formulários multi-etapas em /forms/xyz para captar leads com perguntas de múltipla escolha, texto e geolocalização opcional."
+    />
+  );
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        {pageHeader}
+        <Card>
+          <Alert
+            tone="danger"
+            title="Não foi possível carregar os formulários."
+            action={
+              <Button onClick={() => void loadForms()}>
+                <RefreshCw className="kds-control-icon" />
+                <span>Tentar novamente</span>
+              </Button>
+            }
+          >
+            Verifique sua conexão ou sessão e tente novamente. Seus formulários não foram apagados.
+          </Alert>
+        </Card>
+      </div>
+    );
+  }
+
   const selectedForm = forms.find((form) => form.id === selectedFormId) ?? null;
 
   if (selectedForm) {
@@ -219,11 +256,7 @@ export default function FormsScreen() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        eyebrow="Página pública"
-        title="Formulários de captação"
-        description="Crie formulários multi-etapas em /forms/xyz para captar leads com perguntas de múltipla escolha, texto e geolocalização opcional."
-      />
+      {pageHeader}
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

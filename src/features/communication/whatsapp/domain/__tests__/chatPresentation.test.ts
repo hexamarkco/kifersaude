@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
 import {
+  applyChatPresenceUpdate,
   getSafeChatDisplayName,
   mergeUniqueChats,
   preserveUsefulChatPreview,
@@ -136,4 +137,50 @@ test('uses the group name and never falls back to a phone identity for groups', 
   });
 
   assert.equal(getSafeChatDisplayName(group), 'Equipe de Atendimento');
+});
+
+test('ignores presence updates that cannot change the loaded chat list', () => {
+  const chat = createChat({
+    presence_status: 'typing',
+    presence_last_seen_at: '2026-09-08T12:01:00.000Z',
+    presence_updated_at: '2026-09-08T12:01:00.000Z',
+  });
+  const chats = [chat];
+
+  assert.strictEqual(
+    applyChatPresenceUpdate(chats, {
+      chatId: 'missing-chat',
+      status: 'recording',
+      lastSeenAt: null,
+      updatedAt: null,
+    }),
+    chats,
+  );
+  assert.strictEqual(
+    applyChatPresenceUpdate(chats, {
+      chatId: chat.id,
+      status: 'typing',
+      lastSeenAt: chat.presence_last_seen_at ?? null,
+      updatedAt: chat.presence_updated_at ?? null,
+    }),
+    chats,
+  );
+});
+
+test('updates only the matching chat when presence really changes', () => {
+  const first = createChat({ id: 'first' });
+  const second = createChat({ id: 'second' });
+  const chats = [first, second];
+
+  const result = applyChatPresenceUpdate(chats, {
+    chatId: 'second',
+    status: 'recording',
+    lastSeenAt: '2026-09-08T12:02:00.000Z',
+    updatedAt: '2026-09-08T12:02:00.000Z',
+  });
+
+  assert.notStrictEqual(result, chats);
+  assert.strictEqual(result[0], first);
+  assert.equal(result[1]?.presence_status, 'recording');
+  assert.equal(result[1]?.presence_last_seen_at, '2026-09-08T12:02:00.000Z');
 });

@@ -211,3 +211,36 @@ export const mergeUniqueChats = (...collections: CommWhatsAppChat[][]) => {
   });
   return Array.from(chatsById.values());
 };
+
+export const applyChatPresenceUpdate = (
+  chats: CommWhatsAppChat[],
+  update: {
+    chatId: string;
+    status: CommWhatsAppChat['presence_status'];
+    lastSeenAt: string | null;
+    updatedAt: string | null;
+  },
+) => {
+  const chatIndex = chats.findIndex((chat) => chat.id === update.chatId);
+  if (chatIndex < 0) {
+    return chats;
+  }
+
+  const currentChat = chats[chatIndex];
+  if (
+    currentChat.presence_status === update.status
+    && currentChat.presence_last_seen_at === update.lastSeenAt
+    && currentChat.presence_updated_at === update.updatedAt
+  ) {
+    return chats;
+  }
+
+  const nextChats = [...chats];
+  nextChats[chatIndex] = {
+    ...currentChat,
+    presence_status: update.status,
+    presence_last_seen_at: update.lastSeenAt,
+    presence_updated_at: update.updatedAt,
+  };
+  return nextChats;
+};

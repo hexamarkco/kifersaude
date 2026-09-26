@@ -121,6 +121,7 @@ import {
   mergeMessages,
 } from './domain/messageTimeline';
 import {
+  applyChatPresenceUpdate,
   getSafeChatDisplayName,
   mergeUniqueChats,
   preserveUsefulChatPreview,
@@ -3592,16 +3593,12 @@ export default function WhatsAppInboxScreen() {
     const targetChatId = incomingPresence?.chat_id ?? previousPresence?.chat_id ?? null;
     if (!targetChatId) return;
 
-    setChats((current) => current.map((chat) => (
-      chat.id !== targetChatId
-        ? chat
-        : {
-            ...chat,
-            presence_status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
-            presence_last_seen_at: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
-            presence_updated_at: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
-          }
-    )));
+    setChats((current) => applyChatPresenceUpdate(current, {
+      chatId: targetChatId,
+      status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
+      lastSeenAt: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
+      updatedAt: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
+    }));
   }, []);
 
   const applyRealtimeMessageChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {

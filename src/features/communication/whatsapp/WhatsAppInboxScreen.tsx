@@ -6934,117 +6934,120 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const targetChat = selectedChat;
+    if (!targetChat || targetChat.id !== message.chat_id) {
+      return;
+    }
+
     retryingMessageIdsRef.current.add(message.id);
     setRetryingMessageId(message.id);
 
     try {
-      const localRetryPayload = localOutgoingRetryPayloadRef.current.get(message.id);
+      await enqueueChatSend(targetChat.id, async () => {
+        const localRetryPayload = localOutgoingRetryPayloadRef.current.get(message.id);
 
-      if (localRetryPayload) {
-        let keepRetryPayload = false;
-        patchLocalOutgoingMessage(message.id, {
-          delivery_status: 'pending',
-          status_updated_at: new Date().toISOString(),
-          error_message: null,
+        if (localRetryPayload) {
+          let keepRetryPayload = false;
+          patchLocalOutgoingMessage(message.id, {
+            delivery_status: 'pending',
+            status_updated_at: new Date().toISOString(),
+            error_message: null,
+          });
+
+          const retryClientRequestId = localRetryPayload.clientRequestId || createClientRequestId();
+          if (!localRetryPayload.clientRequestId) {
+            localOutgoingRetryPayloadRef.current.set(message.id, {
+              ...localRetryPayload,
+              clientRequestId: retryClientRequestId,
+            } as LocalOutgoingRetryPayload);
+          }
+
+          if (localRetryPayload.kind === 'text') {
+            const sendResult = await whatsappMessagesRepository.sendText(targetChat.external_chat_id, localRetryPayload.text, {
+              clientRequestId: retryClientRequestId,
+            });
+            patchLocalOutgoingMessage(message.id, {
+              external_message_id: sendResult.messageId,
+              delivery_status: sendResult.status,
+              status_updated_at: new Date().toISOString(),
+              error_message: null,
+            });
+            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+              scheduleMessageStatusRefresh({
+                chat: targetChat,
+                externalMessageIds: [sendResult.messageId],
+              });
+            }
+            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
+          } else if (localRetryPayload.kind === 'media') {
+            const sendResult = await whatsappMediaRepository.send({
+              chatId: targetChat.external_chat_id,
+              kind: localRetryPayload.mediaKind,
+              file: localRetryPayload.file,
+              caption: localRetryPayload.caption,
+              durationSeconds: localRetryPayload.durationSeconds,
+              waveform: localRetryPayload.waveform,
+              clientRequestId: retryClientRequestId,
+            });
+            if (message.media_url && sendResult.messageId) {
+              whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, message.media_url);
+            }
+            patchLocalOutgoingMessage(message.id, {
+              external_message_id: sendResult.messageId,
+              delivery_status: sendResult.status,
+              status_updated_at: new Date().toISOString(),
+              error_message: null,
+            });
+            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+              scheduleMessageStatusRefresh({
+                chat: targetChat,
+                externalMessageIds: [sendResult.messageId],
+              });
+            }
+            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
+          } else {
+            const sendResult = await whatsappMediaRepository.sendRemote({
+              chatId: targetChat.external_chat_id,
+              kind: localRetryPayload.mediaKind,
+              remoteUrl: localRetryPayload.remoteUrl,
+              fileName: localRetryPayload.fileName,
+              mimeType: localRetryPayload.mimeType,
+              caption: localRetryPayload.caption,
+              clientRequestId: retryClientRequestId,
+            });
+            patchLocalOutgoingMessage(message.id, {
+              external_message_id: sendResult.messageId,
+              delivery_status: sendResult.status,
+              status_updated_at: new Date().toISOString(),
+              error_message: null,
+            });
+            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+              scheduleMessageStatusRefresh({
+                chat: targetChat,
+                externalMessageIds: [sendResult.messageId],
+              });
+            }
+            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
+          }
+
+          if (!keepRetryPayload) {
+            localOutgoingRetryPayloadRef.current.delete(message.id);
+          }
+          await Promise.all([loadMessages(targetChat, 'send'), loadChats()]);
+          return;
+        }
+
+        if (!message.media_id) {
+          removeLocalOutgoingMessage(message.id);
+          toast.error('Não foi possível reenviar esta mensagem local.');
+          return;
+        }
+
+        await whatsappMediaRepository.retry(message.id, {
+          clientRequestId: createClientRequestId(),
         });
-
-        const retryClientRequestId = localRetryPayload.clientRequestId || createClientRequestId();
-        if (!localRetryPayload.clientRequestId) {
-          localOutgoingRetryPayloadRef.current.set(message.id, {
-            ...localRetryPayload,
-            clientRequestId: retryClientRequestId,
-          } as LocalOutgoingRetryPayload);
-        }
-
-        if (localRetryPayload.kind === 'text') {
-          const sendResult = await whatsappMessagesRepository.sendText(selectedChat?.external_chat_id || '', localRetryPayload.text, {
-            clientRequestId: retryClientRequestId,
-          });
-          patchLocalOutgoingMessage(message.id, {
-            external_message_id: sendResult.messageId,
-            delivery_status: sendResult.status,
-            status_updated_at: new Date().toISOString(),
-            error_message: null,
-          });
-          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-            scheduleMessageStatusRefresh({
-              chat: selectedChat,
-              externalMessageIds: [sendResult.messageId],
-            });
-          }
-          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-        } else if (localRetryPayload.kind === 'media') {
-          const sendResult = await whatsappMediaRepository.send({
-            chatId: selectedChat?.external_chat_id || '',
-            kind: localRetryPayload.mediaKind,
-            file: localRetryPayload.file,
-            caption: localRetryPayload.caption,
-            durationSeconds: localRetryPayload.durationSeconds,
-            waveform: localRetryPayload.waveform,
-            clientRequestId: retryClientRequestId,
-          });
-          if (message.media_url && sendResult.messageId) {
-            whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, message.media_url);
-          }
-          patchLocalOutgoingMessage(message.id, {
-            external_message_id: sendResult.messageId,
-            delivery_status: sendResult.status,
-            status_updated_at: new Date().toISOString(),
-            error_message: null,
-          });
-          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-            scheduleMessageStatusRefresh({
-              chat: selectedChat,
-              externalMessageIds: [sendResult.messageId],
-            });
-          }
-          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-        } else {
-          const sendResult = await whatsappMediaRepository.sendRemote({
-            chatId: selectedChat?.external_chat_id || '',
-            kind: localRetryPayload.mediaKind,
-            remoteUrl: localRetryPayload.remoteUrl,
-            fileName: localRetryPayload.fileName,
-            mimeType: localRetryPayload.mimeType,
-            caption: localRetryPayload.caption,
-            clientRequestId: retryClientRequestId,
-          });
-          patchLocalOutgoingMessage(message.id, {
-            external_message_id: sendResult.messageId,
-            delivery_status: sendResult.status,
-            status_updated_at: new Date().toISOString(),
-            error_message: null,
-          });
-          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-            scheduleMessageStatusRefresh({
-              chat: selectedChat,
-              externalMessageIds: [sendResult.messageId],
-            });
-          }
-          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-        }
-
-        if (!keepRetryPayload) {
-          localOutgoingRetryPayloadRef.current.delete(message.id);
-        }
-        if (selectedChat) {
-          await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-        }
-        return;
-      }
-
-      if (!message.media_id) {
-        removeLocalOutgoingMessage(message.id);
-        toast.error('Não foi possível reenviar esta mensagem local.');
-        return;
-      }
-
-      await whatsappMediaRepository.retry(message.id, {
-        clientRequestId: createClientRequestId(),
+        await Promise.all([loadMessages(targetChat, 'send'), loadChats()]);
       });
-      if (selectedChat) {
-        await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-      }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao reenviar mensagem', error);
       const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
@@ -7055,11 +7058,9 @@ export default function WhatsAppInboxScreen() {
           error_message: 'Envio ainda em confirmação. Evite reenviar por enquanto.',
         });
         toast.info('Envio ainda em confirmação. Aguarde antes de reenviar.');
-        if (selectedChat) {
-          void Promise.all([loadMessages(selectedChat, 'send'), loadChats()]).catch((refreshError) => {
-            console.error('[WhatsAppInbox] erro ao atualizar conversa apos timeout de reenvio', refreshError);
-          });
-        }
+        void Promise.all([loadMessages(targetChat, 'send'), loadChats()]).catch((refreshError) => {
+          console.error('[WhatsAppInbox] erro ao atualizar conversa apos timeout de reenvio', refreshError);
+        });
         return;
       }
 

@@ -8689,6 +8689,9 @@ export default function WhatsAppInboxScreen() {
     if (deletingChatId) {
       return;
     }
+    if (!chatInboxActionLockRef.current.tryAcquire(chat.id)) {
+      return;
+    }
 
     setDeletingChatId(chat.id);
     try {
@@ -8713,6 +8716,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao excluir conversa', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível excluir esta conversa.');
     } finally {
+      chatInboxActionLockRef.current.release(chat.id);
       setDeletingChatId((current) => (current === chat.id ? null : current));
     }
   }, [buildChatsSignature, deletingChatId]);

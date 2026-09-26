@@ -329,12 +329,17 @@ export async function markLeadLostFromAgenda(params: {
 export function subscribeToReminderChanges(
   onChange: (change: ReminderRealtimeChange) => void,
 ): () => void {
+  let active = true;
   const channel = databaseClient
     .channel(`agenda-reminders-changes-${crypto.randomUUID()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'reminders' },
       (payload: RealtimePostgresChangesPayload<Reminder>) => {
+        if (!active) {
+          return;
+        }
+
         onChange({
           eventType: payload.eventType,
           current: payload.eventType === 'DELETE' ? null : normalizeReminder(payload.new),
@@ -346,6 +351,7 @@ export function subscribeToReminderChanges(
     .subscribe();
 
   return () => {
+    active = false;
     void databaseClient.removeChannel(channel);
   };
 }

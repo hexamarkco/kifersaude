@@ -105,6 +105,7 @@ export default function DependentForm({
   );
   const [formData, setFormData] = useState<DependentFormState>(initialFormData);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
   const lastFetchedCpfKeyRef = useRef('');
@@ -216,6 +217,9 @@ export default function DependentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -249,13 +253,14 @@ export default function DependentForm({
       console.error('Erro ao salvar dependente:', error);
       toast.error('Erro ao salvar dependente.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="md">
-      <DialogHeader onClose={onClose}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="md">
+      <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
         <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
       </DialogHeader>
@@ -385,7 +390,7 @@ export default function DependentForm({
       </form>
       </DialogBody>
       <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onClose}>
+        <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button type="submit" form="dependent-form" loading={saving}>

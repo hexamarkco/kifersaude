@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   saveContractValueAdjustment,
   type ContractValueAdjustment,
@@ -39,10 +39,12 @@ export default function ValueAdjustmentForm({
     motivo: adjustment?.motivo || '',
   });
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
 
     if (!formData.motivo.trim()) {
       setError('O motivo é obrigatório');
@@ -54,6 +56,7 @@ export default function ValueAdjustmentForm({
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     setError('');
 
@@ -73,13 +76,14 @@ export default function ValueAdjustmentForm({
       console.error('Erro ao salvar ajuste:', error);
       setError('Erro ao salvar ajuste. Tente novamente.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
-      <DialogHeader onClose={onClose}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm">
+      <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>
       <DialogBody>
@@ -151,6 +155,7 @@ export default function ValueAdjustmentForm({
           type="button"
           onClick={onClose}
           variant="ghost"
+          disabled={saving}
         >
           Cancelar
         </Button>

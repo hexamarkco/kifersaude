@@ -141,6 +141,7 @@ export default function HolderForm({
   );
   const [formData, setFormData] = useState<HolderFormState>(initialFormData);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [holders, setHolders] = useState<ContractHolder[]>([]);
   const [selectedHolderId, setSelectedHolderId] = useState<string | null>(holder?.id || null);
   const [showDependentForm, setShowDependentForm] = useState(false);
@@ -448,6 +449,9 @@ export default function HolderForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -506,14 +510,15 @@ export default function HolderForm({
       console.error('Erro ao salvar titular:', error);
       toast.error('Erro ao salvar titular.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   return (
     <>
-      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
-        <DialogHeader onClose={onClose}>
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl">
+        <DialogHeader onClose={saving ? undefined : onClose}>
           <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
           <DialogDescription>
             Cadastre os dados pessoais, de contato e de elegibilidade do titular.
@@ -829,7 +834,7 @@ export default function HolderForm({
         </form>
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
           <Button type="submit" form="holder-form" loading={saving}>

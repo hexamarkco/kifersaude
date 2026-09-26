@@ -23,7 +23,7 @@ export type InboxMessageNotificationCallback = (notification: InboxMessageNotifi
 
 const RECENT_INBOX_MESSAGE_THRESHOLD_MS = 5 * 60 * 1000;
 
-class NotificationService {
+export class NotificationService {
   private callbacks: NotificationCallback[] = [];
   private leadCallbacks: LeadNotificationCallback[] = [];
   private unreadCountCallbacks: UnreadCountCallback[] = [];
@@ -36,6 +36,7 @@ class NotificationService {
   private isChecking = false;
   private leadChannelSubscription: RealtimeChannel | null = null;
   private inboxChannelSubscription: RealtimeChannel | null = null;
+  private inboxSubscriptionRequestId = 0;
   private lastUnreadCount = 0;
   private lastInboxUnreadCount = 0;
 
@@ -133,8 +134,13 @@ class NotificationService {
       return;
     }
 
+    const requestId = ++this.inboxSubscriptionRequestId;
     void whatsappConversationsRepository.getOperationalState()
       .then((state) => {
+        if (requestId !== this.inboxSubscriptionRequestId || this.intervalId === null || this.inboxChannelSubscription !== null) {
+          return;
+        }
+
         const channelId = state?.channel?.id;
         if (!channelId) return;
 
@@ -167,6 +173,7 @@ class NotificationService {
   }
 
   private stopInboxMessageNotifications() {
+    this.inboxSubscriptionRequestId += 1;
     if (this.inboxChannelSubscription !== null) {
       supabase.removeChannel(this.inboxChannelSubscription);
       this.inboxChannelSubscription = null;

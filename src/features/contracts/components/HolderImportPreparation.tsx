@@ -223,7 +223,17 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
         Preparar titular para importação
       </Button>
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : close())} size="wide">
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setOpen(true);
+          } else if (!saving) {
+            close();
+          }
+        }}
+        size="wide"
+      >
         <DialogHeader>
           <DialogTitle>Preparar titular para importação</DialogTitle>
           <DialogDescription>

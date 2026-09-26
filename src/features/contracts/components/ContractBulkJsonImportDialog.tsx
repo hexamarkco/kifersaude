@@ -125,12 +125,13 @@ export function ContractBulkJsonImportDialog({
             type="file"
             accept="application/json,.json"
             className="sr-only"
+            disabled={loading || importing}
             onChange={(event) => {
               selectFile(event.target.files?.[0]);
               event.target.value = '';
             }}
           />
-          <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => inputRef.current?.click()}>
+          <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => inputRef.current?.click()} disabled={loading || importing}>
             Selecionar arquivo JSON
           </Button>
         </div>

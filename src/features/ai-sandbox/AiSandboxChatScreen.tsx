@@ -429,13 +429,14 @@ export default function AiSandboxChatScreen() {
 
       if (!conversationId) {
         const conversation = await aiSandboxChatService.createConversation(text, user.id);
+        if (requestId !== sendRequestIdRef.current || activeConversationIdRef.current !== originConversationId) {
+          return;
+        }
         conversationId = conversation.id;
         invalidateConversationsLoad();
         setConversations((prev) => [conversation, ...prev]);
-        if (requestId === sendRequestIdRef.current && activeConversationIdRef.current === originConversationId) {
-          activeConversationIdRef.current = conversation.id;
-          setActiveConversationId(conversation.id);
-        }
+        activeConversationIdRef.current = conversation.id;
+        setActiveConversationId(conversation.id);
       }
 
       const leadMessage = await aiSandboxChatService.appendLeadMessage(conversationId, text);

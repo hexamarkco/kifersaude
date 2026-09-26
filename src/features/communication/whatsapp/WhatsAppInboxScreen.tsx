@@ -2433,6 +2433,7 @@ export default function WhatsAppInboxScreen() {
   const contactSaveLockRef = useRef(new KeyedActionLock());
   const savedContactsLoadMoreLockRef = useRef(new KeyedActionLock());
   const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
+  const olderMessagesLoadLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
@@ -6381,6 +6382,10 @@ export default function WhatsAppInboxScreen() {
     }
 
     const targetChatId = selectedChat.id;
+    if (!olderMessagesLoadLockRef.current.tryAcquire(targetChatId)) {
+      return;
+    }
+
     const requestId = ++olderMessagesRequestIdRef.current;
     const oldestMessage = latestMessagesRef.current[0];
     const container = messagesContainerRef.current;
@@ -6422,6 +6427,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar mensagens antigas', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mensagens mais antigas.');
     } finally {
+      olderMessagesLoadLockRef.current.release(targetChatId);
       if (requestId === olderMessagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setLoadingOlderMessages(false);
       }

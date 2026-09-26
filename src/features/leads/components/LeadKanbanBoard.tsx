@@ -140,12 +140,19 @@ export default function LeadKanbanBoard({
     void loadLeads();
 
     if (leads) {
-      return;
+      return () => {
+        loadLeadsRequestIdRef.current += 1;
+      };
     }
 
-    return subscribeToLeadChanges(() => {
+    const unsubscribe = subscribeToLeadChanges(() => {
       void loadLeads();
     });
+
+    return () => {
+      loadLeadsRequestIdRef.current += 1;
+      unsubscribe();
+    };
   }, [leads, loadLeads]);
 
   useEffect(() => {

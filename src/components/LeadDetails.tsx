@@ -55,6 +55,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const timelineRequestIdRef = useRef(0);
+  const timelineMountedRef = useRef(false);
   const [formData, setFormData] = useState({
     tipo: 'Observação',
     descricao: '',
@@ -112,6 +113,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   }, [lead.id, lead.favorito]);
 
   const loadLeadTimeline = useCallback(async () => {
+    if (!timelineMountedRef.current) {
+      return;
+    }
+
     const requestId = timelineRequestIdRef.current + 1;
     timelineRequestIdRef.current = requestId;
     setLoading(true);
@@ -137,7 +142,12 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   }, [lead.id]);
 
   useEffect(() => {
+    timelineMountedRef.current = true;
     void loadLeadTimeline();
+    return () => {
+      timelineMountedRef.current = false;
+      timelineRequestIdRef.current += 1;
+    };
   }, [loadLeadTimeline]);
 
   const handleAddInteraction = async (e: React.FormEvent) => {
@@ -148,7 +158,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
       setFormData({ tipo: 'Observação', descricao: '', responsavel: 'Luiza' });
       setShowForm(false);
-      loadLeadTimeline();
+      void loadLeadTimeline();
       onUpdate();
     } catch (error) {
       console.error('Erro ao adicionar interação:', error);

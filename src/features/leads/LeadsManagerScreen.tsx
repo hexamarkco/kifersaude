@@ -415,6 +415,9 @@ export default function LeadsManager({
 
   useEffect(() => {
     void fetchContractsForLeads(leads.map((lead) => lead.id));
+    return () => {
+      contractsRequestIdRef.current += 1;
+    };
   }, [fetchContractsForLeads, leads]);
 
   useEffect(() => {
@@ -1237,7 +1240,11 @@ export default function LeadsManager({
   useEffect(() => {
     const unsubscribe = subscribeToLeadChanges(handleRealtimeLeadChange);
     void loadLeads();
-    return unsubscribe;
+    return () => {
+      leadsRequestIdRef.current += 1;
+      contractsRequestIdRef.current += 1;
+      unsubscribe();
+    };
   }, [handleRealtimeLeadChange, loadLeads]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, RefreshCcw, Sparkles, Trash2 } from "lucide-react";
 
 import {
@@ -32,6 +32,8 @@ export function MessageListEditor({
 }: MessageListEditorProps) {
   const [preview, setPreview] = useState<{ index: number; text: string } | null>(null);
   const [previewingIndex, setPreviewingIndex] = useState<number | null>(null);
+  const messageKeyCounterRef = useRef(0);
+  const messageKeysRef = useRef<{ stepId: string; keys: string[] }>({ stepId: step.id, keys: [] });
   const currentMessages = useMemo<MessageListItem[]>(() => {
     if (Array.isArray(step.messages) && step.messages.length > 0) {
       return step.messages.map((item) => ({ ...item }));
@@ -43,7 +45,20 @@ export function MessageListEditor({
       return [{ templateId: step.templateId }];
     }
     return [{ templateId: "" }];
-  }, [step.messages, step.messageSource, step.customMessage, step.templateId]);
+  }, [step.customMessage, step.messageSource, step.messages, step.templateId]);
+
+  const getCurrentMessageKeys = () => {
+    if (messageKeysRef.current.stepId !== step.id) {
+      messageKeysRef.current = { stepId: step.id, keys: [] };
+    }
+
+    while (messageKeysRef.current.keys.length < currentMessages.length) {
+      messageKeysRef.current.keys.push(`message-${messageKeyCounterRef.current++}`);
+    }
+
+    messageKeysRef.current.keys.length = currentMessages.length;
+    return messageKeysRef.current.keys;
+  };
 
   const updateItem = (index: number, item: MessageListItem) => {
     const next = currentMessages.map((entry, i) => (i === index ? item : entry));
@@ -51,20 +66,26 @@ export function MessageListEditor({
   };
 
   const removeItem = (index: number) => {
+    getCurrentMessageKeys().splice(index, 1);
     onUpdate(currentMessages.filter((_, i) => i !== index));
   };
 
   const moveItem = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= currentMessages.length) return;
+    const keys = getCurrentMessageKeys();
+    [keys[index], keys[target]] = [keys[target], keys[index]];
     const next = [...currentMessages];
     [next[index], next[target]] = [next[target], next[index]];
     onUpdate(next);
   };
 
   const addItem = () => {
+    getCurrentMessageKeys().push(`message-${messageKeyCounterRef.current++}`);
     onUpdate([...currentMessages, { templateId: "" }]);
   };
+
+  const messageKeys = getCurrentMessageKeys();
 
   return (
     <div className="space-y-2">
@@ -73,7 +94,7 @@ export function MessageListEditor({
         const isAi = "ai" in item;
         return (
           <div
-            key={`msg-${index}`}
+            key={messageKeys[index]}
             className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2"
           >
             <div className="mb-1 flex items-center justify-between gap-1">

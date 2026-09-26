@@ -2424,6 +2424,8 @@ export default function WhatsAppInboxScreen() {
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const chatInboxActionLockRef = useRef(new KeyedActionLock());
+  const autonomousAttendanceLockRef = useRef(new KeyedActionLock());
+  const contactSaveLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
@@ -7855,24 +7857,29 @@ export default function WhatsAppInboxScreen() {
     }
     if (!selectedChat) return;
 
-    const isRenaming = Boolean(selectedChat.saved_contact_name?.trim());
+    const targetChat = selectedChat;
+    if (!contactSaveLockRef.current.tryAcquire(targetChat.id)) {
+      return;
+    }
+
+    const isRenaming = Boolean(targetChat.saved_contact_name?.trim());
 
     setSavingContact(true);
     try {
       if (isRenaming) {
         await whatsappContactsRepository.rename({
-          phoneNumber: selectedChat.phone_number,
+          phoneNumber: targetChat.phone_number,
           displayName: name,
         });
         toast.success('Contato renomeado com sucesso.');
       } else {
         await whatsappContactsRepository.save({
-          phoneNumber: selectedChat.phone_number,
+          phoneNumber: targetChat.phone_number,
           displayName: name,
         });
         toast.success('Contato salvo com sucesso.');
       }
-      const phoneKeys = collectPhoneLookupKeys(selectedChat.phone_digits || selectedChat.phone_number);
+      const phoneKeys = collectPhoneLookupKeys(targetChat.phone_digits || targetChat.phone_number);
       const savedContactMap = new Map(savedContactNameByPhoneRef.current);
       const savedContactOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
       phoneKeys.forEach((key) => {
@@ -7890,6 +7897,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao salvar contato', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato.');
     } finally {
+      contactSaveLockRef.current.release(targetChat.id);
       setSavingContact(false);
     }
   }, [applyFrontendSavedContactNames, saveContactName, selectedChat, loadChats, refreshStartChatSources, startChatQuery]);
@@ -8556,7 +8564,7 @@ export default function WhatsAppInboxScreen() {
   }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);
 
   const handleDeactivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
-    if (assumingControlChatId) {
+    if (assumingControlChatId || !autonomousAttendanceLockRef.current.tryAcquire(chat.id)) {
       return;
     }
 
@@ -8569,12 +8577,13 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao desativar atendimento autonomo', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível desativar o atendimento autônomo desta conversa.');
     } finally {
+      autonomousAttendanceLockRef.current.release(chat.id);
       setAssumingControlChatId((current) => (current === chat.id ? null : current));
     }
   }, [assumingControlChatId, upsertChatLocally]);
 
   const handleActivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
-    if (assumingControlChatId) {
+    if (assumingControlChatId || !autonomousAttendanceLockRef.current.tryAcquire(chat.id)) {
       return;
     }
 
@@ -8587,6 +8596,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao ativar atendimento autonomo', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível ativar o atendimento autônomo desta conversa.');
     } finally {
+      autonomousAttendanceLockRef.current.release(chat.id);
       setAssumingControlChatId((current) => (current === chat.id ? null : current));
     }
   }, [assumingControlChatId, upsertChatLocally]);

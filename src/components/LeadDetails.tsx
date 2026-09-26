@@ -7,7 +7,7 @@ import {
   type LeadTimelineReminder,
   type LeadTimelineStatusHistory,
 } from '../features/leads';
-import { MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle } from 'lucide-react';
+import { AlertCircle, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle, RefreshCw } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -16,6 +16,7 @@ import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
   Badge,
   Button,
+  Alert,
   EmptyState,
   Field,
   LoadingState,
@@ -53,6 +54,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   const [statusHistory, setStatusHistory] = useState<LeadTimelineStatusHistory[]>([]);
   const [reminders, setReminders] = useState<LeadTimelineReminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timelineLoadError, setTimelineLoadError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const timelineRequestIdRef = useRef(0);
   const timelineMountedRef = useRef(false);
@@ -120,6 +122,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     const requestId = timelineRequestIdRef.current + 1;
     timelineRequestIdRef.current = requestId;
     setLoading(true);
+    setTimelineLoadError(false);
 
     try {
       const timeline = await getLeadTimeline(lead.id);
@@ -133,6 +136,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     } catch (error) {
       if (requestId === timelineRequestIdRef.current) {
         console.error('Erro ao carregar interações:', error);
+        setTimelineLoadError(true);
       }
     } finally {
       if (requestId === timelineRequestIdRef.current) {
@@ -255,6 +259,26 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
           />
           {loading ? (
             <LoadingState compact label="Carregando linha do tempo" className="py-8" />
+          ) : timelineLoadError ? (
+            <Alert tone="danger" role="alert" className="items-start">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Não foi possível carregar o histórico deste lead.</p>
+                  <p className="mt-1 text-sm">Os dados não estão disponíveis no momento. Tente novamente.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => void loadLeadTimeline()}
+                  >
+                    <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                    Tentar novamente
+                  </Button>
+                </div>
+              </div>
+            </Alert>
           ) : timelineEvents.length === 0 ? (
             <EmptyState
               icon={<History className="h-8 w-8" />}
@@ -375,6 +399,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
 
         {loading ? (
           <LoadingState compact label="Carregando interações" className="py-12" />
+        ) : timelineLoadError ? (
+          <p className="py-8 text-sm text-[var(--text-muted)]">
+            As interações não estão disponíveis enquanto o histórico não for carregado.
+          </p>
         ) : interactions.length === 0 ? (
           <EmptyState
             icon={<MessageCircle className="h-10 w-10" />}

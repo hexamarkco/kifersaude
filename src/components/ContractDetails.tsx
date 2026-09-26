@@ -26,6 +26,7 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useConfig } from "../contexts/ConfigContext";
@@ -34,6 +35,7 @@ import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
 import {
   Badge,
+  Alert,
   Button,
   Dialog,
   DialogBody,
@@ -115,6 +117,8 @@ export default function ContractDetails({
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [documentsLoadError, setDocumentsLoadError] = useState(false);
   const dataRequestIdRef = useRef(0);
   const eligibleLivesUpdateRequestIdRef = useRef(0);
   const [showHolderForm, setShowHolderForm] = useState(false);
@@ -349,6 +353,8 @@ export default function ContractDetails({
     const requestId = dataRequestIdRef.current + 1;
     dataRequestIdRef.current = requestId;
     setLoading(true);
+    setLoadError(false);
+    setDocumentsLoadError(false);
 
     try {
       const snapshot = await getContractDetailsSnapshot(contract.id);
@@ -366,12 +372,16 @@ export default function ContractDetails({
 
       if (snapshot.documentsError) {
         console.error("Erro ao carregar documentos:", snapshot.documentsError);
+        setDocuments([]);
+        setDocumentsLoadError(true);
       } else {
         setDocuments(snapshot.documents);
+        setDocumentsLoadError(false);
       }
     } catch (error) {
       if (requestId === dataRequestIdRef.current) {
         console.error("Erro ao carregar dados:", error);
+        setLoadError(true);
       }
     } finally {
       if (requestId === dataRequestIdRef.current) {
@@ -751,6 +761,38 @@ export default function ContractDetails({
         </DialogHeader>
         <DialogBody className="flex min-h-[260px] items-center justify-center">
           <LoadingState label="Carregando dados do contrato" />
+        </DialogBody>
+      </Dialog>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+        <DialogHeader onClose={onClose}>
+          <DialogTitle>{contract.codigo_contrato}</DialogTitle>
+          <DialogDescription>Não foi possível carregar os dados atualizados do contrato.</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex min-h-[260px] items-center justify-center">
+          <Alert tone="danger" role="alert" className="w-full max-w-xl items-start">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">Não foi possível carregar este contrato.</p>
+                <p className="mt-1 text-sm">Nenhum dado foi considerado vazio. Tente novamente para buscar as informações mais recentes.</p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => void loadData()}
+                >
+                  <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                  Tentar novamente
+                </Button>
+              </div>
+            </div>
+          </Alert>
         </DialogBody>
       </Dialog>
     );
@@ -1478,6 +1520,27 @@ export default function ContractDetails({
               {documents.length} arquivo(s)
             </span>
           </div>
+          {documentsLoadError ? (
+            <Alert tone="danger" role="alert" className="items-start">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">Não foi possível carregar os documentos.</p>
+                  <p className="mt-1 text-sm">Os documentos não foram considerados ausentes.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => void loadData()}
+                  >
+                    <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                    Tentar novamente
+                  </Button>
+                </div>
+              </div>
+            </Alert>
+          ) : (
           <div className="space-y-4">
             {holders.map((holderItem) => (
               <div
@@ -1507,6 +1570,7 @@ export default function ContractDetails({
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div className="mb-6">

@@ -53,6 +53,11 @@ export async function getContractDetailsSnapshot(
         .overrideTypes<ContractValueAdjustment[], { merge: false }>(),
     ]);
 
+  if (holdersResult.error) throw holdersResult.error;
+  if (dependentsResult.error) throw dependentsResult.error;
+  if (interactionsResult.error) throw interactionsResult.error;
+  if (adjustmentsResult.error) throw adjustmentsResult.error;
+
   const holders = holdersResult.data ?? [];
   const dependents = dependentsResult.data ?? [];
   const entityIds = [

@@ -322,6 +322,8 @@ export default function WhatsAppCampaignsScreen() {
   const campaignListRequestIdRef = useRef(0);
   const campaignEditRequestIdRef = useRef(0);
   const activationPreviewRequestIdRef = useRef(0);
+  const campaignMutationLockRef = useRef(false);
+  const testMessageLockRef = useRef(false);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -454,6 +456,7 @@ export default function WhatsAppCampaignsScreen() {
 
   const closeCampaignModal = () => {
     campaignEditRequestIdRef.current += 1;
+    setCampaignActionId(null);
     setCampaignModalOpen(false);
     resetCampaignForm();
   };
@@ -565,12 +568,13 @@ export default function WhatsAppCampaignsScreen() {
     } finally {
       if (requestId === campaignEditRequestIdRef.current) {
         setLoadingCampaignEdit(false);
+        setCampaignActionId(null);
       }
     }
   };
 
   const handleCreateDraft = async () => {
-    if (saving) return;
+    if (saving || campaignMutationLockRef.current) return;
     if (!name.trim()) {
       toast.warning('Informe um nome para o disparo.');
       return;
@@ -592,6 +596,7 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
+    campaignMutationLockRef.current = true;
     setSaving(true);
     setCsvSaveProgress(null);
     try {
@@ -682,6 +687,7 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o disparo.');
     } finally {
+      campaignMutationLockRef.current = false;
       setSaving(false);
       setCsvSaveProgress(null);
     }
@@ -816,11 +822,13 @@ export default function WhatsAppCampaignsScreen() {
 
   const handleSendTest = async () => {
     if (!editingCampaign) return;
+    if (testMessageLockRef.current) return;
     if (!testPhoneNumber.trim()) {
       toast.warning('Informe um telefone para o envio de teste.');
       return;
     }
 
+    testMessageLockRef.current = true;
     setSendingTest(true);
     try {
       await commWhatsAppCampaignService.sendTestMessage(editingCampaign.id, testPhoneNumber, 0, 'A');
@@ -828,6 +836,7 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar a mensagem de teste.');
     } finally {
+      testMessageLockRef.current = false;
       setSendingTest(false);
     }
   };
@@ -863,6 +872,8 @@ export default function WhatsAppCampaignsScreen() {
 
   const handleConfirmActivateCampaign = async () => {
     if (!activationPreview) return;
+    if (campaignMutationLockRef.current) return;
+    campaignMutationLockRef.current = true;
     setCampaignActionId(activationPreview.campaign.id);
     try {
       const result = await commWhatsAppCampaignService.activateCampaign(activationPreview.campaign.id);
@@ -872,11 +883,14 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível ativar o disparo.');
     } finally {
+      campaignMutationLockRef.current = false;
       setCampaignActionId(null);
     }
   };
 
   const handleProcessCampaign = async (campaign: CommWhatsAppCampaign) => {
+    if (campaignMutationLockRef.current) return;
+    campaignMutationLockRef.current = true;
     setCampaignActionId(campaign.id);
     try {
       const result = await commWhatsAppCampaignService.processCampaign(campaign.id);
@@ -885,12 +899,15 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível processar o disparo.');
     } finally {
+      campaignMutationLockRef.current = false;
       setCampaignActionId(null);
     }
   };
 
   const handleDeleteCampaign = async () => {
     if (!campaignPendingDelete) return;
+    if (campaignMutationLockRef.current) return;
+    campaignMutationLockRef.current = true;
     setDeletingCampaign(true);
     try {
       await commWhatsAppCampaignService.deleteCampaign(campaignPendingDelete.id);
@@ -900,11 +917,14 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível excluir o disparo.');
     } finally {
+      campaignMutationLockRef.current = false;
       setDeletingCampaign(false);
     }
   };
 
   const handleAcceptSuggestion = async (suggestion: CommWhatsAppAiIntentSuggestion) => {
+    if (campaignMutationLockRef.current) return;
+    campaignMutationLockRef.current = true;
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.acceptAiSuggestion(suggestion);
@@ -913,11 +933,14 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível bloquear este contato.');
     } finally {
+      campaignMutationLockRef.current = false;
       setSuggestionActionId(null);
     }
   };
 
   const handleDismissSuggestion = async (suggestion: CommWhatsAppAiIntentSuggestion) => {
+    if (campaignMutationLockRef.current) return;
+    campaignMutationLockRef.current = true;
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.dismissAiSuggestion(suggestion.id);
@@ -926,6 +949,7 @@ export default function WhatsAppCampaignsScreen() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível dispensar a sugestão.');
     } finally {
+      campaignMutationLockRef.current = false;
       setSuggestionActionId(null);
     }
   };
@@ -1716,7 +1740,7 @@ export default function WhatsAppCampaignsScreen() {
                     </Button>
                     <Button size="sm" variant="ghost" loading={loadingCampaignEdit && campaignActionId === campaign.id} onClick={() => {
                       setCampaignActionId(campaign.id);
-                      void openEditCampaignModal(campaign).finally(() => setCampaignActionId(null));
+                      void openEditCampaignModal(campaign);
                     }}>
                       {!(loadingCampaignEdit && campaignActionId === campaign.id) && <Pencil className="kds-control-icon" />}
                       Editar

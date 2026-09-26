@@ -29,6 +29,9 @@ export type DashboardCalendarSnapshot = {
   dependents: Dependent[];
 };
 
+const DASHBOARD_LEAD_SELECT =
+  'id, nome_completo, telefone, email, cep, endereco, cidade, regiao, estado, origem_id, tipo_contratacao_id, status_id, responsavel_id, operadora_atual, status, data_criacao, ultimo_contato, proximo_retorno, observacoes, blackout_dates, daily_send_limit, skip_automation, arquivado, favorito, created_at, updated_at, canal';
+
 export type DashboardRealtimePayload<T> = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
   new: T | null;
@@ -64,7 +67,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
   const [leads, contracts] = await Promise.all([
     fetchAllPages<Lead>(async (from, to) => databaseClient
       .from('leads')
-      .select('*')
+      .select(DASHBOARD_LEAD_SELECT)
       .order('created_at', { ascending: false })
       .range(from, to)
       .overrideTypes<Lead[], { merge: false }>()),

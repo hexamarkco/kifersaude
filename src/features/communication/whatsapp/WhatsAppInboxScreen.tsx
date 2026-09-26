@@ -2448,6 +2448,7 @@ export default function WhatsAppInboxScreen() {
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
   const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
+  const localOutgoingMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
@@ -2496,6 +2497,10 @@ export default function WhatsAppInboxScreen() {
   const selectedChatIdRef = useRef<string | null>(null);
   const suppressAutoChatSelectionRef = useRef(false);
   const historyRecoveryCursorByChatIdRef = useRef<Map<string, { nextOffset: number; timeTo: number }>>(new Map());
+
+  useEffect(() => {
+    localOutgoingMessagesRef.current = localOutgoingMessages;
+  }, [localOutgoingMessages]);
   const historyRecoveryLockRef = useRef(new KeyedActionLock());
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
@@ -5965,6 +5970,23 @@ export default function WhatsAppInboxScreen() {
       archivedChatsCountRequestIdRef.current += 1;
       archivedSectionLoadRequestIdRef.current += 1;
       clearScheduledMessageStatusRefreshes();
+
+      for (const [messageId, previewUrl] of localOutgoingMediaPreviewUrlsRef.current.entries()) {
+        const message = localOutgoingMessagesRef.current.find((item) => item.id === messageId);
+        const externalMessageId = String(message?.external_message_id ?? '').trim();
+
+        if (externalMessageId) {
+          // A mensagem já recebeu ID do WhatsApp; o cache compartilhado assume
+          // a prévia por alguns segundos para não quebrar uma confirmação tardia.
+          whatsappMediaRepository.rememberLocalPreview(externalMessageId, previewUrl);
+        } else if (previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }
+
+      localOutgoingMediaPreviewUrlsRef.current.clear();
+      localOutgoingRetryPayloadRef.current.clear();
+      localOutgoingMessagesRef.current = [];
     },
     [clearScheduledMessageStatusRefreshes],
   );

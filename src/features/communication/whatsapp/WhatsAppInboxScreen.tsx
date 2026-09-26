@@ -2471,6 +2471,7 @@ export default function WhatsAppInboxScreen() {
   const operationalStateRequestIdRef = useRef(0);
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
+  const leadMutationRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const archivedChatsCountRequestIdRef = useRef(0);
   const archivedSectionLoadRequestIdRef = useRef(0);
@@ -4343,6 +4344,8 @@ export default function WhatsAppInboxScreen() {
   }, [openChatMenuChat, openChatMenuChatId]);
 
   useEffect(() => {
+    leadMutationRequestIdRef.current += 1;
+    setLinkLoadingLeadId(null);
     setThreadActionsMenuOpen(false);
   }, [selectedChatId]);
 
@@ -7401,21 +7404,36 @@ export default function WhatsAppInboxScreen() {
     const targetChatId = createLeadDraft?.chatId;
     setCreateLeadDraft(null);
 
-    if (!targetChatId || selectedChat?.is_group) {
+    if (!targetChatId) {
       return;
     }
+
+    const requestId = ++leadMutationRequestIdRef.current;
 
     try {
       const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, lead.id);
       upsertChatLocally(updatedChat);
-      setSelectedChatId(updatedChat.id);
-      await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
+
+      const isCurrentTarget = requestId === leadMutationRequestIdRef.current
+        && selectedChatIdRef.current === targetChatId;
+      if (isCurrentTarget) {
+        setSelectedChatId(updatedChat.id);
+        await loadLeadPanel(updatedChat);
+      }
+      await loadChats();
+
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       toast.success('Lead criado e vinculado a conversa.');
     } catch (error) {
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao vincular lead criado no chat', error);
       toast.error('Lead criado, mas não foi possível vinculá-lo ao chat.');
     }
-  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, selectedChat?.is_group, upsertChatLocally]);
+  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, upsertChatLocally]);
 
   const handleLinkLead = useCallback(async (leadId: string) => {
     if (!selectedChat || selectedChat.is_group) {
@@ -7423,21 +7441,31 @@ export default function WhatsAppInboxScreen() {
     }
 
     const targetChatId = selectedChat.id;
+    const requestId = ++leadMutationRequestIdRef.current;
     setLinkLoadingLeadId(leadId);
     try {
       const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, leadId);
       upsertChatLocally(updatedChat);
-      if (selectedChatIdRef.current === targetChatId) {
+      if (requestId === leadMutationRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setSelectedChatId(updatedChat.id);
         await loadLeadPanel(updatedChat);
       }
       await loadChats();
+
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       toast.success('Lead vinculado a conversa.');
     } catch (error) {
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao vincular lead', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível vincular o lead ao chat.');
     } finally {
-      setLinkLoadingLeadId(null);
+      if (requestId === leadMutationRequestIdRef.current) {
+        setLinkLoadingLeadId((current) => (current === leadId ? null : current));
+      }
     }
   }, [loadChats, loadLeadPanel, selectedChat, upsertChatLocally]);
 
@@ -7446,15 +7474,25 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const targetChatId = selectedChat.id;
+    const requestId = ++leadMutationRequestIdRef.current;
+
     try {
-      const updatedChat = await whatsappContactsRepository.unlinkLead(selectedChat.id);
+      const updatedChat = await whatsappContactsRepository.unlinkLead(targetChatId);
       upsertChatLocally(updatedChat);
+
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       setLeadPanel(null);
       setLeadContracts([]);
       setLeadContractsError(null);
       setLeadSearchQuery('');
       toast.success('Lead desvinculado da conversa.');
     } catch (error) {
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao desvincular lead', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível desvincular o lead do chat.');
     }
@@ -7466,6 +7504,8 @@ export default function WhatsAppInboxScreen() {
     }
 
     const normalizedStatus = normalizeLeadStatusLabel(newStatus);
+    const targetChatId = selectedChat.id;
+    const requestId = ++leadMutationRequestIdRef.current;
     const statusReminderLeadSnapshot = {
       id: leadPanel.id,
       nome_completo: leadPanel.nome_completo,
@@ -7474,7 +7514,12 @@ export default function WhatsAppInboxScreen() {
     } satisfies Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
 
     try {
-      await whatsappContactsRepository.updateLeadStatus(selectedChat.id, newStatus);
+      await whatsappContactsRepository.updateLeadStatus(targetChatId, newStatus);
+
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        void loadChats();
+        return;
+      }
 
       if (shouldPromptFirstReminderAfterQuote(newStatus)) {
         setStatusReminderLead(statusReminderLeadSnapshot);
@@ -7490,6 +7535,9 @@ export default function WhatsAppInboxScreen() {
         loadChatAgendaSummary(leadPanel.id, leadContracts.map((contract) => contract.id)),
       ]);
     } catch (error) {
+      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao atualizar status do lead', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o status do lead.');
       throw error;
@@ -7501,7 +7549,12 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    await whatsappContactsRepository.updateLeadResponsible(selectedChat.id, responsavelValue);
+    const targetChatId = selectedChat.id;
+    const requestId = ++leadMutationRequestIdRef.current;
+    await whatsappContactsRepository.updateLeadResponsible(targetChatId, responsavelValue);
+    if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+      return;
+    }
     await loadLeadPanel(selectedChat);
   };
 

@@ -2422,6 +2422,7 @@ export default function WhatsAppInboxScreen() {
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
+  const chatInboxActionLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
@@ -8448,48 +8449,53 @@ export default function WhatsAppInboxScreen() {
       markAsUnread?: boolean | null;
     },
   ) => {
+    if (!chatInboxActionLockRef.current.tryAcquire(chat.id)) {
+      return;
+    }
+
     setUpdatingChatStateId(chat.id);
-
-    const fieldsOnlyPatch = stripPendingChatInboxMetadata(buildPendingChatInboxStatePatch(chat, options));
-    const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
-    const hasFieldsToApply = Object.keys(fieldsOnlyPatch).length > 0;
-    if (hasFieldsToApply) {
-      mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, pendingPatch);
-      upsertChatLocally({ ...chat, ...fieldsOnlyPatch });
-    }
-
-    if (options.markAsUnread === true && selectedChatIdRef.current === chat.id) {
-      manualUnreadSkipReadChatIdRef.current = chat.id;
-    }
-
-    // Ao desarquivar a conversa aberta dentro de Arquivadas, levamos o usuario
-    // de volta para Conversas mantendo o chat selecionado. Arquivar a conversa
-    // aberta na Inbox continua selecionando o proximo chat ativo.
-    const shouldMoveSelectedUnarchivedChatToActive = (
-      options.isArchived === false
-      && selectedChatIdRef.current === chat.id
-      && archivedSectionOpenRef.current
-    );
-    const shouldRotateSelection = (
-      typeof options.isArchived === 'boolean'
-      && selectedChatIdRef.current === chat.id
-      && !shouldMoveSelectedUnarchivedChatToActive
-      // se o usuario esta na secao "Arquivadas" e desarquivou, idem
-      && options.isArchived !== archivedSectionOpenRef.current
-    );
-
-    if (shouldMoveSelectedUnarchivedChatToActive) {
-      setArchivedSectionOpen(false);
-      void loadChats({ sections: ['active'] });
-    } else if (shouldRotateSelection) {
-      const nextChat = latestChatsRef.current.find((candidate) => (
-        candidate.id !== chat.id
-        && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
-      )) ?? null;
-      setSelectedChatId(nextChat?.id ?? null);
-    }
+    let hasFieldsToApply = false;
 
     try {
+      const fieldsOnlyPatch = stripPendingChatInboxMetadata(buildPendingChatInboxStatePatch(chat, options));
+      const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
+      hasFieldsToApply = Object.keys(fieldsOnlyPatch).length > 0;
+      if (hasFieldsToApply) {
+        mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, pendingPatch);
+        upsertChatLocally({ ...chat, ...fieldsOnlyPatch });
+      }
+
+      if (options.markAsUnread === true && selectedChatIdRef.current === chat.id) {
+        manualUnreadSkipReadChatIdRef.current = chat.id;
+      }
+
+      // Ao desarquivar a conversa aberta dentro de Arquivadas, levamos o usuario
+      // de volta para Conversas mantendo o chat selecionado. Arquivar a conversa
+      // aberta na Inbox continua selecionando o proximo chat ativo.
+      const shouldMoveSelectedUnarchivedChatToActive = (
+        options.isArchived === false
+        && selectedChatIdRef.current === chat.id
+        && archivedSectionOpenRef.current
+      );
+      const shouldRotateSelection = (
+        typeof options.isArchived === 'boolean'
+        && selectedChatIdRef.current === chat.id
+        && !shouldMoveSelectedUnarchivedChatToActive
+        // se o usuario esta na secao "Arquivadas" e desarquivou, idem
+        && options.isArchived !== archivedSectionOpenRef.current
+      );
+
+      if (shouldMoveSelectedUnarchivedChatToActive) {
+        setArchivedSectionOpen(false);
+        void loadChats({ sections: ['active'] });
+      } else if (shouldRotateSelection) {
+        const nextChat = latestChatsRef.current.find((candidate) => (
+          candidate.id !== chat.id
+          && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
+        )) ?? null;
+        setSelectedChatId(nextChat?.id ?? null);
+      }
+
       const updatedChat = await whatsappConversationsRepository.updateInboxState(chat.id, options);
 
       // Sanidade: confirma que o servidor refletiu o que pedimos. Caso
@@ -8529,6 +8535,7 @@ export default function WhatsAppInboxScreen() {
       }
       toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar esta conversa.');
     } finally {
+      chatInboxActionLockRef.current.release(chat.id);
       setUpdatingChatStateId((current) => (current === chat.id ? null : current));
     }
   }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);

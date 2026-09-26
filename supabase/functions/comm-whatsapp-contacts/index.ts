@@ -99,6 +99,40 @@ async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<t
   return (data?.last_synced_at as string | null | undefined) ?? null;
 }
 
+async function refreshChatIdentitiesForPhones(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  phoneNumbers: string[];
+}) {
+  const phoneDigits = Array.from(
+    new Set(
+      params.phoneNumbers
+        .flatMap((phoneNumber) => getCommWhatsAppPhoneLookupKeys(phoneNumber))
+        .filter(Boolean),
+    ),
+  );
+
+  if (phoneDigits.length === 0) {
+    return;
+  }
+
+  const { error } = await params.supabaseAdmin.rpc('comm_whatsapp_refresh_chat_identities_for_phones', {
+    p_channel_id: params.channelId,
+    p_phone_digits: phoneDigits,
+  });
+
+  if (error) {
+    console.error('[comm-whatsapp-contacts] falha ao atualizar identidade dos chats afetados', {
+      channelId: params.channelId,
+      phoneCount: phoneDigits.length,
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+  }
+}
+
 async function syncContactsToCache(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   channelId: string;
@@ -133,6 +167,7 @@ async function syncContactsToCache(params: {
   const manualOverridePhoneKeys = new Set(
     (manualOverrides ?? []).flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || '')),
   );
+  const affectedPhoneDigits = new Set(manualOverridePhoneKeys);
 
   const rows = fetchedContacts
     .filter((contact) => extractWhapiContactSaved(contact))
@@ -152,6 +187,8 @@ async function syncContactsToCache(params: {
       if (getCommWhatsAppPhoneLookupKeys(phoneNumber).some((key) => manualOverridePhoneKeys.has(key))) {
         return null;
       }
+
+      getCommWhatsAppPhoneLookupKeys(phoneNumber).forEach((key) => affectedPhoneDigits.add(key));
 
       return {
         channel_id: params.channelId,
@@ -192,7 +229,7 @@ async function syncContactsToCache(params: {
 
     const { data: existingIds, error: listError } = await params.supabaseAdmin
       .from('comm_whatsapp_phone_contacts_cache')
-      .select('contact_id')
+      .select('contact_id, phone_digits')
       .eq('channel_id', params.channelId)
       .not('contact_id', 'like', 'manual:%')
       .not('contact_id', 'like', 'chat:%');
@@ -201,9 +238,12 @@ async function syncContactsToCache(params: {
       throw new Error(`Erro ao listar cache de contatos do WhatsApp: ${listError.message}`);
     }
 
-    const staleIds = (existingIds ?? [])
-      .map((row) => row.contact_id)
-      .filter((id) => !syncedContactIds.has(id));
+    const staleRows = (existingIds ?? []).filter((row) => !syncedContactIds.has(row.contact_id));
+    const staleIds = staleRows.map((row) => row.contact_id);
+
+    staleRows
+      .flatMap((row) => getCommWhatsAppPhoneLookupKeys(row.phone_digits || ''))
+      .forEach((key) => affectedPhoneDigits.add(key));
 
     if (staleIds.length > 0) {
       const { error: cleanupError } = await params.supabaseAdmin
@@ -222,8 +262,10 @@ async function syncContactsToCache(params: {
     }
   }
 
-  await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
-    p_channel_id: params.channelId,
+  await refreshChatIdentitiesForPhones({
+    supabaseAdmin: params.supabaseAdmin,
+    channelId: params.channelId,
+    phoneNumbers: Array.from(affectedPhoneDigits),
   });
 }
 
@@ -378,8 +420,10 @@ async function saveContactToCache(params: {
     throw new Error(`Erro ao consolidar o contato salvo do WhatsApp: ${externalDuplicateError.message}`);
   }
 
-  await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
-    p_channel_id: params.channelId,
+  await refreshChatIdentitiesForPhones({
+    supabaseAdmin: params.supabaseAdmin,
+    channelId: params.channelId,
+    phoneNumbers: phoneLookupKeys,
   });
 
   return row;

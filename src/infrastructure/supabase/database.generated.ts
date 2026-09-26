@@ -8330,6 +8330,10 @@ export type Database = {
         Args: { p_channel_id: string }
         Returns: number
       }
+      comm_whatsapp_refresh_chat_identities_for_phones: {
+        Args: { p_channel_id: string; p_phone_digits: string[] }
+        Returns: number
+      }
       comm_whatsapp_refresh_chat_identity: {
         Args: { p_chat_id: string }
         Returns: {

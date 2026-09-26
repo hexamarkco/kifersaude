@@ -67,7 +67,10 @@ export const useChatMessageSearch = ({ chatId, enabled, query }: UseChatMessageS
       });
     }, 250);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(timeoutId);
+      requestIdRef.current += 1;
+    };
   }, [chatId, enabled, query, retryNonce]);
 
   const retry = useCallback(() => {

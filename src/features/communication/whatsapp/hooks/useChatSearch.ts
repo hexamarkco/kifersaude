@@ -102,6 +102,10 @@ export const useChatSearch = ({
         setSearchingChats(false);
       }
     });
+
+    return () => {
+      chatSearchRequestIdRef.current += 1;
+    };
   }, [
     activityFilter,
     leadStatusFilters,
@@ -155,6 +159,10 @@ export const useChatSearch = ({
         setSearchingMessages(false);
       }
     });
+
+    return () => {
+      messageSearchRequestIdRef.current += 1;
+    };
   }, [search, searchRetryNonce, setSearch]);
 
   const retrySearch = useCallback(() => {

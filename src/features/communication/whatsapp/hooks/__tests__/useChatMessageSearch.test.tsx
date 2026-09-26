@@ -8,6 +8,7 @@ import { useChatMessageSearch } from '../useChatMessageSearch';
 type AsyncMock = {
   (...args: unknown[]): Promise<unknown>;
   mock: { calls: unknown[][] };
+  mockImplementation(implementation: (...args: unknown[]) => Promise<unknown>): AsyncMock;
   mockReset: () => AsyncMock;
   mockRejectedValueOnce: (error: unknown) => AsyncMock;
   mockResolvedValue: (value: unknown) => AsyncMock;
@@ -90,4 +91,35 @@ test('permite repetir a busca dentro do chat', async () => {
   assert.equal(mocks.searchMessages.mock.calls.length, 2);
 
   view.unmount();
+});
+
+test('ignora erro de busca que chega depois que o chat é desmontado', async () => {
+  mocks.searchMessages.mockReset();
+  let rejectSearch: (error: unknown) => void = () => undefined;
+  mocks.searchMessages.mockImplementation(() => new Promise((_, reject) => {
+    rejectSearch = reject;
+  }));
+
+  const originalError = console.error;
+  const errors: unknown[][] = [];
+  console.error = (...args: unknown[]) => {
+    errors.push(args);
+  };
+
+  const view = render(<SearchHarness />);
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await Promise.resolve();
+  });
+
+  view.unmount();
+  await act(async () => {
+    rejectSearch(new Error('resposta tardia'));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  assert.equal(errors.length, 0);
+  console.error = originalError;
 });

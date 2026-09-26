@@ -8,6 +8,7 @@ import { useChatSearch } from '../useChatSearch';
 type AsyncMock = {
   (...args: unknown[]): Promise<unknown>;
   mock: { calls: unknown[][] };
+  mockImplementation(implementation: (...args: unknown[]) => Promise<unknown>): AsyncMock;
   mockReset: () => AsyncMock;
   mockRejectedValueOnce: (error: unknown) => AsyncMock;
   mockResolvedValue: (value: unknown) => AsyncMock;
@@ -107,4 +108,39 @@ test('permite repetir a busca sem reaproveitar o erro anterior', async () => {
   assert.equal(mocks.listChats.mock.calls.length, 2);
 
   view.unmount();
+});
+
+test('ignora erro de busca que chega depois que o Inbox é desmontado', async () => {
+  mocks.listChats.mockReset();
+  mocks.searchMessages.mockReset();
+  let rejectSearch: (error: unknown) => void = () => undefined;
+  mocks.listChats.mockImplementation(() => new Promise((_, reject) => {
+    rejectSearch = reject;
+  }));
+  mocks.searchMessages.mockResolvedValue([]);
+
+  const originalError = console.error;
+  const errors: unknown[][] = [];
+  console.error = (...args: unknown[]) => {
+    errors.push(args);
+  };
+
+  const view = render(<SearchHarness />);
+  const searchButton = view.container.querySelector('[data-testid="search"]');
+  assert.ok(searchButton instanceof HTMLButtonElement);
+
+  await act(async () => {
+    searchButton.click();
+    await Promise.resolve();
+  });
+
+  view.unmount();
+  await act(async () => {
+    rejectSearch(new Error('resposta tardia'));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  assert.equal(errors.length, 0);
+  console.error = originalError;
 });

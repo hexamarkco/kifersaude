@@ -4954,7 +4954,7 @@ export default function WhatsAppInboxScreen() {
             offset += page.length;
           }
 
-          if (isArchivedPartial) {
+          if (isArchivedPartial && requestId === chatsRequestIdRef.current) {
             setArchivedChatsHasMore(offset > 0 && all.length >= CHAT_PAGE_SIZE);
             setArchivedChatsPage(pagesFetched);
           }

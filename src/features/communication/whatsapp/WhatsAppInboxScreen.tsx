@@ -200,6 +200,7 @@ const WhatsAppScheduledMessagesPanel = lazy(() => import('./components/WhatsAppS
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
+const ARCHIVED_CHATS_COUNT_POLL_INTERVAL_MS = 30000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
 // Quando o Realtime de mensagens confirma SUBSCRIBED, o polling vira só rede
 // de segurança e pode rodar bem mais espaçado.
@@ -6097,7 +6098,6 @@ export default function WhatsAppInboxScreen() {
 
       timeoutId = window.setTimeout(() => {
         void loadChats();
-        void refreshArchivedChatsCount();
         scheduleNext();
       }, delay);
     };
@@ -6105,7 +6105,26 @@ export default function WhatsAppInboxScreen() {
     scheduleNext();
 
     return () => window.clearTimeout(timeoutId);
-  }, [loadChats, pollingEnabled, refreshArchivedChatsCount]);
+  }, [loadChats, pollingEnabled]);
+
+  useEffect(() => {
+    if (!pollingEnabled) {
+      return;
+    }
+
+    let timeoutId: number;
+
+    const scheduleNext = () => {
+      timeoutId = window.setTimeout(() => {
+        void refreshArchivedChatsCount();
+        scheduleNext();
+      }, ARCHIVED_CHATS_COUNT_POLL_INTERVAL_MS);
+    };
+
+    scheduleNext();
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pollingEnabled, refreshArchivedChatsCount]);
 
   useEffect(() => {
     if (!pollingEnabled) {

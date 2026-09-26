@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarClock, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
@@ -25,12 +25,10 @@ import {
   IconButton,
   OperationalStatusBadge,
 } from '../../../design-system';
-import LeadForm from '../../../components/LeadForm';
 import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
-import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
@@ -149,23 +147,10 @@ import {
   summarizeQuickReplyPreview,
   type WhatsAppQuickReply,
 } from './domain/quickReplies';
-import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import ChatPreviewIcon from './components/ChatPreviewIcon';
 import LinkifiedText, { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
-import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
-import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
-import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
-import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
-import WhatsAppMessageDetailsModal from './components/WhatsAppMessageDetailsModal';
 import { ComposerSendLock } from './components/composerSendLock';
-import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
-import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
-import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
-import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
-import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
-import WhatsAppScheduleMessageModal from './components/WhatsAppScheduleMessageModal';
-import WhatsAppScheduledMessagesPanel from './components/WhatsAppScheduledMessagesPanel';
 import WhatsAppPresenceIndicator from './components/WhatsAppPresenceIndicator';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
@@ -192,6 +177,22 @@ import {
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
+
+const LeadForm = lazy(() => import('../../../components/LeadForm'));
+const ReminderSchedulerModal = lazy(() => import('../../../components/ReminderSchedulerModal'));
+const WhatsAppAgendaModal = lazy(() => import('./components/WhatsAppAgendaModal'));
+const WhatsAppComposerRewriteModal = lazy(() => import('./components/WhatsAppComposerRewriteModal'));
+const WhatsAppDashboardModal = lazy(() => import('./components/WhatsAppDashboardModal'));
+const WhatsAppEditMessageModal = lazy(() => import('./components/WhatsAppEditMessageModal'));
+const WhatsAppFollowUpModal = lazy(() => import('./components/WhatsAppFollowUpModal'));
+const WhatsAppMessageDetailsModal = lazy(() => import('./components/WhatsAppMessageDetailsModal'));
+const WhatsAppMediaDrawer = lazy(() => import('./components/WhatsAppMediaDrawer'));
+const WhatsAppLeadDrawer = lazy(() => import('./components/WhatsAppLeadDrawer'));
+const WhatsAppChatFilesDrawer = lazy(() => import('./components/WhatsAppChatFilesDrawer'));
+const WhatsAppQuickRepliesModal = lazy(() => import('./components/WhatsAppQuickRepliesModal'));
+const WhatsAppStartChatModal = lazy(() => import('./components/WhatsAppStartChatModal'));
+const WhatsAppScheduleMessageModal = lazy(() => import('./components/WhatsAppScheduleMessageModal'));
+const WhatsAppScheduledMessagesPanel = lazy(() => import('./components/WhatsAppScheduledMessagesPanel'));
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
@@ -10717,31 +10718,38 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        <WhatsAppQuickRepliesModal
-          isOpen={quickRepliesModalOpen}
-          quickReplies={quickReplies}
-          saving={savingQuickReplies}
-          onClose={() => setQuickRepliesModalOpen(false)}
-          onSave={handleSaveQuickReplies}
-        />
+        <Suspense fallback={null}>
+          {quickRepliesModalOpen ? (
+            <WhatsAppQuickRepliesModal
+              isOpen
+              quickReplies={quickReplies}
+              saving={savingQuickReplies}
+              onClose={() => setQuickRepliesModalOpen(false)}
+              onSave={handleSaveQuickReplies}
+            />
+          ) : null}
 
-        <WhatsAppEditMessageModal
-          isOpen={Boolean(editingMessage)}
-          loading={savingMessageEdit}
-          value={editingMessageDraft}
-          title={editingMessage?.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda da mensagem'}
-          description={editingMessage?.message_type.trim().toLowerCase() === 'text'
-            ? 'Atualize o texto da mensagem enviada. O WhatsApp so permite editar mensagens proprias dentro da janela suportada.'
-            : 'Atualize o texto exibido nesta midia. O arquivo continua o mesmo; apenas a legenda sera alterada.'}
-          onClose={handleCloseEditMessageModal}
-          onChange={setEditingMessageDraft}
-          onSubmit={() => void handleSaveEditedMessage()}
-        />
+          {editingMessage ? (
+            <WhatsAppEditMessageModal
+              isOpen
+              loading={savingMessageEdit}
+              value={editingMessageDraft}
+              title={editingMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda da mensagem'}
+              description={editingMessage.message_type.trim().toLowerCase() === 'text'
+                ? 'Atualize o texto da mensagem enviada. O WhatsApp so permite editar mensagens proprias dentro da janela suportada.'
+                : 'Atualize o texto exibido nesta midia. O arquivo continua o mesmo; apenas a legenda sera alterada.'}
+              onClose={handleCloseEditMessageModal}
+              onChange={setEditingMessageDraft}
+              onSubmit={() => void handleSaveEditedMessage()}
+            />
+          ) : null}
 
-        <WhatsAppMessageDetailsModal
-          message={messageDetailsMessage}
-          onClose={() => setMessageDetailsMessageId(null)}
-        />
+          {messageDetailsMessage ? (
+            <WhatsAppMessageDetailsModal
+              message={messageDetailsMessage}
+              onClose={() => setMessageDetailsMessageId(null)}
+            />
+          ) : null}
 
         {forwardingMessage ? (
           <Dialog
@@ -10822,82 +10830,94 @@ export default function WhatsAppInboxScreen() {
           </Dialog>
         ) : null}
 
-        <WhatsAppComposerRewriteModal
-          isOpen={composerRewriteModalOpen}
-          generating={rewritingComposer}
-          sourceValue={composerRewriteSource}
-          value={composerRewriteDraft}
-          tone={composerRewriteTone}
-          customInstructions={composerRewriteCustomInstructions}
-          onClose={handleCloseComposerRewriteModal}
-          onChangeSourceValue={setComposerRewriteSource}
-          onChangeValue={setComposerRewriteDraft}
-          onChangeTone={setComposerRewriteTone}
-          onChangeCustomInstructions={setComposerRewriteCustomInstructions}
-          onGenerate={handleRegenerateComposerRewrite}
-          onApply={handleApplyComposerRewrite}
-        />
+        {composerRewriteModalOpen ? (
+          <WhatsAppComposerRewriteModal
+            isOpen
+            generating={rewritingComposer}
+            sourceValue={composerRewriteSource}
+            value={composerRewriteDraft}
+            tone={composerRewriteTone}
+            customInstructions={composerRewriteCustomInstructions}
+            onClose={handleCloseComposerRewriteModal}
+            onChangeSourceValue={setComposerRewriteSource}
+            onChangeValue={setComposerRewriteDraft}
+            onChangeTone={setComposerRewriteTone}
+            onChangeCustomInstructions={setComposerRewriteCustomInstructions}
+            onGenerate={handleRegenerateComposerRewrite}
+            onApply={handleApplyComposerRewrite}
+          />
+        ) : null}
 
-        <WhatsAppAgendaModal
-          isOpen={whatsAppAgendaOpen}
-          onClose={() => setWhatsAppAgendaOpen(false)}
-          currentLead={leadPanel}
-          currentLeadContracts={leadContracts}
-          canEdit={canEditAgenda}
-          onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
-          onOpenLeadChat={handleOpenAgendaLeadChat}
-          onSendBatchFollowUps={handleBatchSendFollowUp}
-        />
+        {whatsAppAgendaOpen ? (
+          <WhatsAppAgendaModal
+            isOpen
+            onClose={() => setWhatsAppAgendaOpen(false)}
+            currentLead={leadPanel}
+            currentLeadContracts={leadContracts}
+            canEdit={canEditAgenda}
+            onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
+            onOpenLeadChat={handleOpenAgendaLeadChat}
+            onSendBatchFollowUps={handleBatchSendFollowUp}
+          />
+        ) : null}
 
-        <WhatsAppDashboardModal
-          isOpen={whatsAppDashboardOpen}
-          onClose={() => setWhatsAppDashboardOpen(false)}
-        />
+        {whatsAppDashboardOpen ? (
+          <WhatsAppDashboardModal
+            isOpen
+            onClose={() => setWhatsAppDashboardOpen(false)}
+          />
+        ) : null}
 
-        <WhatsAppMediaDrawer
-          isOpen={mediaDrawerOpen}
-          position={mediaDrawerPosition}
-          triggerRef={mediaDrawerTriggerRef}
-          canSendMedia={!mediaDrawerSendDisabledReason}
-          mediaDisabledReason={mediaDrawerSendDisabledReason}
-          sendingMedia={sendingDrawerMedia}
-          onClose={() => setMediaDrawerOpen(false)}
-          onSelectEmoji={handleInsertEmoji}
-          onSendMedia={handleSendDrawerMedia}
-        />
+        {mediaDrawerOpen ? (
+          <WhatsAppMediaDrawer
+            isOpen
+            position={mediaDrawerPosition}
+            triggerRef={mediaDrawerTriggerRef}
+            canSendMedia={!mediaDrawerSendDisabledReason}
+            mediaDisabledReason={mediaDrawerSendDisabledReason}
+            sendingMedia={sendingDrawerMedia}
+            onClose={() => setMediaDrawerOpen(false)}
+            onSelectEmoji={handleInsertEmoji}
+            onSendMedia={handleSendDrawerMedia}
+          />
+        ) : null}
 
-        <WhatsAppChatFilesDrawer
-          chatId={selectedChat?.id ?? null}
-          chatDisplayName={selectedChatDisplayName}
-          isOpen={chatFilesOpen}
-          onClose={() => setChatFilesOpen(false)}
-          onOpenMedia={handleOpenChatFile}
-        />
+        {chatFilesOpen ? (
+          <WhatsAppChatFilesDrawer
+            chatId={selectedChat?.id ?? null}
+            chatDisplayName={selectedChatDisplayName}
+            isOpen
+            onClose={() => setChatFilesOpen(false)}
+            onOpenMedia={handleOpenChatFile}
+          />
+        ) : null}
 
-        <WhatsAppFollowUpModal
-          isOpen={followUpModalOpen}
-          generating={generatingFollowUp}
-          submitting={sending}
-          chatId={selectedChat?.id ?? null}
-          leadName={selectedChatDisplayName}
-          leadFavorito={leadPanel?.favorito}
-          value={followUpDraft}
-          customInstructions={followUpCustomInstructions}
-          variations={followUpVariations}
-          aiContextRationale={followUpAiContextRationale}
-          emotionalContext={followUpEmotionalContext}
-          currentAction={followUpCurrentAction}
-          currentActionReason={followUpCurrentActionReason}
-          opportunityRecommendation={followUpOpportunityRecommendation}
-          nextAction={followUpNextAction}
-          schedulingNextAction={schedulingFollowUpNextAction}
-          onClose={handleCloseFollowUpModal}
-          onChangeValue={setFollowUpDraft}
-          onChangeCustomInstructions={setFollowUpCustomInstructions}
-          onGenerate={handleRegenerateFollowUp}
-          onScheduleNextAction={handleScheduleFollowUpNextAction}
-          onSend={handleSendFollowUpDraft}
-        />
+        {followUpModalOpen ? (
+          <WhatsAppFollowUpModal
+            isOpen
+            generating={generatingFollowUp}
+            submitting={sending}
+            chatId={selectedChat?.id ?? null}
+            leadName={selectedChatDisplayName}
+            leadFavorito={leadPanel?.favorito}
+            value={followUpDraft}
+            customInstructions={followUpCustomInstructions}
+            variations={followUpVariations}
+            aiContextRationale={followUpAiContextRationale}
+            emotionalContext={followUpEmotionalContext}
+            currentAction={followUpCurrentAction}
+            currentActionReason={followUpCurrentActionReason}
+            opportunityRecommendation={followUpOpportunityRecommendation}
+            nextAction={followUpNextAction}
+            schedulingNextAction={schedulingFollowUpNextAction}
+            onClose={handleCloseFollowUpModal}
+            onChangeValue={setFollowUpDraft}
+            onChangeCustomInstructions={setFollowUpCustomInstructions}
+            onGenerate={handleRegenerateFollowUp}
+            onScheduleNextAction={handleScheduleFollowUpNextAction}
+            onSend={handleSendFollowUpDraft}
+          />
+        ) : null}
 
         {statusReminderLead ? (
           <ReminderSchedulerModal
@@ -11012,35 +11032,37 @@ export default function WhatsAppInboxScreen() {
           </DialogBody>
         </Dialog>
 
-        <WhatsAppLeadDrawer
-          isOpen={leadDrawerOpen && !selectedChat?.is_group}
-          onClose={handleCloseLeadDrawer}
-          chatId={selectedChat?.id ?? null}
-          chatDisplayName={selectedChatDisplayName}
-          linkedLead={leadPanel}
-          autoLinked={selectedChatWasAutoLinked}
-          loading={leadPanelLoading}
-          contracts={leadContracts}
-          contractsLoading={leadContractsLoading}
-          contractsError={leadContractsError}
-          statusOptions={leadStatuses}
-          responsavelOptions={responsavelOptions}
-          onStatusChange={handleLeadStatusChange}
-          onResponsavelChange={handleLeadResponsavelChange}
-          onRefreshContracts={handleRefreshLeadContracts}
-          onViewLead={leadPanel ? handleViewLeadInCrm : undefined}
-          onUnlinkLead={selectedChat?.lead_id ? handleUnlinkLead : undefined}
-          searchQuery={leadSearchQuery}
-          onSearchQueryChange={setLeadSearchQuery}
-          searchResults={leadSearchResults}
-          suggestedLead={suggestedLead}
-          searchLoading={leadSearchLoading}
-          onCreateLead={selectedChat && !selectedChat.is_group && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
-          onLinkLead={(leadId) => void handleLinkLead(leadId)}
-          linkLoadingLeadId={linkLoadingLeadId}
-          canViewAgenda={canViewAgenda}
-          canEditAgenda={canEditAgenda}
-        />
+        {leadDrawerOpen && !selectedChat?.is_group ? (
+          <WhatsAppLeadDrawer
+            isOpen
+            onClose={handleCloseLeadDrawer}
+            chatId={selectedChat?.id ?? null}
+            chatDisplayName={selectedChatDisplayName}
+            linkedLead={leadPanel}
+            autoLinked={selectedChatWasAutoLinked}
+            loading={leadPanelLoading}
+            contracts={leadContracts}
+            contractsLoading={leadContractsLoading}
+            contractsError={leadContractsError}
+            statusOptions={leadStatuses}
+            responsavelOptions={responsavelOptions}
+            onStatusChange={handleLeadStatusChange}
+            onResponsavelChange={handleLeadResponsavelChange}
+            onRefreshContracts={handleRefreshLeadContracts}
+            onViewLead={leadPanel ? handleViewLeadInCrm : undefined}
+            onUnlinkLead={selectedChat?.lead_id ? handleUnlinkLead : undefined}
+            searchQuery={leadSearchQuery}
+            onSearchQueryChange={setLeadSearchQuery}
+            searchResults={leadSearchResults}
+            suggestedLead={suggestedLead}
+            searchLoading={leadSearchLoading}
+            onCreateLead={selectedChat && !selectedChat.is_group && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
+            onLinkLead={(leadId) => void handleLinkLead(leadId)}
+            linkLoadingLeadId={linkLoadingLeadId}
+            canViewAgenda={canViewAgenda}
+            canEditAgenda={canEditAgenda}
+          />
+        ) : null}
 
         {createLeadDraft ? (
           <LeadForm
@@ -11051,31 +11073,33 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        <WhatsAppStartChatModal
-          isOpen={startChatModalOpen}
-          onClose={() => setStartChatModalOpen(false)}
-          query={startChatQuery}
-          onQueryChange={setStartChatQuery}
-          contacts={savedContacts}
-          contactsTotal={savedContactsTotal}
-          contactsHasMore={savedContactsHasMore}
-          contactsLoading={savedContactsLoading}
-          contactsLoadingMore={savedContactsLoadingMore}
-          onLoadMoreContacts={handleLoadMoreSavedContacts}
-          crmLeads={crmStartResults}
-          crmLoading={crmStartLoading}
-          statusOptions={leadStatuses}
-          onStartFromSavedContact={(contact) => void handleStartChatFromSavedContact(contact)}
-          onStartFromLead={(lead) => void handleStartChatFromLead(lead)}
-          manualPhone={manualStartPhone}
-          onManualPhoneChange={setManualStartPhone}
-          onStartFromManual={() => void handleStartChatFromManual()}
-          startingKey={startingChatKey}
-        />
+        {startChatModalOpen ? (
+          <WhatsAppStartChatModal
+            isOpen
+            onClose={() => setStartChatModalOpen(false)}
+            query={startChatQuery}
+            onQueryChange={setStartChatQuery}
+            contacts={savedContacts}
+            contactsTotal={savedContactsTotal}
+            contactsHasMore={savedContactsHasMore}
+            contactsLoading={savedContactsLoading}
+            contactsLoadingMore={savedContactsLoadingMore}
+            onLoadMoreContacts={handleLoadMoreSavedContacts}
+            crmLeads={crmStartResults}
+            crmLoading={crmStartLoading}
+            statusOptions={leadStatuses}
+            onStartFromSavedContact={(contact) => void handleStartChatFromSavedContact(contact)}
+            onStartFromLead={(lead) => void handleStartChatFromLead(lead)}
+            manualPhone={manualStartPhone}
+            onManualPhoneChange={setManualStartPhone}
+            onStartFromManual={() => void handleStartChatFromManual()}
+            startingKey={startingChatKey}
+          />
+        ) : null}
 
-        {selectedChat && (
+        {selectedChat && scheduleMessageModalOpen ? (
           <WhatsAppScheduleMessageModal
-            isOpen={scheduleMessageModalOpen}
+            isOpen
             onClose={() => setScheduleMessageModalOpen(false)}
             channelId={selectedChat.channel_id}
             chatId={selectedChat.id}
@@ -11087,23 +11111,27 @@ export default function WhatsAppInboxScreen() {
               setScheduledMessagesPanelOpen(false);
             }}
           />
-        )}
+        ) : null}
 
-        {selectedChat ? (
+        {selectedChat && scheduledMessagesPanelOpen ? (
           <WhatsAppScheduledMessagesPanel
             channelId={selectedChat.channel_id}
             chatId={selectedChat.id}
             phoneDigits={selectedChat.phone_digits}
-            isOpen={scheduledMessagesPanelOpen}
+            isOpen
             onClose={() => setScheduledMessagesPanelOpen(false)}
             onScheduleNew={() => setScheduleMessageModalOpen(true)}
           />
         ) : null}
 
-        <WhatsAppScheduledMessagesPanel
-          isOpen={allScheduledMessagesPanelOpen}
-          onClose={() => setAllScheduledMessagesPanelOpen(false)}
-        />
+        {allScheduledMessagesPanelOpen ? (
+          <WhatsAppScheduledMessagesPanel
+            isOpen
+            onClose={() => setAllScheduledMessagesPanelOpen(false)}
+          />
+        ) : null}
+
+        </Suspense>
 
         <PanelPopoverShell
           ref={reactionPickerRef}

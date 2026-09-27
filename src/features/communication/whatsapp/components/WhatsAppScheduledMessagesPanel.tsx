@@ -174,12 +174,21 @@ export default function WhatsAppScheduledMessagesPanel({
         let offset = 0;
 
         while (true) {
+          if (requestId !== loadRequestIdRef.current) {
+            return allMessages;
+          }
+
           const page = await commWhatsAppService.listScheduledMessages({
             ...scheduleFilters,
             statuses: messageStatuses,
             limit: SCHEDULED_MESSAGES_PAGE_SIZE,
             offset,
           });
+
+          if (requestId !== loadRequestIdRef.current) {
+            return allMessages;
+          }
+
           allMessages.push(...page);
 
           if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;
@@ -193,12 +202,21 @@ export default function WhatsAppScheduledMessagesPanel({
         let offset = 0;
 
         while (true) {
+          if (requestId !== loadRequestIdRef.current) {
+            return allSequences;
+          }
+
           const page = await commWhatsAppService.listScheduledSequences({
             ...scheduleFilters,
             statuses: sequenceStatuses,
             limit: SCHEDULED_MESSAGES_PAGE_SIZE,
             offset,
           });
+
+          if (requestId !== loadRequestIdRef.current) {
+            return allSequences;
+          }
+
           allSequences.push(...page);
 
           if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;

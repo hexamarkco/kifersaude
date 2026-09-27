@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
     in: TestMock<[string, string[]], Query>;
     order: TestMock<[string, { ascending: boolean }], Query>;
     limit: TestMock<[number], Query>;
+    range: TestMock<[number, number], Promise<{ data: unknown[]; error: unknown | null }>>;
     overrideTypes: TestMock<[], Promise<{ data: unknown[]; error: unknown | null }>>;
   };
 
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => {
     in: createMock<[string, string[]], Query>(),
     order: createMock<[string, { ascending: boolean }], Query>(),
     limit: createMock<[number], Query>(),
+    range: createMock<[number, number], Promise<{ data: unknown[]; error: unknown | null }>>(),
     overrideTypes: createMock<[], Promise<{ data: unknown[]; error: unknown | null }>>(),
   };
 
@@ -32,6 +34,7 @@ const mocks = vi.hoisted(() => {
   query.in.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.limit.mockReturnValue(query);
+  query.range.mockResolvedValue({ data: [], error: null });
 
   const from = createMock<[string], Query>();
   const invoke = createMock<[
@@ -202,4 +205,19 @@ test('nao devolve duas linhas do mesmo telefone na lista de contatos', async () 
   assert.equal(page.contacts.length, 1);
   assert.equal(page.contacts[0]?.display_name, 'Mariangela');
   assert.equal(page.contacts[0]?.manual_override, true);
+});
+
+test('lista agendamentos sem pedir colunas que nao existem no chat remoto', async () => {
+  const selectCallsBefore = mocks.query.select.mock.calls.length;
+
+  await commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' });
+  await commWhatsAppService.listScheduledSequences({ channelId: 'channel-1' });
+
+  const scheduledSelects = mocks.query.select.mock.calls
+    .slice(selectCallsBefore)
+    .map(([fields]) => fields);
+
+  assert.equal(scheduledSelects.length, 2);
+  assert.equal(scheduledSelects.every((fields) => !fields.includes('lead_name')), true);
+  assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
 });

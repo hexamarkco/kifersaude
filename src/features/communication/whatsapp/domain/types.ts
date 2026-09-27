@@ -259,6 +259,7 @@ export type CommWhatsAppScheduledSequence = {
   id: string;
   channel_id: string;
   chat_id: string | null;
+  chat: Pick<CommWhatsAppChat, 'display_name' | 'phone_number' | 'phone_digits' | 'is_group' | 'saved_contact_name' | 'push_name' | 'lead_name' | 'lead_id'> | null;
   phone_digits: string;
   phone_number: string | null;
   display_name: string | null;
@@ -283,6 +284,7 @@ export type CommWhatsAppScheduledMessage = {
   id: string;
   channel_id: string;
   chat_id: string | null;
+  chat: Pick<CommWhatsAppChat, 'display_name' | 'phone_number' | 'phone_digits' | 'is_group' | 'saved_contact_name' | 'push_name' | 'lead_name' | 'lead_id'> | null;
   phone_digits: string;
   phone_number: string | null;
   display_name: string | null;

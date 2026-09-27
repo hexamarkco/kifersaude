@@ -11,6 +11,7 @@ import type {
   CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceStatus,
 } from '../domain/types';
+import { getScheduledContactDisplayName } from '../domain/scheduledContactPresentation';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
 
@@ -355,7 +356,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           message.text_content,
-          message.display_name,
+          getScheduledContactDisplayName(message),
           message.phone_number,
           message.phone_digits,
           message.label,
@@ -385,7 +386,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           sequence.label,
-          sequence.display_name,
+          getScheduledContactDisplayName(sequence),
           sequence.phone_number,
           sequence.phone_digits,
           SEQUENCE_STATUS_LABELS[sequence.status],
@@ -639,6 +640,7 @@ type ScheduledMessageItemProps = {
 function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete }: ScheduledMessageItemProps) {
   const isActive = message.status === 'scheduled' || message.status === 'failed';
   const scheduledAt = message.next_run_at ?? message.scheduled_at;
+  const contactDisplayName = getScheduledContactDisplayName(message);
 
   return (
     <div className="rounded-lg border border-[var(--border-subtle)] p-3 hover:border-[var(--border-default)] transition-colors">
@@ -666,8 +668,8 @@ function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete 
             </span>
             <span>{formatDateTimeFullBR(scheduledAt)}</span>
             <span>{formatCommWhatsAppPhoneLabel(message.phone_digits)}</span>
-            {message.display_name && message.display_name !== message.phone_number && (
-              <span className="truncate">{message.display_name}</span>
+            {contactDisplayName && contactDisplayName !== message.phone_number && (
+              <span className="truncate">{contactDisplayName}</span>
             )}
           </div>
 
@@ -733,6 +735,7 @@ function ScheduledSequenceItem({ sequence, cancelling, onEdit, onCancel, onRetry
     && sequence.current_step_index === 0
     && Boolean(stepCount)
     && sequence.steps?.every((step) => step.status === 'pending' && step.actions.every((action) => action.status === 'pending'));
+  const contactDisplayName = getScheduledContactDisplayName(sequence);
 
   return (
     <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-3">
@@ -756,8 +759,8 @@ function ScheduledSequenceItem({ sequence, cancelling, onEdit, onCancel, onRetry
             </span>
             <span>{formatDateTimeFullBR(sequence.scheduled_at)}</span>
             <span>{formatCommWhatsAppPhoneLabel(sequence.phone_digits)}</span>
-            {sequence.display_name && sequence.display_name !== sequence.phone_number && (
-              <span className="truncate">{sequence.display_name}</span>
+            {contactDisplayName && contactDisplayName !== sequence.phone_number && (
+              <span className="truncate">{contactDisplayName}</span>
             )}
           </div>
           {sequence.last_error && (

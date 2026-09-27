@@ -340,6 +340,7 @@ export default function WhatsAppAgendaModal({
     setIsDuplicatesModalOpen(false);
     setDuplicateKeepSelection({});
     setError(null);
+    setPendingCount(null);
     setReminders([]);
     setLeadsMap(new Map());
     setContractsMap(new Map());

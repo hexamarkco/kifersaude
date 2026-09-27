@@ -3541,7 +3541,6 @@ export default function WhatsAppInboxScreen() {
       return {
         ...chat,
         lead_name: chat.lead_name || matchedLeadName,
-        display_name: matchedLeadName,
       };
     });
   }, []);
@@ -3899,22 +3898,15 @@ export default function WhatsAppInboxScreen() {
       }
       setLeadPanel(lead);
       const nextLeadStatus = lead?.status_value ?? lead?.status_nome ?? null;
-      const savedContactName = resolveSavedContactName(
-        chat.phone_digits || chat.phone_number,
-        chat.saved_contact_name,
-        savedContactNameOverrideByPhoneRef.current,
-        savedContactNameByPhoneRef.current,
-      );
       const shouldHydrateChatFromLead = Boolean(
         lead
-          && ((!savedContactName && lead.nome_completo && chat.display_name !== lead.nome_completo)
+          && ((lead.nome_completo && chat.lead_name !== lead.nome_completo)
             || (nextLeadStatus && chat.lead_status !== nextLeadStatus)),
       );
       if (shouldHydrateChatFromLead && lead) {
         upsertChatLocally({
           ...chat,
           lead_name: lead.nome_completo || chat.lead_name,
-          display_name: !savedContactName && lead.nome_completo ? lead.nome_completo : chat.display_name,
           lead_status: nextLeadStatus,
         });
       }

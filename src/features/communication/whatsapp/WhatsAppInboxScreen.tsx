@@ -5264,6 +5264,10 @@ export default function WhatsAppInboxScreen() {
           let pagesFetched = 0;
 
           while (pagesFetched < maxPages) {
+            if (requestId !== chatsRequestIdRef.current) {
+              return all;
+            }
+
             let page: CommWhatsAppChat[] = [];
             for (let attempt = 0; attempt <= EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
               page = await whatsappConversationsRepository.list({
@@ -5274,6 +5278,10 @@ export default function WhatsAppInboxScreen() {
                 limit: CHAT_PAGE_SIZE,
                 offset,
               });
+
+              if (requestId !== chatsRequestIdRef.current) {
+                return all;
+              }
 
               const shouldRetryEmptyFirstPage = page.length === 0
                 && offset === 0
@@ -5290,6 +5298,10 @@ export default function WhatsAppInboxScreen() {
                 delayMs: EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt],
               });
               await waitForChatListRetry(EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt]);
+
+              if (requestId !== chatsRequestIdRef.current) {
+                return all;
+              }
             }
 
             all.push(...page);

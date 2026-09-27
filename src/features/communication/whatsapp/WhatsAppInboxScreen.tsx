@@ -3079,21 +3079,17 @@ export default function WhatsAppInboxScreen() {
         savedContactNameOverrideByPhoneRef.current,
         savedContactNameByPhoneRef.current,
       );
-      const manualSavedContactName = getSavedContactNameForPhone(
-        nextChat.phone_digits || nextChat.phone_number,
-        savedContactNameOverrideByPhoneRef.current,
-      );
       const stableNextChat = stabilizeChatIdentityForLocalMerge(
         applySavedContactName(nextChat, knownSavedContactName),
         previousChat,
-        manualSavedContactName,
+        knownSavedContactName,
       );
       const hydratedNextChat = preserveUsefulChatPreview(stableNextChat, previousChat);
       const exists = Boolean(previousChat);
       const updated = exists
         ? current.map((chat) => (chat.id === nextChat.id
           ? preserveUsefulChatPreview(
-              stabilizeChatIdentityForLocalMerge({ ...chat, ...hydratedNextChat }, chat, manualSavedContactName),
+              stabilizeChatIdentityForLocalMerge({ ...chat, ...hydratedNextChat }, chat, knownSavedContactName),
               chat,
             )
           : chat))
@@ -5308,7 +5304,10 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(mergedData.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
-              return preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge(chat, previousChat), previousChat);
+              return preserveUsefulChatPreview(
+                stabilizeChatIdentityForLocalMerge(chat, previousChat, chat.saved_contact_name),
+                previousChat,
+              );
             })),
           ),
           pendingChatInboxStateRef.current,
@@ -5480,7 +5479,10 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(page.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
-              return preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge(chat, previousChat), previousChat);
+              return preserveUsefulChatPreview(
+                stabilizeChatIdentityForLocalMerge(chat, previousChat, chat.saved_contact_name),
+                previousChat,
+              );
             })),
           ),
           pendingChatInboxStateRef.current,

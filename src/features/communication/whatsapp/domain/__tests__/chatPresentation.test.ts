@@ -146,6 +146,22 @@ test('preserves the saved name when a stale realtime identity arrives', () => {
   assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
+test('accepts the canonical saved name from a fresh chat projection', () => {
+  const previous = createChat({
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: 'Mariangela - Cliente',
+  });
+  const incoming = createChat({
+    display_name: 'Mariangela',
+    saved_contact_name: 'Mariangela',
+  });
+
+  const result = stabilizeChatIdentityForLocalMerge(incoming, previous, incoming.saved_contact_name);
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
 test('allows an explicit manual rename to replace the previous saved name', () => {
   const previous = createChat({
     display_name: 'Mariangela',

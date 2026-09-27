@@ -141,6 +141,40 @@ test('combina páginas de contatos sem duplicar uma linha repetida', () => {
   assert.equal(merged[0]?.display_name, 'Nome atualizado');
 });
 
+test('combina linhas do mesmo telefone e mantém a versão manual', () => {
+  const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
+    id: 'provider-row',
+    channel_id: 'channel-1',
+    contact_id: 'provider-1',
+    phone_number: '5521982965495',
+    phone_digits: '5521982965495',
+    display_name: 'Mariangela - Cliente',
+    saved: true,
+    manual_override: false,
+    manual_override_name: null,
+    last_synced_at: '2026-09-08T13:00:00.000Z',
+    created_at: '2026-09-08T13:00:00.000Z',
+    updated_at: '2026-09-08T13:00:00.000Z',
+    ...overrides,
+  });
+
+  const merged = mergeSavedContactPages(
+    [createContact({})],
+    [createContact({
+      id: 'manual-row',
+      contact_id: 'manual:5521982965495',
+      display_name: 'Mariangela',
+      manual_override: true,
+      manual_override_name: 'Mariangela',
+      updated_at: '2026-09-08T09:00:00.000Z',
+    })],
+  );
+
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]?.display_name, 'Mariangela');
+  assert.equal(merged[0]?.manual_override, true);
+});
+
 test('sempre prioriza o contato salvo manualmente sobre o nome sincronizado', () => {
   const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
     id: 'contact-1',

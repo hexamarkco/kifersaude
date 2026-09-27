@@ -165,26 +165,87 @@ export const applyCanonicalSavedContactNames = (
   });
 };
 
+const normalizeSavedContactForMerge = (contact: CommWhatsAppPhoneContact) => {
+  const displayName = getSavedContactDisplayName(contact);
+  if (!displayName || contact.display_name?.trim() === displayName) {
+    return contact;
+  }
+
+  return { ...contact, display_name: displayName };
+};
+
+const getSavedContactMergeKeys = (contact: CommWhatsAppPhoneContact) => {
+  const fallbackIdentity = contact.id.trim()
+    || `${contact.channel_id}:${contact.contact_id}:${contact.phone_digits ?? contact.phone_number ?? ''}`;
+  const keys = [`id:${fallbackIdentity}`];
+  const phoneKeys = collectPhoneLookupKeys(contact.phone_digits || contact.phone_number);
+  phoneKeys.forEach((key) => keys.push(`phone:${key}`));
+  return keys;
+};
+
+const isPreferredContactForMerge = (
+  candidate: CommWhatsAppPhoneContact,
+  current: CommWhatsAppPhoneContact,
+) => {
+  const candidateIsManual = isManualSavedContact(candidate);
+  const currentIsManual = isManualSavedContact(current);
+  if (candidateIsManual !== currentIsManual) {
+    return candidateIsManual;
+  }
+
+  // Keep the previous last-copy-wins behavior when the same row is returned
+  // again by a refreshed page, while still using timestamps across different
+  // rows representing the same phone.
+  if (candidate.id.trim() && candidate.id.trim() === current.id.trim()) {
+    return true;
+  }
+
+  return isPreferredSavedContact(candidate, current);
+};
+
 /**
- * Combines pages from the saved-contact list without showing the same row
- * twice when the provider changes the list between page requests.
+ * Combines pages from the saved-contact list without showing the same
+ * contact twice when the provider changes the list between page requests.
  *
- * The last copy wins so a refreshed row can update its name or timestamp,
- * while Map keeps the original position in the list.
+ * A provider contact and a manual cache row can have different IDs but still
+ * represent the same phone. The manual row must win in that case, otherwise
+ * a refresh or pagination can make the old provider name reappear.
  */
 export const mergeSavedContactPages = (
   current: CommWhatsAppPhoneContact[],
   incoming: CommWhatsAppPhoneContact[],
 ) => {
-  const contactsById = new Map<string, CommWhatsAppPhoneContact>();
+  const merged: CommWhatsAppPhoneContact[] = [];
 
-  for (const contact of [...current, ...incoming]) {
-    const identity = contact.id.trim()
-      || `${contact.channel_id}:${contact.contact_id}:${contact.phone_digits ?? contact.phone_number ?? ''}`;
-    contactsById.set(identity, contact);
+  for (const rawContact of [...current, ...incoming]) {
+    const contact = normalizeSavedContactForMerge(rawContact);
+    const contactKeys = getSavedContactMergeKeys(contact);
+    const conflictingIndexes = merged.flatMap((existingContact, index) => {
+      const existingKeys = getSavedContactMergeKeys(existingContact);
+      return contactKeys.some((key) => existingKeys.includes(key)) ? [index] : [];
+    });
+
+    if (conflictingIndexes.length === 0) {
+      merged.push(contact);
+      continue;
+    }
+
+    const conflictingContacts = conflictingIndexes.map((index) => merged[index]);
+    const preferredExistingContact = conflictingContacts.slice(1).reduce((preferred, candidate) => (
+      isPreferredContactForMerge(candidate, preferred) ? candidate : preferred
+    ), conflictingContacts[0]);
+    const preferredContact = isPreferredContactForMerge(contact, preferredExistingContact)
+      ? contact
+      : preferredExistingContact;
+    const firstConflictIndex = conflictingIndexes[0];
+
+    for (const index of [...conflictingIndexes].reverse()) {
+      merged.splice(index, 1);
+    }
+    merged.splice(firstConflictIndex, 0, preferredContact);
   }
 
-  return Array.from(contactsById.values());
+  return merged;
 };
 
 export const addSavedContactsToNameMap = (

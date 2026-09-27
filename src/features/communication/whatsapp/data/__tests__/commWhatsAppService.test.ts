@@ -174,3 +174,32 @@ test('corrige o nome atrasado da lista de contatos com o cache canonico', async 
   assert.equal(page.contacts[0]?.manual_override, true);
   assert.equal(page.contacts[0]?.manual_override_name, 'Mariangela');
 });
+
+test('nao devolve duas linhas do mesmo telefone na lista de contatos', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: {
+      contacts: [
+        {
+          ...manualContact,
+          id: 'provider-row',
+          contact_id: '5521982965495',
+          display_name: 'Mariangela - Cliente',
+          manual_override: false,
+          manual_override_name: null,
+        },
+        manualContact,
+      ],
+      total: 2,
+      hasMore: false,
+    },
+    error: null,
+    response: null,
+  });
+  mocks.query.overrideTypes.mockResolvedValue({ data: [manualContact], error: null });
+
+  const page = await commWhatsAppService.listSavedContacts({ page: 1 });
+
+  assert.equal(page.contacts.length, 1);
+  assert.equal(page.contacts[0]?.display_name, 'Mariangela');
+  assert.equal(page.contacts[0]?.manual_override, true);
+});

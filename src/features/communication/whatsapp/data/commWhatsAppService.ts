@@ -20,7 +20,7 @@ import type {
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
-import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, selectPreferredSavedContacts } from '../domain/contactLookup';
+import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, mergeSavedContactPages, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
 
@@ -1694,9 +1694,10 @@ export const commWhatsAppService = {
           .filter((value): value is string => Boolean(value))
       )),
     );
-    const contacts = canonicalLookup.error
+    const reconciledContacts = canonicalLookup.error
       ? providerContacts
       : applyCanonicalSavedContactNames(providerContacts, canonicalLookup.contacts);
+    const contacts = mergeSavedContactPages([], reconciledContacts);
 
     return {
       contacts,

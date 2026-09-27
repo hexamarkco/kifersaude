@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run secrets:check && npm run audit:visual && vite build",
+    "build": "npm run secrets:check && npm run audit:visual && vite build && npm run verify:editor-bundle",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
@@ -22,6 +22,7 @@
     "patch-react-side-effect": "node scripts/patch-react-side-effect.js",
     "postinstall": "npm run patch-react-side-effect",
     "verify:automations": "node scripts/verify-automations.mjs",
+    "verify:editor-bundle": "node scripts/check-react-quill-bundle.mjs",
     "deploy:automations": "bash scripts/run-supabase-migrations.sh && node scripts/verify-automations.mjs",
     "spread:leads": "node scripts/spread-existing-leads.mjs",
     "repair:whatsapp-identities": "node scripts/reconcile-whatsapp-identities.mjs",

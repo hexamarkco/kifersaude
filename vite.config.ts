@@ -64,8 +64,8 @@ function reactQuillInterop(): Plugin {
       }
 
       const transformedCode = code
-        .replaceAll('require("react")', `require(${JSON.stringify(reactShim)})`)
-        .replaceAll('require("react-dom")', `require(${JSON.stringify(reactDomShim)})`);
+        .replace(/require\(\s*(['"])react\1\s*\)/g, `require(${JSON.stringify(reactShim)})`)
+        .replace(/require\(\s*(['"])react-dom\1\s*\)/g, `require(${JSON.stringify(reactDomShim)})`);
 
       return transformedCode === code ? null : { code: transformedCode, map: null };
     },

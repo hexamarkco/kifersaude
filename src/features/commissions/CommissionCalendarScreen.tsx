@@ -174,7 +174,7 @@ export default function CommissionCalendarScreen() {
               <IconButton
                 onClick={goToPreviousMonth}
                 variant="icon"
-                aria-label="Mes anterior"
+                aria-label="Mês anterior"
                size="md">
                 <ChevronLeft className="kds-control-icon" />
               </IconButton>
@@ -191,7 +191,7 @@ export default function CommissionCalendarScreen() {
               <IconButton
                 onClick={goToNextMonth}
                 variant="icon"
-                aria-label="Proximo mes"
+                aria-label="Próximo mês"
                size="md">
                 <ChevronRight className="kds-control-icon" />
               </IconButton>

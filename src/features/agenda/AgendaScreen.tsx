@@ -532,7 +532,7 @@ export default function AgendaScreen() {
             ...current,
             {
               lead: leadInfo,
-              promptMessage: "Deseja marcar um proximo lembrete para este lead?",
+              promptMessage: "Deseja marcar um próximo lembrete para este lead?",
               defaultTitle: reminder.titulo,
               defaultDescription: reminder.descricao ?? undefined,
               defaultType: "Follow-up",
@@ -1218,7 +1218,7 @@ export default function AgendaScreen() {
                   ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
                   : "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
               }`}
-              title={`${pendingCount} pendente(s), ${doneCount} concluido(s)`}
+              title={`${pendingCount} pendente(s), ${doneCount} concluído(s)`}
             >
               {totalCount}
             </span>
@@ -1603,7 +1603,7 @@ export default function AgendaScreen() {
         <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
           <Surface padding="md" className="space-y-4 2xl:sticky 2xl:top-4 2xl:self-start">
             <div className="flex items-center justify-between gap-2">
-                <IconButton onClick={goToPreviousMonth} variant="icon" aria-label="Mes anterior" size="md">
+                <IconButton onClick={goToPreviousMonth} variant="icon" aria-label="Mês anterior" size="md">
                   <ChevronLeft className="kds-control-icon" />
                 </IconButton>
                 <div className="text-center">
@@ -1614,7 +1614,7 @@ export default function AgendaScreen() {
                     {filteredMonthReminders.length} item(ns) com os filtros atuais
                   </p>
                 </div>
-                <IconButton onClick={goToNextMonth} variant="icon" aria-label="Proximo mes" size="md">
+                <IconButton onClick={goToNextMonth} variant="icon" aria-label="Próximo mês" size="md">
                   <ChevronRight className="kds-control-icon" />
                 </IconButton>
             </div>
@@ -1632,7 +1632,7 @@ export default function AgendaScreen() {
                     eyebrow="Dia selecionado"
                     title={selectedDateLabel}
                     description={selectedDateReminders.length > 0
-                      ? `${selectedDateReminders.length} item(ns): ${pendingSelectedReminders.length} pendente(s), ${overdueSelectedReminders.length} atrasado(s), ${completedSelectedReminders.length} concluido(s).`
+                      ? `${selectedDateReminders.length} item(ns): ${pendingSelectedReminders.length} pendente(s), ${overdueSelectedReminders.length} atrasado(s), ${completedSelectedReminders.length} concluído(s).`
                       : "Nenhum item encontrado para este dia com os filtros atuais."}
                   />
 

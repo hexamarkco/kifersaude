@@ -223,6 +223,36 @@ test('carrega somente o contexto necessario dos contratos relacionados', async (
   assert.deepEqual(mocks.query.select.mock.calls[0], ['id, lead_id, codigo_contrato']);
 });
 
+test('preserva lotes de contratos que carregaram quando outro lote falha', async () => {
+  const ids = Array.from({ length: 101 }, (_, index) => `contract-${index + 1}`);
+  let calls = 0;
+  mocks.query.overrideTypes.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('segundo lote indisponível');
+    }
+    return { data: [{ id: 'contract-from-first-batch' }], error: null };
+  });
+
+  try {
+    const result = await listReminderContracts(ids);
+
+    assert.deepEqual(result, [{ id: 'contract-from-first-batch' }]);
+  } finally {
+    mocks.query.overrideTypes.mockReturnValue(Promise.resolve({
+      data: [{
+        id: 'reminder-1',
+        tipo: 'retorno',
+        titulo: 'Retorno agendado: cliente',
+        descricao: 'Ligar para o cliente',
+        data_lembrete: '2026-09-26T12:00:00Z',
+        lido: false,
+      }],
+      error: null,
+    }));
+  }
+});
+
 test('carrega somente o contexto necessario dos leads relacionados', async () => {
   mocks.query.select.mock.calls.splice(0);
 

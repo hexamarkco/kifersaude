@@ -197,7 +197,7 @@ async function listByIds<T>(params: {
     return [];
   }
 
-  const pages = await Promise.all(
+  const results = await Promise.allSettled(
     batchesOf(ids).map(async (batch) => {
       const result = await databaseClient
         .from(params.table)
@@ -210,7 +210,21 @@ async function listByIds<T>(params: {
       return result.data ?? [];
     }),
   );
-  return pages.flat();
+  const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+  const successfulResults = results.filter((result): result is PromiseFulfilledResult<T[]> => result.status === 'fulfilled');
+
+  if (successfulResults.length === 0) {
+    throw failedResults[0]?.reason ?? new Error(`Não foi possível carregar ${params.table}.`);
+  }
+
+  if (failedResults.length > 0) {
+    console.warn('[Reminders] parte dos dados relacionados não pôde ser carregada', {
+      table: params.table,
+      failedBatches: failedResults.length,
+    });
+  }
+
+  return successfulResults.flatMap((result) => result.value);
 }
 
 export const listReminderContracts = (ids: string[]) =>

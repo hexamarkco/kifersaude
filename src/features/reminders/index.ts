@@ -46,4 +46,5 @@ export {
   type NotificationContract,
   type NotificationReminder,
   type NotificationSummarySource,
+  type NotificationSummarySourceName,
 } from './data/notificationSummaryRepository';

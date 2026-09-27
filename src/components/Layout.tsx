@@ -103,6 +103,7 @@ export default function Layout({
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationsWarning, setNotificationsWarning] = useState<string | null>(null);
   const [todayReminders, setTodayReminders] = useState<NotificationReminder[]>([]);
   const [todayPayments, setTodayPayments] = useState<{
     id: string;
@@ -245,6 +246,7 @@ export default function Layout({
         contracts: activeContracts,
         holders: holdersData,
         dependents: dependentsData,
+        failedSources,
       } = await loadNotificationSummarySource(
         startOfDay.toISOString(),
         endOfDay.toISOString(),
@@ -377,10 +379,14 @@ export default function Layout({
       setTodayReminders(remindersForToday);
       setTodayPayments(payments);
       setTodayBirthdays(birthdays);
+      setNotificationsWarning(failedSources.length > 0
+        ? 'Parte do resumo não pôde ser atualizada agora.'
+        : null);
     } catch (error) {
       if (requestId === notificationsRequestIdRef.current) {
         console.error('Erro ao carregar central de notificações:', error);
         setNotificationsError('Não foi possível carregar o resumo do dia.');
+        setNotificationsWarning(null);
       }
     } finally {
       if (requestId === notificationsRequestIdRef.current) {
@@ -1074,6 +1080,11 @@ export default function Layout({
                       <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
                     ) : (
                       <div className="max-h-[70vh] overflow-y-auto">
+                        {notificationsWarning && (
+                          <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]" role="status">
+                            {notificationsWarning}
+                          </div>
+                        )}
                         <div className="px-4 py-3">
                           <div className="flex items-center justify-between">
                             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</p>

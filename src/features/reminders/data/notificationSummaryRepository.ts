@@ -43,11 +43,14 @@ export type NotificationDependent = {
   data_nascimento: string;
 };
 
+export type NotificationSummarySourceName = 'reminders' | 'contracts' | 'holders' | 'dependents';
+
 export type NotificationSummarySource = {
   reminders: NotificationReminder[];
   contracts: NotificationContract[];
   holders: NotificationHolder[];
   dependents: NotificationDependent[];
+  failedSources: NotificationSummarySourceName[];
 };
 
 const batchesOf = <T>(items: T[], size = 100): T[][] => {
@@ -78,9 +81,13 @@ export async function loadNotificationSummarySource(
       .overrideTypes<NotificationContract[], { merge: false }>(),
   ]);
 
-  const error = remindersResult.error
-    ?? contractsResult.error;
-  if (error) throw error;
+  const failedSources: NotificationSummarySourceName[] = [];
+  if (remindersResult.error) failedSources.push('reminders');
+  if (contractsResult.error) failedSources.push('contracts');
+
+  if (failedSources.length === 2) {
+    throw remindersResult.error ?? contractsResult.error;
+  }
 
   const reminders = remindersResult.data ?? [];
   const contracts = contractsResult.data ?? [];
@@ -92,6 +99,7 @@ export async function loadNotificationSummarySource(
       contracts,
       holders: [],
       dependents: [],
+      failedSources,
     };
   }
 
@@ -116,14 +124,14 @@ export async function loadNotificationSummarySource(
     ),
   ]);
 
-  const peopleError = holderPages.find((page) => page.error)?.error
-    ?? dependentPages.find((page) => page.error)?.error;
-  if (peopleError) throw peopleError;
+  if (holderPages.some((page) => page.error)) failedSources.push('holders');
+  if (dependentPages.some((page) => page.error)) failedSources.push('dependents');
 
   return {
     reminders,
     contracts,
     holders: holderPages.flatMap((page) => page.data ?? []),
     dependents: dependentPages.flatMap((page) => page.data ?? []),
+    failedSources,
   };
 }

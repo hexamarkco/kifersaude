@@ -8263,7 +8263,7 @@ export default function WhatsAppInboxScreen() {
     }
     if (!selectedChat) return;
 
-    const targetChat = selectedChat;
+    const targetChat = selectedChatForPresentation ?? selectedChat;
     if (!contactSaveLockRef.current.tryAcquire(targetChat.id)) {
       return;
     }
@@ -8307,7 +8307,7 @@ export default function WhatsAppInboxScreen() {
       contactSaveLockRef.current.release(targetChat.id);
       setSavingContact(false);
     }
-  }, [applyFrontendSavedContactNames, saveContactName, selectedChat, loadChats, refreshStartChatSources, startChatQuery]);
+  }, [applyFrontendSavedContactNames, saveContactName, selectedChat, selectedChatForPresentation, loadChats, refreshStartChatSources, startChatQuery]);
 
   const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
     if (!target) {
@@ -10112,7 +10112,7 @@ export default function WhatsAppInboxScreen() {
                     <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
                       <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
                       <WhatsAppPresenceIndicator chat={selectedChat} />
-                      {!selectedChat.saved_contact_name ? (
+                      {!selectedChatForPresentation?.saved_contact_name ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -10127,7 +10127,7 @@ export default function WhatsAppInboxScreen() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSaveContactName(selectedChat.saved_contact_name || selectedChatDisplayName);
+                            setSaveContactName(selectedChatForPresentation?.saved_contact_name || selectedChatDisplayName);
                             setSaveContactDialogOpen(true);
                           }}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
@@ -11797,11 +11797,11 @@ export default function WhatsAppInboxScreen() {
 
         <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">
           <DialogHeader onClose={() => setSaveContactDialogOpen(false)} showCloseButton>
-            <DialogTitle>{selectedChat?.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}</DialogTitle>
+            <DialogTitle>{selectedChatForPresentation?.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <DialogDescription>
-              {selectedChat?.saved_contact_name
+              {selectedChatForPresentation?.saved_contact_name
                 ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'
                 : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}
             </DialogDescription>
@@ -11829,7 +11829,7 @@ export default function WhatsAppInboxScreen() {
                 Cancelar
               </Button>
               <Button variant="primary" onClick={handleSaveContactToPhonebook} loading={savingContact} disabled={savingContact}>
-                {selectedChat?.saved_contact_name ? 'Renomear' : 'Salvar'}
+                {selectedChatForPresentation?.saved_contact_name ? 'Renomear' : 'Salvar'}
               </Button>
             </div>
           </DialogBody>

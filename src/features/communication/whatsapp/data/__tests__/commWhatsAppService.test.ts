@@ -282,6 +282,21 @@ test('repete uma leitura agendada após falhas transitórias até concluir', asy
   mocks.query.range.mockResolvedValue({ data: [], error: null });
 });
 
+test('repete uma leitura agendada quando o Supabase responde com erro temporário', async () => {
+  let attempts = 0;
+  mocks.query.range.mockImplementation(async () => {
+    attempts += 1;
+    return attempts === 1
+      ? { data: [], error: { status: 503, message: 'Service Unavailable' } }
+      : { data: [], error: null };
+  });
+
+  await commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' });
+
+  assert.equal(attempts, 2);
+  mocks.query.range.mockResolvedValue({ data: [], error: null });
+});
+
 test('não repete falha permanente ao listar agendamentos', async () => {
   let attempts = 0;
   mocks.query.range.mockImplementation(async () => {

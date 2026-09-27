@@ -69,16 +69,52 @@ const SCHEDULED_MESSAGE_SELECT = [
 ].join(',');
 
 function isRetryableScheduledReadError(error: unknown): boolean {
-  const message = error instanceof Error
-    ? error.message.toLowerCase()
-    : String(error ?? '').toLowerCase();
+  const candidate = error && typeof error === 'object'
+    ? error as {
+      code?: unknown;
+      message?: unknown;
+      name?: unknown;
+      status?: unknown;
+      context?: unknown;
+    }
+    : null;
+  const context = candidate?.context && typeof candidate.context === 'object'
+    ? candidate.context as { message?: unknown; status?: unknown }
+    : null;
+  const status = Number(candidate?.status ?? context?.status);
+  const code = String(candidate?.code ?? '').toLowerCase();
+  const name = String(candidate?.name ?? '').toLowerCase();
+  const message = String(candidate?.message ?? context?.message ?? error ?? '').toLowerCase();
+
+  if ([408, 425, 429].includes(status) || (status >= 500 && status <= 599)) {
+    return true;
+  }
+
+  if (code === '57014' || name === 'aborterror') {
+    return true;
+  }
 
   return [
     'falha de rede ao conectar com o supabase',
     'tempo limite atingido',
+    'tempo limite',
+    'timed out',
+    'timeout',
     'failed to fetch',
     'networkerror',
+    'network error',
+    'network request failed',
     'fetch failed',
+    'temporarily unavailable',
+    'service unavailable',
+    'bad gateway',
+    'gateway timeout',
+    'connection reset',
+    'connection refused',
+    'econnreset',
+    'etimedout',
+    'socket hang up',
+    'aborted',
   ].some((fragment) => message.includes(fragment));
 }
 

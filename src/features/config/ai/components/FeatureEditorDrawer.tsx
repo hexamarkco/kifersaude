@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, RotateCcw, Save } from "lucide-react";
 
 import {
@@ -98,6 +98,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [loadedProvider, setLoadedProvider] = useState<AiProviderSlug | null>(null);
   const [providerLoading, setProviderLoading] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
+  const providerRequestIdRef = useRef(0);
 
   const [catalogMeta, setCatalogMeta] = useState<Map<string, AiModelCatalogWithPricing>>(new Map());
 
@@ -123,17 +124,36 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, [feature.key]);
 
   const loadProviderModels = useCallback(async (providerSlug: AiProviderSlug) => {
+    const requestId = ++providerRequestIdRef.current;
     setProviderLoading(true);
     setProviderError(null);
     setLoadedProvider(null);
-    const { data, error } = await aiConfigService.fetchProviderModels(providerSlug);
-    setProviderLoading(false);
-    setLoadedProvider(providerSlug);
-    if (error) {
-      setProviderError(error);
+
+    try {
+      const { data, error } = await aiConfigService.fetchProviderModels(providerSlug);
+      if (requestId !== providerRequestIdRef.current) {
+        return;
+      }
+
+      setLoadedProvider(providerSlug);
+      if (error) {
+        setProviderError(error);
+        setProviderModels([]);
+      } else {
+        setProviderModels(data ?? []);
+      }
+    } catch (error) {
+      if (requestId !== providerRequestIdRef.current) {
+        return;
+      }
+
+      setLoadedProvider(providerSlug);
       setProviderModels([]);
-    } else {
-      setProviderModels(data ?? []);
+      setProviderError(error instanceof Error ? error.message : "Não foi possível carregar os modelos do provedor.");
+    } finally {
+      if (requestId === providerRequestIdRef.current) {
+        setProviderLoading(false);
+      }
     }
   }, []);
 
@@ -237,23 +257,33 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     }
 
     setSaving(true);
-    const { error } = await aiConfigService.createConfig(feature.id, {
-      feature_prompt: prompt,
-      output_instructions: outputInstructions,
-      temperature,
-      max_output_tokens: maxTokens,
-      provider: modelOverrideEnabled ? provider : undefined,
-      model: modelOverrideEnabled ? model : undefined,
-      model_override_enabled: modelOverrideEnabled,
-      reasoning_effort: reasoningEffort,
-    });
-    setSaving(false);
+    try {
+      const { error } = await aiConfigService.createConfig(feature.id, {
+        feature_prompt: prompt,
+        output_instructions: outputInstructions,
+        temperature,
+        max_output_tokens: maxTokens,
+        provider: modelOverrideEnabled ? provider : undefined,
+        model: modelOverrideEnabled ? model : undefined,
+        model_override_enabled: modelOverrideEnabled,
+        reasoning_effort: reasoningEffort,
+      });
 
-    if (error) return toast.error(error);
-    toast.success("Nova versão criada e ativada");
-    loadHistory();
-    loadEffectiveModel();
-    onSaved();
+      if (error) {
+        toast.error(error);
+        return;
+      }
+
+      toast.success("Nova versão criada e ativada");
+      loadHistory();
+      loadEffectiveModel();
+      onSaved();
+    } catch (error) {
+      console.error("Erro ao salvar configuração da IA:", error);
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a configuração.");
+    } finally {
+      setSaving(false);
+    }
   }, [feature.id, prompt, outputInstructions, temperature, maxTokens, modelOverrideEnabled, provider, model, reasoningEffort, taskType, onSaved, loadHistory, loadEffectiveModel]);
 
   const handleResetToDefaults = useCallback(() => {

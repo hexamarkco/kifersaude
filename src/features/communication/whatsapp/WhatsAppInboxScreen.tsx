@@ -2930,9 +2930,12 @@ export default function WhatsAppInboxScreen() {
         return 'Contato';
       }
 
-      return getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo) || selectedChatForPresentation.phone_number?.trim() || 'Contato';
+      // O painel do lead carrega em uma chamada separada e pode trazer um
+      // nome diferente do contato salvo. O cabeçalho deve permanecer ligado
+      // à identidade consolidada da conversa, sem piscar entre as duas fontes.
+      return getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null) || selectedChatForPresentation.phone_number?.trim() || 'Contato';
     },
-    [leadPanel?.nome_completo, operationalState?.channel?.connected_user_name, selectedChatForPresentation],
+    [operationalState?.channel?.connected_user_name, selectedChatForPresentation],
   );
 
   const quickReplyLead = useMemo<Lead | null>(() => {
@@ -2943,7 +2946,7 @@ export default function WhatsAppInboxScreen() {
     const timestamp = new Date().toISOString();
     return {
       id: leadPanel?.id ?? selectedChat.lead_id ?? selectedChat.id,
-      nome_completo: getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo),
+      nome_completo: getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null),
       telefone: leadPanel?.telefone || selectedChat.phone_number || '',
       email: '',
       cidade: '',
@@ -4142,8 +4145,8 @@ export default function WhatsAppInboxScreen() {
   const selectedChatWasAutoLinked = selectedChat?.lead_link_source === 'auto_phone';
   const selectedChatLeadMutationLoading = leadMutationLoadingChatId === selectedChat?.id;
   const selectedChatDisplayName = useMemo(
-    () => getSafeChatDisplayName(selectedChatForPresentation, channelState?.connected_user_name ?? null, leadPanel?.nome_completo),
-    [channelState?.connected_user_name, selectedChatForPresentation, leadPanel?.nome_completo],
+    () => getSafeChatDisplayName(selectedChatForPresentation, channelState?.connected_user_name ?? null),
+    [channelState?.connected_user_name, selectedChatForPresentation],
   );
   const isSelectedChatWaitingForQuote = useMemo(() => {
     const normalizedStatus = String(leadPanel?.status_nome ?? selectedChat?.lead_status ?? '')

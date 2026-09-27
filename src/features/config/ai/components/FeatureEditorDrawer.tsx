@@ -502,7 +502,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           </Field>
 
           {/* Temperature + Max Tokens */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field
               label="Temperatura"
               description={reasoningEffort && reasoningEffort !== "none"

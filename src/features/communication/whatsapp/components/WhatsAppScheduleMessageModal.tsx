@@ -682,7 +682,7 @@ export default function WhatsAppScheduleMessageModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{stepIndex === 0 ? 'Primeira etapa' : 'Aguardar após etapa anterior (horas)'}</label>
                       <Input

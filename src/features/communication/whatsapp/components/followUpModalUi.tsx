@@ -1,19 +1,12 @@
 import type { ComponentType, ReactNode } from 'react';
 import {
-  ArrowRightCircle,
-  Briefcase,
   Calendar,
   CalendarPlus,
   Clock3,
-  Feather,
   HeartHandshake,
-  History,
   Loader2,
   MessageSquare,
-  Scissors,
-  Smile,
   Sparkles,
-  Target,
 } from 'lucide-react';
 
 import { cx } from '../../../../lib/cx';
@@ -21,8 +14,8 @@ import type {
   CommWhatsAppFollowUpEmotionalContext,
   CommWhatsAppFollowUpNextAction,
   CommWhatsAppFollowUpVariation,
-  CommWhatsAppRewriteTone,
 } from '../data';
+import { formatNextActionDate, getNextActionBadgeLabel } from './followUpModalActions';
 
 // ---- Shared visual building blocks for the follow-up (single + batch) modals.
 // Centralized here so both flows look and behave identically instead of
@@ -145,25 +138,6 @@ export function VariationCarousel({
 
 // ---- Next action ----
 
-export const formatNextActionDate = (value?: string | null) => {
-  if (!value) return 'Sem data sugerida';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Data sugerida inválida';
-  return date.toLocaleString('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const NEXT_ACTION_BADGE_LABEL: Record<CommWhatsAppFollowUpNextAction['type'], string> = {
-  schedule: 'Agendar',
-  wait: 'Aguardar',
-  mark_lost_recommended: 'Perdido?',
-};
-
 export function NextActionCard({
   nextAction,
   title = 'Próxima ação sugerida',
@@ -184,7 +158,7 @@ export function NextActionCard({
           <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{nextAction.reason}</p>
         </div>
         <span className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
-          {NEXT_ACTION_BADGE_LABEL[nextAction.type]}
+          {getNextActionBadgeLabel(nextAction.type)}
         </span>
       </div>
 
@@ -212,65 +186,6 @@ export function NextActionCard({
 }
 
 // ---- Refinement chips (simple tone rewrite + context-aware refinement) ----
-
-export type RefinementChipAction = {
-  id: string;
-  label: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
-export type SimpleRefinementAction = RefinementChipAction & { id: CommWhatsAppRewriteTone };
-
-export const SIMPLE_REFINEMENT_ACTIONS: SimpleRefinementAction[] = [
-  { id: 'shorter', label: 'Encurtar', description: 'Reescrever a sugestão de forma mais curta e objetiva.', icon: Scissors },
-  { id: 'friendly', label: 'Mais amigável', description: 'Deixar a mensagem mais leve, humana e acolhedora.', icon: Smile },
-  { id: 'professional', label: 'Mais profissional', description: 'Ajustar o texto para um tom mais consultivo e profissional.', icon: Briefcase },
-];
-
-export type ContextRefinementAction = RefinementChipAction & { instruction: string };
-
-// Refinamentos que podem mudar a ESTRATEGIA comercial da mensagem (nao so o
-// estilo) sempre releem o contexto completo do chat (mode: 'refine'), para
-// nao contrariar a leitura real da conversa nem repetir uma abordagem ja
-// tentada sem resposta.
-export const CONTEXT_REFINEMENT_ACTIONS: ContextRefinementAction[] = [
-  {
-    id: 'add-context',
-    label: 'Usar contexto do chat',
-    description: 'Refinar considerando o histórico e o momento atual da conversa.',
-    icon: History,
-    instruction: 'Refine a mensagem usando o contexto completo do chat. Preserve apenas fatos confirmados no histórico e deixe o próximo passo mais coerente com a conversa.',
-  },
-  {
-    id: 'reduce-pressure',
-    label: 'Menos pressão',
-    description: 'Diminuir insistência e cobrança no follow-up.',
-    icon: Feather,
-    instruction: 'Refine a mensagem para reduzir pressão e cobrança. Mantenha cordialidade, naturalidade e uma pergunta simples para facilitar resposta.',
-  },
-  {
-    id: 'clear-next-step',
-    label: 'Próximo passo claro',
-    description: 'Reforçar uma ação objetiva para avançar a conversa.',
-    icon: ArrowRightCircle,
-    instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
-  },
-  {
-    id: 'more-assertive',
-    label: 'Mais firme',
-    description: 'Deixar a mensagem comercialmente mais firme, sem perder a coerência com o histórico.',
-    icon: Target,
-    instruction: 'Refine a mensagem para ficar comercialmente mais firme e direta, sem perder a coerência com o histórico e sem soar agressiva ou pressionar artificialmente.',
-  },
-  {
-    id: 'find-blocker',
-    label: 'Investigar bloqueio',
-    description: 'Focar em descobrir o que realmente está travando a decisão do cliente.',
-    icon: Sparkles,
-    instruction: 'Refine a mensagem para investigar com sutileza qual é o real bloqueio do cliente neste momento (preço, insegurança, terceiro decisor, comparação, falta de urgência, etc.), em vez de apenas perguntar se ele já decidiu ou analisou.',
-  },
-];
 
 export function RefinementChip({
   icon: Icon,

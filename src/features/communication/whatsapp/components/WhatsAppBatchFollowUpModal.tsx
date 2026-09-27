@@ -17,13 +17,15 @@ import { toast } from '../../../../lib/toast';
 import type { BatchFollowUpFinalStatus, BatchFollowUpOpportunityRecommendation } from '../domain/batchFollowUpOutcome';
 import {
   AiContextPanel,
-  CONTEXT_REFINEMENT_ACTIONS,
   ChatBubblePreview,
   Pill,
   RefinementChip,
-  SIMPLE_REFINEMENT_ACTIONS,
   VariationCarousel,
 } from './followUpModalUi';
+import {
+  CONTEXT_REFINEMENT_ACTIONS,
+  SIMPLE_REFINEMENT_ACTIONS,
+} from './followUpModalActions';
 
 // ---- Constants ----
 

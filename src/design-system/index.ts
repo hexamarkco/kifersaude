@@ -113,7 +113,8 @@ export {
 export type { TableProps, TableSize, TableActionsProps, TableBodyProps, TableCellProps, TableHeadProps, TableHeaderProps, TableRowProps } from './components/Table';
 export { default as Tooltip } from './components/Tooltip';
 export type { TooltipProps, TooltipSide, TooltipSize } from './components/Tooltip';
-export { Toast, ToastProvider, useToast } from './components/Toast';
+export { Toast, ToastProvider } from './components/Toast';
+export { useToast } from './components/toastContext';
 export type { ToastAction, ToastInput, ToastProps, ToastProviderProps, ToastVariant, ToastPosition } from './components/Toast';
 export * from './panelStyles';
 export * from './tokens';

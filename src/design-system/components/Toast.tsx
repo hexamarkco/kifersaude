@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 import Button, { type ButtonSize, type ButtonVariant } from './Button';
+import { ToastContext } from './toastContext';
 
 export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'info';
 export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
@@ -44,13 +45,6 @@ export type ToastProps = Omit<HTMLAttributes<HTMLDivElement>, 'title'> & {
   showProgress?: boolean;
 };
 
-type ToastContextValue = {
-  toast: (input: ToastInput) => string;
-  dismiss: (id: string) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | null>(null);
-
 const variantIcons: Record<ToastVariant, typeof CheckCircle2> = {
   default: Info,
   success: CheckCircle2,
@@ -66,12 +60,6 @@ const variantClasses: Record<ToastVariant, string> = {
   warning: 'kds-toast-warning',
   info: 'kds-toast-info',
 };
-
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
-  return ctx;
-}
 
 export type ToastProviderProps = {
   children: ReactNode;

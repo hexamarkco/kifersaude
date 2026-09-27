@@ -14,15 +14,17 @@ import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, typ
 import { toast } from '../../../../lib/toast';
 import {
   AiContextPanel,
-  CONTEXT_REFINEMENT_ACTIONS,
   ChatBubblePreview,
   NextActionCard,
   Pill,
   RefinementChip,
-  SIMPLE_REFINEMENT_ACTIONS,
   SectionCard,
   VariationCarousel,
 } from './followUpModalUi';
+import {
+  CONTEXT_REFINEMENT_ACTIONS,
+  SIMPLE_REFINEMENT_ACTIONS,
+} from './followUpModalActions';
 
 type SpeechRecognitionType = {
   new (): {

@@ -1,7 +1,7 @@
 BEGIN;
 SET LOCAL search_path = extensions, public, pg_catalog;
 
-SELECT plan(6);
+SELECT plan(8);
 
 SELECT ok(
   to_regprocedure('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)') IS NOT NULL,
@@ -14,6 +14,14 @@ SELECT ok(
 SELECT ok(
   position('contact.display_name ilike' IN lower(pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure))) > 0,
   'chat search includes cached saved contact name'
+);
+SELECT ok(
+  position('comm_whatsapp_preferred_saved_contact_name(' IN pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure)) > 0,
+  'chat filters use the canonical saved contact resolver'
+);
+SELECT ok(
+  position('coalesce(c.phone_digits, c.phone_number)' IN lower(pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure))) > 0,
+  'canonical resolver receives a phone fallback for identifier-only chats'
 );
 SELECT ok(
   position('input.saved_filter = ''saved''' IN pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure)) > 0,

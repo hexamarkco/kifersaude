@@ -196,7 +196,17 @@ export default function AgendaScreen() {
             .filter((id): id is string => Boolean(id)),
         ),
       );
-      const fetchedContracts = await listReminderContracts(contractIds);
+      const directLeadIds = Array.from(
+        new Set(
+          remindersData
+            .map((reminder) => reminder.lead_id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      const [fetchedContracts, fetchedDirectLeads] = await Promise.all([
+        listReminderContracts(contractIds),
+        listReminderLeads(directLeadIds),
+      ]);
       const nextContractsMap = new Map<string, ReminderContractContext>();
 
       fetchedContracts.forEach((contract) => {
@@ -206,16 +216,10 @@ export default function AgendaScreen() {
       const contractLeadIds = Array.from(
         new Set(fetchedContracts.map((contract) => contract.lead_id).filter((id): id is string => Boolean(id))),
       );
-
-      const leadIds = Array.from(
-        new Set([
-          ...remindersData
-            .map((reminder) => reminder.lead_id)
-            .filter((id): id is string => Boolean(id)),
-          ...contractLeadIds,
-        ]),
-      );
-      const fetchedLeads = await listReminderLeads(leadIds);
+      const directLeadIdSet = new Set(directLeadIds);
+      const contractOnlyLeadIds = contractLeadIds.filter((leadId) => !directLeadIdSet.has(leadId));
+      const fetchedContractLeads = await listReminderLeads(contractOnlyLeadIds);
+      const fetchedLeads = [...fetchedDirectLeads, ...fetchedContractLeads];
       const nextLeadsMap = new Map<string, ReminderLeadContext>();
 
       fetchedLeads.forEach((lead) => {

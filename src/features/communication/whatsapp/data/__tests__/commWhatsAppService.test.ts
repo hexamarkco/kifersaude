@@ -123,3 +123,29 @@ test('preserva o erro para o retry quando a Edge Function e o cache falham', asy
     /Nao foi possivel localizar contatos salvos do WhatsApp\./,
   );
 });
+
+test('nao aceita nome do provedor quando o cache canonico falha', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: {
+      contacts: [{
+        ...manualContact,
+        contact_id: '5521982965495',
+        display_name: 'Mariangela - Cliente',
+        manual_override: false,
+        manual_override_name: null,
+      }],
+    },
+    error: null,
+    response: null,
+  });
+  mocks.query.overrideTypes.mockResolvedValue({
+    data: [],
+    error: new Error('cache temporariamente indisponível'),
+  });
+
+  const contacts = await commWhatsAppService.lookupSavedContactsByPhones({
+    phoneNumbers: ['5521982965495'],
+  });
+
+  assert.deepEqual(contacts, []);
+});

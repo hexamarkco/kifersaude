@@ -139,7 +139,7 @@ import {
 import { selectInitialChatId, shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -3595,6 +3595,27 @@ export default function WhatsAppInboxScreen() {
       savedContactNameByPhoneRef.current,
     ));
   }, []);
+
+  const rememberManualSavedContactName = useCallback((phone: string | null | undefined, displayName: string) => {
+    const result = applyManualSavedContactNameToMaps(
+      phone,
+      displayName,
+      savedContactNameByPhoneRef.current,
+      savedContactNameOverrideByPhoneRef.current,
+    );
+
+    if (result.phoneKeys.length === 0 || !displayName.trim()) {
+      return;
+    }
+
+    result.phoneKeys.forEach((key) => {
+      resolvedSavedContactPhoneKeysRef.current.add(key);
+    });
+    savedContactNameByPhoneRef.current = result.synchronizedNames;
+    savedContactNameOverrideByPhoneRef.current = result.manualNames;
+    setSavedContactNameRevision((current) => current + 1);
+    setChats((current) => applyFrontendSavedContactNames(current));
+  }, [applyFrontendSavedContactNames]);
 
   useEffect(() => {
     const now = Date.now();
@@ -8339,6 +8360,7 @@ export default function WhatsAppInboxScreen() {
         displayName,
       });
 
+      rememberManualSavedContactName(phoneNumber, displayName);
       void refreshStartChatSources(startChatQuery, 1, false);
       void loadChats();
       toast.success('Contato salvo com sucesso.');
@@ -8348,7 +8370,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSharedContactActionKey((current) => (current === actionKey ? null : current));
     }
-  }, [loadChats, refreshStartChatSources, startChatQuery]);
+  }, [loadChats, refreshStartChatSources, rememberManualSavedContactName, startChatQuery]);
 
   const handleSaveContactToPhonebook = useCallback(async () => {
     const name = saveContactName.trim();
@@ -8380,18 +8402,7 @@ export default function WhatsAppInboxScreen() {
         });
         toast.success('Contato salvo com sucesso.');
       }
-      const phoneKeys = collectPhoneLookupKeys(targetChat.phone_digits || targetChat.phone_number);
-      const savedContactMap = new Map(savedContactNameByPhoneRef.current);
-      const savedContactOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
-      phoneKeys.forEach((key) => {
-        savedContactMap.set(key, name);
-        savedContactOverrides.set(key, name);
-        resolvedSavedContactPhoneKeysRef.current.add(key);
-      });
-      savedContactNameByPhoneRef.current = savedContactMap;
-      savedContactNameOverrideByPhoneRef.current = savedContactOverrides;
-      setSavedContactNameRevision((current) => current + 1);
-      setChats((current) => applyFrontendSavedContactNames(current));
+      rememberManualSavedContactName(targetChat.phone_digits || targetChat.phone_number, name);
       setSaveContactDialogOpen(false);
       void refreshStartChatSources(startChatQuery, 1, false);
       void loadChats();
@@ -8402,7 +8413,7 @@ export default function WhatsAppInboxScreen() {
       contactSaveLockRef.current.release(targetChat.id);
       setSavingContact(false);
     }
-  }, [applyFrontendSavedContactNames, saveContactName, selectedChat, selectedChatForPresentation, loadChats, refreshStartChatSources, startChatQuery]);
+  }, [rememberManualSavedContactName, saveContactName, selectedChat, selectedChatForPresentation, loadChats, refreshStartChatSources, startChatQuery]);
 
   const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
     if (!target) {

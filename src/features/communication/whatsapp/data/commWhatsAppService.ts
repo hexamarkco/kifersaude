@@ -86,7 +86,10 @@ const lookupSavedContactsFromCache = async (phoneNumbers: string[]) => {
   )).slice(0, 500);
 
   if (phoneKeys.length === 0) {
-    return [] as CommWhatsAppPhoneContact[];
+    return {
+      contacts: [] as CommWhatsAppPhoneContact[],
+      error: null,
+    };
   }
 
   const { data, error } = await supabase
@@ -102,10 +105,16 @@ const lookupSavedContactsFromCache = async (phoneNumbers: string[]) => {
 
   if (error) {
     console.warn('[WhatsAppInbox] consulta canônica do cache de contatos indisponível', error);
-    return [] as CommWhatsAppPhoneContact[];
+    return {
+      contacts: [] as CommWhatsAppPhoneContact[],
+      error,
+    };
   }
 
-  return data ?? [];
+  return {
+    contacts: data ?? [],
+    error: null,
+  };
 };
 
 type ScheduledMediaUpload = {
@@ -1727,10 +1736,21 @@ export const commWhatsAppService = {
     // A versão publicada da Edge Function pode ficar temporariamente atrás
     // do frontend. Ler também o cache exposto pelo banco garante que linhas
     // antigas com manual_override=true continuem vencendo o nome sincronizado.
-    const databaseContacts = await databaseContactsPromise;
+    const databaseLookup = await databaseContactsPromise;
+    const databaseContacts = databaseLookup.contacts;
+
+    // Se o cache canônico falhar, a resposta antiga da Edge Function pode
+    // carregar o nome do provedor e sobrescrever visualmente um nome manual.
+    // Nesse cenário, só aceitamos uma resposta que já prove ser manual; é
+    // preferível manter o nome atual até o cache voltar do que fazê-lo piscar.
+    const safeEdgeFunctionContacts = databaseLookup.error
+      ? edgeFunctionContacts.filter((contact) => (
+        contact.manual_override === true || contact.contact_id.startsWith('manual:')
+      ))
+      : edgeFunctionContacts;
 
     const contacts = selectPreferredSavedContacts([
-      ...edgeFunctionContacts,
+      ...safeEdgeFunctionContacts,
       ...databaseContacts,
     ]);
 

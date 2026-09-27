@@ -199,6 +199,37 @@ export const getSavedContactNameForPhone = (
   return null;
 };
 
+export const applyManualSavedContactNameToMaps = (
+  phone: string | null | undefined,
+  displayName: string,
+  synchronizedNames: ReadonlyMap<string, string>,
+  manualNames: ReadonlyMap<string, string>,
+) => {
+  const normalizedName = displayName.trim();
+  const phoneKeys = collectPhoneLookupKeys(phone);
+  const nextSynchronizedNames = new Map(synchronizedNames);
+  const nextManualNames = new Map(manualNames);
+
+  if (!normalizedName || phoneKeys.length === 0) {
+    return {
+      phoneKeys,
+      synchronizedNames: nextSynchronizedNames,
+      manualNames: nextManualNames,
+    };
+  }
+
+  phoneKeys.forEach((key) => {
+    nextSynchronizedNames.set(key, normalizedName);
+    nextManualNames.set(key, normalizedName);
+  });
+
+  return {
+    phoneKeys,
+    synchronizedNames: nextSynchronizedNames,
+    manualNames: nextManualNames,
+  };
+};
+
 export const resolveSavedContactName = (
   phone: string | null | undefined,
   currentChatName: string | null | undefined,

@@ -3,6 +3,7 @@ import { test } from 'vitest';
 
 import {
   addSavedContactsToNameMap,
+  applyManualSavedContactNameToMaps,
   applySavedContactNameFromLookup,
   applySavedContactNameToContact,
   buildSavedContactNameMap,
@@ -271,6 +272,20 @@ test('prioritizes a locally saved name over a stale synchronized name', () => {
     getSavedContactNameForPhone('+55 (11) 99999-9999', localOverrides, synchronizedNames),
     'Fabiola',
   );
+});
+
+test('fixa o nome manual em todas as variantes de telefone antes do proximo refresh', () => {
+  const result = applyManualSavedContactNameToMaps(
+    '+55 (21) 98296-5495',
+    'Mariangela',
+    new Map([['5521982965495', 'Mariangela - Cliente']]),
+    new Map(),
+  );
+
+  assert.equal(result.manualNames.get('5521982965495'), 'Mariangela');
+  assert.equal(result.manualNames.get('21982965495'), 'Mariangela');
+  assert.equal(result.synchronizedNames.get('5521982965495'), 'Mariangela');
+  assert.equal(result.phoneKeys.length > 0, true);
 });
 
 test('ignores a blank chat name and falls back to the synchronized saved name', () => {

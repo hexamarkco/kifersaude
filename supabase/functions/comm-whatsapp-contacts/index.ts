@@ -720,18 +720,18 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      try {
-        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
-      } catch {
-        console.warn('[comm-whatsapp-contacts] sync apos salvar contato ignorado, servindo cache existente');
-      }
-
       const savedContact = await saveContactToCache({
         supabaseAdmin,
         channelId: channel.id,
         phoneNumber,
         displayName,
       });
+
+      try {
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+      } catch {
+        console.warn('[comm-whatsapp-contacts] sync apos salvar contato ignorado, servindo cache existente');
+      }
 
       return new Response(JSON.stringify({ success: true, contact: savedContact }), {
         status: 200,
@@ -766,18 +766,18 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      try {
-        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
-      } catch {
-        console.warn('[comm-whatsapp-contacts] sync apos renomear contato ignorado, servindo cache existente');
-      }
-
       const savedContact = await saveContactToCache({
         supabaseAdmin,
         channelId: channel.id,
         phoneNumber,
         displayName,
       });
+
+      try {
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+      } catch {
+        console.warn('[comm-whatsapp-contacts] sync apos renomear contato ignorado, servindo cache existente');
+      }
 
       return new Response(JSON.stringify({ success: true, contact: savedContact }), {
         status: 200,

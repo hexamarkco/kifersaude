@@ -675,6 +675,12 @@ export default function WhatsAppScheduledMessagesPanel({
                 </Alert>
               ) : null}
 
+              {countsLoadError ? (
+                <Alert tone="warning" title="Os totais das abas estão incompletos.">
+                  Os agendamentos continuam disponíveis. Tente atualizar novamente para recalcular todos os totais.
+                </Alert>
+              ) : null}
+
               {messages.length === 0 && sequences.length === 0 ? (
                 <div className="text-center py-12">
                   <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
@@ -691,13 +697,6 @@ export default function WhatsAppScheduledMessagesPanel({
                 </div>
               ) : (
                 <>
-
-              {countsLoadError ? (
-                <Alert tone="warning" title="Os totais das abas estão incompletos.">
-                  Os agendamentos continuam disponíveis. Tente atualizar novamente para recalcular todos os totais.
-                </Alert>
-              ) : null}
-
               <Tabs
                 items={viewTabs}
                 value={activeView}

@@ -153,3 +153,35 @@ test('não apresenta falha de carregamento como se não houvesse agendamentos', 
   assert.doesNotMatch(document.body.textContent ?? '', /0 mensagem\(ns\) e 0 sequência\(s\)$/);
   view.unmount();
 });
+
+test('informa quando as contagens das abas falham mesmo sem agendamentos listados', async () => {
+  mocks.listScheduledMessages.mockReturnValueOnce(Promise.resolve([]));
+  mocks.listScheduledSequences.mockReturnValueOnce(Promise.resolve([]));
+  mocks.lookupSavedContactsByPhones.mockResolvedValue([]);
+  mocks.countScheduledMessages
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')))
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')))
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')));
+  mocks.countScheduledSequences
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')))
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')))
+    .mockReturnValueOnce(Promise.reject(new Error('contagem indisponível')));
+
+  const view = render(
+    <WhatsAppScheduledMessagesPanel
+      channelId="channel-1"
+      isOpen
+      onClose={() => undefined}
+    />,
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  assert.match(document.body.textContent ?? '', /Os totais das abas estão incompletos/);
+  assert.match(document.body.textContent ?? '', /Nenhum agendamento encontrado/);
+  view.unmount();
+});

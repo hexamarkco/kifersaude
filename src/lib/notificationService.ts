@@ -4,6 +4,7 @@ import type { Lead } from '../features/leads';
 import type { Reminder } from '../features/reminders';
 import {
   whatsappConversationsRepository,
+  getSafeChatDisplayName,
   type CommWhatsAppChat,
 } from '../features/communication/whatsapp';
 import { isReminderDue } from './dateUtils';
@@ -41,6 +42,7 @@ export class NotificationService {
   private leadChannelSubscription: RealtimeChannel | null = null;
   private inboxChannelSubscription: RealtimeChannel | null = null;
   private inboxSubscriptionRequestId = 0;
+  private inboxConnectedUserName: string | null = null;
   private lifecycleId = 0;
   private lastUnreadCount = 0;
   private lastInboxUnreadCount = 0;
@@ -160,6 +162,7 @@ export class NotificationService {
         }
 
         const channelId = state?.channel?.id;
+        this.inboxConnectedUserName = state?.channel?.connected_user_name ?? null;
         if (!channelId) return;
 
         let realtimeWarningShown = false;
@@ -213,6 +216,7 @@ export class NotificationService {
 
   private stopInboxMessageNotifications() {
     this.inboxSubscriptionRequestId += 1;
+    this.inboxConnectedUserName = null;
     if (this.inboxChannelSubscription !== null) {
       supabase.removeChannel(this.inboxChannelSubscription);
       this.inboxChannelSubscription = null;
@@ -276,7 +280,7 @@ export class NotificationService {
     const messagePreview = (chat.last_message_text ?? '').replace(/\s+/g, ' ').trim();
     this.inboxMessageCallbacks.forEach(callback => callback({
       chatId: chat.id,
-      displayName: chat.saved_contact_name || chat.lead_name || chat.display_name || chat.push_name || chat.phone_number || 'Contato privado',
+      displayName: getSafeChatDisplayName(chat, this.inboxConnectedUserName),
       phoneNumber: chat.phone_number || null,
       messagePreview: messagePreview || 'Nova mensagem recebida.',
       messageAt: chat.last_message_at ?? null,

@@ -18,12 +18,25 @@ const mocks = vi.hoisted(() => {
     eq: TestMock<[], Query>;
     order: TestMock<[], Promise<{ data: unknown[]; error: null }>>;
   };
+  type ChatIdentity = {
+    display_name?: string | null;
+    phone_number?: string | null;
+  };
   const createMock = <Args extends unknown[], Result>() => vi.fn() as unknown as TestMock<Args, Result>;
 
   const channelNames: string[] = [];
   const subscriptions: Subscription[] = [];
-  const getOperationalState = createMock<[], Promise<{ channel: { id: string } } | null>>();
+  const getOperationalState = createMock<[], Promise<{ channel: { id: string; connected_user_name?: string | null } } | null>>();
   const getUnreadCount = createMock<[], Promise<number>>();
+  const getSafeChatDisplayName = createMock<[
+    ChatIdentity,
+    string | null | undefined,
+  ], string>();
+  getSafeChatDisplayName.mockImplementation((chat, connectedUserName) => (
+    chat.display_name?.toLowerCase() === connectedUserName?.toLowerCase()
+      ? '+55 (11) 99999-9999'
+      : chat.display_name || chat.phone_number || 'Contato privado'
+  ));
   getUnreadCount.mockResolvedValue(0);
   const removeChannel = createMock<[Subscription], void>();
   const channel = createMock<[string], Subscription>();
@@ -52,6 +65,7 @@ const mocks = vi.hoisted(() => {
     channel,
     getOperationalState,
     getUnreadCount,
+    getSafeChatDisplayName,
     removeChannel,
     query,
   };
@@ -70,6 +84,7 @@ vi.mock('../../features/communication/whatsapp', () => ({
     getOperationalState: mocks.getOperationalState,
     getUnreadCount: mocks.getUnreadCount,
   },
+  getSafeChatDisplayName: mocks.getSafeChatDisplayName,
 }));
 
 import { NotificationService } from '../notificationService';
@@ -142,4 +157,51 @@ test('ignora eventos de lead e inbox depois que o serviço é interrompido', asy
 
   unsubscribeLead();
   unsubscribeInbox();
+});
+
+test('usa a mesma identidade segura do Inbox nas notificações de novas mensagens', async () => {
+  mocks.channelNames.splice(0);
+  mocks.subscriptions.splice(0);
+  mocks.getOperationalState.mockResolvedValue({
+    channel: { id: 'channel-1', connected_user_name: 'Atendente' },
+  });
+
+  let notificationName = '';
+  const service = new NotificationService();
+  const unsubscribe = service.subscribeToInboxMessages((notification) => {
+    notificationName = notification.displayName;
+  });
+
+  service.start(60_000);
+  await Promise.resolve();
+  await Promise.resolve();
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+  const inboxCallback = mocks.subscriptions[1]?.on.mock.calls[0]?.[2];
+  inboxCallback?.({
+    eventType: 'INSERT',
+    new: {
+      id: 'chat-1',
+      phone_number: '5511999999999',
+      last_message_at: new Date().toISOString(),
+      last_message_direction: 'inbound',
+      last_message_text: 'Mensagem nova',
+      unread_count: 1,
+      manual_unread: false,
+      deleted_at: null,
+      merged_into_chat_id: null,
+      is_archived: false,
+      is_muted: false,
+      display_name: 'Atendente',
+      saved_contact_name: null,
+      push_name: null,
+      lead_id: null,
+    },
+    old: {},
+  });
+
+  assert.equal(notificationName, '+55 (11) 99999-9999');
+
+  service.stop();
+  unsubscribe();
 });

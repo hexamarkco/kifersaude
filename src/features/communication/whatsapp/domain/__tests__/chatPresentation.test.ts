@@ -162,6 +162,22 @@ test('accepts the canonical saved name from a fresh chat projection', () => {
   assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
+test('does not reintroduce an old provider name when the list refresh already resolved the saved name', () => {
+  const previous = createChat({
+    display_name: 'Mariangela',
+    saved_contact_name: 'Mariangela',
+  });
+  const incoming = createChat({
+    display_name: 'Mariangela - Cliente',
+    saved_contact_name: 'Mariangela - Cliente',
+  });
+
+  const result = stabilizeChatIdentityForLocalMerge(incoming, previous, 'Mariangela');
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
 test('allows an explicit manual rename to replace the previous saved name', () => {
   const previous = createChat({
     display_name: 'Mariangela',

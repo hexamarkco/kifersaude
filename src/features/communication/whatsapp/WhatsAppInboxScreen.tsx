@@ -5345,8 +5345,14 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(mergedData.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
+              const canonicalSavedContactName = resolveSavedContactName(
+                chat.phone_digits || chat.phone_number,
+                chat.saved_contact_name,
+                savedContactNameOverrideByPhoneRef.current,
+                savedContactNameByPhoneRef.current,
+              );
               return preserveUsefulChatPreview(
-                stabilizeChatIdentityForLocalMerge(chat, previousChat, chat.saved_contact_name),
+                stabilizeChatIdentityForLocalMerge(chat, previousChat, canonicalSavedContactName),
                 previousChat,
               );
             })),
@@ -5520,8 +5526,14 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(page.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
+              const canonicalSavedContactName = resolveSavedContactName(
+                chat.phone_digits || chat.phone_number,
+                chat.saved_contact_name,
+                savedContactNameOverrideByPhoneRef.current,
+                savedContactNameByPhoneRef.current,
+              );
               return preserveUsefulChatPreview(
-                stabilizeChatIdentityForLocalMerge(chat, previousChat, chat.saved_contact_name),
+                stabilizeChatIdentityForLocalMerge(chat, previousChat, canonicalSavedContactName),
                 previousChat,
               );
             })),

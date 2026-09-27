@@ -4965,11 +4965,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     setLeadSearchQuery('');
-    const currentSelectedChat = selectedChatId
-      ? latestChatsRef.current.find((chat) => chat.id === selectedChatId) ?? null
-      : null;
-    void loadLeadPanel(currentSelectedChat);
-  }, [leadDrawerOpen, loadLeadPanel, selectedChat?.lead_id, selectedChatId]);
+  }, [leadDrawerOpen, selectedChatId]);
 
   useEffect(() => {
     followUpGenerationRequestIdRef.current += 1;

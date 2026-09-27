@@ -673,6 +673,10 @@ html,
   border-color: transparent;
   background: var(--bg-surface);
   box-shadow: var(--shadow-card);
+  /* Mantém listas grandes leves sem esconder chats do operador: o navegador
+     só calcula pintura/layout dos cards quando eles entram na viewport. */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 76px;
 }
 
 .painel-theme .whatsapp-inbox-chat-card:hover {

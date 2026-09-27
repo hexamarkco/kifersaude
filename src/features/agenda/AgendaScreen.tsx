@@ -185,9 +185,22 @@ export default function AgendaScreen() {
     if (showLoading) {
       setLoading(true);
     }
+    let mainListLoaded = false;
 
     try {
       const remindersData = await listReminders();
+
+      if (requestId !== loadRemindersRequestIdRef.current) {
+        return;
+      }
+
+      // Os lembretes são a lista principal da tela. Exiba-os assim que
+      // chegarem, sem bloquear a agenda enquanto os dados complementares de
+      // contratos e leads são hidratados em seguida.
+      setReminders(remindersData);
+      setError(null);
+      setLoading(false);
+      mainListLoaded = true;
 
       const contractIds = Array.from(
         new Set(
@@ -230,8 +243,6 @@ export default function AgendaScreen() {
         return;
       }
 
-      setReminders(remindersData);
-      setError(null);
       setContractsMap(nextContractsMap);
       setLeadsMap(nextLeadsMap);
     } catch (loadError) {
@@ -240,7 +251,9 @@ export default function AgendaScreen() {
       }
 
       console.error("Erro ao carregar agenda:", loadError);
-      setError("Não foi possível carregar a agenda agora.");
+      setError(mainListLoaded
+        ? "A agenda foi carregada, mas os detalhes dos leads ainda não puderam ser atualizados."
+        : "Não foi possível carregar a agenda agora.");
     } finally {
       if (requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);

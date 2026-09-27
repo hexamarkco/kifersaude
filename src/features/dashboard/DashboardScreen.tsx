@@ -510,6 +510,29 @@ export default function DashboardScreen({
     setError(null);
     setDecisionSnapshotError(null);
     try {
+      // Os dados principais e a análise complementar são independentes.
+      // Iniciar as duas leituras juntas evita deixar lembretes, interações e
+      // histórico esperando a paginação de leads e contratos terminar.
+      const decisionSnapshotPromise = loadDashboardDecisionSnapshot()
+        .then(({ reminders, interactions, statusHistory }) => {
+          if (requestId !== dataRequestIdRef.current) {
+            return;
+          }
+
+          setDecisionSnapshotError(null);
+          setReminders(reminders);
+          setInteractions(interactions);
+          setStatusHistory(statusHistory);
+        })
+        .catch((decisionError: unknown) => {
+          if (requestId === dataRequestIdRef.current) {
+            console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
+            setDecisionSnapshotError(
+              "Os dados principais estão disponíveis, mas alguns indicadores podem estar incompletos porque não foi possível carregar o histórico de interações e retornos.",
+            );
+          }
+        });
+
       const {
         leads: leadsData,
         contracts: contractsData,
@@ -545,25 +568,9 @@ export default function DashboardScreen({
 
       setContracts(contractsData || []);
 
-      void loadDashboardDecisionSnapshot()
-        .then(({ reminders, interactions, statusHistory }) => {
-          if (requestId !== dataRequestIdRef.current) {
-            return;
-          }
-
-          setDecisionSnapshotError(null);
-          setReminders(reminders);
-          setInteractions(interactions);
-          setStatusHistory(statusHistory);
-        })
-        .catch((decisionError: unknown) => {
-          if (requestId === dataRequestIdRef.current) {
-            console.error("Erro ao carregar a análise complementar do dashboard:", decisionError);
-            setDecisionSnapshotError(
-              "Os dados principais estão disponíveis, mas alguns indicadores podem estar incompletos porque não foi possível carregar o histórico de interações e retornos.",
-            );
-          }
-        });
+      // Mantém a promessa observada para evitar rejeições não tratadas caso
+      // o carregamento principal termine antes da análise complementar.
+      void decisionSnapshotPromise;
     } catch (error) {
       if (requestId === dataRequestIdRef.current) {
         console.error("Erro ao carregar dados:", error);

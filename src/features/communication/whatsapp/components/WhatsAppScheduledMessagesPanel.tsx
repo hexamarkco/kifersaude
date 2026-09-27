@@ -53,6 +53,15 @@ const SCHEDULED_MESSAGES_PAGE_SIZE = 100;
 
 type ScheduledMessagesView = 'upcoming' | 'attention' | 'history' | 'all';
 
+type ScheduledViewCounts = Record<ScheduledMessagesView, number>;
+
+const EMPTY_VIEW_COUNTS: ScheduledViewCounts = {
+  upcoming: 0,
+  attention: 0,
+  history: 0,
+  all: 0,
+};
+
 const VIEW_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppScheduledMessageStatus[]> = {
   upcoming: ['scheduled', 'sending'],
   attention: ['failed'],
@@ -133,9 +142,19 @@ export default function WhatsAppScheduledMessagesPanel({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const loadRequestIdRef = useRef(0);
+  const countsRequestIdRef = useRef(0);
   const scheduledActionLockRef = useRef(new KeyedActionLock());
 
   const isFiltered = Boolean(chatId || phoneDigits);
+
+  const scheduleFilters = useMemo(() => ({
+    ...(channelId ? { channelId } : {}),
+    ...(chatId ? { chatId } : {}),
+    ...(phoneDigits && !chatId ? { phoneDigits } : {}),
+  }), [channelId, chatId, phoneDigits]);
+
+  const [messageViewCounts, setMessageViewCounts] = useState<ScheduledViewCounts>(EMPTY_VIEW_COUNTS);
+  const [sequenceViewCounts, setSequenceViewCounts] = useState<ScheduledViewCounts>(EMPTY_VIEW_COUNTS);
 
   const loadMessages = useCallback(async () => {
     if (!isOpen) return;
@@ -143,11 +162,8 @@ export default function WhatsAppScheduledMessagesPanel({
     setLoading(true);
     setLoadError(false);
     try {
-      const scheduleFilters = {
-        ...(channelId ? { channelId } : {}),
-        ...(chatId ? { chatId } : {}),
-        ...(phoneDigits && !chatId ? { phoneDigits } : {}),
-      };
+      const messageStatuses = activeView === 'all' ? undefined : VIEW_STATUSES[activeView];
+      const sequenceStatuses = activeView === 'all' ? undefined : VIEW_SEQUENCE_STATUSES[activeView];
       const allMessagesPromise = (async () => {
         const allMessages: CommWhatsAppScheduledMessage[] = [];
         let offset = 0;
@@ -155,6 +171,7 @@ export default function WhatsAppScheduledMessagesPanel({
         while (true) {
           const page = await commWhatsAppService.listScheduledMessages({
             ...scheduleFilters,
+            statuses: messageStatuses,
             limit: SCHEDULED_MESSAGES_PAGE_SIZE,
             offset,
           });
@@ -166,10 +183,25 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return allMessages;
       })();
-      const sequencesPromise = commWhatsAppService.listScheduledSequences({
-        ...scheduleFilters,
-        limit: SCHEDULED_MESSAGES_PAGE_SIZE,
-      });
+      const sequencesPromise = (async () => {
+        const allSequences: CommWhatsAppScheduledSequence[] = [];
+        let offset = 0;
+
+        while (true) {
+          const page = await commWhatsAppService.listScheduledSequences({
+            ...scheduleFilters,
+            statuses: sequenceStatuses,
+            limit: SCHEDULED_MESSAGES_PAGE_SIZE,
+            offset,
+          });
+          allSequences.push(...page);
+
+          if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;
+          offset += page.length;
+        }
+
+        return allSequences;
+      })();
       const [allMessages, sequenceData] = await Promise.all([allMessagesPromise, sequencesPromise]);
 
       if (requestId !== loadRequestIdRef.current) {
@@ -195,7 +227,44 @@ export default function WhatsAppScheduledMessagesPanel({
         setLoading(false);
       }
     }
-  }, [channelId, chatId, phoneDigits, isOpen]);
+  }, [activeView, chatId, isOpen, phoneDigits, scheduleFilters]);
+
+  const loadViewCounts = useCallback(async () => {
+    if (!isOpen) return;
+    const requestId = ++countsRequestIdRef.current;
+    setMessageViewCounts(EMPTY_VIEW_COUNTS);
+    setSequenceViewCounts(EMPTY_VIEW_COUNTS);
+
+    try {
+      const [messageUpcoming, messageAttention, messageHistory, sequenceUpcoming, sequenceAttention, sequenceHistory] = await Promise.all([
+        commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.upcoming }),
+        commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.attention }),
+        commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.history }),
+        commWhatsAppService.countScheduledSequences({ ...scheduleFilters, statuses: VIEW_SEQUENCE_STATUSES.upcoming }),
+        commWhatsAppService.countScheduledSequences({ ...scheduleFilters, statuses: VIEW_SEQUENCE_STATUSES.attention }),
+        commWhatsAppService.countScheduledSequences({ ...scheduleFilters, statuses: VIEW_SEQUENCE_STATUSES.history }),
+      ]);
+
+      if (requestId !== countsRequestIdRef.current) return;
+
+      setMessageViewCounts({
+        upcoming: messageUpcoming,
+        attention: messageAttention,
+        history: messageHistory,
+        all: messageUpcoming + messageAttention + messageHistory,
+      });
+      setSequenceViewCounts({
+        upcoming: sequenceUpcoming,
+        attention: sequenceAttention,
+        history: sequenceHistory,
+        all: sequenceUpcoming + sequenceAttention + sequenceHistory,
+      });
+    } catch (error) {
+      if (requestId === countsRequestIdRef.current) {
+        console.warn('[ScheduledMessagesPanel] error counting scheduled items', error);
+      }
+    }
+  }, [isOpen, scheduleFilters]);
 
   useEffect(() => {
     void loadMessages();
@@ -204,6 +273,21 @@ export default function WhatsAppScheduledMessagesPanel({
       loadRequestIdRef.current += 1;
     };
   }, [loadMessages]);
+
+  useEffect(() => {
+    void loadViewCounts();
+
+    return () => {
+      countsRequestIdRef.current += 1;
+    };
+  }, [loadViewCounts]);
+
+  const refreshScheduledData = useCallback(async () => {
+    await loadMessages();
+    void loadViewCounts();
+  }, [loadMessages, loadViewCounts]);
+
+  const viewCounts = messageViewCounts;
 
   const beginScheduledAction = useCallback((id: string) => {
     if (!scheduledActionLockRef.current.tryAcquire(id)) {
@@ -239,14 +323,14 @@ export default function WhatsAppScheduledMessagesPanel({
     try {
       await commWhatsAppService.cancelScheduledMessage(id, 'Cancelado pelo usuário');
       toast.success('Mensagem agendada cancelada');
-      await loadMessages();
+      await refreshScheduledData();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao cancelar';
       toast.error(message);
     } finally {
       endScheduledAction(id);
     }
-  }, [beginScheduledAction, endScheduledAction, loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, refreshScheduledData]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!beginScheduledAction(id)) {
@@ -256,14 +340,14 @@ export default function WhatsAppScheduledMessagesPanel({
     try {
       await commWhatsAppService.deleteScheduledMessage(id);
       toast.success('Mensagem agendada excluída');
-      await loadMessages();
+      await refreshScheduledData();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao excluir';
       toast.error(message);
     } finally {
       endScheduledAction(id);
     }
-  }, [beginScheduledAction, endScheduledAction, loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, refreshScheduledData]);
 
   const handleCancelSequence = useCallback(async (id: string) => {
     if (!beginScheduledAction(id)) {
@@ -273,14 +357,14 @@ export default function WhatsAppScheduledMessagesPanel({
     try {
       await commWhatsAppService.cancelScheduledSequence(id, 'Cancelada pelo usuário');
       toast.success('Sequência cancelada');
-      await loadMessages();
+      await refreshScheduledData();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao cancelar sequência';
       toast.error(message);
     } finally {
       endScheduledAction(id);
     }
-  }, [beginScheduledAction, endScheduledAction, loadMessages]);
+  }, [beginScheduledAction, endScheduledAction, refreshScheduledData]);
 
   const handleRetrySequence = useCallback(async (id: string) => {
     if (!beginScheduledAction(id)) {
@@ -290,48 +374,14 @@ export default function WhatsAppScheduledMessagesPanel({
     try {
       await commWhatsAppService.retryScheduledSequence(id);
       toast.success('Sequência retomada');
-      await loadMessages();
+      await refreshScheduledData();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao retomar sequência';
       toast.error(message);
     } finally {
       endScheduledAction(id);
     }
-  }, [beginScheduledAction, endScheduledAction, loadMessages]);
-
-  const viewCounts = useMemo(() => {
-    const counts: Record<ScheduledMessagesView, number> = {
-      upcoming: 0,
-      attention: 0,
-      history: 0,
-      all: messages.length,
-    };
-
-    for (const message of messages) {
-      if (VIEW_STATUSES.upcoming.includes(message.status)) counts.upcoming += 1;
-      if (VIEW_STATUSES.attention.includes(message.status)) counts.attention += 1;
-      if (VIEW_STATUSES.history.includes(message.status)) counts.history += 1;
-    }
-
-    return counts;
-  }, [messages]);
-
-  const sequenceViewCounts = useMemo(() => {
-    const counts: Record<ScheduledMessagesView, number> = {
-      upcoming: 0,
-      attention: 0,
-      history: 0,
-      all: sequences.length,
-    };
-
-    for (const sequence of sequences) {
-      if (VIEW_SEQUENCE_STATUSES.upcoming.includes(sequence.status)) counts.upcoming += 1;
-      if (VIEW_SEQUENCE_STATUSES.attention.includes(sequence.status)) counts.attention += 1;
-      if (VIEW_SEQUENCE_STATUSES.history.includes(sequence.status)) counts.history += 1;
-    }
-
-    return counts;
-  }, [sequences]);
+  }, [beginScheduledAction, endScheduledAction, refreshScheduledData]);
 
   const viewTabs: TabItem<ScheduledMessagesView>[] = useMemo(() => [
     { id: 'upcoming', label: 'Próximas', badge: viewCounts.upcoming + sequenceViewCounts.upcoming },
@@ -446,7 +496,7 @@ export default function WhatsAppScheduledMessagesPanel({
               tone="danger"
               title="Não foi possível carregar os agendamentos."
               action={
-                <Button variant="secondary" size="sm" onClick={() => void loadMessages()}>
+                <Button variant="secondary" size="sm" onClick={() => void refreshScheduledData()}>
                   <RotateCcw className="kds-control-icon" />
                   <span>Tentar novamente</span>
                 </Button>
@@ -603,7 +653,7 @@ export default function WhatsAppScheduledMessagesPanel({
           scheduledMessage={editingMessage}
           onScheduled={() => {
             setEditingMessage(null);
-            void loadMessages();
+            void refreshScheduledData();
           }}
         />
       ) : null}
@@ -621,7 +671,7 @@ export default function WhatsAppScheduledMessagesPanel({
           scheduledSequence={editingSequence}
           onScheduled={() => {
             setEditingSequence(null);
-            void loadMessages();
+            void refreshScheduledData();
           }}
         />
       ) : null}

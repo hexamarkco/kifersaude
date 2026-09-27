@@ -3019,7 +3019,9 @@ export const commWhatsAppService = {
     phoneDigits?: string;
     leadId?: string;
     status?: string;
+    statuses?: readonly string[];
     limit?: number;
+    offset?: number;
   }): Promise<CommWhatsAppScheduledSequence[]> {
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
@@ -3030,11 +3032,37 @@ export const commWhatsAppService = {
     if (options?.chatId) query = query.eq('chat_id', options.chatId);
     if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
     if (options?.leadId) query = query.eq('lead_id', options.leadId);
-    if (options?.status) query = query.eq('status', options.status);
-    if (options?.limit) query = query.limit(options.limit);
+    if (options?.statuses?.length) {
+      query = query.in('status', [...options.statuses]);
+    } else if (options?.status) {
+      query = query.eq('status', options.status);
+    }
+    const from = options?.offset ?? 0;
+    const to = options?.limit ? from + options.limit - 1 : from + 99;
+    query = query.range(from, to);
     const { data, error } = await query;
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível listar as sequências.'));
     return ((data ?? []) as unknown as ScheduledSequenceRow[]).map(mapScheduledSequenceRow);
+  },
+
+  async countScheduledSequences(options?: {
+    channelId?: string;
+    chatId?: string;
+    phoneDigits?: string;
+    leadId?: string;
+    statuses?: readonly string[];
+  }): Promise<number> {
+    let query = supabase
+      .from('comm_whatsapp_scheduled_sequences' as never)
+      .select('id', { count: 'exact', head: true });
+    if (options?.channelId) query = query.eq('channel_id', options.channelId);
+    if (options?.chatId) query = query.eq('chat_id', options.chatId);
+    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+    if (options?.leadId) query = query.eq('lead_id', options.leadId);
+    if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
+    const { count, error } = await query;
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as sequências.'));
+    return count ?? 0;
   },
 
   async cancelScheduledSequence(sequenceId: string, reason?: string): Promise<boolean> {
@@ -3059,6 +3087,7 @@ export const commWhatsAppService = {
     chatId?: string;
     phoneDigits?: string;
     status?: string;
+    statuses?: readonly string[];
     createdBy?: string;
     leadId?: string;
     limit?: number;
@@ -3081,7 +3110,9 @@ export const commWhatsAppService = {
     if (options?.phoneDigits) {
       query = query.eq('phone_digits', options.phoneDigits);
     }
-    if (options?.status) {
+    if (options?.statuses?.length) {
+      query = query.in('status', [...options.statuses]);
+    } else if (options?.status) {
       query = query.eq('status', options.status);
     }
     if (options?.createdBy) {
@@ -3101,6 +3132,28 @@ export const commWhatsAppService = {
     }
 
     return (data ?? []) as unknown as CommWhatsAppScheduledMessage[];
+  },
+
+  async countScheduledMessages(options?: {
+    channelId?: string;
+    chatId?: string;
+    phoneDigits?: string;
+    statuses?: readonly string[];
+    createdBy?: string;
+    leadId?: string;
+  }): Promise<number> {
+    let query = supabase
+      .from('comm_whatsapp_scheduled_messages')
+      .select('id', { count: 'exact', head: true });
+    if (options?.channelId) query = query.eq('channel_id', options.channelId);
+    if (options?.chatId) query = query.eq('chat_id', options.chatId);
+    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+    if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
+    if (options?.createdBy) query = query.eq('created_by', options.createdBy);
+    if (options?.leadId) query = query.eq('lead_id', options.leadId);
+    const { count, error } = await query;
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as mensagens agendadas.'));
+    return count ?? 0;
   },
 
   async updateScheduledMessage(id: string, input: {

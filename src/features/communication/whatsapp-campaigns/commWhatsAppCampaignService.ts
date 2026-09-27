@@ -1,5 +1,6 @@
 import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
 import { getSupabaseErrorMessage, supabase } from '../../../infrastructure/supabase';
+import type { CommWhatsAppChatIdentity } from '../whatsapp';
 import { getResponsibleDisplayName, resolveResponsibleIds, type CampaignResponsibleOption } from './domain/responsibleFilter';
 
 export type CommWhatsAppCampaignStatus = 'draft' | 'scheduled' | 'queued' | 'running' | 'paused' | 'completed' | 'cancelled';
@@ -136,7 +137,9 @@ export type CommWhatsAppCampaignTargetListItem = Pick<
   | 'next_send_at'
   | 'last_attempt_at'
   | 'error_message'
->;
+> & {
+  chat: CommWhatsAppChatIdentity | null;
+};
 
 export type CreateCampaignInput = {
   name: string;
@@ -312,6 +315,7 @@ const CAMPAIGN_TARGET_LIST_SELECT = [
   'next_send_at',
   'last_attempt_at',
   'error_message',
+  'chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_name,lead_id,is_group)',
 ].join(',');
 
 const CAMPAIGN_STEP_SELECT = [

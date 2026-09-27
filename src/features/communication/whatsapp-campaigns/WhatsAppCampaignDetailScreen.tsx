@@ -23,6 +23,7 @@ import {
 } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignChanges } from './campaignRealtime';
+import { getCampaignTargetDisplayName } from './domain/campaignTargetPresentation';
 import {
   commWhatsAppCampaignService,
   computeAdmissionIntervalMinutes,
@@ -658,7 +659,7 @@ export default function WhatsAppCampaignDetailScreen() {
                 <Card key={target.id} className="space-y-3 bg-[color:var(--panel-surface-soft)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium text-[var(--text-primary)]">{target.display_name || target.phone_number}</p>
+                      <p className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</p>
                       <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
                     </div>
                     <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
@@ -689,7 +690,7 @@ export default function WhatsAppCampaignDetailScreen() {
                   {targets.map((target) => (
                     <TableRow key={target.id} className="align-top">
                       <TableCell>
-                        <p className="font-medium text-[var(--text-primary)]">{target.display_name || target.phone_number}</p>
+                        <p className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</p>
                         <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
                       </TableCell>
                       <TableCell><Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge></TableCell>

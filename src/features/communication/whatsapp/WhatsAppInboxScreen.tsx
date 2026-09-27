@@ -138,7 +138,7 @@ import {
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -4098,7 +4098,11 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      setSavedContacts((current) => (appendSavedContacts ? [...current, ...contactsPage.contacts] : contactsPage.contacts));
+      setSavedContacts((current) => (
+        appendSavedContacts
+          ? mergeSavedContactPages(current, contactsPage.contacts)
+          : contactsPage.contacts
+      ));
       setSavedContactsTotal(contactsPage.total);
       setSavedContactsHasMore(contactsPage.hasMore);
       setSavedContactsPage(page);

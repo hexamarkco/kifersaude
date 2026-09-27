@@ -110,6 +110,28 @@ export const selectPreferredSavedContacts = (contacts: CommWhatsAppPhoneContact[
   return Array.from(selected.values());
 };
 
+/**
+ * Combines pages from the saved-contact list without showing the same row
+ * twice when the provider changes the list between page requests.
+ *
+ * The last copy wins so a refreshed row can update its name or timestamp,
+ * while Map keeps the original position in the list.
+ */
+export const mergeSavedContactPages = (
+  current: CommWhatsAppPhoneContact[],
+  incoming: CommWhatsAppPhoneContact[],
+) => {
+  const contactsById = new Map<string, CommWhatsAppPhoneContact>();
+
+  for (const contact of [...current, ...incoming]) {
+    const identity = contact.id.trim()
+      || `${contact.channel_id}:${contact.contact_id}:${contact.phone_digits ?? contact.phone_number ?? ''}`;
+    contactsById.set(identity, contact);
+  }
+
+  return Array.from(contactsById.values());
+};
+
 export const addSavedContactsToNameMap = (
   target: Map<string, string>,
   contacts: CommWhatsAppPhoneContact[],

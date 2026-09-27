@@ -7,6 +7,7 @@ import {
   applySavedContactNameToContact,
   collectPhoneLookupKeys,
   getSavedContactNameForPhone,
+  mergeSavedContactPages,
   resolveSavedContactName,
   selectPreferredSavedContacts,
 } from '../contactLookup';
@@ -108,6 +109,33 @@ test('does not let an older duplicate contact overwrite the newest name', () => 
   ]);
 
   assert.deepEqual(preferred.map((contact) => contact.display_name), ['Nome atual']);
+});
+
+test('combina páginas de contatos sem duplicar uma linha repetida', () => {
+  const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
+    id: 'contact-1',
+    channel_id: 'channel-1',
+    contact_id: 'external-1',
+    phone_number: '5511999999999',
+    phone_digits: '5511999999999',
+    display_name: 'Nome antigo',
+    saved: true,
+    last_synced_at: '2026-09-08T12:00:00.000Z',
+    created_at: '2026-09-08T12:00:00.000Z',
+    updated_at: '2026-09-08T12:00:00.000Z',
+    ...overrides,
+  });
+
+  const merged = mergeSavedContactPages(
+    [createContact({})],
+    [
+      createContact({ display_name: 'Nome atualizado', updated_at: '2026-09-08T13:00:00.000Z' }),
+      createContact({ id: 'contact-2', contact_id: 'external-2', phone_digits: '5521999999999', display_name: 'Outro contato' }),
+    ],
+  );
+
+  assert.deepEqual(merged.map((contact) => contact.id), ['contact-1', 'contact-2']);
+  assert.equal(merged[0]?.display_name, 'Nome atualizado');
 });
 
 test('sempre prioriza o contato salvo manualmente sobre o nome sincronizado', () => {

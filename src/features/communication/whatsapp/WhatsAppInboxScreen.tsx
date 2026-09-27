@@ -6222,6 +6222,9 @@ export default function WhatsAppInboxScreen() {
     };
   }, [loadChats, loadOperationalState, refreshArchivedChatsCount]);
 
+  const applyRealtimeChatChangeRef = useRef(applyRealtimeChatChange);
+  applyRealtimeChatChangeRef.current = applyRealtimeChatChange;
+
   useEffect(() => {
     if (!channelState?.id) {
       return;
@@ -6229,7 +6232,7 @@ export default function WhatsAppInboxScreen() {
 
     const unsubscribe = subscribeToInboxChats(
       channelState.id,
-      applyRealtimeChatChange,
+      (payload) => applyRealtimeChatChangeRef.current(payload),
       (status) => {
         if (status === 'unavailable') {
           console.warn('[WhatsAppInbox] realtime de chats indisponivel; polling permanece ativo.');
@@ -6240,7 +6243,7 @@ export default function WhatsAppInboxScreen() {
     return () => {
       unsubscribe();
     };
-  }, [applyRealtimeChatChange, channelState?.id]);
+  }, [channelState?.id]);
 
   useEffect(() => {
     if (!channelState?.id) return undefined;

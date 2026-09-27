@@ -3968,6 +3968,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
       setLeadPanel(lead);
+      setLeadPanelLoading(false);
       const nextLeadStatus = lead?.status_value ?? lead?.status_nome ?? null;
       const shouldHydrateChatFromLead = Boolean(
         lead
@@ -3990,7 +3991,7 @@ export default function WhatsAppInboxScreen() {
           setChats((current) => applyFrontendSavedContactNames(applyPrefetchedLeadNames(current)));
         }
       }
-      await loadLeadContracts(lead?.id ?? null);
+      void loadLeadContracts(lead?.id ?? null);
     } catch (error) {
       if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;

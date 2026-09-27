@@ -220,6 +220,7 @@ export default function WhatsAppLeadDrawer({
 
     if (!linkedLead || !canViewAgenda) {
       agendaRequestIdRef.current += 1;
+      setAgendaLoading(false);
       setAgendaReminders([]);
       setAgendaError(null);
       return;

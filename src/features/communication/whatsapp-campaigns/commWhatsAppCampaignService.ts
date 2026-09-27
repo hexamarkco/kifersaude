@@ -315,7 +315,7 @@ const CAMPAIGN_TARGET_LIST_SELECT = [
   'next_send_at',
   'last_attempt_at',
   'error_message',
-  'chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_name,lead_id,is_group)',
+  'chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_id,is_group)',
 ].join(',');
 
 const CAMPAIGN_STEP_SELECT = [
@@ -368,7 +368,7 @@ const AI_SUGGESTION_SELECT = [
   'reason',
   'evidence',
   'status',
-  'chat:comm_whatsapp_chats!inner(display_name,phone_number,saved_contact_name,push_name,lead_name,lead_id,is_group)',
+  'chat:comm_whatsapp_chats!inner(display_name,phone_number,saved_contact_name,push_name,lead_id,is_group)',
   'campaign:comm_whatsapp_campaigns(name)',
 ].join(',');
 

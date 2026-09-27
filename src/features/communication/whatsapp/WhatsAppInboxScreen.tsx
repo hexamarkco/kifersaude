@@ -586,15 +586,28 @@ function VoiceComposerTimeline({ progress = 0, recording = false }: { progress?:
 }
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
+  const buildMediaRequestKey = (retry: number) => [
+    message.external_message_id ?? '',
+    message.media_id ?? '',
+    message.media_url ?? '',
+    retry,
+  ].join('\u001f');
   const [mediaUrl, setMediaUrl] = useState<string | null>(whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
+  const mediaRequestKey = buildMediaRequestKey(retryNonce);
+  const [resolvedMediaRequestKey, setResolvedMediaRequestKey] = useState(mediaRequestKey);
 
   useEffect(() => {
     let active = true;
     let retainedLocalPreview = false;
     let retainedMediaObjectUrl = false;
+
+    setResolvedMediaRequestKey(mediaRequestKey);
+    setMediaUrl(null);
+    setLoading(false);
+    setError(null);
 
     const rememberedPreview = whatsappMediaRepository.retainLocalPreview(message.external_message_id);
     if (rememberedPreview) {
@@ -670,14 +683,21 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
         whatsappMediaRepository.releaseObjectUrl(message.media_id);
       }
     };
-  }, [message.external_message_id, message.media_id, message.media_url, retryNonce]);
+  }, [mediaRequestKey, message.external_message_id, message.media_id, message.media_url]);
 
   const retry = useCallback(() => {
     setError(null);
     setRetryNonce((current) => current + 1);
   }, []);
 
-  return { mediaUrl, loading, error, retry };
+  const isCurrentMediaRequest = resolvedMediaRequestKey === mediaRequestKey;
+
+  return {
+    mediaUrl: isCurrentMediaRequest ? mediaUrl : null,
+    loading: isCurrentMediaRequest ? loading : true,
+    error: isCurrentMediaRequest ? error : null,
+    retry,
+  };
 }
 
 const isChatMediaViewerMessage = (message: CommWhatsAppMessage) => {

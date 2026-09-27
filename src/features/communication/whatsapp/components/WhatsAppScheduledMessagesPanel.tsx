@@ -11,6 +11,7 @@ import type {
   CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceStatus,
 } from '../domain/types';
+import { collectPhoneLookupKeys, getSavedContactNameForPhone } from '../domain/contactLookup';
 import { getScheduledContactDisplayName } from '../domain/scheduledContactPresentation';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
@@ -143,8 +144,10 @@ export default function WhatsAppScheduledMessagesPanel({
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [savedContactNamesByPhone, setSavedContactNamesByPhone] = useState<Map<string, string>>(() => new Map());
   const loadRequestIdRef = useRef(0);
   const countsRequestIdRef = useRef(0);
+  const contactLookupRequestIdRef = useRef(0);
   const scheduledActionLockRef = useRef(new KeyedActionLock());
 
   const isFiltered = Boolean(chatId || phoneDigits);
@@ -284,6 +287,95 @@ export default function WhatsAppScheduledMessagesPanel({
     };
   }, [loadViewCounts]);
 
+  const scheduledPhoneNumbers = useMemo(() => {
+    const phoneNumbers = new Set<string>();
+    const appendPhone = (value?: string | null) => {
+      const normalized = String(value ?? '').trim();
+      if (normalized) {
+        phoneNumbers.add(normalized);
+      }
+    };
+
+    messages.forEach((message) => {
+      appendPhone(message.chat?.phone_digits || message.phone_digits);
+      appendPhone(message.chat?.phone_number || message.phone_number);
+    });
+    sequences.forEach((sequence) => {
+      appendPhone(sequence.chat?.phone_digits || sequence.phone_digits);
+      appendPhone(sequence.chat?.phone_number || sequence.phone_number);
+    });
+
+    return Array.from(phoneNumbers);
+  }, [messages, sequences]);
+
+  const scheduledPhoneLookupSignature = scheduledPhoneNumbers.join('|');
+
+  useEffect(() => {
+    if (!isOpen || currentContactName?.trim() || scheduledPhoneNumbers.length === 0) {
+      return;
+    }
+
+    const requestId = ++contactLookupRequestIdRef.current;
+    let cancelled = false;
+    const batches: string[][] = [];
+
+    for (let index = 0; index < scheduledPhoneNumbers.length; index += 120) {
+      batches.push(scheduledPhoneNumbers.slice(index, index + 120));
+    }
+
+    void Promise.all(batches.map((phoneNumbers) => commWhatsAppService.lookupSavedContactsByPhones({ phoneNumbers })))
+      .then((contactsByBatch) => {
+        if (cancelled || requestId !== contactLookupRequestIdRef.current) {
+          return;
+        }
+
+        const namesByPhone = new Map<string, string>();
+        contactsByBatch.flat().forEach((contact) => {
+          const displayName = contact.display_name?.trim();
+          if (!displayName) {
+            return;
+          }
+
+          collectPhoneLookupKeys(contact.phone_digits || contact.phone_number).forEach((key) => {
+            namesByPhone.set(key, displayName);
+          });
+        });
+
+        setSavedContactNamesByPhone(namesByPhone);
+      })
+      .catch((error) => {
+        if (!cancelled && requestId === contactLookupRequestIdRef.current) {
+          console.warn('[ScheduledMessagesPanel] não foi possível atualizar nomes dos contatos', error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentContactName, isOpen, scheduledPhoneLookupSignature, scheduledPhoneNumbers]);
+
+  const resolveScheduledContactName = useCallback((scheduled: {
+    chat?: { phone_number?: string | null; phone_digits?: string | null } | null;
+    phone_number?: string | null;
+    phone_digits?: string | null;
+  }) => {
+    if (currentContactName?.trim()) {
+      return currentContactName;
+    }
+
+    return getSavedContactNameForPhone(
+      scheduled.chat?.phone_digits
+        || scheduled.chat?.phone_number
+        || scheduled.phone_digits
+        || scheduled.phone_number,
+      savedContactNamesByPhone,
+    );
+  }, [currentContactName, savedContactNamesByPhone]);
+
+  const getContactDisplayName = useCallback((scheduled: Parameters<typeof getScheduledContactDisplayName>[0]) => (
+    getScheduledContactDisplayName(scheduled, resolveScheduledContactName(scheduled))
+  ), [resolveScheduledContactName]);
+
   const refreshScheduledData = useCallback(async () => {
     await loadMessages();
     void loadViewCounts();
@@ -408,7 +500,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           message.text_content,
-          getScheduledContactDisplayName(message, currentContactName),
+          getContactDisplayName(message),
           message.phone_number,
           message.phone_digits,
           message.label,
@@ -420,7 +512,7 @@ export default function WhatsAppScheduledMessagesPanel({
         const secondDate = new Date(second.next_run_at ?? second.scheduled_at).getTime();
         return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
       });
-  }, [activeView, currentContactName, endDate, messages, searchQuery, startDate]);
+  }, [activeView, endDate, getContactDisplayName, messages, searchQuery, startDate]);
 
   const visibleSequences = useMemo(() => {
     const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
@@ -438,7 +530,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           sequence.label,
-          getScheduledContactDisplayName(sequence, currentContactName),
+          getContactDisplayName(sequence),
           sequence.phone_number,
           sequence.phone_digits,
           SEQUENCE_STATUS_LABELS[sequence.status],
@@ -449,7 +541,7 @@ export default function WhatsAppScheduledMessagesPanel({
         const secondDate = new Date(second.scheduled_at).getTime();
         return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
       });
-  }, [activeView, currentContactName, endDate, searchQuery, sequences, startDate]);
+  }, [activeView, endDate, getContactDisplayName, searchQuery, sequences, startDate]);
 
   const hasListFilters = Boolean(searchQuery || startDate || endDate);
 
@@ -603,7 +695,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledSequenceItem
                       key={sequence.id}
                       sequence={sequence}
-                      currentContactName={currentContactName}
+                      currentContactName={resolveScheduledContactName(sequence)}
                       cancelling={activeActionIds.has(sequence.id)}
                       onEdit={() => setEditingSequence(sequence)}
                       onCancel={() => void handleCancelSequence(sequence.id)}
@@ -630,7 +722,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledMessageItem
                       key={message.id}
                       message={message}
-                      currentContactName={currentContactName}
+                      currentContactName={resolveScheduledContactName(message)}
                       cancelling={activeActionIds.has(message.id)}
                       onEdit={() => setEditingMessage(message)}
                       onCancel={() => void handleCancel(message.id)}

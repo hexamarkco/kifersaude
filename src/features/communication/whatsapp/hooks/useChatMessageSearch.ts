@@ -4,6 +4,7 @@ import {
   whatsappMessagesRepository,
   type CommWhatsAppMessageSearchResult,
 } from '../data';
+import { canSearchWhatsAppMessages } from '../domain/messageSearch';
 
 type UseChatMessageSearchParams = {
   chatId: string | null;
@@ -22,7 +23,7 @@ export const useChatMessageSearch = ({ chatId, enabled, query }: UseChatMessageS
     // Invalida imediatamente uma resposta lenta quando o operador muda o texto.
     const requestId = ++requestIdRef.current;
 
-    if (!enabled || !chatId || !query) {
+    if (!enabled || !chatId || !canSearchWhatsAppMessages(query)) {
       setResults([]);
       setSearching(false);
       setError(null);

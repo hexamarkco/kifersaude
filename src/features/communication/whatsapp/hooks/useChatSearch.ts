@@ -10,6 +10,7 @@ import {
   applyPendingChatInboxState,
   type PendingChatInboxStatePatch,
 } from '../pendingChatInboxState';
+import { canSearchWhatsAppMessages } from '../domain/messageSearch';
 
 type ChatActivityFilter = 'all' | 'unread';
 
@@ -65,6 +66,14 @@ export const useChatSearch = ({
   }, [searchDraft, setSearch]);
 
   useEffect(() => {
+    if (!canSearchWhatsAppMessages(search)) {
+      messageSearchRequestIdRef.current += 1;
+      setMessageSearchResults([]);
+      setSearchingMessages(false);
+      setMessageSearchError(null);
+      return;
+    }
+
     if (!search) {
       setSearch('');
       return;
@@ -118,8 +127,11 @@ export const useChatSearch = ({
   ]);
 
   useEffect(() => {
-    if (!search) {
-      setSearch('');
+    if (!canSearchWhatsAppMessages(search)) {
+      messageSearchRequestIdRef.current += 1;
+      setMessageSearchResults([]);
+      setSearchingMessages(false);
+      setMessageSearchError(null);
       return;
     }
 
@@ -163,7 +175,7 @@ export const useChatSearch = ({
     return () => {
       messageSearchRequestIdRef.current += 1;
     };
-  }, [search, searchRetryNonce, setSearch]);
+  }, [search, searchRetryNonce]);
 
   const retrySearch = useCallback(() => {
     setSearchRetryNonce((current) => current + 1);

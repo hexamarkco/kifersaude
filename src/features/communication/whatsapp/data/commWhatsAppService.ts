@@ -19,6 +19,7 @@ import type {
   CommWhatsAppScheduledSequenceAction,
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
+import { canSearchWhatsAppMessages } from '../domain/messageSearch';
 import { collectPhoneLookupKeys, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
@@ -1448,7 +1449,7 @@ export const commWhatsAppService = {
 
   async searchMessages(params: SearchMessagesParams): Promise<CommWhatsAppMessageSearchResult[]> {
     const search = sanitizeSearch(params.search ?? '');
-    if (!search) {
+    if (!canSearchWhatsAppMessages(search)) {
       return [];
     }
 

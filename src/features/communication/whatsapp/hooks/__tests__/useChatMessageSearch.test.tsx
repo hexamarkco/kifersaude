@@ -41,6 +41,29 @@ const SearchHarness = () => {
   );
 };
 
+const ShortQueryHarness = () => {
+  useChatMessageSearch({
+    chatId: 'chat-1',
+    enabled: true,
+    query: 'a',
+  });
+  return null;
+};
+
+test('não consulta mensagens remotas com apenas uma letra', async () => {
+  mocks.searchMessages.mockReset();
+
+  const view = render(<ShortQueryHarness />);
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await Promise.resolve();
+  });
+
+  assert.equal(mocks.searchMessages.mock.calls.length, 0);
+  view.unmount();
+});
+
 test('diferencia falha na busca dentro do chat de uma busca sem resultados', async () => {
   mocks.searchMessages.mockReset();
   mocks.searchMessages.mockRejectedValueOnce(new Error('falha de conexão'));

@@ -160,12 +160,20 @@ export const resolveSavedContactName = (
     return localOverrideName;
   }
 
+  // O cache de contatos salvos é a fonte canônica quando estiver disponível.
+  // O nome que veio no chat pode ser histórico (por exemplo, um registro
+  // `chat:` antigo) e não deve substituir um contato salvo mais recente.
+  const synchronizedName = getSavedContactNameForPhone(phone, synchronizedNames);
+  if (synchronizedName) {
+    return synchronizedName;
+  }
+
   const normalizedCurrentChatName = currentChatName?.trim();
   if (normalizedCurrentChatName) {
     return normalizedCurrentChatName;
   }
 
-  return getSavedContactNameForPhone(phone, synchronizedNames);
+  return null;
 };
 
 export const applySavedContactNameFromLookup = (

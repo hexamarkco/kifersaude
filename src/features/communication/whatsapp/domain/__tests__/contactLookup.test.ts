@@ -160,11 +160,18 @@ test('ignores a blank chat name and falls back to the synchronized saved name', 
   );
 });
 
-test('preserves the saved name already returned by the chat over a stale synchronized name', () => {
+test('prioriza o contato salvo atual sobre um nome histórico retornado pelo chat', () => {
   const synchronizedNames = new Map([['5511999999999', 'Fabiola']]);
 
   assert.equal(
-    resolveSavedContactName('+55 (11) 99999-9999', 'Mariangela', new Map(), synchronizedNames),
+    resolveSavedContactName('+55 (11) 99999-9999', 'Leve Saúde Operadora - Apoio Corretor', new Map(), synchronizedNames),
+    'Fabiola',
+  );
+});
+
+test('mantém o nome do chat apenas quando o cache de contatos ainda não respondeu', () => {
+  assert.equal(
+    resolveSavedContactName('+55 (11) 99999-9999', 'Mariangela', new Map(), new Map()),
     'Mariangela',
   );
 });
@@ -201,13 +208,13 @@ test('aplica o nome salvo também em um resultado de busca que veio com nome ant
   assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
-test('não deixa um nome sincronizado antigo substituir o nome salvo no chat', () => {
+test('usa o nome do contato salvo como fonte canônica mesmo quando o chat veio com outro nome', () => {
   const chat = {
     id: 'chat-1',
     phone_number: '+55 (21) 98296-5495',
     phone_digits: '5521982965495',
-    display_name: 'Mariangela',
-    saved_contact_name: 'Mariangela',
+    display_name: 'Leve Saúde Operadora - Apoio Corretor',
+    saved_contact_name: 'Leve Saúde Operadora - Apoio Corretor',
     push_name: 'Mariangela - Cliente',
     is_group: false,
   } as CommWhatsAppChat;
@@ -215,7 +222,7 @@ test('não deixa um nome sincronizado antigo substituir o nome salvo no chat', (
   const result = applySavedContactNameFromLookup(
     chat,
     new Map(),
-    new Map([['5521982965495', 'Mariangela - Cliente']]),
+    new Map([['5521982965495', 'Mariangela']]),
   );
 
   assert.equal(result.display_name, 'Mariangela');

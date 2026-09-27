@@ -59,11 +59,15 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
     setShowHistory(false);
     setGenerateError(null);
     setGenerating(false);
+    setListLoading(false);
     setListError(null);
   }, [chatId]);
 
   useEffect(() => {
-    if (!isActive || !chatId) return;
+    if (!isActive || !chatId) {
+      setListLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setListLoading(true);

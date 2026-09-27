@@ -5323,12 +5323,29 @@ export default function WhatsAppInboxScreen() {
           return all;
         };
 
-        const fetchedSections = await Promise.all(
+        const fetchedSectionResults = await Promise.allSettled(
           requestedSections.map(async (section) => ({ section, data: await fetchChatSection(section) })),
         );
 
         if (requestId !== chatsRequestIdRef.current) {
           return;
+        }
+
+        const fetchedSections: Array<{ section: 'active' | 'archived'; data: CommWhatsAppChat[] }> = [];
+        const failedSections: Array<'active' | 'archived'> = [];
+        let firstSectionError: unknown = null;
+        fetchedSectionResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            fetchedSections.push(result.value);
+            return;
+          }
+
+          failedSections.push(requestedSections[index]);
+          firstSectionError ??= result.reason;
+        });
+
+        if (fetchedSections.length === 0) {
+          throw firstSectionError ?? new Error('Não foi possível carregar as conversas.');
         }
 
         const fetchedSectionSet = new Set(requestedSections);
@@ -5422,7 +5439,11 @@ export default function WhatsAppInboxScreen() {
         const nextSignature = buildChatsSignature(hydratedData);
 
         setChatLoadError(false);
-        setChatRefreshError(null);
+        setChatRefreshError(
+          failedSections.length > 0
+            ? `Não foi possível atualizar ${failedSections.map((section) => section === 'active' ? 'as conversas ativas' : 'as conversas arquivadas').join(' e ')}. A lista disponível continua visível.`
+            : null,
+        );
 
         const chatsChanged = nextSignature !== chatsSignatureRef.current;
         if (chatsChanged) {

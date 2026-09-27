@@ -319,6 +319,47 @@ test('repete a lista do Inbox quando a RPC sofre timeout transitório', async ()
   mocks.rpc.mockResolvedValue({ data: [], error: null });
 });
 
+test('repete a lista do Inbox quando o fetch rejeita por timeout', async () => {
+  let attempts = 0;
+  const chat = { id: 'chat-fetch-retry', display_name: 'Contato', is_archived: false };
+  mocks.rpc.mockImplementation(async () => {
+    attempts += 1;
+    if (attempts === 1) {
+      throw new Error('Falha de rede ao conectar com o Supabase. Tempo limite atingido apos 8s.');
+    }
+
+    return { data: [chat], error: null };
+  });
+
+  const chats = await commWhatsAppService.listChats();
+
+  assert.deepEqual(chats, [chat]);
+  assert.equal(attempts, 2);
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+});
+
+test('tenta a RPC compatível quando a RPC principal rejeita por falha de rede', async () => {
+  const rpcCallsBefore = mocks.rpc.mock.calls.length;
+  const chat = { id: 'chat-fallback-fetch', display_name: 'Contato', is_archived: false };
+  mocks.rpc.mockImplementation(async (rpcName) => {
+    if (rpcName === 'comm_whatsapp_list_chats_with_presence') {
+      throw new Error('Falha de rede ao conectar com o Supabase. Tempo limite atingido apos 8s.');
+    }
+
+    return { data: [chat], error: null };
+  });
+
+  const chats = await commWhatsAppService.listChats();
+  const rpcCalls = mocks.rpc.mock.calls.slice(rpcCallsBefore);
+
+  assert.deepEqual(chats, [chat]);
+  assert.equal(
+    rpcCalls.filter(([rpcName]) => rpcName === 'comm_whatsapp_list_chats_with_groups').length,
+    1,
+  );
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+});
+
 test('usa a RPC compatível quando a RPC de presença não existe', async () => {
   mocks.rpc.mockImplementation(async (rpcName) => rpcName === 'comm_whatsapp_list_chats_with_presence'
     ? { data: null, error: { code: 'PGRST202', message: 'function does not exist' } }

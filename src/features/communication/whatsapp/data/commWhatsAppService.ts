@@ -135,14 +135,24 @@ async function executeInboxChatListRpc(
   args: never,
 ) {
   for (let attempt = 0; attempt <= INBOX_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
-    const result = await supabase.rpc(rpcName as never, args);
-    if (!result.error) {
-      return result;
-    }
-
     const retryDelayMs = INBOX_CHAT_LIST_RETRY_DELAYS_MS[attempt];
-    if (retryDelayMs === undefined || !isRetryableInboxChatListError(result.error)) {
-      return result;
+
+    try {
+      const result = await supabase.rpc(rpcName as never, args);
+      if (!result.error) {
+        return result;
+      }
+
+      if (retryDelayMs === undefined || !isRetryableInboxChatListError(result.error)) {
+        return result;
+      }
+    } catch (error) {
+      // The custom Supabase fetch turns network timeouts into rejected
+      // promises, so they do not arrive in `result.error`. Keep these
+      // transient failures on the same retry path as RPC errors.
+      if (retryDelayMs === undefined || !isRetryableInboxChatListError(error)) {
+        throw error;
+      }
     }
 
     await new Promise<void>((resolve) => window.setTimeout(resolve, retryDelayMs));
@@ -1421,11 +1431,27 @@ export const commWhatsAppService = {
       p_offset: offset,
     } as never;
 
-    let { data, error } = await executeInboxChatListRpc(
-      'comm_whatsapp_list_chats_with_presence',
-      listArgs,
-    );
-    if (error) {
+    let data;
+    let error;
+    let fallbackAttempted = false;
+    try {
+      ({ data, error } = await executeInboxChatListRpc(
+        'comm_whatsapp_list_chats_with_presence',
+        listArgs,
+      ));
+    } catch {
+      // A network failure can reject the RPC promise before Supabase returns
+      // its usual `{ data, error }` object. Still try the compatibility RPC so
+      // a transient failure in the primary path does not blank the Inbox.
+      fallbackAttempted = true;
+      const fallback = await executeInboxChatListRpc(
+        'comm_whatsapp_list_chats_with_groups',
+        listArgs,
+      );
+      data = fallback.data;
+      error = fallback.error;
+    }
+    if (error && !fallbackAttempted) {
       // Mantém o Inbox funcional durante a janela em que o frontend pode ser
       // publicado antes da migration de presença no projeto Supabase.
       const fallback = await executeInboxChatListRpc(

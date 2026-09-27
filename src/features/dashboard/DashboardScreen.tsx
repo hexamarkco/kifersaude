@@ -93,6 +93,7 @@ export default function DashboardScreen({
   >(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [decisionSnapshotError, setDecisionSnapshotError] = useState<
     string | null
   >(null);
@@ -508,6 +509,7 @@ export default function DashboardScreen({
 
     setLoading(true);
     setError(null);
+    setSnapshotError(null);
     setDecisionSnapshotError(null);
     try {
       // Os dados principais e a análise complementar são independentes.
@@ -536,37 +538,47 @@ export default function DashboardScreen({
       const {
         leads: leadsData,
         contracts: contractsData,
+        failedSources,
       } = await loadDashboardSnapshot();
 
       if (requestId !== dataRequestIdRef.current) {
         return;
       }
 
-      const mappedLeads = (leadsData || [])
-        .map((lead) => mapLeadWithRelations(lead))
-        .filter((lead): lead is Lead => Boolean(lead));
+      if (!failedSources.includes('leads')) {
+        const mappedLeads = (leadsData || [])
+          .map((lead) => mapLeadWithRelations(lead))
+          .filter((lead): lead is Lead => Boolean(lead));
 
-      if (isObserver) {
-        const hiddenLeadIds = new Set(
-          mappedLeads
-            .filter((lead) => !isOriginVisibleToObserver(lead.origem))
-            .map((lead) => lead.id),
-        );
+        if (isObserver) {
+          const hiddenLeadIds = new Set(
+            mappedLeads
+              .filter((lead) => !isOriginVisibleToObserver(lead.origem))
+              .map((lead) => lead.id),
+          );
 
-        setHiddenLeadIdsForObserver((currentHidden) =>
-          areSetsEqual(currentHidden, hiddenLeadIds)
-            ? currentHidden
-            : hiddenLeadIds,
-        );
-        setLeads(mappedLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
-      } else {
-        setHiddenLeadIdsForObserver((currentHidden) =>
-          currentHidden.size === 0 ? currentHidden : new Set(),
-        );
-        setLeads(mappedLeads);
+          setHiddenLeadIdsForObserver((currentHidden) =>
+            areSetsEqual(currentHidden, hiddenLeadIds)
+              ? currentHidden
+              : hiddenLeadIds,
+          );
+          setLeads(mappedLeads.filter((lead) => !hiddenLeadIds.has(lead.id)));
+        } else {
+          setHiddenLeadIdsForObserver((currentHidden) =>
+            currentHidden.size === 0 ? currentHidden : new Set(),
+          );
+          setLeads(mappedLeads);
+        }
       }
 
-      setContracts(contractsData || []);
+      if (!failedSources.includes('contracts')) {
+        setContracts(contractsData || []);
+      }
+
+      if (failedSources.length > 0) {
+        const failedLabels = failedSources.map((source) => source === 'leads' ? 'leads' : 'contratos');
+        setSnapshotError(`Não foi possível atualizar ${failedLabels.join(' e ')}. Os demais dados continuam disponíveis.`);
+      }
 
       // Mantém a promessa observada para evitar rejeições não tratadas caso
       // o carregamento principal termine antes da análise complementar.
@@ -2269,7 +2281,7 @@ export default function DashboardScreen({
 
         <DashboardAlerts
           error={error}
-          supportingError={decisionSnapshotError}
+          supportingError={[snapshotError, decisionSnapshotError].filter((item): item is string => Boolean(item)).join(' ') || null}
           loading={loading}
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}

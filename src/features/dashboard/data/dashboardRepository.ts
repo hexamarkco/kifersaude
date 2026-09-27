@@ -16,6 +16,7 @@ import type {
 export type DashboardSnapshot = {
   leads: Lead[];
   contracts: Contract[];
+  failedSources: Array<'leads' | 'contracts'>;
 };
 
 export type DashboardDecisionSnapshot = {
@@ -64,7 +65,7 @@ const chunk = <T>(items: T[], size = 100): T[][] => {
 };
 
 export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
-  const [leads, contracts] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchAllPages<Lead>(async (from, to) => databaseClient
       .from('leads')
       .select(DASHBOARD_LEAD_SELECT)
@@ -79,7 +80,25 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
       .overrideTypes<Contract[], { merge: false }>()),
   ]);
 
-  return { leads, contracts };
+  const [leadsResult, contractsResult] = results;
+  const failedSources: DashboardSnapshot['failedSources'] = [];
+  if (leadsResult.status === 'rejected') failedSources.push('leads');
+  if (contractsResult.status === 'rejected') failedSources.push('contracts');
+
+  if (failedSources.length === results.length) {
+    const failureReason = leadsResult.status === 'rejected'
+      ? leadsResult.reason
+      : contractsResult.status === 'rejected'
+        ? contractsResult.reason
+        : undefined;
+    throw failureReason ?? new Error('Não foi possível carregar os dados principais do dashboard.');
+  }
+
+  return {
+    leads: leadsResult.status === 'fulfilled' ? leadsResult.value : [],
+    contracts: contractsResult.status === 'fulfilled' ? contractsResult.value : [],
+    failedSources,
+  };
 }
 
 export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecisionSnapshot> {

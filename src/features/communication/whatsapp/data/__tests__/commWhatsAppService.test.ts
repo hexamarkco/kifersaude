@@ -226,6 +226,7 @@ test('lista agendamentos sem pedir colunas que nao existem no chat remoto', asyn
 
   assert.equal(scheduledSelects.length, 2);
   assert.equal(scheduledSelects.every((fields) => !fields.includes('lead_name')), true);
+  assert.equal(scheduledSelects.every((fields) => fields.includes('chat:comm_whatsapp_chats!left')), true);
   assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
 });
 

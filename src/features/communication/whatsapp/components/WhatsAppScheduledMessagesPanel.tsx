@@ -171,6 +171,11 @@ export default function WhatsAppScheduledMessagesPanel({
     const requestId = ++loadRequestIdRef.current;
     setLoading(true);
     setLoadError(false);
+    // Do not keep rows from the previous contact/view visible while the new
+    // request is in flight. A partial failure must never show stale
+    // schedules as if they belonged to the current filters.
+    setMessages([]);
+    setSequences([]);
     try {
       const messageStatuses = activeView === 'all' ? undefined : VIEW_STATUSES[activeView];
       const sequenceStatuses = activeView === 'all' ? undefined : VIEW_SEQUENCE_STATUSES[activeView];

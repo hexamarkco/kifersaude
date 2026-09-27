@@ -1686,39 +1686,59 @@ export const commWhatsAppService = {
   },
 
   async lookupSavedContactsByPhones(params: { phoneNumbers: string[]; forceSync?: boolean }): Promise<CommWhatsAppPhoneContact[]> {
-    const { data, error, response } = await supabase.functions.invoke('comm-whatsapp-contacts', {
-      body: {
-        action: 'lookupContactsByPhones',
-        phoneNumbers: params.phoneNumbers,
-        forceSync: params.forceSync === true,
-      },
-    });
+    let edgeFunctionContacts: CommWhatsAppPhoneContact[] = [];
+    let edgeFunctionError: Error | null = null;
 
-    if (error) {
-      // FunctionsHttpError.context is the raw Response — try to read the body for the actual error
-      let actualError = '';
-      if (response && typeof (response as Response).json === 'function') {
-        try {
-          const body = await (response as Response).clone().json() as { error?: string };
-          if (body?.error) actualError = body.error;
-        } catch {
-          // response body may already be consumed or not parseable
+    try {
+      const { data, error, response } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+        body: {
+          action: 'lookupContactsByPhones',
+          phoneNumbers: params.phoneNumbers,
+          forceSync: params.forceSync === true,
+        },
+      });
+
+      if (error) {
+        // FunctionsHttpError.context is the raw Response — try to read the body for the actual error
+        let actualError = '';
+        if (response && typeof (response as Response).json === 'function') {
+          try {
+            const body = await (response as Response).clone().json() as { error?: string };
+            if (body?.error) actualError = body.error;
+          } catch {
+            // response body may already be consumed or not parseable
+          }
         }
+        throw new Error(actualError || await getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
       }
-      throw new Error(actualError || await getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
+
+      const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };
+      edgeFunctionContacts = (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
+    } catch (error) {
+      edgeFunctionError = error instanceof Error
+        ? error
+        : new Error('Nao foi possivel localizar contatos salvos do WhatsApp.');
     }
 
-    const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };
-    const edgeFunctionContacts = (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
     // A versão publicada da Edge Function pode ficar temporariamente atrás
     // do frontend. Ler também o cache exposto pelo banco garante que linhas
     // antigas com manual_override=true continuem vencendo o nome sincronizado.
     const databaseContacts = await lookupSavedContactsFromCache(params.phoneNumbers);
 
-    return selectPreferredSavedContacts([
+    const contacts = selectPreferredSavedContacts([
       ...edgeFunctionContacts,
       ...databaseContacts,
     ]);
+
+    // Uma falha transitória da função não deve esconder um nome manual que já
+    // está persistido no cache. Se nenhuma fonte conseguiu responder com um
+    // contato, mantemos o erro original para o chamador aplicar seu retry e
+    // feedback normais.
+    if (contacts.length === 0 && edgeFunctionError) {
+      throw edgeFunctionError;
+    }
+
+    return contacts;
   },
 
   async startChat(params:

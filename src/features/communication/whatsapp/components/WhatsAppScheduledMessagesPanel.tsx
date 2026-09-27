@@ -136,7 +136,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const [messages, setMessages] = useState<CommWhatsAppScheduledMessage[]>([]);
   const [sequences, setSequences] = useState<CommWhatsAppScheduledSequence[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<'all' | 'partial' | false>(false);
   const [activeActionIds, setActiveActionIds] = useState<Set<string>>(() => new Set());
   const [editingMessage, setEditingMessage] = useState<CommWhatsAppScheduledMessage | null>(null);
   const [editingSequence, setEditingSequence] = useState<CommWhatsAppScheduledSequence | null>(null);
@@ -207,25 +207,54 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return allSequences;
       })();
-      const [allMessages, sequenceData] = await Promise.all([allMessagesPromise, sequencesPromise]);
+      const [messagesResult, sequencesResult] = await Promise.allSettled([
+        allMessagesPromise,
+        sequencesPromise,
+      ]);
 
       if (requestId !== loadRequestIdRef.current) {
         return;
       }
 
-      setMessages(
-        chatId
-          ? allMessages
-          : phoneDigits
-          ? allMessages.filter((m) => m.phone_digits === phoneDigits)
-          : allMessages,
-      );
-      setSequences(sequenceData);
-      setLoadError(false);
+      const messagesLoaded = messagesResult.status === 'fulfilled';
+      const sequencesLoaded = sequencesResult.status === 'fulfilled';
+
+      if (messagesLoaded) {
+        const allMessages = messagesResult.value;
+        setMessages(
+          chatId
+            ? allMessages
+            : phoneDigits
+            ? allMessages.filter((m) => m.phone_digits === phoneDigits)
+            : allMessages,
+        );
+      }
+
+      if (sequencesLoaded) {
+        setSequences(sequencesResult.value);
+      }
+
+      if (!messagesLoaded && !sequencesLoaded) {
+        console.error('[ScheduledMessagesPanel] error loading messages and sequences', {
+          messages: messagesResult.reason,
+          sequences: sequencesResult.reason,
+        });
+        setLoadError('all');
+      } else if (!messagesLoaded || !sequencesLoaded) {
+        console.warn('[ScheduledMessagesPanel] partial load', {
+          messagesLoaded,
+          sequencesLoaded,
+          messages: messagesLoaded ? undefined : messagesResult.reason,
+          sequences: sequencesLoaded ? undefined : sequencesResult.reason,
+        });
+        setLoadError('partial');
+      } else {
+        setLoadError(false);
+      }
     } catch (error) {
       if (requestId === loadRequestIdRef.current) {
         console.error('[ScheduledMessagesPanel] error loading', error);
-        setLoadError(true);
+        setLoadError('all');
       }
     } finally {
       if (requestId === loadRequestIdRef.current) {
@@ -571,7 +600,7 @@ export default function WhatsAppScheduledMessagesPanel({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
             </div>
-          ) : loadError ? (
+          ) : loadError === 'all' ? (
             <Alert
               tone="danger"
               title="Não foi possível carregar os agendamentos."
@@ -600,6 +629,21 @@ export default function WhatsAppScheduledMessagesPanel({
             </div>
           ) : (
             <>
+              {loadError === 'partial' ? (
+                <Alert
+                  tone="warning"
+                  title="Alguns agendamentos não puderam ser carregados."
+                  action={
+                    <Button variant="secondary" size="sm" onClick={() => void refreshScheduledData()}>
+                      <RotateCcw className="kds-control-icon" />
+                      <span>Tentar novamente</span>
+                    </Button>
+                  }
+                >
+                  Os itens disponíveis continuam visíveis. Tente novamente para atualizar o restante.
+                </Alert>
+              ) : null}
+
               <Tabs
                 items={viewTabs}
                 value={activeView}

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import ToastViewport from './components/ui/ToastViewport';
 import NoIndex from './components/seo/NoIndex';
 import {
@@ -39,10 +40,11 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<RouteLoading />}>
-          <Routes>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Suspense fallback={<RouteLoading />}>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/planos" element={<Navigate to="/" replace />} />
             <Route path="/planos/:slug/:variant" element={<OperatorLandingWrapper />} />
@@ -86,10 +88,11 @@ createRoot(document.getElementById('root')!).render(
               <Route path="config" element={<ConfigPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-        <ToastViewport />
-      </AuthProvider>
-    </BrowserRouter>
+            </Routes>
+          </Suspense>
+          <ToastViewport />
+        </AuthProvider>
+      </BrowserRouter>
+    </AppErrorBoundary>
   </StrictMode>,
 );

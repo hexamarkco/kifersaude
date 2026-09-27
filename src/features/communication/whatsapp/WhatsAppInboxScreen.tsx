@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarClock, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
@@ -195,6 +195,7 @@ import {
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
+import { lazyWithChunkRecovery } from '../../../routes/lazyImport';
 import {
   computeChatPollIntervalMs,
   computeMessagePollIntervalMs,
@@ -209,21 +210,21 @@ import {
   type MediaUploadProgress,
 } from './domain/mediaUploadState';
 
-const LeadForm = lazy(() => import('../../../components/LeadForm'));
-const ReminderSchedulerModal = lazy(() => import('../../../components/ReminderSchedulerModal'));
-const WhatsAppAgendaModal = lazy(() => import('./components/WhatsAppAgendaModal'));
-const WhatsAppComposerRewriteModal = lazy(() => import('./components/WhatsAppComposerRewriteModal'));
-const WhatsAppDashboardModal = lazy(() => import('./components/WhatsAppDashboardModal'));
-const WhatsAppEditMessageModal = lazy(() => import('./components/WhatsAppEditMessageModal'));
-const WhatsAppFollowUpModal = lazy(() => import('./components/WhatsAppFollowUpModal'));
-const WhatsAppMessageDetailsModal = lazy(() => import('./components/WhatsAppMessageDetailsModal'));
-const WhatsAppMediaDrawer = lazy(() => import('./components/WhatsAppMediaDrawer'));
-const WhatsAppLeadDrawer = lazy(() => import('./components/WhatsAppLeadDrawer'));
-const WhatsAppChatFilesDrawer = lazy(() => import('./components/WhatsAppChatFilesDrawer'));
-const WhatsAppQuickRepliesModal = lazy(() => import('./components/WhatsAppQuickRepliesModal'));
-const WhatsAppStartChatModal = lazy(() => import('./components/WhatsAppStartChatModal'));
-const WhatsAppScheduleMessageModal = lazy(() => import('./components/WhatsAppScheduleMessageModal'));
-const WhatsAppScheduledMessagesPanel = lazy(() => import('./components/WhatsAppScheduledMessagesPanel'));
+const LeadForm = lazyWithChunkRecovery(() => import('../../../components/LeadForm'));
+const ReminderSchedulerModal = lazyWithChunkRecovery(() => import('../../../components/ReminderSchedulerModal'));
+const WhatsAppAgendaModal = lazyWithChunkRecovery(() => import('./components/WhatsAppAgendaModal'));
+const WhatsAppComposerRewriteModal = lazyWithChunkRecovery(() => import('./components/WhatsAppComposerRewriteModal'));
+const WhatsAppDashboardModal = lazyWithChunkRecovery(() => import('./components/WhatsAppDashboardModal'));
+const WhatsAppEditMessageModal = lazyWithChunkRecovery(() => import('./components/WhatsAppEditMessageModal'));
+const WhatsAppFollowUpModal = lazyWithChunkRecovery(() => import('./components/WhatsAppFollowUpModal'));
+const WhatsAppMessageDetailsModal = lazyWithChunkRecovery(() => import('./components/WhatsAppMessageDetailsModal'));
+const WhatsAppMediaDrawer = lazyWithChunkRecovery(() => import('./components/WhatsAppMediaDrawer'));
+const WhatsAppLeadDrawer = lazyWithChunkRecovery(() => import('./components/WhatsAppLeadDrawer'));
+const WhatsAppChatFilesDrawer = lazyWithChunkRecovery(() => import('./components/WhatsAppChatFilesDrawer'));
+const WhatsAppQuickRepliesModal = lazyWithChunkRecovery(() => import('./components/WhatsAppQuickRepliesModal'));
+const WhatsAppStartChatModal = lazyWithChunkRecovery(() => import('./components/WhatsAppStartChatModal'));
+const WhatsAppScheduleMessageModal = lazyWithChunkRecovery(() => import('./components/WhatsAppScheduleMessageModal'));
+const WhatsAppScheduledMessagesPanel = lazyWithChunkRecovery(() => import('./components/WhatsAppScheduledMessagesPanel'));
 
 function InboxLazyLoadingFallback() {
   return (

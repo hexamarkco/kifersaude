@@ -142,23 +142,34 @@ export default function WhatsAppScheduledMessagesPanel({
     setLoading(true);
     setLoadError(false);
     try {
-      const allMessages: CommWhatsAppScheduledMessage[] = [];
-      let offset = 0;
+      const scheduleFilters = {
+        ...(channelId ? { channelId } : {}),
+        ...(chatId ? { chatId } : {}),
+        ...(phoneDigits && !chatId ? { phoneDigits } : {}),
+      };
+      const allMessagesPromise = (async () => {
+        const allMessages: CommWhatsAppScheduledMessage[] = [];
+        let offset = 0;
 
-      while (true) {
-        const data = await commWhatsAppService.listScheduledMessages({
-          ...(channelId ? { channelId } : {}),
-          ...(chatId ? { chatId } : {}),
-          ...(phoneDigits && !chatId ? { phoneDigits } : {}),
-          limit: SCHEDULED_MESSAGES_PAGE_SIZE,
-          offset,
-        });
-        const page = data;
-        allMessages.push(...page);
+        while (true) {
+          const page = await commWhatsAppService.listScheduledMessages({
+            ...scheduleFilters,
+            limit: SCHEDULED_MESSAGES_PAGE_SIZE,
+            offset,
+          });
+          allMessages.push(...page);
 
-        if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;
-        offset += page.length;
-      }
+          if (page.length < SCHEDULED_MESSAGES_PAGE_SIZE) break;
+          offset += page.length;
+        }
+
+        return allMessages;
+      })();
+      const sequencesPromise = commWhatsAppService.listScheduledSequences({
+        ...scheduleFilters,
+        limit: SCHEDULED_MESSAGES_PAGE_SIZE,
+      });
+      const [allMessages, sequenceData] = await Promise.all([allMessagesPromise, sequencesPromise]);
 
       if (requestId !== loadRequestIdRef.current) {
         return;
@@ -171,17 +182,6 @@ export default function WhatsAppScheduledMessagesPanel({
           ? allMessages.filter((m) => m.phone_digits === phoneDigits)
           : allMessages,
       );
-
-      const sequenceData = await commWhatsAppService.listScheduledSequences({
-        ...(channelId ? { channelId } : {}),
-        ...(chatId ? { chatId } : {}),
-        ...(phoneDigits && !chatId ? { phoneDigits } : {}),
-        limit: SCHEDULED_MESSAGES_PAGE_SIZE,
-      });
-      if (requestId !== loadRequestIdRef.current) {
-        return;
-      }
-
       setSequences(sequenceData);
       setLoadError(false);
     } catch (error) {

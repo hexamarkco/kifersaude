@@ -317,7 +317,10 @@ export default function WhatsAppAgendaModal({
       console.error('[WhatsAppAgendaModal] erro ao carregar agenda', loadError);
       setError('Não foi possível carregar a agenda agora.');
     } finally {
-      if (showLoading && requestId === loadRemindersRequestIdRef.current) {
+      // Uma atualização em tempo real pode invalidar o carregamento inicial.
+      // A requisição mais nova também precisa encerrar o estado de loading;
+      // caso contrário, o spinner fica preso mesmo após a atualização terminar.
+      if (requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);
       }
     }

@@ -1041,7 +1041,7 @@ export default function WhatsAppCampaignsScreen() {
             </Surface>
           ))}
           {workerHealth.recentRuns.length === 0 && (
-            <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma execucao registrada ainda. O proximo cron deve aparecer aqui apos rodar.</p>
+            <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma execução registrada ainda. O próximo cron deve aparecer aqui após rodar.</p>
           )}
         </div>
       </Card>

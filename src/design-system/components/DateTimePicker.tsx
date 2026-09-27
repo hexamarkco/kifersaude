@@ -201,13 +201,13 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
         {showCalendar && (
           <div className="kds-dp-calendar">
             <div className="kds-dp-calendar-header">
-              <button type="button" onClick={goToPrevMonth} className="kds-dp-nav-button" aria-label="Mes anterior">
+              <button type="button" onClick={goToPrevMonth} className="kds-dp-nav-button" aria-label="Mês anterior">
                 <ChevronLeft aria-hidden="true" />
               </button>
               <span className="kds-dp-calendar-title">
                 {MONTH_LABELS_PT[viewMonth - 1]} de {viewYear}
               </span>
-              <button type="button" onClick={goToNextMonth} className="kds-dp-nav-button" aria-label="Proximo mes">
+              <button type="button" onClick={goToNextMonth} className="kds-dp-nav-button" aria-label="Próximo mês">
                 <ChevronRight aria-hidden="true" />
               </button>
             </div>

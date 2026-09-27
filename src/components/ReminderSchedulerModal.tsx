@@ -168,7 +168,7 @@ export default function ReminderSchedulerModal({
       }
 
       if (synchronizationFailed) {
-        toast.warning('Lembrete criado, mas alguns dados do lead ainda nao foram sincronizados.');
+        toast.warning('Lembrete criado, mas alguns dados do lead ainda não foram sincronizados.');
       }
 
       onScheduled?.({
@@ -197,17 +197,17 @@ export default function ReminderSchedulerModal({
             <Clock className="h-5 w-5 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-semibold">
-                {promptMessage ?? 'Defina o proximo lembrete para continuar o acompanhamento manual do lead.'}
+                {promptMessage ?? 'Defina o próximo lembrete para continuar o acompanhamento manual do lead.'}
               </p>
               <p className="mt-1 text-xs">
-                Escolha o melhor momento e personalize as informacoes conforme necessario.
+                Escolha o melhor momento e personalize as informações conforme necessário.
               </p>
             </div>
           </div>
         </Alert>
 
         <div className="grid grid-cols-1 gap-4">
-          <Field label="Titulo *">
+          <Field label="Título *">
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -260,7 +260,7 @@ export default function ReminderSchedulerModal({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               rows={3}
-              placeholder="Anote detalhes importantes para o proximo contato"
+              placeholder="Anote detalhes importantes para o próximo contato"
             />
           </Field>
         </div>

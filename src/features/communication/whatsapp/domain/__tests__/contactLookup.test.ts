@@ -242,6 +242,27 @@ test('prioriza contato antigo marcado manualmente mesmo com contact_id do proved
   assert.equal(getSavedContactNameForPhone('5521982965495', manualNames, synchronizedNames), 'Mariangela');
 });
 
+test('usa manual_override_name mesmo quando display_name ainda traz o nome do provedor', () => {
+  const preferred = selectPreferredSavedContacts([
+    {
+      id: 'legacy-manual',
+      channel_id: 'channel-1',
+      contact_id: '5521982965495',
+      phone_number: '5521982965495',
+      phone_digits: '5521982965495',
+      display_name: 'Mariangela - Cliente',
+      saved: true,
+      manual_override: true,
+      manual_override_name: 'Mariangela',
+      last_synced_at: '2026-09-08T13:00:00.000Z',
+      created_at: '2026-09-08T09:00:00.000Z',
+      updated_at: '2026-09-08T13:00:00.000Z',
+    },
+  ]);
+
+  assert.equal(preferred[0]?.display_name, 'Mariangela');
+});
+
 test('prioritizes a locally saved name over a stale synchronized name', () => {
   const localOverrides = new Map([['5511999999999', 'Fabiola']]);
   const synchronizedNames = new Map([['5511999999999', 'Leve Saúde Operadora - Apoio Corretor']]);

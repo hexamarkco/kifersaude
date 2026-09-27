@@ -54,6 +54,17 @@ const isManualSavedContact = (contact: CommWhatsAppPhoneContact) => (
   contact.manual_override === true || contact.contact_id?.startsWith('manual:') === true
 );
 
+const getSavedContactDisplayName = (contact: CommWhatsAppPhoneContact) => {
+  if (isManualSavedContact(contact)) {
+    const manualName = contact.manual_override_name?.trim();
+    if (manualName) {
+      return manualName;
+    }
+  }
+
+  return contact.display_name?.trim() || '';
+};
+
 const getContactTimestamp = (value?: string | null) => {
   const timestamp = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(timestamp) ? timestamp : 0;
@@ -89,15 +100,20 @@ export const selectPreferredSavedContacts = (contacts: CommWhatsAppPhoneContact[
   const preferredByPhoneKey = new Map<string, CommWhatsAppPhoneContact>();
 
   for (const contact of contacts) {
-    if (!contact.saved || !contact.display_name?.trim()) {
+    const displayName = getSavedContactDisplayName(contact);
+    if (!contact.saved || !displayName) {
       continue;
     }
 
-    for (const key of collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)) {
-      const sourceKey = `${isManualSavedContact(contact) ? 'manual' : 'synchronized'}:${key}`;
+    const normalizedContact = contact.display_name?.trim() === displayName
+      ? contact
+      : { ...contact, display_name: displayName };
+
+    for (const key of collectPhoneLookupKeys(normalizedContact.phone_digits || normalizedContact.phone_number)) {
+      const sourceKey = `${isManualSavedContact(normalizedContact) ? 'manual' : 'synchronized'}:${key}`;
       const current = preferredByPhoneKey.get(sourceKey);
-      if (!current || isPreferredSavedContact(contact, current)) {
-        preferredByPhoneKey.set(sourceKey, contact);
+      if (!current || isPreferredSavedContact(normalizedContact, current)) {
+        preferredByPhoneKey.set(sourceKey, normalizedContact);
       }
     }
   }

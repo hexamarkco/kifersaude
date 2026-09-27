@@ -436,6 +436,23 @@ test('usa o nome do contato salvo como fonte canônica mesmo quando o chat veio 
   assert.equal(result.saved_contact_name, 'Mariangela');
 });
 
+test('mantém o nome salvo persistido no chat quando o cache canônico não tem a linha', () => {
+  const chat = {
+    id: 'chat-1',
+    phone_number: '+55 (21) 98296-5495',
+    phone_digits: '5521982965495',
+    display_name: 'Leve Saúde Operadora - Apoio Corretor',
+    saved_contact_name: 'Mariangela',
+    push_name: 'Mariangela - Cliente',
+    is_group: false,
+  } as CommWhatsAppChat;
+
+  const result = applySavedContactNameFromLookup(chat, new Map(), new Map());
+
+  assert.equal(result.display_name, 'Mariangela');
+  assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
 test('aplica o nome salvo também na lista de contatos do modal de novo chat', () => {
   const contact: CommWhatsAppPhoneContact = {
     id: 'contact-1',

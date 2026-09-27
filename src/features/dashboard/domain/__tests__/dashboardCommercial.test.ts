@@ -79,6 +79,18 @@ test('flags advanced stale opportunities and uses linked monthly value when avai
   assert.equal(analysis.opportunities[0]?.signal, 'Etapa avançada');
 });
 
+test('usa a interação mais recente para calcular inatividade comercial', () => {
+  const analysis = buildDashboardCommercialAnalysis(input({
+    interactions: [
+      { lead_id: 'lead-1', data_interacao: '2026-09-01T10:00:00.000Z' },
+      { lead_id: 'lead-1', data_interacao: '2026-09-20T10:00:00.000Z' },
+    ],
+  }));
+
+  assert.equal(analysis.opportunities[0]?.idleDays, 1);
+  assert.equal(analysis.stuck.count, 0);
+});
+
 test('only labels a lead with overdue follow-up when Agenda has an unread overdue reminder', () => {
   const leadWithOldReturn = lead({ id: 'lead-overdue', nome_completo: 'Sem lembrete', status: 'Qualificação', proximo_retorno: '2026-09-10' });
   const reminder: Reminder = {

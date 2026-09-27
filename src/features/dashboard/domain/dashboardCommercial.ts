@@ -65,6 +65,10 @@ const getLatestDate = (values: Array<string | null | undefined>) => {
   return dates.sort((left, right) => right.getTime() - left.getTime())[0] ?? null;
 };
 
+const getLatestInteractionDate = (interactions: DashboardInteraction[]) => (
+  getLatestDate(interactions.map((interaction) => interaction.data_interacao))?.toISOString() ?? null
+);
+
 const hasPendingNextStep = (
   lead: Lead,
   remindersByLead: Map<string, DashboardReminder[]>,
@@ -288,7 +292,7 @@ export const buildDashboardCommercialAnalysis = ({
 
   const opportunityDetails: DashboardOpportunity[] = periodOpenLeads.map((lead) => {
     const leadInteractions = interactionsByLead.get(lead.id) ?? [];
-    const interactionDate = leadInteractions[leadInteractions.length - 1]?.data_interacao;
+    const interactionDate = getLatestInteractionDate(leadInteractions);
     const lastContact = getLatestDate([lead.ultimo_contato, interactionDate]);
     const idleDays = lastContact ? daysBetween(lastContact, now) : null;
     const hasNextStep = hasPendingNextStep(lead, remindersByLead, now);
@@ -376,7 +380,7 @@ export const buildDashboardCommercialAnalysis = ({
   const stuckLeads = periodOpenLeads.filter((lead) => {
     if (!advancedStagePattern.test(lead.status ?? '')) return false;
     const leadInteractions = interactionsByLead.get(lead.id) ?? [];
-    const interactionDate = leadInteractions[leadInteractions.length - 1]?.data_interacao;
+    const interactionDate = getLatestInteractionDate(leadInteractions);
     const lastActivity = getLatestDate([lead.ultimo_contato, interactionDate, lead.updated_at, leadDate(lead)]);
     return Boolean(lastActivity && now.getTime() - lastActivity.getTime() >= DASHBOARD_STALE_OPPORTUNITY_HOURS * 3_600_000);
   });

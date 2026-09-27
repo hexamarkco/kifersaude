@@ -108,6 +108,19 @@ const waitForText = async (text: string) => {
   }
 };
 
+const waitForCallCount = async (getCount: () => number, expected: number) => {
+  const startedAt = Date.now();
+  while (getCount() < expected) {
+    if (Date.now() - startedAt >= 1_000) {
+      throw new Error(`Quantidade de chamadas não alcançada: ${expected}`);
+    }
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+  }
+};
+
 const flushLiveRequests = (resolvers: Array<() => void>) => {
   resolvers.splice(0).forEach((resolve) => resolve());
 };
@@ -166,8 +179,8 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
 
   await act(async () => {
     flushLiveRequests(liveResolvers);
-    await new Promise((resolve) => setTimeout(resolve, 0));
   });
+  await waitForCallCount(() => serviceMocks.listCampaignTargets.mock.calls.length, 2);
   assert.equal(serviceMocks.listCampaignTargets.mock.calls.length, 2);
   assert.equal(serviceMocks.getCampaignTargetStatusCounts.mock.calls.length, 2);
 

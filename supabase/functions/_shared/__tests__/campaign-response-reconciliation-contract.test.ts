@@ -26,6 +26,10 @@ test('reconcilia respostas de campanha em uma chamada de banco por lote', () => 
   assert.doesNotMatch(reconcileSource, /await findVisibleInboundCampaignReply\(/);
 });
 
+test('reconciliação não reprocessa alvos que já têm resposta registrada', () => {
+  assert.match(reconcileSource, /\.is\('responded_at',\s*'is',\s*null\)/);
+});
+
 test('RPC de respostas preserva as regras de resposta visível e janela mínima', () => {
   assert.match(migrationSource, /target\.sent_at \+ interval '20 seconds'/);
   assert.match(migrationSource, /message\.direction = 'inbound'/);

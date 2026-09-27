@@ -1337,6 +1337,9 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at,status,current_step_index')
     .in('status', ['sent', 'scheduled'])
     .not('sent_at', 'is', null)
+    // Alvos já respondidos não precisam voltar para a reconciliação.
+    // Isso também evita updates condicionais sem nenhuma linha correspondente.
+    .is('responded_at', 'is', null)
     .limit(500);
 
   if (campaignId) {

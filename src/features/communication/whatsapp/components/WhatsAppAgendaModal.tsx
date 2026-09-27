@@ -282,12 +282,8 @@ export default function WhatsAppAgendaModal({
       // Os lembretes são a lista principal da agenda. Mostre-os assim que
       // chegarem; contratos e leads são contexto complementar e podem ser
       // hidratados depois sem bloquear a operação.
-      applyAgendaSnapshot({
-        reminders: remindersData,
-        contracts: [],
-        leads: [],
-        updatedAt: new Date().toISOString(),
-      });
+      setReminders(remindersData);
+      setError(null);
       setLoading(false);
 
       const contractIds = Array.from(

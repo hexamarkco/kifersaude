@@ -2881,8 +2881,25 @@ export default function WhatsAppInboxScreen() {
     [chatMatchesActiveFilters, messageSearchResults, savedContactLookupMaps],
   );
   const sidebarChats = useMemo(
-    () => (search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats),
-    [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
+    () => {
+      const candidates = search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats;
+      return candidates.map((chat) => applySavedContactNameFromLookup(
+        chat,
+        savedContactLookupMaps.localOverrides,
+        savedContactLookupMaps.synchronizedNames,
+      ));
+    },
+    [localChatSearchResults, remoteChatSearchResults, savedContactLookupMaps, scopedChats, search],
+  );
+  const selectedChatForPresentation = useMemo(
+    () => selectedChat
+      ? applySavedContactNameFromLookup(
+          selectedChat,
+          savedContactLookupMaps.localOverrides,
+          savedContactLookupMaps.synchronizedNames,
+        )
+      : null,
+    [savedContactLookupMaps, selectedChat],
   );
   const forwardTargetChats = useMemo(() => {
     const normalizedSearch = normalizeInboxSearch(forwardSearch);
@@ -2901,13 +2918,13 @@ export default function WhatsAppInboxScreen() {
   }, [chats, forwardSearch, savedContactLookupMaps]);
   const selectedChatTranscriptLabel = useMemo(
     () => {
-      if (!selectedChat) {
+      if (!selectedChatForPresentation) {
         return 'Contato';
       }
 
-      return getSafeChatDisplayName(selectedChat, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo) || selectedChat.phone_number?.trim() || 'Contato';
+      return getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo) || selectedChatForPresentation.phone_number?.trim() || 'Contato';
     },
-    [leadPanel?.nome_completo, operationalState?.channel?.connected_user_name, selectedChat],
+    [leadPanel?.nome_completo, operationalState?.channel?.connected_user_name, selectedChatForPresentation],
   );
 
   const quickReplyLead = useMemo<Lead | null>(() => {
@@ -3488,8 +3505,18 @@ export default function WhatsAppInboxScreen() {
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
-      if (chat.saved_contact_name?.trim()) {
-        return chat;
+      const savedContactName = resolveSavedContactName(
+        chat.phone_digits || chat.phone_number,
+        chat.saved_contact_name,
+        savedContactNameOverrideByPhoneRef.current,
+        savedContactNameByPhoneRef.current,
+      );
+      if (savedContactName) {
+        return applySavedContactNameFromLookup(
+          chat,
+          savedContactNameOverrideByPhoneRef.current,
+          savedContactNameByPhoneRef.current,
+        );
       }
 
       const matchedLeadName = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number)
@@ -3861,16 +3888,22 @@ export default function WhatsAppInboxScreen() {
       }
       setLeadPanel(lead);
       const nextLeadStatus = lead?.status_value ?? lead?.status_nome ?? null;
+      const savedContactName = resolveSavedContactName(
+        chat.phone_digits || chat.phone_number,
+        chat.saved_contact_name,
+        savedContactNameOverrideByPhoneRef.current,
+        savedContactNameByPhoneRef.current,
+      );
       const shouldHydrateChatFromLead = Boolean(
         lead
-          && ((!chat.saved_contact_name && lead.nome_completo && chat.display_name !== lead.nome_completo)
+          && ((!savedContactName && lead.nome_completo && chat.display_name !== lead.nome_completo)
             || (nextLeadStatus && chat.lead_status !== nextLeadStatus)),
       );
       if (shouldHydrateChatFromLead && lead) {
         upsertChatLocally({
           ...chat,
           lead_name: lead.nome_completo || chat.lead_name,
-          display_name: !chat.saved_contact_name && lead.nome_completo ? lead.nome_completo : chat.display_name,
+          display_name: !savedContactName && lead.nome_completo ? lead.nome_completo : chat.display_name,
           lead_status: nextLeadStatus,
         });
       }
@@ -4097,8 +4130,8 @@ export default function WhatsAppInboxScreen() {
   const selectedChatWasAutoLinked = selectedChat?.lead_link_source === 'auto_phone';
   const selectedChatLeadMutationLoading = leadMutationLoadingChatId === selectedChat?.id;
   const selectedChatDisplayName = useMemo(
-    () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null, leadPanel?.nome_completo),
-    [channelState?.connected_user_name, selectedChat, leadPanel?.nome_completo],
+    () => getSafeChatDisplayName(selectedChatForPresentation, channelState?.connected_user_name ?? null, leadPanel?.nome_completo),
+    [channelState?.connected_user_name, selectedChatForPresentation, leadPanel?.nome_completo],
   );
   const isSelectedChatWaitingForQuote = useMemo(() => {
     const normalizedStatus = String(leadPanel?.status_nome ?? selectedChat?.lead_status ?? '')

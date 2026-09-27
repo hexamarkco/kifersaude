@@ -7712,6 +7712,14 @@ export type Database = {
         Args: { p_chat_id: string }
         Returns: string
       }
+      comm_whatsapp_invoke_ai_autonomous_reply_jobs: {
+        Args: never
+        Returns: number
+      }
+      comm_whatsapp_invoke_auto_contact_flow_jobs: {
+        Args: never
+        Returns: number
+      }
       comm_whatsapp_is_hidden_preview_text: {
         Args: { p_message_type?: string; p_value: string }
         Returns: boolean

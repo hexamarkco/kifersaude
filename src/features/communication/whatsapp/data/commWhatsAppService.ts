@@ -3024,7 +3024,8 @@ export const commWhatsAppService = {
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
       .select(SCHEDULED_SEQUENCE_SELECT)
-      .order('scheduled_at', { ascending: false });
+      .order('scheduled_at', { ascending: false })
+      .order('id', { ascending: true });
     if (options?.channelId) query = query.eq('channel_id', options.channelId);
     if (options?.chatId) query = query.eq('chat_id', options.chatId);
     if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
@@ -3068,7 +3069,8 @@ export const commWhatsAppService = {
       .select(
         'id, channel_id, chat_id, chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_name,lead_id,is_group), phone_digits, phone_number, display_name, message_type, text_content, media_url, media_mime_type, media_file_name, scheduled_at, recurrence, recurrence_config, next_run_at, recurrence_ends_at, cancel_on_inbound_message, status, error_message, lead_id, contract_id, label',
       )
-      .order('scheduled_at', { ascending: false });
+      .order('scheduled_at', { ascending: false })
+      .order('id', { ascending: true });
 
     if (options?.channelId) {
       query = query.eq('channel_id', options.channelId);

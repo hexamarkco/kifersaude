@@ -149,3 +149,28 @@ test('nao aceita nome do provedor quando o cache canonico falha', async () => {
 
   assert.deepEqual(contacts, []);
 });
+
+test('corrige o nome atrasado da lista de contatos com o cache canonico', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: {
+      contacts: [{
+        ...manualContact,
+        contact_id: '5521982965495',
+        display_name: 'Mariangela - Cliente',
+        manual_override: false,
+        manual_override_name: null,
+      }],
+      total: 1,
+      hasMore: false,
+    },
+    error: null,
+    response: null,
+  });
+  mocks.query.overrideTypes.mockResolvedValue({ data: [manualContact], error: null });
+
+  const page = await commWhatsAppService.listSavedContacts({ page: 1 });
+
+  assert.equal(page.contacts[0]?.display_name, 'Mariangela');
+  assert.equal(page.contacts[0]?.manual_override, true);
+  assert.equal(page.contacts[0]?.manual_override_name, 'Mariangela');
+});

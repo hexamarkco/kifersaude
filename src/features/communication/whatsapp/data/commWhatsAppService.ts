@@ -20,7 +20,7 @@ import type {
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
-import { collectPhoneLookupKeys, selectPreferredSavedContacts } from '../domain/contactLookup';
+import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
 
@@ -1687,9 +1687,19 @@ export const commWhatsAppService = {
     }
 
     const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[]; total?: number; hasMore?: boolean };
+    const providerContacts = (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
+    const canonicalLookup = await lookupSavedContactsFromCache(
+      providerContacts.flatMap((contact) => (
+        [contact.phone_number, contact.phone_digits]
+          .filter((value): value is string => Boolean(value))
+      )),
+    );
+    const contacts = canonicalLookup.error
+      ? providerContacts
+      : applyCanonicalSavedContactNames(providerContacts, canonicalLookup.contacts);
 
     return {
-      contacts: (payload.contacts ?? []) as CommWhatsAppPhoneContact[],
+      contacts,
       total: typeof payload.total === 'number' ? payload.total : 0,
       hasMore: payload.hasMore === true,
     };

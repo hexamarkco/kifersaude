@@ -127,6 +127,45 @@ export const selectPreferredSavedContacts = (contacts: CommWhatsAppPhoneContact[
 };
 
 /**
+ * Reconciles a paged provider response with the canonical database cache.
+ * The provider can return an older synchronized name after a manual rename;
+ * the cache must win without changing the contact identity used by the UI.
+ */
+export const applyCanonicalSavedContactNames = (
+  contacts: CommWhatsAppPhoneContact[],
+  canonicalContacts: CommWhatsAppPhoneContact[],
+) => {
+  const canonicalByPhoneKey = new Map<string, CommWhatsAppPhoneContact>();
+
+  for (const contact of selectPreferredSavedContacts(canonicalContacts)) {
+    for (const key of collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)) {
+      const current = canonicalByPhoneKey.get(key);
+      if (!current || isPreferredSavedContact(contact, current)) {
+        canonicalByPhoneKey.set(key, contact);
+      }
+    }
+  }
+
+  return contacts.map((contact) => {
+    const canonical = collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)
+      .map((key) => canonicalByPhoneKey.get(key) ?? null)
+      .find((candidate): candidate is CommWhatsAppPhoneContact => candidate !== null);
+
+    if (!canonical) {
+      return contact;
+    }
+
+    return {
+      ...contact,
+      display_name: canonical.display_name,
+      short_name: canonical.short_name ?? contact.short_name,
+      manual_override: canonical.manual_override,
+      manual_override_name: canonical.manual_override_name,
+    };
+  });
+};
+
+/**
  * Combines pages from the saved-contact list without showing the same row
  * twice when the provider changes the list between page requests.
  *

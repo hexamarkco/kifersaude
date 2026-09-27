@@ -3,6 +3,7 @@ import { test } from 'vitest';
 
 import {
   addSavedContactsToNameMap,
+  applyCanonicalSavedContactNames,
   applyManualSavedContactNameToMaps,
   applySavedContactNameFromLookup,
   applySavedContactNameToContact,
@@ -272,6 +273,41 @@ test('prioritizes a locally saved name over a stale synchronized name', () => {
     getSavedContactNameForPhone('+55 (11) 99999-9999', localOverrides, synchronizedNames),
     'Fabiola',
   );
+});
+
+test('prioriza o nome canonico do cache quando a lista do provedor esta atrasada', () => {
+  const providerContact = {
+    id: 'provider-row',
+    channel_id: 'channel-1',
+    contact_id: '5521982965495',
+    phone_number: '5521982965495',
+    phone_digits: '5521982965495',
+    display_name: 'Mariangela - Cliente',
+    short_name: 'Mariangela - Cliente',
+    push_name: 'Mariangela 🤍',
+    saved: true,
+    manual_override: false,
+    manual_override_name: null,
+    last_synced_at: '2026-09-27T12:00:00.000Z',
+    created_at: '2026-09-01T09:00:00.000Z',
+    updated_at: '2026-09-27T12:00:00.000Z',
+  };
+  const canonicalContact = {
+    ...providerContact,
+    id: 'manual-row',
+    contact_id: 'manual:5521982965495',
+    display_name: 'Mariangela',
+    short_name: 'Mariangela',
+    manual_override: true,
+    manual_override_name: 'Mariangela',
+    updated_at: '2026-09-27T12:05:00.000Z',
+  };
+
+  const [result] = applyCanonicalSavedContactNames([providerContact], [canonicalContact]);
+
+  assert.equal(result?.display_name, 'Mariangela');
+  assert.equal(result?.manual_override, true);
+  assert.equal(result?.manual_override_name, 'Mariangela');
 });
 
 test('fixa o nome manual em todas as variantes de telefone antes do proximo refresh', () => {

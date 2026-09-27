@@ -501,233 +501,268 @@ export default function IntegrationsScreen() {
     setSavingAiProvider((prev) => ({ ...prev, [provider]: true }));
     setAiMessage(null);
 
-    const settingsPayload = {
-      enabled: currentForm.enabled,
-    };
+    try {
+      const settingsPayload = {
+        enabled: currentForm.enabled,
+      };
 
-    const integration = aiProviderIntegrations[provider];
+      const integration = aiProviderIntegrations[provider];
 
-    const result = integration?.id
-      ? await configService.updateIntegrationSetting(integration.id, {
-          settings: settingsPayload,
-        })
-      : await configService.createIntegrationSetting({
-          slug: providerMeta.slug,
-          name: providerMeta.name,
-          description: providerMeta.description,
-          settings: settingsPayload,
+      const result = integration?.id
+        ? await configService.updateIntegrationSetting(integration.id, {
+            settings: settingsPayload,
+          })
+        : await configService.createIntegrationSetting({
+            slug: providerMeta.slug,
+            name: providerMeta.name,
+            description: providerMeta.description,
+            settings: settingsPayload,
+          });
+
+      if (result.error) {
+        setAiMessage({
+          type: "error",
+          text: `Erro ao salvar configuração de ${providerMeta.name}.`,
         });
-
-    if (result.error) {
-      setAiMessage({
-        type: "error",
-        text: `Erro ao salvar configuração de ${providerMeta.name}.`,
-      });
-    } else {
-      const savedIntegration = result.data ?? integration;
-      if (savedIntegration) {
-        setAiProviderIntegrations((prev) => ({
-          ...prev,
-          [provider]: savedIntegration,
-        }));
-      }
-
-      setAiProviderForms((prev) => ({
-        ...prev,
-        [provider]: {
-          enabled: settingsPayload.enabled,
-        },
-      }));
-
-      if (settingsPayload.enabled) {
-        void loadProviderModels(provider);
       } else {
-        aiModelsRequestIdRef.current[provider] += 1;
-        setAiProviderModels((prev) => ({
+        const savedIntegration = result.data ?? integration;
+        if (savedIntegration) {
+          setAiProviderIntegrations((prev) => ({
+            ...prev,
+            [provider]: savedIntegration,
+          }));
+        }
+
+        setAiProviderForms((prev) => ({
           ...prev,
           [provider]: {
-            loading: false,
-            options: [],
-            error: null,
+            enabled: settingsPayload.enabled,
           },
         }));
+
+        if (settingsPayload.enabled) {
+          void loadProviderModels(provider);
+        } else {
+          aiModelsRequestIdRef.current[provider] += 1;
+          setAiProviderModels((prev) => ({
+            ...prev,
+            [provider]: {
+              loading: false,
+              options: [],
+              error: null,
+            },
+          }));
+        }
+
+        setAiMessage({
+          type: "success",
+          text: `${providerMeta.name} atualizado com sucesso.`,
+        });
       }
-
+    } catch (error) {
+      console.error(`Erro ao salvar configuração de ${providerMeta.name}:`, error);
       setAiMessage({
-        type: "success",
-        text: `${providerMeta.name} atualizado com sucesso.`,
+        type: "error",
+        text: error instanceof Error
+          ? error.message
+          : `Erro ao salvar configuração de ${providerMeta.name}.`,
       });
+    } finally {
+      setSavingAiProvider((prev) => ({ ...prev, [provider]: false }));
     }
-
-    setSavingAiProvider((prev) => ({ ...prev, [provider]: false }));
   };
 
   const handleSaveRouting = async () => {
     setSavingAiRouting(true);
     setAiMessage(null);
 
-    const invalidTask = AI_TASKS.find((task) => getTaskRouteError(task.key, aiRoutingForm[task.key]));
-    if (invalidTask) {
-      setAiMessage({
-        type: "error",
-        text: `${invalidTask.label}: ${getTaskRouteError(invalidTask.key, aiRoutingForm[invalidTask.key])}`,
-      });
-      setSavingAiRouting(false);
-      return;
-    }
-
-    const tasksPayload = AI_TASKS.reduce(
-      (accumulator, task) => {
-        const route = aiRoutingForm[task.key];
-        const model =
-          route.model.trim() || getDefaultTaskModel(route.provider, task.key);
-
-        accumulator[task.key] = {
-          provider: route.provider,
-          model,
-        };
-
-        return accumulator;
-      },
-      {} as Record<
-        AiTaskKey,
-        { provider: AiProvider; model: string }
-      >,
-    );
-
-    const settingsPayload = {
-      tasks: tasksPayload,
-    };
-
-    const result = aiRoutingIntegration?.id
-      ? await configService.updateIntegrationSetting(aiRoutingIntegration.id, {
-          settings: settingsPayload,
-        })
-      : await configService.createIntegrationSetting({
-          slug: AI_ROUTING_SLUG,
-          name: "IA - Roteamento de Funcionalidades",
-          description:
-            "Define qual provedor/modelo cada funcionalidade de IA deve usar.",
-          settings: settingsPayload,
+    try {
+      const invalidTask = AI_TASKS.find((task) => getTaskRouteError(task.key, aiRoutingForm[task.key]));
+      if (invalidTask) {
+        setAiMessage({
+          type: "error",
+          text: `${invalidTask.label}: ${getTaskRouteError(invalidTask.key, aiRoutingForm[invalidTask.key])}`,
         });
+        return;
+      }
 
-    if (result.error) {
+      const tasksPayload = AI_TASKS.reduce(
+        (accumulator, task) => {
+          const route = aiRoutingForm[task.key];
+          const model =
+            route.model.trim() || getDefaultTaskModel(route.provider, task.key);
+
+          accumulator[task.key] = {
+            provider: route.provider,
+            model,
+          };
+
+          return accumulator;
+        },
+        {} as Record<
+          AiTaskKey,
+          { provider: AiProvider; model: string }
+        >,
+      );
+
+      const settingsPayload = {
+        tasks: tasksPayload,
+      };
+
+      const result = aiRoutingIntegration?.id
+        ? await configService.updateIntegrationSetting(aiRoutingIntegration.id, {
+            settings: settingsPayload,
+          })
+        : await configService.createIntegrationSetting({
+            slug: AI_ROUTING_SLUG,
+            name: "IA - Roteamento de Funcionalidades",
+            description:
+              "Define qual provedor/modelo cada funcionalidade de IA deve usar.",
+            settings: settingsPayload,
+          });
+
+      if (result.error) {
+        setAiMessage({
+          type: "error",
+          text: "Erro ao salvar roteamento de funcionalidades de IA.",
+        });
+      } else {
+        setAiRoutingIntegration(result.data ?? aiRoutingIntegration);
+        setAiRoutingForm((prev) =>
+          AI_TASKS.reduce((accumulator, task) => {
+            const route = prev[task.key];
+            accumulator[task.key] = {
+              ...route,
+              model: tasksPayload[task.key].model,
+            };
+            return accumulator;
+          }, {} as AiRoutingFormState),
+        );
+        setAiMessage({
+          type: "success",
+          text: "Roteamento de IA atualizado com sucesso.",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar roteamento de funcionalidades de IA:", error);
       setAiMessage({
         type: "error",
-        text: "Erro ao salvar roteamento de funcionalidades de IA.",
+        text: error instanceof Error ? error.message : "Erro ao salvar roteamento de funcionalidades de IA.",
       });
-    } else {
-      setAiRoutingIntegration(result.data ?? aiRoutingIntegration);
-      setAiRoutingForm((prev) =>
-        AI_TASKS.reduce((accumulator, task) => {
-          const route = prev[task.key];
-          accumulator[task.key] = {
-            ...route,
-            model: tasksPayload[task.key].model,
-          };
-          return accumulator;
-        }, {} as AiRoutingFormState),
-      );
-      setAiMessage({
-        type: "success",
-        text: "Roteamento de IA atualizado com sucesso.",
-      });
+    } finally {
+      setSavingAiRouting(false);
     }
-
-    setSavingAiRouting(false);
   };
 
   const handleSaveMetaPixel = async () => {
     setSavingMetaPixel(true);
     setMetaPixelMessage(null);
 
-    if (!metaPixelIntegration?.id) {
-      const { data, error } = await configService.createIntegrationSetting({
-        slug: META_PIXEL_SLUG,
-        name: "Meta Pixel",
-        description: "Código do Meta Pixel (Facebook) para rastreamento",
-        settings: { pixelId: metaPixelId.trim() },
-      });
-      if (error) {
-        setMetaPixelMessage({
-          type: "error",
-          text: "Erro ao salvar. Tente novamente.",
-        });
-      } else {
-        setMetaPixelIntegration(data);
-        setMetaPixelLoadError(false);
-        setMetaPixelMessage({
-          type: "success",
-          text: "Meta Pixel configurado com sucesso!",
-        });
-      }
-    } else {
-      const { data, error } = await configService.updateIntegrationSetting(
-        metaPixelIntegration.id,
-        {
+    try {
+      if (!metaPixelIntegration?.id) {
+        const { data, error } = await configService.createIntegrationSetting({
+          slug: META_PIXEL_SLUG,
+          name: "Meta Pixel",
+          description: "Código do Meta Pixel (Facebook) para rastreamento",
           settings: { pixelId: metaPixelId.trim() },
-        },
-      );
-      if (error) {
-        setMetaPixelMessage({
-          type: "error",
-          text: "Erro ao salvar. Tente novamente.",
         });
+        if (error) {
+          setMetaPixelMessage({
+            type: "error",
+            text: "Erro ao salvar. Tente novamente.",
+          });
+        } else {
+          setMetaPixelIntegration(data);
+          setMetaPixelLoadError(false);
+          setMetaPixelMessage({
+            type: "success",
+            text: "Meta Pixel configurado com sucesso!",
+          });
+        }
       } else {
-        setMetaPixelIntegration(data);
-        setMetaPixelLoadError(false);
-        setMetaPixelMessage({
-          type: "success",
-          text: "Meta Pixel atualizado com sucesso!",
-        });
+        const { data, error } = await configService.updateIntegrationSetting(
+          metaPixelIntegration.id,
+          {
+            settings: { pixelId: metaPixelId.trim() },
+          },
+        );
+        if (error) {
+          setMetaPixelMessage({
+            type: "error",
+            text: "Erro ao salvar. Tente novamente.",
+          });
+        } else {
+          setMetaPixelIntegration(data);
+          setMetaPixelLoadError(false);
+          setMetaPixelMessage({
+            type: "success",
+            text: "Meta Pixel atualizado com sucesso!",
+          });
+        }
       }
+    } catch (error) {
+      console.error("Erro ao salvar configuração do Meta Pixel:", error);
+      setMetaPixelMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Erro ao salvar. Tente novamente.",
+      });
+    } finally {
+      setSavingMetaPixel(false);
     }
-    setSavingMetaPixel(false);
   };
 
   const handleSaveGtm = async () => {
     setSavingGtm(true);
     setGtmMessage(null);
 
-    if (!gtmIntegration?.id) {
-      const { data, error } = await configService.createIntegrationSetting({
-        slug: GTM_SLUG,
-        name: "Google Tag Manager",
-        description: "Código do GTM para rastreamento",
-        settings: { gtmId: gtmId.trim() },
-      });
-      if (error) {
-        setGtmMessage({
-          type: "error",
-          text: "Erro ao salvar. Tente novamente.",
-        });
-      } else {
-        setGtmIntegration(data);
-        setGtmLoadError(false);
-        setGtmMessage({
-          type: "success",
-          text: "GTM configurado com sucesso!",
-        });
-      }
-    } else {
-      const { data, error } = await configService.updateIntegrationSetting(
-        gtmIntegration.id,
-        {
+    try {
+      if (!gtmIntegration?.id) {
+        const { data, error } = await configService.createIntegrationSetting({
+          slug: GTM_SLUG,
+          name: "Google Tag Manager",
+          description: "Código do GTM para rastreamento",
           settings: { gtmId: gtmId.trim() },
-        },
-      );
-      if (error) {
-        setGtmMessage({
-          type: "error",
-          text: "Erro ao salvar. Tente novamente.",
         });
+        if (error) {
+          setGtmMessage({
+            type: "error",
+            text: "Erro ao salvar. Tente novamente.",
+          });
+        } else {
+          setGtmIntegration(data);
+          setGtmLoadError(false);
+          setGtmMessage({
+            type: "success",
+            text: "GTM configurado com sucesso!",
+          });
+        }
       } else {
-        setGtmIntegration(data);
-        setGtmLoadError(false);
-        setGtmMessage({ type: "success", text: "GTM atualizado com sucesso!" });
+        const { data, error } = await configService.updateIntegrationSetting(
+          gtmIntegration.id,
+          {
+            settings: { gtmId: gtmId.trim() },
+          },
+        );
+        if (error) {
+          setGtmMessage({
+            type: "error",
+            text: "Erro ao salvar. Tente novamente.",
+          });
+        } else {
+          setGtmIntegration(data);
+          setGtmLoadError(false);
+          setGtmMessage({ type: "success", text: "GTM atualizado com sucesso!" });
+        }
       }
+    } catch (error) {
+      console.error("Erro ao salvar configuração do GTM:", error);
+      setGtmMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Erro ao salvar. Tente novamente.",
+      });
+    } finally {
+      setSavingGtm(false);
     }
-    setSavingGtm(false);
   };
 
   const hasIntegrationSnapshot =

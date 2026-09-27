@@ -7,6 +7,8 @@ import {
   recordCommWhatsAppEventReceipt,
 } from '../webhook-event-receipts';
 
+type WebhookReceiptClient = Parameters<typeof recordCommWhatsAppEventReceipt>[0];
+
 const makeReceiptsTableStub = (existingEventKeys: Set<string> = new Set()) => {
   const insertCalls: Record<string, unknown>[] = [];
 
@@ -39,7 +41,7 @@ const makeReceiptsTableStub = (existingEventKeys: Set<string> = new Set()) => {
         }),
       }),
     }),
-  } as any;
+  } as unknown as WebhookReceiptClient;
 
   return { client, insertCalls, existingEventKeys };
 };
@@ -81,7 +83,7 @@ test('propaga erro de banco que não seja violação de unicidade', async () => 
     from: () => ({
       insert: async () => ({ error: { code: '42501', message: 'permission denied' } }),
     }),
-  } as any;
+  } as unknown as WebhookReceiptClient;
 
   await assert.rejects(
     () => recordCommWhatsAppEventReceipt(client, 'channel-1', 'event-key-1', 'message', 'msg-1', {}),

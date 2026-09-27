@@ -3,6 +3,8 @@ import { test } from 'vitest';
 
 import { checkCommWhatsAppActionRateLimit } from '../rate-limit';
 
+type RateLimitClient = Parameters<typeof checkCommWhatsAppActionRateLimit>[0];
+
 const makeRpcStub = (results: Array<{ data: unknown; error: unknown }>) => {
   let callIndex = -1;
   const calls: Record<string, unknown>[] = [];
@@ -13,7 +15,7 @@ const makeRpcStub = (results: Array<{ data: unknown; error: unknown }>) => {
       callIndex += 1;
       return results[callIndex] ?? { data: null, error: null };
     },
-  } as any;
+  } as unknown as RateLimitClient;
 
   return { client, calls };
 };

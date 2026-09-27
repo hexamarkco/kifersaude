@@ -3,6 +3,8 @@ import { test } from 'vitest';
 
 import { isDuplicateLead } from '../leads';
 
+type LeadsClient = Parameters<typeof isDuplicateLead>[0];
+
 type Call = { column: string; op: 'eq' | 'ilike'; value: string };
 
 const makeSupabaseStub = (
@@ -28,7 +30,7 @@ const makeSupabaseStub = (
         },
       }),
     }),
-  } as any;
+  } as unknown as LeadsClient;
 };
 
 test('e-mail com sintaxe de filtro PostgREST (vírgula/parênteses) nunca é interpolado numa string de filtro', async () => {

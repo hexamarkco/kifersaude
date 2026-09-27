@@ -3,6 +3,8 @@ import { test } from 'vitest';
 
 import { CampaignTargetLeaseLostError, createLockToken, updateClaimedTarget } from '../campaign-lock';
 
+type CampaignLockClient = Parameters<typeof updateClaimedTarget>[0];
+
 /**
  * Simula a tabela `comm_whatsapp_campaign_targets` com semântica de linha única:
  * um UPDATE só afeta a linha se id + status + lock_token baterem exatamente com o
@@ -38,7 +40,7 @@ const makeTargetsTableStub = (initialRow: { id: string; status: string; lock_tok
         return builder;
       },
     }),
-  } as any;
+  } as unknown as CampaignLockClient;
 
   return { client, row, updateCalls };
 };

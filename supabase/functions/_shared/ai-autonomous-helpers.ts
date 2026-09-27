@@ -5,6 +5,7 @@ import {
   type MessageRow,
 } from './comm-whatsapp-transcript.ts';
 import { extractAutonomousQualificationState } from './ai-autonomous-qualification.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 export type AutonomousMessageRow = {
   role: 'lead' | 'ai';
   content: string;
@@ -101,8 +102,7 @@ const QUICK_REPLIES_INTEGRATION_SLUG = 'whatsapp_quick_replies';
  * templates reais que a operacao ja usa e que a IA pode adaptar ao
  * contexto em vez de sempre escrever do zero.
  */
-// deno-lint-ignore no-explicit-any
-export const fetchQuickReplies = async (supabaseAdmin: any): Promise<QuickReplyRef[]> => {
+export const fetchQuickReplies = async (supabaseAdmin: SupabaseClient): Promise<QuickReplyRef[]> => {
   const { data, error } = await supabaseAdmin
     .from('integration_settings')
     .select('settings')
@@ -131,8 +131,7 @@ export const fetchQuickReplies = async (supabaseAdmin: any): Promise<QuickReplyR
  * situacoes ja vividas" que embasa a resposta da IA em casos reais em
  * vez de so no tom generico.
  */
-// deno-lint-ignore no-explicit-any
-export const fetchSimilarSituations = async (supabaseAdmin: any, queryText: string, limit = 4): Promise<SimilarSituationRef[]> => {
+export const fetchSimilarSituations = async (supabaseAdmin: SupabaseClient, queryText: string, limit = 4): Promise<SimilarSituationRef[]> => {
   const trimmed = queryText.trim();
   if (trimmed.length < 8) return [];
 

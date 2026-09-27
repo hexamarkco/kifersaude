@@ -134,6 +134,28 @@ type RecordFilter = {
   value?: unknown;
 };
 
+type ReadableQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+  count: number | null;
+};
+
+type ReadableQuery = {
+  eq: (field: string, value: unknown) => ReadableQuery;
+  neq: (field: string, value: unknown) => ReadableQuery;
+  ilike: (field: string, value: unknown) => ReadableQuery;
+  like: (field: string, value: unknown) => ReadableQuery;
+  gt: (field: string, value: unknown) => ReadableQuery;
+  gte: (field: string, value: unknown) => ReadableQuery;
+  lt: (field: string, value: unknown) => ReadableQuery;
+  lte: (field: string, value: unknown) => ReadableQuery;
+  is: (field: string, value: boolean | null) => ReadableQuery;
+  in: (field: string, values: string[]) => ReadableQuery;
+  order: (field: string, options: { ascending: boolean; nullsFirst: boolean }) => {
+    range: (from: number, to: number) => Promise<ReadableQueryResult>;
+  };
+};
+
 const errorResponse = (id: JsonRpcRequest['id'], code: number, message: string, data?: unknown) =>
   new Response(JSON.stringify({ jsonrpc: '2.0', id: id ?? null, error: { code, message, ...(data === undefined ? {} : { data }) } }), {
     status: 200,
@@ -229,7 +251,7 @@ async function listRecords(supabase: SupabaseClient, params: Record<string, unkn
 
   if (!isSafeIdentifier(orderBy)) throw new Error('Campo de ordenacao invalido.');
 
-  let query: any = supabase.from(table).select('*', { count: 'exact' });
+  let query = supabase.from(table).select('*', { count: 'exact' }) as unknown as ReadableQuery;
   const filters = Array.isArray(params.filters) ? (params.filters as RecordFilter[]).slice(0, 12) : [];
 
   for (const filter of filters) {
@@ -247,7 +269,34 @@ async function listRecords(supabase: SupabaseClient, params: Record<string, unkn
       const value = filter.value === null || filter.value === 'null' ? null : Boolean(filter.value);
       query = query.is(field, value);
     } else {
-      query = query[operator](field, filter.value);
+      switch (operator) {
+        case 'eq':
+          query = query.eq(field, filter.value);
+          break;
+        case 'neq':
+          query = query.neq(field, filter.value);
+          break;
+        case 'ilike':
+          query = query.ilike(field, filter.value);
+          break;
+        case 'like':
+          query = query.like(field, filter.value);
+          break;
+        case 'gt':
+          query = query.gt(field, filter.value);
+          break;
+        case 'gte':
+          query = query.gte(field, filter.value);
+          break;
+        case 'lt':
+          query = query.lt(field, filter.value);
+          break;
+        case 'lte':
+          query = query.lte(field, filter.value);
+          break;
+        default:
+          throw new Error('Filtro invalido. Operador nao suportado.');
+      }
     }
   }
 

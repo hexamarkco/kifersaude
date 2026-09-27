@@ -22,6 +22,7 @@ import {
   loadFeatureConfig,
   loadGlobalConfig,
 } from './ai-config-resolver.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 // ============================================================
 // Types
@@ -58,7 +59,7 @@ export const GLOBAL_CONFIG_KEYS = {
 // ============================================================
 
 export async function composePrompt(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   options: ComposePromptOptions,
 ): Promise<ComposePromptResult> {
   const { featureKey, context, customInstructions } = options;

@@ -19,6 +19,7 @@ import {
 } from './ai-feature-registry.ts';
 import type { AiProvider } from './ai-router.ts';
 import type { AiReasoningEffort } from './ai-provider-request-profile.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 // ============================================================
 // Types
@@ -68,7 +69,7 @@ const globalConfigCache = new Map<string, CacheEntry<ResolvedAIGlobalConfig>>();
 // ============================================================
 
 export async function loadFeatureConfig(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   featureKey: AIFeatureKey,
   options?: { noCache?: boolean },
 ): Promise<ResolvedAIFeatureConfig> {
@@ -153,7 +154,7 @@ export async function loadFeatureConfig(
 // ============================================================
 
 export async function loadGlobalConfig(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   configKey: string,
   options?: { noCache?: boolean },
 ): Promise<ResolvedAIGlobalConfig | null> {
@@ -245,7 +246,7 @@ function buildDefaultConfig(featureKey: AIFeatureKey): ResolvedAIFeatureConfig {
 
 function mergeWithDefaults(
   featureKey: AIFeatureKey,
-  config: Record<string, any>,
+  config: Record<string, unknown>,
 ): ResolvedAIFeatureConfig {
   const meta = AI_FEATURE_META[featureKey];
   if (!meta) {
@@ -254,20 +255,20 @@ function mergeWithDefaults(
 
   return {
     featureKey,
-    provider: (config.provider as AiProvider) || meta.defaultProvider,
-    model: config.model || meta.defaultModel,
-    fallbackModel: config.fallback_model ?? null,
+    provider: (config.provider as AiProvider | undefined) || meta.defaultProvider,
+    model: (config.model as string | undefined) || meta.defaultModel,
+    fallbackModel: (config.fallback_model as string | null | undefined) ?? null,
     modelOverrideEnabled: Boolean(config.model_override_enabled),
-    temperature: config.temperature ?? meta.defaultTemperature,
-    maxOutputTokens: config.max_output_tokens ?? meta.defaultMaxTokens,
-    reasoningEffort: config.reasoning_effort ?? meta.defaultReasoningEffort,
-    timeoutMs: config.timeout_ms ?? null,
-    retryCount: config.retry_count ?? null,
-    useGlobalInstructions: config.use_global_instructions ?? true,
-    useGlobalStyle: config.use_global_style ?? true,
-    featurePrompt: config.feature_prompt ?? '',
-    outputInstructions: config.output_instructions ?? '',
-    contextConfig: config.context_config_json ?? { ...meta.defaultContextConfig },
-    version: config.version ?? 1,
+    temperature: (config.temperature as number | undefined) ?? meta.defaultTemperature,
+    maxOutputTokens: (config.max_output_tokens as number | undefined) ?? meta.defaultMaxTokens,
+    reasoningEffort: (config.reasoning_effort as AiReasoningEffort | null | undefined) ?? meta.defaultReasoningEffort,
+    timeoutMs: (config.timeout_ms as number | null | undefined) ?? null,
+    retryCount: (config.retry_count as number | null | undefined) ?? null,
+    useGlobalInstructions: (config.use_global_instructions as boolean | undefined) ?? true,
+    useGlobalStyle: (config.use_global_style as boolean | undefined) ?? true,
+    featurePrompt: (config.feature_prompt as string | undefined) ?? '',
+    outputInstructions: (config.output_instructions as string | undefined) ?? '',
+    contextConfig: (config.context_config_json as Record<string, boolean> | undefined) ?? { ...meta.defaultContextConfig },
+    version: (config.version as number | undefined) ?? 1,
   };
 }

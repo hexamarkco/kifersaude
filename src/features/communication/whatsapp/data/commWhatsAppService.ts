@@ -6,6 +6,7 @@ import {
   waitForSupabaseSession,
 } from '../../../../infrastructure/supabase';
 import type { Contract } from '../../../contracts';
+import { loadInboxConversations } from '../domain/inboxExport';
 import type {
   CommWhatsAppChannel,
   CommWhatsAppChat,
@@ -1271,20 +1272,18 @@ export const commWhatsAppService = {
       offset += page.length;
     }
 
-    const conversations: CommWhatsAppInboxExportPayload['conversations'] = [];
-    let messagesExported = 0;
-
-    for (const chat of chats) {
-      const messages = await this.listAllMessages(chat.id);
-      messagesExported += messages.length;
-      conversations.push({ chat, messages });
-
-      params.onProgress?.({
-        chatsLoaded: chats.length,
-        chatsExported: conversations.length,
-        messagesExported,
-      });
-    }
+    const { conversations, messagesExported } = await loadInboxConversations({
+      chats,
+      concurrency: 4,
+      loadMessages: (chat) => this.listAllMessages(chat.id),
+      onProgress: (progress) => {
+        params.onProgress?.({
+          chatsLoaded: chats.length,
+          chatsExported: progress.chatsExported,
+          messagesExported: progress.messagesExported,
+        });
+      },
+    });
 
     return {
       schema: 'kifer.comm_whatsapp_inbox_export.v1',

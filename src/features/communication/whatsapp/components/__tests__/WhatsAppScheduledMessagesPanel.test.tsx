@@ -127,3 +127,29 @@ test('descarta sequências antigas quando uma nova carga parcial falha', async (
   assert.match(document.body.textContent ?? '', /Uma parte da consulta falhou/);
   view.unmount();
 });
+
+test('não apresenta falha de carregamento como se não houvesse agendamentos', async () => {
+  configureSuccessfulCounts();
+  mocks.listScheduledMessages.mockReturnValueOnce(Promise.reject(new Error('falha temporária')));
+  mocks.listScheduledSequences.mockReturnValueOnce(Promise.reject(new Error('falha temporária')));
+
+  const view = render(
+    <WhatsAppScheduledMessagesPanel
+      channelId="channel-1"
+      chatId="chat-1"
+      isOpen
+      onClose={() => undefined}
+    />,
+  );
+
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  assert.match(document.body.textContent ?? '', /Dados indisponíveis — tente novamente/);
+  assert.match(document.body.textContent ?? '', /Não foi possível carregar os agendamentos/);
+  assert.doesNotMatch(document.body.textContent ?? '', /0 mensagem\(ns\) e 0 sequência\(s\)$/);
+  view.unmount();
+});

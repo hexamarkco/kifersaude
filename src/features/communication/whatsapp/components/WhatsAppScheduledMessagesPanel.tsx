@@ -597,6 +597,13 @@ export default function WhatsAppScheduledMessagesPanel({
   }, [activeView, endDate, getContactDisplayName, searchQuery, sequences, startDate]);
 
   const hasListFilters = Boolean(searchQuery || startDate || endDate);
+  const headerSummary = loading
+    ? 'Carregando agendamentos...'
+    : loadError === 'all'
+      ? 'Dados indisponíveis — tente novamente'
+      : loadError === 'partial'
+        ? `Dados parciais: ${messages.length} mensagem(ns) e ${sequences.length} sequência(s)`
+        : `${messages.length} mensagem(ns) e ${sequences.length} sequência(s)`;
 
   if (!isOpen) return null;
 
@@ -617,7 +624,7 @@ export default function WhatsAppScheduledMessagesPanel({
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
               </h2>
-              <p className="text-sm text-[var(--text-muted)]">{messages.length} mensagem(ns) e {sequences.length} sequência(s)</p>
+              <p className="text-sm text-[var(--text-muted)]">{headerSummary}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

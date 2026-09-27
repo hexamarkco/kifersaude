@@ -19,6 +19,7 @@ import type {
   CommWhatsAppScheduledSequenceAction,
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
+import { collectPhoneLookupKeys, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
 
@@ -61,6 +62,48 @@ const SCHEDULED_SEQUENCE_SELECT = [
   'updated_at',
   'steps:comm_whatsapp_scheduled_sequence_steps(id,step_index,delay_seconds,due_at,reminder_id,message_type,text_content,media_url,media_mime_type,media_file_name,status,last_error,actions:comm_whatsapp_scheduled_sequence_actions(id,action_index,action_type,config,status,error_message))',
 ].join(',');
+
+const SAVED_CONTACT_CACHE_SELECT = [
+  'id',
+  'channel_id',
+  'contact_id',
+  'phone_number',
+  'phone_digits',
+  'display_name',
+  'short_name',
+  'push_name',
+  'saved',
+  'manual_override',
+  'manual_override_name',
+  'last_synced_at',
+  'created_at',
+  'updated_at',
+].join(',');
+
+const lookupSavedContactsFromCache = async (phoneNumbers: string[]) => {
+  const phoneKeys = Array.from(new Set(
+    phoneNumbers.flatMap((phoneNumber) => collectPhoneLookupKeys(phoneNumber)),
+  )).slice(0, 500);
+
+  if (phoneKeys.length === 0) {
+    return [] as CommWhatsAppPhoneContact[];
+  }
+
+  const { data, error } = await supabase
+    .from('comm_whatsapp_phone_contacts_cache')
+    .select(SAVED_CONTACT_CACHE_SELECT)
+    .eq('saved', true)
+    .in('phone_digits', phoneKeys)
+    .limit(500)
+    .overrideTypes<CommWhatsAppPhoneContact[]>();
+
+  if (error) {
+    console.warn('[WhatsAppInbox] consulta canônica do cache de contatos indisponível', error);
+    return [] as CommWhatsAppPhoneContact[];
+  }
+
+  return data ?? [];
+};
 
 type ScheduledMediaUpload = {
   url: string;
@@ -1663,7 +1706,16 @@ export const commWhatsAppService = {
     }
 
     const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };
-    return (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
+    const edgeFunctionContacts = (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
+    // A versão publicada da Edge Function pode ficar temporariamente atrás
+    // do frontend. Ler também o cache exposto pelo banco garante que linhas
+    // antigas com manual_override=true continuem vencendo o nome sincronizado.
+    const databaseContacts = await lookupSavedContactsFromCache(params.phoneNumbers);
+
+    return selectPreferredSavedContacts([
+      ...edgeFunctionContacts,
+      ...databaseContacts,
+    ]);
   },
 
   async startChat(params:

@@ -7716,6 +7716,10 @@ export type Database = {
         Args: { p_message_type?: string; p_value: string }
         Returns: boolean
       }
+      comm_whatsapp_is_manual_contact_cache_row: {
+        Args: { p_contact_id: string; p_manual_override: boolean }
+        Returns: boolean
+      }
       comm_whatsapp_is_valid_display_name: {
         Args: { p_value: string }
         Returns: boolean

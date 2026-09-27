@@ -3599,7 +3599,6 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    let cancelled = false;
     const forceSync = requestKeys.some((key) => forceSyncKeys.has(key));
 
     if (forceSync) {
@@ -3607,9 +3606,11 @@ export default function WhatsAppInboxScreen() {
     }
 
     requestKeys.forEach((key) => savedContactLookupInFlightKeysRef.current.add(key));
+    // A lista pode mudar enquanto a consulta termina (polling, Realtime ou
+    // carregamento do painel do lead). A resposta ainda e valida: o setter
+    // funcional abaixo aplica o nome sobre o estado mais recente. Cancelar
+    // por causa da troca de `chats` descartava justamente a identidade manual.
     void whatsappContactsRepository.lookupSavedByPhones({ phoneNumbers, forceSync }).then((contacts) => {
-      if (cancelled) return;
-
       const matchedKeys = new Set(contacts.flatMap((contact) => collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)));
       const missedAt = Date.now();
       requestKeys.forEach((key) => {
@@ -3637,8 +3638,6 @@ export default function WhatsAppInboxScreen() {
     }).finally(() => {
       requestKeys.forEach((key) => savedContactLookupInFlightKeysRef.current.delete(key));
     });
-
-    return () => { cancelled = true; };
   }, [applyFrontendSavedContactNames, chats, selectedChat]);
 
   const applyRealtimeChatChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {

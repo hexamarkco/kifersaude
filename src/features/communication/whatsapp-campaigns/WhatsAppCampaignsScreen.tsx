@@ -31,6 +31,7 @@ import {
 } from '../../../design-system';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
+import { getSafeChatDisplayName } from '../whatsapp';
 import { subscribeToCampaignListChanges } from './campaignRealtime';
 import {
   commWhatsAppCampaignService,
@@ -1062,7 +1063,7 @@ export default function WhatsAppCampaignsScreen() {
                         <Bot className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
+                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{getSafeChatDisplayName({ ...suggestion.chat, phone_digits: suggestion.phone_digits })}</h3>
                         <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
                       </div>
                     </div>

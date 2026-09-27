@@ -4,6 +4,12 @@ import { formatCommWhatsAppPhoneLabel } from './phonePresentation';
 import { getVisiblePreviewText, normalizeInboxSearch } from './messagePresentation';
 import type { CommWhatsAppChat } from './types';
 
+export type CommWhatsAppChatIdentity = {
+  display_name?: string | null;
+  phone_number?: string | null;
+  phone_digits?: string | null;
+} & Partial<Pick<CommWhatsAppChat, 'is_group' | 'saved_contact_name' | 'lead_name' | 'lead_id' | 'push_name'>>;
+
 export const resolveStableDeliveryStatus = (incoming?: string | null, previous?: string | null) => (
   resolveDeliveryStatus(previous, incoming)
 );
@@ -90,7 +96,7 @@ export const applySavedContactName = (
 };
 
 export const getSafeChatDisplayName = (
-  chat: CommWhatsAppChat | null,
+  chat: CommWhatsAppChatIdentity | null,
   connectedUserName?: string | null,
   leadName?: string | null,
 ) => {
@@ -115,7 +121,7 @@ export const getSafeChatDisplayName = (
     || resolvedLeadName
     || pushName
     || (!isOwnNameLeak ? displayName : '')
-    || formatCommWhatsAppPhoneLabel(chat.phone_number)
+    || formatCommWhatsAppPhoneLabel(chat.phone_number || chat.phone_digits)
     || 'Contato privado';
 };
 

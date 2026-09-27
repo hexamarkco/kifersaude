@@ -211,6 +211,11 @@ export type CommWhatsAppAiIntentSuggestion = {
   chat?: {
     display_name?: string | null;
     phone_number?: string | null;
+    saved_contact_name?: string | null;
+    push_name?: string | null;
+    lead_name?: string | null;
+    lead_id?: string | null;
+    is_group?: boolean;
   } | null;
   campaign?: {
     name?: string | null;
@@ -359,7 +364,7 @@ const AI_SUGGESTION_SELECT = [
   'reason',
   'evidence',
   'status',
-  'chat:comm_whatsapp_chats!inner(display_name,phone_number)',
+  'chat:comm_whatsapp_chats!inner(display_name,phone_number,saved_contact_name,push_name,lead_name,lead_id,is_group)',
   'campaign:comm_whatsapp_campaigns(name)',
 ].join(',');
 

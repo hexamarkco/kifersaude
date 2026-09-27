@@ -84,6 +84,17 @@ test('chooses stable contact names and hides a leaked connected-user name', () =
   assert.equal(getSafeChatDisplayName(leakedOwnName, 'Atendente'), '+55 (11) 99999-9999');
 });
 
+test('applies saved names to partial chat identities from related screens', () => {
+  assert.equal(
+    getSafeChatDisplayName({
+      display_name: 'Mariangela - Cliente',
+      saved_contact_name: 'Mariangela',
+      phone_number: '5521982965495',
+    }),
+    'Mariangela',
+  );
+});
+
 test('keeps known identity fields while merging a partial update for the same lead', () => {
   const previous = createChat({
     saved_contact_name: 'Maria',

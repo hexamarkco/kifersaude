@@ -415,8 +415,18 @@ export default function WhatsAppCampaignsScreen() {
   const handleCsvFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    setCsvText(text);
+
+    // Permite selecionar o mesmo arquivo novamente depois de corrigir ou
+    // tentar importar de novo. Sem limpar o input, o navegador não dispara
+    // outro `change` quando o arquivo escolhido é exatamente o mesmo.
+    event.target.value = '';
+
+    try {
+      setCsvText(await file.text());
+    } catch (error) {
+      console.error('[WhatsAppCampaigns] erro ao ler arquivo CSV', error);
+      toast.error('Não foi possível ler este arquivo CSV. Tente selecionar o arquivo novamente.');
+    }
   };
 
   const resetCampaignForm = () => {

@@ -140,6 +140,7 @@ import {
 import {
   preserveChatsFromPartialLoad,
   selectInitialChatId,
+  selectReplacementChatId,
   shouldPreserveSelectedChatAfterLoad,
 } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
@@ -3751,6 +3752,26 @@ export default function WhatsAppInboxScreen() {
     if (incomingChat?.merged_into_chat_id && selectedChatIdRef.current === incomingChat.id) {
       setSelectedChatId(incomingChat.merged_into_chat_id);
       void loadChatsRef.current();
+    }
+
+    const selectedChatWasRemoved = selectedChatIdRef.current === changedChatId
+      && !incomingChat?.merged_into_chat_id
+      && (payload.eventType === 'DELETE' || Boolean(incomingChat?.deleted_at));
+    if (selectedChatWasRemoved) {
+      const selectedChatBeforeRemoval = latestChatsRef.current.find((chat) => chat.id === changedChatId);
+      const preferredSection = (selectedChatBeforeRemoval?.is_archived ?? archivedSectionOpenRef.current)
+        ? 'archived'
+        : 'active';
+      const replacementChatId = selectReplacementChatId({
+        chats: latestChatsRef.current.filter((chat) => (
+          chatMatchesActiveFilters(chat)
+          && Boolean(chat.is_archived) === (preferredSection === 'archived')
+        )),
+        removedChatId: changedChatId,
+        preferredSection,
+      });
+      chatIdFromUrlRef.current = replacementChatId;
+      setSelectedChatId(replacementChatId);
     }
 
     setChats((current) => {

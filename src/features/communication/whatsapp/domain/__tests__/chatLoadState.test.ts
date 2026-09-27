@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   preserveChatsFromPartialLoad,
   selectInitialChatId,
+  selectReplacementChatId,
   shouldPreserveSelectedChatAfterLoad,
 } from '../chatLoadState';
 import type { CommWhatsAppChat } from '../types';
@@ -104,6 +105,29 @@ test('seleciona primeiro um chat da seção que o operador acabou de abrir', () 
 
   assert.equal(selectInitialChatId([activeChat, archivedChat], 'archived'), 'archived-chat');
   assert.equal(selectInitialChatId([archivedChat, activeChat], 'active'), 'active-chat');
+});
+
+test('troca a seleção quando a conversa atual é removida em tempo real', () => {
+  const removedChat = createChat({ id: 'removed-chat' });
+  const nextActiveChat = createChat({ id: 'next-active-chat' });
+  const archivedChat = createChat({ id: 'archived-chat', is_archived: true });
+
+  assert.equal(
+    selectReplacementChatId({
+      chats: [removedChat, nextActiveChat, archivedChat],
+      removedChatId: 'removed-chat',
+      preferredSection: 'active',
+    }),
+    'next-active-chat',
+  );
+  assert.equal(
+    selectReplacementChatId({
+      chats: [removedChat, nextActiveChat, archivedChat],
+      removedChatId: 'removed-chat',
+      preferredSection: 'archived',
+    }),
+    'archived-chat',
+  );
 });
 
 test('preserva chats da seção cuja consulta falhou', () => {

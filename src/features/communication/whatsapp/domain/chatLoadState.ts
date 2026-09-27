@@ -9,6 +9,19 @@ export const selectInitialChatId = (
   ?? chats[0]?.id
   ?? null;
 
+export const selectReplacementChatId = ({
+  chats,
+  removedChatId,
+  preferredSection,
+}: {
+  chats: readonly CommWhatsAppChat[];
+  removedChatId: string;
+  preferredSection: ChatSection;
+}) => selectInitialChatId(
+  chats.filter((chat) => chat.id !== removedChatId),
+  preferredSection,
+);
+
 type ShouldPreserveSelectedChatParams = {
   selectedChat: CommWhatsAppChat | null;
   refreshedChatIds: ReadonlySet<string>;

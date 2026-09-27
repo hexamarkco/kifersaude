@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { selectInitialChatId, shouldPreserveSelectedChatAfterLoad } from '../chatLoadState';
+import {
+  preserveChatsFromPartialLoad,
+  selectInitialChatId,
+  shouldPreserveSelectedChatAfterLoad,
+} from '../chatLoadState';
 import type { CommWhatsAppChat } from '../types';
 
 const createChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat => ({
@@ -51,7 +55,7 @@ test('não preserva chat selecionado omitido por uma seção carregada', () => {
     shouldPreserveSelectedChatAfterLoad({
       selectedChat: createChat(),
       refreshedChatIds: new Set(),
-      requestedSections: ['active'],
+      loadedSections: ['active'],
       unexpectedlyEmptySections: new Set(),
     }),
     false,
@@ -63,7 +67,7 @@ test('preserva chat quando a seção dele ainda não foi carregada', () => {
     shouldPreserveSelectedChatAfterLoad({
       selectedChat: createChat({ is_archived: true }),
       refreshedChatIds: new Set(),
-      requestedSections: ['active'],
+      loadedSections: ['active'],
       unexpectedlyEmptySections: new Set(),
     }),
     true,
@@ -75,7 +79,7 @@ test('preserva chat quando a resposta da seção foi vazia de forma transitória
     shouldPreserveSelectedChatAfterLoad({
       selectedChat: createChat(),
       refreshedChatIds: new Set(),
-      requestedSections: ['active'],
+      loadedSections: ['active'],
       unexpectedlyEmptySections: new Set(['active']),
     }),
     true,
@@ -87,7 +91,7 @@ test('não preserva chat que já voltou na resposta atual', () => {
     shouldPreserveSelectedChatAfterLoad({
       selectedChat: createChat(),
       refreshedChatIds: new Set(['chat-1']),
-      requestedSections: ['active'],
+      loadedSections: ['active'],
       unexpectedlyEmptySections: new Set(),
     }),
     false,
@@ -100,4 +104,32 @@ test('seleciona primeiro um chat da seção que o operador acabou de abrir', () 
 
   assert.equal(selectInitialChatId([activeChat, archivedChat], 'archived'), 'archived-chat');
   assert.equal(selectInitialChatId([archivedChat, activeChat], 'active'), 'active-chat');
+});
+
+test('preserva chats da seção cuja consulta falhou', () => {
+  const activeChat = createChat({ id: 'active-chat', is_archived: false });
+  const archivedChat = createChat({ id: 'archived-chat', is_archived: true });
+
+  const preserved = preserveChatsFromPartialLoad({
+    previousChats: [activeChat, archivedChat],
+    refreshedChatIds: new Set(['active-chat']),
+    loadedSections: new Set(['active']),
+    unexpectedlyEmptySections: new Set(),
+  });
+
+  assert.deepEqual(preserved, [archivedChat]);
+});
+
+test('preserva chats quando a resposta vazia da seção carregada é transitória', () => {
+  const activeChat = createChat({ id: 'active-chat', is_archived: false });
+  const archivedChat = createChat({ id: 'archived-chat', is_archived: true });
+
+  const preserved = preserveChatsFromPartialLoad({
+    previousChats: [activeChat, archivedChat],
+    refreshedChatIds: new Set(),
+    loadedSections: new Set(['active']),
+    unexpectedlyEmptySections: new Set(['active']),
+  });
+
+  assert.deepEqual(preserved, [activeChat, archivedChat]);
 });

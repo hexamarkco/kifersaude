@@ -136,7 +136,11 @@ import {
   QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
   shouldContinueQueuedTextSendAfterFailure,
 } from './domain/messageSendQueue';
-import { selectInitialChatId, shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
+import {
+  preserveChatsFromPartialLoad,
+  selectInitialChatId,
+  shouldPreserveSelectedChatAfterLoad,
+} from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
 import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
@@ -5348,7 +5352,7 @@ export default function WhatsAppInboxScreen() {
           throw firstSectionError ?? new Error('Não foi possível carregar as conversas.');
         }
 
-        const fetchedSectionSet = new Set(requestedSections);
+        const fetchedSectionSet = new Set(fetchedSections.map(({ section }) => section));
         const fetchedChatIds = new Set<string>();
         const fetchedFlat: CommWhatsAppChat[] = [];
         for (const bucket of fetchedSections) {
@@ -5383,19 +5387,11 @@ export default function WhatsAppInboxScreen() {
           });
         }
 
-        const preservedFromOtherSections = previousChats.filter((chat) => {
-          if (chat.deleted_at) {
-            return false;
-          }
-
-          const sectionOfChat = chat.is_archived ? 'archived' : 'active';
-          if (fetchedSectionSet.has(sectionOfChat)) {
-            // se a secao foi recarregada, removemos chats antigos que nao vieram
-            // exceto quando a resposta veio vazia de forma transitória; nesse
-            // caso manter o cache evita a sidebar colapsar para o chat aberto.
-            return unexpectedlyEmptySections.has(sectionOfChat) && !fetchedChatIds.has(chat.id);
-          }
-          return !fetchedChatIds.has(chat.id);
+        const preservedFromOtherSections = preserveChatsFromPartialLoad({
+          previousChats,
+          refreshedChatIds: fetchedChatIds,
+          loadedSections: fetchedSectionSet,
+          unexpectedlyEmptySections,
         });
 
         const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
@@ -5427,7 +5423,7 @@ export default function WhatsAppInboxScreen() {
         const shouldPreserveSelectedChat = shouldPreserveSelectedChatAfterLoad({
           selectedChat: preservedSelectedChat,
           refreshedChatIds: new Set(refreshedChats.map((chat) => chat.id)),
-          requestedSections,
+          loadedSections: Array.from(fetchedSectionSet),
           unexpectedlyEmptySections,
         });
         const hydratedData = sortChatsByInboxOrder(

@@ -12,7 +12,7 @@ export const selectInitialChatId = (
 type ShouldPreserveSelectedChatParams = {
   selectedChat: CommWhatsAppChat | null;
   refreshedChatIds: ReadonlySet<string>;
-  requestedSections: readonly ChatSection[];
+  loadedSections: readonly ChatSection[];
   unexpectedlyEmptySections: ReadonlySet<ChatSection>;
 };
 
@@ -25,7 +25,7 @@ type ShouldPreserveSelectedChatParams = {
 export const shouldPreserveSelectedChatAfterLoad = ({
   selectedChat,
   refreshedChatIds,
-  requestedSections,
+  loadedSections,
   unexpectedlyEmptySections,
 }: ShouldPreserveSelectedChatParams) => {
   if (!selectedChat || refreshedChatIds.has(selectedChat.id)) {
@@ -33,9 +33,38 @@ export const shouldPreserveSelectedChatAfterLoad = ({
   }
 
   const selectedSection: ChatSection = selectedChat.is_archived ? 'archived' : 'active';
-  if (!requestedSections.includes(selectedSection)) {
+  if (!loadedSections.includes(selectedSection)) {
     return true;
   }
 
   return unexpectedlyEmptySections.has(selectedSection);
 };
+
+type PreserveChatsFromPartialLoadParams = {
+  previousChats: readonly CommWhatsAppChat[];
+  refreshedChatIds: ReadonlySet<string>;
+  loadedSections: ReadonlySet<ChatSection>;
+  unexpectedlyEmptySections: ReadonlySet<ChatSection>;
+};
+
+/**
+ * Keeps cached chats from sections whose request failed, while allowing a
+ * successful response to remove chats that no longer belong to that section.
+ */
+export const preserveChatsFromPartialLoad = ({
+  previousChats,
+  refreshedChatIds,
+  loadedSections,
+  unexpectedlyEmptySections,
+}: PreserveChatsFromPartialLoadParams) => previousChats.filter((chat) => {
+  if (chat.deleted_at || refreshedChatIds.has(chat.id)) {
+    return false;
+  }
+
+  const section: ChatSection = chat.is_archived ? 'archived' : 'active';
+  if (!loadedSections.has(section)) {
+    return true;
+  }
+
+  return unexpectedlyEmptySections.has(section);
+});

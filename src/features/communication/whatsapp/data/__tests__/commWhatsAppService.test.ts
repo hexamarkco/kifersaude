@@ -234,3 +234,18 @@ test('aguarda a sessão antes de carregar listas e contagens agendadas', async (
 
   assert.equal(mocks.waitForSupabaseSession.mock.calls.length, sessionCallsBefore + 4);
 });
+
+test('repete uma leitura agendada após uma falha transitória', async () => {
+  let attempts = 0;
+  mocks.query.range.mockImplementation(async () => {
+    attempts += 1;
+    return attempts === 1
+      ? { data: [], error: new Error('falha transitória') }
+      : { data: [], error: null };
+  });
+
+  await commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' });
+
+  assert.equal(attempts, 2);
+  mocks.query.range.mockResolvedValue({ data: [], error: null });
+});

@@ -29,6 +29,7 @@ export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
 const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
 const MAX_SCHEDULED_MEDIA_BYTES = 20 * 1024 * 1024;
+const SCHEDULED_READ_RETRY_DELAY_MS = 250;
 const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'video/mp4', 'video/webm', 'video/quicktime',
@@ -38,6 +39,16 @@ const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain', 'text/csv',
 ]);
+
+async function executeScheduledRead<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, SCHEDULED_READ_RETRY_DELAY_MS));
+
+    return operation();
+  }
+}
 
 const SCHEDULED_SEQUENCE_SELECT = [
   'id',
@@ -3079,28 +3090,36 @@ export const commWhatsAppService = {
     limit?: number;
     offset?: number;
   }): Promise<CommWhatsAppScheduledSequence[]> {
-    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as sequências agendadas.' });
+    try {
+      const data = await executeScheduledRead(async () => {
+        await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as sequências agendadas.' });
 
-    let query = supabase
-      .from('comm_whatsapp_scheduled_sequences' as never)
-      .select(SCHEDULED_SEQUENCE_SELECT)
-      .order('scheduled_at', { ascending: false })
-      .order('id', { ascending: true });
-    if (options?.channelId) query = query.eq('channel_id', options.channelId);
-    if (options?.chatId) query = query.eq('chat_id', options.chatId);
-    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
-    if (options?.leadId) query = query.eq('lead_id', options.leadId);
-    if (options?.statuses?.length) {
-      query = query.in('status', [...options.statuses]);
-    } else if (options?.status) {
-      query = query.eq('status', options.status);
+        let query = supabase
+          .from('comm_whatsapp_scheduled_sequences' as never)
+          .select(SCHEDULED_SEQUENCE_SELECT)
+          .order('scheduled_at', { ascending: false })
+          .order('id', { ascending: true });
+        if (options?.channelId) query = query.eq('channel_id', options.channelId);
+        if (options?.chatId) query = query.eq('chat_id', options.chatId);
+        if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+        if (options?.leadId) query = query.eq('lead_id', options.leadId);
+        if (options?.statuses?.length) {
+          query = query.in('status', [...options.statuses]);
+        } else if (options?.status) {
+          query = query.eq('status', options.status);
+        }
+        const from = options?.offset ?? 0;
+        const to = options?.limit ? from + options.limit - 1 : from + 99;
+        query = query.range(from, to);
+        const result = await query;
+        if (result.error) throw result.error;
+        return result.data;
+      });
+
+      return ((data ?? []) as unknown as ScheduledSequenceRow[]).map(mapScheduledSequenceRow);
+    } catch (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível listar as sequências.'));
     }
-    const from = options?.offset ?? 0;
-    const to = options?.limit ? from + options.limit - 1 : from + 99;
-    query = query.range(from, to);
-    const { data, error } = await query;
-    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível listar as sequências.'));
-    return ((data ?? []) as unknown as ScheduledSequenceRow[]).map(mapScheduledSequenceRow);
   },
 
   async countScheduledSequences(options?: {
@@ -3110,19 +3129,25 @@ export const commWhatsAppService = {
     leadId?: string;
     statuses?: readonly string[];
   }): Promise<number> {
-    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as sequências agendadas.' });
+    try {
+      return await executeScheduledRead(async () => {
+        await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as sequências agendadas.' });
 
-    let query = supabase
-      .from('comm_whatsapp_scheduled_sequences' as never)
-      .select('id', { count: 'exact', head: true });
-    if (options?.channelId) query = query.eq('channel_id', options.channelId);
-    if (options?.chatId) query = query.eq('chat_id', options.chatId);
-    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
-    if (options?.leadId) query = query.eq('lead_id', options.leadId);
-    if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
-    const { count, error } = await query;
-    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as sequências.'));
-    return count ?? 0;
+        let query = supabase
+          .from('comm_whatsapp_scheduled_sequences' as never)
+          .select('id', { count: 'exact', head: true });
+        if (options?.channelId) query = query.eq('channel_id', options.channelId);
+        if (options?.chatId) query = query.eq('chat_id', options.chatId);
+        if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+        if (options?.leadId) query = query.eq('lead_id', options.leadId);
+        if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
+        const result = await query;
+        if (result.error) throw result.error;
+        return result.count ?? 0;
+      });
+    } catch (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as sequências.'));
+    }
   },
 
   async cancelScheduledSequence(sequenceId: string, reason?: string): Promise<boolean> {
@@ -3153,47 +3178,51 @@ export const commWhatsAppService = {
     limit?: number;
     offset?: number;
   }): Promise<CommWhatsAppScheduledMessage[]> {
-    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as mensagens agendadas.' });
+    try {
+      const data = await executeScheduledRead(async () => {
+        await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as mensagens agendadas.' });
 
-    let query = supabase
-      .from('comm_whatsapp_scheduled_messages')
-      .select(
-        'id, channel_id, chat_id, chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_id,is_group), phone_digits, phone_number, display_name, message_type, text_content, media_url, media_mime_type, media_file_name, scheduled_at, recurrence, recurrence_config, next_run_at, recurrence_ends_at, cancel_on_inbound_message, status, error_message, lead_id, contract_id, label',
-      )
-      .order('scheduled_at', { ascending: false })
-      .order('id', { ascending: true });
+        let query = supabase
+          .from('comm_whatsapp_scheduled_messages')
+          .select(
+            'id, channel_id, chat_id, chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_id,is_group), phone_digits, phone_number, display_name, message_type, text_content, media_url, media_mime_type, media_file_name, scheduled_at, recurrence, recurrence_config, next_run_at, recurrence_ends_at, cancel_on_inbound_message, status, error_message, lead_id, contract_id, label',
+          )
+          .order('scheduled_at', { ascending: false })
+          .order('id', { ascending: true });
 
-    if (options?.channelId) {
-      query = query.eq('channel_id', options.channelId);
-    }
-    if (options?.chatId) {
-      query = query.eq('chat_id', options.chatId);
-    }
-    if (options?.phoneDigits) {
-      query = query.eq('phone_digits', options.phoneDigits);
-    }
-    if (options?.statuses?.length) {
-      query = query.in('status', [...options.statuses]);
-    } else if (options?.status) {
-      query = query.eq('status', options.status);
-    }
-    if (options?.createdBy) {
-      query = query.eq('created_by', options.createdBy);
-    }
-    if (options?.leadId) {
-      query = query.eq('lead_id', options.leadId);
-    }
+        if (options?.channelId) {
+          query = query.eq('channel_id', options.channelId);
+        }
+        if (options?.chatId) {
+          query = query.eq('chat_id', options.chatId);
+        }
+        if (options?.phoneDigits) {
+          query = query.eq('phone_digits', options.phoneDigits);
+        }
+        if (options?.statuses?.length) {
+          query = query.in('status', [...options.statuses]);
+        } else if (options?.status) {
+          query = query.eq('status', options.status);
+        }
+        if (options?.createdBy) {
+          query = query.eq('created_by', options.createdBy);
+        }
+        if (options?.leadId) {
+          query = query.eq('lead_id', options.leadId);
+        }
 
-    const from = options?.offset ?? 0;
-    const to = options?.limit ? from + options.limit - 1 : from + 99;
+        const from = options?.offset ?? 0;
+        const to = options?.limit ? from + options.limit - 1 : from + 99;
 
-    const { data, error } = await query.range(from, to);
+        const result = await query.range(from, to);
+        if (result.error) throw result.error;
+        return result.data;
+      });
 
-    if (error) {
+      return (data ?? []) as unknown as CommWhatsAppScheduledMessage[];
+    } catch (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel listar mensagens agendadas.'));
     }
-
-    return (data ?? []) as unknown as CommWhatsAppScheduledMessage[];
   },
 
   async countScheduledMessages(options?: {
@@ -3204,20 +3233,26 @@ export const commWhatsAppService = {
     createdBy?: string;
     leadId?: string;
   }): Promise<number> {
-    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as mensagens agendadas.' });
+    try {
+      return await executeScheduledRead(async () => {
+        await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as mensagens agendadas.' });
 
-    let query = supabase
-      .from('comm_whatsapp_scheduled_messages')
-      .select('id', { count: 'exact', head: true });
-    if (options?.channelId) query = query.eq('channel_id', options.channelId);
-    if (options?.chatId) query = query.eq('chat_id', options.chatId);
-    if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
-    if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
-    if (options?.createdBy) query = query.eq('created_by', options.createdBy);
-    if (options?.leadId) query = query.eq('lead_id', options.leadId);
-    const { count, error } = await query;
-    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as mensagens agendadas.'));
-    return count ?? 0;
+        let query = supabase
+          .from('comm_whatsapp_scheduled_messages')
+          .select('id', { count: 'exact', head: true });
+        if (options?.channelId) query = query.eq('channel_id', options.channelId);
+        if (options?.chatId) query = query.eq('chat_id', options.chatId);
+        if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+        if (options?.statuses?.length) query = query.in('status', [...options.statuses]);
+        if (options?.createdBy) query = query.eq('created_by', options.createdBy);
+        if (options?.leadId) query = query.eq('lead_id', options.leadId);
+        const result = await query;
+        if (result.error) throw result.error;
+        return result.count ?? 0;
+      });
+    } catch (error) {
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível contar as mensagens agendadas.'));
+    }
   },
 
   async updateScheduledMessage(id: string, input: {

@@ -1686,6 +1686,10 @@ export const commWhatsAppService = {
   },
 
   async lookupSavedContactsByPhones(params: { phoneNumbers: string[]; forceSync?: boolean }): Promise<CommWhatsAppPhoneContact[]> {
+    // As duas fontes são independentes. Consultá-las em paralelo evita que um
+    // atraso da Edge Function também atrase o cache local, que é a fonte capaz
+    // de preservar imediatamente um nome manual já conhecido.
+    const databaseContactsPromise = lookupSavedContactsFromCache(params.phoneNumbers);
     let edgeFunctionContacts: CommWhatsAppPhoneContact[] = [];
     let edgeFunctionError: Error | null = null;
 
@@ -1723,7 +1727,7 @@ export const commWhatsAppService = {
     // A versão publicada da Edge Function pode ficar temporariamente atrás
     // do frontend. Ler também o cache exposto pelo banco garante que linhas
     // antigas com manual_override=true continuem vencendo o nome sincronizado.
-    const databaseContacts = await lookupSavedContactsFromCache(params.phoneNumbers);
+    const databaseContacts = await databaseContactsPromise;
 
     const contacts = selectPreferredSavedContacts([
       ...edgeFunctionContacts,

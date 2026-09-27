@@ -284,7 +284,7 @@ export function DashboardCommercialSections({
         <section data-panel-animate aria-labelledby="dashboard-agenda-title">
           <Surface padding="md" className="h-full">
             <SectionHeader eyebrow="Agenda comercial" title="Hoje" description="Lembretes pendentes, atrasados e concluídos." action={<Button variant="secondary" size="sm" onClick={openAgenda}>Abrir agenda <ArrowRight aria-hidden="true" /></Button>} as="h2" />
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums">{analysis.agenda.pending}</p><p className="text-xs text-[var(--text-muted)]">Pendentes</p></Card>
               <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums text-[var(--danger-text)]">{analysis.agenda.overdue}</p><p className="text-xs text-[var(--text-muted)]">Atrasados</p></Card>
               <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums text-[var(--success-text)]">{analysis.agenda.completed}</p><p className="text-xs text-[var(--text-muted)]">Concluídos</p></Card>

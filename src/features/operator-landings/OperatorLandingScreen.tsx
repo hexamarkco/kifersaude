@@ -122,8 +122,8 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
     '@context': 'https://schema.org',
     '@type': 'Service',
     '@id': `${absoluteUrl(canonicalPath)}#service`,
-    name: `Cotação ${page.name}`,
-    serviceType: 'Corretagem de planos de saúde',
+    name: `Cotação de plano ${page.name} no Rio de Janeiro`,
+    serviceType: 'Corretagem e cotação de planos de saúde',
     provider: { '@id': `${siteConfig.url}/#organization` },
     areaServed: { '@type': 'State', name: siteConfig.areaServed },
     url: absoluteUrl(canonicalPath),
@@ -164,9 +164,11 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
 
         <main id="conteudo-principal">
           <section className="relative overflow-hidden bg-[var(--surface-hero-bg)] px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[var(--operator-accent-soft)] opacity-50" />
+            <div aria-hidden="true" className="kds-public-hero-glow pointer-events-none absolute inset-0 bg-[var(--operator-accent-soft)] opacity-50 [--public-glow-color:var(--operator-accent-soft)]" />
+            <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-one pointer-events-none [--public-glow-color:var(--operator-accent)]" />
+            <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-two pointer-events-none [--public-glow-color:var(--operator-accent)]" />
             <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="max-w-3xl">
+              <div className="kds-public-hero-copy max-w-3xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--operator-accent-border)] bg-[var(--operator-accent-soft)] px-4 py-2 text-sm font-semibold text-[color:var(--operator-accent-ink)]">
                   <Stethoscope className="kds-control-icon" aria-hidden="true" />
                   {page.eyebrow}
@@ -189,9 +191,9 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
                 <p className="mt-5 text-sm leading-relaxed text-[color:var(--text-muted)]">A Kifer Saúde é a corretora responsável pelo atendimento. A operadora é o produto apresentado.</p>
               </div>
 
-              <div className="relative mx-auto w-full max-w-md">
+              <div className="kds-public-hero-visual relative mx-auto w-full max-w-md">
                 <div aria-hidden="true" className="absolute -inset-5 rounded-[var(--kds-radius-xl)] bg-[var(--operator-accent-soft)] blur-2xl" />
-                <div className="relative rounded-[var(--kds-radius-xl)] border border-[color:var(--operator-accent-border)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-modal)] sm:p-9">
+                <div className="kds-public-motion-card relative rounded-[var(--kds-radius-xl)] border border-[color:var(--operator-accent-border)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-modal)] sm:p-9">
                   <div className="flex min-h-36 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[color:var(--operator-accent-border)] bg-[var(--bg-surface)] px-6 py-8 text-center">
                     <OperatorLogo page={page} />
                   </div>
@@ -214,7 +216,7 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-[color:var(--operator-accent)]">A leitura da Kifer</p>
                 <h2 className="mt-4 font-[var(--font-display)] text-4xl font-semibold leading-tight text-[color:var(--text-primary)]">O produto é da operadora. A orientação é da Kifer Saúde.</h2>
               </div>
-              <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)] sm:p-9">
+              <div className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)] sm:p-9">
                 <HeartHandshake className="h-9 w-9 text-[color:var(--operator-accent)]" aria-hidden="true" />
                 <p className="mt-5 text-lg leading-relaxed text-[color:var(--text-secondary)]">{page.valueProposition}</p>
                 <div className="mt-7 grid gap-4 sm:grid-cols-3">
@@ -230,19 +232,19 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
           </section>
 
           <section className="bg-[var(--bg-surface-muted)] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-            <SectionHeading eyebrow="Possibilidades" title="O que entra na análise da sua cotação" description="A página orienta a conversa. A Kifer confirma a disponibilidade e as condições comerciais para o seu caso." />
+            <SectionHeading eyebrow="Possibilidades" title={`O que analisamos no ${page.name}`} description={`Para uma cotação de ${page.name}, a Kifer cruza cidade, perfil, rede credenciada e condições comerciais antes de apresentar as opções disponíveis.`} />
             <div className="mx-auto mt-12 grid max-w-7xl gap-5 md:grid-cols-2">
               {page.contractProfiles.map((profile) => (
-                <article key={profile.label} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
+                <article key={profile.label} className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
                   <p className="text-lg font-semibold text-[color:var(--text-primary)]">{profile.label}</p>
                   <p className="mt-3 leading-relaxed text-[color:var(--text-secondary)]">{profile.detail}</p>
                 </article>
               ))}
-              <article className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
+              <article className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
                 <p className="flex items-center gap-2 text-lg font-semibold text-[color:var(--text-primary)]"><UsersIcon /> Quantidade mínima de vidas</p>
                 <p className="mt-3 leading-relaxed text-[color:var(--text-secondary)]">{page.minimumLives}</p>
               </article>
-              <article className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
+              <article className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
                 <p className="flex items-center gap-2 text-lg font-semibold text-[color:var(--text-primary)]"><MapPin className="h-5 w-5 text-[color:var(--operator-accent)]" aria-hidden="true" /> Abrangência</p>
                 <p className="mt-3 leading-relaxed text-[color:var(--text-secondary)]">{page.coverage}</p>
               </article>
@@ -251,8 +253,8 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
 
           <section className="bg-[var(--bg-surface)] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
-              <InfoList title="Produtos e linhas" icon={<Sparkles className="h-6 w-6" aria-hidden="true" />} items={page.products} />
-              <InfoList title="Rede e atendimento" icon={<MapPin className="h-6 w-6" aria-hidden="true" />} items={page.networkHighlights} />
+              <InfoList title="Produtos e modalidades" icon={<Sparkles className="h-6 w-6" aria-hidden="true" />} items={page.products} />
+              <InfoList title="Rede credenciada e atendimento" icon={<MapPin className="h-6 w-6" aria-hidden="true" />} items={page.networkHighlights} />
               <InfoList title="Diferenciais da Kifer" icon={<HeartHandshake className="h-6 w-6" aria-hidden="true" />} items={page.differentials} />
             </div>
             <div className="mx-auto mt-8 max-w-7xl rounded-[var(--kds-radius-lg)] border border-[color:var(--operator-accent-border)] bg-[var(--operator-accent-soft)] p-6">
@@ -264,14 +266,14 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
           </section>
 
           <section className="bg-[var(--bg-surface-muted)] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-            <SectionHeading eyebrow="Como funciona" title="Você decide com mais clareza em três passos" description="A Kifer conduz o processo sem transformar a landing page em uma promessa de contratação automática." />
+            <SectionHeading eyebrow="Como funciona" title={`Como pedir uma cotação de ${page.name}`} description="A Kifer transforma suas prioridades em uma comparação clara, sem prometer uma condição antes de confirmar a disponibilidade para o seu perfil." />
             <div className="mx-auto mt-12 grid max-w-5xl gap-5 md:grid-cols-3">
               {[
                 { number: '01', title: 'Você conta seu cenário', text: 'Cidade, vidas, idade e prioridade de rede entram na primeira conversa.' },
                 { number: '02', title: 'A Kifer compara', text: `A equipe confere as possibilidades de ${page.name} e explica as diferenças importantes.` },
                 { number: '03', title: 'Você escolhe', text: 'Depois da decisão, a corretora acompanha documentação, proposta e ativação.' },
               ].map((step) => (
-                <article key={step.number} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
+                <article key={step.number} className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-card)]">
                   <span className="font-[var(--font-display)] text-4xl font-semibold text-[color:var(--operator-accent)]">{step.number}</span>
                   <h3 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">{step.title}</h3>
                   <p className="mt-3 leading-relaxed text-[color:var(--text-secondary)]">{step.text}</p>
@@ -282,12 +284,12 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
 
           <section className="bg-[var(--bg-surface)] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
             <div className="mx-auto max-w-4xl">
-              <SectionHeading eyebrow="Dúvidas frequentes" title={`Antes de falar sobre ${page.name}`} description="Respostas iniciais para orientar a conversa. As condições válidas são sempre confirmadas na cotação." />
+              <SectionHeading eyebrow="Dúvidas frequentes" title={`Dúvidas sobre ${page.name} no Rio de Janeiro`} description="Respostas iniciais para orientar sua pesquisa. Rede, carência, preço e elegibilidade são confirmados na cotação." />
               <div className="mt-10 space-y-3">
                 {page.faqs.map((faq, index) => {
                   const isOpen = openFaq === index;
                   return (
-                    <div key={faq.question} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-2 shadow-[var(--shadow-card)]">
+                    <div key={faq.question} className="kds-public-motion-card rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-2 shadow-[var(--shadow-card)]">
                       <Button type="button" variant="ghost" fullWidth className="justify-between text-left" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? null : index)}>
                         <span className="text-base font-semibold text-[color:var(--text-primary)]">{faq.question}</span>
                         <ChevronDown className={`kds-control-icon shrink-0 text-[color:var(--operator-accent)] transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -304,12 +306,12 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
             <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[1fr_auto]">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.18em] opacity-80">Próximo passo</p>
-                <h2 className="mt-4 max-w-3xl font-[var(--font-display)] text-4xl font-semibold leading-tight md:text-5xl">Quer saber se {page.name} é uma boa opção para você?</h2>
-                <p className="mt-5 max-w-2xl text-lg leading-relaxed opacity-90">Peça uma análise sem compromisso e receba orientação da Kifer Saúde para o seu perfil.</p>
+                <h2 className="mt-4 max-w-3xl font-[var(--font-display)] text-4xl font-semibold leading-tight md:text-5xl">Quer saber se o plano {page.name} é uma boa opção para seu perfil?</h2>
+                <p className="mt-5 max-w-2xl text-lg leading-relaxed opacity-90">Peça uma cotação sem compromisso e receba orientação da Kifer Saúde para sua cidade, sua família ou sua empresa.</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <LinkButton href={quotePath} variant="secondary" size="lg" onClick={() => trackCta('final')}>
-                  Pedir cotação
+                  Pedir cotação de {page.name}
                   <ArrowRight className="kds-control-icon" aria-hidden="true" />
                 </LinkButton>
                 <LinkButton href={whatsappUrl} target="_blank" rel="noopener noreferrer" variant="success" size="lg" onClick={() => trackCta('whatsapp')}>

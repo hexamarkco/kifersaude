@@ -105,7 +105,7 @@ const faqItems: PublicFaqItem[] = [
   {
     question: 'MEI pode contratar plano empresarial?',
     answer:
-      'Sim. Quando existe CNPJ ativo e enquadramento aceito pela operadora, o MEI pode acessar produtos empresariais com condição mais competitiva do que muitos planos individuais.',
+      'Sim. Com CNPJ ativo e enquadramento aceito pela operadora, o MEI pode avaliar planos empresariais. A Kifer verifica a elegibilidade, o número de vidas e as condições disponíveis antes da proposta.',
   },
   {
     question: 'Qual a diferença entre plano por adesão e empresarial?',
@@ -115,17 +115,17 @@ const faqItems: PublicFaqItem[] = [
   {
     question: 'Tem carência?',
     answer:
-      'Tem, e ela varia conforme a operadora, o tipo de contratação e a regra do produto. Antes da contratação, a Kifer explica o que muda para consultas, exames, internações e urgência.',
+      'A carência varia conforme a operadora, o tipo de contratação e a regra do produto. Antes da contratação, a Kifer explica o que muda para consultas, exames, internações e urgência.',
   },
   {
     question: 'Cobre qual área do RJ?',
     answer:
-      'A análise é feita de acordo com a cidade, os bairros de uso e a rede credenciada que realmente faz sentido para sua rotina no Rio de Janeiro e Grande Rio.',
+      'A abrangência varia por plano. A análise considera sua cidade, os bairros onde você usa o serviço e a rede credenciada que faz sentido para sua rotina no Rio de Janeiro e na Grande Rio.',
   },
   {
     question: 'Como faço para contratar?',
     answer:
-      'Você envia seus dados pelo formulário ou WhatsApp, recebe as opções comparadas para o seu perfil e, depois da escolha, a Kifer acompanha documentação, proposta e ativação até a contratação ficar de pé.',
+      'Você envia seus dados pelo formulário ou WhatsApp, recebe opções de plano de saúde comparadas para o seu perfil e, depois da escolha, a Kifer acompanha documentação, proposta e ativação.',
   },
 ];
 
@@ -164,27 +164,27 @@ const testimonials: Testimonial[] = [
 const audienceCards: AudienceCard[] = [
   {
     eyebrow: 'Pessoa física',
-    title: 'Comparação direta pra quem quer parar de pagar caro.',
-    description: 'A gente compara operadora, rede, carência e coparticipação para mostrar o que realmente compensa na sua rotina.',
-    bullets: ['Comparação sem letra miúda', 'Rede pensada pro seu bairro', 'Zero compromisso para pedir'],
+    title: 'Plano de saúde para pessoa física e família.',
+    description: 'Compare operadoras, rede credenciada, carência e coparticipação para escolher uma cobertura compatível com sua rotina no RJ.',
+    bullets: ['Opções para solteiros, casais e famílias', 'Rede analisada para os locais que você usa', 'Cotação gratuita e sem compromisso'],
     ctaLabel: 'Quero cotar pessoa física',
     contractKind: 'PF',
     icon: UserRound,
   },
   {
     eyebrow: 'MEI',
-    title: 'Plano empresarial custa menos do que parece com CNPJ ativo.',
-    description: 'Como MEI, você pode acessar plano empresarial com condição melhor que muito plano individual. A gente confere a elegibilidade certa pro seu caso.',
-    bullets: ['Elegibilidade explicada sem enrolação', 'Costuma sair mais barato que o individual', 'Ativação rápida com seu CNPJ'],
+    title: 'Plano de saúde empresarial para MEI.',
+    description: 'Com CNPJ ativo, o MEI pode avaliar opções empresariais. A Kifer verifica elegibilidade, número de vidas e condições antes da proposta.',
+    bullets: ['Análise de elegibilidade do CNPJ', 'Comparação com opções individuais quando fizer sentido', 'Suporte na documentação e ativação'],
     ctaLabel: 'Quero cotar como MEI',
     contractKind: 'MEI',
     icon: Briefcase,
   },
   {
     eyebrow: 'Empresa',
-    title: 'Plano coletivo pra empresa com o time crescendo.',
-    description: 'Comparamos operadoras e desenho de plano para fechar uma proposta empresarial que faça sentido pro seu time e pro seu orçamento.',
-    bullets: ['Proposta sob medida pro seu quadro', 'Comparação entre operadoras parceiras', 'Suporte na documentação e ativação'],
+    title: 'Plano de saúde empresarial para pequenas empresas.',
+    description: 'Compare operadoras e formatos de contratação para montar um benefício adequado ao tamanho do seu time, à rede desejada e ao orçamento.',
+    bullets: ['Proposta alinhada ao quadro de funcionários', 'Comparação entre operadoras parceiras', 'Suporte na documentação e ativação'],
     ctaLabel: 'Quero cotar para empresa',
     contractKind: 'CNPJ',
     icon: Building2,
@@ -194,20 +194,20 @@ const audienceCards: AudienceCard[] = [
 const howItWorksSteps = [
   {
     step: '1',
-    title: 'Você me conta o que precisa',
-    text: 'Cidade, idade, rede desejada e perfil de contratação entram primeiro para a análise nascer certa.',
+    title: 'Você informa o seu perfil',
+    text: 'Cidade, idade, rede desejada e tipo de contratação orientam a busca desde o primeiro contato.',
     icon: MessageCircle,
   },
   {
     step: '2',
-    title: 'Eu comparo as melhores opções',
-    text: 'A comparação considera operadora, custo, carência, coparticipação e rede funcional para sua rotina.',
+    title: 'A Kifer compara as opções',
+    text: 'A análise considera operadora, custo, carência, coparticipação e rede credenciada para sua rotina.',
     icon: Search,
   },
   {
     step: '3',
-    title: 'Você escolhe e eu cuido do resto',
-    text: 'A Kifer acompanha a contratação até a ativação para você não ficar sozinho no meio do processo.',
+    title: 'Você escolhe com segurança',
+    text: 'Depois da decisão, a Kifer acompanha documentação, proposta e ativação do plano de saúde.',
     icon: CheckCircle,
   },
 ];
@@ -435,7 +435,7 @@ function Reveal({ children, className, delayMs = 0, onReveal }: RevealProps) {
     <div
       ref={nodeRef}
       className={`${isVisible ? 'reveal-visible' : 'reveal-hidden'}${className ? ` ${className}` : ''}`}
-      style={delayMs ? { animationDelay: `${delayMs}ms` } : undefined}
+      style={isVisible && delayMs ? { transitionDelay: `${delayMs}ms` } : undefined}
     >
       {children}
     </div>
@@ -936,8 +936,8 @@ export default function HomePage() {
   return (
     <>
       <PublicSeo
-        title="Planos de saúde no Rio de Janeiro com atendimento humano"
-        description="Plano de saúde no RJ com atendimento humano, cotação gratuita e suporte consultivo pelo WhatsApp para pessoa física, MEI e empresa pequena."
+        title="Plano de saúde no RJ para PF, MEI e empresas"
+        description="Compare planos de saúde no Rio de Janeiro para pessoa física, MEI e empresas. Receba uma cotação gratuita da Kifer com orientação sobre rede, carência e custos."
         canonicalPath="/"
         faqItems={faqItems}
       />
@@ -1010,20 +1010,22 @@ export default function HomePage() {
 
         <main id="conteudo-principal">
         <section id="topo" className="relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-0 lg:pt-20">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[var(--brand-primary-muted)] opacity-20" />
+          <div aria-hidden="true" className="kds-public-hero-glow pointer-events-none absolute inset-0 bg-[var(--brand-primary-muted)] opacity-20" />
+          <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-one pointer-events-none" />
+          <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-two pointer-events-none" />
           <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-4">
-            <div className="relative z-10 max-w-2xl py-6 sm:py-10 lg:py-16">
+            <div className="kds-public-hero-copy relative z-10 max-w-2xl py-6 sm:py-10 lg:py-16">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)]">
                 <Heart aria-hidden="true" className="h-4 w-4 fill-current text-[color:var(--brand-primary)]" />
-                Especialista em planos de saúde no RJ
+                Corretora de planos de saúde no Rio de Janeiro
               </div>
 
               <h1 className="mt-7 max-w-[11ch] font-[var(--font-display)] text-[clamp(2.75rem,6.2vw,5.75rem)] font-bold leading-[0.96] text-[color:var(--text-primary)]">
-                O plano ideal começa com <span className="text-[color:var(--brand-primary)]">gente de verdade.</span>
+                Plano de saúde no Rio de Janeiro com <span className="text-[color:var(--brand-primary)]">orientação de verdade.</span>
               </h1>
 
               <p className="mt-7 max-w-xl text-lg leading-8 text-[color:var(--text-secondary)] sm:text-xl">
-                Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
+                Compare operadoras e encontre uma opção de plano de saúde para sua cidade, sua família ou sua empresa — com atendimento humano do primeiro contato ao pós-venda.
               </p>
 
               <div aria-hidden="true" className="mt-7 h-0.5 w-14 rounded-full bg-[var(--brand-primary)]" />
@@ -1064,7 +1066,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <div className="relative mx-auto flex w-full max-w-xl items-end justify-center self-end lg:h-[calc(100vh-5rem)] lg:min-h-[640px]">
+            <div className="kds-public-hero-visual relative mx-auto flex w-full max-w-xl items-end justify-center self-end lg:h-[calc(100vh-5rem)] lg:min-h-[640px]">
               <div aria-hidden="true" className="absolute bottom-[7%] left-1/2 aspect-square w-[92%] -translate-x-1/2 rounded-full bg-[var(--brand-primary-muted)]" />
               <div aria-hidden="true" className="absolute bottom-[10%] left-[4%] h-[54%] w-[92%] rounded-[50%] border border-[color:var(--brand-primary-border)] opacity-50" />
               <img
@@ -1091,9 +1093,9 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">confiança em números</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Confiança construída no atendimento real.</h2>
+                <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Uma corretora de planos de saúde que explica antes de vender.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                A Kifer compara operadoras, custos e rede de atendimento com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir.
+                A Kifer compara operadoras, custos, rede credenciada e regras com linguagem simples. O foco é ajudar você a escolher um plano de saúde coerente com sua rotina, sem pressão.
               </p>
             </Reveal>
 
@@ -1104,7 +1106,7 @@ export default function HomePage() {
                 return (
                   <article
                     key={metric.label}
-                    className="relative overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]"
+                    className="kds-public-motion-card relative overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]"
                   >
                     <MetricIcon className="absolute -right-4 -top-4 h-24 w-24 text-[color:var(--brand-primary)] opacity-[0.08]" />
                     <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
@@ -1151,7 +1153,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Planos de saúde para pessoa física, MEI e empresas.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 Cada perfil pede uma leitura diferente de rede, custo e carência. Escolha o seu abaixo e a Kifer cuida dos detalhes.
               </p>
@@ -1159,7 +1161,7 @@ export default function HomePage() {
 
             <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {audienceCards.map((card) => (
-                <article key={card.eyebrow} className="flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)]">
+                <article key={card.eyebrow} className="kds-public-motion-card flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)]">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                     <card.icon className="h-7 w-7" />
                   </span>
@@ -1197,9 +1199,9 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">como funciona</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Como contratar um plano de saúde com mais clareza.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                Do primeiro contato até a ativação, você sabe exatamente em que etapa está.
+                Do primeiro contato até a ativação, você entende o que está sendo comparado e sabe exatamente em que etapa está.
               </p>
             </Reveal>
 
@@ -1207,9 +1209,9 @@ export default function HomePage() {
               <div className="pointer-events-none absolute left-[16.6%] right-[16.6%] top-8 hidden h-px bg-[color:var(--border-strong)] md:block" />
 
               {howItWorksSteps.map((item) => (
-                <div key={item.step} className="relative flex flex-col items-center text-center">
+                <div key={item.step} className="kds-public-motion-card relative flex flex-col items-center rounded-[var(--kds-radius-xl)] p-4 text-center">
                   <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)] ring-8 ring-[var(--bg-surface)]">
-                    <item.icon className="h-7 w-7" />
+                    <item.icon className="kds-public-motion-icon h-7 w-7" />
                     <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
                       {item.step}
                     </span>
@@ -1244,7 +1246,7 @@ export default function HomePage() {
 
             <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {testimonials.map((testimonial) => (
-                <article key={testimonial.name} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
+                <article key={testimonial.name} className="kds-public-motion-card rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
                   <div className="mb-5 flex items-center gap-1 text-[color:var(--accent-gold)]">
                     {Array.from({ length: 5 }).map((_, index) => (
                       <Star key={`${testimonial.name}-${index}`} className="h-5 w-5 fill-current" />
@@ -1296,9 +1298,9 @@ export default function HomePage() {
 
             <Reveal delayMs={120}>
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luiza</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Uma pessoa real te acompanha do início até a ativação.</h2>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Luiza Kifer: atendimento humano para escolher seu plano de saúde no RJ.</h2>
               <p className="mt-6 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                Sou corretora independente no Rio de Janeiro. Trabalho com as principais operadoras e cuido de cada cliente com o mesmo cuidado que eu teria ao orientar alguém da minha família.
+                 Sou corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e cuido de cada cliente com o mesmo cuidado que eu teria ao orientar alguém da minha família.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 O foco da Kifer é deixar a contratação mais clara, comparando custo, rede e regras com linguagem simples para você decidir sem pressão e sem surpresa depois.
@@ -1327,8 +1329,8 @@ export default function HomePage() {
                     icon: Phone,
                   },
                 ].map((item) => (
-                  <article key={item.title} className="rounded-[var(--kds-radius-md)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-5 shadow-[var(--shadow-card)]">
-                    <item.icon className="h-8 w-8 text-[color:var(--brand-primary)]" />
+                  <article key={item.title} className="kds-public-motion-card rounded-[var(--kds-radius-md)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-5 shadow-[var(--shadow-card)]">
+                    <item.icon className="kds-public-motion-icon h-8 w-8 text-[color:var(--brand-primary)]" />
                     <h3 className="mt-4 font-[var(--font-display)] text-lg font-bold text-[color:var(--text-primary)]">{item.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.description}</p>
                   </article>
@@ -1342,12 +1344,12 @@ export default function HomePage() {
           <div className="mx-auto max-w-4xl">
             <Reveal className="text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">faq rápido</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Perguntas frequentes antes de contratar.</h2>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Dúvidas sobre plano de saúde no Rio de Janeiro.</h2>
             </Reveal>
 
             <Reveal className="mt-12 space-y-3" delayMs={100}>
               {faqItems.map((faq, index) => (
-                <div key={faq.question} className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
+                  <div key={faq.question} className="kds-public-motion-card rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
                   <Button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
@@ -1382,9 +1384,9 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <Reveal className="text-[color:var(--text-on-brand)]">
               <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80">cotação gratuita</p>
-              <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba um comparativo coerente com o seu perfil.</h2>
+              <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba uma cotação de plano de saúde feita para o seu perfil.</h2>
               <p className="mt-5 text-lg leading-relaxed opacity-90">
-                Preencha o formulário e receba orientação para pessoa física, MEI ou empresa pequena com foco em rede, custo e contratação sem complicação.
+                Preencha o formulário e receba orientação para pessoa física, MEI ou empresa com foco em rede credenciada, custo, carência e contratação sem complicação.
               </p>
 
               <div className="mt-8 space-y-4 rounded-[var(--kds-radius-xl)] border border-[color:color-mix(in_srgb,var(--text-on-brand)_24%,transparent)] bg-[color:color-mix(in_srgb,var(--text-on-brand)_14%,transparent)] p-6 backdrop-blur-sm">

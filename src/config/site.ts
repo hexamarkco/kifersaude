@@ -14,7 +14,7 @@ export const siteConfig = {
   legalName: 'Kifer Saúde',
   personName: 'Luiza Kifer',
   description:
-    'Corretora especializada em planos de saúde no Rio de Janeiro, com atendimento humano, comparação consultiva e suporte até o pós-venda.',
+    'Corretora de planos de saúde no Rio de Janeiro para pessoa física, MEI e empresas. A Kifer compara operadoras, rede credenciada, carência e coparticipação com atendimento humano.',
   url: normalizeSiteUrl(import.meta.env.VITE_SITE_URL),
   locale: 'pt_BR',
   language: 'pt-BR',

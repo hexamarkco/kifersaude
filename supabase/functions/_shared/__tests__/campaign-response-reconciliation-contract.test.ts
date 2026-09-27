@@ -19,6 +19,14 @@ const reconcileSource = workerSource.slice(
   workerSource.indexOf('async function reconcileResponses'),
   workerSource.indexOf('async function reconcileAcceptedCampaignPersistences'),
 );
+const responseUpdateStart = reconcileSource.indexOf(
+  "const { data: updatedTargets, error: updateTargetError }",
+);
+const responseUpdateEnd = reconcileSource.indexOf(
+  'if (updateTargetError)',
+  responseUpdateStart,
+);
+const responseUpdateSource = reconcileSource.slice(responseUpdateStart, responseUpdateEnd);
 
 test('reconcilia respostas de campanha em uma chamada de banco por lote', () => {
   assert.match(workerSource, /comm_whatsapp_find_campaign_replies/);
@@ -28,6 +36,14 @@ test('reconcilia respostas de campanha em uma chamada de banco por lote', () => 
 
 test('reconciliação não reprocessa alvos que já têm resposta registrada', () => {
   assert.match(reconcileSource, /\.is\('responded_at',\s*'is',\s*null\)/);
+});
+
+test('atualização condicional de resposta aceita zero linhas sem gerar 406', () => {
+  assert.ok(responseUpdateStart >= 0);
+  assert.ok(responseUpdateEnd > responseUpdateStart);
+  assert.match(responseUpdateSource, /\.select\('id'\);/);
+  assert.match(reconcileSource, /if \(!updatedTargets\?\.\[0\]\) continue;/);
+  assert.doesNotMatch(responseUpdateSource, /\.maybeSingle\(\)/);
 });
 
 test('RPC de respostas preserva as regras de resposta visível e janela mínima', () => {

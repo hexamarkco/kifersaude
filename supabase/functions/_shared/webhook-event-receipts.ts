@@ -12,9 +12,9 @@ export type CommWhatsAppEventReceiptMatch = {
 
 /**
  * Registra um evento de webhook processado em `comm_whatsapp_event_receipts` para
- * dedupe. Se `event_key` já existir (constraint única, código de erro 23505 do
- * Postgres), retorna `false` em vez de lançar — é assim que o webhook trata retries
- * legítimos do provedor como no-op em vez de reprocessar o mesmo evento duas vezes.
+ * dedupe. A inserção usa a constraint única de `event_key` como operação
+ * atômica: se o provedor entregar o mesmo evento em paralelo, a segunda
+ * tentativa retorna `false` sem gerar um conflito 409 no PostgREST.
  */
 export async function recordCommWhatsAppEventReceipt(
   supabaseAdmin: SupabaseClient,
@@ -25,26 +25,26 @@ export async function recordCommWhatsAppEventReceipt(
   summary: Record<string, unknown>,
   payloadArchivePath?: string | null,
 ): Promise<boolean> {
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_event_receipts')
-    .insert({
-      channel_id: channelId,
-      event_key: eventKey,
-      event_type: eventType,
-      resource_id: resourceId,
-      summary,
-      payload_archive_path: payloadArchivePath || null,
-    });
+    .insert(
+      {
+        channel_id: channelId,
+        event_key: eventKey,
+        event_type: eventType,
+        resource_id: resourceId,
+        summary,
+        payload_archive_path: payloadArchivePath || null,
+      },
+      { onConflict: 'event_key', ignoreDuplicates: true },
+    )
+    .select('id');
 
   if (error) {
-    if (error.code === '23505') {
-      return false;
-    }
-
     throw new Error(`Erro ao registrar dedupe do webhook: ${error.message}`);
   }
 
-  return true;
+  return Array.isArray(data) && data.length > 0;
 }
 
 export async function hasCommWhatsAppEventReceipt(

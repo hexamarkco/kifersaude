@@ -192,6 +192,12 @@ import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
+import {
+  clearMediaUploadProgressForChat,
+  setMediaUploadProgressForChat,
+  updateMediaUploadProgressForChat,
+  type MediaUploadProgress,
+} from './domain/mediaUploadState';
 
 const LeadForm = lazy(() => import('../../../components/LeadForm'));
 const ReminderSchedulerModal = lazy(() => import('../../../components/ReminderSchedulerModal'));
@@ -248,13 +254,6 @@ type PendingAttachment = {
   previewUrl?: string | null;
   waveform?: number[];
   waveformPayload?: string | null;
-};
-type MediaUploadProgress = {
-  attachmentId: string;
-  currentIndex: number;
-  total: number;
-  progress: number | null;
-  fileName: string;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type QuickReplyOption = {
@@ -443,7 +442,7 @@ const isMediaSendingMessage = (
   && isMediaMessage(message)
   && (
     MEDIA_SENDING_STATUSES.has(message.delivery_status.trim().toLowerCase())
-    || mediaUploadProgress?.attachmentId === message.id
+    || (mediaUploadProgress?.chatId === message.chat_id && mediaUploadProgress.attachmentId === message.id)
     || retrying
   )
 );
@@ -2372,10 +2371,10 @@ export default function WhatsAppInboxScreen() {
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
-  const [sendingDrawerMedia, setSendingDrawerMedia] = useState(false);
+  const [sendingDrawerMediaByChatId, setSendingDrawerMediaByChatId] = useState<Record<string, boolean>>({});
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
   const [dismissedQuickReplyKey, setDismissedQuickReplyKey] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
+  const [sendingByChatId, setSendingByChatId] = useState<Record<string, boolean>>({});
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
@@ -2414,7 +2413,7 @@ export default function WhatsAppInboxScreen() {
   const threadDragCounterRef = useRef(0);
   const [selectedMediaComposerAttachmentId, setSelectedMediaComposerAttachmentId] = useState<string | null>(null);
   const [selectedDocumentComposerAttachmentId, setSelectedDocumentComposerAttachmentId] = useState<string | null>(null);
-  const [mediaUploadProgress, setMediaUploadProgress] = useState<MediaUploadProgress | null>(null);
+  const [mediaUploadProgressByChatId, setMediaUploadProgressByChatId] = useState<Record<string, MediaUploadProgress>>({});
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -2477,7 +2476,7 @@ export default function WhatsAppInboxScreen() {
   const messageBubbleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const chatMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
-  const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
+  const mediaUploadAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const localOutgoingMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
@@ -2494,7 +2493,7 @@ export default function WhatsAppInboxScreen() {
   const statusRefreshInFlightGenerationRef = useRef<number | null>(null);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
-  const activeSendOperationsRef = useRef(0);
+  const activeSendOperationsByChatIdRef = useRef<Map<string, number>>(new Map());
   const composerSendLockRef = useRef(new ComposerSendLock());
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
@@ -2723,9 +2722,10 @@ export default function WhatsAppInboxScreen() {
   });
   const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
-  const beginSendOperation = useCallback(() => {
-    activeSendOperationsRef.current += 1;
-    setSending(true);
+  const beginSendOperation = useCallback((chatId: string) => {
+    const activeOperations = activeSendOperationsByChatIdRef.current.get(chatId) ?? 0;
+    activeSendOperationsByChatIdRef.current.set(chatId, activeOperations + 1);
+    setSendingByChatId((current) => ({ ...current, [chatId]: true }));
 
     let released = false;
     return () => {
@@ -2734,8 +2734,22 @@ export default function WhatsAppInboxScreen() {
       }
 
       released = true;
-      activeSendOperationsRef.current = Math.max(0, activeSendOperationsRef.current - 1);
-      setSending(activeSendOperationsRef.current > 0);
+      const remainingOperations = Math.max(0, (activeSendOperationsByChatIdRef.current.get(chatId) ?? 1) - 1);
+      if (remainingOperations > 0) {
+        activeSendOperationsByChatIdRef.current.set(chatId, remainingOperations);
+        return;
+      }
+
+      activeSendOperationsByChatIdRef.current.delete(chatId);
+      setSendingByChatId((current) => {
+        if (!current[chatId]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[chatId];
+        return next;
+      });
     };
   }, []);
 
@@ -2744,7 +2758,7 @@ export default function WhatsAppInboxScreen() {
     const next = previous
       .catch(() => undefined)
       .then(async () => {
-        const release = beginSendOperation();
+        const release = beginSendOperation(chatId);
         try {
           await task();
         } finally {
@@ -2813,6 +2827,9 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const sending = selectedChatId ? Boolean(sendingByChatId[selectedChatId]) : false;
+  const sendingDrawerMedia = selectedChatId ? Boolean(sendingDrawerMediaByChatId[selectedChatId]) : false;
+  const mediaUploadProgress = selectedChatId ? mediaUploadProgressByChatId[selectedChatId] ?? null : null;
 
   const chatMessageSearch = chatMessageSearchDraft.trim();
   const {
@@ -3367,11 +3384,25 @@ export default function WhatsAppInboxScreen() {
     });
   }, [buildChatsSignature]);
 
+  const setMediaUploadProgressForSelectedChat = useCallback((progress: MediaUploadProgress) => {
+    setMediaUploadProgressByChatId((current) => setMediaUploadProgressForChat(current, progress));
+  }, []);
+
+  const updateMediaUploadProgress = useCallback((chatId: string, attachmentId: string, progress: number | null) => {
+    setMediaUploadProgressByChatId((current) => updateMediaUploadProgressForChat(current, chatId, attachmentId, progress));
+  }, []);
+
+  const clearMediaUploadProgress = useCallback((chatId: string, attachmentId?: string) => {
+    setMediaUploadProgressByChatId((current) => clearMediaUploadProgressForChat(current, chatId, attachmentId));
+  }, []);
+
   const resetComposerAfterQueue = useCallback(() => {
     resetComposerDraft();
     setPendingAttachments([]);
     setReplyTargetMessage(null);
-    setMediaUploadProgress(null);
+    if (selectedChatId) {
+      clearMediaUploadProgress(selectedChatId);
+    }
     voicePreviewAudioRef.current?.pause();
     if (voicePreviewAudioRef.current) {
       voicePreviewAudioRef.current.currentTime = 0;
@@ -3379,7 +3410,7 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewPlaying(false);
     setVoicePreviewCurrentTime(0);
     setVoicePreviewDuration(null);
-  }, [resetComposerDraft, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
+  }, [clearMediaUploadProgress, resetComposerDraft, selectedChatId, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
 
   const messageTimelineItems = useMemo(() => {
     const items: Array<
@@ -6176,7 +6207,10 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(
     () => () => {
-      mediaUploadAbortControllerRef.current?.abort();
+      for (const controller of mediaUploadAbortControllersRef.current.values()) {
+        controller.abort();
+      }
+      mediaUploadAbortControllersRef.current.clear();
       cancelVoiceRecordingRef.current();
       chatsRequestIdRef.current += 1;
       messagesRequestIdRef.current += 1;
@@ -6856,7 +6890,9 @@ export default function WhatsAppInboxScreen() {
       }
       return current.filter((attachment) => attachment.id !== attachmentId);
     });
-    setMediaUploadProgress(null);
+    if (selectedChatId) {
+      clearMediaUploadProgress(selectedChatId);
+    }
 
     if (removedAttachment && removedAttachment.kind !== 'voice') {
       if (removedAttachmentUndoTimeoutRef.current) {
@@ -7095,7 +7131,8 @@ export default function WhatsAppInboxScreen() {
       const quotePayload = replyTargetSnapshot ? getQuotePayloadFromMessage(replyTargetSnapshot) : null;
       let queuedSend: Promise<void>;
       if (attachmentsSnapshot.length > 0) {
-        const optimisticTimestamps = allocateOptimisticMessageTimestamps(selectedChat.id, attachmentsSnapshot.length);
+        const sendChatId = selectedChat.id;
+        const optimisticTimestamps = allocateOptimisticMessageTimestamps(sendChatId, attachmentsSnapshot.length);
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
           const caption = index === 0 && attachment.kind !== 'voice' ? text || undefined : undefined;
           const clientRequestId = createClientRequestId();
@@ -7140,11 +7177,12 @@ export default function WhatsAppInboxScreen() {
           return { attachment, caption, optimisticMessage, clientRequestId };
         });
 
-        queuedSend = enqueueChatSend(selectedChat.id, async () => {
+        queuedSend = enqueueChatSend(sendChatId, async () => {
           let shouldStopQueue = false;
           let hadSuccessfulSend = false;
           let firstErrorMessage = '';
           let hadAmbiguousSend = false;
+          let activeAbortController: AbortController | null = null;
 
           try {
             for (let index = 0; index < attachmentsToSend.length; index += 1) {
@@ -7160,14 +7198,17 @@ export default function WhatsAppInboxScreen() {
                 continue;
               }
 
-              setMediaUploadProgress({
+              const abortController = new AbortController();
+              activeAbortController = abortController;
+              setMediaUploadProgressForSelectedChat({
+                chatId: sendChatId,
                 attachmentId: queued.optimisticMessage.id,
                 currentIndex: index + 1,
                 total: attachmentsToSend.length,
                 progress: 0,
                 fileName: queued.attachment.file.name,
               });
-              mediaUploadAbortControllerRef.current = new AbortController();
+              mediaUploadAbortControllersRef.current.set(sendChatId, abortController);
 
               try {
                 const sendResult = await whatsappMediaRepository.send({
@@ -7180,11 +7221,9 @@ export default function WhatsAppInboxScreen() {
                   clientRequestId: queued.clientRequestId,
                   ...(quotePayload && index === 0 ? quotePayload : {}),
                   onUploadProgress: (progress) => {
-                    setMediaUploadProgress((current) => current?.attachmentId === queued.optimisticMessage.id
-                      ? { ...current, progress }
-                      : current);
+                    updateMediaUploadProgress(sendChatId, queued.optimisticMessage.id, progress);
                   },
-                  signal: mediaUploadAbortControllerRef.current.signal,
+                  signal: abortController.signal,
                 });
 
                 if (queued.optimisticMessage.media_url && sendResult.messageId) {
@@ -7232,8 +7271,10 @@ export default function WhatsAppInboxScreen() {
               }
             }
           } finally {
-            setMediaUploadProgress(null);
-            mediaUploadAbortControllerRef.current = null;
+            clearMediaUploadProgress(sendChatId);
+            if (activeAbortController && mediaUploadAbortControllersRef.current.get(sendChatId) === activeAbortController) {
+              mediaUploadAbortControllersRef.current.delete(sendChatId);
+            }
           }
 
           if (hadSuccessfulSend || hadAmbiguousSend) {
@@ -7268,7 +7309,7 @@ export default function WhatsAppInboxScreen() {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, updateOptimisticChatPreviewStatus]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, clearMediaUploadProgress, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, setMediaUploadProgressForSelectedChat, updateMediaUploadProgress, updateOptimisticChatPreviewStatus]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -7285,7 +7326,10 @@ export default function WhatsAppInboxScreen() {
   }, [handleSendMessage, voiceAttachment, autoSendVoiceRef]);
 
   const handleCancelMediaUpload = () => {
-    mediaUploadAbortControllerRef.current?.abort();
+    const activeChatId = selectedChatIdRef.current;
+    if (activeChatId) {
+      mediaUploadAbortControllersRef.current.get(activeChatId)?.abort();
+    }
   };
 
   const handleRetryMediaMessage = async (message: CommWhatsAppMessage) => {
@@ -9158,8 +9202,9 @@ export default function WhatsAppInboxScreen() {
     });
     applyOptimisticChatSummary(selectedChat, optimisticMessage.text_content ?? '', optimisticMessage.message_at);
 
-    return enqueueChatSend(selectedChat.id, async () => {
-      setSendingDrawerMedia(true);
+    const sendChatId = selectedChat.id;
+    return enqueueChatSend(sendChatId, async () => {
+      setSendingDrawerMediaByChatId((current) => ({ ...current, [sendChatId]: true }));
 
       try {
         const sendResult = await whatsappMediaRepository.sendRemote({
@@ -9202,7 +9247,15 @@ export default function WhatsAppInboxScreen() {
         updateOptimisticChatPreviewStatus(selectedChat.id, optimisticMessage.message_at, 'failed');
         throw error instanceof Error ? error : new Error(message);
       } finally {
-        setSendingDrawerMedia(false);
+        setSendingDrawerMediaByChatId((current) => {
+          if (!current[sendChatId]) {
+            return current;
+          }
+
+          const next = { ...current };
+          delete next[sendChatId];
+          return next;
+        });
       }
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);

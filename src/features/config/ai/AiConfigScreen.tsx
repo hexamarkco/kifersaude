@@ -61,17 +61,25 @@ export default function AiConfigScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [featResult, globalResult] = await Promise.all([
-      aiConfigService.fetchFeaturesWithConfigs(),
-      aiConfigService.fetchGlobalConfigs(),
-    ]);
+    try {
+      const [featResult, globalResult] = await Promise.all([
+        aiConfigService.fetchFeaturesWithConfigs(),
+        aiConfigService.fetchGlobalConfigs(),
+      ]);
 
-    if (featResult.error) toast.error("Não foi possível carregar as funcionalidades.");
-    if (globalResult.error) toast.error("Não foi possível carregar as configurações globais.");
+      if (featResult.error) toast.error("Não foi possível carregar as funcionalidades.");
+      if (globalResult.error) toast.error("Não foi possível carregar as configurações globais.");
 
-    setFeatures(featResult.data ?? []);
-    setGlobalConfigs(globalResult.data ?? []);
-    setLoading(false);
+      setFeatures(featResult.data ?? []);
+      setGlobalConfigs(globalResult.data ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar configurações de IA:", error);
+      setFeatures([]);
+      setGlobalConfigs([]);
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar as configurações de IA.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);

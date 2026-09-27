@@ -221,3 +221,16 @@ test('lista agendamentos sem pedir colunas que nao existem no chat remoto', asyn
   assert.equal(scheduledSelects.every((fields) => !fields.includes('lead_name')), true);
   assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
 });
+
+test('aguarda a sessão antes de carregar listas e contagens agendadas', async () => {
+  const sessionCallsBefore = mocks.waitForSupabaseSession.mock.calls.length;
+
+  await Promise.all([
+    commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' }),
+    commWhatsAppService.listScheduledSequences({ channelId: 'channel-1' }),
+    commWhatsAppService.countScheduledMessages({ channelId: 'channel-1' }),
+    commWhatsAppService.countScheduledSequences({ channelId: 'channel-1' }),
+  ]);
+
+  assert.equal(mocks.waitForSupabaseSession.mock.calls.length, sessionCallsBefore + 4);
+});

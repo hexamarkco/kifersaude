@@ -3079,6 +3079,8 @@ export const commWhatsAppService = {
     limit?: number;
     offset?: number;
   }): Promise<CommWhatsAppScheduledSequence[]> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as sequências agendadas.' });
+
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
       .select(SCHEDULED_SEQUENCE_SELECT)
@@ -3108,6 +3110,8 @@ export const commWhatsAppService = {
     leadId?: string;
     statuses?: readonly string[];
   }): Promise<number> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as sequências agendadas.' });
+
     let query = supabase
       .from('comm_whatsapp_scheduled_sequences' as never)
       .select('id', { count: 'exact', head: true });
@@ -3149,6 +3153,8 @@ export const commWhatsAppService = {
     limit?: number;
     offset?: number;
   }): Promise<CommWhatsAppScheduledMessage[]> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as mensagens agendadas.' });
+
     let query = supabase
       .from('comm_whatsapp_scheduled_messages')
       .select(
@@ -3198,6 +3204,8 @@ export const commWhatsAppService = {
     createdBy?: string;
     leadId?: string;
   }): Promise<number> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para contar as mensagens agendadas.' });
+
     let query = supabase
       .from('comm_whatsapp_scheduled_messages')
       .select('id', { count: 'exact', head: true });

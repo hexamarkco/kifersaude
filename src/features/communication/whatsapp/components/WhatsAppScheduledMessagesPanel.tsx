@@ -402,7 +402,7 @@ export default function WhatsAppScheduledMessagesPanel({
     return () => {
       cancelled = true;
     };
-  }, [currentContactName, isOpen, scheduledPhoneLookupSignature, scheduledPhoneNumbers]);
+  }, [isOpen, scheduledPhoneLookupSignature, scheduledPhoneNumbers]);
 
   const resolveScheduledContactName = useCallback((scheduled: {
     chat?: { phone_number?: string | null; phone_digits?: string | null } | null;

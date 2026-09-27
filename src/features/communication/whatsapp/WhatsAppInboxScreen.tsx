@@ -3780,13 +3780,14 @@ export default function WhatsAppInboxScreen() {
 
         if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at && !incomingChat.merged_into_chat_id) {
           const existingChat = current.find((chat) => chat.id === incomingChat.id) ?? null;
-          const manualSavedContactName = getSavedContactNameForPhone(
+          const canonicalSavedContactName = getSavedContactNameForPhone(
             incomingChat.phone_digits || incomingChat.phone_number,
             savedContactNameOverrideByPhoneRef.current,
+            savedContactNameByPhoneRef.current,
           );
           const hydratedChat = applyPendingChatInboxState(
             applyFrontendSavedContactNames(applyPrefetchedLeadNames([preserveUsefulChatPreview(
-              stabilizeChatIdentityForLocalMerge(incomingChat, existingChat, manualSavedContactName),
+              stabilizeChatIdentityForLocalMerge(incomingChat, existingChat, canonicalSavedContactName),
               existingChat,
             )])),
             pendingChatInboxStateRef.current,

@@ -7615,6 +7615,19 @@ export type Database = {
         Args: { p_text: string }
         Returns: string
       }
+      comm_whatsapp_find_campaign_replies: {
+        Args: { p_targets: Json }
+        Returns: {
+          chat_id: string
+          media_caption: string
+          message_at: string
+          message_id: string
+          message_type: string
+          target_id: string
+          text_content: string
+          transcription_text: string
+        }[]
+      }
       comm_whatsapp_format_phone_label: {
         Args: { p_phone: string }
         Returns: string

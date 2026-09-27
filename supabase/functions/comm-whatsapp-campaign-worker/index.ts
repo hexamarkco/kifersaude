@@ -147,6 +147,17 @@ type InboundMessageRow = {
   message_at: string;
 };
 
+type CampaignInboundReplyRow = {
+  target_id: string;
+  chat_id: string;
+  message_id: string;
+  message_type: string;
+  text_content: string | null;
+  media_caption: string | null;
+  transcription_text: string | null;
+  message_at: string;
+};
+
 type WorkerRunSource = NonNullable<WorkerRequestBody['source']>;
 
 type WorkerRunResult = {
@@ -1239,6 +1250,50 @@ async function findVisibleInboundCampaignReply(
   };
 }
 
+const findVisibleInboundCampaignReplies = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  targets: Array<Pick<TargetRow, 'id' | 'chat_id' | 'phone_digits' | 'sent_at'>>,
+): Promise<Map<string, { chat: InboundCampaignChat; message: InboundMessageRow; respondedAt: string | null }>> => {
+  const eligibleTargets = targets.filter((target) => target.sent_at);
+  if (eligibleTargets.length === 0) return new Map();
+
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_find_campaign_replies', {
+    p_targets: eligibleTargets.map((target) => ({
+      target_id: target.id,
+      chat_id: target.chat_id,
+      phone_digits: target.phone_digits,
+      sent_at: target.sent_at,
+    })),
+  });
+
+  if (error) {
+    throw new Error(`Erro ao localizar respostas da campanha em lote: ${error.message}`);
+  }
+
+  const repliesByTargetId = new Map<string, { chat: InboundCampaignChat; message: InboundMessageRow; respondedAt: string | null }>();
+  for (const row of (data ?? []) as CampaignInboundReplyRow[]) {
+    repliesByTargetId.set(row.target_id, {
+      chat: {
+        id: row.chat_id,
+        last_message_at: row.message_at,
+        last_message_direction: 'inbound',
+      },
+      message: {
+        id: row.message_id,
+        chat_id: row.chat_id,
+        message_type: row.message_type,
+        text_content: row.text_content,
+        media_caption: row.media_caption,
+        transcription_text: row.transcription_text,
+        message_at: row.message_at,
+      },
+      respondedAt: row.message_at,
+    });
+  }
+
+  return repliesByTargetId;
+};
+
 const shouldStopSequenceBeforeStep = (
   step: Pick<CampaignStepRow, 'delay_amount'> | null,
   targetStatus?: string | null,
@@ -1297,8 +1352,12 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   const stopOnReplyByCampaign = new Map<string, boolean>();
   const campaignById = new Map<string, CampaignRow>();
   const stepsByCampaignId = new Map<string, CampaignStepRow[]>();
+  const repliesByTargetId = await findVisibleInboundCampaignReplies(
+    supabaseAdmin,
+    (data ?? []) as Array<Pick<TargetRow, 'id' | 'chat_id' | 'phone_digits' | 'sent_at'>>,
+  );
   for (const target of data ?? []) {
-    const reply = await findVisibleInboundCampaignReply(supabaseAdmin, target as Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>);
+    const reply = repliesByTargetId.get(target.id);
 
     if (!reply) continue;
 
@@ -1321,20 +1380,19 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     const responseUpdate = shouldStop
       ? { status: 'responded', responded_at: reply.respondedAt || nowIso, chat_id: reply.chat.id }
       : { responded_at: reply.respondedAt || nowIso, chat_id: reply.chat.id };
-    const { data: updatedTarget, error: updateTargetError } = await supabaseAdmin
+    const { data: updatedTargets, error: updateTargetError } = await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
       .update(responseUpdate)
       .eq('id', target.id)
       .is('responded_at', null)
       .in('status', ['sent', 'scheduled'])
-      .select('id')
-      .maybeSingle();
+      .select('id');
 
     if (updateTargetError) {
       throw new Error(`Erro ao registrar resposta da campanha: ${updateTargetError.message}`);
     }
 
-    if (!updatedTarget) continue;
+    if (!updatedTargets?.[0]) continue;
 
     await classifyInboundCampaignIntent({
       supabaseAdmin,

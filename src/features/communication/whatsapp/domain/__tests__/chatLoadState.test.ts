@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { shouldPreserveSelectedChatAfterLoad } from '../chatLoadState';
+import { selectInitialChatId, shouldPreserveSelectedChatAfterLoad } from '../chatLoadState';
 import type { CommWhatsAppChat } from '../types';
 
 const createChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat => ({
@@ -92,4 +92,12 @@ test('não preserva chat que já voltou na resposta atual', () => {
     }),
     false,
   );
+});
+
+test('seleciona primeiro um chat da seção que o operador acabou de abrir', () => {
+  const activeChat = createChat({ id: 'active-chat', is_archived: false });
+  const archivedChat = createChat({ id: 'archived-chat', is_archived: true });
+
+  assert.equal(selectInitialChatId([activeChat, archivedChat], 'archived'), 'archived-chat');
+  assert.equal(selectInitialChatId([archivedChat, activeChat], 'active'), 'active-chat');
 });

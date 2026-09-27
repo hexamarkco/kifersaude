@@ -2,6 +2,13 @@ import type { CommWhatsAppChat } from './types';
 
 export type ChatSection = 'active' | 'archived';
 
+export const selectInitialChatId = (
+  chats: readonly CommWhatsAppChat[],
+  preferredSection: ChatSection,
+) => chats.find((chat) => Boolean(chat.is_archived) === (preferredSection === 'archived'))?.id
+  ?? chats[0]?.id
+  ?? null;
+
 type ShouldPreserveSelectedChatParams = {
   selectedChat: CommWhatsAppChat | null;
   refreshedChatIds: ReadonlySet<string>;

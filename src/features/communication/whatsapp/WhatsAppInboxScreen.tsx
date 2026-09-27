@@ -136,7 +136,7 @@ import {
   QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
   shouldContinueQueuedTextSendAfterFailure,
 } from './domain/messageSendQueue';
-import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
+import { selectInitialChatId, shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
 import { addSavedContactsToNameMap, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
@@ -246,6 +246,11 @@ const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
+type ChatLoadOptions = {
+  sections?: Array<'active' | 'archived'>;
+  partialArchived?: boolean;
+  preferredSection?: 'active' | 'archived';
+};
 type PendingAttachment = {
   id: string;
   file: File;
@@ -5187,13 +5192,17 @@ export default function WhatsAppInboxScreen() {
     setChats((current) => applyFrontendSavedContactNames(current));
   }, [applyFrontendSavedContactNames, savedContacts]);
 
-  const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'>; partialArchived?: boolean } = {}) => {
+  const loadChats = useCallback(async (loadOptions: ChatLoadOptions = {}) => {
     // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario
     // esta visualizando. Os chats da outra secao continuam em memoria (e sao
     // recarregados sob demanda quando o usuario alterna). Isso reduz drasticamente
     // o trafego de polling (8s) em contas com muitos chats arquivados.
     const requestedSections = loadOptions.sections
       ?? (archivedSectionOpenRef.current ? (['archived'] as const) : (['active'] as const));
+    const preferredSection = loadOptions.preferredSection
+      ?? (requestedSections.length === 1
+        ? requestedSections[0]
+        : archivedSectionOpenRef.current ? 'archived' : 'active');
     // Secao arquivada carrega parcialmente (pagina a pagina com "Carregar mais")
     // por padrao quando o chamador nao pede explicitamente as secoes (ex.: polling).
     const partialArchived = loadOptions.partialArchived ?? !loadOptions.sections;
@@ -5204,6 +5213,7 @@ export default function WhatsAppInboxScreen() {
       responsaveis: leadResponsavelFilters.map((id) => id.trim()).filter(Boolean).sort(),
       sections: [...requestedSections].sort(),
       partialArchived,
+      preferredSection,
     });
 
     if (chatsLoadPromiseRef.current && chatsLoadKeyRef.current === loadKey) {
@@ -5404,7 +5414,7 @@ export default function WhatsAppInboxScreen() {
             return current;
           }
 
-          return hydratedData.find((chat) => !chat.is_archived)?.id ?? hydratedData[0]?.id ?? null;
+          return selectInitialChatId(hydratedData, preferredSection);
         });
         chatPollBackoffRef.current = 0;
         didApplyChatLoad = true;
@@ -5585,7 +5595,7 @@ export default function WhatsAppInboxScreen() {
       const loadRequestId = ++archivedSectionLoadRequestIdRef.current;
       setArchivedChatsLoading(true);
       setArchivedChatsLoadingMore(false);
-      void loadChats({ sections: ['archived', 'active'], partialArchived: true })
+      void loadChats({ sections: ['archived', 'active'], partialArchived: true, preferredSection: 'archived' })
         .catch(() => undefined)
         .finally(() => {
           if (loadRequestId === archivedSectionLoadRequestIdRef.current) {
@@ -5596,7 +5606,7 @@ export default function WhatsAppInboxScreen() {
     } else {
       archivedSectionLoadRequestIdRef.current += 1;
       setArchivedChatsLoading(false);
-      void loadChats({ sections: ['active'] });
+      void loadChats({ sections: ['active'], preferredSection: 'active' });
     }
   }, [chatMatchesActiveFilters, loadChats, refreshArchivedChatsCount]);
 

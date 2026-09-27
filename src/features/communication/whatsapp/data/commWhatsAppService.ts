@@ -3127,7 +3127,7 @@ export const commWhatsAppService = {
       }
     }
 
-    const { error, data } = await supabase.rpc('create_scheduled_message', {
+    const { error, data } = await supabase.rpc('create_scheduled_message_for_chat', {
       p_channel_id: input.channelId,
       p_phone_digits: input.phoneDigits,
       p_scheduled_at: input.scheduledAt,
@@ -3145,6 +3145,7 @@ export const commWhatsAppService = {
       p_notes: input.notes ?? null,
       p_max_attempts: 3,
       p_cancel_on_inbound_message: input.cancelOnInboundMessage ?? false,
+      p_chat_id: input.chatId ?? null,
     });
 
     if (error) {

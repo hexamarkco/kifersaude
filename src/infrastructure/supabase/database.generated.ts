@@ -8857,6 +8857,29 @@ export type Database = {
         }
         Returns: string
       }
+      create_scheduled_message_for_chat: {
+        Args: {
+          p_cancel_on_inbound_message?: boolean
+          p_channel_id: string
+          p_chat_id?: string
+          p_contract_id?: string
+          p_label?: string
+          p_lead_id?: string
+          p_max_attempts?: number
+          p_media_file_name?: string
+          p_media_mime_type?: string
+          p_media_url?: string
+          p_message_type?: string
+          p_notes?: string
+          p_phone_digits: string
+          p_recurrence?: string
+          p_recurrence_config?: Json
+          p_recurrence_ends_at?: string
+          p_scheduled_at: string
+          p_text_content?: string
+        }
+        Returns: string
+      }
       create_scheduled_message_sequence: {
         Args: {
           p_cancel_on_inbound_message?: boolean

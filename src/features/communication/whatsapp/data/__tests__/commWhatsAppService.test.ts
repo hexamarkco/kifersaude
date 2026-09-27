@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => {
     limit: TestMock<[number], Query>;
     range: TestMock<[number, number], Promise<{ data: unknown[]; error: unknown | null }>>;
     overrideTypes: TestMock<[], Promise<{ data: unknown[]; error: unknown | null }>>;
+    maybeSingle: TestMock<[], Promise<{ data: unknown; error: unknown | null }>>;
   };
 
   const createMock = <Args extends unknown[], Result>() => vi.fn() as unknown as TestMock<Args, Result>;
@@ -27,6 +28,7 @@ const mocks = vi.hoisted(() => {
     limit: createMock<[number], Query>(),
     range: createMock<[number, number], Promise<{ data: unknown[]; error: unknown | null }>>(),
     overrideTypes: createMock<[], Promise<{ data: unknown[]; error: unknown | null }>>(),
+    maybeSingle: createMock<[], Promise<{ data: unknown; error: unknown | null }>>(),
   };
 
   query.select.mockReturnValue(query);
@@ -35,6 +37,7 @@ const mocks = vi.hoisted(() => {
   query.order.mockReturnValue(query);
   query.limit.mockReturnValue(query);
   query.range.mockResolvedValue({ data: [], error: null });
+  query.maybeSingle.mockResolvedValue({ data: null, error: null });
 
   const from = createMock<[string], Query>();
   const rpc = createMock<
@@ -230,6 +233,25 @@ test('lista agendamentos sem pedir colunas que nao existem no chat remoto', asyn
   assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
 });
 
+test('agenda a mensagem no chat selecionado quando ele existe', async () => {
+  mocks.query.maybeSingle.mockResolvedValue({ data: { id: 'chat-1', is_group: false }, error: null });
+  mocks.rpc.mockResolvedValue({ data: 'scheduled-1', error: null });
+
+  const scheduledId = await commWhatsAppService.scheduleMessage({
+    channelId: 'channel-1',
+    chatId: 'chat-1',
+    phoneDigits: '5521999999999',
+    scheduledAt: '2099-01-01T12:00:00.000Z',
+    textContent: 'Olá',
+  });
+
+  assert.equal(scheduledId, 'scheduled-1');
+  const rpcCall = mocks.rpc.mock.calls.find(([name]) => name === 'create_scheduled_message_for_chat');
+  assert.equal(rpcCall?.[0], 'create_scheduled_message_for_chat');
+  assert.equal(rpcCall?.[1]?.p_chat_id, 'chat-1');
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+});
+
 test('aguarda a sessão antes de carregar listas e contagens agendadas', async () => {
   const sessionCallsBefore = mocks.waitForSupabaseSession.mock.calls.length;
 
@@ -278,6 +300,7 @@ test('não repete falha permanente ao listar agendamentos', async () => {
 
 test('repete a lista do Inbox quando a RPC sofre timeout transitório', async () => {
   let attempts = 0;
+  const rpcCallsBefore = mocks.rpc.mock.calls.length;
   const chat = { id: 'chat-1', display_name: 'Contato', is_archived: false };
   mocks.rpc.mockImplementation(async () => {
     attempts += 1;
@@ -287,11 +310,12 @@ test('repete a lista do Inbox quando a RPC sofre timeout transitório', async ()
   });
 
   const chats = await commWhatsAppService.listChats();
+  const rpcCalls = mocks.rpc.mock.calls.slice(rpcCallsBefore);
 
   assert.deepEqual(chats, [chat]);
   assert.equal(attempts, 2);
-  assert.equal(mocks.rpc.mock.calls[0]?.[0], 'comm_whatsapp_list_chats_with_presence');
-  assert.equal(mocks.rpc.mock.calls[1]?.[0], 'comm_whatsapp_list_chats_with_presence');
+  assert.equal(rpcCalls[0]?.[0], 'comm_whatsapp_list_chats_with_presence');
+  assert.equal(rpcCalls[1]?.[0], 'comm_whatsapp_list_chats_with_presence');
   mocks.rpc.mockResolvedValue({ data: [], error: null });
 });
 

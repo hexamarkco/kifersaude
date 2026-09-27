@@ -114,6 +114,7 @@ import {
 import {
   compareMessageChronology,
   dedupeObviousDuplicateMessages,
+  findMessageByIdOrExternalId,
   formatMessageDaySeparatorLabel,
   formatMessageTime,
   getMessageDayKey,
@@ -402,16 +403,6 @@ const isGroupChatMessage = (chat: CommWhatsAppChat, message: CommWhatsAppMessage
     || isWhapiGroupChatId(getMessageMetadataRecord(message).chat_id)
   )
 );
-
-const findLoadedMessageByExternalId = (messages: CommWhatsAppMessage[], externalMessageId: string) => {
-  const normalizedExternalMessageId = externalMessageId.trim();
-  if (!normalizedExternalMessageId) return null;
-
-  return messages.find((message) => (
-    message.id === normalizedExternalMessageId
-    || message.external_message_id?.trim() === normalizedExternalMessageId
-  )) ?? null;
-};
 
 const isPdfDocumentMessage = (message: CommWhatsAppMessage) => {
   const kind = message.message_type.trim().toLowerCase();
@@ -5756,24 +5747,33 @@ export default function WhatsAppInboxScreen() {
     const targetChat = result.chat;
     const targetMessageId = result.message.id;
     const requestId = ++messageSearchSelectionRequestIdRef.current;
+    const isChangingChat = selectedChatIdRef.current !== targetChat.id;
 
     setChatMenuPointerAnchor(null);
     setOpenChatMenuChatId(null);
     upsertChatLocally(targetChat);
 
-    if (selectedChatIdRef.current !== targetChat.id) {
+    if (isChangingChat) {
       pendingMessageSearchChatIdRef.current = targetChat.id;
       selectedChatIdRef.current = targetChat.id;
+      messagesRequestIdRef.current += 1;
+      messagesSignatureRef.current = '';
+      latestMessagesRef.current = [];
+      setMessages([]);
+      setMessageLoadError(null);
+      setHasOlderMessages(false);
+      setThreadReconcileChatId(null);
       setSelectedChatId(targetChat.id);
     }
 
-    if (latestMessagesRef.current.some((message) => message.id === targetMessageId)) {
+    if (findMessageByIdOrExternalId(latestMessagesRef.current, targetMessageId, targetChat.id)) {
       setHighlightedMessageId(targetMessageId);
       return;
     }
 
     setLoadingMessages(true);
 
+    let fallbackLoadStarted = false;
     void whatsappMessagesRepository.listContext(targetChat.id, targetMessageId).then((contextMessages) => {
       if (requestId !== messageSearchSelectionRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
         return;
@@ -5799,16 +5799,17 @@ export default function WhatsAppInboxScreen() {
       pendingMessageSearchChatIdRef.current = null;
       console.error('[WhatsAppInbox] erro ao carregar contexto da mensagem buscada', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a mensagem encontrada.');
-      void loadMessages(targetChat, 'initial');
+      fallbackLoadStarted = true;
+      return loadMessages(targetChat, 'initial');
     }).finally(() => {
-      if (requestId === messageSearchSelectionRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
+      if (!fallbackLoadStarted && requestId === messageSearchSelectionRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
         setLoadingMessages(false);
       }
     });
   }, [buildMessagesSignature, loadMessages, upsertChatLocally]);
 
   const handleOpenQuotedMessage = useCallback(async (quotedExternalMessageId: string) => {
-    const targetMessage = findLoadedMessageByExternalId(latestMessagesRef.current, quotedExternalMessageId);
+    const targetMessage = findMessageByIdOrExternalId(latestMessagesRef.current, quotedExternalMessageId);
     if (targetMessage) {
       setHighlightedMessageId(targetMessage.id);
       return;
@@ -5828,7 +5829,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const loadedTargetMessage = findLoadedMessageByExternalId(allMessages, quotedExternalMessageId);
+      const loadedTargetMessage = findMessageByIdOrExternalId(allMessages, quotedExternalMessageId);
       if (!loadedTargetMessage) {
         toast.info('Não foi possível localizar a mensagem original nesta conversa.');
         return;

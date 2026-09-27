@@ -7,6 +7,7 @@ import {
   compareMessageDeliveryStatusEvents,
   compareMessageChronology,
   dedupeObviousDuplicateMessages,
+  findMessageByIdOrExternalId,
   formatMessageDaySeparatorLabel,
   getMessageDayKey,
   getMessageTimestampMs,
@@ -95,6 +96,23 @@ test('merges an optimistic message with its persisted delivery', () => {
   assert.equal(merged.length, 1);
   assert.equal(merged[0].id, 'server-1');
   assert.equal(merged[0].delivery_status, 'delivered');
+});
+
+test('does not find a message from another chat when the chat scope is provided', () => {
+  const otherChatMessage = createMessage({
+    id: 'target-message',
+    chat_id: 'chat-2',
+    external_message_id: 'target-external',
+  });
+
+  assert.equal(
+    findMessageByIdOrExternalId([otherChatMessage], 'target-message', 'chat-1'),
+    null,
+  );
+  assert.equal(
+    findMessageByIdOrExternalId([otherChatMessage], 'target-external', 'chat-2')?.id,
+    'target-message',
+  );
 });
 
 test('deduplicates only sufficiently descriptive messages from the same second', () => {

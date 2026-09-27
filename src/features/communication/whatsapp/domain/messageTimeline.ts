@@ -125,6 +125,23 @@ export const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWha
   mergeCommWhatsAppMessages(existing, incoming).sort(compareMessageChronology)
 );
 
+export const findMessageByIdOrExternalId = (
+  messages: CommWhatsAppMessage[],
+  messageReference: string,
+  chatId?: string,
+) => {
+  const normalizedReference = messageReference.trim();
+  if (!normalizedReference) return null;
+
+  return messages.find((message) => (
+    (!chatId || message.chat_id === chatId)
+    && (
+      message.id === normalizedReference
+      || message.external_message_id?.trim() === normalizedReference
+    )
+  )) ?? null;
+};
+
 const getObviousDuplicateMessageKey = (message: CommWhatsAppMessage) => {
   if (message.direction === 'system') return '';
 

@@ -3814,13 +3814,21 @@ export default function WhatsAppInboxScreen() {
     const targetChatId = incomingPresence?.chat_id ?? previousPresence?.chat_id ?? null;
     if (!targetChatId) return;
 
-    setChats((current) => applyChatPresenceUpdate(current, {
-      chatId: targetChatId,
-      status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
-      lastSeenAt: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
-      updatedAt: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
-    }));
-  }, []);
+    setChats((current) => {
+      const next = applyChatPresenceUpdate(current, {
+        chatId: targetChatId,
+        status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
+        lastSeenAt: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
+        updatedAt: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
+      });
+
+      if (next !== current) {
+        chatsSignatureRef.current = buildChatsSignature(next);
+      }
+
+      return next;
+    });
+  }, [buildChatsSignature]);
 
   const applyRealtimeMessageChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {
     const incomingMessage = payload.new as CommWhatsAppMessage | null;

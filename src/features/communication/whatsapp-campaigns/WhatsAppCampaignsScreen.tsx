@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import '../communicationTerracotta.css';
 import {
   ActionSurface,
+  Alert,
   Badge,
   Button,
   Card,
@@ -112,6 +113,7 @@ const defaultStage = (delayAmount = 0, delayUnit: CommWhatsAppCampaignStageDraft
 });
 
 type AudienceMode = 'crm' | 'csv';
+type CampaignLoadError = 'all' | 'partial' | false;
 
 type VariableAutocompleteState = {
   stageIndex: number;
@@ -278,6 +280,7 @@ export default function WhatsAppCampaignsScreen() {
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<CampaignLoadError>(false);
   const [saving, setSaving] = useState(false);
   const [csvSaveProgress, setCsvSaveProgress] = useState<{ saved: number; total: number } | null>(null);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
@@ -370,8 +373,9 @@ export default function WhatsAppCampaignsScreen() {
     const requestId = campaignListRequestIdRef.current + 1;
     campaignListRequestIdRef.current = requestId;
     setLoading(true);
+    setLoadError(false);
     try {
-      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth, nextTemplates] = await Promise.all([
+      const results = await Promise.allSettled([
         commWhatsAppCampaignService.listCampaigns(),
         commWhatsAppCampaignService.getStats(),
         commWhatsAppCampaignService.listPendingAiSuggestions(),
@@ -379,14 +383,23 @@ export default function WhatsAppCampaignsScreen() {
         commWhatsAppCampaignService.listTemplates(),
       ]);
       if (requestId !== campaignListRequestIdRef.current) return;
-      setCampaigns(nextCampaigns);
-      setStats(nextStats);
-      setAiSuggestions(nextSuggestions);
-      setWorkerHealth(nextWorkerHealth);
-      setTemplates(nextTemplates);
+
+      const [campaignsResult, statsResult, suggestionsResult, workerHealthResult, templatesResult] = results;
+      if (campaignsResult.status === 'fulfilled') setCampaigns(campaignsResult.value);
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+      if (suggestionsResult.status === 'fulfilled') setAiSuggestions(suggestionsResult.value);
+      if (workerHealthResult.status === 'fulfilled') setWorkerHealth(workerHealthResult.value);
+      if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value);
+
+      const failedResults = results.filter((result) => result.status === 'rejected');
+      if (failedResults.length > 0) {
+        setLoadError(failedResults.length === results.length ? 'all' : 'partial');
+        console.warn('[WhatsAppCampaigns] alguns dados não puderam ser carregados', results);
+      }
     } catch (error) {
       if (requestId !== campaignListRequestIdRef.current) return;
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar os disparos.');
+      console.error('[WhatsAppCampaigns] erro ao carregar os disparos', error);
+      setLoadError('all');
     } finally {
       if (requestId === campaignListRequestIdRef.current) {
         setLoading(false);
@@ -1714,9 +1727,28 @@ export default function WhatsAppCampaignsScreen() {
             <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
           </div>
 
+          {loadError ? (
+            <Alert
+              tone="warning"
+              title={loadError === 'all' ? 'Não foi possível carregar as campanhas.' : 'Alguns dados das campanhas não foram atualizados.'}
+              action={(
+                <Button type="button" variant="secondary" size="sm" onClick={() => void loadCampaigns()} loading={loading}>
+                  Tentar novamente
+                </Button>
+              )}
+            >
+              Os dados que carregaram continuam disponíveis. Nenhuma campanha foi excluída.
+            </Alert>
+          ) : null}
+
           {loading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-surface-soft)]" />)}
+            </div>
+          ) : loadError === 'all' && campaigns.length === 0 ? (
+            <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
+              <p className="text-sm font-medium text-[color:var(--panel-text)]">Não foi possível carregar as campanhas.</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Tente atualizar novamente. Nenhuma campanha foi excluída.</p>
             </div>
           ) : campaigns.length === 0 ? (
             <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">

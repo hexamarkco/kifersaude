@@ -116,6 +116,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<'all' | 'partial' | false>(false);
   const [liveRefreshError, setLiveRefreshError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const targetsPageRef = useRef(0);
@@ -142,10 +143,11 @@ export default function WhatsAppCampaignDetailScreen() {
     const metricsRequestId = liveMetricsRequestIdRef.current + 1;
     liveMetricsRequestIdRef.current = metricsRequestId;
     setLoading(true);
+    setLoadError(false);
     loadDetailInFlightRef.current = true;
     try {
       const targetsFilters = targetsFiltersRef.current;
-      const [nextCampaign, nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
+      const results = await Promise.allSettled([
         commWhatsAppCampaignService.getCampaign(campaignId),
         commWhatsAppCampaignService.listCampaignTargets(campaignId, {
           page: 0,
@@ -158,22 +160,35 @@ export default function WhatsAppCampaignDetailScreen() {
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       if (screenGeneration !== screenGenerationRef.current || requestId !== detailRequestIdRef.current) return;
-      setCampaign(nextCampaign);
-      if (screenGeneration === screenGenerationRef.current && targetRequestId === targetListRequestIdRef.current) {
-        setTargets(nextTargets.targets);
-        setTargetsTotal(nextTargets.total);
+      const [campaignResult, targetsResult, statusCountsResult, failureReasonsResult, pendingValidationResult] = results;
+
+      if (campaignResult.status === 'fulfilled') {
+        setCampaign(campaignResult.value);
+      }
+      if (targetsResult.status === 'fulfilled' && screenGeneration === screenGenerationRef.current && targetRequestId === targetListRequestIdRef.current) {
+        setTargets(targetsResult.value.targets);
+        setTargetsTotal(targetsResult.value.total);
         setTargetsPage(1);
         targetsPageRef.current = 0;
       }
       if (screenGeneration === screenGenerationRef.current && metricsRequestId === liveMetricsRequestIdRef.current) {
-        setStatusCounts(nextStatusCounts);
-        setFailureReasons(nextFailureReasons);
-        setPendingWhatsAppValidation(nextPendingValidation);
+        if (statusCountsResult.status === 'fulfilled') setStatusCounts(statusCountsResult.value);
+        if (failureReasonsResult.status === 'fulfilled') setFailureReasons(failureReasonsResult.value);
+        if (pendingValidationResult.status === 'fulfilled') setPendingWhatsAppValidation(pendingValidationResult.value);
       }
-      setLiveRefreshError(null);
+
+      const failedResults = results.filter((result) => result.status === 'rejected');
+      setLoadError(failedResults.length === 0 ? false : failedResults.length === results.length ? 'all' : 'partial');
+      if (failedResults.length === 0) {
+        setLiveRefreshError(null);
+      }
+      if (failedResults.length > 0) {
+        console.warn('[WhatsAppCampaignDetailScreen] alguns dados não puderam ser carregados', results);
+      }
     } catch (error) {
       if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar o detalhe do disparo.');
+        console.error('[WhatsAppCampaignDetailScreen] erro ao carregar detalhe', error);
+        setLoadError('all');
       }
     } finally {
       if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
@@ -263,7 +278,7 @@ export default function WhatsAppCampaignDetailScreen() {
     refreshLiveDataInFlightRef.current = true;
     try {
       const targetsFilters = targetsFiltersRef.current;
-      const [nextTargets, nextStatusCounts, nextFailureReasons, nextPendingValidation] = await Promise.all([
+      const results = await Promise.allSettled([
         commWhatsAppCampaignService.listCampaignTargets(campaignId, {
           page: targetsPageRef.current,
           pageSize: targetsFilters.pageSize,
@@ -275,14 +290,23 @@ export default function WhatsAppCampaignDetailScreen() {
         commWhatsAppCampaignService.getPendingWhatsAppValidationCount(campaignId),
       ]);
       if (screenGeneration !== screenGenerationRef.current) return;
-      if (targetRequestId === targetListRequestIdRef.current) {
-        setTargets(nextTargets.targets);
-        setTargetsTotal(nextTargets.total);
+      const [targetsResult, statusCountsResult, failureReasonsResult, pendingValidationResult] = results;
+      if (targetsResult.status === 'fulfilled' && targetRequestId === targetListRequestIdRef.current) {
+        setTargets(targetsResult.value.targets);
+        setTargetsTotal(targetsResult.value.total);
       }
       if (metricsRequestId === liveMetricsRequestIdRef.current) {
-        setStatusCounts(nextStatusCounts);
-        setFailureReasons(nextFailureReasons);
-        setPendingWhatsAppValidation(nextPendingValidation);
+        if (statusCountsResult.status === 'fulfilled') setStatusCounts(statusCountsResult.value);
+        if (failureReasonsResult.status === 'fulfilled') setFailureReasons(failureReasonsResult.value);
+        if (pendingValidationResult.status === 'fulfilled') setPendingWhatsAppValidation(pendingValidationResult.value);
+      }
+
+      const failedResults = results.filter((result) => result.status === 'rejected');
+      if (failedResults.length === 0) {
+        setLiveRefreshError(null);
+      } else {
+        setLiveRefreshError('Alguns dados da atualização automática falharam; os demais continuam disponíveis.');
+        console.warn('[WhatsAppCampaignDetailScreen] atualização parcial em segundo plano', results);
       }
     } catch (error) {
       if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignId) {
@@ -506,6 +530,26 @@ export default function WhatsAppCampaignDetailScreen() {
           )}
         >
           {liveRefreshError}
+        </Alert>
+      )}
+
+      {loadError && (
+        <Alert
+          tone={loadError === 'all' ? 'danger' : 'warning'}
+          title={loadError === 'all' ? 'Não foi possível carregar o detalhe completo.' : 'Alguns dados do disparo não foram carregados.'}
+          action={(
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadDetail()}
+              loading={loading}
+            >
+              Tentar novamente
+            </Button>
+          )}
+        >
+          Os dados disponíveis continuam visíveis. Nenhum contato ou campanha foi excluído.
         </Alert>
       )}
 

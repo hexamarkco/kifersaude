@@ -418,6 +418,11 @@ export default function LeadsManager({
 
       setLeads(visibleLeads);
       leadsLoaded = true;
+      // A lista principal já está pronta. Exiba-a sem esperar a consulta
+      // complementar dos próximos lembretes, que pode envolver muitos leads.
+      // Essa consulta continua protegida pelo requestId e atualiza os cartões
+      // quando terminar.
+      setLoading(false);
       const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
       const nextReminders = await listNextReminderByLeadId(leadIds);
       if (requestId !== leadsRequestIdRef.current) {

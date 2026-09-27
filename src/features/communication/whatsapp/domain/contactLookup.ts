@@ -201,3 +201,24 @@ export const applySavedContactNameFromLookup = (
     display_name: savedName,
   };
 };
+
+export const applySavedContactNameToContact = (
+  contact: CommWhatsAppPhoneContact,
+  localOverrides: ReadonlyMap<string, string>,
+  synchronizedNames: ReadonlyMap<string, string>,
+) => {
+  const savedName = resolveSavedContactName(
+    contact.phone_digits || contact.phone_number,
+    contact.display_name,
+    localOverrides,
+    synchronizedNames,
+  );
+  if (!savedName) {
+    return contact;
+  }
+
+  return {
+    ...contact,
+    display_name: savedName,
+  };
+};

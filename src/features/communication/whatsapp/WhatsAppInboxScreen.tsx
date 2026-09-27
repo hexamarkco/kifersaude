@@ -138,7 +138,7 @@ import {
 import { shouldPreserveSelectedChatAfterLoad } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, applySavedContactNameFromLookup, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -2850,6 +2850,14 @@ export default function WhatsAppInboxScreen() {
       revision: savedContactNameRevision,
     }),
     [savedContactNameRevision],
+  );
+  const savedContactsForPresentation = useMemo(
+    () => savedContacts.map((contact) => applySavedContactNameToContact(
+      contact,
+      savedContactLookupMaps.localOverrides,
+      savedContactLookupMaps.synchronizedNames,
+    )),
+    [savedContactLookupMaps, savedContacts],
   );
   const remoteChatSearchResults = useMemo(
     () => (search
@@ -11887,7 +11895,7 @@ export default function WhatsAppInboxScreen() {
             onClose={() => setStartChatModalOpen(false)}
             query={startChatQuery}
             onQueryChange={setStartChatQuery}
-            contacts={savedContacts}
+            contacts={savedContactsForPresentation}
             contactsTotal={savedContactsTotal}
             contactsHasMore={savedContactsHasMore}
             contactsLoading={savedContactsLoading}

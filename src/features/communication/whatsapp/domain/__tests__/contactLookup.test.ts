@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   addSavedContactsToNameMap,
   applySavedContactNameFromLookup,
+  applySavedContactNameToContact,
   collectPhoneLookupKeys,
   getSavedContactNameForPhone,
   resolveSavedContactName,
@@ -227,4 +228,27 @@ test('usa o nome do contato salvo como fonte canônica mesmo quando o chat veio 
 
   assert.equal(result.display_name, 'Mariangela');
   assert.equal(result.saved_contact_name, 'Mariangela');
+});
+
+test('aplica o nome salvo também na lista de contatos do modal de novo chat', () => {
+  const contact: CommWhatsAppPhoneContact = {
+    id: 'contact-1',
+    channel_id: 'channel-1',
+    contact_id: 'external-1',
+    phone_number: '+55 (21) 98296-5495',
+    phone_digits: '5521982965495',
+    display_name: 'Mariangela - Cliente',
+    saved: true,
+    last_synced_at: '2026-09-08T13:00:00.000Z',
+    created_at: '2026-09-08T13:00:00.000Z',
+    updated_at: '2026-09-08T13:00:00.000Z',
+  };
+
+  const result = applySavedContactNameToContact(
+    contact,
+    new Map([['5521982965495', 'Mariangela']]),
+    new Map([['5521982965495', 'Mariangela - Cliente']]),
+  );
+
+  assert.equal(result.display_name, 'Mariangela');
 });

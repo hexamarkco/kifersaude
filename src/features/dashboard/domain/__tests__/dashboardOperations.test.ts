@@ -73,3 +73,20 @@ test('does not fabricate a conversion percentage with no decided outcomes', () =
   assert.equal(analysis.conversion, null);
   assert.equal(analysis.conversionPrevious, null);
 });
+
+test('agrupa origens com diferença apenas de caixa e acentuação', () => {
+  const analysis = buildDashboardOperationsAnalysis(input({
+    leads: [
+      lead({ id: 'lead-indicacao-1', origem: 'Indicação' }),
+      lead({ id: 'lead-indicacao-2', origem: 'indicação' }),
+    ],
+    contracts: [],
+  }));
+
+  assert.deepEqual(analysis.sourcePerformance, [{
+    origin: 'Indicação',
+    leads: 2,
+    contracts: 0,
+    conversion: 0,
+  }]);
+});

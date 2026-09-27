@@ -14,6 +14,7 @@ import type {
   DashboardStatusHistory,
 } from '../shared/dashboardTypes';
 import { resolveDashboardDateRange } from './dashboardOperations';
+import { resolveDashboardOriginLabel } from './dashboardOrigin';
 
 // Não há SLA/aging persistido para oportunidades no modelo atual; manter o
 // limite centralizado evita espalhar um número operacional pela UI e domínio.
@@ -106,9 +107,9 @@ const buildPerformanceRows = (
   }));
 
   leads.forEach((lead) => {
-    const label = getLeadLabel(lead) || 'Não informado';
-    const row = rows.get(label) ?? {
-      label,
+    const resolvedLabel = resolveDashboardOriginLabel(getLeadLabel(lead));
+    const row = rows.get(resolvedLabel.key) ?? {
+      label: resolvedLabel.label,
       leads: 0,
       proposals: null,
       contracts: 0,
@@ -118,15 +119,15 @@ const buildPerformanceRows = (
       commissionExpected: 0,
     };
     row.leads += 1;
-    rows.set(label, row);
+    rows.set(resolvedLabel.key, row);
   });
 
   contracts.forEach((contract) => {
-    const label = contract.lead_id
-      ? getLeadLabel(leadsById.get(contract.lead_id) ?? ({ origem: null } as Lead)) || 'Não informado'
-      : 'Não informado';
-    const row = rows.get(label) ?? {
-      label,
+    const resolvedLabel = resolveDashboardOriginLabel(contract.lead_id
+      ? getLeadLabel(leadsById.get(contract.lead_id) ?? ({ origem: null } as Lead))
+      : null);
+    const row = rows.get(resolvedLabel.key) ?? {
+      label: resolvedLabel.label,
       leads: 0,
       proposals: null,
       contracts: 0,
@@ -140,7 +141,7 @@ const buildPerformanceRows = (
     row.commissionExpected += contract.comissao_prevista ?? 0;
     row.averageTicket = row.contracts > 0 ? row.monthlyValue / row.contracts : null;
     row.conversion = percentage(row.contracts, row.leads);
-    rows.set(label, row);
+    rows.set(resolvedLabel.key, row);
   });
 
   return [...rows.values()]

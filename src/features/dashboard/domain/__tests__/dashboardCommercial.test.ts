@@ -99,3 +99,24 @@ test('only labels a lead with overdue follow-up when Agenda has an unread overdu
   assert.equal(withReminder.opportunities[0]?.signal, 'Follow-up vencido');
   assert.equal(withReminder.agenda.overdue, 1);
 });
+
+test('consolida a mesma origem quando a grafia muda apenas em caixa ou acento', () => {
+  const analysis = buildDashboardCommercialAnalysis(input({
+    leads: [
+      lead({ id: 'lead-indicacao-1', origem: 'Indicação' }),
+      lead({ id: 'lead-indicacao-2', origem: 'indicação' }),
+    ],
+    contracts: [],
+  }));
+
+  assert.deepEqual(analysis.origins, [{
+    label: 'Indicação',
+    leads: 2,
+    proposals: null,
+    contracts: 0,
+    conversion: null,
+    monthlyValue: 0,
+    averageTicket: null,
+    commissionExpected: 0,
+  }]);
+});

@@ -11,6 +11,7 @@ import type {
   DashboardPeriodFilter,
 } from '../shared/dashboardTypes';
 import { parseDashboardDateString, parseDashboardDateValue } from '../shared/dashboardUtils';
+import { resolveDashboardOriginLabel } from './dashboardOrigin';
 
 const terminalStatusPattern = /^(fechado|perdido|convertido)$/i;
 const wonStatusPattern = /^(fechado|convertido)$/i;
@@ -184,18 +185,18 @@ export const buildDashboardOperationsAnalysis = ({
 
   const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
   const contractsCurrent = contracts.filter((contract) => isInside(contractDate(contract), currentRange));
-  const sources = new Map<string, { leads: number; contracts: number }>();
+  const sources = new Map<string, { origin: string; leads: number; contracts: number }>();
   leads.filter((lead) => isInside(leadDate(lead), currentRange)).forEach((lead) => {
-    const origin = lead.origem || 'Não informado';
-    const current = sources.get(origin) ?? { leads: 0, contracts: 0 };
+    const resolvedOrigin = resolveDashboardOriginLabel(lead.origem);
+    const current = sources.get(resolvedOrigin.key) ?? { origin: resolvedOrigin.label, leads: 0, contracts: 0 };
     current.leads += 1;
-    sources.set(origin, current);
+    sources.set(resolvedOrigin.key, current);
   });
   contractsCurrent.forEach((contract) => {
-    const origin = contract.lead_id ? leadsById.get(contract.lead_id)?.origem || 'Não informado' : 'Não informado';
-    const current = sources.get(origin) ?? { leads: 0, contracts: 0 };
+    const resolvedOrigin = resolveDashboardOriginLabel(contract.lead_id ? leadsById.get(contract.lead_id)?.origem : null);
+    const current = sources.get(resolvedOrigin.key) ?? { origin: resolvedOrigin.label, leads: 0, contracts: 0 };
     current.contracts += 1;
-    sources.set(origin, current);
+    sources.set(resolvedOrigin.key, current);
   });
   const cycleDays = contractsCurrent.flatMap((contract) => {
     const lead = contract.lead_id ? leadsById.get(contract.lead_id) : undefined;
@@ -224,7 +225,7 @@ export const buildDashboardOperationsAnalysis = ({
     bottleneck,
     attention,
     sourcePerformance: [...sources.entries()]
-      .map(([origin, metrics]) => ({ origin, ...metrics, conversion: percentage(metrics.contracts, metrics.leads) }))
+      .map(([, metrics]) => ({ origin: metrics.origin, leads: metrics.leads, contracts: metrics.contracts, conversion: percentage(metrics.contracts, metrics.leads) }))
       .sort((left, right) => right.leads - left.leads || right.contracts - left.contracts),
     dataCoverage: { statusHistory: statusHistory.length > 0, interactions: interactions.length > 0, reminders: reminders.length > 0 },
   };

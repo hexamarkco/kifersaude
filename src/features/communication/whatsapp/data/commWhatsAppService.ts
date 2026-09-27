@@ -94,6 +94,9 @@ const lookupSavedContactsFromCache = async (phoneNumbers: string[]) => {
     .select(SAVED_CONTACT_CACHE_SELECT)
     .eq('saved', true)
     .in('phone_digits', phoneKeys)
+    .order('manual_override', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .order('id', { ascending: true })
     .limit(500)
     .overrideTypes<CommWhatsAppPhoneContact[]>();
 

@@ -58,7 +58,7 @@ export async function listContractLeadIds(leadIds: string[]): Promise<Set<string
     return new Set();
   }
 
-  const results = await Promise.all(
+  const results = await Promise.allSettled(
     chunk([...new Set(leadIds)]).map(async (leadIdChunk) => {
       const { data, error } = await databaseClient
         .from('contracts')
@@ -71,9 +71,20 @@ export async function listContractLeadIds(leadIds: string[]): Promise<Set<string
     }),
   );
 
+  const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+  const successfulResults = results.filter((result): result is PromiseFulfilledResult<{ lead_id: string | null }[]> => result.status === 'fulfilled');
+  if (successfulResults.length === 0) {
+    throw failedResults[0]?.reason ?? new Error('Não foi possível verificar os contratos dos leads.');
+  }
+  if (failedResults.length > 0) {
+    console.warn('[Leads] parte dos contratos relacionados não pôde ser carregada', {
+      failedBatches: failedResults.length,
+    });
+  }
+
   return new Set(
-    results
-      .flat()
+    successfulResults
+      .flatMap((result) => result.value)
       .map((contract) => contract.lead_id)
       .filter((leadId): leadId is string => Boolean(leadId)),
   );
@@ -87,7 +98,7 @@ export async function listNextReminderByLeadId(
     return new Map();
   }
 
-  const results = await Promise.all(
+  const results = await Promise.allSettled(
     chunk(leadIds).map(async (leadIdChunk) => {
       const { data, error } = await databaseClient
         .from('reminders')
@@ -103,8 +114,19 @@ export async function listNextReminderByLeadId(
     }),
   );
 
+  const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+  const successfulResults = results.filter((result): result is PromiseFulfilledResult<{ lead_id: string | null; data_lembrete: string }[]> => result.status === 'fulfilled');
+  if (successfulResults.length === 0) {
+    throw failedResults[0]?.reason ?? new Error('Não foi possível carregar os próximos retornos.');
+  }
+  if (failedResults.length > 0) {
+    console.warn('[Leads] parte dos próximos retornos não pôde ser carregada', {
+      failedBatches: failedResults.length,
+    });
+  }
+
   const nextReminderByLeadId = new Map<string, string>();
-  for (const reminder of results.flat()) {
+  for (const reminder of successfulResults.flatMap((result) => result.value)) {
     if (
       reminder.lead_id
       && reminder.data_lembrete

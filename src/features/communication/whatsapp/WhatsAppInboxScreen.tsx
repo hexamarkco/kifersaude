@@ -2943,7 +2943,7 @@ export default function WhatsAppInboxScreen() {
     const timestamp = new Date().toISOString();
     return {
       id: leadPanel?.id ?? selectedChat.lead_id ?? selectedChat.id,
-      nome_completo: getSafeChatDisplayName(selectedChat, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo),
+      nome_completo: getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo),
       telefone: leadPanel?.telefone || selectedChat.phone_number || '',
       email: '',
       cidade: '',
@@ -2955,7 +2955,7 @@ export default function WhatsAppInboxScreen() {
       created_at: timestamp,
       updated_at: timestamp,
     };
-  }, [leadPanel, operationalState?.channel?.connected_user_name, selectedChat]);
+  }, [leadPanel, operationalState?.channel?.connected_user_name, selectedChat, selectedChatForPresentation]);
   const resolveComposerVariables = useCallback((value: string) => {
     return quickReplyLead ? applyTemplateVariables(value, quickReplyLead) : value;
   }, [quickReplyLead]);
@@ -9221,7 +9221,7 @@ export default function WhatsAppInboxScreen() {
 
       const result = await scheduleInboxFollowUp({
         leadId,
-        title: followUpNextAction.title || `Follow-up: ${getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null)}`,
+        title: followUpNextAction.title || `Follow-up: ${selectedChatDisplayName}`,
         description: description || null,
         dueAt: followUpNextAction.suggestedDateTime,
         priority: followUpNextAction.priority,
@@ -9247,7 +9247,7 @@ export default function WhatsAppInboxScreen() {
         setSchedulingFollowUpNextAction(false);
       }
     }
-  }, [canEditAgenda, channelState?.connected_user_name, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat]);
+  }, [canEditAgenda, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat, selectedChatDisplayName]);
 
   const handleBatchSendFollowUp = useCallback(async (results: Array<{
     chatId: string;

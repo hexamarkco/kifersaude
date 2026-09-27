@@ -3101,9 +3101,8 @@ export default function WhatsAppInboxScreen() {
       }
 
       const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
-      const knownSavedContactName = resolveSavedContactName(
+      const knownSavedContactName = getSavedContactNameForPhone(
         nextChat.phone_digits || nextChat.phone_number,
-        nextChat.saved_contact_name,
         savedContactNameOverrideByPhoneRef.current,
         savedContactNameByPhoneRef.current,
       );
@@ -5375,9 +5374,11 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(mergedData.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
-              const canonicalSavedContactName = resolveSavedContactName(
+              // O nome salvo do próprio chat pode ser uma cópia antiga do
+              // provedor. Só o cache de contatos confirma uma troca durante
+              // o merge; sem essa confirmação, o nome já estabilizado vence.
+              const canonicalSavedContactName = getSavedContactNameForPhone(
                 chat.phone_digits || chat.phone_number,
-                chat.saved_contact_name,
                 savedContactNameOverrideByPhoneRef.current,
                 savedContactNameByPhoneRef.current,
               );
@@ -5560,9 +5561,8 @@ export default function WhatsAppInboxScreen() {
           applyFrontendSavedContactNames(
             applyPrefetchedLeadNames(page.map((chat) => {
               const previousChat = previousChatsById.get(chat.id) ?? null;
-              const canonicalSavedContactName = resolveSavedContactName(
+              const canonicalSavedContactName = getSavedContactNameForPhone(
                 chat.phone_digits || chat.phone_number,
-                chat.saved_contact_name,
                 savedContactNameOverrideByPhoneRef.current,
                 savedContactNameByPhoneRef.current,
               );

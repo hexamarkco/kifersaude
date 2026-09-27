@@ -17,6 +17,7 @@ import {
   sanitizeWhapiToken,
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
+import { resolveScheduledDestinationDisplayName } from './domain/destination.ts';
 
 declare const Deno: {
   env: {
@@ -214,7 +215,7 @@ async function resolveScheduledDestination(
   if (msg.chat_id) {
     const { data: chat, error } = await admin
       .from('comm_whatsapp_chats')
-      .select('external_chat_id,phone_digits,display_name,is_group')
+      .select('external_chat_id,phone_digits,display_name,saved_contact_name,is_group')
       .eq('id', msg.chat_id)
       .maybeSingle();
     if (error) throw new Error(`Nao foi possivel resolver o destino agendado: ${error.message}`);
@@ -224,7 +225,14 @@ async function resolveScheduledDestination(
       return {
         chatId: externalChatId,
         phoneDigits: isGroup ? '' : (chat?.phone_digits || msg.phone_digits),
-        displayName: chat?.display_name || (isGroup ? 'Grupo' : msg.display_name || msg.phone_digits),
+        displayName: resolveScheduledDestinationDisplayName({
+          chat: chat
+            ? { displayName: chat.display_name, savedContactName: chat.saved_contact_name }
+            : null,
+          scheduledDisplayName: msg.display_name,
+          phoneDigits: isGroup ? '' : (chat?.phone_digits || msg.phone_digits),
+          isGroup,
+        }),
         isGroup,
       };
     }
@@ -234,7 +242,12 @@ async function resolveScheduledDestination(
   return {
     chatId,
     phoneDigits: msg.phone_digits,
-    displayName: msg.display_name ?? msg.phone_digits,
+    displayName: resolveScheduledDestinationDisplayName({
+      chat: null,
+      scheduledDisplayName: msg.display_name,
+      phoneDigits: msg.phone_digits,
+      isGroup: isWhapiGroupChatId(chatId),
+    }),
     isGroup: isWhapiGroupChatId(chatId),
   };
 }

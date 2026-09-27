@@ -855,6 +855,13 @@ export default function DashboardScreen({
   }, [leads, selectedLead]);
 
   useEffect(() => {
+    // Aguarda as configurações e a primeira carga dos dados antes de validar
+    // filtros vindos da URL. Caso contrário, as listas ainda vazias fariam um
+    // link compartilhado perder seus filtros de operadora, responsável ou status.
+    if (configLoading || isInitialLoad) {
+      return;
+    }
+
     const storedPeriod = resolvePeriodFilter();
     const storedStart = resolveCustomDate("customStartDate");
     const storedEnd = resolveCustomDate("customEndDate");
@@ -940,7 +947,9 @@ export default function DashboardScreen({
       current === resolvedStatus ? current : resolvedStatus,
     );
   }, [
+    configLoading,
     isObserver,
+    isInitialLoad,
     isOriginVisibleToObserver,
     contractsVisibleToUser,
     leadOrigins,

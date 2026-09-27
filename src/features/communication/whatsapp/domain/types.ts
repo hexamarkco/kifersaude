@@ -151,6 +151,8 @@ export type CommWhatsAppPhoneContact = {
   short_name?: string | null;
   push_name?: string | null;
   saved: boolean;
+  manual_override?: boolean | null;
+  manual_override_name?: string | null;
   last_synced_at: string;
   created_at: string;
   updated_at: string;

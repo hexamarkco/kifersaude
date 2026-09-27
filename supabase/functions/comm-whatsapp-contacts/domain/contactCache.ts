@@ -10,6 +10,11 @@ export const isManualContactId = (contactId: string | null | undefined) => (
   toTrimmedString(contactId).startsWith(MANUAL_CONTACT_ID_PREFIX)
 );
 
+export const isManualContactRow = (contact: {
+  contact_id?: string | null;
+  manual_override?: boolean | null;
+}) => contact.manual_override === true || isManualContactId(contact.contact_id);
+
 export type ManualContactCacheRow = {
   channel_id: string;
   contact_id: string;
@@ -18,6 +23,8 @@ export type ManualContactCacheRow = {
   display_name: string;
   short_name: string | null;
   saved: true;
+  manual_override: true;
+  manual_override_name: string;
   last_synced_at: string;
   updated_at: string;
 };
@@ -47,6 +54,8 @@ export const buildManualContactCacheRow = (params: {
     display_name: displayName,
     short_name: displayName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
     saved: true,
+    manual_override: true,
+    manual_override_name: displayName,
     last_synced_at: params.nowIso,
     updated_at: params.nowIso,
   };

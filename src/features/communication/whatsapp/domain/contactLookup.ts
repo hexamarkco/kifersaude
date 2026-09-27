@@ -51,7 +51,7 @@ export const collectPhoneLookupKeys = (value?: string | null) => {
 };
 
 const isManualSavedContact = (contact: CommWhatsAppPhoneContact) => (
-  contact.contact_id?.startsWith('manual:') ?? false
+  contact.manual_override === true || contact.contact_id?.startsWith('manual:') === true
 );
 
 const getContactTimestamp = (value?: string | null) => {
@@ -118,7 +118,7 @@ export const addSavedContactsToNameMap = (
   for (const contact of selectPreferredSavedContacts(contacts)) {
     const name = contact.display_name.trim();
 
-    const destination = contact.contact_id?.startsWith('manual:')
+    const destination = isManualSavedContact(contact)
       ? manualTarget ?? target
       : target;
 

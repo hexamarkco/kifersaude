@@ -4,6 +4,7 @@ import { test } from 'vitest';
 import {
   buildManualContactCacheRow,
   isManualContactId,
+  isManualContactRow,
   MANUAL_CONTACT_ID_PREFIX,
 } from './contactCache';
 
@@ -20,6 +21,8 @@ test('cria uma identidade manual estável para o telefone normalizado', () => {
   assert.equal(row.display_name, 'Mariangela');
   assert.equal(row.short_name, 'Mariangela');
   assert.equal(row.saved, true);
+  assert.equal(row.manual_override, true);
+  assert.equal(row.manual_override_name, 'Mariangela');
   assert.equal(isManualContactId(row.contact_id), true);
 });
 
@@ -27,6 +30,17 @@ test('não classifica a identidade do provedor como sobrescrita manual', () => {
   assert.equal(isManualContactId('5521982965495'), false);
   assert.equal(isManualContactId('chat:5521982965495'), false);
   assert.equal(isManualContactId(' manual:5521982965495 '), true);
+});
+
+test('reconhece contato antigo protegido mesmo com identificador do provedor', () => {
+  assert.equal(isManualContactRow({
+    contact_id: '5521982965495',
+    manual_override: true,
+  }), true);
+  assert.equal(isManualContactRow({
+    contact_id: '5521982965495',
+    manual_override: false,
+  }), false);
 });
 
 test('rejeita telefone ou nome inválido antes de gravar o cache', () => {

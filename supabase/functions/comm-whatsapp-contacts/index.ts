@@ -3,6 +3,7 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   buildManualContactCacheRow,
   MANUAL_CONTACT_ID_PREFIX,
+  isManualContactRow,
 } from './domain/contactCache.ts';
 import {
   addWhapiContact,
@@ -61,6 +62,8 @@ type SavedContactRow = {
   short_name: string | null;
   push_name: string | null;
   saved: boolean;
+  manual_override?: boolean | null;
+  manual_override_name?: string | null;
   last_synced_at: string;
   created_at: string;
   updated_at: string;
@@ -90,6 +93,7 @@ async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<t
     .from('comm_whatsapp_phone_contacts_cache')
     .select('last_synced_at')
     .eq('channel_id', channelId)
+    .eq('manual_override', false)
     .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
     .not('contact_id', 'like', 'chat:%')
     .order('last_synced_at', { ascending: false })
@@ -147,6 +151,7 @@ async function syncContactsToCache(params: {
     .select('id', { count: 'exact', head: true })
     .eq('channel_id', params.channelId)
     .eq('saved', true)
+    .eq('manual_override', false)
     .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
     .not('contact_id', 'like', 'chat:%');
 
@@ -159,17 +164,19 @@ async function syncContactsToCache(params: {
 
   const { data: manualOverrides, error: manualOverridesError } = await params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
-    .select('phone_digits')
+    .select('phone_digits, contact_id, manual_override')
     .eq('channel_id', params.channelId)
     .eq('saved', true)
-    .like('contact_id', `${MANUAL_CONTACT_ID_PREFIX}%`);
+    .or(`manual_override.eq.true,contact_id.like.${MANUAL_CONTACT_ID_PREFIX}%`);
 
   if (manualOverridesError) {
     throw new Error(`Erro ao localizar sobrescritas manuais dos contatos do WhatsApp: ${manualOverridesError.message}`);
   }
 
   const manualOverridePhoneKeys = new Set(
-    (manualOverrides ?? []).flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || '')),
+    (manualOverrides ?? [])
+      .filter((contact) => isManualContactRow(contact))
+      .flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || '')),
   );
   const affectedPhoneDigits = new Set(manualOverridePhoneKeys);
 
@@ -235,6 +242,7 @@ async function syncContactsToCache(params: {
       .from('comm_whatsapp_phone_contacts_cache')
       .select('contact_id, phone_digits')
       .eq('channel_id', params.channelId)
+      .eq('manual_override', false)
       .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
       .not('contact_id', 'like', 'chat:%');
 
@@ -329,6 +337,7 @@ async function findCachedContactByPhone(params: {
     .eq('channel_id', params.channelId)
     .eq('saved', true)
     .in('phone_digits', phoneLookupKeys)
+    .order('manual_override', { ascending: false })
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -363,6 +372,7 @@ async function lookupCachedContactsByPhones(params: {
     .eq('channel_id', params.channelId)
     .eq('saved', true)
     .in('phone_digits', phoneLookupKeys)
+    .order('manual_override', { ascending: false })
     .order('updated_at', { ascending: false })
     .limit(500);
 

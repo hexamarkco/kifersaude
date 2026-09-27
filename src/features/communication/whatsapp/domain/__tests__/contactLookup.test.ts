@@ -142,6 +142,42 @@ test('sempre prioriza o contato salvo manualmente sobre o nome sincronizado', ()
   assert.equal(getSavedContactNameForPhone('5521982965495', manualNames, map), 'Mariangela');
 });
 
+test('prioriza contato antigo marcado manualmente mesmo com contact_id do provedor', () => {
+  const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
+    id: 'contact-1',
+    channel_id: 'channel-1',
+    contact_id: 'external-1',
+    phone_number: '5521982965495',
+    phone_digits: '5521982965495',
+    display_name: 'Mariangela - Cliente',
+    saved: true,
+    last_synced_at: '2026-09-08T13:00:00.000Z',
+    created_at: '2026-09-08T13:00:00.000Z',
+    updated_at: '2026-09-08T13:00:00.000Z',
+    ...overrides,
+  });
+  const synchronizedNames = new Map<string, string>();
+  const manualNames = new Map<string, string>();
+
+  addSavedContactsToNameMap(synchronizedNames, [
+    createContact({
+      id: 'manual-override',
+      display_name: 'Mariangela',
+      manual_override: true,
+      manual_override_name: 'Mariangela',
+      updated_at: '2026-09-08T09:00:00.000Z',
+    }),
+    createContact({
+      id: 'provider-newer',
+      display_name: 'Mariangela - Cliente',
+      updated_at: '2026-09-08T13:00:00.000Z',
+    }),
+  ], manualNames);
+
+  assert.equal(manualNames.get('5521982965495'), 'Mariangela');
+  assert.equal(getSavedContactNameForPhone('5521982965495', manualNames, synchronizedNames), 'Mariangela');
+});
+
 test('prioritizes a locally saved name over a stale synchronized name', () => {
   const localOverrides = new Map([['5511999999999', 'Fabiola']]);
   const synchronizedNames = new Map([['5511999999999', 'Leve Saúde Operadora - Apoio Corretor']]);

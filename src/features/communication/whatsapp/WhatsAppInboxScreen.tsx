@@ -2886,13 +2886,19 @@ export default function WhatsAppInboxScreen() {
   );
   const forwardTargetChats = useMemo(() => {
     const normalizedSearch = normalizeInboxSearch(forwardSearch);
-    const candidates = chats.filter((chat) => chat.external_chat_id?.trim());
+    const candidates = chats
+      .filter((chat) => chat.external_chat_id?.trim())
+      .map((chat) => applySavedContactNameFromLookup(
+        chat,
+        savedContactLookupMaps.localOverrides,
+        savedContactLookupMaps.synchronizedNames,
+      ));
     const filtered = normalizedSearch
       ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
       : candidates;
 
     return sortChatsByInboxOrder(filtered).slice(0, 30);
-  }, [chats, forwardSearch]);
+  }, [chats, forwardSearch, savedContactLookupMaps]);
   const selectedChatTranscriptLabel = useMemo(
     () => {
       if (!selectedChat) {

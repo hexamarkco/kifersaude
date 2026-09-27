@@ -20,6 +20,7 @@ import {
 } from '../data';
 import { toast } from '../../../../lib/toast';
 import { KeyedActionLock } from './keyedActionLock';
+import { formatDashboardRecentChatMeta } from '../domain/dashboardPresentation';
 
 type WhatsAppDashboardModalProps = {
   isOpen: boolean;
@@ -550,7 +551,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
-                          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatCommWhatsAppPhoneLabel(chat.phoneNumber)} · {formatDateTime(chat.lastMessageAt)}</p>
+                          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatDashboardRecentChatMeta(formatCommWhatsAppPhoneLabel(chat.phoneNumber), formatDateTime(chat.lastMessageAt))}</p>
                         </div>
                       </div>
                       {chat.unreadCount > 0 || chat.manualUnread ? (

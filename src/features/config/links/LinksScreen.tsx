@@ -138,14 +138,20 @@ export default function LinksScreen() {
     if (!file) return;
 
     setUploadingAvatar(true);
-    const result = await uploadLinkPageImage(file);
+    try {
+      const result = await uploadLinkPageImage(file);
 
-    if (!result.success || !result.url) {
-      toast.error(result.error ?? "Não foi possível fazer upload da imagem.");
-    } else {
-      setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
+      if (!result.success || !result.url) {
+        toast.error(result.error ?? "Não foi possível fazer upload da imagem.");
+      } else {
+        setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
+      }
+    } catch (error) {
+      console.error("Erro ao enviar a imagem da página de links:", error);
+      toast.error(error instanceof Error ? error.message : "Não foi possível fazer upload da imagem.");
+    } finally {
+      setUploadingAvatar(false);
     }
-    setUploadingAvatar(false);
   };
 
   const handleSaveProfile = async () => {
@@ -155,25 +161,31 @@ export default function LinksScreen() {
     }
 
     setSavingProfile(true);
-    const { data, error } = await linksService.saveLinkPageSettings(
-      {
-        title: profileForm.title.trim(),
-        subtitle: profileForm.subtitle.trim() || null,
-        bio: profileForm.bio.trim() || null,
-        avatar_url: profileForm.avatar_url.trim() || null,
-        is_verified: profileForm.is_verified,
-        is_published: profileForm.is_published,
-      },
-      pageSettings?.id,
-    );
+    try {
+      const { data, error } = await linksService.saveLinkPageSettings(
+        {
+          title: profileForm.title.trim(),
+          subtitle: profileForm.subtitle.trim() || null,
+          bio: profileForm.bio.trim() || null,
+          avatar_url: profileForm.avatar_url.trim() || null,
+          is_verified: profileForm.is_verified,
+          is_published: profileForm.is_published,
+        },
+        pageSettings?.id,
+      );
 
-    if (error) {
-      toast.error("Não foi possível salvar as configurações da página.");
-    } else {
-      setPageSettings(data ?? pageSettings);
-      toast.success("Página de links atualizada com sucesso.");
+      if (error) {
+        toast.error("Não foi possível salvar as configurações da página.");
+      } else {
+        setPageSettings(data ?? pageSettings);
+        toast.success("Página de links atualizada com sucesso.");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar a página de links:", error);
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar as configurações da página.");
+    } finally {
+      setSavingProfile(false);
     }
-    setSavingProfile(false);
   };
 
   const handleCreateLink = async () => {
@@ -183,23 +195,29 @@ export default function LinksScreen() {
     }
 
     setCreating(true);
-    const { error } = await linksService.createLinkItem({
-      title: createForm.title.trim(),
-      url: createForm.url.trim(),
-      icon: createForm.icon,
-      is_active: true,
-      position: links.length,
-    });
+    try {
+      const { error } = await linksService.createLinkItem({
+        title: createForm.title.trim(),
+        url: createForm.url.trim(),
+        icon: createForm.icon,
+        is_active: true,
+        position: links.length,
+      });
 
-    if (error) {
-      toast.error("Não foi possível adicionar o link.");
-    } else {
-      setIsCreateModalOpen(false);
-      setCreateForm(EMPTY_LINK_FORM);
-      await loadData();
-      toast.success("Link adicionado com sucesso.");
+      if (error) {
+        toast.error("Não foi possível adicionar o link.");
+      } else {
+        setIsCreateModalOpen(false);
+        setCreateForm(EMPTY_LINK_FORM);
+        await loadData();
+        toast.success("Link adicionado com sucesso.");
+      }
+    } catch (error) {
+      console.error("Erro ao adicionar link:", error);
+      toast.error(error instanceof Error ? error.message : "Não foi possível adicionar o link.");
+    } finally {
+      setCreating(false);
     }
-    setCreating(false);
   };
 
   const startEditing = (link: PublicLinkItem) => {

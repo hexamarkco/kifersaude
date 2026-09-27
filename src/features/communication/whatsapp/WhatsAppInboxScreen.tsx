@@ -24,6 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   IconButton,
+  LoadingState,
   OperationalStatusBadge,
 } from '../../../design-system';
 import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
@@ -222,6 +223,28 @@ const WhatsAppQuickRepliesModal = lazy(() => import('./components/WhatsAppQuickR
 const WhatsAppStartChatModal = lazy(() => import('./components/WhatsAppStartChatModal'));
 const WhatsAppScheduleMessageModal = lazy(() => import('./components/WhatsAppScheduleMessageModal'));
 const WhatsAppScheduledMessagesPanel = lazy(() => import('./components/WhatsAppScheduledMessagesPanel'));
+
+function InboxLazyLoadingFallback() {
+  return (
+    <div
+      className="kds-dialog-overlay modal-theme-host painel-theme kifer-ds"
+      role="status"
+      aria-live="polite"
+      aria-label="Abrindo janela"
+    >
+      <div className="kds-dialog-backdrop" aria-hidden="true" />
+      <div className="kds-dialog-container pointer-events-none">
+        <div className="kds-dialog max-w-sm p-6" aria-hidden="true">
+          <LoadingState
+            compact
+            label="Abrindo janela"
+            description="Só um instante."
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_IDLE_INTERVAL_MS = 30000;
@@ -11683,7 +11706,7 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        <Suspense fallback={null}>
+        <Suspense fallback={<InboxLazyLoadingFallback />}>
           {quickRepliesModalOpen ? (
             <WhatsAppQuickRepliesModal
               isOpen

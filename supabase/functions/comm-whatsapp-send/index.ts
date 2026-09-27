@@ -405,7 +405,6 @@ async function sendAudioLikeWhapi(params: {
   assertSendAllowed: () => Promise<void>;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const cleanMimeType = stripMimeParameters(params.file.type || 'audio/webm');
-  const bytes = new Uint8Array(await params.file.arrayBuffer());
   const normalizedFileName =
     params.kind === 'voice'
       ? deriveVoiceFileName(cleanMimeType, params.file.name || 'voice-note')
@@ -414,7 +413,11 @@ async function sendAudioLikeWhapi(params: {
   const AUDIO_KIND_TIMEOUT_MS = 30_000;
   const AUDIO_UPLOAD_TIMEOUT_MS = 60_000;
 
-  const freshFile = new File([bytes], normalizedFileName, { type: cleanMimeType });
+  // Reutiliza o Blob recebido para que o primeiro envio multipart não precise
+  // carregar e copiar o arquivo inteiro para a memória. A leitura completa
+  // fica restrita ao fallback JSON, usado somente quando as opções binárias
+  // anteriores não são aceitas pela Whapi.
+  const freshFile = new File([params.file], normalizedFileName, { type: cleanMimeType });
 
   const buildWhapiFormData = (form: FormData) => {
     form.append('to', params.chatId);
@@ -473,6 +476,7 @@ async function sendAudioLikeWhapi(params: {
   }
 
   // 3rd attempt: JSON with data-URL (last resort)
+  const bytes = new Uint8Array(await freshFile.arrayBuffer());
   const jsonPayload: Record<string, unknown> = {
     to: params.chatId,
     media: fileBytesToDataUrl(bytes, cleanMimeType, normalizedFileName),

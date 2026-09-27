@@ -59,13 +59,17 @@ function shouldReloadForChunkError(): boolean {
   }
 }
 
-function clearReloadState(): void {
+function clearReloadQuery(): void {
   if (typeof window === 'undefined') return;
 
   try {
-    window.sessionStorage.removeItem(CHUNK_RELOAD_STATE_KEY);
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('kifer_chunk_reload')) return;
+
+    url.searchParams.delete('kifer_chunk_reload');
+    window.history.replaceState(window.history.state, document.title, url.toString());
   } catch {
-    // Storage can be unavailable in privacy-restricted browser contexts.
+    // The reload marker is cosmetic; a browser may restrict history updates.
   }
 }
 
@@ -75,7 +79,7 @@ export function lazyWithChunkRecovery<Props>(
   return lazy(async () => {
     try {
       const module = await loader();
-      clearReloadState();
+      clearReloadQuery();
       return module;
     } catch (error) {
       if (isDynamicImportError(error) && shouldReloadForChunkError()) {

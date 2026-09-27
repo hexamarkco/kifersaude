@@ -1,6 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
+  buildManualContactCacheRow,
+  MANUAL_CONTACT_ID_PREFIX,
+} from './domain/contactCache.ts';
+import {
   addWhapiContact,
   checkWhapiContactIdentity,
   COMM_WHATSAPP_MODULE,
@@ -86,7 +90,7 @@ async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<t
     .from('comm_whatsapp_phone_contacts_cache')
     .select('last_synced_at')
     .eq('channel_id', channelId)
-    .not('contact_id', 'like', 'manual:%')
+    .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
     .not('contact_id', 'like', 'chat:%')
     .order('last_synced_at', { ascending: false })
     .limit(1)
@@ -143,7 +147,7 @@ async function syncContactsToCache(params: {
     .select('id', { count: 'exact', head: true })
     .eq('channel_id', params.channelId)
     .eq('saved', true)
-    .not('contact_id', 'like', 'manual:%')
+    .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
     .not('contact_id', 'like', 'chat:%');
 
   if (previousCountError) {
@@ -158,7 +162,7 @@ async function syncContactsToCache(params: {
     .select('phone_digits')
     .eq('channel_id', params.channelId)
     .eq('saved', true)
-    .like('contact_id', 'manual:%');
+    .like('contact_id', `${MANUAL_CONTACT_ID_PREFIX}%`);
 
   if (manualOverridesError) {
     throw new Error(`Erro ao localizar sobrescritas manuais dos contatos do WhatsApp: ${manualOverridesError.message}`);
@@ -231,7 +235,7 @@ async function syncContactsToCache(params: {
       .from('comm_whatsapp_phone_contacts_cache')
       .select('contact_id, phone_digits')
       .eq('channel_id', params.channelId)
-      .not('contact_id', 'like', 'manual:%')
+      .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
       .not('contact_id', 'like', 'chat:%');
 
     if (listError) {
@@ -375,29 +379,13 @@ async function saveContactToCache(params: {
   phoneNumber: string;
   displayName: string;
 }) {
-  const normalizedPhone = normalizeCommWhatsAppPhone(params.phoneNumber);
-  const displayName = toTrimmedString(params.displayName);
-
-  if (!normalizedPhone) {
-    throw new Error('Numero invalido para salvar o contato.');
-  }
-
-  if (!isValidCommWhatsAppDisplayName(displayName)) {
-    throw new Error('Nome invalido para salvar o contato.');
-  }
-
   const nowIso = getNowIso();
-  const row = {
-    channel_id: params.channelId,
-    contact_id: `manual:${normalizedPhone}`,
-    phone_number: normalizedPhone,
-    phone_digits: normalizedPhone,
-    display_name: displayName,
-    short_name: displayName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
-    saved: true,
-    last_synced_at: nowIso,
-    updated_at: nowIso,
-  };
+  const row = buildManualContactCacheRow({
+    channelId: params.channelId,
+    phoneNumber: params.phoneNumber,
+    displayName: params.displayName,
+    nowIso,
+  });
 
   const { error } = await params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
@@ -407,14 +395,14 @@ async function saveContactToCache(params: {
     throw new Error(`Erro ao salvar contato no cache do WhatsApp: ${error.message}`);
   }
 
-  const phoneLookupKeys = getCommWhatsAppPhoneLookupKeys(normalizedPhone);
+  const phoneLookupKeys = getCommWhatsAppPhoneLookupKeys(row.phone_digits);
   const { error: externalDuplicateError } = await params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
     .delete()
     .eq('channel_id', params.channelId)
     .eq('saved', true)
     .in('phone_digits', phoneLookupKeys)
-    .not('contact_id', 'like', 'manual:%');
+    .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`);
 
   if (externalDuplicateError) {
     throw new Error(`Erro ao consolidar o contato salvo do WhatsApp: ${externalDuplicateError.message}`);

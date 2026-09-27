@@ -98,7 +98,6 @@ import { LeadsHeader } from "./components/LeadsHeader";
 import {
   getLeadFirstName,
   getWhatsappLink,
-  getStableLeadIdsSignature,
   isWithinDateRange,
 } from "./shared/leadsManagerUtils";
 import type {
@@ -185,6 +184,7 @@ export default function LeadsManager({
   const hasAnimatedSectionsRef = useRef(false);
   const leadsRequestIdRef = useRef(0);
   const contractsRequestIdRef = useRef(0);
+  const remindersRequestIdRef = useRef(0);
   const leadStatusMutationLockRef = useRef(new LeadStatusMutationLock());
   const bulkMutationInFlightRef = useRef(false);
   const deletingLeadIdsRef = useRef(new Set<string>());
@@ -385,11 +385,6 @@ export default function LeadsManager({
     [],
   );
 
-  const leadIdsForContractLookupSignature = useMemo(
-    () => getStableLeadIdsSignature(leads.map((lead) => lead.id)),
-    [leads],
-  );
-
   const loadLeads = useCallback(async () => {
     const requestId = leadsRequestIdRef.current + 1;
     leadsRequestIdRef.current = requestId;
@@ -423,13 +418,6 @@ export default function LeadsManager({
       // Essa consulta continua protegida pelo requestId e atualiza os cartões
       // quando terminar.
       setLoading(false);
-      const leadIds = visibleLeads.map((lead) => lead.id).filter(Boolean);
-      const nextReminders = await listNextReminderByLeadId(leadIds);
-      if (requestId !== leadsRequestIdRef.current) {
-        return;
-      }
-
-      setNextReminderByLeadId(nextReminders);
     } catch (error) {
       if (requestId === leadsRequestIdRef.current) {
         console.error("Erro ao carregar leads:", error);
@@ -452,15 +440,6 @@ export default function LeadsManager({
     tipoContratacaoOptions,
     responsavelOptions,
   ]);
-
-  useEffect(() => {
-    void fetchContractsForLeads(
-      leadIdsForContractLookupSignature ? leadIdsForContractLookupSignature.split("|") : [],
-    );
-    return () => {
-      contractsRequestIdRef.current += 1;
-    };
-  }, [fetchContractsForLeads, leadIdsForContractLookupSignature]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -750,9 +729,9 @@ export default function LeadsManager({
     Math.ceil(filteredLeads.length / itemsPerPage),
   );
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedLeads = filteredLeads.slice(
-    startIndex,
-    startIndex + itemsPerPage,
+  const paginatedLeads = useMemo(
+    () => filteredLeads.slice(startIndex, startIndex + itemsPerPage),
+    [filteredLeads, itemsPerPage, startIndex],
   );
   const selectedLeadIdsSet = useMemo(
     () => new Set(selectedLeadIds),
@@ -762,6 +741,57 @@ export default function LeadsManager({
     () => paginatedLeads.map((lead) => lead.id),
     [paginatedLeads],
   );
+
+  useEffect(() => {
+    const requestId = remindersRequestIdRef.current + 1;
+    remindersRequestIdRef.current = requestId;
+    const leadIds = paginatedLeadIds.filter(Boolean);
+
+    if (leadIds.length === 0) {
+      return () => {
+        if (remindersRequestIdRef.current === requestId) {
+          remindersRequestIdRef.current += 1;
+        }
+      };
+    }
+
+    void listNextReminderByLeadId(leadIds)
+      .then((nextReminders) => {
+        if (requestId !== remindersRequestIdRef.current) {
+          return;
+        }
+
+        setNextReminderByLeadId((current) => {
+          const next = new Map(current);
+          leadIds.forEach((leadId) => next.delete(leadId));
+          nextReminders.forEach((reminderDate, leadId) => next.set(leadId, reminderDate));
+          return next;
+        });
+      })
+      .catch((error) => {
+        if (requestId !== remindersRequestIdRef.current) {
+          return;
+        }
+
+        console.error("Erro ao carregar próximos retornos dos leads visíveis:", error);
+        setLeadsLoadError(
+          "Os leads foram carregados, mas não foi possível atualizar os próximos retornos.",
+        );
+      });
+
+    return () => {
+      if (remindersRequestIdRef.current === requestId) {
+        remindersRequestIdRef.current += 1;
+      }
+    };
+  }, [paginatedLeadIds]);
+
+  useEffect(() => {
+    void fetchContractsForLeads(paginatedLeadIds);
+    return () => {
+      contractsRequestIdRef.current += 1;
+    };
+  }, [fetchContractsForLeads, paginatedLeadIds]);
   const areAllPageLeadsSelected = useMemo(
     () =>
       paginatedLeadIds.length > 0 &&

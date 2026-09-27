@@ -632,6 +632,18 @@ export default function HomePage() {
     };
   }, [showQuoteModal]);
 
+  useEffect(() => {
+    if (window.location.hash !== '#cotacao') {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      document.getElementById('cotacao')?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
   const updateAgeRangeCount = (range: (typeof AGE_RANGES)[number], value: string) => {
     const numericValue = value.replace(/\D/g, '');
     setAgeRangeCounts((current) => ({ ...current, [range]: numericValue }));

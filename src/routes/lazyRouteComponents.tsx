@@ -7,6 +7,7 @@ import {
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
 export const LinksPage = lazy(() => import('../pages/public/LinksPage'));
 export const FormPage = lazy(() => import('../pages/public/FormPage'));
+export const OperatorLandingWrapper = lazy(() => import('../pages/routes/OperatorLandingWrapper'));
 export const AiSandboxChatWrapper = lazy(() => import('../pages/routes/AiSandboxChatWrapper'));
 export const DesignSystemShowcase = lazy(() => import('../pages/dev/DesignSystemShowcase'));
 export const PainelWrapper = lazy(() => import('../pages/PainelWrapper'));

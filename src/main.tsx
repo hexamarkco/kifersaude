@@ -19,6 +19,7 @@ import {
   LeadsManagerWrapper,
   LinksPage,
   LoginPage,
+  OperatorLandingWrapper,
   PainelWrapper,
   ProtectedRoute,
   RouteLoading,
@@ -44,6 +45,8 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/planos" element={<Navigate to="/" replace />} />
+            <Route path="/planos/:slug/:variant" element={<OperatorLandingWrapper />} />
+            <Route path="/planos/:slug" element={<OperatorLandingWrapper />} />
             <Route path="/lp" element={<Navigate to="/" replace />} />
             <Route path="/lp/*" element={<Navigate to="/" replace />} />
             <Route path="/cotacao" element={<Navigate to="/" replace />} />

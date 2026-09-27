@@ -19,6 +19,8 @@ type PublicSeoProps = {
   faqItems?: PublicFaqItem[];
   indexable?: boolean;
   imagePath?: string;
+  imageAlt?: string;
+  extraStructuredData?: Record<string, unknown>[];
 };
 
 export default function PublicSeo({
@@ -29,6 +31,8 @@ export default function PublicSeo({
   faqItems = [],
   indexable = true,
   imagePath = siteConfig.defaultOgImage,
+  imageAlt = `${siteConfig.personName}, ${siteConfig.description}`,
+  extraStructuredData = [],
 }: PublicSeoProps) {
   const canonicalUrl = absoluteUrl(canonicalPath);
   const socialImageUrl = absoluteUrl(imagePath);
@@ -151,15 +155,18 @@ export default function PublicSeo({
       <meta property="og:site_name" content={siteConfig.name} />
       <meta property="og:locale" content={siteConfig.locale} />
       <meta property="og:image" content={socialImageUrl} />
-      <meta property="og:image:alt" content={`${siteConfig.personName}, ${siteConfig.description}`} />
+      <meta property="og:image:alt" content={imageAlt} />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={socialImageUrl} />
-      <meta name="twitter:image:alt" content={`${siteConfig.personName}, ${siteConfig.description}`} />
+      <meta name="twitter:image:alt" content={imageAlt} />
       <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       {breadcrumbSchema && <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>}
       {faqSchema && <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>}
+      {extraStructuredData.map((schema, index) => (
+        <script key={`extra-structured-data-${index}`} type="application/ld+json">{JSON.stringify(schema)}</script>
+      ))}
     </Helmet>
   );
 }

@@ -883,3 +883,40 @@
   }
 }
 
+/* Public operator landing pages use the same Kifer palette and expose only a
+ * controlled accent layer for each operator record. The operator never owns
+ * the page surface, typography, spacing or interaction primitives. */
+.operator-landing-accent-terracotta {
+  --operator-accent: var(--brand-primary);
+  --operator-accent-soft: var(--brand-primary-soft);
+  --operator-accent-border: var(--brand-primary-border);
+  --operator-accent-ink: var(--brand-primary-hover);
+}
+
+.operator-landing-accent-gold {
+  --operator-accent: var(--accent-gold);
+  --operator-accent-soft: var(--accent-gold-soft);
+  --operator-accent-border: var(--accent-gold-border);
+  --operator-accent-ink: var(--accent-gold-active);
+}
+
+.operator-landing-accent-copper {
+  --operator-accent: var(--accent-copper);
+  --operator-accent-soft: color-mix(in srgb, var(--accent-copper) 14%, transparent);
+  --operator-accent-border: color-mix(in srgb, var(--accent-copper) 44%, transparent);
+  --operator-accent-ink: var(--accent-copper-hover);
+}
+
+.operator-landing-accent-success {
+  --operator-accent: var(--success);
+  --operator-accent-soft: var(--success-soft);
+  --operator-accent-border: var(--success-border);
+  --operator-accent-ink: var(--success-text);
+}
+
+.operator-landing-accent-info {
+  --operator-accent: var(--info);
+  --operator-accent-soft: var(--info-soft);
+  --operator-accent-border: var(--info-border);
+  --operator-accent-ink: var(--info-text);
+}

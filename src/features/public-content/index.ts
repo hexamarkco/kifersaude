@@ -4,3 +4,5 @@ export {
   submitPublicLead,
   type PublicLeadSubmission,
 } from './data/publicLeadApi';
+export { trackPublicConversion } from './domain/publicAnalytics';
+export type { PublicConversionEvent, PublicConversionParameters } from './domain/publicAnalytics';

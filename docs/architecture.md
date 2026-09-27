@@ -35,7 +35,7 @@ As features principais são:
 | `config` | configurações gerais, integrações, IA e automações |
 | `communication/whatsapp` | inbox, mensagens, mídia, contatos e follow-up |
 | `communication/whatsapp-campaigns` | criação e acompanhamento de campanhas |
-| `public-content` / `blog` | formulários, links e conteúdo público |
+| `public-content` / `operator-landings` / `blog` | formulários, links, landing pages comerciais orientadas a dados e conteúdo público |
 | `ai-sandbox` | simulação controlada das configurações de atendimento |
 
 Dentro de uma feature:
@@ -45,6 +45,8 @@ Dentro de uma feature:
 - `hooks`: estado e coordenação do React;
 - `components`: apresentação e interação;
 - `index.ts`: superfície pública mínima.
+
+`operator-landings` mantém o catálogo comercial em uma fonte central tipada e expõe um repository por caminho. Todas as operadoras usam o mesmo renderer; logo, destaque, copy, FAQs, regras de contratação e metadata são dados da página. O resolver já separa `slug` e `variantSlug`, deixando caminhos como `/planos/amil/pme` preparados sem indexar uma variação enquanto ela não tiver conteúdo próprio. Essa fronteira permite substituir o catálogo estático por uma leitura do backoffice no futuro sem mover regras para componentes ou duplicar rotas.
 
 O cliente Supabase fica exclusivamente em `src/infrastructure/supabase`. Repositories tipados usam `databaseClient`; serviços legados ainda não migrados para tipos persistidos podem importar `supabase` diretamente dessa infraestrutura. Tipos de tela e domínio vêm da feature proprietária. O tipo `Database` gerado descreve persistência; não é modelo de tela.
 

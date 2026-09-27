@@ -11,7 +11,7 @@ import type {
   CommWhatsAppScheduledSequence,
   CommWhatsAppScheduledSequenceStatus,
 } from '../domain/types';
-import { collectPhoneLookupKeys, getSavedContactNameForPhone } from '../domain/contactLookup';
+import { buildSavedContactNameMap, getSavedContactNameForPhone } from '../domain/contactLookup';
 import { getScheduledContactDisplayName } from '../domain/scheduledContactPresentation';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
@@ -311,7 +311,7 @@ export default function WhatsAppScheduledMessagesPanel({
   const scheduledPhoneLookupSignature = scheduledPhoneNumbers.join('|');
 
   useEffect(() => {
-    if (!isOpen || currentContactName?.trim() || scheduledPhoneNumbers.length === 0) {
+    if (!isOpen || scheduledPhoneNumbers.length === 0) {
       return;
     }
 
@@ -329,19 +329,7 @@ export default function WhatsAppScheduledMessagesPanel({
           return;
         }
 
-        const namesByPhone = new Map<string, string>();
-        contactsByBatch.flat().forEach((contact) => {
-          const displayName = contact.display_name?.trim();
-          if (!displayName) {
-            return;
-          }
-
-          collectPhoneLookupKeys(contact.phone_digits || contact.phone_number).forEach((key) => {
-            namesByPhone.set(key, displayName);
-          });
-        });
-
-        setSavedContactNamesByPhone(namesByPhone);
+        setSavedContactNamesByPhone(buildSavedContactNameMap(contactsByBatch.flat()));
       })
       .catch((error) => {
         if (!cancelled && requestId === contactLookupRequestIdRef.current) {
@@ -359,17 +347,15 @@ export default function WhatsAppScheduledMessagesPanel({
     phone_number?: string | null;
     phone_digits?: string | null;
   }) => {
-    if (currentContactName?.trim()) {
-      return currentContactName;
-    }
-
-    return getSavedContactNameForPhone(
+    const savedContactName = getSavedContactNameForPhone(
       scheduled.chat?.phone_digits
         || scheduled.chat?.phone_number
         || scheduled.phone_digits
         || scheduled.phone_number,
       savedContactNamesByPhone,
     );
+
+    return savedContactName || currentContactName?.trim() || null;
   }, [currentContactName, savedContactNamesByPhone]);
 
   const getContactDisplayName = useCallback((scheduled: Parameters<typeof getScheduledContactDisplayName>[0]) => (

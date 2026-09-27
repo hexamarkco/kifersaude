@@ -150,6 +150,18 @@ export const addSavedContactsToNameMap = (
   }
 };
 
+export const buildSavedContactNameMap = (contacts: CommWhatsAppPhoneContact[]) => {
+  const synchronizedNames = new Map<string, string>();
+  const manualNames = new Map<string, string>();
+
+  addSavedContactsToNameMap(synchronizedNames, contacts, manualNames);
+
+  // O mapa usado pela apresentação precisa manter uma única resposta por
+  // telefone, mas o nome manual deve vencer independentemente da ordem em
+  // que o provedor e o cache do banco retornaram seus registros.
+  return new Map([...synchronizedNames, ...manualNames]);
+};
+
 export const getSavedContactNameForPhone = (
   phone: string | null | undefined,
   primary: ReadonlyMap<string, string>,

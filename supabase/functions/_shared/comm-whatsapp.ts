@@ -24,6 +24,7 @@ import {
 } from './whapi-group-webhook-parser.ts';
 import {
   extractWhapiPresenceItems,
+  isWhapiPresenceSnapshotStale,
   isWhapiTransientPresenceStatus,
   normalizeWhapiPresenceItem,
   type WhapiPresenceItem,
@@ -48,6 +49,7 @@ export {
   normalizeWhapiParticipantId,
   normalizeWhapiPhoneChatId,
   extractWhapiPresenceItems,
+  isWhapiPresenceSnapshotStale,
   isWhapiTransientPresenceStatus,
   normalizeWhapiPresenceItem,
   type WhapiPresenceItem,

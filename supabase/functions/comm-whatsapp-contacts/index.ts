@@ -5,6 +5,7 @@ import {
   MANUAL_CONTACT_ID_PREFIX,
   isManualContactRow,
 } from './domain/contactCache.ts';
+import { isContactCacheStale } from './domain/contactSync.ts';
 import {
   addWhapiContact,
   checkWhapiContactIdentity,
@@ -82,22 +83,11 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
-const isCacheStale = (lastSyncedAt: string | null) => {
-  if (!lastSyncedAt) return true;
-  const ageMs = Date.now() - new Date(lastSyncedAt).getTime();
-  return !Number.isFinite(ageMs) || ageMs > 30 * 60 * 1000;
-};
-
 async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<typeof createAdminClient>) {
   const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_phone_contacts_cache')
+    .from('comm_whatsapp_phone_contacts_sync_state')
     .select('last_synced_at')
     .eq('channel_id', channelId)
-    .eq('manual_override', false)
-    .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
-    .not('contact_id', 'like', 'chat:%')
-    .order('last_synced_at', { ascending: false })
-    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -105,6 +95,24 @@ async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<t
   }
 
   return (data?.last_synced_at as string | null | undefined) ?? null;
+}
+
+async function markCacheSyncCompleted(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  lastSyncedAt: string;
+}) {
+  const { error } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_sync_state')
+    .upsert({
+      channel_id: params.channelId,
+      last_synced_at: params.lastSyncedAt,
+      updated_at: params.lastSyncedAt,
+    }, { onConflict: 'channel_id' });
+
+  if (error) {
+    throw new Error(`Erro ao registrar sincronizacao do cache de contatos do WhatsApp: ${error.message}`);
+  }
 }
 
 async function refreshChatIdentitiesForPhones(params: {
@@ -278,6 +286,12 @@ async function syncContactsToCache(params: {
     supabaseAdmin: params.supabaseAdmin,
     channelId: params.channelId,
     phoneNumbers: Array.from(affectedPhoneDigits),
+  });
+
+  await markCacheSyncCompleted({
+    supabaseAdmin: params.supabaseAdmin,
+    channelId: params.channelId,
+    lastSyncedAt: nowIso,
   });
 }
 
@@ -510,7 +524,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const latestSync = await getLatestCacheSync(channel.id, supabaseAdmin);
-    if (body.forceSync === true || isCacheStale(latestSync)) {
+    if (body.forceSync === true || isContactCacheStale(latestSync)) {
       try {
         await syncContactsToCache({
           supabaseAdmin,

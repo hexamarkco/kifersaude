@@ -3459,6 +3459,35 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_phone_contacts_sync_state: {
+        Row: {
+          channel_id: string
+          created_at: string
+          last_synced_at: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          last_synced_at?: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          last_synced_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_phone_contacts_sync_state_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_presences: {
         Row: {
           channel_id: string

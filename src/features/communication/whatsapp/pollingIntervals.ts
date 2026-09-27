@@ -10,6 +10,27 @@ export const computeMessagePollIntervalMs = (
 ): number => (isRealtimeHealthy ? safetyNetIntervalMs : baseIntervalMs);
 
 /**
+ * A lista de conversas pode ficar ociosa por bastante tempo enquanto o
+ * Realtime entrega as mudanças. Nesses ciclos sem alteração, aumentamos o
+ * intervalo de segurança gradualmente, sem ultrapassar o limite informado.
+ * Um evento Realtime ou uma carga que mudou a lista deve zerar o contador.
+ */
+export const computeChatPollIntervalMs = (
+  idleCycles: number,
+  baseIntervalMs: number,
+  maxIntervalMs: number,
+): number => {
+  const safeIdleCycles = Math.max(0, Math.floor(idleCycles));
+  const safeBaseInterval = Math.max(0, baseIntervalMs);
+  const safeMaxInterval = Math.max(safeBaseInterval, maxIntervalMs);
+
+  return Math.min(
+    safeBaseInterval * (2 ** safeIdleCycles),
+    safeMaxInterval,
+  );
+};
+
+/**
  * Intervalo de polling do estado operacional do canal: quando o canal está
  * conectado, poll mais espaçado. Quando não está, poll mais frequente para
  * detectar a reconexão mais rápido.

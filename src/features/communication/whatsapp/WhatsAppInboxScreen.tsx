@@ -189,7 +189,11 @@ import {
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
-import { computeMessagePollIntervalMs, computeOperationalStatePollIntervalMs } from './pollingIntervals';
+import {
+  computeChatPollIntervalMs,
+  computeMessagePollIntervalMs,
+  computeOperationalStatePollIntervalMs,
+} from './pollingIntervals';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 import {
@@ -216,6 +220,7 @@ const WhatsAppScheduleMessageModal = lazy(() => import('./components/WhatsAppSch
 const WhatsAppScheduledMessagesPanel = lazy(() => import('./components/WhatsAppScheduledMessagesPanel'));
 
 const CHAT_POLL_INTERVAL_MS = 8000;
+const MAX_CHAT_POLL_IDLE_INTERVAL_MS = 30000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
 const ARCHIVED_CHATS_COUNT_POLL_INTERVAL_MS = 30000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
@@ -2542,6 +2547,7 @@ export default function WhatsAppInboxScreen() {
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
+  const chatPollIdleCyclesRef = useRef(0);
   const messageSearchSelectionRequestIdRef = useRef(0);
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
@@ -3712,6 +3718,9 @@ export default function WhatsAppInboxScreen() {
     if (!changedChatId) {
       return;
     }
+
+    chatPollBackoffRef.current = 0;
+    chatPollIdleCyclesRef.current = 0;
 
     if (incomingChat?.merged_into_chat_id && selectedChatIdRef.current === incomingChat.id) {
       setSelectedChatId(incomingChat.merged_into_chat_id);
@@ -5401,9 +5410,13 @@ export default function WhatsAppInboxScreen() {
         setChatLoadError(false);
         setChatRefreshError(null);
 
-        if (nextSignature !== chatsSignatureRef.current) {
+        const chatsChanged = nextSignature !== chatsSignatureRef.current;
+        if (chatsChanged) {
+          chatPollIdleCyclesRef.current = 0;
           chatsSignatureRef.current = nextSignature;
           setChats(hydratedData);
+        } else {
+          chatPollIdleCyclesRef.current += 1;
         }
 
         const requestedChatId = chatIdFromUrlRef.current;
@@ -6304,7 +6317,11 @@ export default function WhatsAppInboxScreen() {
       const backoffLevel = chatPollBackoffRef.current;
       const delay = backoffLevel > 0
         ? Math.min(CHAT_POLL_INTERVAL_MS * Math.pow(2, backoffLevel), MAX_CHAT_POLL_BACKOFF_MS)
-        : CHAT_POLL_INTERVAL_MS;
+        : computeChatPollIntervalMs(
+            chatPollIdleCyclesRef.current,
+            CHAT_POLL_INTERVAL_MS,
+            MAX_CHAT_POLL_IDLE_INTERVAL_MS,
+          );
 
       timeoutId = window.setTimeout(() => {
         void loadChats();

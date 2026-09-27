@@ -1520,7 +1520,7 @@ export default function FlowBuilder({
 
             {selectedNode.type === "action" && (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Esperar
@@ -1709,7 +1709,7 @@ export default function FlowBuilder({
                         suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Vencimento (h)
@@ -1821,7 +1821,7 @@ export default function FlowBuilder({
                         size="sm"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Método

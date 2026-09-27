@@ -96,7 +96,7 @@ export default function ValueAdjustmentForm({
 
           <div className="space-y-4">
             <Field label="Tipo de Ajuste *">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <ActionSurface
                   type="button"
                   onClick={() => setFormData({ ...formData, tipo: 'acrescimo' })}

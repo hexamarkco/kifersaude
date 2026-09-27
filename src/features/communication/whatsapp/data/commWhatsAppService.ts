@@ -68,6 +68,8 @@ const SCHEDULED_MESSAGE_SELECT = [
   'contract_id',
   'label',
 ].join(',');
+const SCHEDULED_MESSAGE_FALLBACK_SELECT = SCHEDULED_MESSAGE_SELECT
+  .replace(`${SCHEDULED_CHAT_SELECT},`, '');
 
 function isRetryableScheduledReadError(error: unknown): boolean {
   const candidate = error && typeof error === 'object'
@@ -116,6 +118,29 @@ function isRetryableScheduledReadError(error: unknown): boolean {
     'etimedout',
     'socket hang up',
     'aborted',
+  ].some((fragment) => message.includes(fragment));
+}
+
+function isScheduledNestedSelectError(error: unknown): boolean {
+  const candidate = error && typeof error === 'object'
+    ? error as { code?: unknown; message?: unknown; status?: unknown }
+    : null;
+  const status = Number(candidate?.status);
+  const code = String(candidate?.code ?? '').toUpperCase();
+  const message = String(candidate?.message ?? error ?? '').toLowerCase();
+
+  if (status !== 400 && !code.startsWith('PGRST2')) {
+    return false;
+  }
+
+  return [
+    'column',
+    'relationship',
+    'schema cache',
+    'embedded',
+    'could not find',
+    'does not exist',
+    'failed to parse',
   ].some((fragment) => message.includes(fragment));
 }
 
@@ -222,6 +247,8 @@ const SCHEDULED_SEQUENCE_SELECT = [
   'updated_at',
   'steps:comm_whatsapp_scheduled_sequence_steps(id,step_index,delay_seconds,due_at,reminder_id,message_type,text_content,media_url,media_mime_type,media_file_name,status,last_error,actions:comm_whatsapp_scheduled_sequence_actions(id,action_index,action_type,config,status,error_message))',
 ].join(',');
+const SCHEDULED_SEQUENCE_FALLBACK_SELECT = SCHEDULED_SEQUENCE_SELECT
+  .replace(`${SCHEDULED_CHAT_SELECT},`, '');
 
 const SAVED_CONTACT_CACHE_SELECT = [
   'id',
@@ -3299,26 +3326,34 @@ export const commWhatsAppService = {
       const data = await executeScheduledRead(async () => {
         await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as sequências agendadas.' });
 
-        let query = supabase
-          .from('comm_whatsapp_scheduled_sequences' as never)
-          .select(SCHEDULED_SEQUENCE_SELECT)
-          .order('scheduled_at', { ascending: false })
-          .order('id', { ascending: true });
-        if (options?.channelId) query = query.eq('channel_id', options.channelId);
-        if (options?.chatId) query = query.eq('chat_id', options.chatId);
-        if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
-        if (options?.leadId) query = query.eq('lead_id', options.leadId);
-        if (options?.statuses?.length) {
-          query = query.in('status', [...options.statuses]);
-        } else if (options?.status) {
-          query = query.eq('status', options.status);
+        const loadPage = async (select: string) => {
+          let query = supabase
+            .from('comm_whatsapp_scheduled_sequences' as never)
+            .select(select)
+            .order('scheduled_at', { ascending: false })
+            .order('id', { ascending: true });
+          if (options?.channelId) query = query.eq('channel_id', options.channelId);
+          if (options?.chatId) query = query.eq('chat_id', options.chatId);
+          if (options?.phoneDigits) query = query.eq('phone_digits', options.phoneDigits);
+          if (options?.leadId) query = query.eq('lead_id', options.leadId);
+          if (options?.statuses?.length) {
+            query = query.in('status', [...options.statuses]);
+          } else if (options?.status) {
+            query = query.eq('status', options.status);
+          }
+          const from = options?.offset ?? 0;
+          const to = options?.limit ? from + options.limit - 1 : from + 99;
+          const result = await query.range(from, to);
+          if (result.error) throw result.error;
+          return result.data;
+        };
+
+        try {
+          return await loadPage(SCHEDULED_SEQUENCE_SELECT);
+        } catch (error) {
+          if (!isScheduledNestedSelectError(error)) throw error;
+          return loadPage(SCHEDULED_SEQUENCE_FALLBACK_SELECT);
         }
-        const from = options?.offset ?? 0;
-        const to = options?.limit ? from + options.limit - 1 : from + 99;
-        query = query.range(from, to);
-        const result = await query;
-        if (result.error) throw result.error;
-        return result.data;
       });
 
       return ((data ?? []) as unknown as ScheduledSequenceRow[]).map(mapScheduledSequenceRow);
@@ -3387,39 +3422,47 @@ export const commWhatsAppService = {
       const data = await executeScheduledRead(async () => {
         await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as mensagens agendadas.' });
 
-        let query = supabase
-          .from('comm_whatsapp_scheduled_messages')
-          .select(SCHEDULED_MESSAGE_SELECT)
-          .order('scheduled_at', { ascending: false })
-          .order('id', { ascending: true });
+        const loadPage = async (select: string) => {
+          let query = supabase
+            .from('comm_whatsapp_scheduled_messages')
+            .select(select)
+            .order('scheduled_at', { ascending: false })
+            .order('id', { ascending: true });
 
-        if (options?.channelId) {
-          query = query.eq('channel_id', options.channelId);
-        }
-        if (options?.chatId) {
-          query = query.eq('chat_id', options.chatId);
-        }
-        if (options?.phoneDigits) {
-          query = query.eq('phone_digits', options.phoneDigits);
-        }
-        if (options?.statuses?.length) {
-          query = query.in('status', [...options.statuses]);
-        } else if (options?.status) {
-          query = query.eq('status', options.status);
-        }
-        if (options?.createdBy) {
-          query = query.eq('created_by', options.createdBy);
-        }
-        if (options?.leadId) {
-          query = query.eq('lead_id', options.leadId);
-        }
+          if (options?.channelId) {
+            query = query.eq('channel_id', options.channelId);
+          }
+          if (options?.chatId) {
+            query = query.eq('chat_id', options.chatId);
+          }
+          if (options?.phoneDigits) {
+            query = query.eq('phone_digits', options.phoneDigits);
+          }
+          if (options?.statuses?.length) {
+            query = query.in('status', [...options.statuses]);
+          } else if (options?.status) {
+            query = query.eq('status', options.status);
+          }
+          if (options?.createdBy) {
+            query = query.eq('created_by', options.createdBy);
+          }
+          if (options?.leadId) {
+            query = query.eq('lead_id', options.leadId);
+          }
 
-        const from = options?.offset ?? 0;
-        const to = options?.limit ? from + options.limit - 1 : from + 99;
+          const from = options?.offset ?? 0;
+          const to = options?.limit ? from + options.limit - 1 : from + 99;
+          const result = await query.range(from, to);
+          if (result.error) throw result.error;
+          return result.data;
+        };
 
-        const result = await query.range(from, to);
-        if (result.error) throw result.error;
-        return result.data;
+        try {
+          return await loadPage(SCHEDULED_MESSAGE_SELECT);
+        } catch (error) {
+          if (!isScheduledNestedSelectError(error)) throw error;
+          return loadPage(SCHEDULED_MESSAGE_FALLBACK_SELECT);
+        }
       });
 
       return (data ?? []) as unknown as CommWhatsAppScheduledMessage[];

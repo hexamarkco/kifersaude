@@ -239,6 +239,33 @@ test('lista agendamentos sem pedir colunas que nao existem no chat remoto', asyn
   assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
 });
 
+test('mantém a agenda disponível quando a relação de chat falha no PostgREST', async () => {
+  const selectCallsBefore = mocks.query.select.mock.calls.length;
+  let attempts = 0;
+  mocks.query.range.mockImplementation(async () => {
+    attempts += 1;
+    return attempts % 2 === 1
+      ? { data: [], error: { status: 400, message: 'column lead_name does not exist' } }
+      : { data: [], error: null };
+  });
+
+  await commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' });
+  await commWhatsAppService.listScheduledSequences({ channelId: 'channel-1' });
+
+  const scheduledSelects = mocks.query.select.mock.calls
+    .slice(selectCallsBefore)
+    .map(([fields]) => fields);
+
+  assert.equal(attempts, 4);
+  assert.equal(scheduledSelects.length, 4);
+  assert.equal(scheduledSelects[0]?.includes('chat:comm_whatsapp_chats!left'), true);
+  assert.equal(scheduledSelects[1]?.includes('chat:comm_whatsapp_chats!left'), false);
+  assert.equal(scheduledSelects[2]?.includes('chat:comm_whatsapp_chats!left'), true);
+  assert.equal(scheduledSelects[3]?.includes('chat:comm_whatsapp_chats!left'), false);
+
+  mocks.query.range.mockResolvedValue({ data: [], error: null });
+});
+
 test('agenda a mensagem no chat selecionado quando ele existe', async () => {
   mocks.query.maybeSingle.mockResolvedValue({ data: { id: 'chat-1', is_group: false }, error: null });
   mocks.rpc.mockResolvedValue({ data: 'scheduled-1', error: null });

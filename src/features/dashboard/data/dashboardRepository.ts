@@ -23,11 +23,13 @@ export type DashboardDecisionSnapshot = {
   reminders: DashboardReminder[];
   interactions: DashboardInteraction[];
   statusHistory: DashboardStatusHistory[];
+  failedSources: Array<'reminders' | 'interactions' | 'statusHistory'>;
 };
 
 export type DashboardCalendarSnapshot = {
   holders: Holder[];
   dependents: Dependent[];
+  failedSources: Array<'holders' | 'dependents'>;
 };
 
 const DASHBOARD_LEAD_SELECT =
@@ -102,7 +104,7 @@ export async function loadDashboardSnapshot(): Promise<DashboardSnapshot> {
 }
 
 export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecisionSnapshot> {
-  const [reminders, interactions, statusHistory] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchAllPages<DashboardReminder>(async (from, to) => databaseClient
       .from('reminders')
       .select('id,lead_id,contract_id,tipo,titulo,data_lembrete,lido,concluido_em')
@@ -123,7 +125,29 @@ export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecision
       .overrideTypes<DashboardStatusHistory[], { merge: false }>()),
   ]);
 
-  return { reminders, interactions, statusHistory };
+  const [remindersResult, interactionsResult, statusHistoryResult] = results;
+  const failedSources: DashboardDecisionSnapshot['failedSources'] = [];
+  if (remindersResult.status === 'rejected') failedSources.push('reminders');
+  if (interactionsResult.status === 'rejected') failedSources.push('interactions');
+  if (statusHistoryResult.status === 'rejected') failedSources.push('statusHistory');
+
+  if (failedSources.length === results.length) {
+    const failureReason = remindersResult.status === 'rejected'
+      ? remindersResult.reason
+      : interactionsResult.status === 'rejected'
+        ? interactionsResult.reason
+        : statusHistoryResult.status === 'rejected'
+          ? statusHistoryResult.reason
+          : undefined;
+    throw failureReason ?? new Error('Não foi possível carregar os indicadores complementares do dashboard.');
+  }
+
+  return {
+    reminders: remindersResult.status === 'fulfilled' ? remindersResult.value : [],
+    interactions: interactionsResult.status === 'fulfilled' ? interactionsResult.value : [],
+    statusHistory: statusHistoryResult.status === 'fulfilled' ? statusHistoryResult.value : [],
+    failedSources,
+  };
 }
 
 export async function loadDashboardCalendarSnapshot(
@@ -131,11 +155,11 @@ export async function loadDashboardCalendarSnapshot(
 ): Promise<DashboardCalendarSnapshot> {
   const uniqueContractIds = [...new Set(contractIds)].filter(Boolean);
   if (uniqueContractIds.length === 0) {
-    return { holders: [], dependents: [] };
+    return { holders: [], dependents: [], failedSources: [] };
   }
 
-  const [holderPages, dependentPages] = await Promise.all([
-    Promise.all(
+  const [holderResults, dependentResults] = await Promise.all([
+    Promise.allSettled(
       chunk(uniqueContractIds).map((contractIdChunk) =>
         fetchAllPages<DashboardCalendarHolder>(async (from, to) => databaseClient
           .from('contract_holders')
@@ -145,7 +169,7 @@ export async function loadDashboardCalendarSnapshot(
           .overrideTypes<DashboardCalendarHolder[], { merge: false }>()),
       ),
     ),
-    Promise.all(
+    Promise.allSettled(
       chunk(uniqueContractIds).map((contractIdChunk) =>
         fetchAllPages<DashboardCalendarDependent>(async (from, to) => databaseClient
           .from('dependents')
@@ -157,9 +181,33 @@ export async function loadDashboardCalendarSnapshot(
     ),
   ]);
 
+  const holdersFailed = holderResults.some((result) => result.status === 'rejected');
+  const dependentsFailed = dependentResults.some((result) => result.status === 'rejected');
+  const holdersCompletelyFailed = holderResults.every((result) => result.status === 'rejected');
+  const dependentsCompletelyFailed = dependentResults.every((result) => result.status === 'rejected');
+  const failedSources: DashboardCalendarSnapshot['failedSources'] = [];
+  if (holdersFailed) failedSources.push('holders');
+  if (dependentsFailed) failedSources.push('dependents');
+
+  if (holdersCompletelyFailed && dependentsCompletelyFailed) {
+    const holderFailure = holderResults.find((result) => result.status === 'rejected');
+    const dependentFailure = dependentResults.find((result) => result.status === 'rejected');
+    const failureReason = holderFailure?.status === 'rejected'
+      ? holderFailure.reason
+      : dependentFailure?.status === 'rejected'
+        ? dependentFailure.reason
+        : undefined;
+    throw failureReason ?? new Error('Não foi possível carregar os detalhes do calendário.');
+  }
+
   return {
-    holders: holderPages.flat(),
-    dependents: dependentPages.flat(),
+    holders: holderResults
+      .filter((result): result is PromiseFulfilledResult<DashboardCalendarHolder[]> => result.status === 'fulfilled')
+      .flatMap((result) => result.value),
+    dependents: dependentResults
+      .filter((result): result is PromiseFulfilledResult<DashboardCalendarDependent[]> => result.status === 'fulfilled')
+      .flatMap((result) => result.value),
+    failedSources,
   };
 }
 

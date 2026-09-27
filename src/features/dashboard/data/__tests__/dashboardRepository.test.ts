@@ -60,10 +60,12 @@ const mocks = vi.hoisted(() => {
 
 mocks.from.mockReturnValue(mocks.query);
 mocks.channel.mockReturnValue(mocks.subscription);
-mocks.fetchAllPages.mockImplementation(async (fetchPage) => {
+const defaultFetchAllPages = async (fetchPage: FetchPage) => {
   const result = await fetchPage(0, 999);
   return result.data ?? [];
-});
+};
+
+mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
 
 vi.mock('../../../../infrastructure/supabase', () => ({
   databaseClient: {
@@ -74,12 +76,85 @@ vi.mock('../../../../infrastructure/supabase', () => ({
   fetchAllPages: mocks.fetchAllPages,
 }));
 
-import { loadDashboardSnapshot, subscribeToDashboardLeads } from '../dashboardRepository';
+import {
+  loadDashboardCalendarSnapshot,
+  loadDashboardDecisionSnapshot,
+  loadDashboardSnapshot,
+  subscribeToDashboardLeads,
+} from '../dashboardRepository';
 
 test('carrega somente os campos necessários de leads no dashboard', async () => {
   await loadDashboardSnapshot();
 
   assert.deepEqual(mocks.query.select.mock.calls[0], [DASHBOARD_LEAD_SELECT]);
+});
+
+test('preserva indicadores complementares quando uma fonte falha', async () => {
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('interações indisponíveis');
+    }
+    return calls === 1 ? [{ id: 'reminder-1' }] : [{ id: 'history-1' }];
+  });
+
+  try {
+    const snapshot = await loadDashboardDecisionSnapshot();
+
+    assert.deepEqual(snapshot.reminders, [{ id: 'reminder-1' }]);
+    assert.deepEqual(snapshot.interactions, []);
+    assert.deepEqual(snapshot.statusHistory, [{ id: 'history-1' }]);
+    assert.deepEqual(snapshot.failedSources, ['interactions']);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
+  }
+});
+
+test('preserva titulares quando a consulta de dependentes falha', async () => {
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('dependentes indisponíveis');
+    }
+    return [{ id: 'holder-1', contract_id: 'contract-1' }];
+  });
+
+  try {
+    const snapshot = await loadDashboardCalendarSnapshot(['contract-1']);
+
+    assert.deepEqual(snapshot.holders, [{ id: 'holder-1', contract_id: 'contract-1' }]);
+    assert.deepEqual(snapshot.dependents, []);
+    assert.deepEqual(snapshot.failedSources, ['dependents']);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
+  }
+});
+
+test('preserva lotes válidos do calendário quando um lote falha', async () => {
+  const contractIds = Array.from({ length: 101 }, (_, index) => `contract-${index}`);
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('segundo lote de titulares indisponível');
+    }
+    if (calls === 1) {
+      return [{ id: 'holder-1', contract_id: 'contract-1' }];
+    }
+    return [{ id: `dependent-${calls}`, contract_id: 'contract-1' }];
+  });
+
+  try {
+    const snapshot = await loadDashboardCalendarSnapshot(contractIds);
+
+    assert.deepEqual(snapshot.holders, [{ id: 'holder-1', contract_id: 'contract-1' }]);
+    assert.equal(snapshot.dependents.length, 2);
+    assert.deepEqual(snapshot.failedSources, ['holders']);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
+  }
 });
 
 test('ignora eventos tardios de leads do dashboard depois do unsubscribe', () => {

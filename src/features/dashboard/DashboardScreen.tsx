@@ -516,15 +516,26 @@ export default function DashboardScreen({
       // Iniciar as duas leituras juntas evita deixar lembretes, interações e
       // histórico esperando a paginação de leads e contratos terminar.
       const decisionSnapshotPromise = loadDashboardDecisionSnapshot()
-        .then(({ reminders, interactions, statusHistory }) => {
+        .then(({ reminders, interactions, statusHistory, failedSources }) => {
           if (requestId !== dataRequestIdRef.current) {
             return;
           }
 
-          setDecisionSnapshotError(null);
-          setReminders(reminders);
-          setInteractions(interactions);
-          setStatusHistory(statusHistory);
+          if (!failedSources.includes('reminders')) {
+            setReminders(reminders);
+          }
+          if (!failedSources.includes('interactions')) {
+            setInteractions(interactions);
+          }
+          if (!failedSources.includes('statusHistory')) {
+            setStatusHistory(statusHistory);
+          }
+
+          setDecisionSnapshotError(
+            failedSources.length > 0
+              ? "Alguns indicadores podem estar incompletos porque não foi possível atualizar todos os históricos e retornos."
+              : null,
+          );
         })
         .catch((decisionError: unknown) => {
           if (requestId === dataRequestIdRef.current) {
@@ -1389,13 +1400,26 @@ export default function DashboardScreen({
       const {
         holders: loadedHolders,
         dependents: loadedDependents,
+        failedSources,
       } = await loadDashboardCalendarSnapshot(calendarActiveContractIds);
       if (requestId !== calendarSnapshotRequestIdRef.current) {
         return;
       }
-      setHolders(loadedHolders);
-      setDependents(loadedDependents);
-      calendarSnapshotLoadedKeyRef.current = calendarSnapshotContractKey;
+
+      if (!failedSources.includes('holders')) {
+        setHolders(loadedHolders);
+      }
+      if (!failedSources.includes('dependents')) {
+        setDependents(loadedDependents);
+      }
+      setCalendarSnapshotError(
+        failedSources.length > 0
+          ? "Alguns detalhes do calendário não foram atualizados, mas os demais continuam disponíveis."
+          : null,
+      );
+      if (failedSources.length === 0) {
+        calendarSnapshotLoadedKeyRef.current = calendarSnapshotContractKey;
+      }
     } catch (calendarError: unknown) {
       if (requestId !== calendarSnapshotRequestIdRef.current) {
         return;

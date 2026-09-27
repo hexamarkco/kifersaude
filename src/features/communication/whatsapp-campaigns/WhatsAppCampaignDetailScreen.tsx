@@ -125,8 +125,12 @@ export default function WhatsAppCampaignDetailScreen() {
     status: [],
     search: '',
   });
-  const refreshLiveDataInFlightRef = useRef(false);
-  const loadDetailInFlightRef = useRef(false);
+  const refreshLiveDataInFlightRef = useRef<number | null>(null);
+  const loadDetailInFlightRef = useRef<number | null>(null);
+  const pendingDetailReloadRef = useRef(false);
+  const pendingLiveRefreshRef = useRef(false);
+  const loadDetailRef = useRef<(() => Promise<void>) | null>(null);
+  const refreshLiveDataRef = useRef<(() => Promise<void>) | null>(null);
   const detailRequestIdRef = useRef(0);
   const targetListRequestIdRef = useRef(0);
   const liveMetricsRequestIdRef = useRef(0);
@@ -135,6 +139,11 @@ export default function WhatsAppCampaignDetailScreen() {
 
   const loadDetail = useCallback(async () => {
     if (!campaignId || activeCampaignIdRef.current !== campaignId) return;
+    if (loadDetailInFlightRef.current !== null || refreshLiveDataInFlightRef.current !== null) {
+      pendingDetailReloadRef.current = true;
+      setLoading(true);
+      return;
+    }
     const screenGeneration = screenGenerationRef.current;
     const requestId = detailRequestIdRef.current + 1;
     detailRequestIdRef.current = requestId;
@@ -144,7 +153,7 @@ export default function WhatsAppCampaignDetailScreen() {
     liveMetricsRequestIdRef.current = metricsRequestId;
     setLoading(true);
     setLoadError(false);
-    loadDetailInFlightRef.current = true;
+    loadDetailInFlightRef.current = requestId;
     try {
       const targetsFilters = targetsFiltersRef.current;
       const results = await Promise.allSettled([
@@ -191,12 +200,26 @@ export default function WhatsAppCampaignDetailScreen() {
         setLoadError('all');
       }
     } finally {
-      if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
-        setLoading(false);
-        loadDetailInFlightRef.current = false;
+      if (loadDetailInFlightRef.current === requestId) {
+        loadDetailInFlightRef.current = null;
+        if (screenGeneration === screenGenerationRef.current && requestId === detailRequestIdRef.current) {
+          setLoading(false);
+        }
+        if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignId) {
+          if (pendingDetailReloadRef.current) {
+            pendingDetailReloadRef.current = false;
+            pendingLiveRefreshRef.current = false;
+            window.setTimeout(() => { void loadDetailRef.current?.(); }, 0);
+          } else if (pendingLiveRefreshRef.current) {
+            pendingLiveRefreshRef.current = false;
+            window.setTimeout(() => { void refreshLiveDataRef.current?.(); }, 0);
+          }
+        }
       }
     }
   }, [campaignId]);
+
+  loadDetailRef.current = loadDetail;
 
   const goToTargetsPage = useCallback(async (page: number) => {
     if (!campaignId || activeCampaignIdRef.current !== campaignId || page < 1) return;
@@ -270,12 +293,17 @@ export default function WhatsAppCampaignDetailScreen() {
     // acoes como "Processar lote") e multiplicam as requisicoes exatamente
     // quando o banco esta mais ocupado gravando o lote, aumentando a chance
     // de estourar o timeout de 8s do cliente Supabase.
-    if (refreshLiveDataInFlightRef.current || loadDetailInFlightRef.current) return;
+    if (loadDetailInFlightRef.current !== null || refreshLiveDataInFlightRef.current !== null) {
+      pendingLiveRefreshRef.current = true;
+      return;
+    }
+    if (pendingDetailReloadRef.current) return;
     const targetRequestId = targetListRequestIdRef.current + 1;
     targetListRequestIdRef.current = targetRequestId;
     const metricsRequestId = liveMetricsRequestIdRef.current + 1;
     liveMetricsRequestIdRef.current = metricsRequestId;
-    refreshLiveDataInFlightRef.current = true;
+    refreshLiveDataInFlightRef.current = metricsRequestId;
+    pendingLiveRefreshRef.current = false;
     try {
       const targetsFilters = targetsFiltersRef.current;
       const results = await Promise.allSettled([
@@ -309,14 +337,33 @@ export default function WhatsAppCampaignDetailScreen() {
         console.warn('[WhatsAppCampaignDetailScreen] atualização parcial em segundo plano', results);
       }
     } catch (error) {
-      if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignId) {
+      if (
+        screenGeneration === screenGenerationRef.current
+        && activeCampaignIdRef.current === campaignId
+        && metricsRequestId === liveMetricsRequestIdRef.current
+      ) {
         console.error('[WhatsAppCampaignDetailScreen] falha na atualizacao em tempo real', error);
         setLiveRefreshError('A atualização automática falhou. Os dados exibidos podem estar desatualizados.');
       }
     } finally {
-      refreshLiveDataInFlightRef.current = false;
+      if (refreshLiveDataInFlightRef.current === metricsRequestId) {
+        refreshLiveDataInFlightRef.current = null;
+        if (screenGeneration === screenGenerationRef.current && activeCampaignIdRef.current === campaignId) {
+          if (pendingDetailReloadRef.current) {
+            pendingDetailReloadRef.current = false;
+            pendingLiveRefreshRef.current = false;
+            setLoading(true);
+            window.setTimeout(() => { void loadDetailRef.current?.(); }, 0);
+          } else if (pendingLiveRefreshRef.current) {
+            pendingLiveRefreshRef.current = false;
+            window.setTimeout(() => { void refreshLiveDataRef.current?.(); }, 0);
+          }
+        }
+      }
     }
   }, [campaignId]);
+
+  refreshLiveDataRef.current = refreshLiveData;
 
   // A linha de comm_whatsapp_campaigns e atualizada pelo worker uma vez por
   // tick (a cada minuto) enquanto a campanha esta ativa - poucas escritas,
@@ -349,15 +396,15 @@ export default function WhatsAppCampaignDetailScreen() {
     const unsubscribe = subscribeToCampaignChanges(campaignId, {
       onCampaign: (nextCampaign) => {
         if (!active) return;
-        const hadLoadInFlight = loadDetailInFlightRef.current;
+        const hadLoadInFlight = loadDetailInFlightRef.current !== null;
+        const hadRefreshInFlight = refreshLiveDataInFlightRef.current !== null;
         detailRequestIdRef.current += 1;
         targetListRequestIdRef.current += 1;
         liveMetricsRequestIdRef.current += 1;
-        loadDetailInFlightRef.current = false;
-        refreshLiveDataInFlightRef.current = false;
+        if (hadLoadInFlight || hadRefreshInFlight) pendingLiveRefreshRef.current = true;
         if (hadLoadInFlight) setLoading(false);
         setCampaign(nextCampaign);
-        void refreshLiveData();
+        if (!hadLoadInFlight && !hadRefreshInFlight) void refreshLiveData();
       },
       onStatus: (status) => {
         if (!active) return;
@@ -391,8 +438,10 @@ export default function WhatsAppCampaignDetailScreen() {
       detailRequestIdRef.current += 1;
       targetListRequestIdRef.current += 1;
       liveMetricsRequestIdRef.current += 1;
-      loadDetailInFlightRef.current = false;
-      refreshLiveDataInFlightRef.current = false;
+      loadDetailInFlightRef.current = null;
+      refreshLiveDataInFlightRef.current = null;
+      pendingDetailReloadRef.current = false;
+      pendingLiveRefreshRef.current = false;
       window.clearTimeout(fallbackTimeoutId);
       if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
       unsubscribe();

@@ -275,30 +275,55 @@ export default function WhatsAppAgendaModal({
     try {
       const remindersData = await listReminders();
 
-      const contractIds = Array.from(
-        new Set(remindersData.map((reminder) => reminder.contract_id).filter((id): id is string => Boolean(id))),
-      );
-      const fetchedContracts = await listReminderContracts(contractIds);
-
-      const leadIds = Array.from(
-        new Set([
-          ...remindersData.map((reminder) => reminder.lead_id).filter((id): id is string => Boolean(id)),
-          ...fetchedContracts.map((contract) => contract.lead_id).filter((id): id is string => Boolean(id)),
-        ]),
-      );
-      const fetchedLeads = await listReminderLeads(leadIds);
-      const snapshot: WhatsAppAgendaCacheSnapshot = {
-        reminders: remindersData,
-        contracts: fetchedContracts,
-        leads: fetchedLeads,
-        updatedAt: new Date().toISOString(),
-      };
-
       if (requestId !== loadRemindersRequestIdRef.current) {
         return;
       }
 
-      applyAgendaSnapshot(snapshot);
+      // Os lembretes são a lista principal da agenda. Mostre-os assim que
+      // chegarem; contratos e leads são contexto complementar e podem ser
+      // hidratados depois sem bloquear a operação.
+      applyAgendaSnapshot({
+        reminders: remindersData,
+        contracts: [],
+        leads: [],
+        updatedAt: new Date().toISOString(),
+      });
+      setLoading(false);
+
+      const contractIds = Array.from(
+        new Set(remindersData.map((reminder) => reminder.contract_id).filter((id): id is string => Boolean(id))),
+      );
+
+      try {
+        const fetchedContracts = await listReminderContracts(contractIds);
+
+        const leadIds = Array.from(
+          new Set([
+            ...remindersData.map((reminder) => reminder.lead_id).filter((id): id is string => Boolean(id)),
+            ...fetchedContracts.map((contract) => contract.lead_id).filter((id): id is string => Boolean(id)),
+          ]),
+        );
+        const fetchedLeads = await listReminderLeads(leadIds);
+
+        if (requestId !== loadRemindersRequestIdRef.current) {
+          return;
+        }
+
+        applyAgendaSnapshot({
+          reminders: remindersData,
+          contracts: fetchedContracts,
+          leads: fetchedLeads,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (contextError) {
+        if (requestId !== loadRemindersRequestIdRef.current) {
+          return;
+        }
+
+        console.error('[WhatsAppAgendaModal] erro ao hidratar contexto da agenda', contextError);
+        setError('A agenda foi carregada, mas os detalhes de leads e contratos não puderam ser atualizados.');
+      }
+
       try {
         const pendingChats = await whatsappFollowUpService.listPendingChats();
         if (requestId === loadRemindersRequestIdRef.current) {

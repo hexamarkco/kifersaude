@@ -64,6 +64,10 @@ const EMPTY_VIEW_COUNTS: ScheduledViewCounts = {
   all: 0,
 };
 
+function getSettledCount(result: PromiseSettledResult<number>): number {
+  return result.status === 'fulfilled' ? result.value : 0;
+}
+
 const VIEW_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppScheduledMessageStatus[]> = {
   upcoming: ['scheduled', 'sending'],
   attention: ['failed'],
@@ -160,6 +164,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
   const [messageViewCounts, setMessageViewCounts] = useState<ScheduledViewCounts>(EMPTY_VIEW_COUNTS);
   const [sequenceViewCounts, setSequenceViewCounts] = useState<ScheduledViewCounts>(EMPTY_VIEW_COUNTS);
+  const [countsLoadError, setCountsLoadError] = useState(false);
 
   const loadMessages = useCallback(async () => {
     if (!isOpen) return;
@@ -286,9 +291,10 @@ export default function WhatsAppScheduledMessagesPanel({
     const requestId = ++countsRequestIdRef.current;
     setMessageViewCounts(EMPTY_VIEW_COUNTS);
     setSequenceViewCounts(EMPTY_VIEW_COUNTS);
+    setCountsLoadError(false);
 
     try {
-      const [messageUpcoming, messageAttention, messageHistory, sequenceUpcoming, sequenceAttention, sequenceHistory] = await Promise.all([
+      const results = await Promise.allSettled([
         commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.upcoming }),
         commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.attention }),
         commWhatsAppService.countScheduledMessages({ ...scheduleFilters, statuses: VIEW_STATUSES.history }),
@@ -299,21 +305,30 @@ export default function WhatsAppScheduledMessagesPanel({
 
       if (requestId !== countsRequestIdRef.current) return;
 
+      const [messageUpcoming, messageAttention, messageHistory, sequenceUpcoming, sequenceAttention, sequenceHistory] = results;
+      const hasCountError = results.some((result) => result.status === 'rejected');
+
       setMessageViewCounts({
-        upcoming: messageUpcoming,
-        attention: messageAttention,
-        history: messageHistory,
-        all: messageUpcoming + messageAttention + messageHistory,
+        upcoming: getSettledCount(messageUpcoming),
+        attention: getSettledCount(messageAttention),
+        history: getSettledCount(messageHistory),
+        all: getSettledCount(messageUpcoming) + getSettledCount(messageAttention) + getSettledCount(messageHistory),
       });
       setSequenceViewCounts({
-        upcoming: sequenceUpcoming,
-        attention: sequenceAttention,
-        history: sequenceHistory,
-        all: sequenceUpcoming + sequenceAttention + sequenceHistory,
+        upcoming: getSettledCount(sequenceUpcoming),
+        attention: getSettledCount(sequenceAttention),
+        history: getSettledCount(sequenceHistory),
+        all: getSettledCount(sequenceUpcoming) + getSettledCount(sequenceAttention) + getSettledCount(sequenceHistory),
       });
+
+      setCountsLoadError(hasCountError);
+      if (hasCountError) {
+        console.warn('[ScheduledMessagesPanel] algumas contagens não puderam ser atualizadas', results);
+      }
     } catch (error) {
       if (requestId === countsRequestIdRef.current) {
         console.warn('[ScheduledMessagesPanel] error counting scheduled items', error);
+        setCountsLoadError(true);
       }
     }
   }, [isOpen, scheduleFilters]);
@@ -659,6 +674,12 @@ export default function WhatsAppScheduledMessagesPanel({
                   }
                 >
                   Os itens disponíveis continuam visíveis. Tente novamente para atualizar o restante.
+                </Alert>
+              ) : null}
+
+              {countsLoadError ? (
+                <Alert tone="warning" title="Os totais das abas estão incompletos.">
+                  Os agendamentos continuam disponíveis. Tente atualizar novamente para recalcular todos os totais.
                 </Alert>
               ) : null}
 

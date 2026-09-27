@@ -30,6 +30,7 @@ const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
 const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
 const MAX_SCHEDULED_MEDIA_BYTES = 20 * 1024 * 1024;
 const SCHEDULED_READ_RETRY_DELAYS_MS = [250, 750] as const;
+const INBOX_CHAT_LIST_RETRY_DELAYS_MS = [100, 300] as const;
 const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'video/mp4', 'video/webm', 'video/quicktime',
@@ -69,6 +70,58 @@ async function executeScheduledRead<T>(operation: () => Promise<T>): Promise<T> 
   }
 
   throw new Error('Não foi possível concluir a leitura dos agendamentos.');
+}
+
+function isRetryableInboxChatListError(error: unknown): boolean {
+  const candidate = error && typeof error === 'object'
+    ? error as { code?: unknown; status?: unknown; message?: unknown; context?: unknown }
+    : null;
+  const status = typeof candidate?.status === 'number'
+    ? candidate.status
+    : candidate?.context && typeof candidate.context === 'object' && 'status' in candidate.context
+      ? Number((candidate.context as { status?: unknown }).status)
+      : null;
+  const code = typeof candidate?.code === 'string' ? candidate.code.toLowerCase() : '';
+  const message = String(candidate?.message ?? error ?? '').toLowerCase();
+
+  if (typeof status === 'number' && status >= 500 && status <= 599) {
+    return true;
+  }
+
+  if (code === '57014' || code.startsWith('08')) {
+    return true;
+  }
+
+  return [
+    'canceling statement',
+    'statement timeout',
+    'timeout',
+    'failed to fetch',
+    'networkerror',
+    'network error',
+    'fetch failed',
+  ].some((fragment) => message.includes(fragment));
+}
+
+async function executeInboxChatListRpc(
+  rpcName: 'comm_whatsapp_list_chats_with_presence' | 'comm_whatsapp_list_chats_with_groups',
+  args: never,
+) {
+  for (let attempt = 0; attempt <= INBOX_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
+    const result = await supabase.rpc(rpcName as never, args);
+    if (!result.error) {
+      return result;
+    }
+
+    const retryDelayMs = INBOX_CHAT_LIST_RETRY_DELAYS_MS[attempt];
+    if (retryDelayMs === undefined || !isRetryableInboxChatListError(result.error)) {
+      return result;
+    }
+
+    await new Promise<void>((resolve) => window.setTimeout(resolve, retryDelayMs));
+  }
+
+  throw new Error('Não foi possível concluir a leitura das conversas do WhatsApp.');
 }
 
 const SCHEDULED_SEQUENCE_SELECT = [
@@ -1341,11 +1394,17 @@ export const commWhatsAppService = {
       p_offset: offset,
     } as never;
 
-    let { data, error } = await supabase.rpc('comm_whatsapp_list_chats_with_presence' as never, listArgs);
+    let { data, error } = await executeInboxChatListRpc(
+      'comm_whatsapp_list_chats_with_presence',
+      listArgs,
+    );
     if (error) {
       // Mantém o Inbox funcional durante a janela em que o frontend pode ser
       // publicado antes da migration de presença no projeto Supabase.
-      const fallback = await supabase.rpc('comm_whatsapp_list_chats_with_groups' as never, listArgs);
+      const fallback = await executeInboxChatListRpc(
+        'comm_whatsapp_list_chats_with_groups',
+        listArgs,
+      );
       data = fallback.data;
       error = fallback.error;
     }

@@ -37,6 +37,10 @@ const mocks = vi.hoisted(() => {
   query.range.mockResolvedValue({ data: [], error: null });
 
   const from = createMock<[string], Query>();
+  const rpc = createMock<
+    [string, Record<string, unknown>],
+    Promise<{ data: unknown; error: unknown | null }>
+  >();
   const invoke = createMock<[
     string,
     { body: { action: string; phoneNumbers: string[]; forceSync: boolean } },
@@ -46,6 +50,7 @@ const mocks = vi.hoisted(() => {
   const waitForSupabaseSession = createMock<[{ errorMessage: string }], Promise<void>>();
 
   from.mockReturnValue(query);
+  rpc.mockResolvedValue({ data: [], error: null });
   getSupabaseErrorMessage.mockImplementation(async (_error, fallback) => fallback);
   isSupabaseFunctionFetchError.mockReturnValue(false);
   waitForSupabaseSession.mockResolvedValue(undefined);
@@ -56,6 +61,7 @@ const mocks = vi.hoisted(() => {
     invoke,
     isSupabaseFunctionFetchError,
     query,
+    rpc,
     waitForSupabaseSession,
   };
 });
@@ -63,6 +69,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('../../../../../infrastructure/supabase', () => ({
   supabase: {
     from: mocks.from,
+    rpc: mocks.rpc,
     functions: {
       invoke: mocks.invoke,
     },
@@ -266,4 +273,37 @@ test('não repete falha permanente ao listar agendamentos', async () => {
 
   assert.equal(attempts, 1);
   mocks.query.range.mockResolvedValue({ data: [], error: null });
+});
+
+test('repete a lista do Inbox quando a RPC sofre timeout transitório', async () => {
+  let attempts = 0;
+  const chat = { id: 'chat-1', display_name: 'Contato', is_archived: false };
+  mocks.rpc.mockImplementation(async () => {
+    attempts += 1;
+    return attempts === 1
+      ? { data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }
+      : { data: [chat], error: null };
+  });
+
+  const chats = await commWhatsAppService.listChats();
+
+  assert.deepEqual(chats, [chat]);
+  assert.equal(attempts, 2);
+  assert.equal(mocks.rpc.mock.calls[0]?.[0], 'comm_whatsapp_list_chats_with_presence');
+  assert.equal(mocks.rpc.mock.calls[1]?.[0], 'comm_whatsapp_list_chats_with_presence');
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+});
+
+test('usa a RPC compatível quando a RPC de presença não existe', async () => {
+  mocks.rpc.mockImplementation(async (rpcName) => rpcName === 'comm_whatsapp_list_chats_with_presence'
+    ? { data: null, error: { code: 'PGRST202', message: 'function does not exist' } }
+    : { data: [{ id: 'chat-2' }], error: null });
+
+  const chats = await commWhatsAppService.listChats();
+
+  assert.deepEqual(chats, [{ id: 'chat-2' }]);
+  assert.equal(mocks.rpc.mock.calls.length >= 2, true);
+  const lastRpcCall = mocks.rpc.mock.calls[mocks.rpc.mock.calls.length - 1];
+  assert.equal(lastRpcCall?.[0], 'comm_whatsapp_list_chats_with_groups');
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
 });

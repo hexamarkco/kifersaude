@@ -723,6 +723,7 @@ export const commWhatsAppCampaignService = {
 
     const { data, error, count } = await query
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
       .range(from, to);
 
     if (error) {

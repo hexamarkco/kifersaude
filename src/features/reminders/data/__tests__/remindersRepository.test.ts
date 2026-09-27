@@ -115,6 +115,84 @@ test('carrega somente lembretes pendentes do contexto e normaliza valores legado
   assert.equal(result.contractReminders[0]?.lido, false);
 });
 
+test('preserva lembretes do lead quando a consulta dos contratos falha', async () => {
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('lembretes de contratos indisponíveis');
+    }
+    return [{
+      id: 'reminder-lead-1',
+      tipo: 'retorno',
+      titulo: 'Retorno agendado: cliente',
+      descricao: 'Ligar para o cliente',
+      data_lembrete: '2026-09-27T12:00:00.000Z',
+      lido: false,
+    }];
+  });
+
+  try {
+    const result = await listRemindersForLeadContext('lead-1', ['contract-1']);
+
+    assert.equal(result.leadReminders.length, 1);
+    assert.deepEqual(result.contractReminders, []);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(async (fetchPage) => {
+      const page = await fetchPage(0, 999);
+      return page.data ?? [];
+    });
+  }
+});
+
+test('preserva lembretes dos contratos quando a consulta do lead falha', async () => {
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 1) {
+      throw new Error('lembretes do lead indisponíveis');
+    }
+    return [{
+      id: 'reminder-contract-1',
+      tipo: 'retorno',
+      titulo: 'Retorno agendado: contrato',
+      descricao: 'Ligar para o responsável',
+      data_lembrete: '2026-09-27T12:00:00.000Z',
+      lido: false,
+    }];
+  });
+
+  try {
+    const result = await listRemindersForLeadContext('lead-1', ['contract-1']);
+
+    assert.deepEqual(result.leadReminders, []);
+    assert.equal(result.contractReminders.length, 1);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(async (fetchPage) => {
+      const page = await fetchPage(0, 999);
+      return page.data ?? [];
+    });
+  }
+});
+
+test('propaga a falha do lead quando não há contratos para consultar', async () => {
+  mocks.fetchAllPages.mockImplementation(async () => {
+    throw new Error('lembretes do lead indisponíveis');
+  });
+
+  try {
+    await assert.rejects(
+      listRemindersForLeadContext('lead-1', []),
+      /lembretes do lead indisponíveis/,
+    );
+  } finally {
+    mocks.fetchAllPages.mockImplementation(async (fetchPage) => {
+      const page = await fetchPage(0, 999);
+      return page.data ?? [];
+    });
+  }
+});
+
 test('carrega somente os campos usados pelas listas da agenda', async () => {
   mocks.query.select.mock.calls.splice(0);
 

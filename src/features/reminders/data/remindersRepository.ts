@@ -137,11 +137,41 @@ export async function listRemindersForLeadContext(
   leadId: string,
   contractIds: string[],
 ): Promise<{ leadReminders: ReminderContextItem[]; contractReminders: ReminderContextItem[] }> {
-  const [leadReminders, contractReminders] = await Promise.all([
-    listRemindersByRelation('lead_id', [leadId]),
-    listRemindersByRelation('contract_id', contractIds),
+  const leadRemindersPromise = listRemindersByRelation('lead_id', [leadId]);
+  const contractRemindersPromise = contractIds.length > 0
+    ? listRemindersByRelation('contract_id', contractIds)
+    : null;
+  const results = await Promise.allSettled([
+    leadRemindersPromise,
+    ...(contractRemindersPromise ? [contractRemindersPromise] : []),
   ]);
-  return { leadReminders, contractReminders };
+  const leadResult = results[0];
+  const contractResult = contractRemindersPromise
+    ? results[1]
+    : { status: 'fulfilled' as const, value: [] as ReminderContextItem[] };
+
+  if (leadResult.status === 'rejected') {
+    if (contractResult.status === 'rejected') {
+      throw leadResult.reason ?? contractResult.reason;
+    }
+    if (!contractRemindersPromise) {
+      throw leadResult.reason;
+    }
+  }
+
+  if (leadResult.status === 'rejected' || contractResult.status === 'rejected') {
+    console.warn('[Reminders] parte do contexto da agenda não pôde ser carregada', {
+      failedSources: [
+        ...(leadResult.status === 'rejected' ? ['lead'] : []),
+        ...(contractResult.status === 'rejected' ? ['contract'] : []),
+      ],
+    });
+  }
+
+  return {
+    leadReminders: leadResult.status === 'fulfilled' ? leadResult.value : [],
+    contractReminders: contractResult.status === 'fulfilled' ? contractResult.value : [],
+  };
 }
 
 export async function listPendingRemindersForLead(leadId: string): Promise<ReminderPendingItem[]> {

@@ -15,7 +15,10 @@ export type ContractsSearchSnapshot = {
   contracts: Contract[];
   holdersByContractId: Record<string, ContractHolderSearch[]>;
   dependentsByContractId: Record<string, ContractDependentSearch[]>;
+  failedSources: ContractsSearchSourceName[];
 };
+
+export type ContractsSearchSourceName = 'contracts' | 'holders' | 'dependents';
 
 export type ContractRealtimeChange = {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -30,7 +33,7 @@ const groupByContractId = <T extends { contract_id: string }>(items: T[]) =>
   }, {});
 
 export async function listContractsSearchSnapshot(): Promise<ContractsSearchSnapshot> {
-  const [contracts, holders, dependents] = await Promise.all([
+  const results = await Promise.allSettled([
     fetchAllPages<Contract>(async (from, to) => {
       const result = await databaseClient
         .from('contracts')
@@ -59,11 +62,28 @@ export async function listContractsSearchSnapshot(): Promise<ContractsSearchSnap
       return result;
     }),
   ]);
+  const contractsResult = results[0];
+  if (contractsResult.status === 'rejected') {
+    throw contractsResult.reason;
+  }
+
+  const failedSources: ContractsSearchSourceName[] = [];
+  const holdersResult = results[1];
+  const dependentsResult = results[2];
+  if (holdersResult.status === 'rejected') failedSources.push('holders');
+  if (dependentsResult.status === 'rejected') failedSources.push('dependents');
+
+  if (failedSources.length > 0) {
+    console.warn('[Contracts] parte dos dados complementares não pôde ser carregada', {
+      failedSources,
+    });
+  }
 
   return {
-    contracts,
-    holdersByContractId: groupByContractId(holders),
-    dependentsByContractId: groupByContractId(dependents),
+    contracts: contractsResult.value,
+    holdersByContractId: groupByContractId(holdersResult.status === 'fulfilled' ? holdersResult.value : []),
+    dependentsByContractId: groupByContractId(dependentsResult.status === 'fulfilled' ? dependentsResult.value : []),
+    failedSources,
   };
 }
 

@@ -93,6 +93,7 @@ export default function ContractsManager({
   >({});
   const [loading, setLoading] = useState(true);
   const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
+  const [contractsLoadWarning, setContractsLoadWarning] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
@@ -222,6 +223,7 @@ export default function ContractsManager({
     const requestId = ++contractsLoadRequestIdRef.current;
     setLoading(true);
     setContractsLoadError(null);
+    setContractsLoadWarning(null);
     try {
       const snapshot = await listContractsSearchSnapshot();
 
@@ -233,11 +235,15 @@ export default function ContractsManager({
       setHolders(snapshot.holdersByContractId);
       setDependentsByContract(snapshot.dependentsByContractId);
       setContractsLoadError(null);
+      setContractsLoadWarning(snapshot.failedSources.length > 0
+        ? "A lista de contratos foi carregada, mas alguns titulares ou dependentes não puderam ser atualizados."
+        : null);
       return snapshot.contracts;
     } catch (error) {
       if (requestId === contractsLoadRequestIdRef.current) {
         console.error("Erro ao carregar contratos:", error);
         setContractsLoadError("Não foi possível carregar os contratos agora.");
+        setContractsLoadWarning(null);
       }
       return null;
     } finally {
@@ -590,6 +596,20 @@ export default function ContractsManager({
             )}
           >
             Os dados exibidos anteriormente foram preservados. Tente novamente para atualizar a carteira.
+          </Alert>
+        )}
+
+        {contractsLoadWarning && (
+          <Alert
+            tone="warning"
+            title="Dados complementares incompletos"
+            action={(
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadContracts()} loading={loading}>
+                Tentar novamente
+              </Button>
+            )}
+          >
+            {contractsLoadWarning}
           </Alert>
         )}
 

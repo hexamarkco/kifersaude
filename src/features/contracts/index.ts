@@ -17,6 +17,8 @@ export {
   deleteContract,
   listContractHolders,
   listContractsSearchSnapshot,
+  type ContractsSearchSnapshot,
+  type ContractsSearchSourceName,
   saveContractDependent,
   saveContractHolder,
   subscribeToContractChanges,

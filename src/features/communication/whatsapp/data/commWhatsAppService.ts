@@ -23,6 +23,7 @@ import { canSearchWhatsAppMessages } from '../domain/messageSearch';
 import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, mergeSavedContactPages, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
+import { createMediaObjectUrlFailureCache } from './mediaObjectUrlFailureCache';
 
 export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 
@@ -1089,6 +1090,26 @@ type MediaObjectUrlCacheEntry = {
 const mediaObjectUrlCache = new Map<string, MediaObjectUrlCacheEntry>();
 const MEDIA_OBJECT_URL_RELEASE_GRACE_MS = 30_000;
 const localMediaPreviewCache = createLocalMediaPreviewCache();
+const mediaObjectUrlFailureCache = createMediaObjectUrlFailureCache();
+
+const isUnavailableMediaError = (error: unknown) => {
+  const candidate = error && typeof error === 'object'
+    ? error as { message?: unknown; status?: unknown }
+    : null;
+  const status = Number(candidate?.status);
+  if (status === 400 || status === 404) {
+    return true;
+  }
+
+  const message = String(candidate?.message ?? error ?? '').toLowerCase();
+  return [
+    'specified media not found',
+    'media not found',
+    'object not found',
+    'no such object',
+    'arquivo indisponível',
+  ].some((fragment) => message.includes(fragment));
+};
 
 const sanitizeSearch = (value: string) =>
   value
@@ -3007,10 +3028,19 @@ export const commWhatsAppService = {
       : [];
   },
 
-  async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
+  async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null; forceRefresh?: boolean }): Promise<string | null> {
     const mediaId = params.mediaId?.trim();
     if (!mediaId) {
       return params.mediaUrl?.trim() || null;
+    }
+
+    if (params.forceRefresh) {
+      mediaObjectUrlFailureCache.clear(mediaId);
+    } else {
+      const previousFailure = mediaObjectUrlFailureCache.get(mediaId);
+      if (previousFailure) {
+        throw previousFailure instanceof Error ? previousFailure : new Error('Nao foi possivel carregar a midia do WhatsApp.');
+      }
     }
 
     const cached = mediaObjectUrlCache.get(mediaId);
@@ -3055,11 +3085,13 @@ export const commWhatsAppService = {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(
+        const responseError = new Error(
           typeof payload?.error === 'string' && payload.error.trim()
             ? payload.error.trim()
             : 'Nao foi possivel carregar a midia do WhatsApp.',
         );
+        Object.assign(responseError, { status: response.status });
+        throw responseError;
       }
 
       const blob = await response.blob();
@@ -3069,6 +3101,9 @@ export const commWhatsAppService = {
     })().catch((error) => {
       if (mediaObjectUrlCache.get(mediaId) === entry) {
         mediaObjectUrlCache.delete(mediaId);
+      }
+      if (isUnavailableMediaError(error)) {
+        mediaObjectUrlFailureCache.remember(mediaId, error);
       }
       throw error;
     });

@@ -51,16 +51,19 @@ const mocks = vi.hoisted(() => {
   const getSupabaseErrorMessage = createMock<[unknown, string], Promise<string>>();
   const isSupabaseFunctionFetchError = createMock<[unknown], boolean>();
   const waitForSupabaseSession = createMock<[{ errorMessage: string }], Promise<void>>();
+  const getSession = createMock<[], Promise<{ data: { session: { access_token: string } | null }; error: unknown | null }>>();
 
   from.mockReturnValue(query);
   rpc.mockResolvedValue({ data: [], error: null });
   getSupabaseErrorMessage.mockImplementation(async (_error, fallback) => fallback);
   isSupabaseFunctionFetchError.mockReturnValue(false);
   waitForSupabaseSession.mockResolvedValue(undefined);
+  getSession.mockResolvedValue({ data: { session: { access_token: 'test-token' } }, error: null });
 
   return {
     from,
     getSupabaseErrorMessage,
+    getSession,
     invoke,
     isSupabaseFunctionFetchError,
     query,
@@ -71,6 +74,9 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../../../../infrastructure/supabase', () => ({
   supabase: {
+    auth: {
+      getSession: mocks.getSession,
+    },
     from: mocks.from,
     rpc: mocks.rpc,
     functions: {
@@ -311,6 +317,43 @@ test('não repete falha permanente ao listar agendamentos', async () => {
 
   assert.equal(attempts, 1);
   mocks.query.range.mockResolvedValue({ data: [], error: null });
+});
+
+test('não repete a busca de uma mídia ausente e permite retry explícito', async () => {
+  const mediaId = 'missing-media-cache-contract';
+  let fetchCalls = 0;
+  const originalFetch = globalThis.fetch;
+  const fetchMock = vi.fn(async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({ error: 'specified media not found' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  });
+  globalThis.fetch = fetchMock;
+
+  try {
+    await assert.rejects(
+      () => commWhatsAppService.resolveMediaObjectUrl({ mediaId }),
+      /specified media not found/,
+    );
+    await assert.rejects(
+      () => commWhatsAppService.resolveMediaObjectUrl({ mediaId }),
+      /specified media not found/,
+    );
+    assert.equal(fetchCalls, 1);
+
+    await assert.rejects(
+      () => commWhatsAppService.resolveMediaObjectUrl({ mediaId, forceRefresh: true }),
+      /specified media not found/,
+    );
+    assert.equal(fetchCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('repete a lista do Inbox quando a RPC sofre timeout transitório', async () => {

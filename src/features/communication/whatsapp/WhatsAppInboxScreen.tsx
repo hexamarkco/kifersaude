@@ -693,7 +693,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
     retainedMediaObjectUrl = true;
     void whatsappMediaRepository
-      .resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
+      .resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url, forceRefresh: retryNonce > 0 })
       .then((resolved) => {
         if (!active) return;
         setMediaUrl(resolved);
@@ -721,7 +721,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
         whatsappMediaRepository.releaseObjectUrl(message.media_id);
       }
     };
-  }, [mediaRequestKey, message.external_message_id, message.media_id, message.media_url]);
+  }, [mediaRequestKey, message.external_message_id, message.media_id, message.media_url, retryNonce]);
 
   const retry = useCallback(() => {
     setError(null);

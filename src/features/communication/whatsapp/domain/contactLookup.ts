@@ -50,14 +50,73 @@ export const collectPhoneLookupKeys = (value?: string | null) => {
   return Array.from(keys);
 };
 
+const isManualSavedContact = (contact: CommWhatsAppPhoneContact) => (
+  contact.contact_id?.startsWith('manual:') ?? false
+);
+
+const getContactTimestamp = (value?: string | null) => {
+  const timestamp = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const isPreferredSavedContact = (
+  candidate: CommWhatsAppPhoneContact,
+  current: CommWhatsAppPhoneContact,
+) => {
+  const candidateIsManual = isManualSavedContact(candidate);
+  const currentIsManual = isManualSavedContact(current);
+
+  if (candidateIsManual !== currentIsManual) {
+    return candidateIsManual;
+  }
+
+  const candidateUpdatedAt = getContactTimestamp(candidate.updated_at);
+  const currentUpdatedAt = getContactTimestamp(current.updated_at);
+  if (candidateUpdatedAt !== currentUpdatedAt) {
+    return candidateUpdatedAt > currentUpdatedAt;
+  }
+
+  const candidateSyncedAt = getContactTimestamp(candidate.last_synced_at);
+  const currentSyncedAt = getContactTimestamp(current.last_synced_at);
+  if (candidateSyncedAt !== currentSyncedAt) {
+    return candidateSyncedAt > currentSyncedAt;
+  }
+
+  return candidate.contact_id.localeCompare(current.contact_id) < 0;
+};
+
+export const selectPreferredSavedContacts = (contacts: CommWhatsAppPhoneContact[]) => {
+  const preferredByPhoneKey = new Map<string, CommWhatsAppPhoneContact>();
+
+  for (const contact of contacts) {
+    if (!contact.saved || !contact.display_name?.trim()) {
+      continue;
+    }
+
+    for (const key of collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)) {
+      const sourceKey = `${isManualSavedContact(contact) ? 'manual' : 'synchronized'}:${key}`;
+      const current = preferredByPhoneKey.get(sourceKey);
+      if (!current || isPreferredSavedContact(contact, current)) {
+        preferredByPhoneKey.set(sourceKey, contact);
+      }
+    }
+  }
+
+  const selected = new Map<string, CommWhatsAppPhoneContact>();
+  for (const contact of preferredByPhoneKey.values()) {
+    selected.set(contact.id, contact);
+  }
+
+  return Array.from(selected.values());
+};
+
 export const addSavedContactsToNameMap = (
   target: Map<string, string>,
   contacts: CommWhatsAppPhoneContact[],
   manualTarget?: Map<string, string>,
 ) => {
-  for (const contact of contacts) {
-    const name = contact.display_name?.trim();
-    if (!contact.saved || !name) continue;
+  for (const contact of selectPreferredSavedContacts(contacts)) {
+    const name = contact.display_name.trim();
 
     const destination = contact.contact_id?.startsWith('manual:')
       ? manualTarget ?? target

@@ -7,6 +7,7 @@ import {
   collectPhoneLookupKeys,
   getSavedContactNameForPhone,
   resolveSavedContactName,
+  selectPreferredSavedContacts,
 } from '../contactLookup';
 import type { CommWhatsAppChat, CommWhatsAppPhoneContact } from '../types';
 
@@ -73,6 +74,71 @@ test('keeps manual contact names in a separate higher-priority map', () => {
   assert.equal(synchronizedNames.get('5511999999999'), 'Mariangela - Cliente');
   assert.equal(manualNames.get('5511999999999'), 'Mariangela');
   assert.equal(getSavedContactNameForPhone('5511999999999', manualNames, synchronizedNames), 'Mariangela');
+});
+
+test('does not let an older duplicate contact overwrite the newest name', () => {
+  const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
+    id: 'contact-1',
+    channel_id: 'channel-1',
+    contact_id: 'external-1',
+    phone_number: '5511999999999',
+    phone_digits: '5511999999999',
+    display_name: 'Nome atual',
+    saved: true,
+    last_synced_at: '2026-09-08T12:00:00.000Z',
+    created_at: '2026-09-08T12:00:00.000Z',
+    updated_at: '2026-09-08T12:00:00.000Z',
+    ...overrides,
+  });
+
+  const preferred = selectPreferredSavedContacts([
+    createContact({
+      id: 'older',
+      contact_id: 'external-older',
+      display_name: 'Nome antigo',
+      updated_at: '2026-09-08T11:00:00.000Z',
+    }),
+    createContact({
+      id: 'newer',
+      contact_id: 'external-newer',
+      display_name: 'Nome atual',
+      updated_at: '2026-09-08T13:00:00.000Z',
+    }),
+  ]);
+
+  assert.deepEqual(preferred.map((contact) => contact.display_name), ['Nome atual']);
+});
+
+test('sempre prioriza o contato salvo manualmente sobre o nome sincronizado', () => {
+  const createContact = (overrides: Partial<CommWhatsAppPhoneContact>): CommWhatsAppPhoneContact => ({
+    id: 'contact-1',
+    channel_id: 'channel-1',
+    contact_id: 'external-1',
+    phone_number: '5521982965495',
+    phone_digits: '5521982965495',
+    display_name: 'Mariangela - Cliente',
+    saved: true,
+    last_synced_at: '2026-09-08T13:00:00.000Z',
+    created_at: '2026-09-08T13:00:00.000Z',
+    updated_at: '2026-09-08T13:00:00.000Z',
+    ...overrides,
+  });
+  const map = new Map<string, string>();
+  const manualNames = new Map<string, string>();
+
+  addSavedContactsToNameMap(map, [
+    createContact({}),
+    createContact({
+      id: 'manual',
+      contact_id: 'manual:5521982965495',
+      display_name: 'Mariangela',
+      updated_at: '2026-09-08T09:00:00.000Z',
+    }),
+  ], manualNames);
+
+  assert.equal(map.get('5521982965495'), 'Mariangela - Cliente');
+  assert.equal(manualNames.get('5521982965495'), 'Mariangela');
+  assert.equal(getSavedContactNameForPhone('5521982965495', manualNames, map), 'Mariangela');
 });
 
 test('prioritizes a locally saved name over a stale synchronized name', () => {

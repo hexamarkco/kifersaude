@@ -1,0 +1,125 @@
+import assert from 'node:assert/strict';
+import { test, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => {
+  type TestMock<Args extends unknown[], Result> = ((...args: Args) => Result) & {
+    mock: { calls: Args[] };
+    mockImplementation: (implementation: (...args: Args) => Result) => TestMock<Args, Result>;
+    mockReturnValue: (value: Result) => TestMock<Args, Result>;
+    mockResolvedValue: (value: Awaited<Result>) => TestMock<Args, Result>;
+  };
+  type Query = {
+    select: TestMock<[string], Query>;
+    eq: TestMock<[string, unknown], Query>;
+    in: TestMock<[string, string[]], Query>;
+    order: TestMock<[string, { ascending: boolean }], Query>;
+    limit: TestMock<[number], Query>;
+    overrideTypes: TestMock<[], Promise<{ data: unknown[]; error: unknown | null }>>;
+  };
+
+  const createMock = <Args extends unknown[], Result>() => vi.fn() as unknown as TestMock<Args, Result>;
+  const query: Query = {
+    select: createMock<[string], Query>(),
+    eq: createMock<[string, unknown], Query>(),
+    in: createMock<[string, string[]], Query>(),
+    order: createMock<[string, { ascending: boolean }], Query>(),
+    limit: createMock<[number], Query>(),
+    overrideTypes: createMock<[], Promise<{ data: unknown[]; error: unknown | null }>>(),
+  };
+
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.in.mockReturnValue(query);
+  query.order.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
+
+  const from = createMock<[string], Query>();
+  const invoke = createMock<[
+    string,
+    { body: { action: string; phoneNumbers: string[]; forceSync: boolean } },
+  ], Promise<{ data: unknown; error: unknown; response: Response | null }>>();
+  const getSupabaseErrorMessage = createMock<[unknown, string], Promise<string>>();
+  const isSupabaseFunctionFetchError = createMock<[unknown], boolean>();
+  const waitForSupabaseSession = createMock<[{ errorMessage: string }], Promise<void>>();
+
+  from.mockReturnValue(query);
+  getSupabaseErrorMessage.mockImplementation(async (_error, fallback) => fallback);
+  isSupabaseFunctionFetchError.mockReturnValue(false);
+  waitForSupabaseSession.mockResolvedValue(undefined);
+
+  return {
+    from,
+    getSupabaseErrorMessage,
+    invoke,
+    isSupabaseFunctionFetchError,
+    query,
+    waitForSupabaseSession,
+  };
+});
+
+vi.mock('../../../../../infrastructure/supabase', () => ({
+  supabase: {
+    from: mocks.from,
+    functions: {
+      invoke: mocks.invoke,
+    },
+  },
+  getSupabaseErrorMessage: mocks.getSupabaseErrorMessage,
+  isSupabaseFunctionFetchError: mocks.isSupabaseFunctionFetchError,
+  supabaseFunctionsUrl: 'https://example.test/functions/v1',
+  waitForSupabaseSession: mocks.waitForSupabaseSession,
+}));
+
+import { commWhatsAppService } from '../commWhatsAppService';
+
+const manualContact = {
+  id: 'manual-row',
+  channel_id: 'channel-1',
+  contact_id: 'manual:5521982965495',
+  phone_number: '5521982965495',
+  phone_digits: '5521982965495',
+  display_name: 'Mariangela',
+  short_name: 'Mariangela',
+  push_name: null,
+  saved: true,
+  manual_override: true,
+  manual_override_name: 'Mariangela',
+  last_synced_at: '2026-09-08T13:00:00.000Z',
+  created_at: '2026-09-08T09:00:00.000Z',
+  updated_at: '2026-09-08T09:00:00.000Z',
+};
+
+test('mantém o nome manual quando a Edge Function de contatos falha', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: null,
+    error: new Error('função temporariamente indisponível'),
+    response: null,
+  });
+  mocks.query.overrideTypes.mockResolvedValue({ data: [manualContact], error: null });
+
+  const contacts = await commWhatsAppService.lookupSavedContactsByPhones({
+    phoneNumbers: ['+55 (21) 98296-5495'],
+  });
+
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0]?.display_name, 'Mariangela');
+  assert.equal(contacts[0]?.manual_override, true);
+  assert.equal(mocks.from.mock.calls[0]?.[0], 'comm_whatsapp_phone_contacts_cache');
+});
+
+test('preserva o erro para o retry quando a Edge Function e o cache falham', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: null,
+    error: new Error('função temporariamente indisponível'),
+    response: null,
+  });
+  mocks.query.overrideTypes.mockResolvedValue({
+    data: [],
+    error: new Error('cache temporariamente indisponível'),
+  });
+
+  await assert.rejects(
+    () => commWhatsAppService.lookupSavedContactsByPhones({ phoneNumbers: ['5521982965495'] }),
+    /Nao foi possivel localizar contatos salvos do WhatsApp\./,
+  );
+});

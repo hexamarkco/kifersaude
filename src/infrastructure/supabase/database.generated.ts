@@ -3408,6 +3408,8 @@ export type Database = {
           display_name: string
           id: string
           last_synced_at: string
+          manual_override: boolean
+          manual_override_name: string | null
           phone_digits: string | null
           phone_number: string | null
           push_name: string | null
@@ -3422,6 +3424,8 @@ export type Database = {
           display_name: string
           id?: string
           last_synced_at?: string
+          manual_override?: boolean
+          manual_override_name?: string | null
           phone_digits?: string | null
           phone_number?: string | null
           push_name?: string | null
@@ -3436,6 +3440,8 @@ export type Database = {
           display_name?: string
           id?: string
           last_synced_at?: string
+          manual_override?: boolean
+          manual_override_name?: string | null
           phone_digits?: string | null
           phone_number?: string | null
           push_name?: string | null
@@ -8412,6 +8418,35 @@ export type Database = {
       comm_whatsapp_resolve_chat_uuid: {
         Args: { p_chat_id: string }
         Returns: string
+      }
+      comm_whatsapp_save_manual_contact_override: {
+        Args: {
+          p_channel_id: string
+          p_display_name: string
+          p_phone_number: string
+        }
+        Returns: {
+          channel_id: string
+          contact_id: string
+          created_at: string
+          display_name: string
+          id: string
+          last_synced_at: string
+          manual_override: boolean
+          manual_override_name: string | null
+          phone_digits: string | null
+          phone_number: string | null
+          push_name: string | null
+          saved: boolean
+          short_name: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "comm_whatsapp_phone_contacts_cache"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       comm_whatsapp_search_cotador_quotes_by_topic: {
         Args: { p_limit?: number; p_search: string; p_terms?: string[] }

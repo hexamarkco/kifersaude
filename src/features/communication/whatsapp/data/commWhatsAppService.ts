@@ -475,6 +475,29 @@ export type CommWhatsAppSavedContactResult = {
   updated_at: string;
 };
 
+const persistManualContactOverride = async (params: {
+  channelId: string;
+  phoneNumber: string;
+  displayName: string;
+}): Promise<CommWhatsAppSavedContactResult> => {
+  const { data, error } = await supabase.rpc('comm_whatsapp_save_manual_contact_override', {
+    p_channel_id: params.channelId,
+    p_phone_number: params.phoneNumber,
+    p_display_name: params.displayName,
+  });
+
+  if (error) {
+    throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível fixar o nome salvo do contato no CRM.'));
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error('O nome salvo não retornou um registro persistido.');
+  }
+
+  return row as CommWhatsAppSavedContactResult;
+};
+
 export type CommWhatsAppTranscriptionResult = {
   transcription_text: string;
   transcription_status: 'completed';
@@ -1684,7 +1707,11 @@ export const commWhatsAppService = {
       throw new Error('O contato salvo nao retornou dados suficientes.');
     }
 
-    return payload.contact;
+    return persistManualContactOverride({
+      channelId: payload.contact.channel_id,
+      phoneNumber: payload.contact.phone_digits || payload.contact.phone_number || params.phoneNumber,
+      displayName: params.displayName,
+    });
   },
 
   async renameContact(params: { phoneNumber: string; displayName: string }): Promise<CommWhatsAppSavedContactResult> {
@@ -1705,7 +1732,11 @@ export const commWhatsAppService = {
       throw new Error('O contato renomeado nao retornou dados suficientes.');
     }
 
-    return payload.contact;
+    return persistManualContactOverride({
+      channelId: payload.contact.channel_id,
+      phoneNumber: payload.contact.phone_digits || payload.contact.phone_number || params.phoneNumber,
+      displayName: params.displayName,
+    });
   },
 
   async findExistingChat(params: { leadId?: string | null; phoneDigits?: string[] }): Promise<CommWhatsAppChat | null> {

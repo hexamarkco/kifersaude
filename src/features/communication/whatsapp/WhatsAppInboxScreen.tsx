@@ -11940,6 +11940,7 @@ export default function WhatsAppInboxScreen() {
             channelId={selectedChat.channel_id}
             chatId={selectedChat.id}
             phoneDigits={selectedChat.phone_digits}
+            currentContactName={selectedChatDisplayName}
             isOpen
             onClose={() => setScheduledMessagesPanelOpen(false)}
             onScheduleNew={() => setScheduleMessageModalOpen(true)}

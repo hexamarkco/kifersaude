@@ -70,3 +70,10 @@ test('prefere o nome salvo atual do chat ao nome histórico do agendamento', () 
 test('usa o nome histórico quando o chat não existe mais', () => {
   assert.equal(getScheduledContactDisplayName(createScheduledMessage()), 'Mariangela - Cliente');
 });
+
+test('usa o nome atual da conversa quando o agendamento não traz o chat relacionado', () => {
+  assert.equal(
+    getScheduledContactDisplayName(createScheduledMessage(), 'Mariangela'),
+    'Mariangela',
+  );
+});

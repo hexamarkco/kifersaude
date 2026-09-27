@@ -19,6 +19,7 @@ type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
   chatId?: string;
   phoneDigits?: string;
+  currentContactName?: string | null;
   isOpen: boolean;
   onClose: () => void;
   onScheduleNew?: () => void;
@@ -126,6 +127,7 @@ export default function WhatsAppScheduledMessagesPanel({
   channelId,
   chatId,
   phoneDigits,
+  currentContactName,
   isOpen,
   onClose,
   onScheduleNew,
@@ -406,7 +408,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           message.text_content,
-          getScheduledContactDisplayName(message),
+          getScheduledContactDisplayName(message, currentContactName),
           message.phone_number,
           message.phone_digits,
           message.label,
@@ -418,7 +420,7 @@ export default function WhatsAppScheduledMessagesPanel({
         const secondDate = new Date(second.next_run_at ?? second.scheduled_at).getTime();
         return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
       });
-  }, [activeView, endDate, messages, searchQuery, startDate]);
+  }, [activeView, currentContactName, endDate, messages, searchQuery, startDate]);
 
   const visibleSequences = useMemo(() => {
     const normalizedQuery = normalizeSearchTerm(searchQuery.trim());
@@ -436,7 +438,7 @@ export default function WhatsAppScheduledMessagesPanel({
 
         return normalizeSearchTerm([
           sequence.label,
-          getScheduledContactDisplayName(sequence),
+          getScheduledContactDisplayName(sequence, currentContactName),
           sequence.phone_number,
           sequence.phone_digits,
           SEQUENCE_STATUS_LABELS[sequence.status],
@@ -447,7 +449,7 @@ export default function WhatsAppScheduledMessagesPanel({
         const secondDate = new Date(second.scheduled_at).getTime();
         return activeView === 'upcoming' ? firstDate - secondDate : secondDate - firstDate;
       });
-  }, [activeView, endDate, searchQuery, sequences, startDate]);
+  }, [activeView, currentContactName, endDate, searchQuery, sequences, startDate]);
 
   const hasListFilters = Boolean(searchQuery || startDate || endDate);
 
@@ -601,6 +603,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledSequenceItem
                       key={sequence.id}
                       sequence={sequence}
+                      currentContactName={currentContactName}
                       cancelling={activeActionIds.has(sequence.id)}
                       onEdit={() => setEditingSequence(sequence)}
                       onCancel={() => void handleCancelSequence(sequence.id)}
@@ -627,6 +630,7 @@ export default function WhatsAppScheduledMessagesPanel({
                     <ScheduledMessageItem
                       key={message.id}
                       message={message}
+                      currentContactName={currentContactName}
                       cancelling={activeActionIds.has(message.id)}
                       onEdit={() => setEditingMessage(message)}
                       onCancel={() => void handleCancel(message.id)}
@@ -681,16 +685,17 @@ export default function WhatsAppScheduledMessagesPanel({
 
 type ScheduledMessageItemProps = {
   message: CommWhatsAppScheduledMessage;
+  currentContactName?: string | null;
   cancelling: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onDelete: () => void;
 };
 
-function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete }: ScheduledMessageItemProps) {
+function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit, onCancel, onDelete }: ScheduledMessageItemProps) {
   const isActive = message.status === 'scheduled' || message.status === 'failed';
   const scheduledAt = message.next_run_at ?? message.scheduled_at;
-  const contactDisplayName = getScheduledContactDisplayName(message);
+  const contactDisplayName = getScheduledContactDisplayName(message, currentContactName);
 
   return (
     <div className="rounded-lg border border-[var(--border-subtle)] p-3 hover:border-[var(--border-default)] transition-colors">
@@ -771,13 +776,14 @@ function ScheduledMessageItem({ message, cancelling, onEdit, onCancel, onDelete 
 
 type ScheduledSequenceItemProps = {
   sequence: CommWhatsAppScheduledSequence;
+  currentContactName?: string | null;
   cancelling: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onRetry: () => void;
 };
 
-function ScheduledSequenceItem({ sequence, cancelling, onEdit, onCancel, onRetry }: ScheduledSequenceItemProps) {
+function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdit, onCancel, onRetry }: ScheduledSequenceItemProps) {
   const canCancel = sequence.status === 'scheduled' || sequence.status === 'running' || sequence.status === 'paused';
   const canRetry = sequence.status === 'paused';
   const stepCount = sequence.steps?.length;
@@ -785,7 +791,7 @@ function ScheduledSequenceItem({ sequence, cancelling, onEdit, onCancel, onRetry
     && sequence.current_step_index === 0
     && Boolean(stepCount)
     && sequence.steps?.every((step) => step.status === 'pending' && step.actions.every((action) => action.status === 'pending'));
-  const contactDisplayName = getScheduledContactDisplayName(sequence);
+  const contactDisplayName = getScheduledContactDisplayName(sequence, currentContactName);
 
   return (
     <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-3">

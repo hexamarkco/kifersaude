@@ -29,7 +29,7 @@ export { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 const SCHEDULED_MEDIA_BUCKET = 'comm-whatsapp-scheduled-media';
 const SCHEDULED_MEDIA_URL_PREFIX = `storage://${SCHEDULED_MEDIA_BUCKET}/`;
 const MAX_SCHEDULED_MEDIA_BYTES = 20 * 1024 * 1024;
-const SCHEDULED_READ_RETRY_DELAY_MS = 250;
+const SCHEDULED_READ_RETRY_DELAYS_MS = [250, 750] as const;
 const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'video/mp4', 'video/webm', 'video/quicktime',
@@ -40,14 +40,35 @@ const SCHEDULED_MEDIA_MIME_TYPES = new Set([
   'text/plain', 'text/csv',
 ]);
 
-async function executeScheduledRead<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch {
-    await new Promise<void>((resolve) => window.setTimeout(resolve, SCHEDULED_READ_RETRY_DELAY_MS));
+function isRetryableScheduledReadError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message.toLowerCase()
+    : String(error ?? '').toLowerCase();
 
-    return operation();
+  return [
+    'falha de rede ao conectar com o supabase',
+    'tempo limite atingido',
+    'failed to fetch',
+    'networkerror',
+    'fetch failed',
+  ].some((fragment) => message.includes(fragment));
+}
+
+async function executeScheduledRead<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt <= SCHEDULED_READ_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const retryDelayMs = SCHEDULED_READ_RETRY_DELAYS_MS[attempt];
+      if (retryDelayMs === undefined || !isRetryableScheduledReadError(error)) {
+        throw error;
+      }
+
+      await new Promise<void>((resolve) => window.setTimeout(resolve, retryDelayMs));
+    }
   }
+
+  throw new Error('Não foi possível concluir a leitura dos agendamentos.');
 }
 
 const SCHEDULED_SEQUENCE_SELECT = [

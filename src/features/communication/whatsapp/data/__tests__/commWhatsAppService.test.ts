@@ -235,17 +235,35 @@ test('aguarda a sessão antes de carregar listas e contagens agendadas', async (
   assert.equal(mocks.waitForSupabaseSession.mock.calls.length, sessionCallsBefore + 4);
 });
 
-test('repete uma leitura agendada após uma falha transitória', async () => {
+test('repete uma leitura agendada após falhas transitórias até concluir', async () => {
   let attempts = 0;
   mocks.query.range.mockImplementation(async () => {
     attempts += 1;
     return attempts === 1
-      ? { data: [], error: new Error('falha transitória') }
+      ? { data: [], error: new Error('Falha de rede ao conectar com o Supabase') }
+      : attempts === 2
+        ? { data: [], error: new Error('Failed to fetch') }
       : { data: [], error: null };
   });
 
   await commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' });
 
-  assert.equal(attempts, 2);
+  assert.equal(attempts, 3);
+  mocks.query.range.mockResolvedValue({ data: [], error: null });
+});
+
+test('não repete falha permanente ao listar agendamentos', async () => {
+  let attempts = 0;
+  mocks.query.range.mockImplementation(async () => {
+    attempts += 1;
+    return { data: [], error: new Error('permission denied') };
+  });
+
+  await assert.rejects(
+    () => commWhatsAppService.listScheduledMessages({ channelId: 'channel-1' }),
+    /Nao foi possivel listar mensagens agendadas\./,
+  );
+
+  assert.equal(attempts, 1);
   mocks.query.range.mockResolvedValue({ data: [], error: null });
 });

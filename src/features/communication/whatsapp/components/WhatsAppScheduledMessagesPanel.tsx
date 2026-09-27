@@ -651,20 +651,6 @@ export default function WhatsAppScheduledMessagesPanel({
             >
               Verifique sua conexão ou sessão. Nenhum agendamento foi apagado.
             </Alert>
-          ) : messages.length === 0 && sequences.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-muted)]">Nenhum agendamento encontrado</p>
-              <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
-                Agende mensagens únicas ou sequências para envio automático
-              </p>
-              {onScheduleNew && (
-                <Button onClick={onScheduleNew} size="sm">
-                  <Plus className="kds-control-icon" />
-                  Agendar nova mensagem
-                </Button>
-              )}
-            </div>
           ) : (
             <>
               {loadError === 'partial' ? (
@@ -678,9 +664,26 @@ export default function WhatsAppScheduledMessagesPanel({
                     </Button>
                   }
                 >
-                  Os itens disponíveis continuam visíveis. Tente novamente para atualizar o restante.
+                  Uma parte da consulta falhou. Tente novamente para atualizar todos os agendamentos.
                 </Alert>
               ) : null}
+
+              {messages.length === 0 && sequences.length === 0 ? (
+                <div className="text-center py-12">
+                  <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
+                  <p className="text-[var(--text-muted)]">Nenhum agendamento encontrado</p>
+                  <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
+                    Agende mensagens únicas ou sequências para envio automático
+                  </p>
+                  {onScheduleNew && (
+                    <Button onClick={onScheduleNew} size="sm">
+                      <Plus className="kds-control-icon" />
+                      Agendar nova mensagem
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <>
 
               {countsLoadError ? (
                 <Alert tone="warning" title="Os totais das abas estão incompletos.">
@@ -804,6 +807,8 @@ export default function WhatsAppScheduledMessagesPanel({
                     />
                   ))}
                 </div>
+              )}
+                </>
               )}
             </>
           )}

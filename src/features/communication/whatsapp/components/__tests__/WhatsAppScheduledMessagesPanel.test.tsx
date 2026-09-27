@@ -123,5 +123,7 @@ test('descarta sequências antigas quando uma nova carga parcial falha', async (
 
   assert.doesNotMatch(document.body.textContent ?? '', /Sequência antiga/);
   assert.match(document.body.textContent ?? '', /0 mensagem\(ns\) e 0 sequência\(s\)/);
+  assert.match(document.body.textContent ?? '', /Alguns agendamentos não puderam ser carregados/);
+  assert.match(document.body.textContent ?? '', /Uma parte da consulta falhou/);
   view.unmount();
 });

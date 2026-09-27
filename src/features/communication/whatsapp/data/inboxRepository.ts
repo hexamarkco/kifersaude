@@ -201,8 +201,7 @@ export async function listInboxAgendaReminders(
   leadId: string,
   contractIds: string[],
 ): Promise<InboxAgendaSummaryReminder[]> {
-  const [leadReminders, contractReminders] = await Promise.all([
-    fetchAllPages<InboxAgendaSummaryReminder>(async (from, to) => databaseClient
+  const leadRemindersPromise = fetchAllPages<InboxAgendaSummaryReminder>(async (from, to) => databaseClient
       .from('reminders')
       .select('id, tipo, titulo, data_lembrete, lido')
       .eq('lead_id', leadId)
@@ -210,8 +209,8 @@ export async function listInboxAgendaReminders(
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
-      .overrideTypes<InboxAgendaSummaryReminder[], { merge: false }>()),
-    contractIds.length > 0
+      .overrideTypes<InboxAgendaSummaryReminder[], { merge: false }>());
+  const contractRemindersPromise = contractIds.length > 0
       ? fetchAllPages<InboxAgendaSummaryReminder>(async (from, to) => databaseClient
           .from('reminders')
           .select('id, tipo, titulo, data_lembrete, lido')
@@ -221,11 +220,30 @@ export async function listInboxAgendaReminders(
           .order('id', { ascending: true })
           .range(from, to)
           .overrideTypes<InboxAgendaSummaryReminder[], { merge: false }>())
-      : Promise.resolve([]),
+      : null;
+  const results = await Promise.allSettled([
+    leadRemindersPromise,
+    ...(contractRemindersPromise ? [contractRemindersPromise] : []),
   ]);
+  const failedResults = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+  const successfulResults = results.filter(
+    (result): result is PromiseFulfilledResult<InboxAgendaSummaryReminder[]> => result.status === 'fulfilled',
+  );
+
+  if (successfulResults.length === 0) {
+    throw failedResults[0]?.reason ?? new Error('Não foi possível carregar os lembretes do chat.');
+  }
+
+  if (failedResults.length > 0) {
+    console.warn('[WhatsAppInbox] parte dos lembretes da agenda não pôde ser carregada', {
+      failedSources: failedResults.length,
+    });
+  }
+
+  const reminders = successfulResults.flatMap((result) => result.value);
 
   return Array.from(
-    new Map([...leadReminders, ...contractReminders].map((reminder) => [reminder.id, reminder])).values(),
+    new Map(reminders.map((reminder) => [reminder.id, reminder])).values(),
   ).map((reminder) => ({
     ...reminder,
     tipo: normalizeReminderType(reminder.tipo),

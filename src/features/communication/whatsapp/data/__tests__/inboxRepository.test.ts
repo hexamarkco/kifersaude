@@ -52,10 +52,6 @@ const mocks = vi.hoisted(() => {
   query.overrideTypes.mockReturnValue(Promise.resolve({ data: [], error: null }));
 
   const fetchAllPages = createMock<[FetchPage], Promise<unknown[]>>();
-  fetchAllPages.mockImplementation(async (fetchPage) => {
-    const page = await fetchPage(0, 999);
-    return page.data ?? [];
-  });
 
   return {
     channel: createMock<[string], Subscription>(),
@@ -69,6 +65,13 @@ const mocks = vi.hoisted(() => {
 
 mocks.channel.mockReturnValue(mocks.subscription);
 mocks.from.mockReturnValue(mocks.query);
+
+const defaultFetchAllPages = async (fetchPage: FetchPage) => {
+  const page = await fetchPage(0, 999);
+  return page.data ?? [];
+};
+
+mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
 
 vi.mock('../../../../../infrastructure/supabase', () => ({
   databaseClient: {
@@ -208,4 +211,36 @@ test('carrega somente os campos usados no resumo da agenda', async () => {
     mocks.query.eq.mock.calls.filter(([field, value]) => field === 'lido' && value === false).length,
     2,
   );
+});
+
+test('preserva lembretes do lead quando a consulta de contratos falha', async () => {
+  resetMocks();
+  let calls = 0;
+  mocks.fetchAllPages.mockImplementation(async () => {
+    calls += 1;
+    if (calls === 2) {
+      throw new Error('lembretes de contratos indisponíveis');
+    }
+    return [{
+      id: 'reminder-lead-1',
+      tipo: 'Outro',
+      titulo: 'Retornar contato',
+      data_lembrete: '2026-09-27T12:00:00.000Z',
+      lido: false,
+    }];
+  });
+
+  try {
+    const reminders = await listInboxAgendaReminders('lead-1', ['contract-1']);
+
+    assert.deepEqual(reminders, [{
+      id: 'reminder-lead-1',
+      tipo: 'Outro',
+      titulo: 'Retornar contato',
+      data_lembrete: '2026-09-27T12:00:00.000Z',
+      lido: false,
+    }]);
+  } finally {
+    mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
+  }
 });

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-07T20:13:48.948Z",
-  "totalFiles": 153,
-  "wrappedFiles": 36,
+  "generatedAt": "2026-09-28T00:13:35.107Z",
+  "totalFiles": 545,
+  "wrappedFiles": 37,
   "duplicateSlugs": [
     "add_admin_update_policy",
     "add_blog_images_storage",
@@ -68,7 +68,8 @@
     "20251101090000_add_commission_receipt_mode",
     "20251101120000_create_email_tables",
     "20251101120000_dependents_per_holder",
-    "20251102120000_add_system_configurations_table"
+    "20251102120000_add_system_configurations_table",
+    "20261014030000_optimize_auto_contact_inactivity_scan"
   ],
   "exactDuplicateHashes": [
     "0395e545e7f6",

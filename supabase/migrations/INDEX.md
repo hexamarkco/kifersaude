@@ -1,13 +1,13 @@
 # Migrations Index
 
-Generated: 2026-08-27T14:47:41.358Z
+Generated: 2026-09-28T00:13:34.517Z
 
 ## Summary
 
-- Total SQL files: 354
-- Valid migration filenames: 354
+- Total SQL files: 545
+- Valid migration filenames: 545
 - Invalid SQL filenames: 0
-- Legacy wrapped files (format `<new>_<old>_name.sql`): 36
+- Legacy wrapped files (format `<new>_<old>_name.sql`): 37
 - Duplicate slug groups: 36
 - Exact content duplicate groups: 14
 
@@ -30,7 +30,8 @@ Generated: 2026-08-27T14:47:41.358Z
 | 2026-05 | 4 |
 | 2026-07 | 10 |
 | 2026-08 | 13 |
-| 2026-09 | 181 |
+| 2026-09 | 266 |
+| 2026-10 | 106 |
 
 ## Duplicate Slugs
 
@@ -218,53 +219,55 @@ Generated: 2026-08-27T14:47:41.358Z
   - `20251207165509_20251101120000_dependents_per_holder.sql`
 - `20251102120000_add_system_configurations_table`
   - `20251207165552_20251102120000_add_system_configurations_table.sql`
+- `20261014030000_optimize_auto_contact_inactivity_scan`
+  - `20260928001054_20261014030000_optimize_auto_contact_inactivity_scan.sql`
 
 ## Exact Content Duplicates
 
-- hash `367ce0263dd6` (3 files)
-  - `20251018004034_add_lead_status_history.sql`
-  - `20251030154205_20251018004034_add_lead_status_history.sql`
-  - `20251207164519_20251018004034_add_lead_status_history.sql`
-- hash `aa0d7066a865` (3 files)
-  - `20251017235353_fix_contract_value_adjustments_rls.sql`
-  - `20251030154202_20251017235353_fix_contract_value_adjustments_rls.sql`
-  - `20251207164517_20251017235353_fix_contract_value_adjustments_rls.sql`
-- hash `b5a829be163f` (3 files)
-  - `20251018183639_add_reminders_enhancements.sql`
-  - `20251030154236_20251018183639_add_reminders_enhancements.sql`
-  - `20251207164549_20251018183639_add_reminders_enhancements.sql`
-- hash `fc7e17ce6d75` (3 files)
+- hash `0cbaf6022e29` (3 files)
   - `20251012162700_update_rls_policies_public_access.sql`
   - `20251030154107_20251012162700_update_rls_policies_public_access.sql`
   - `20251207164439_20251012162700_update_rls_policies_public_access.sql`
-- hash `1d5672cc695a` (2 files)
-  - `20251031013923_add_blog_posts_table.sql`
-  - `20251207164941_20251031013923_add_blog_posts_table.sql`
-- hash `2010f9c65aab` (2 files)
+- hash `7fd3335cec61` (3 files)
+  - `20251017235353_fix_contract_value_adjustments_rls.sql`
+  - `20251030154202_20251017235353_fix_contract_value_adjustments_rls.sql`
+  - `20251207164517_20251017235353_fix_contract_value_adjustments_rls.sql`
+- hash `9c8bb54c95f6` (3 files)
+  - `20251018004034_add_lead_status_history.sql`
+  - `20251030154205_20251018004034_add_lead_status_history.sql`
+  - `20251207164519_20251018004034_add_lead_status_history.sql`
+- hash `ed991339a70d` (3 files)
+  - `20251018183639_add_reminders_enhancements.sql`
+  - `20251030154236_20251018183639_add_reminders_enhancements.sql`
+  - `20251207164549_20251018183639_add_reminders_enhancements.sql`
+- hash `0395e545e7f6` (2 files)
   - `20251031113901_add_blog_images_storage.sql`
   - `20251031120000_add_blog_images_storage.sql`
-- hash `2624b4dc5c19` (2 files)
+- hash `071333becefb` (2 files)
   - `20251030154037_20251012150958_create_kifer_saude_schema.sql`
   - `20251207164403_20251012150958_create_kifer_saude_schema.sql`
-- hash `5dc2bd0853ae` (2 files)
+- hash `326c1d9551a3` (2 files)
   - `20251030154239_20251022171047_add_leads_address_fields.sql`
   - `20251207164551_20251022171047_add_leads_address_fields.sql`
-- hash `6116f74e1531` (2 files)
+- hash `3fd558ba4246` (2 files)
   - `20251030212542_add_configuration_tables.sql`
   - `20251207164837_20251030212542_add_configuration_tables.sql`
-- hash `866043d3ea20` (2 files)
+- hash `5a2d87a75c4f` (2 files)
   - `20251030154159_20251017222326_add_contract_renovation_date.sql`
   - `20251207164514_20251017222326_add_contract_renovation_date.sql`
-- hash `8d33638cfc2d` (2 files)
+- hash `6ff4279fee44` (2 files)
+  - `20251031013923_add_blog_posts_table.sql`
+  - `20251207164941_20251031013923_add_blog_posts_table.sql`
+- hash `d4f09c1b490c` (2 files)
   - `20251030214605_add_vidas_to_contracts.sql`
   - `20251207164908_20251030214605_add_vidas_to_contracts.sql`
-- hash `9abffa0b2ac6` (2 files)
-  - `20251208235305_add_contract_reajuste_month.sql`
-  - `20260730130000_add_contract_reajuste_month.sql`
-- hash `b034139420b0` (2 files)
+- hash `d73915467ee1` (2 files)
   - `20251030213736_add_bonus_commission_fields.sql`
   - `20251207164906_20251030213736_add_bonus_commission_fields.sql`
-- hash `c3a948aa9e15` (2 files)
+- hash `db54ba2f4c4d` (2 files)
+  - `20251208235305_add_contract_reajuste_month.sql`
+  - `20260730130000_add_contract_reajuste_month.sql`
+- hash `e55b6dd42b86` (2 files)
   - `20251030154133_20251013111410_add_contract_commission_multiplier_and_adjustments.sql`
   - `20251207164442_20251013111410_add_contract_commission_multiplier_and_adjustments.sql`
 

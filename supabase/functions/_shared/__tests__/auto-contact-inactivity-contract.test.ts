@@ -11,6 +11,10 @@ const cutoverRepairMigrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260915153939_repair_auto_contact_inactivity_cutover_config_lookup.sql'),
   'utf8',
 );
+const inactivityOptimizationMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260928001054_20261014030000_optimize_auto_contact_inactivity_scan.sql'),
+  'utf8',
+);
 const leadsApiSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/leads-api/index.ts'),
   'utf8',
@@ -44,4 +48,13 @@ test('flow messages carry their origin and the edge entry point blocks self-reen
 test('a completed step schedules the next step within the same enrollment', () => {
   assert.match(leadsApiSource, /const nextStep = flow\.steps\[completedJob\.step_order \+ 1\]/);
   assert.match(leadsApiSource, /enrollment_id: completedJob\.enrollment_id \?\? null/);
+});
+
+test('the inactivity scanner reads only the latest visible message per chat', () => {
+  assert.match(inactivityOptimizationMigrationSource, /idx_comm_whatsapp_messages_chat_latest_visible/);
+  assert.match(inactivityOptimizationMigrationSource, /WHERE public\.comm_whatsapp_message_preview_text\(media_caption, text_content, message_type\) IS NOT NULL/);
+  assert.match(inactivityOptimizationMigrationSource, /JOIN LATERAL \(\s*SELECT[\s\S]*FROM public\.comm_whatsapp_messages m/);
+  assert.match(inactivityOptimizationMigrationSource, /ORDER BY m\.message_at DESC, m\.id DESC\s*LIMIT 1/);
+  assert.match(inactivityOptimizationMigrationSource, /ORDER BY l\.created_at DESC\s*LIMIT 20/);
+  assert.match(inactivityOptimizationMigrationSource, /v_total_leads := v_total_leads \+ 1/);
 });

@@ -99,7 +99,7 @@ export function WhatsAppComposer({
   handleInsertQuickReply,
   quickReplyEmptyStateMessage,
   quickRepliesLoadError,
-  setQuickRepliesLoadRetryToken,
+  onRetryQuickRepliesLoad,
 }: {
   fileInputRef: RefObject<HTMLInputElement>;
   attachmentInputAccept: string;
@@ -172,7 +172,7 @@ export function WhatsAppComposer({
   handleInsertQuickReply: (option: ComposerQuickReplyOption) => void;
   quickReplyEmptyStateMessage: string;
   quickRepliesLoadError: boolean;
-  setQuickRepliesLoadRetryToken: Dispatch<SetStateAction<number>>;
+  onRetryQuickRepliesLoad: () => void;
 }) {
   return (
               <div className="whatsapp-inbox-composer-area relative z-10 min-h-0 overflow-visible border-t p-2.5 sm:p-3">
@@ -828,7 +828,7 @@ export function WhatsAppComposer({
                                       variant="secondary"
                                       size="sm"
                                       onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => setQuickRepliesLoadRetryToken((current) => current + 1)}
+                                      onClick={onRetryQuickRepliesLoad}
                                     >
                                       Tentar novamente
                                     </Button>

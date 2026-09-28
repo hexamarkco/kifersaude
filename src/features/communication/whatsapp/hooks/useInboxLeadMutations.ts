@@ -40,6 +40,7 @@ type LeadMutationOptions = {
   loadLeadPanel: (chat: CommWhatsAppChat) => Promise<unknown> | void;
   loadChats: () => Promise<unknown> | void;
   loadChatAgendaSummary: (leadId: string, contractIds: string[]) => Promise<unknown> | void;
+  isChatSendActive: (chatId: string) => boolean;
 };
 
 export const useInboxLeadMutations = ({
@@ -65,6 +66,7 @@ export const useInboxLeadMutations = ({
   loadLeadPanel,
   loadChats,
   loadChatAgendaSummary,
+  isChatSendActive,
 }: LeadMutationOptions) => {
   const handleCreateLeadFromChatSaved = useCallback(async (lead: Lead) => {
     const targetChatId = createLeadChatId;
@@ -196,6 +198,7 @@ export const useInboxLeadMutations = ({
 
     const requestId = ++leadMutationRequestIdRef.current;
     setLeadMutationLoadingChatId(targetChatId);
+    const deferChatListRefresh = isChatSendActive(targetChatId);
     const statusReminderLeadSnapshot = {
       id: leadPanel.id,
       nome_completo: leadPanel.nome_completo,
@@ -219,11 +222,14 @@ export const useInboxLeadMutations = ({
         setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
       }
 
-      await Promise.all([
+      const refreshes: Array<Promise<unknown> | void> = [
         loadLeadPanel(selectedChat),
-        loadChats(),
         loadChatAgendaSummary(leadPanel.id, leadContracts.map((contract) => contract.id)),
-      ]);
+      ];
+      if (!deferChatListRefresh) {
+        refreshes.push(loadChats());
+      }
+      await Promise.all(refreshes);
     } catch (error) {
       if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -235,7 +241,7 @@ export const useInboxLeadMutations = ({
       leadMutationLockRef.current.release(targetChatId);
       setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
     }
-  }, [leadContracts, leadMutationLockRef, leadMutationRequestIdRef, leadPanel, loadChatAgendaSummary, loadChats, loadLeadPanel, selectedChat, selectedChatIdRef, setChatAgendaSummary, setLeadMutationLoadingChatId, setStatusReminderLead, setStatusReminderPromptMessage]);
+  }, [isChatSendActive, leadContracts, leadMutationLockRef, leadMutationRequestIdRef, leadPanel, loadChatAgendaSummary, loadChats, loadLeadPanel, selectedChat, selectedChatIdRef, setChatAgendaSummary, setLeadMutationLoadingChatId, setStatusReminderLead, setStatusReminderPromptMessage]);
 
   const handleLeadResponsavelChange = useCallback(async (_leadId: string, responsavelValue: string) => {
     if (!selectedChat || selectedChat.is_group) {

@@ -32,30 +32,40 @@ test('serializa envios do mesmo chat, permite paralelismo entre chats e mantém 
       states.push({ ...sendingByChatId });
     },
   };
-  let queue: Queue | null = null;
-  const view = render(<Harness options={options} capture={(value) => { queue = value; }} />);
+  const queueRef: { current: Queue | null } = { current: null };
+  const getQueue = () => {
+    const current = queueRef.current;
+    if (!current) {
+      throw new Error('A fila de envio não foi montada.');
+    }
+    return current;
+  };
+  const view = render(<Harness options={options} capture={(value) => { queueRef.current = value; }} />);
 
   try {
-    assert.ok(queue);
+    assert.ok(queueRef.current);
+    assert.equal(getQueue().isChatSendActive('chat-1'), false);
     let sameChatSecond: Promise<void> | null = null;
     let otherChatSend: Promise<void> | null = null;
     act(() => {
-      void queue?.enqueueChatSend('chat-1', async () => {
+      void getQueue().enqueueChatSend('chat-1', async () => {
         events.push('chat-1:first:start');
         await firstSend.promise;
         events.push('chat-1:first:end');
       });
-      sameChatSecond = queue?.enqueueChatSend('chat-1', async () => {
+      sameChatSecond = getQueue().enqueueChatSend('chat-1', async () => {
         events.push('chat-1:second');
-      }) ?? null;
-      otherChatSend = queue?.enqueueChatSend('chat-2', async () => {
+      });
+      otherChatSend = getQueue().enqueueChatSend('chat-2', async () => {
         events.push('chat-2:first');
-      }) ?? null;
+      });
     });
 
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     assert.deepEqual(events, ['chat-1:first:start', 'chat-2:first']);
     assert.deepEqual(sendingByChatId, { 'chat-1': true });
+    assert.equal(getQueue().isChatSendActive('chat-1'), true);
+    assert.equal(getQueue().isChatSendActive('chat-2'), false);
 
     await act(async () => {
       firstSend.resolve();
@@ -64,6 +74,7 @@ test('serializa envios do mesmo chat, permite paralelismo entre chats e mantém 
 
     assert.deepEqual(events, ['chat-1:first:start', 'chat-2:first', 'chat-1:first:end', 'chat-1:second']);
     assert.deepEqual(sendingByChatId, {});
+    assert.equal(getQueue().isChatSendActive('chat-1'), false);
     assert.ok(states.some((state) => state['chat-1'] === true));
   } finally {
     view.unmount();

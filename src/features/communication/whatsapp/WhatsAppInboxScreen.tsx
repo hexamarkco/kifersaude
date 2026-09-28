@@ -405,7 +405,7 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [connectionStatusLabel, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
-  const { enqueueChatSend } = useInboxSendQueue({ setSendingByChatId });
+  const { enqueueChatSend, isChatSendActive } = useInboxSendQueue({ setSendingByChatId });
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -1714,6 +1714,7 @@ export default function WhatsAppInboxScreen() {
     loadLeadPanel,
     loadChats,
     loadChatAgendaSummary,
+    isChatSendActive,
   });
 
   const handleViewLeadInCrm = () => {

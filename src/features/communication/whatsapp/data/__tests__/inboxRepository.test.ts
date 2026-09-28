@@ -13,7 +13,12 @@ type Subscription = {
   subscribe: MockFunction<[callback?: (status: string) => void], Subscription>;
 };
 
-type Query = {
+type QueryResult = { data: unknown; error: unknown | null };
+
+type Query = PromiseLike<QueryResult> & {
+  delete: MockFunction<[], Query>;
+  update: MockFunction<[Record<string, unknown>], Query>;
+  insert: MockFunction<[unknown[]], Query>;
   select: MockFunction<[string], Query>;
   eq: MockFunction<[string, unknown], Query>;
   in: MockFunction<[string, string[]], Query>;
@@ -38,6 +43,11 @@ const mocks = vi.hoisted(() => {
   subscription.subscribe.mockReturnValue(subscription);
 
   const query = {} as Query;
+  const queryResult = { current: { data: null, error: null } as QueryResult };
+  const rpcResult = { current: { data: null, error: null } as QueryResult };
+  query.delete = createMock<[], Query>();
+  query.update = createMock<[Record<string, unknown>], Query>();
+  query.insert = createMock<[unknown[]], Query>();
   query.select = createMock<[string], Query>();
   query.eq = createMock<[string, unknown], Query>();
   query.in = createMock<[string, string[]], Query>();
@@ -45,20 +55,29 @@ const mocks = vi.hoisted(() => {
   query.range = createMock<[number, number], Query>();
   query.overrideTypes = createMock<[], Promise<{ data: unknown[]; error: null }>>();
   query.select.mockReturnValue(query);
+  query.delete.mockReturnValue(query);
+  query.update.mockReturnValue(query);
+  query.insert.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.in.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
   query.overrideTypes.mockReturnValue(Promise.resolve({ data: [], error: null }));
+  query.then = (onfulfilled, onrejected) => Promise.resolve(queryResult.current).then(onfulfilled, onrejected);
 
   const fetchAllPages = createMock<[FetchPage], Promise<unknown[]>>();
+  const rpc = createMock<[string, Record<string, unknown>], Promise<QueryResult>>();
+  rpc.mockImplementation(async () => rpcResult.current);
 
   return {
     channel: createMock<[string], Subscription>(),
     fetchAllPages,
     from: createMock<[string], Query>(),
+    rpc,
     removeChannel: createMock<[Subscription], void>(),
     query,
+    queryResult,
+    rpcResult,
     subscription,
   };
 });
@@ -77,6 +96,7 @@ vi.mock('../../../../../infrastructure/supabase', () => ({
   databaseClient: {
     channel: mocks.channel,
     from: mocks.from,
+    rpc: mocks.rpc,
     removeChannel: mocks.removeChannel,
   },
   fetchAllPages: mocks.fetchAllPages,
@@ -88,19 +108,32 @@ import {
   subscribeToInboxChats,
   subscribeToInboxPresences,
   subscribeToInboxReminders,
+  clearInboxLeadAgenda,
+  scheduleInboxFollowUp,
+  markInboxRemindersRead,
+  approveInboxFollowUpSchedule,
+  updateInboxFollowUpSentAudits,
+  updateInboxFollowUpSentAudit,
+  insertInboxLegacyFollowUpAudits,
 } from '../inboxRepository';
 
 const resetMocks = () => {
   mocks.channel.mock.calls.length = 0;
   mocks.fetchAllPages.mock.calls.length = 0;
   mocks.from.mock.calls.length = 0;
+  mocks.rpc.mock.calls.length = 0;
   mocks.removeChannel.mock.calls.length = 0;
+  mocks.query.delete.mock.calls.length = 0;
+  mocks.query.update.mock.calls.length = 0;
+  mocks.query.insert.mock.calls.length = 0;
   mocks.query.select.mock.calls.length = 0;
   mocks.query.eq.mock.calls.length = 0;
   mocks.query.in.mock.calls.length = 0;
   mocks.query.order.mock.calls.length = 0;
   mocks.query.range.mock.calls.length = 0;
   mocks.query.overrideTypes.mock.calls.length = 0;
+  mocks.queryResult.current = { data: null, error: null };
+  mocks.rpcResult.current = { data: null, error: null };
   mocks.subscription.on.mock.calls.length = 0;
   mocks.subscription.subscribe.mock.calls.length = 0;
 };
@@ -243,4 +276,158 @@ test('preserva lembretes do lead quando a consulta de contratos falha', async ()
   } finally {
     mocks.fetchAllPages.mockImplementation(defaultFetchAllPages);
   }
+});
+
+test('limpa os lembretes do lead antes de zerar a data do próximo retorno', async () => {
+  resetMocks();
+
+  await clearInboxLeadAgenda('lead-1');
+
+  assert.deepEqual(mocks.from.mock.calls, [['reminders'], ['leads']]);
+  assert.equal(mocks.query.delete.mock.calls.length, 1);
+  assert.deepEqual(mocks.query.eq.mock.calls, [['lead_id', 'lead-1'], ['id', 'lead-1']]);
+  assert.deepEqual(mocks.query.update.mock.calls, [[{ proximo_retorno: null }]]);
+});
+
+test('interrompe a limpeza da agenda quando a exclusão dos lembretes falha', async () => {
+  resetMocks();
+  const error = new Error('falha ao excluir lembretes');
+  mocks.queryResult.current = { data: null, error };
+
+  await assert.rejects(clearInboxLeadAgenda('lead-1'), error);
+
+  assert.deepEqual(mocks.from.mock.calls, [['reminders']]);
+  assert.equal(mocks.query.update.mock.calls.length, 0);
+});
+
+test('agenda follow-up pelo RPC legado e pela versão com geração', async () => {
+  resetMocks();
+  mocks.rpcResult.current = { data: [{ inserted: true, reminder_id: 'reminder-1' }], error: null };
+  const baseInput = {
+    leadId: 'lead-1',
+    title: 'Retomar contato: Ana',
+    description: 'Confirmar o horário',
+    dueAt: '2026-10-01T12:00:00.000Z',
+    priority: 'normal',
+  };
+
+  assert.deepEqual(await scheduleInboxFollowUp(baseInput), { inserted: true, reminderId: 'reminder-1' });
+  assert.deepEqual(mocks.rpc.mock.calls[0], ['schedule_follow_up_reminder', {
+    p_lead_id: 'lead-1',
+    p_title: 'Follow-up: Ana',
+    p_description: 'Confirmar o horário',
+    p_due_at: '2026-10-01T12:00:00.000Z',
+    p_priority: 'normal',
+  }]);
+
+  mocks.rpcResult.current = { data: { inserted: false, reminder_id: null }, error: null };
+  assert.deepEqual(await scheduleInboxFollowUp({
+    ...baseInput,
+    generationId: 'generation-1',
+  }), { inserted: false, reminderId: null });
+  assert.deepEqual(mocks.rpc.mock.calls[1], ['schedule_follow_up_reminder_v2', {
+    p_lead_id: 'lead-1',
+    p_title: 'Follow-up: Ana',
+    p_description: 'Confirmar o horário',
+    p_due_at: '2026-10-01T12:00:00.000Z',
+    p_priority: 'normal',
+    p_generation_id: 'generation-1',
+    p_origin: 'follow_up_v2_batch',
+  }]);
+});
+
+test('propaga erro do RPC de follow-up', async () => {
+  resetMocks();
+  const error = new Error('RPC indisponível');
+  mocks.rpcResult.current = { data: null, error };
+
+  await assert.rejects(scheduleInboxFollowUp({
+    leadId: 'lead-1',
+    title: 'Retorno',
+    description: null,
+    dueAt: '2026-10-01T12:00:00.000Z',
+    priority: 'normal',
+  }), error);
+});
+
+test('ignora lista vazia ao marcar lembretes e atualiza somente os IDs informados', async () => {
+  resetMocks();
+  await markInboxRemindersRead([]);
+  assert.equal(mocks.from.mock.calls.length, 0);
+
+  await markInboxRemindersRead(['reminder-1', 'reminder-2']);
+
+  assert.deepEqual(mocks.from.mock.calls, [['reminders']]);
+  assert.deepEqual(mocks.query.update.mock.calls, [[{ lido: true }]]);
+  assert.deepEqual(mocks.query.in.mock.calls, [['id', ['reminder-1', 'reminder-2']]]);
+});
+
+test('aprova o agendamento da geração com os dados do lembrete criado', async () => {
+  resetMocks();
+
+  await approveInboxFollowUpSchedule({
+    generationId: 'generation-1',
+    dueAt: '2026-10-01T12:00:00.000Z',
+    reminderId: 'reminder-1',
+  });
+
+  const [patch] = mocks.query.update.mock.calls[0] ?? [];
+  assert.deepEqual({
+    schedule_approved: patch?.schedule_approved,
+    approved_schedule_date: patch?.approved_schedule_date,
+    created_reminder_id: patch?.created_reminder_id,
+  }, {
+    schedule_approved: true,
+    approved_schedule_date: '2026-10-01T12:00:00.000Z',
+    created_reminder_id: 'reminder-1',
+  });
+  assert.equal(Number.isNaN(Date.parse(String(patch?.schedule_approved_at))), false);
+  assert.deepEqual(mocks.query.eq.mock.calls, [['id', 'generation-1']]);
+});
+
+test('atualiza auditorias de follow-up em lote e propaga falha de gravação', async () => {
+  resetMocks();
+  await updateInboxFollowUpSentAudits([
+    { id: 'generation-1', sentText: 'Mensagem 1' },
+    { id: 'generation-2', sentText: 'Mensagem 2' },
+  ], '2026-10-01T12:00:00.000Z');
+
+  assert.deepEqual(mocks.query.update.mock.calls, [
+    [{ sent_text: 'Mensagem 1', sent_at_actual: '2026-10-01T12:00:00.000Z' }],
+    [{ sent_text: 'Mensagem 2', sent_at_actual: '2026-10-01T12:00:00.000Z' }],
+  ]);
+  assert.deepEqual(mocks.query.eq.mock.calls, [['id', 'generation-1'], ['id', 'generation-2']]);
+
+  const error = new Error('falha de auditoria');
+  mocks.queryResult.current = { data: null, error };
+  await assert.rejects(
+    updateInboxFollowUpSentAudits([{ id: 'generation-1', sentText: 'Mensagem 1' }], '2026-10-01T12:00:00.000Z'),
+    error,
+  );
+});
+
+test('atualiza uma auditoria de follow-up individual com o horário de envio', async () => {
+  resetMocks();
+
+  await updateInboxFollowUpSentAudit('generation-1', 'Mensagem enviada');
+
+  const patch = mocks.query.update.mock.calls[0]?.[0];
+  assert.deepEqual(patch?.sent_text, 'Mensagem enviada');
+  assert.equal(Number.isNaN(Date.parse(String(patch?.sent_at_actual))), false);
+  assert.deepEqual(mocks.query.eq.mock.calls, [['id', 'generation-1']]);
+});
+
+test('não insere auditorias antigas vazias e propaga erro ao inserir registros', async () => {
+  resetMocks();
+  await insertInboxLegacyFollowUpAudits([]);
+  assert.equal(mocks.from.mock.calls.length, 0);
+
+  const entries = [{ chat_id: 'chat-1', sent_text: 'Mensagem histórica' }];
+  await insertInboxLegacyFollowUpAudits(entries);
+  assert.deepEqual(mocks.from.mock.calls, [['comm_follow_up_audit_log']]);
+  assert.deepEqual(mocks.query.insert.mock.calls, [[entries]]);
+
+  const error = new Error('falha ao inserir auditoria');
+  mocks.queryResult.current = { data: null, error };
+  await assert.rejects(insertInboxLegacyFollowUpAudits(entries), error);
 });

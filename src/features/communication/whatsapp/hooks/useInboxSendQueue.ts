@@ -8,6 +8,11 @@ export const useInboxSendQueue = ({ setSendingByChatId }: InboxSendQueueOptions)
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const activeSendOperationsByChatIdRef = useRef<Map<string, number>>(new Map());
 
+  const isChatSendActive = useCallback((chatId: string) => (
+    (activeSendOperationsByChatIdRef.current.get(chatId) ?? 0) > 0
+    || sendQueueByChatIdRef.current.has(chatId)
+  ), []);
+
   const beginSendOperation = useCallback((chatId: string) => {
     const activeOperations = activeSendOperationsByChatIdRef.current.get(chatId) ?? 0;
     activeSendOperationsByChatIdRef.current.set(chatId, activeOperations + 1);
@@ -66,5 +71,5 @@ export const useInboxSendQueue = ({ setSendingByChatId }: InboxSendQueueOptions)
     return next;
   }, [beginSendOperation]);
 
-  return { enqueueChatSend };
+  return { enqueueChatSend, isChatSendActive };
 };

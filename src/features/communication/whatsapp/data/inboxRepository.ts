@@ -288,7 +288,11 @@ export async function scheduleInboxFollowUp(input: {
   const row = Array.isArray(result.data) ? result.data[0] : result.data;
   return {
     inserted: row && typeof row === 'object' && 'inserted' in row ? row.inserted === true : null,
-    reminderId: row && typeof row === 'object' && 'reminder_id' in row ? String(row.reminder_id) : null,
+    reminderId: row && typeof row === 'object' && 'reminder_id' in row
+      && row.reminder_id !== null
+      && row.reminder_id !== undefined
+      ? String(row.reminder_id)
+      : null,
   };
 }
 

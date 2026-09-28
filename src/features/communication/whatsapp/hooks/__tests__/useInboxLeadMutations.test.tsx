@@ -117,6 +117,7 @@ const createOptions = () => {
     loadLeadPanel: async () => { calls.push('reload-lead'); },
     loadChats: async () => { calls.push('reload-chats'); },
     loadChatAgendaSummary: async () => { calls.push('reload-agenda'); },
+    isChatSendActive: () => false,
   };
   return { options, calls, reminders, agendaSummaries, selectedChatIdRef, leadMutationRequestIdRef, leadMutationLockRef, mutationLoadingChatId };
 };
@@ -172,6 +173,26 @@ test('status perdido limpa a agenda do lead e zera o resumo local', async () => 
     assert.equal(mocks.clearAgenda.mock.calls[0]?.[0], 'lead-1');
     assert.deepEqual(state.agendaSummaries[0], { pendingCount: 0, nextReminder: null });
     assert.ok(state.calls.includes('reload-agenda'));
+  } finally {
+    view.unmount();
+  }
+});
+
+test('não recarrega a lista de chats enquanto há envio ativo na conversa', async () => {
+  resetMocks();
+  mocks.updateLeadStatus.mockResolvedValue(undefined);
+  const state = createOptions();
+  state.options.isChatSendActive = () => true;
+  let mutations: Mutations | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { mutations = value; }} />);
+
+  try {
+    assert.ok(mutations);
+    await act(async () => { await mutations?.handleLeadStatusChange('lead-1', 'Qualificado'); });
+
+    assert.ok(state.calls.includes('reload-lead'));
+    assert.ok(state.calls.includes('reload-agenda'));
+    assert.equal(state.calls.includes('reload-chats'), false);
   } finally {
     view.unmount();
   }

@@ -1231,6 +1231,7 @@ export type Database = {
           client_id: string
           created_at: string
           expires_at: string
+          resource: string | null
           revoked_at: string | null
           scope: string
           token_hash: string
@@ -1240,6 +1241,7 @@ export type Database = {
           client_id: string
           created_at?: string
           expires_at: string
+          resource?: string | null
           revoked_at?: string | null
           scope: string
           token_hash: string
@@ -1249,6 +1251,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           expires_at?: string
+          resource?: string | null
           revoked_at?: string | null
           scope?: string
           token_hash?: string
@@ -1264,6 +1267,7 @@ export type Database = {
           created_at: string
           expires_at: string
           redirect_uri: string
+          resource: string | null
           scope: string
           user_id: string
         }
@@ -1274,6 +1278,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           redirect_uri: string
+          resource?: string | null
           scope: string
           user_id: string
         }
@@ -1284,6 +1289,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           redirect_uri?: string
+          resource?: string | null
           scope?: string
           user_id?: string
         }
@@ -1294,6 +1300,7 @@ export type Database = {
           client_id: string
           created_at: string
           expires_at: string
+          resource: string | null
           revoked_at: string | null
           scope: string
           token_hash: string
@@ -1303,6 +1310,7 @@ export type Database = {
           client_id: string
           created_at?: string
           expires_at: string
+          resource?: string | null
           revoked_at?: string | null
           scope: string
           token_hash: string
@@ -1312,6 +1320,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           expires_at?: string
+          resource?: string | null
           revoked_at?: string | null
           scope?: string
           token_hash?: string
@@ -7655,6 +7664,14 @@ export type Database = {
           target_id: string
           text_content: string
           transcription_text: string
+        }[]
+      }
+      comm_whatsapp_find_similar_situations: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          resposta: string
+          similaridade: number
+          situacao: string
         }[]
       }
       comm_whatsapp_format_phone_label: {

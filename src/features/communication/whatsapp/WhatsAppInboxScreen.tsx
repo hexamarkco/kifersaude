@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Copy, Download, FolderOpen, Info, Loader2, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -93,10 +93,10 @@ import { useInboxChatCreation } from './hooks/useInboxChatCreation';
 import { useInboxLeadMutations } from './hooks/useInboxLeadMutations';
 import { useInboxComposerAttachments } from './hooks/useInboxComposerAttachments';
 import { useInboxMediaUploadController } from './hooks/useInboxMediaUploadController';
-import { useInboxMessageLoader, type InboxMessageLoadReason } from './hooks/useInboxMessageLoader';
+import type { InboxMessageLoadReason } from './hooks/useInboxMessageLoader';
+import { useInboxConversationDataLoader } from './hooks/useInboxConversationDataLoader';
 import { useInboxLeadPanel } from './hooks/useInboxLeadPanel';
 import { useInboxChatMutations } from './hooks/useInboxChatMutations';
-import { useInboxChatLoader } from './hooks/useInboxChatLoader';
 import { useInboxOperationalState } from './hooks/useInboxOperationalState';
 import { useInboxOptimisticOutgoingMessages } from './hooks/useInboxOptimisticOutgoingMessages';
 import { useInboxMessageStatusRefresh } from './hooks/useInboxMessageStatusRefresh';
@@ -124,6 +124,12 @@ import { useInboxMessageThreadController } from './hooks/useInboxMessageThreadCo
 import { useInboxChatCollection } from './hooks/useInboxChatCollection';
 import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState';
 import { useInboxMessageViewport } from './hooks/useInboxMessageViewport';
+import { useInboxComposerSubmission, type InboxQuickReplyOption as QuickReplyOption } from './hooks/useInboxComposerSubmission';
+import {
+  useInboxSelectedChatLifecycle,
+  type InboxCreateLeadDraft,
+  type InboxStatusReminderLead,
+} from './hooks/useInboxSelectedChatLifecycle';
 import {
   useInboxOverlayPositions,
   type InboxOverlayPosition,
@@ -174,18 +180,6 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
 
-type QuickReplyOption = {
-  id: string;
-  name: string;
-  shortcut: string;
-  text: string;
-  preview: string;
-  searchValue: string;
-};
-type CreateLeadDraft = {
-  chatId: string;
-  initialValues: Partial<Lead>;
-};
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -274,12 +268,12 @@ export default function WhatsAppInboxScreen() {
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
-  const [statusReminderLead, setStatusReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
+  const [statusReminderLead, setStatusReminderLead] = useState<InboxStatusReminderLead | null>(null);
   const [statusReminderPromptMessage, setStatusReminderPromptMessage] = useState<string | null>(null);
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
   const [leadMutationLoadingChatId, setLeadMutationLoadingChatId] = useState<string | null>(null);
-  const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
+  const [createLeadDraft, setCreateLeadDraft] = useState<InboxCreateLeadDraft | null>(null);
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
   const [scheduleMessageModalOpen, setScheduleMessageModalOpen] = useState(false);
   const [scheduledMessagesPanelOpen, setScheduledMessagesPanelOpen] = useState(false);
@@ -1315,29 +1309,31 @@ export default function WhatsAppInboxScreen() {
     }
   }, [openChatMenuChat, openChatMenuChatId]);
 
-  useEffect(() => {
-    leadMutationRequestIdRef.current += 1;
-    setLinkLoadingLeadId(null);
-    setThreadActionsMenuOpen(false);
-  }, [selectedChatId]);
-
-  useEffect(() => {
-    // Modais que editam dados da conversa anterior não podem permanecer
-    // ativos depois que o usuário troca de chat. Caso contrário, a ação
-    // confirmada pode usar o selectedChat atual em vez do chat que abriu o
-    // modal (especialmente ao salvar um contato).
-    setSaveContactDialogOpen(false);
-    setSaveContactName('');
-    setCreateLeadDraft(null);
-    setMessagePendingDeletion(null);
-    setRetryPendingMessage(null);
-    setStatusReminderLead(null);
-    setStatusReminderPromptMessage(null);
-    setScheduleMessageModalOpen(false);
-    setScheduledMessagesPanelOpen(false);
-    setChatFilesOpen(false);
-    setMediaDrawerOpen(false);
-  }, [selectedChatId]);
+  useInboxSelectedChatLifecycle({
+    selectedChatId,
+    leadDrawerOpen,
+    refs: {
+      selectedChatIdRef,
+      suppressAutoChatSelectionRef,
+      leadMutationRequestIdRef,
+    },
+    state: {
+      setLinkLoadingLeadId,
+      setThreadActionsMenuOpen,
+      setSaveContactDialogOpen,
+      setSaveContactName,
+      setCreateLeadDraft,
+      setMessagePendingDeletion,
+      setRetryPendingMessage,
+      setStatusReminderLead,
+      setStatusReminderPromptMessage,
+      setScheduleMessageModalOpen,
+      setScheduledMessagesPanelOpen,
+      setChatFilesOpen,
+      setMediaDrawerOpen,
+      setLeadSearchQuery,
+    },
+  });
 
   useClickOutside(
     advancedFiltersOpen,
@@ -1412,26 +1408,11 @@ export default function WhatsAppInboxScreen() {
     };
   }, [voiceAttachment, voicePreviewAudioRef, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying]);
 
-  useEffect(() => {
-    selectedChatIdRef.current = selectedChatId;
-    if (selectedChatId) {
-      suppressAutoChatSelectionRef.current = false;
-    }
-  }, [selectedChatId]);
-
   const { loadOperationalState } = useInboxOperationalState({
     setOperationalState,
     setOperationalStateError,
     setOperationalStateLoaded,
   });
-
-  useEffect(() => {
-    if (!leadDrawerOpen) {
-      return;
-    }
-
-    setLeadSearchQuery('');
-  }, [leadDrawerOpen, selectedChatId]);
 
   useEffect(() => {
     if (!selectedChat?.lead_id) {
@@ -1505,50 +1486,78 @@ export default function WhatsAppInboxScreen() {
     synchronizeSavedContacts(savedContacts);
   }, [savedContacts, synchronizeSavedContacts]);
 
-  const { loadChats, handleLoadMoreArchivedChats, handleSwitchArchivedSection } = useInboxChatLoader({
-    chatActivityFilter,
-    leadStatusFilters,
-    leadResponsavelFilters,
-    pageSize: CHAT_PAGE_SIZE,
-    archivedChatsLoading,
-    archivedChatsLoadingMore,
-    archivedChatsHasMore,
-    archivedChatsPage,
-    refs: {
-      archivedSectionOpenRef,
-      archivedChatsPageRef,
-      chatsRequestIdRef,
-      chatsLoadPromiseRef,
-      chatsLoadKeyRef,
-      latestChatsRef,
-      selectedChatIdRef,
-      chatIdFromUrlRef,
-      suppressAutoChatSelectionRef,
-      pendingChatInboxStateRef,
-      savedContactNameByPhoneRef,
-      savedContactNameOverrideByPhoneRef,
-      chatsSignatureRef,
-      chatPollIdleCyclesRef,
-      chatPollBackoffRef,
-      latestChatsLoadedAtRef,
+  const {
+    loadChats,
+    handleLoadMoreArchivedChats,
+    handleSwitchArchivedSection,
+    loadMessages,
+  } = useInboxConversationDataLoader({
+    chatLoader: {
+      chatActivityFilter,
+      leadStatusFilters,
+      leadResponsavelFilters,
+      pageSize: CHAT_PAGE_SIZE,
+      archivedChatsLoading,
+      archivedChatsLoadingMore,
+      archivedChatsHasMore,
+      archivedChatsPage,
+      refs: {
+        archivedSectionOpenRef,
+        archivedChatsPageRef,
+        chatsRequestIdRef,
+        chatsLoadPromiseRef,
+        chatsLoadKeyRef,
+        latestChatsRef,
+        selectedChatIdRef,
+        chatIdFromUrlRef,
+        suppressAutoChatSelectionRef,
+        pendingChatInboxStateRef,
+        savedContactNameByPhoneRef,
+        savedContactNameOverrideByPhoneRef,
+        chatsSignatureRef,
+        chatPollIdleCyclesRef,
+        chatPollBackoffRef,
+        latestChatsLoadedAtRef,
+      },
+      setArchivedChatsLoading,
+      setArchivedChatsLoadingMore,
+      setArchivedChatsHasMore,
+      setArchivedChatsPage,
+      setChatLoadError,
+      setChatRefreshError,
+      setChats,
+      setArchivedSectionOpen,
+      setSelectedChatId,
+      applyFrontendSavedContactNames,
+      applyPrefetchedLeadNames,
+      buildChatsSignature,
+      chatMatchesActiveFilters,
+      refreshArchivedChatsCount,
     },
-    setArchivedChatsLoading,
-    setArchivedChatsLoadingMore,
-    setArchivedChatsHasMore,
-    setArchivedChatsPage,
-    setChatLoadError,
-    setChatRefreshError,
-    setChats,
-    setArchivedSectionOpen,
-    setSelectedChatId,
-    applyFrontendSavedContactNames,
-    applyPrefetchedLeadNames,
-    buildChatsSignature,
-    chatMatchesActiveFilters,
-    refreshArchivedChatsCount,
+    messageLoader: {
+      selectedChatIdRef,
+      messagesRequestIdRef,
+      latestMessagesRef,
+      messagesSignatureRef,
+      messagesCacheByChatIdRef,
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+      isNearBottomRef,
+      messagesContainerRef,
+      setMessages,
+      setMessageLoadError,
+      setLoadingMessages,
+      setThreadReconcileChatId,
+      setHasOlderMessages,
+      setLeadPanel,
+      applyOutgoingOrderToServerMessage,
+      buildMessagesSignature,
+      reconcileLocalOutgoingMessages,
+      upsertChatLocally,
+    },
+    refs: { loadChatsRef, loadMessagesRef },
   });
-
-  loadChatsRef.current = loadChats;
 
   const {
     markSelectedChatReadIfEligible,
@@ -1599,31 +1608,6 @@ export default function WhatsAppInboxScreen() {
     setSelectedChatId,
     loadChats,
   });
-
-  const { loadMessages } = useInboxMessageLoader({
-    selectedChatIdRef,
-    messagesRequestIdRef,
-    latestMessagesRef,
-    messagesSignatureRef,
-    messagesCacheByChatIdRef,
-    pendingScrollModeRef,
-    pendingScrollTopRef,
-    pendingScrollHeightRef,
-    isNearBottomRef,
-    messagesContainerRef,
-    setMessages,
-    setMessageLoadError,
-    setLoadingMessages,
-    setThreadReconcileChatId,
-    setHasOlderMessages,
-    setLeadPanel,
-    applyOutgoingOrderToServerMessage,
-    buildMessagesSignature,
-    reconcileLocalOutgoingMessages,
-    upsertChatLocally,
-  });
-
-  loadMessagesRef.current = loadMessages;
 
   const {
     syncingChatId: syncingHistoryChatId,
@@ -1814,17 +1798,6 @@ export default function WhatsAppInboxScreen() {
     resizeComposerTextarea();
   }, [messageDraft, pendingAttachments.length, resizeComposerTextarea, selectedChatId, voiceAttachment?.id]);
 
-  const handleSendCurrentVoiceRecording = () => {
-    if (voiceRecordingState === 'recording') {
-      handleStopVoiceRecording(true);
-      return;
-    }
-
-    if (voiceAttachment) {
-      void handleSendMessage();
-    }
-  };
-
   const { sendTextSegments, handleSendMessage, handleSendDrawerMedia } = useInboxMessageSending({
     selectedChat,
     mediaDrawerSendDisabledReason,
@@ -1938,20 +1911,6 @@ export default function WhatsAppInboxScreen() {
     sendTextSegments(selectedChat, [replyText], getQuotePayloadFromMessage(message));
   }, [selectedChat, sendDisabledReason, sendTextSegments]);
 
-  useEffect(() => {
-    if (!voiceAttachment) {
-      autoSendVoiceRef.current = false;
-      return;
-    }
-
-    if (!autoSendVoiceRef.current) {
-      return;
-    }
-
-    autoSendVoiceRef.current = false;
-    void handleSendMessage();
-  }, [handleSendMessage, voiceAttachment, autoSendVoiceRef]);
-
   const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
     if (!canReplyOrForwardMessage(message)) {
       toast.error('Esta mensagem não pode ser respondida no momento.');
@@ -2064,6 +2023,32 @@ export default function WhatsAppInboxScreen() {
     resizeComposerTextarea,
   });
 
+  const {
+    handleSendCurrentVoiceRecording,
+    handleComposerSubmit,
+    handleComposerKeyDown,
+  } = useInboxComposerSubmission({
+    generatingFollowUp,
+    voiceRecordingState,
+    voiceAttachment,
+    hasSendPayload,
+    quickReplyMenuOpen,
+    quickReplyMenuHasResults,
+    filteredQuickReplyOptions,
+    quickReplyActiveIndex,
+    activeQuickReplyKey,
+    replySuggestionText,
+    replySuggestionLoading,
+    autoSendVoiceRef,
+    setQuickReplyActiveIndex,
+    setDismissedQuickReplyKey,
+    handleInsertQuickReply,
+    handleApplyReplySuggestion,
+    handleSendMessage,
+    handleStartVoiceRecording,
+    handleStopVoiceRecording,
+  });
+
   const handleCopyChatTranscript = useCallback(async () => {
     if (!selectedChat || copyingTranscript) {
       return;
@@ -2162,75 +2147,6 @@ export default function WhatsAppInboxScreen() {
       toast.error('Não foi possível abrir este arquivo.');
     }
   }, []);
-
-  const handleComposerSubmit = () => {
-    if (generatingFollowUp) return;
-
-    if (voiceRecordingState === 'recording') {
-      handleStopVoiceRecording();
-      return;
-    }
-
-    if (hasSendPayload) {
-      void handleSendMessage();
-      return;
-    }
-
-    void handleStartVoiceRecording();
-  };
-
-  useEffect(() => {
-    setMediaDrawerOpen(false);
-  }, [selectedChatId]);
-
-  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (quickReplyMenuOpen && quickReplyMenuHasResults) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setQuickReplyActiveIndex((current) => (current + 1) % filteredQuickReplyOptions.length);
-        return;
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setQuickReplyActiveIndex((current) => (current === 0 ? filteredQuickReplyOptions.length - 1 : current - 1));
-        return;
-      }
-
-      if (event.key === 'Enter' || event.key === 'Tab') {
-        const selectedQuickReply = filteredQuickReplyOptions[quickReplyActiveIndex];
-        if (selectedQuickReply) {
-          event.preventDefault();
-          handleInsertQuickReply(selectedQuickReply);
-          return;
-        }
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setDismissedQuickReplyKey(activeQuickReplyKey);
-        setQuickReplyActiveIndex(0);
-        return;
-      }
-    }
-
-    if (event.key === 'Tab' && replySuggestionText.trim() && !replySuggestionLoading) {
-      event.preventDefault();
-      handleApplyReplySuggestion();
-      return;
-    }
-
-    if (event.key !== 'Enter' || event.shiftKey) {
-      return;
-    }
-
-    if (!hasSendPayload || voiceAttachment || voiceRecordingState === 'recording') {
-      return;
-    }
-
-    event.preventDefault();
-    void handleSendMessage();
-  };
 
   const selectionContextValue = useMemo<WhatsAppInboxSelectionContextValue>(() => ({
     selectedChatId,

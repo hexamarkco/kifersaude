@@ -205,3 +205,72 @@ test('usa a mesma identidade segura do Inbox nas notificações de novas mensage
   service.stop();
   unsubscribe();
 });
+
+test('tenta novamente a assinatura quando o canal ainda não está disponível', async () => {
+  mocks.channelNames.splice(0);
+  mocks.subscriptions.splice(0);
+  let operationalStateCalls = 0;
+  mocks.getOperationalState.mockImplementation(async () => {
+    operationalStateCalls += 1;
+    return operationalStateCalls === 1
+      ? null
+      : { channel: { id: 'channel-after-retry' } };
+  });
+
+  const service = new NotificationService();
+  service.start(60_000);
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+  assert.equal(mocks.channelNames.includes('comm-whatsapp-inbox-notifications'), false);
+
+  (service as unknown as { inboxSubscriptionRetryAt: number }).inboxSubscriptionRetryAt = 0;
+  const check = (service as unknown as { check: (lifecycleId: number) => Promise<void> }).check;
+  await check.call(service, 1);
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+  assert.equal(operationalStateCalls, 2);
+  assert.equal(mocks.channelNames.includes('comm-whatsapp-inbox-notifications'), true);
+
+  service.stop();
+});
+
+test('mantém lembretes funcionando quando a contagem do Inbox falha', async () => {
+  mocks.channelNames.splice(0);
+  mocks.subscriptions.splice(0);
+  mocks.getOperationalState.mockResolvedValue(null);
+  mocks.getUnreadCount.mockImplementation(async () => {
+    throw new Error('contador indisponível');
+  });
+  mocks.query.order.mockResolvedValue({
+    data: [{
+      id: 'reminder-1',
+      titulo: 'Ligar para o lead',
+      descricao: null,
+      data_lembrete: new Date().toISOString(),
+      prioridade: 'alta',
+    }],
+    error: null,
+  });
+
+  let reminderNotifications = 0;
+  let inboxCountUpdates = 0;
+  const service = new NotificationService();
+  const unsubscribeReminder = service.subscribe(() => {
+    reminderNotifications += 1;
+  });
+  const unsubscribeInboxCount = service.subscribeToInboxUnreadCount(() => {
+    inboxCountUpdates += 1;
+  });
+
+  service.start(60_000);
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+  assert.equal(reminderNotifications, 1);
+  assert.equal(inboxCountUpdates, 1);
+
+  service.stop();
+  unsubscribeReminder();
+  unsubscribeInboxCount();
+  mocks.getUnreadCount.mockResolvedValue(0);
+  mocks.query.order.mockResolvedValue({ data: [], error: null });
+});

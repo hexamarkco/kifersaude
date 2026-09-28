@@ -5739,6 +5739,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_comm_whatsapp_campaign_requests: {
+        Row: {
+          actor_id: string
+          campaign_id: string | null
+          client_request_id: string
+          completed_at: string | null
+          created_at: string
+          operation: string
+          request_fingerprint: string
+          result_payload: Json | null
+          target_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          campaign_id?: string | null
+          client_request_id: string
+          completed_at?: string | null
+          created_at?: string
+          operation: string
+          request_fingerprint: string
+          result_payload?: Json | null
+          target_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          campaign_id?: string | null
+          client_request_id?: string
+          completed_at?: string | null
+          created_at?: string
+          operation?: string
+          request_fingerprint?: string
+          result_payload?: Json | null
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       mcp_contract_document_audit_log: {
         Row: {
           action: string
@@ -6981,6 +7017,45 @@ export type Database = {
           p_signature: Json
         }
         Returns: Json
+      }
+      _mcp_comm_whatsapp_campaign_assert_admin: {
+        Args: { p_actor_user_id: string }
+        Returns: undefined
+      }
+      _mcp_comm_whatsapp_campaign_begin: {
+        Args: {
+          p_actor_user_id: string
+          p_campaign_id: string
+          p_client_request_id: string
+          p_operation: string
+          p_signature: Json
+          p_target_id: string
+        }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_campaign_complete: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_result: Json
+        }
+        Returns: undefined
+      }
+      _mcp_comm_whatsapp_campaign_normalize_phone: {
+        Args: { p_phone: string }
+        Returns: string
+      }
+      _mcp_comm_whatsapp_campaign_recount: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      _mcp_comm_whatsapp_campaign_replace_steps: {
+        Args: {
+          p_campaign_id: string
+          p_fallback_message: string
+          p_steps: Json
+        }
+        Returns: string
       }
       _mcp_comm_whatsapp_chat_state: {
         Args: { p_chat_id: string }
@@ -9056,6 +9131,18 @@ export type Database = {
           p_actor_user_id: string
           p_changes: Json
           p_client_request_id: string
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_campaign_mutation: {
+        Args: {
+          p_actor_user_id: string
+          p_campaign_id?: string
+          p_client_request_id?: string
+          p_expected_updated_at?: string
+          p_operation: string
+          p_payload?: Json
+          p_target_id?: string
         }
         Returns: Json
       }

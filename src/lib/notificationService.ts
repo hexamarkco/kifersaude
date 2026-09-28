@@ -27,6 +27,7 @@ export type InboxMessageNotification = {
 export type InboxMessageNotificationCallback = (notification: InboxMessageNotification) => void;
 
 const RECENT_INBOX_MESSAGE_THRESHOLD_MS = 5 * 60 * 1000;
+const INBOX_SUBSCRIPTION_RETRY_INTERVAL_MS = 30 * 1000;
 
 export class NotificationService {
   private callbacks: NotificationCallback[] = [];
@@ -41,8 +42,11 @@ export class NotificationService {
   private isChecking = false;
   private leadChannelSubscription: RealtimeChannel | null = null;
   private inboxChannelSubscription: RealtimeChannel | null = null;
+  private inboxSubscriptionPromise: Promise<void> | null = null;
   private inboxSubscriptionRequestId = 0;
   private inboxConnectedUserName: string | null = null;
+  private inboxSubscriptionRetryAt = 0;
+  private inboxRealtimeWarningShown = false;
   private lifecycleId = 0;
   private lastUnreadCount = 0;
   private lastInboxUnreadCount = 0;
@@ -145,12 +149,22 @@ export class NotificationService {
   }
 
   private startInboxMessageNotifications(lifecycleId: number) {
-    if (this.inboxChannelSubscription !== null) {
+    this.ensureInboxMessageSubscription(lifecycleId);
+  }
+
+  private ensureInboxMessageSubscription(lifecycleId: number) {
+    if (
+      lifecycleId !== this.lifecycleId
+      || this.intervalId === null
+      || this.inboxChannelSubscription !== null
+      || this.inboxSubscriptionPromise !== null
+      || Date.now() < this.inboxSubscriptionRetryAt
+    ) {
       return;
     }
 
     const requestId = ++this.inboxSubscriptionRequestId;
-    void whatsappConversationsRepository.getOperationalState()
+    const subscriptionPromise = whatsappConversationsRepository.getOperationalState()
       .then((state) => {
         if (
           lifecycleId !== this.lifecycleId
@@ -163,10 +177,13 @@ export class NotificationService {
 
         const channelId = state?.channel?.id;
         this.inboxConnectedUserName = state?.channel?.connected_user_name ?? null;
-        if (!channelId) return;
+        if (!channelId) {
+          this.inboxSubscriptionRetryAt = Date.now() + INBOX_SUBSCRIPTION_RETRY_INTERVAL_MS;
+          return;
+        }
 
         let realtimeWarningShown = false;
-        this.inboxChannelSubscription = supabase
+        const channel = supabase
           .channel('comm-whatsapp-inbox-notifications')
           .on(
             'postgres_changes',
@@ -190,6 +207,7 @@ export class NotificationService {
           .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               realtimeWarningShown = false;
+              this.inboxRealtimeWarningShown = false;
               return;
             }
 
@@ -201,22 +219,44 @@ export class NotificationService {
               && !realtimeWarningShown
             ) {
               realtimeWarningShown = true;
-              console.warn('[Notifications] realtime de mensagens do inbox indisponivel; polling do contador permanece ativo.');
+              if (!this.inboxRealtimeWarningShown) {
+                this.inboxRealtimeWarningShown = true;
+                console.warn('[Notifications] realtime de mensagens do inbox indisponivel; polling do contador permanece ativo.');
+              }
+
+              if (this.inboxChannelSubscription === channel) {
+                this.inboxChannelSubscription = null;
+                this.inboxSubscriptionRetryAt = Date.now() + INBOX_SUBSCRIPTION_RETRY_INTERVAL_MS;
+                void supabase.removeChannel(channel);
+              }
             }
           });
+
+        this.inboxChannelSubscription = channel;
       })
       .catch((error) => {
         if (lifecycleId !== this.lifecycleId) {
           return;
         }
 
+        this.inboxSubscriptionRetryAt = Date.now() + INBOX_SUBSCRIPTION_RETRY_INTERVAL_MS;
         console.warn('[Notifications] nao foi possivel obter o canal para filtrar subscription realtime.', error);
+      })
+      .finally(() => {
+        if (this.inboxSubscriptionPromise === subscriptionPromise) {
+          this.inboxSubscriptionPromise = null;
+        }
       });
+
+    this.inboxSubscriptionPromise = subscriptionPromise;
   }
 
   private stopInboxMessageNotifications() {
     this.inboxSubscriptionRequestId += 1;
+    this.inboxSubscriptionPromise = null;
     this.inboxConnectedUserName = null;
+    this.inboxSubscriptionRetryAt = 0;
+    this.inboxRealtimeWarningShown = false;
     if (this.inboxChannelSubscription !== null) {
       supabase.removeChannel(this.inboxChannelSubscription);
       this.inboxChannelSubscription = null;
@@ -291,12 +331,10 @@ export class NotificationService {
     if (this.isChecking) return;
 
     this.isChecking = true;
+    this.ensureInboxMessageSubscription(lifecycleId);
 
     try {
-      const [
-        { data: reminders, error },
-        inboxUnreadCount,
-      ] = await Promise.all([
+      const [remindersResult, inboxUnreadResult] = await Promise.allSettled([
         supabase
           .from('reminders')
           .select('id, titulo, descricao, data_lembrete, prioridade')
@@ -309,10 +347,19 @@ export class NotificationService {
         return;
       }
 
-      if (error) throw error;
+      if (inboxUnreadResult.status === 'fulfilled') {
+        this.lastInboxUnreadCount = inboxUnreadResult.value;
+        this.inboxUnreadCountCallbacks.forEach(callback => callback(inboxUnreadResult.value));
+      } else {
+        console.warn('[Notifications] nao foi possivel atualizar o contador de nao lidas do inbox.', inboxUnreadResult.reason);
+      }
 
-      this.lastInboxUnreadCount = inboxUnreadCount;
-      this.inboxUnreadCountCallbacks.forEach(callback => callback(inboxUnreadCount));
+      if (remindersResult.status === 'rejected') {
+        throw remindersResult.reason;
+      }
+
+      const { data: reminders, error } = remindersResult.value;
+      if (error) throw error;
 
       if (reminders) {
         const unreadCount = reminders.length;

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { UserProfile } from '../features/config';
 import { getAuthenticatedUserId } from '../infrastructure/supabase';
 import { User, Session } from '@supabase/supabase-js';
@@ -34,6 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileRequestId = useRef(0);
+  const mountedRef = useRef(true);
 
   const getAuthErrorMessage = (error: unknown): string => {
     if (error instanceof Error) {
@@ -64,34 +66,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('⚠️ Nao foi possivel limpar a sessao local automaticamente:', error);
     }
 
+    profileRequestId.current += 1;
+    if (!mountedRef.current) return;
+
     setSession(null);
     setUser(null);
     setUserProfile(null);
   };
 
   const loadUserProfile = async (profileId: string | null) => {
+    const requestId = profileRequestId.current + 1;
+    profileRequestId.current = requestId;
+
     if (!profileId) {
-      setUserProfile(null);
+      if (mountedRef.current) setUserProfile(null);
       return;
     }
 
     try {
-      console.log('📥 Carregando perfil...');
       const data = await loadAuthenticatedUserProfile(profileId);
-      console.log('✅ Perfil carregado:', data);
+
+      if (!mountedRef.current || requestId !== profileRequestId.current) return;
+
       setUserProfile(data);
     } catch (error) {
       console.error('❌ Erro ao carregar perfil do usuário:', error);
-      setUserProfile(null);
+      if (mountedRef.current && requestId === profileRequestId.current) {
+        setUserProfile(null);
+      }
     }
   };
 
   useEffect(() => {
     let mounted = true;
+    mountedRef.current = true;
 
     const initAuth = async () => {
       try {
-        console.log('🔐 Inicializando autenticação...');
         const { session, error } = await getCurrentSession();
 
         if (!mounted) return;
@@ -105,18 +116,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log('📋 Sessão:', session ? 'Encontrada' : 'Não encontrada');
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           const profileId = getAuthenticatedUserId(session.user);
-          console.log('👤 Carregando perfil do usuário:', profileId ?? 'indisponível');
           await loadUserProfile(profileId);
         }
 
+        if (!mounted) return;
+
         setLoading(false);
-        console.log('✅ Autenticação inicializada');
       } catch (error) {
         console.error('❌ Erro fatal na inicialização:', error);
         if (isInvalidRefreshTokenError(error)) {
@@ -128,8 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    const unsubscribe = subscribeToAuthState((_event, session) => {
-      console.log('🔄 Estado de autenticação mudou:', _event);
+    const unsubscribe = subscribeToAuthState((event, session) => {
 
       if (!mounted) return;
 
@@ -137,18 +146,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       // Only load profile on SIGNED_IN event, not on INITIAL_SESSION
-      if (_event === 'SIGNED_IN' && session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         (async () => {
           const profileId = getAuthenticatedUserId(session.user);
           await loadUserProfile(profileId);
         })();
       } else if (!session?.user) {
-        setUserProfile(null);
+        void loadUserProfile(null);
       }
     });
 
     return () => {
       mounted = false;
+      mountedRef.current = false;
       unsubscribe();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -163,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await signOutAuthenticatedUser();
-    setUserProfile(null);
+    await loadUserProfile(null);
   };
 
   const refreshProfile = async () => {

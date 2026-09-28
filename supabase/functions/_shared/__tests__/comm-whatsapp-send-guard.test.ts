@@ -85,3 +85,30 @@ test('runs the optional guard before media POST and preserves unguarded health/r
   assert.equal(requests, 5);
   assert.deepEqual(events, ['permission', 'fetch', 'fetch', 'fetch', 'fetch', 'fetch']);
 });
+
+test('preserves count and offset when requesting paginated Whapi resources', async () => {
+  const requestedUrls: string[] = [];
+  globalThis.fetch = vi.fn(async (input) => {
+    requestedUrls.push(String(input));
+    return new Response('{}', { status: 200 });
+  }) as typeof fetch;
+
+  const client = createWhapiClient('test-token');
+  await client.fetchChatMessages('5511999991234@s.whatsapp.net', {
+    count: 100,
+    offset: 200,
+    sort: 'desc',
+    timeTo: 1_700_000_000,
+  });
+  await client.fetchContacts({ count: 50, offset: 150 });
+
+  const chatUrl = new URL(requestedUrls[0] ?? '');
+  const contactsUrl = new URL(requestedUrls[1] ?? '');
+
+  assert.equal(chatUrl.searchParams.get('count'), '100');
+  assert.equal(chatUrl.searchParams.get('offset'), '200');
+  assert.equal(chatUrl.searchParams.get('sort'), 'desc');
+  assert.equal(chatUrl.searchParams.get('time_to'), '1700000000');
+  assert.equal(contactsUrl.searchParams.get('count'), '50');
+  assert.equal(contactsUrl.searchParams.get('offset'), '150');
+});

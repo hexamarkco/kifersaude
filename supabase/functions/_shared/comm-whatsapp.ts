@@ -248,7 +248,7 @@ export const createWhapiClient = (token: string): WhapiClient => {
     fetchChatMessages: (chatId, pagination) => {
       const params = new URLSearchParams();
       if (pagination?.count) params.set('count', String(pagination.count));
-      if (pagination?.offset) params.set('count', String(pagination.offset));
+      if (pagination?.offset) params.set('offset', String(pagination.offset));
       if (pagination?.sort) params.set('sort', pagination.sort);
       if (pagination?.timeTo) params.set('time_to', String(pagination.timeTo));
 
@@ -286,7 +286,7 @@ export const createWhapiClient = (token: string): WhapiClient => {
     fetchContacts: (pagination) => {
       const params = new URLSearchParams();
       if (pagination?.count) params.set('count', String(pagination.count));
-      if (pagination?.offset) params.set('count', String(pagination.offset));
+      if (pagination?.offset) params.set('offset', String(pagination.offset));
 
       const qs = params.toString();
       return whapiRetryFetch(

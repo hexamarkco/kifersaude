@@ -265,6 +265,51 @@ test('trocar para arquivados seleciona chat compatível, carrega as duas seçõe
   }
 });
 
+test('deep link carregado tem precedência sobre a seleção anterior', async () => {
+  resetMocks();
+  const previousChat = createChat('previous-chat');
+  const requestedChat = createChat('requested-chat');
+  const state = createOptions([previousChat]);
+  state.refs.chatIdFromUrlRef.current = requestedChat.id;
+  const restoreMatchMedia = stubDesktopMatchMedia();
+  mocks.list.mockResolvedValue([requestedChat]);
+  let loader: Loader | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { loader = value; }} />);
+
+  try {
+    assert.ok(loader);
+    await act(async () => { await loader?.loadChats(); });
+
+    assert.equal(state.state.selectedChatId, requestedChat.id);
+  } finally {
+    view.unmount();
+    restoreMatchMedia();
+  }
+});
+
+test('atualização de chat não reabre uma conversa após volta explícita à lista', async () => {
+  resetMocks();
+  const state = createOptions([createChat('initial-chat')]);
+  state.state.selectedChatId = null;
+  state.refs.selectedChatIdRef.current = null;
+  state.refs.suppressAutoChatSelectionRef.current = true;
+  const nextChat = createChat('next-chat');
+  const restoreMatchMedia = stubDesktopMatchMedia();
+  mocks.list.mockResolvedValue([nextChat]);
+  let loader: Loader | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { loader = value; }} />);
+
+  try {
+    assert.ok(loader);
+    await act(async () => { await loader?.loadChats(); });
+
+    assert.equal(state.state.selectedChatId, null);
+  } finally {
+    view.unmount();
+    restoreMatchMedia();
+  }
+});
+
 test('falha de uma seção mantém o cache dela enquanto aplica a seção que carregou', async () => {
   resetMocks();
   const oldActive = createChat('old-active');

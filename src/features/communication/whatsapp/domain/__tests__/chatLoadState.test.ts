@@ -3,6 +3,7 @@ import { test } from 'vitest';
 
 import {
   preserveChatsFromPartialLoad,
+  resolveSelectedChatIdAfterLoad,
   selectInitialChatId,
   selectReplacementChatId,
   shouldPreserveSelectedChatAfterLoad,
@@ -105,6 +106,56 @@ test('seleciona primeiro um chat da seção que o operador acabou de abrir', () 
 
   assert.equal(selectInitialChatId([activeChat, archivedChat], 'archived'), 'archived-chat');
   assert.equal(selectInitialChatId([archivedChat, activeChat], 'active'), 'active-chat');
+});
+
+test('mantém a lista fechada no mobile quando não há seleção nem deep link', () => {
+  assert.equal(resolveSelectedChatIdAfterLoad({
+    currentSelectedChatId: null,
+    requestedChatId: null,
+    isMobileInboxLayout: true,
+    chats: [createChat({ id: 'chat-1' })],
+    preferredSection: 'active',
+  }), null);
+});
+
+test('mantém a seleção de deep link pendente até o chat chegar à lista', () => {
+  assert.equal(resolveSelectedChatIdAfterLoad({
+    currentSelectedChatId: 'requested-chat',
+    requestedChatId: 'requested-chat',
+    isMobileInboxLayout: true,
+    chats: [createChat({ id: 'other-chat' })],
+    preferredSection: 'active',
+  }), 'requested-chat');
+});
+
+test('preserva a conversa atual enquanto ela continua na coleção carregada', () => {
+  assert.equal(resolveSelectedChatIdAfterLoad({
+    currentSelectedChatId: 'selected-chat',
+    requestedChatId: null,
+    isMobileInboxLayout: false,
+    chats: [createChat({ id: 'selected-chat' }), createChat({ id: 'other-chat' })],
+    preferredSection: 'archived',
+  }), 'selected-chat');
+});
+
+test('substitui seleção removida priorizando a seção ativa e usa fallback se vazia', () => {
+  const activeChat = createChat({ id: 'active-chat' });
+  const archivedChat = createChat({ id: 'archived-chat', is_archived: true });
+
+  assert.equal(resolveSelectedChatIdAfterLoad({
+    currentSelectedChatId: 'removed-chat',
+    requestedChatId: null,
+    isMobileInboxLayout: false,
+    chats: [archivedChat, activeChat],
+    preferredSection: 'active',
+  }), 'active-chat');
+  assert.equal(resolveSelectedChatIdAfterLoad({
+    currentSelectedChatId: 'removed-chat',
+    requestedChatId: null,
+    isMobileInboxLayout: false,
+    chats: [archivedChat],
+    preferredSection: 'active',
+  }), 'archived-chat');
 });
 
 test('troca a seleção quando a conversa atual é removida em tempo real', () => {

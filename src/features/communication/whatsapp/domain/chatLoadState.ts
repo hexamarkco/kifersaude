@@ -9,6 +9,34 @@ export const selectInitialChatId = (
   ?? chats[0]?.id
   ?? null;
 
+export const resolveSelectedChatIdAfterLoad = ({
+  currentSelectedChatId,
+  requestedChatId,
+  isMobileInboxLayout,
+  chats,
+  preferredSection,
+}: {
+  currentSelectedChatId: string | null;
+  requestedChatId: string | null;
+  isMobileInboxLayout: boolean;
+  chats: readonly CommWhatsAppChat[];
+  preferredSection: ChatSection;
+}) => {
+  if (!currentSelectedChatId && isMobileInboxLayout && !requestedChatId) {
+    return null;
+  }
+
+  if (requestedChatId && currentSelectedChatId === requestedChatId) {
+    return currentSelectedChatId;
+  }
+
+  if (currentSelectedChatId && chats.some((chat) => chat.id === currentSelectedChatId)) {
+    return currentSelectedChatId;
+  }
+
+  return selectInitialChatId(chats, preferredSection);
+};
+
 export const selectReplacementChatId = ({
   chats,
   removedChatId,

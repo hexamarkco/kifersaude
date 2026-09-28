@@ -5,7 +5,7 @@ import { toast } from '../../../../lib/toast';
 import { getSavedContactNameForPhone } from '../domain/contactLookup';
 import {
   preserveChatsFromPartialLoad,
-  selectInitialChatId,
+  resolveSelectedChatIdAfterLoad,
   shouldPreserveSelectedChatAfterLoad,
   type ChatSection,
 } from '../domain/chatLoadState';
@@ -304,19 +304,13 @@ export const useInboxChatLoader = ({
 
           const isMobileInboxLayout = typeof window !== 'undefined'
             && window.matchMedia('(max-width: 1023px)').matches;
-          if (!current && isMobileInboxLayout && !requestedChatId) {
-            return null;
-          }
-
-          if (requestedChatId && current === requestedChatId) {
-            return current;
-          }
-
-          if (current && hydratedData.some((chat) => chat.id === current)) {
-            return current;
-          }
-
-          return selectInitialChatId(hydratedData, preferredSection);
+          return resolveSelectedChatIdAfterLoad({
+            currentSelectedChatId: current,
+            requestedChatId,
+            isMobileInboxLayout,
+            chats: hydratedData,
+            preferredSection,
+          });
         });
         chatPollBackoffRef.current = 0;
         didApplyChatLoad = true;

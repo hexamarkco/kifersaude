@@ -130,6 +130,7 @@ import { useInboxChatListModel } from './hooks/useInboxChatListModel';
 import { useInboxContactIdentity } from './hooks/useInboxContactIdentity';
 import { useInboxComposerTextActions } from './hooks/useInboxComposerTextActions';
 import { useInboxQuickReplies } from './hooks/useInboxQuickReplies';
+import { useInboxMessageForwarding } from './hooks/useInboxMessageForwarding';
 import type { ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -283,10 +284,7 @@ export default function WhatsAppInboxScreen() {
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [replyTargetMessage, setReplyTargetMessage] = useState<CommWhatsAppMessage | null>(null);
-  const [forwardingMessage, setForwardingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
-  const [forwardingTargetIds, setForwardingTargetIds] = useState<string[]>([]);
-  const [forwardingInProgress, setForwardingInProgress] = useState(false);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
@@ -2621,6 +2619,24 @@ export default function WhatsAppInboxScreen() {
     scheduleMessageStatusRefresh,
   });
 
+  const {
+    forwardingMessage,
+    forwardingTargetIds,
+    forwardingInProgress,
+    handleOpenForwardMessageModal,
+    handleCloseForwardMessageModal,
+    handleToggleForwardTarget,
+    handleForwardToSelectedChats,
+  } = useInboxMessageForwarding({
+    forwardTargetChats,
+    selectedChatIdRef,
+    latestChatsRef,
+    loadChats,
+    loadMessages,
+    closeMessageActionMenu,
+    setForwardSearch,
+  });
+
   const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
     if (!selectedChat || message.direction !== 'inbound') return;
 
@@ -2672,73 +2688,6 @@ export default function WhatsAppInboxScreen() {
     setOpenMessageActionMenuMessageId(null);
     window.setTimeout(() => composerTextareaRef.current?.focus(), 0);
   }, []);
-
-  const handleOpenForwardMessageModal = useCallback((message: CommWhatsAppMessage) => {
-    if (!canReplyOrForwardMessage(message)) {
-      toast.error('Esta mensagem não pode ser encaminhada no momento.');
-      return;
-    }
-
-    setForwardingMessage(message);
-    setForwardSearch('');
-    setForwardingTargetIds([]);
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
-  }, []);
-
-  const handleCloseForwardMessageModal = useCallback(() => {
-    setForwardingMessage(null);
-    setForwardSearch('');
-    setForwardingTargetIds([]);
-    setForwardingInProgress(false);
-  }, []);
-
-  const handleToggleForwardTarget = useCallback((chatId: string) => {
-    setForwardingTargetIds((current) => (
-      current.includes(chatId) ? current.filter((id) => id !== chatId) : [...current, chatId]
-    ));
-  }, []);
-
-  const handleForwardToSelectedChats = useCallback(async () => {
-    if (!forwardingMessage || forwardingInProgress) {
-      return;
-    }
-
-    if (forwardingTargetIds.length === 0) {
-      toast.error('Selecione pelo menos uma conversa para encaminhar.');
-      return;
-    }
-
-    setForwardingInProgress(true);
-
-    try {
-      const targetChats = forwardTargetChats.filter((chat) => forwardingTargetIds.includes(chat.id));
-      const forwardedCount = await whatsappMessagesRepository.forwardToChats(
-        forwardingMessage.id,
-        targetChats.map((chat) => chat.external_chat_id),
-      );
-
-      const affectedChatIds = targetChats.map((chat) => chat.id);
-      const reloads: Array<Promise<unknown>> = [loadChats()];
-      if (selectedChatIdRef.current && affectedChatIds.includes(selectedChatIdRef.current)) {
-        const selectedChatSnapshot = latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null;
-        if (selectedChatSnapshot) {
-          reloads.push(loadMessages(selectedChatSnapshot, 'send'));
-        }
-      }
-
-      await Promise.all(reloads);
-
-      if (forwardedCount.length > 0) {
-        toast.success(`Mensagem encaminhada para ${forwardedCount.length} ${forwardedCount.length === 1 ? 'conversa' : 'conversas'}.`);
-      }
-      handleCloseForwardMessageModal();
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao encaminhar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível encaminhar a mensagem.');
-      setForwardingInProgress(false);
-    }
-  }, [forwardingInProgress, forwardingMessage, forwardingTargetIds, forwardTargetChats, handleCloseForwardMessageModal, loadChats, loadMessages]);
 
   const handleRefreshLeadContracts = useCallback(() => {
     void loadLeadContracts(leadPanel?.id ?? null);

@@ -35,13 +35,10 @@ import {
 } from './domain/chatPresentation';
 import { shouldHideTechnicalMessage } from './domain/messageVisibility';
 import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
-import { WhatsAppMessageThread } from './components/WhatsAppMessageThread';
 import { WhatsAppThreadActionsMenu } from './components/WhatsAppThreadActionsMenu';
-import { WhatsAppComposer } from './components/WhatsAppComposer';
 import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
-import { WhatsAppThreadHeader } from './components/WhatsAppThreadHeader';
+import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } from './components/WhatsAppInboxConversationPane';
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
-import { WhatsAppChatMessageSearch } from './components/WhatsAppChatMessageSearch';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { isChatMediaViewerMessage } from './domain/mediaViewerPresentation';
 import { buildInboxMessageTimeline } from './domain/inboxMessageTimeline';
@@ -1951,6 +1948,183 @@ export default function WhatsAppInboxScreen() {
     </Alert>
   ) : null;
 
+  const conversationView: WhatsAppInboxConversationView | null = selectedChat ? {
+    selectedChat,
+    header: {
+      selectedChatForPresentation,
+      selectedChatDisplayName,
+      leadPanel,
+      leadStatuses,
+      favoritedLeadIds,
+      selectedChatLeadMutationLoading,
+      selectedChatWasAutoLinked,
+      isSelectedChatWaitingForQuote,
+      assumingControl: assumingControlChatId === selectedChat.id,
+      chatFilesOpen,
+      chatMessageSearchOpen,
+      scheduledMessagesPanelOpen,
+      copyingTranscript,
+      syncingHistory: syncingHistoryChatId === selectedChat.id,
+      historyRecoveryDisabledReason,
+      followUpGenerationDisabledReason,
+      generatingFollowUp,
+      threadActionsMenuOpen,
+      threadActionsMenuTriggerRef,
+      chatAgendaSummary,
+      nextChatReminderSummary,
+      chatAgendaSummaryError,
+      onBack: handleBackToChatList,
+      onLeadStatusChange: handleLeadStatusChange,
+      onSaveContact: (name) => {
+        setSaveContactName(name);
+        setSaveContactDialogOpen(true);
+      },
+      onToggleAutonomousAttendance: () => {
+        if (isSelectedChatWaitingForQuote) {
+          return;
+        }
+        if (selectedChat.autonomous_attendance_status === 'active') {
+          void handleDeactivateAutonomousAttendance(selectedChat);
+        } else {
+          void handleActivateAutonomousAttendance(selectedChat);
+        }
+      },
+      onOpenChatFiles: () => setChatFilesOpen(true),
+      onToggleChatMessageSearch: handleToggleChatMessageSearch,
+      onOpenScheduledMessages: () => setScheduledMessagesPanelOpen(true),
+      onCopyTranscript: () => void handleCopyChatTranscript(),
+      onRecoverHistory: () => void handleRecoverChatHistory(),
+      onOpenFollowUp: handleOpenFollowUpModal,
+      onOpenLeadDrawer: handleOpenLeadDrawer,
+      onToggleThreadActionsMenu: () => setThreadActionsMenuOpen((current) => !current),
+    },
+    messageSearch: chatMessageSearchOpen ? {
+      inputRef: chatMessageSearchInputRef,
+      draft: chatMessageSearchDraft,
+      query: chatMessageSearch,
+      searching: searchingChatMessages,
+      error: chatMessageSearchError,
+      results: chatMessageSearchResults,
+      onDraftChange: setChatMessageSearchDraft,
+      onClose: closeChatMessageSearch,
+      onRetry: retryChatMessageSearch,
+      onSelect: handleSelectChatMessageSearchResult,
+    } : null,
+    thread: {
+      messagesContainerRef,
+      messageBubbleRefs,
+      reactionAnchorRefs,
+      reactionTriggerRefs,
+      messageActionTriggerRefs,
+      handleMessagesScroll,
+      messageLoadErrorNotice,
+      hasOlderMessages,
+      loadingOlderMessages,
+      handleLoadOlderMessages,
+      loadingMessages,
+      messageLoadError,
+      threadReconcileChatId,
+      messages,
+      messageTimelineItems,
+      highlightedMessageId,
+      mediaUploadProgress,
+      retryingMessageId,
+      localOutgoingRetryPayloadRef,
+      setLightboxMessageId,
+      handleCancelMediaUpload,
+      openMessageActionMenuMessageId,
+      handleToggleMessageActionMenu,
+      starringMessageIds,
+      handleToggleStarMessage: (message) => void handleToggleStarMessage(message),
+      setRetryPendingMessage,
+      handleToggleReactionPicker,
+      handleOpenMessageActionMenuFromContext,
+      handleOpenQuotedMessage,
+      handleTranscribeMessage,
+      handleSelectInteractiveReply,
+      handleOpenSharedContactChat,
+      handleSaveSharedContact,
+      sharedContactActionKey,
+      transcribingMessageId,
+    },
+    removedAttachment: removedAttachmentForUndo
+      ? { fileName: removedAttachmentForUndo.file.name, onUndo: handleUndoRemoveAttachment }
+      : null,
+    composer: {
+      fileInputRef,
+      attachmentInputAccept,
+      handleAttachmentInputChange,
+      composerFocused,
+      isVoiceComposerMode,
+      isComposerExpanded,
+      voiceAttachment,
+      voiceRecordingState,
+      voiceRecordingSeconds,
+      voicePreviewPlaying,
+      voicePreviewDuration,
+      voicePreviewCurrentTime,
+      voicePreviewAudioRef,
+      sendDisabledReason,
+      handleClearAttachment,
+      handleToggleVoicePreviewPlayback,
+      handleStartVoiceRecording,
+      handleSendCurrentVoiceRecording,
+      handleCancelVoiceRecording,
+      handleStopVoiceRecording,
+      replyTargetMessage,
+      setReplyTargetMessage,
+      documentComposerAttachments,
+      selectedDocumentComposerAttachment,
+      sending,
+      mediaUploadProgress,
+      handleToggleMediaDrawer,
+      mediaDrawerOpen,
+      setMediaDrawerOpen,
+      composerTextareaRef,
+      messageDraft,
+      handleComposerChange,
+      handleComposerPaste,
+      handleComposerKeyDown,
+      syncComposerSelection,
+      setComposerFocused,
+      generatingFollowUp,
+      handleComposerSubmit,
+      hasSendPayload,
+      setSelectedDocumentComposerAttachmentId,
+      handleAttachmentMenuAction,
+      visualComposerAttachments,
+      selectedMediaComposerAttachment,
+      setSelectedMediaComposerAttachmentId,
+      attachmentMenuOpen,
+      setAttachmentMenuOpen,
+      mediaDrawerTriggerRef,
+      composerAiMenuOpen,
+      setComposerAiMenuOpen,
+      composerRewriteModalOpen,
+      composerRewriteDisabledReason,
+      replySuggestionDisabledReason,
+      rewritingComposer,
+      replySuggestionLoading,
+      replySuggestionText,
+      replySuggestionError,
+      handleOpenComposerRewriteModal,
+      handleQuickRewriteComposerText,
+      handleApplyReplySuggestion,
+      handleDismissReplySuggestion,
+      handleGenerateReplySuggestion,
+      handleApplyComposerTextFormat,
+      quickReplyMenuOpen,
+      quickReplyMenuHasResults,
+      filteredQuickReplyOptions,
+      quickReplyActiveIndex,
+      handleOpenQuickReplySettings,
+      handleInsertQuickReply,
+      quickReplyEmptyStateMessage,
+      quickRepliesLoadError,
+      onRetryQuickRepliesLoad: retryQuickRepliesLoad,
+    },
+  } : null;
+
   return (
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className="comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
@@ -2016,221 +2190,14 @@ export default function WhatsAppInboxScreen() {
           chatMenuTriggerRefs={chatMenuTriggerRefs}
         />
 
-        <div
-          className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-l-none lg:border-l-0 ${selectedChat ? 'flex' : 'hidden lg:flex'}`}
+        <WhatsAppInboxConversationPane
+          conversation={conversationView}
+          isDraggingFilesOverThread={isDraggingFilesOverThread}
           onDragEnter={handleThreadDragEnter}
           onDragOver={handleThreadDragOver}
           onDragLeave={handleThreadDragLeave}
           onDrop={handleThreadDrop}
-        >
-          {isDraggingFilesOverThread ? (
-            <div className="pointer-events-none absolute inset-2 z-[3] flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]/90">
-              <p className="whatsapp-inbox-heading text-sm font-semibold text-[var(--brand-primary)]">Solte para anexar à conversa</p>
-            </div>
-          ) : null}
-          {!selectedChat ? (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-                <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
-                <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--text-primary)]">Selecione uma conversa</p>
-                  <p className="text-sm text-[var(--text-secondary)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
-                </div>
-              </div>
-          ) : (
-            <>
-              <WhatsAppThreadHeader
-                selectedChat={selectedChat}
-                selectedChatForPresentation={selectedChatForPresentation}
-                selectedChatDisplayName={selectedChatDisplayName}
-                leadPanel={leadPanel}
-                leadStatuses={leadStatuses}
-                favoritedLeadIds={favoritedLeadIds}
-                selectedChatLeadMutationLoading={selectedChatLeadMutationLoading}
-                selectedChatWasAutoLinked={selectedChatWasAutoLinked}
-                isSelectedChatWaitingForQuote={isSelectedChatWaitingForQuote}
-                assumingControl={assumingControlChatId === selectedChat.id}
-                chatFilesOpen={chatFilesOpen}
-                chatMessageSearchOpen={chatMessageSearchOpen}
-                scheduledMessagesPanelOpen={scheduledMessagesPanelOpen}
-                copyingTranscript={copyingTranscript}
-                syncingHistory={syncingHistoryChatId === selectedChat.id}
-                historyRecoveryDisabledReason={historyRecoveryDisabledReason}
-                followUpGenerationDisabledReason={followUpGenerationDisabledReason}
-                generatingFollowUp={generatingFollowUp}
-                threadActionsMenuOpen={threadActionsMenuOpen}
-                threadActionsMenuTriggerRef={threadActionsMenuTriggerRef}
-                chatAgendaSummary={chatAgendaSummary}
-                nextChatReminderSummary={nextChatReminderSummary}
-                chatAgendaSummaryError={chatAgendaSummaryError}
-                onBack={handleBackToChatList}
-                onLeadStatusChange={handleLeadStatusChange}
-                onSaveContact={(name) => {
-                  setSaveContactName(name);
-                  setSaveContactDialogOpen(true);
-                }}
-                onToggleAutonomousAttendance={() => {
-                  if (isSelectedChatWaitingForQuote) {
-                    return;
-                  }
-                  if (selectedChat.autonomous_attendance_status === 'active') {
-                    void handleDeactivateAutonomousAttendance(selectedChat);
-                  } else {
-                    void handleActivateAutonomousAttendance(selectedChat);
-                  }
-                }}
-                onOpenChatFiles={() => setChatFilesOpen(true)}
-                onToggleChatMessageSearch={handleToggleChatMessageSearch}
-                onOpenScheduledMessages={() => setScheduledMessagesPanelOpen(true)}
-                onCopyTranscript={() => void handleCopyChatTranscript()}
-                onRecoverHistory={() => void handleRecoverChatHistory()}
-                onOpenFollowUp={handleOpenFollowUpModal}
-                onOpenLeadDrawer={handleOpenLeadDrawer}
-                onToggleThreadActionsMenu={() => setThreadActionsMenuOpen((current) => !current)}
-              />
-
-              {chatMessageSearchOpen ? (
-                <WhatsAppChatMessageSearch
-                  inputRef={chatMessageSearchInputRef}
-                  draft={chatMessageSearchDraft}
-                  query={chatMessageSearch}
-                  searching={searchingChatMessages}
-                  error={chatMessageSearchError}
-                  results={chatMessageSearchResults}
-                  onDraftChange={setChatMessageSearchDraft}
-                  onClose={closeChatMessageSearch}
-                  onRetry={retryChatMessageSearch}
-                  onSelect={handleSelectChatMessageSearchResult}
-                />
-              ) : null}
-
-              <WhatsAppMessageThread
-                messagesContainerRef={messagesContainerRef}
-                messageBubbleRefs={messageBubbleRefs}
-                reactionAnchorRefs={reactionAnchorRefs}
-                reactionTriggerRefs={reactionTriggerRefs}
-                messageActionTriggerRefs={messageActionTriggerRefs}
-                handleMessagesScroll={handleMessagesScroll}
-                messageLoadErrorNotice={messageLoadErrorNotice}
-                hasOlderMessages={hasOlderMessages}
-                loadingOlderMessages={loadingOlderMessages}
-                handleLoadOlderMessages={handleLoadOlderMessages}
-                loadingMessages={loadingMessages}
-                messageLoadError={messageLoadError}
-                threadReconcileChatId={threadReconcileChatId}
-                selectedChat={selectedChat}
-                messages={messages}
-                messageTimelineItems={messageTimelineItems}
-                highlightedMessageId={highlightedMessageId}
-                mediaUploadProgress={mediaUploadProgress}
-                retryingMessageId={retryingMessageId}
-                localOutgoingRetryPayloadRef={localOutgoingRetryPayloadRef}
-                setLightboxMessageId={setLightboxMessageId}
-                handleCancelMediaUpload={handleCancelMediaUpload}
-                openMessageActionMenuMessageId={openMessageActionMenuMessageId}
-                handleToggleMessageActionMenu={handleToggleMessageActionMenu}
-                starringMessageIds={starringMessageIds}
-                handleToggleStarMessage={(message) => void handleToggleStarMessage(message)}
-                setRetryPendingMessage={setRetryPendingMessage}
-                handleToggleReactionPicker={handleToggleReactionPicker}
-                handleOpenMessageActionMenuFromContext={handleOpenMessageActionMenuFromContext}
-                handleOpenQuotedMessage={handleOpenQuotedMessage}
-                handleTranscribeMessage={handleTranscribeMessage}
-                handleSelectInteractiveReply={handleSelectInteractiveReply}
-                handleOpenSharedContactChat={handleOpenSharedContactChat}
-                handleSaveSharedContact={handleSaveSharedContact}
-                sharedContactActionKey={sharedContactActionKey}
-                transcribingMessageId={transcribingMessageId}
-              />
-              {removedAttachmentForUndo ? (
-                <div className="mx-2.5 mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] sm:mx-3">
-                  <span className="truncate">Anexo removido: {removedAttachmentForUndo.file.name}</span>
-                  <button
-                    type="button"
-                    onClick={handleUndoRemoveAttachment}
-                    className="shrink-0 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                  >
-                    Desfazer
-                  </button>
-                </div>
-              ) : null}
-
-              <WhatsAppComposer
-                fileInputRef={fileInputRef}
-                attachmentInputAccept={attachmentInputAccept}
-                handleAttachmentInputChange={handleAttachmentInputChange}
-                composerFocused={composerFocused}
-                isVoiceComposerMode={isVoiceComposerMode}
-                isComposerExpanded={isComposerExpanded}
-                voiceAttachment={voiceAttachment}
-                voiceRecordingState={voiceRecordingState}
-                voiceRecordingSeconds={voiceRecordingSeconds}
-                voicePreviewPlaying={voicePreviewPlaying}
-                voicePreviewDuration={voicePreviewDuration}
-                voicePreviewCurrentTime={voicePreviewCurrentTime}
-                voicePreviewAudioRef={voicePreviewAudioRef}
-                sendDisabledReason={sendDisabledReason}
-                handleClearAttachment={handleClearAttachment}
-                handleToggleVoicePreviewPlayback={handleToggleVoicePreviewPlayback}
-                handleStartVoiceRecording={handleStartVoiceRecording}
-                handleSendCurrentVoiceRecording={handleSendCurrentVoiceRecording}
-                handleCancelVoiceRecording={handleCancelVoiceRecording}
-                handleStopVoiceRecording={handleStopVoiceRecording}
-                replyTargetMessage={replyTargetMessage}
-                setReplyTargetMessage={setReplyTargetMessage}
-                documentComposerAttachments={documentComposerAttachments}
-                selectedDocumentComposerAttachment={selectedDocumentComposerAttachment}
-                sending={sending}
-                mediaUploadProgress={mediaUploadProgress}
-                handleToggleMediaDrawer={handleToggleMediaDrawer}
-                selectedChat={selectedChat}
-                mediaDrawerOpen={mediaDrawerOpen}
-                setMediaDrawerOpen={setMediaDrawerOpen}
-                composerTextareaRef={composerTextareaRef}
-                messageDraft={messageDraft}
-                handleComposerChange={handleComposerChange}
-                handleComposerPaste={handleComposerPaste}
-                handleComposerKeyDown={handleComposerKeyDown}
-                syncComposerSelection={syncComposerSelection}
-                setComposerFocused={setComposerFocused}
-                generatingFollowUp={generatingFollowUp}
-                handleComposerSubmit={handleComposerSubmit}
-                hasSendPayload={hasSendPayload}
-                setSelectedDocumentComposerAttachmentId={setSelectedDocumentComposerAttachmentId}
-                handleAttachmentMenuAction={handleAttachmentMenuAction}
-                visualComposerAttachments={visualComposerAttachments}
-                selectedMediaComposerAttachment={selectedMediaComposerAttachment}
-                setSelectedMediaComposerAttachmentId={setSelectedMediaComposerAttachmentId}
-                attachmentMenuOpen={attachmentMenuOpen}
-                setAttachmentMenuOpen={setAttachmentMenuOpen}
-                mediaDrawerTriggerRef={mediaDrawerTriggerRef}
-                composerAiMenuOpen={composerAiMenuOpen}
-                setComposerAiMenuOpen={setComposerAiMenuOpen}
-                composerRewriteModalOpen={composerRewriteModalOpen}
-                composerRewriteDisabledReason={composerRewriteDisabledReason}
-                replySuggestionDisabledReason={replySuggestionDisabledReason}
-                rewritingComposer={rewritingComposer}
-                replySuggestionLoading={replySuggestionLoading}
-                replySuggestionText={replySuggestionText}
-                replySuggestionError={replySuggestionError}
-                handleOpenComposerRewriteModal={handleOpenComposerRewriteModal}
-                handleQuickRewriteComposerText={handleQuickRewriteComposerText}
-                handleApplyReplySuggestion={handleApplyReplySuggestion}
-                handleDismissReplySuggestion={handleDismissReplySuggestion}
-                handleGenerateReplySuggestion={handleGenerateReplySuggestion}
-                handleApplyComposerTextFormat={handleApplyComposerTextFormat}
-                quickReplyMenuOpen={quickReplyMenuOpen}
-                quickReplyMenuHasResults={quickReplyMenuHasResults}
-                filteredQuickReplyOptions={filteredQuickReplyOptions}
-                quickReplyActiveIndex={quickReplyActiveIndex}
-                handleOpenQuickReplySettings={handleOpenQuickReplySettings}
-                handleInsertQuickReply={handleInsertQuickReply}
-                quickReplyEmptyStateMessage={quickReplyEmptyStateMessage}
-                quickRepliesLoadError={quickRepliesLoadError}
-                onRetryQuickRepliesLoad={retryQuickRepliesLoad}
-              />
-            </>
-          )}
-        </div>
+        />
         </section>
 
         {lightboxMessageId && mediaViewerMessages.length > 0 ? (

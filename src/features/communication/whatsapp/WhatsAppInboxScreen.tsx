@@ -21,9 +21,7 @@ import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
 import { canReplyOrForwardMessage } from './domain/messagePresentation';
-import {
-  formatMessageTime,
-} from './domain/messageTimeline';
+import { formatMessageTime } from './domain/messageTimeline';
 import {
   getSafeChatDisplayName,
   sortChatsByInboxOrder,
@@ -49,10 +47,7 @@ import { useComposerDraft } from './hooks/useComposerDraft';
 import { useChatSearch } from './hooks/useChatSearch';
 import { useInboxChatMessageSearch } from './hooks/useInboxChatMessageSearch';
 import { useClickOutside } from './hooks/useClickOutside';
-import {
-  mergeCommWhatsAppMessage,
-  getMessageDisplayMetadataSignature,
-} from './messageStatus';
+import { getMessageDisplayMetadataSignature } from './messageStatus';
 import {
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
@@ -61,6 +56,7 @@ import { useInboxPollingController } from './hooks/useInboxPollingController';
 import { useInboxStartChatSources } from './hooks/useInboxStartChatSources';
 import { useInboxLeadSearch } from './hooks/useInboxLeadSearch';
 import { useInboxMessageSending } from './hooks/useInboxMessageSending';
+import { useInboxMessageActionController } from './hooks/useInboxMessageActionController';
 import { useInboxMessageRetry } from './hooks/useInboxMessageRetry';
 import { useInboxSendQueue } from './hooks/useInboxSendQueue';
 import { useInboxChatCreation } from './hooks/useInboxChatCreation';
@@ -76,8 +72,6 @@ import { useInboxChatMutations } from './hooks/useInboxChatMutations';
 import { useInboxOperationalState } from './hooks/useInboxOperationalState';
 import { useInboxOptimisticOutgoingMessages } from './hooks/useInboxOptimisticOutgoingMessages';
 import { useInboxSelectedLeadRealtime } from './hooks/useInboxSelectedLeadRealtime';
-import { useInboxMessageReactionActions } from './hooks/useInboxMessageReactionActions';
-import { useInboxMessageMutations } from './hooks/useInboxMessageMutations';
 import { useInboxBatchFollowUpSender } from './hooks/useInboxBatchFollowUpSender';
 import { useInboxComposerAi } from './hooks/useInboxComposerAi';
 import { useInboxMarkChatRead } from './hooks/useInboxMarkChatRead';
@@ -671,65 +665,23 @@ export default function WhatsAppInboxScreen() {
     setOpenChatMenuChatId((current) => (current === chatId ? null : chatId));
   }, []);
 
-  const handleToggleMessageActionMenu = useCallback((messageId: string) => {
-    setOpenReactionPickerMessageId(null);
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId((current) => (current === messageId ? null : messageId));
-  }, []);
-
   const handleOpenChatMenuFromContext = useCallback((chatId: string, anchor: InboxPointerAnchor) => {
     setChatMenuPointerAnchor(anchor);
     setOpenChatMenuChatId(chatId);
   }, []);
 
-  const handleOpenMessageActionMenuFromContext = useCallback((messageId: string, anchor: InboxPointerAnchor) => {
-    setOpenReactionPickerMessageId(null);
-    setMessageActionMenuPointerAnchor(anchor);
-    setOpenMessageActionMenuMessageId(messageId);
-  }, []);
-
-  const handleOpenMessageDetails = useCallback((message: CommWhatsAppMessage) => {
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
-    setMessageDetailsMessageId(message.id);
-  }, []);
-
-  const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
-    setMessages((current) => current.map((message) => {
-      if (message.id !== messageId) {
-        return message;
-      }
-
-      return mergeCommWhatsAppMessage(message, {
-        ...message,
-        ...patch,
-        metadata: {
-          ...message.metadata,
-          ...(patch.metadata ?? {}),
-        },
-      });
-    }));
-  }, []);
-
   const {
+    handleToggleMessageActionMenu,
+    handleOpenMessageActionMenuFromContext,
+    handleOpenMessageDetails,
     reactingMessageIds,
     starringMessageIds,
     handleToggleReactionPicker,
     handleReactToMessage,
     handleToggleStarMessage,
-  } = useInboxMessageReactionActions({
-    selectedChatExternalId: selectedChat?.external_chat_id,
-    patchMessageLocally,
-    setOpenReactionPickerMessageId,
-    setOpenMessageActionMenuMessageId,
-  });
-
-  const closeMessageActionMenu = useCallback(() => {
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
-  }, []);
-
-  const {
+    closeMessageActionMenu,
+    closeReactionPicker,
+    closeMessageDetails,
     editingMessage,
     editingMessageDraft,
     setEditingMessageDraft,
@@ -741,11 +693,17 @@ export default function WhatsAppInboxScreen() {
     handleSaveEditedMessage,
     handleDeleteMessage,
     handleTranscribeMessage,
-  } = useInboxMessageMutations({
+  } = useInboxMessageActionController({
     selectedChatId,
-    patchMessageLocally,
+    selectedChatExternalId: selectedChat?.external_chat_id,
+    setMessages,
     setChats,
-    closeMessageActionMenu,
+    uiState: {
+      setOpenReactionPickerMessageId,
+      setOpenMessageActionMenuMessageId,
+      setMessageActionMenuPointerAnchor,
+      setMessageDetailsMessageId,
+    },
   });
 
   const { handleBatchSendFollowUp } = useInboxBatchFollowUpSender({
@@ -1050,7 +1008,7 @@ export default function WhatsAppInboxScreen() {
       reactionPickerRef.current,
       openReactionPickerMessageId ? reactionTriggerRefs.current[openReactionPickerMessageId] : null,
     ],
-    () => setOpenReactionPickerMessageId(null),
+    closeReactionPicker,
     [openReactionPickerMessageId],
   );
 
@@ -1060,10 +1018,7 @@ export default function WhatsAppInboxScreen() {
       messageActionMenuRef.current,
       openMessageActionMenuMessageId ? messageActionTriggerRefs.current[openMessageActionMenuMessageId] : null,
     ],
-    () => {
-      setMessageActionMenuPointerAnchor(null);
-      setOpenMessageActionMenuMessageId(null);
-    },
+    closeMessageActionMenu,
     [openMessageActionMenuMessageId],
   );
 
@@ -1089,16 +1044,15 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     if (openReactionPickerMessageId && !openReactionPickerMessage) {
-      setOpenReactionPickerMessageId(null);
+      closeReactionPicker();
     }
-  }, [openReactionPickerMessage, openReactionPickerMessageId]);
+  }, [closeReactionPicker, openReactionPickerMessage, openReactionPickerMessageId]);
 
   useEffect(() => {
     if (openMessageActionMenuMessageId && !openMessageActionMenuMessage) {
-      setMessageActionMenuPointerAnchor(null);
-      setOpenMessageActionMenuMessageId(null);
+      closeMessageActionMenu();
     }
-  }, [openMessageActionMenuMessage, openMessageActionMenuMessageId]);
+  }, [closeMessageActionMenu, openMessageActionMenuMessage, openMessageActionMenuMessageId]);
 
   useEffect(() => {
     if (openChatMenuChatId && !openChatMenuChat) {
@@ -1701,10 +1655,9 @@ export default function WhatsAppInboxScreen() {
     }
 
     setReplyTargetMessage(message);
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
+    closeMessageActionMenu();
     window.setTimeout(() => composerTextareaRef.current?.focus(), 0);
-  }, []);
+  }, [closeMessageActionMenu]);
 
   const handleRefreshLeadContracts = useCallback(() => {
     void loadLeadContracts(leadPanel?.id ?? null);
@@ -2191,7 +2144,7 @@ export default function WhatsAppInboxScreen() {
           {messageDetailsMessage ? (
             <WhatsAppMessageDetailsModal
               message={messageDetailsMessage}
-              onClose={() => setMessageDetailsMessageId(null)}
+              onClose={closeMessageDetails}
             />
           ) : null}
 
@@ -2455,29 +2408,24 @@ export default function WhatsAppInboxScreen() {
           openReactionPickerMessage={openReactionPickerMessage}
           reactionOptions={REACTION_OPTIONS}
           reactingMessageIds={reactingMessageIds}
-          onCloseReactionPicker={() => setOpenReactionPickerMessageId(null)}
+          onCloseReactionPicker={closeReactionPicker}
           onReactToMessage={(message, emoji) => void handleReactToMessage(message, emoji)}
           messageActionMenuRef={messageActionMenuRef}
           messageActionMenuPosition={messageActionMenuPosition}
           openMessageActionMenuMessage={openMessageActionMenuMessage}
           starringMessageIds={starringMessageIds}
           deletingMessageId={deletingMessageId}
-          onCloseMessageActionMenu={() => {
-            setMessageActionMenuPointerAnchor(null);
-            setOpenMessageActionMenuMessageId(null);
-          }}
+          onCloseMessageActionMenu={closeMessageActionMenu}
           onOpenMessageDetails={handleOpenMessageDetails}
           onReplyToMessage={handleReplyToMessage}
           onOpenForwardMessageModal={handleOpenForwardMessageModal}
           onToggleStarMessage={(message) => {
             void handleToggleStarMessage(message);
-            setOpenMessageActionMenuMessageId(null);
-            setMessageActionMenuPointerAnchor(null);
+            closeMessageActionMenu();
           }}
           onOpenEditMessageModal={handleOpenEditMessageModal}
           onRequestDeleteMessage={(message) => {
-            setMessageActionMenuPointerAnchor(null);
-            setOpenMessageActionMenuMessageId(null);
+            closeMessageActionMenu();
             setMessagePendingDeletion(message);
           }}
         />

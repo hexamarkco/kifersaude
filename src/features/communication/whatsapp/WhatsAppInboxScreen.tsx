@@ -26,7 +26,6 @@ import {
   listInboxAgendaReminders,
   markInboxRemindersRead,
   scheduleInboxFollowUp,
-  subscribeToInboxLead,
   subscribeToInboxReminders,
   updateInboxFollowUpSentAudit,
   updateInboxFollowUpSentAudits,
@@ -58,7 +57,6 @@ import {
 import {
   buildDeletedMessageSummary,
   getDeletedMessageMarker,
-  getOwnReactionEmoji,
 } from './domain/messageMetadata';
 import {
   compareMessageChronology,
@@ -78,7 +76,6 @@ import {
   sortChatsByInboxOrder,
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
-import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
@@ -128,8 +125,6 @@ import { useClickOutside } from './hooks/useClickOutside';
 import {
   mergeCommWhatsAppMessage,
   getMessageDisplayMetadataSignature,
-  normalizeDeliveryStatus,
-  resolveDeliveryStatus,
 } from './messageStatus';
 import {
   clearPendingChatReadState,
@@ -155,6 +150,12 @@ import { useInboxChatLoader } from './hooks/useInboxChatLoader';
 import { useInboxOperationalState } from './hooks/useInboxOperationalState';
 import { useInboxRealtimeUpdates } from './hooks/useInboxRealtimeUpdates';
 import { useInboxOptimisticOutgoingMessages } from './hooks/useInboxOptimisticOutgoingMessages';
+import { useInboxOlderMessages } from './hooks/useInboxOlderMessages';
+import { useInboxMessageSelection } from './hooks/useInboxMessageSelection';
+import { useInboxMessageStatusRefresh } from './hooks/useInboxMessageStatusRefresh';
+import { useInboxSelectedChatPreviewRefresh } from './hooks/useInboxSelectedChatPreviewRefresh';
+import { useInboxSelectedLeadRealtime } from './hooks/useInboxSelectedLeadRealtime';
+import { useInboxMessageReactionActions } from './hooks/useInboxMessageReactionActions';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 import {
@@ -202,7 +203,6 @@ function InboxLazyLoadingFallback() {
   );
 }
 
-const MESSAGE_PAGE_SIZE = 50;
 const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
@@ -212,7 +212,6 @@ const SAVED_CONTACT_FORCE_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
-const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000, 120000, 300000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
 const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
@@ -335,10 +334,6 @@ export default function WhatsAppInboxScreen() {
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
-  const [reactingMessageIds, setReactingMessageIds] = useState<Set<string>>(new Set());
-  const reactingMessageLockRef = useRef(new KeyedActionLock());
-  const [starringMessageIds, setStarringMessageIds] = useState<Set<string>>(new Set());
-  const starringMessageLockRef = useRef(new KeyedActionLock());
   const deletingMessageLockRef = useRef(new KeyedActionLock());
   const transcriptionMessageLockRef = useRef(new KeyedActionLock());
   const editingMessageLockRef = useRef(new KeyedActionLock());
@@ -427,11 +422,6 @@ export default function WhatsAppInboxScreen() {
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
   const mediaUploadAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const contactSaveLockRef = useRef(new KeyedActionLock());
-  const olderMessagesLoadLockRef = useRef(new KeyedActionLock());
-  const statusRefreshTimeoutsRef = useRef<number[]>([]);
-  const statusRefreshGenerationRef = useRef(0);
-  const statusRefreshInFlightGenerationRef = useRef<number | null>(null);
-  const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
   const composerSendLockRef = useRef(new ComposerSendLock());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
@@ -475,7 +465,6 @@ export default function WhatsAppInboxScreen() {
   const messagesRequestIdRef = useRef(0);
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
   const chatsLoadKeyRef = useRef<string | null>(null);
-  const olderMessagesRequestIdRef = useRef(0);
   const quotedMessageNavigationRequestIdRef = useRef(0);
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
@@ -1442,39 +1431,18 @@ export default function WhatsAppInboxScreen() {
     }));
   }, []);
 
-  const patchMessageReactionLocally = useCallback((message: CommWhatsAppMessage, emoji: string | null) => {
-    const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-      ? message.metadata as Record<string, unknown>
-      : {};
-    const reactions = Array.isArray(metadata.reactions)
-      ? metadata.reactions.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
-      : [];
-    const withoutOwnReaction = reactions.filter((item) => (
-      String(item.actor_key ?? '').trim() !== 'self' && item.from_me !== true
-    ));
-    const nextReactions = emoji
-      ? [
-          ...withoutOwnReaction,
-          {
-            actor_key: 'self',
-            emoji,
-            from_me: true,
-            from: null,
-            from_name: 'Você',
-            reacted_at: new Date().toISOString(),
-            target_external_message_id: message.external_message_id ?? null,
-          },
-        ]
-      : withoutOwnReaction;
-
-    patchMessageLocally(message.id, {
-      metadata: {
-        ...metadata,
-        reactions: nextReactions,
-        last_reaction_at: new Date().toISOString(),
-      },
-    });
-  }, [patchMessageLocally]);
+  const {
+    reactingMessageIds,
+    starringMessageIds,
+    handleToggleReactionPicker,
+    handleReactToMessage,
+    handleToggleStarMessage,
+  } = useInboxMessageReactionActions({
+    selectedChatExternalId: selectedChat?.external_chat_id,
+    patchMessageLocally,
+    setOpenReactionPickerMessageId,
+    setOpenMessageActionMenuMessageId,
+  });
 
   const { loadLeadContracts, loadLeadPanel } = useInboxLeadPanel({
     refs: {
@@ -1495,49 +1463,14 @@ export default function WhatsAppInboxScreen() {
     upsertChatLocally,
   });
 
-  useEffect(() => {
-    const leadId = selectedChat?.lead_id?.trim();
-    if (!leadId) {
-      return;
-    }
-
-    const unsubscribe = subscribeToInboxLead(
-      leadId,
-      (updatedLead) => {
-        const statusName =
-          typeof updatedLead?.status === 'string' && updatedLead.status.trim()
-            ? updatedLead.status.trim()
-            : typeof updatedLead?.status_id === 'string'
-              ? leadStatuses.find((status) => status.id === updatedLead.status_id)?.nome ?? null
-              : null;
-
-        const currentChat = latestChatsRef.current.find((chat) => chat.lead_id === leadId) ?? null;
-        if (!statusName) {
-          void loadLeadPanel(currentChat);
-          return;
-        }
-
-        setLeadPanel((current) => (
-          current?.id === leadId
-            ? { ...current, status_nome: statusName, status_value: statusName }
-            : current
-        ));
-
-        if (currentChat) {
-          upsertChatLocally({ ...currentChat, lead_status: statusName });
-        }
-      },
-      (status) => {
-        if (status === 'unavailable') {
-          console.warn('[WhatsAppInbox] realtime do lead selecionado indisponivel; polling permanece ativo.');
-        }
-      },
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [leadStatuses, loadLeadPanel, selectedChat?.lead_id, upsertChatLocally]);
+  useInboxSelectedLeadRealtime({
+    leadId: selectedChat?.lead_id,
+    leadStatuses,
+    latestChatsRef,
+    loadLeadPanel,
+    setLeadPanel,
+    upsertChatLocally,
+  });
 
   const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
     const requestId = ++chatAgendaSummaryRequestIdRef.current;
@@ -1962,28 +1895,11 @@ export default function WhatsAppInboxScreen() {
     }
   }, [openChatMenuChat, openChatMenuChatId]);
 
-  const clearScheduledMessageStatusRefreshes = useCallback(() => {
-    statusRefreshGenerationRef.current += 1;
-    statusRefreshInFlightGenerationRef.current = null;
-    for (const timeoutId of statusRefreshTimeoutsRef.current) {
-      window.clearTimeout(timeoutId);
-    }
-    statusRefreshTimeoutsRef.current = [];
-    lastPendingStatusRefreshKeyRef.current = '';
-  }, []);
-
   useEffect(() => {
     leadMutationRequestIdRef.current += 1;
     setLinkLoadingLeadId(null);
-    clearScheduledMessageStatusRefreshes();
     setThreadActionsMenuOpen(false);
-  }, [clearScheduledMessageStatusRefreshes, selectedChatId]);
-
-  useEffect(() => {
-    if (!pollingEnabled) {
-      clearScheduledMessageStatusRefreshes();
-    }
-  }, [clearScheduledMessageStatusRefreshes, pollingEnabled]);
+  }, [selectedChatId]);
 
   useEffect(() => {
     // Modais que editam dados da conversa anterior não podem permanecer
@@ -2687,116 +2603,6 @@ export default function WhatsAppInboxScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const scheduleMessageStatusRefresh = useCallback((params: {
-    chat: CommWhatsAppChat;
-    externalMessageIds: string[];
-  }) => {
-    // O realtime (webhook -> comm_whatsapp_messages -> canal do chat, ver
-    // applyRealtimeMessageChange) já é o caminho principal para saber quando
-    // uma mensagem foi entregue/lida — normalmente resolve em 1-2s. Este poll
-    // ao provedor existe só como rede de segurança para quando o webhook
-    // atrasa ou falha, então cada tick primeiro confere se o status já chegou
-    // por outro caminho antes de fazer a chamada ao WHAPI, e para de agendar
-    // chamadas assim que não sobrar nenhuma mensagem pendente — em vez de
-    // sempre repetir as 8 chamadas ao vivo até 5 minutos depois do envio.
-    const remainingIds = new Set(
-      Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20),
-    );
-    if (remainingIds.size === 0) {
-      return;
-    }
-
-    const generation = statusRefreshGenerationRef.current;
-
-    const dropAlreadyResolvedIds = () => {
-      for (const externalMessageId of remainingIds) {
-        const known = latestMessagesRef.current.find(
-          (message) => String(message.external_message_id ?? '').trim() === externalMessageId,
-        );
-        if (known && !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(known.delivery_status))) {
-          remainingIds.delete(externalMessageId);
-        }
-      }
-    };
-
-    for (const delayMs of MESSAGE_STATUS_REFRESH_DELAYS_MS) {
-      const timeoutId = window.setTimeout(() => {
-        statusRefreshTimeoutsRef.current = statusRefreshTimeoutsRef.current.filter((id) => id !== timeoutId);
-
-        if (generation !== statusRefreshGenerationRef.current) {
-          return;
-        }
-
-        dropAlreadyResolvedIds();
-        if (remainingIds.size === 0) {
-          return;
-        }
-
-        // As tentativas continuam programadas para cobrir atrasos do provedor,
-        // mas nunca fazemos duas consultas de status da mesma remessa ao
-        // mesmo tempo quando uma tentativa anterior ainda está pendente.
-        if (statusRefreshInFlightGenerationRef.current === generation) {
-          return;
-        }
-
-        const idsToCheck = Array.from(remainingIds);
-        statusRefreshInFlightGenerationRef.current = generation;
-
-        void whatsappMessagesRepository.refreshStatuses({
-          chatId: params.chat.external_chat_id,
-          externalMessageIds: idsToCheck,
-          limit: idsToCheck.length,
-        }).then((result) => {
-          if (generation !== statusRefreshGenerationRef.current || result.refreshed.length === 0) {
-            return;
-          }
-
-          const refreshedByExternalId = new Map(result.refreshed.map((item) => [item.external_message_id, item]));
-          setLocalOutgoingMessages((current) => current.map((message) => {
-            const externalMessageId = String(message.external_message_id ?? '').trim();
-            const refreshed = externalMessageId ? refreshedByExternalId.get(externalMessageId) : null;
-            if (!refreshed) {
-              return message;
-            }
-
-            const resolvedStatus = resolveDeliveryStatus(message.delivery_status, refreshed.delivery_status) ?? message.delivery_status;
-            if (message.delivery_status === resolvedStatus) {
-              return message;
-            }
-
-            return {
-              ...message,
-              delivery_status: resolvedStatus,
-              status_updated_at: new Date().toISOString(),
-            };
-          }));
-
-          for (const item of result.refreshed) {
-            if (!REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status))) {
-              remainingIds.delete(item.external_message_id);
-            }
-          }
-
-          if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status)))) {
-            void Promise.all([loadMessages(params.chat, 'send'), loadChats()]).catch((error) => {
-              console.error('[WhatsAppInbox] erro ao recarregar apos atualizar status ativo', error);
-            });
-          }
-        }).catch((error) => {
-          if (generation === statusRefreshGenerationRef.current) {
-            console.error('[WhatsAppInbox] erro ao atualizar status ativo da mensagem', error);
-          }
-        }).finally(() => {
-          if (statusRefreshInFlightGenerationRef.current === generation) {
-            statusRefreshInFlightGenerationRef.current = null;
-          }
-        });
-      }, delayMs);
-
-      statusRefreshTimeoutsRef.current.push(timeoutId);
-    }
-  }, [loadChats, loadMessages, setLocalOutgoingMessages]);
-
   useEffect(() => {
     let active = true;
 
@@ -2848,54 +2654,29 @@ export default function WhatsAppInboxScreen() {
     };
   }, [selectedChat?.id]);
 
-  useEffect(() => {
-    if (!selectedChatId) {
-      setMessages([]);
-      setMessageLoadError(null);
-      setLoadingMessages(false);
-      setThreadReconcileChatId(null);
-      lastSelectedChatPreviewRefreshKeyRef.current = '';
-      setLoadingOlderMessages(false);
-      setHasOlderMessages(false);
-      setReplyTargetMessage(null);
-      cancelVoiceRecordingRef.current();
-      messagesSignatureRef.current = '';
-      pendingMessageSearchChatIdRef.current = null;
-      return;
-    }
-
-    pendingScrollModeRef.current = 'bottom';
-    pendingScrollTopRef.current = null;
-    pendingScrollHeightRef.current = null;
-    isNearBottomRef.current = true;
-    setReplyTargetMessage(null);
-    cancelVoiceRecordingRef.current();
-    setLoadingOlderMessages(false);
-    setThreadReconcileChatId(null);
-    setMessageLoadError(null);
-    lastSelectedChatPreviewRefreshKeyRef.current = '';
-
-    // Se já temos o último resultado desta conversa em cache, exibimos na hora
-    // (sem o spinner de "carregando mensagens") enquanto a atualização roda em segundo
-    // plano — evita o efeito de "sempre demora" ao reabrir uma conversa recém-vista.
-    const cached = messagesCacheByChatIdRef.current.get(selectedChatId);
-    setLoadingMessages(shouldShowBlockingMessageLoader(Boolean(cached)));
-    if (cached) {
-      messagesSignatureRef.current = cached.signature;
-      setHasOlderMessages(cached.hasOlderMessages);
-      setMessages(cached.messages);
-    } else {
-      messagesSignatureRef.current = '';
-      setHasOlderMessages(false);
-      setMessages([]);
-    }
-
-    if (pendingMessageSearchChatIdRef.current === selectedChatId) {
-      return;
-    }
-
-    void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
-  }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
+  useInboxMessageSelection({
+    selectedChatId,
+    refs: {
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+      isNearBottomRef,
+      messagesSignatureRef,
+      messagesCacheByChatIdRef,
+      pendingMessageSearchChatIdRef,
+      lastSelectedChatPreviewRefreshKeyRef,
+      cancelVoiceRecordingRef,
+    },
+    getSelectedChatSnapshot,
+    loadMessages,
+    setMessages,
+    setMessageLoadError,
+    setLoadingMessages,
+    setThreadReconcileChatId,
+    setLoadingOlderMessages,
+    setHasOlderMessages,
+    setReplyTargetMessage,
+  });
 
   useEffect(
     () => () => {
@@ -2916,20 +2697,22 @@ export default function WhatsAppInboxScreen() {
       replySuggestionRequestIdRef.current += 1;
       quickRepliesLoadRequestIdRef.current += 1;
       quickRepliesSaveRequestIdRef.current += 1;
-      clearScheduledMessageStatusRefreshes();
 
     },
-    [clearScheduledMessageStatusRefreshes],
+    [],
   );
 
   useInboxPolling({
     pollingEnabled,
+    loading,
     selectedChatId,
     loadingOlderMessages,
     chatPollBackoffRef,
     chatPollIdleCyclesRef,
     isChannelConnectedRef,
     isMessageRealtimeHealthyRef,
+    latestChatsLoadedAtRef,
+    selectedChatIdRef,
     loadChats,
     refreshArchivedChatsCount,
     loadOperationalState,
@@ -2937,100 +2720,27 @@ export default function WhatsAppInboxScreen() {
     loadMessages,
   });
 
-  useEffect(() => {
-    if (!selectedChat || loadingOlderMessages) {
-      return;
-    }
+  useInboxSelectedChatPreviewRefresh({
+    selectedChat,
+    loadingOlderMessages,
+    refs: {
+      latestMessagesRef,
+      messagesSignatureRef,
+      lastSelectedChatPreviewRefreshKeyRef,
+    },
+    getSelectedChatSnapshot,
+    loadMessages,
+  });
 
-    const previewKey = [
-      selectedChat.id,
-      selectedChat.last_message_at ?? '',
-      selectedChat.last_message_text ?? '',
-      selectedChat.last_message_direction ?? '',
-    ].join(':');
-
-    if (!selectedChat.last_message_at || messagesSignatureRef.current === '' || previewKey === lastSelectedChatPreviewRefreshKeyRef.current) {
-      return;
-    }
-
-    const selectedLastMessageAtMs = getMessageTimestampMs(selectedChat.last_message_at);
-    const latestRenderedMessageAtMs = latestMessagesRef.current
-      .filter((message) => message.chat_id === selectedChat.id)
-      .reduce<number | null>((latest, message) => {
-        const messageAt = getMessageTimestampMs(message.message_at);
-        if (messageAt === null) {
-          return latest;
-        }
-        return latest === null || messageAt > latest ? messageAt : latest;
-      }, null);
-
-    if (selectedLastMessageAtMs !== null && latestRenderedMessageAtMs !== null && latestRenderedMessageAtMs >= selectedLastMessageAtMs) {
-      lastSelectedChatPreviewRefreshKeyRef.current = previewKey;
-      return;
-    }
-
-    lastSelectedChatPreviewRefreshKeyRef.current = previewKey;
-    void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
-  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, selectedChat]);
-
-  useEffect(() => {
-    if (!pollingEnabled || !selectedChat) {
-      return;
-    }
-
-    const pendingExternalIds = visibleMessages
-      .filter((message) => message.direction === 'outbound')
-      .filter((message) => REFRESHABLE_OUTBOUND_STATUSES.has(String(message.delivery_status ?? '').trim().toLowerCase()))
-      .map((message) => String(message.external_message_id ?? '').trim())
-      .filter(Boolean)
-      .slice(-10);
-
-    if (pendingExternalIds.length === 0) {
-      lastPendingStatusRefreshKeyRef.current = '';
-      return;
-    }
-
-    const refreshKey = `${selectedChat.id}:${pendingExternalIds.join('|')}`;
-    if (lastPendingStatusRefreshKeyRef.current === refreshKey) {
-      return;
-    }
-
-    lastPendingStatusRefreshKeyRef.current = refreshKey;
-    scheduleMessageStatusRefresh({
-      chat: selectedChat,
-      externalMessageIds: pendingExternalIds,
-    });
-  }, [pollingEnabled, scheduleMessageStatusRefresh, selectedChat, visibleMessages]);
-
-  useEffect(() => {
-    if (!pollingEnabled || loading) {
-      return;
-    }
-
-    // O bootstrap já carrega chats e estado operacional na primeira entrada.
-    // Enquanto ele ainda não concluiu, este efeito não deve repetir a mesma
-    // consulta; depois da primeira carga concluída, ele continua funcionando
-    // como atualização rápida ao voltar para a janela.
-    if (latestChatsLoadedAtRef.current === 0) {
-      return;
-    }
-
-    // BUG FIX (BUG #6): throttle do refocus refresh. Evita disparar
-    // loadChats() em cima de uma mutation otimista recente. A janela de
-    // 3s alinha com o objetivo do polling normal sem multiplicar fontes.
-    const REFOCUS_THROTTLE_MS = 3_000;
-    const elapsed = Date.now() - latestChatsLoadedAtRef.current;
-    if (elapsed < REFOCUS_THROTTLE_MS) {
-      return;
-    }
-
-    void loadChats();
-    void loadOperationalState();
-
-    if (selectedChatIdRef.current && !loadingOlderMessages) {
-      void loadMessages(getSelectedChatSnapshot(selectedChatIdRef.current), 'poll');
-    }
-  }, [getSelectedChatSnapshot, loadChats, loadMessages, loadOperationalState, loading, loadingOlderMessages, pollingEnabled]);
+  const { scheduleMessageStatusRefresh } = useInboxMessageStatusRefresh({
+    refs: { latestMessagesRef, loadChatsRef, loadMessagesRef },
+    pollingEnabled,
+    selectedChatId,
+    selectedChat,
+    visibleMessages,
+    refreshableOutboundStatuses: REFRESHABLE_OUTBOUND_STATUSES,
+    setLocalOutgoingMessages,
+  });
 
   const markSelectedChatReadIfEligible = useCallback((source: 'auto' | 'scroll') => {
     const currentChat = selectedChatIdRef.current
@@ -3297,63 +3007,24 @@ export default function WhatsAppInboxScreen() {
     return () => window.clearTimeout(timeoutId);
   }, [highlightedMessageId]);
 
-  const handleLoadOlderMessages = useCallback(async () => {
-    if (!selectedChat || loadingOlderMessages || !hasOlderMessages || latestMessagesRef.current.length === 0) {
-      return;
-    }
-
-    const targetChatId = selectedChat.id;
-    if (!olderMessagesLoadLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    const requestId = ++olderMessagesRequestIdRef.current;
-    const oldestMessage = latestMessagesRef.current[0];
-    const container = messagesContainerRef.current;
-
-    setLoadingOlderMessages(true);
-
-    try {
-      const page = await whatsappMessagesRepository.listPage(selectedChat.id, {
-        limit: MESSAGE_PAGE_SIZE,
-        before: {
-          messageAt: oldestMessage.message_at,
-          id: oldestMessage.id,
-        },
-      });
-
-      if (requestId !== olderMessagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-
-      const nextMessages = mergeMessages(page.messages, latestMessagesRef.current);
-      const nextSignature = buildMessagesSignature(nextMessages);
-
-      setHasOlderMessages(page.hasMore);
-
-      if (nextSignature === messagesSignatureRef.current) {
-        return;
-      }
-
-      messagesSignatureRef.current = nextSignature;
-      pendingScrollModeRef.current = 'prepend';
-      pendingScrollTopRef.current = container?.scrollTop ?? 0;
-      pendingScrollHeightRef.current = container?.scrollHeight ?? 0;
-      setMessages(nextMessages);
-    } catch (error) {
-      if (requestId !== olderMessagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao carregar mensagens antigas', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mensagens mais antigas.');
-    } finally {
-      olderMessagesLoadLockRef.current.release(targetChatId);
-      if (requestId === olderMessagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setLoadingOlderMessages(false);
-      }
-    }
-  }, [buildMessagesSignature, hasOlderMessages, loadingOlderMessages, selectedChat]);
+  const { handleLoadOlderMessages } = useInboxOlderMessages({
+    selectedChat,
+    loadingOlderMessages,
+    hasOlderMessages,
+    refs: {
+      latestMessagesRef,
+      selectedChatIdRef,
+      messagesSignatureRef,
+      messagesContainerRef,
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+    },
+    setLoadingOlderMessages,
+    setHasOlderMessages,
+    setMessages,
+    buildMessagesSignature,
+  });
 
   const handleMessagesScroll = useCallback(() => {
     const container = messagesContainerRef.current;
@@ -3484,107 +3155,6 @@ export default function WhatsAppInboxScreen() {
       mediaUploadAbortControllersRef.current.get(activeChatId)?.abort();
     }
   };
-
-  const handleToggleReactionPicker = useCallback((messageId: string) => {
-    setOpenMessageActionMenuMessageId(null);
-    setOpenReactionPickerMessageId((current) => (current === messageId ? null : messageId));
-  }, []);
-
-  const handleReactToMessage = useCallback(async (message: CommWhatsAppMessage, emoji: string) => {
-    if (!message.external_message_id) {
-      return;
-    }
-
-    if (!reactingMessageLockRef.current.tryAcquire(message.id)) {
-      return;
-    }
-
-    setReactingMessageIds((current) => new Set(current).add(message.id));
-
-    const chatId = String(message.metadata?.chat_id ?? selectedChat?.external_chat_id ?? '').trim();
-    if (!chatId) {
-      reactingMessageLockRef.current.release(message.id);
-      setReactingMessageIds((current) => {
-        const next = new Set(current);
-        next.delete(message.id);
-        return next;
-      });
-      toast.error('Não foi possível identificar a conversa desta mensagem.');
-      return;
-    }
-
-    const currentOwnReaction = getOwnReactionEmoji(message);
-    const nextEmoji = currentOwnReaction === emoji ? null : emoji;
-
-    setOpenReactionPickerMessageId(null);
-    patchMessageReactionLocally(message, nextEmoji);
-
-    try {
-      await whatsappMessagesRepository.react({
-        chatId,
-        messageId: message.external_message_id,
-        emoji: nextEmoji,
-      });
-    } catch (error) {
-      patchMessageReactionLocally(message, currentOwnReaction);
-      console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
-    } finally {
-      reactingMessageLockRef.current.release(message.id);
-      setReactingMessageIds((current) => {
-        const next = new Set(current);
-        next.delete(message.id);
-        return next;
-      });
-    }
-  }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
-
-  const handleToggleStarMessage = useCallback(async (message: CommWhatsAppMessage) => {
-    if (!message.external_message_id) {
-      return;
-    }
-
-    if (!starringMessageLockRef.current.tryAcquire(message.id)) {
-      return;
-    }
-
-    setStarringMessageIds((current) => new Set(current).add(message.id));
-
-    const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-      ? message.metadata as Record<string, unknown>
-      : {};
-    const currentStarred = metadata.starred === true;
-    const nextStarred = !currentStarred;
-
-    patchMessageLocally(message.id, {
-      metadata: {
-        ...metadata,
-        starred: nextStarred,
-        starred_at: new Date().toISOString(),
-      },
-    });
-
-    try {
-      await whatsappMessagesRepository.star(message.id, nextStarred);
-    } catch (error) {
-      patchMessageLocally(message.id, {
-        metadata: {
-          ...metadata,
-          starred: currentStarred,
-          starred_at: metadata.starred_at,
-        },
-      });
-      console.error('[WhatsAppInbox] erro ao atualizar estrela da mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar a estrela da mensagem.');
-    } finally {
-      starringMessageLockRef.current.release(message.id);
-      setStarringMessageIds((current) => {
-        const next = new Set(current);
-        next.delete(message.id);
-        return next;
-      });
-    }
-  }, [patchMessageLocally]);
 
   const handleOpenEditMessageModal = useCallback((message: CommWhatsAppMessage) => {
     if (!canEditOutboundMessage(message)) {

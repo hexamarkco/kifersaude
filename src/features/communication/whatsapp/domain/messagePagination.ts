@@ -1,0 +1,1 @@
+export const INBOX_MESSAGE_PAGE_SIZE = 50;

@@ -6,6 +6,7 @@ import {
   type CommWhatsAppLeadPanel,
 } from '../data';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
+import { INBOX_MESSAGE_PAGE_SIZE } from '../domain/messagePagination';
 import { mergeMessages } from '../domain/messageTimeline';
 import { KeyedPromiseQueue } from '../components/keyedPromiseQueue';
 import { toast } from '../../../../lib/toast';
@@ -43,7 +44,6 @@ type InboxMessageLoaderOptions = {
   upsertChatLocally: (chat: CommWhatsAppChat) => void;
 };
 
-const MESSAGE_PAGE_SIZE = 50;
 const MESSAGES_CACHE_MAX_CHATS = 20;
 
 export const useInboxMessageLoader = ({
@@ -110,7 +110,7 @@ export const useInboxMessageLoader = ({
 
         if (reason === 'initial') {
           const thread = await whatsappConversationsRepository.getThread(targetChatId, {
-            limit: MESSAGE_PAGE_SIZE,
+            limit: INBOX_MESSAGE_PAGE_SIZE,
           });
 
           data = thread.messages;
@@ -126,7 +126,7 @@ export const useInboxMessageLoader = ({
           }
         } else {
           const page = await whatsappMessagesRepository.listPage(targetChatId, {
-            limit: MESSAGE_PAGE_SIZE,
+            limit: INBOX_MESSAGE_PAGE_SIZE,
           });
 
           data = page.messages;

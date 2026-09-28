@@ -9,15 +9,19 @@ import {
 } from '../pollingIntervals';
 
 type CurrentValue<T> = { readonly current: T };
+const REFOCUS_THROTTLE_MS = 3_000;
 
 type UseInboxPollingOptions = {
   pollingEnabled: boolean;
+  loading: boolean;
   selectedChatId: string | null;
   loadingOlderMessages: boolean;
   chatPollBackoffRef: CurrentValue<number>;
   chatPollIdleCyclesRef: CurrentValue<number>;
   isChannelConnectedRef: CurrentValue<boolean>;
   isMessageRealtimeHealthyRef: CurrentValue<boolean>;
+  latestChatsLoadedAtRef: CurrentValue<number>;
+  selectedChatIdRef: CurrentValue<string | null>;
   loadChats: () => Promise<unknown>;
   refreshArchivedChatsCount: () => Promise<unknown>;
   loadOperationalState: () => Promise<unknown>;
@@ -27,12 +31,15 @@ type UseInboxPollingOptions = {
 
 export const useInboxPolling = ({
   pollingEnabled,
+  loading,
   selectedChatId,
   loadingOlderMessages,
   chatPollBackoffRef,
   chatPollIdleCyclesRef,
   isChannelConnectedRef,
   isMessageRealtimeHealthyRef,
+  latestChatsLoadedAtRef,
+  selectedChatIdRef,
   loadChats,
   refreshArchivedChatsCount,
   loadOperationalState,
@@ -131,5 +138,38 @@ export const useInboxPolling = ({
     loadingOlderMessages,
     pollingEnabled,
     selectedChatId,
+  ]);
+
+  useEffect(() => {
+    if (!pollingEnabled || loading) {
+      return;
+    }
+
+    // Bootstrap already loads the inbox. After it finishes, refresh on return
+    // to the window, but avoid racing an optimistic chat mutation from the last 3s.
+    if (latestChatsLoadedAtRef.current === 0) {
+      return;
+    }
+
+    if (Date.now() - latestChatsLoadedAtRef.current < REFOCUS_THROTTLE_MS) {
+      return;
+    }
+
+    void loadChats();
+    void loadOperationalState();
+
+    if (selectedChatIdRef.current && !loadingOlderMessages) {
+      void loadMessages(getSelectedChatSnapshot(selectedChatIdRef.current), 'poll');
+    }
+  }, [
+    getSelectedChatSnapshot,
+    loadChats,
+    loadMessages,
+    loadOperationalState,
+    latestChatsLoadedAtRef,
+    loading,
+    loadingOlderMessages,
+    pollingEnabled,
+    selectedChatIdRef,
   ]);
 };

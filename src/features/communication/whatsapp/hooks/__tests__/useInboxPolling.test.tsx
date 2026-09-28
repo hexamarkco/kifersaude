@@ -13,6 +13,8 @@ const createOptions = (overrides: Partial<PollingOptions> = {}) => {
     chatPollIdleCycles: { current: 0 },
     isChannelConnected: { current: true },
     isMessageRealtimeHealthy: { current: false },
+    latestChatsLoadedAt: { current: 0 },
+    selectedChatId: { current: 'chat-1' },
   };
   const calls = {
     chats: 0,
@@ -22,12 +24,15 @@ const createOptions = (overrides: Partial<PollingOptions> = {}) => {
   };
   const options = {
     pollingEnabled: true,
+    loading: false,
     selectedChatId: 'chat-1',
     loadingOlderMessages: false,
     chatPollBackoffRef: refs.chatPollBackoff,
     chatPollIdleCyclesRef: refs.chatPollIdleCycles,
     isChannelConnectedRef: refs.isChannelConnected,
     isMessageRealtimeHealthyRef: refs.isMessageRealtimeHealthy,
+    latestChatsLoadedAtRef: refs.latestChatsLoadedAt,
+    selectedChatIdRef: refs.selectedChatId,
     loadChats: async () => { calls.chats += 1; },
     refreshArchivedChatsCount: async () => { calls.archivedCount += 1; },
     loadOperationalState: async () => { calls.operationalState += 1; },
@@ -105,6 +110,36 @@ test('polling desativado não agenda consultas e desmontar cancela os timers ati
   activeView.unmount();
   assert.equal(activeTimers.pendingCount(), 0);
   activeTimers.restore();
+});
+
+test('refresh ao retornar à janela respeita bootstrap, throttle e paginação antiga', () => {
+  const recentTimers = installFakeTimers();
+  const recent = createOptions();
+  recent.refs.latestChatsLoadedAt.current = Date.now() - 2_000;
+  const recentView = render(<PollingHarness options={recent.options} />);
+
+  try {
+    assert.equal(recent.calls.chats, 0);
+    assert.equal(recent.calls.operationalState, 0);
+    assert.equal(recent.calls.messages.length, 0);
+  } finally {
+    recentView.unmount();
+    recentTimers.restore();
+  }
+
+  const activeTimers = installFakeTimers();
+  const active = createOptions({ loadingOlderMessages: true });
+  active.refs.latestChatsLoadedAt.current = Date.now() - 10_000;
+  const activeView = render(<PollingHarness options={active.options} />);
+
+  try {
+    assert.equal(active.calls.chats, 1);
+    assert.equal(active.calls.operationalState, 1);
+    assert.equal(active.calls.messages.length, 0);
+  } finally {
+    activeView.unmount();
+    activeTimers.restore();
+  }
 });
 
 const PollingHarness = ({ options }: { options: PollingOptions }) => {

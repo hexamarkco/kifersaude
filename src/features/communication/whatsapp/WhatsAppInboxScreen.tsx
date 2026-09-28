@@ -1,49 +1,26 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, Calendar, CalendarClock, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, ExternalLink, FileAudio, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MessageCircle, Mic, MoreHorizontal, Pause, Pencil, Pin, Play, Plus, Radio, Reply, RotateCw, Search, SendHorizontal, ShieldCheck, SlidersHorizontal, Smile, Sparkles, Star, Trash2, UserRound, Users, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Copy, Download, FolderOpen, Info, Loader2, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import {
   Alert,
-  Badge,
   Button,
-  ButtonGroup,
-  Checkbox,
-  ConfirmDialog,
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  SearchInput,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  IconButton,
   LoadingState,
-  OperationalStatusBadge,
 } from '../../../design-system';
-import { LeadFavoriteBadge, LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
-import { getPanelButtonClass } from '../../../components/ui/standards';
-import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
-import { cx } from '../../../lib/cx';
 import {
-  CommWhatsAppAmbiguousSendError,
-  CommWhatsAppMediaSendTimeoutError,
   whatsappContactsRepository,
   whatsappConversationsRepository,
   whatsappFollowUpService,
   whatsappMediaRepository,
   whatsappMessagesRepository,
+  loadInboxChatSection,
   commWhatsAppService,
   approveInboxFollowUpSchedule,
   clearInboxLeadAgenda,
@@ -51,15 +28,12 @@ import {
   listInboxAgendaReminders,
   markInboxRemindersRead,
   scheduleInboxFollowUp,
-  subscribeToInboxChats,
-  subscribeToInboxPresences,
   subscribeToInboxLead,
   subscribeToInboxReminders,
   updateInboxFollowUpSentAudit,
   updateInboxFollowUpSentAudits,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
-  type CommWhatsAppLeadSearchResult,
   type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
@@ -72,53 +46,33 @@ import {
 import { configService, type IntegrationSetting } from '../../config';
 import type { Lead } from '../../leads';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
-import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, CommWhatsAppPresence } from './domain/types';
+import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPresence } from './domain/types';
 import {
   canDeleteOutboundMessage,
   canEditOutboundMessage,
   canReplyOrForwardMessage,
-  getChatPreviewIconType,
   getMessageEditableText,
   getMessageSearchPreviewText,
-  getMessageVisibleCaption,
   getQuotePayloadFromMessage,
-  getVisiblePreviewText,
-  isGalleryMediaMessage,
-  isMessageStarred,
-  isVideoLikeMessageType,
-  normalizeChatDraftPreview,
   normalizeInboxSearch,
 } from './domain/messagePresentation';
 import {
   buildDeletedMessageSummary,
-  getDeletedMessageInfo,
   getDeletedMessageMarker,
-  getEditedMessageInfo,
   getMessageClientOrderAt,
   getMessageClientRequestId,
-  getMessageContactCardInfo,
-  getMessageInteractiveInfo,
-  getMessageInviteInfo,
-  getMessageLinkPreview,
   getMessageMetadataRecord,
-  getMessageQuoteInfo,
-  getMessageReactions,
   getOwnReactionEmoji,
-  getReactionTooltipText,
-  hasMessageQuote,
   messagesReferToSameOutgoing,
 } from './domain/messageMetadata';
 import {
   compareMessageChronology,
   dedupeObviousDuplicateMessages,
   findMessageByIdOrExternalId,
-  formatMessageDaySeparatorLabel,
   formatMessageTime,
-  getMessageDayKey,
   getMessageTimestampMs,
   mergeMessages,
 } from './domain/messageTimeline';
@@ -134,18 +88,13 @@ import {
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
 import {
-  QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
-  shouldContinueQueuedTextSendAfterFailure,
-} from './domain/messageSendQueue';
-import {
   preserveChatsFromPartialLoad,
   selectInitialChatId,
   selectReplacementChatId,
   shouldPreserveSelectedChatAfterLoad,
 } from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
-import { formatCommWhatsAppPhoneLabel } from './domain/phonePresentation';
-import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, mergeSavedContactPages, resolveSavedContactName } from './domain/contactLookup';
+import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -163,15 +112,33 @@ import {
   summarizeQuickReplyPreview,
   type WhatsAppQuickReply,
 } from './domain/quickReplies';
-import ChatPreviewIcon from './components/ChatPreviewIcon';
-import LinkifiedText, { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
+import { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
+import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
+import { WhatsAppMessageThread } from './components/WhatsAppMessageThread';
+import { WhatsAppComposer } from './components/WhatsAppComposer';
+import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
+import { WhatsAppThreadHeader } from './components/WhatsAppThreadHeader';
+import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
+import { WhatsAppChatMessageSearch } from './components/WhatsAppChatMessageSearch';
+import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
+import { isChatMediaViewerMessage } from './domain/mediaViewerPresentation';
+import { buildInboxMessageTimeline } from './domain/inboxMessageTimeline';
+import {
+  createPendingAttachmentFromFile,
+  formatConnectionStatusLabel,
+  normalizePastedImageFile,
+} from './domain/inboxPresentation';
 import { KeyedActionLock } from './components/keyedActionLock';
 import { KeyedPromiseQueue } from './components/keyedPromiseQueue';
+import {
+  InboxFilterGroup,
+  InboxMultiFilterGroup,
+} from './components/WhatsAppInboxList';
 import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import { ComposerSendLock } from './components/composerSendLock';
-import WhatsAppPresenceIndicator from './components/WhatsAppPresenceIndicator';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
+import { useInboxChannelSubscriptions } from './hooks/useInboxChannelSubscriptions';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft } from './hooks/useComposerDraft';
@@ -196,11 +163,15 @@ import {
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { lazyWithChunkRecovery } from '../../../routes/lazyImport';
-import {
-  computeChatPollIntervalMs,
-  computeMessagePollIntervalMs,
-  computeOperationalStatePollIntervalMs,
-} from './pollingIntervals';
+import { useInboxPolling } from './hooks/useInboxPolling';
+import { useInboxStartChatSources } from './hooks/useInboxStartChatSources';
+import { useInboxLeadSearch } from './hooks/useInboxLeadSearch';
+import { useInboxMessageSending } from './hooks/useInboxMessageSending';
+import { useInboxMessageRetry } from './hooks/useInboxMessageRetry';
+import { useInboxSendQueue } from './hooks/useInboxSendQueue';
+import { useInboxChatCreation } from './hooks/useInboxChatCreation';
+import { useInboxLeadMutations } from './hooks/useInboxLeadMutations';
+import type { LocalOutgoingRetryPayload, PendingAttachment } from './domain/outgoingMessageTypes';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 import {
@@ -248,18 +219,6 @@ function InboxLazyLoadingFallback() {
   );
 }
 
-const CHAT_POLL_INTERVAL_MS = 8000;
-const MAX_CHAT_POLL_IDLE_INTERVAL_MS = 30000;
-const MAX_CHAT_POLL_BACKOFF_MS = 60000;
-const ARCHIVED_CHATS_COUNT_POLL_INTERVAL_MS = 30000;
-const MESSAGE_POLL_INTERVAL_MS = 5000;
-// Quando o Realtime de mensagens confirma SUBSCRIBED, o polling vira só rede
-// de segurança e pode rodar bem mais espaçado.
-const MESSAGE_POLL_SAFETY_NET_INTERVAL_MS = 20000;
-const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
-// Quando o canal do WhatsApp não está conectado, poll mais rápido para
-// detectar a reconexão sem esperar o intervalo espaçado padrão.
-const OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS = 10000;
 const MESSAGE_PAGE_SIZE = 50;
 // Quantidade de conversas cujo último resultado de mensagens fica em cache em memória,
 // permitindo reabrir uma conversa recém-vista sem exibir o spinner de carregamento.
@@ -275,7 +234,6 @@ const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000, 120000, 300000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
-const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
 const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
@@ -284,15 +242,6 @@ type ChatLoadOptions = {
   sections?: Array<'active' | 'archived'>;
   partialArchived?: boolean;
   preferredSection?: 'active' | 'archived';
-};
-type PendingAttachment = {
-  id: string;
-  file: File;
-  kind: CommWhatsAppMediaSendKind;
-  durationSeconds?: number;
-  previewUrl?: string | null;
-  waveform?: number[];
-  waveformPayload?: string | null;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type QuickReplyOption = {
@@ -311,64 +260,6 @@ type CreateLeadDraft = {
   chatId: string;
   initialValues: Partial<Lead>;
 };
-type LocalOutgoingRetryPayload =
-  | { kind: 'text'; text: string; clientRequestId?: string }
-  | {
-      kind: 'media';
-      mediaKind: CommWhatsAppMediaSendKind;
-      file: File;
-      caption?: string;
-      durationSeconds?: number;
-      waveform?: string;
-      fileName?: string;
-      previewUrl?: string | null;
-      clientRequestId?: string;
-    }
-  | {
-      kind: 'remote_media';
-      mediaKind: 'image' | 'video' | 'document';
-      remoteUrl: string;
-      mimeType?: string;
-      fileName?: string;
-      caption?: string;
-      previewUrl?: string | null;
-      clientRequestId?: string;
-    };
-
-type QueuedTextMessage = {
-  segment: string;
-  optimisticMessage: CommWhatsAppMessage;
-  clientRequestId: string;
-};
-
-type OutgoingQuotePayload = ReturnType<typeof getQuotePayloadFromMessage>;
-
-const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
-
-const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const MEDIA_ATTACHMENT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.heic,.heif,video/*,.mp4,.mov,.avi,.mkv,.webm';
-const DOCUMENT_ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
-const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
-const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
-const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const createClientRequestId = () => `client-request-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
-
-const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document') => {
-  if (kind === 'image') return '[Imagem]';
-  if (kind === 'video') return '[Video]';
-  if (kind === 'audio' || kind === 'voice') return '[Audio]';
-  return '[Documento]';
-};
-
-const buildComposerQueueSnapshotKey = (chatId: string, text: string, attachments: PendingAttachment[]) => {
-  const attachmentKey = attachments
-    .map((attachment) => `${attachment.id}:${attachment.file.name}:${attachment.file.size}:${attachment.kind}`)
-    .join('|');
-
-  return `${chatId}:${text}:${attachmentKey}`;
-};
-
 type PointerAnchor = {
   x: number;
   y: number;
@@ -383,1951 +274,14 @@ const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
   height: 0,
 });
 
-const formatConnectionStatusLabel = (value?: string | null, fallback = 'Indisponível') => {
-  const normalized = String(value ?? '').trim().toUpperCase();
+const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
 
-  if (!normalized) {
-    return fallback;
-  }
-
-  switch (normalized) {
-    case 'AUTH':
-      return 'Conectado';
-    case 'QR':
-      return 'Aguardando QR';
-    case 'LAUNCH':
-      return 'Conectando';
-    case 'INIT':
-      return 'Inicializando';
-    case 'STOP':
-      return 'Parado';
-    case 'DISCONNECTED':
-      return 'Desconectado';
-    default:
-      return normalized;
-  }
-};
-
-const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) => {
-  if (direction === 'outbound') {
-    return 'message-bubble message-bubble-outbound ml-auto';
-  }
-
-  if (direction === 'system') {
-    return 'message-bubble message-bubble-system mx-auto';
-  }
-
-  return 'message-bubble message-bubble-inbound mr-auto';
-};
-
-const getMessageRowClasses = (direction: CommWhatsAppMessage['direction']) => {
-  if (direction === 'outbound') {
-    return 'message-bubble-row-outbound justify-end';
-  }
-
-  if (direction === 'system') {
-    return 'message-bubble-row-system justify-center';
-  }
-
-  return 'message-bubble-row-inbound justify-start';
-};
-
-const isWhapiGroupChatId = (value: unknown) => String(value ?? '').trim().toLowerCase().endsWith('@g.us');
-
-const isGroupChatMessage = (chat: CommWhatsAppChat, message: CommWhatsAppMessage) => (
-  message.direction !== 'system'
-  && (
-    isWhapiGroupChatId(chat.external_chat_id)
-    || isWhapiGroupChatId(getMessageMetadataRecord(message).chat_id)
-  )
-);
-
-const isPdfDocumentMessage = (message: CommWhatsAppMessage) => {
-  const kind = message.message_type.trim().toLowerCase();
-  if (kind !== 'document') return false;
-
-  const mimeType = message.media_mime_type?.split(';', 1)[0]?.trim().toLowerCase();
-  const fileName = message.media_file_name?.trim().toLowerCase() || '';
-  return mimeType === 'application/pdf' || fileName.endsWith('.pdf');
-};
-
-const isVisualMediaMessage = (message: CommWhatsAppMessage) => {
-  const kind = message.message_type.trim().toLowerCase();
-  return isGalleryMediaMessage(message) || kind === 'sticker' || isPdfDocumentMessage(message);
-};
-
-const isAudioMessage = (message: CommWhatsAppMessage) => {
-  const kind = message.message_type.trim().toLowerCase();
-  return kind === 'audio' || kind === 'voice';
-};
-
-const isBubblelessMediaMessage = (message: CommWhatsAppMessage) => (
-  isVisualMediaMessage(message) || isAudioMessage(message)
-);
-
-const isMediaMessage = (message: CommWhatsAppMessage) => {
-  const kind = message.message_type.trim().toLowerCase();
-  return isBubblelessMediaMessage(message) || kind === 'document';
-};
-
-const MEDIA_SENDING_STATUSES = new Set(['pending', 'queued', 'sending']);
-
-const isMediaSendingMessage = (
-  message: CommWhatsAppMessage,
-  mediaUploadProgress: MediaUploadProgress | null,
-  retrying = false,
-) => (
-  message.direction === 'outbound'
-  && isMediaMessage(message)
-  && (
-    MEDIA_SENDING_STATUSES.has(message.delivery_status.trim().toLowerCase())
-    || (mediaUploadProgress?.chatId === message.chat_id && mediaUploadProgress.attachmentId === message.id)
-    || retrying
-  )
-);
-
-const hasVisualMediaCaption = (message: CommWhatsAppMessage) => (
-  isVisualMediaMessage(message) && Boolean(getMessageVisibleCaption(message))
-);
-
-const getVisualMediaBubbleWidth = (message: CommWhatsAppMessage) => (
-  isPdfDocumentMessage(message) ? 'w-[18rem]' : 'w-[13.75rem]'
-);
-
-const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
-const AUDIO_PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
-
-const inboxInlineActionClassName = getPanelButtonClass({
-  variant: 'soft',
-  size: 'sm',
-  className: 'h-8 px-3 text-[11px] font-semibold',
-});
-
+const MEDIA_ATTACHMENT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.heic,.heif,video/*,.mp4,.mov,.avi,.mkv,.webm';
+const DOCUMENT_ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
+const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
+const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
+const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
-
-const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
-  if (file.type.startsWith('image/')) {
-    return 'image';
-  }
-
-  if (file.type.startsWith('video/')) {
-    return 'video';
-  }
-
-  if (file.type.startsWith('audio/')) {
-    return 'audio';
-  }
-
-  return 'document';
-};
-
-const createPendingAttachmentFromFile = (file: File): PendingAttachment => {
-  const kind = inferAttachmentKind(file);
-  return {
-    id: createPendingAttachmentId(),
-    file,
-    kind,
-    previewUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
-  };
-};
-
-const normalizePastedImageFile = (file: File, index: number) => {
-  if (file.name.trim()) {
-    return file;
-  }
-
-  const extension = file.type.split('/')[1]?.split(';')[0] || 'png';
-  return new File([file], `imagem-colada-${Date.now()}-${index + 1}.${extension}`, { type: file.type || 'image/png' });
-};
-
-const formatFileSize = (value?: number | null) => {
-  if (!value || value <= 0) return '';
-
-  if (value >= 1024 * 1024) {
-    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
-  if (value >= 1024) {
-    return `${Math.round(value / 1024)} KB`;
-  }
-
-  return `${value} B`;
-};
-
-const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, messageType?: string | null) => {
-  const status = String(deliveryStatus ?? '').trim().toLowerCase();
-
-  switch (status) {
-    case 'pending':
-    case 'queued':
-    case 'sending':
-      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
-    case 'sent':
-    case 'received':
-      return { icon: Check, label: 'Enviado', tone: 'sent' as const };
-    case 'delivered':
-      return { icon: CheckCheck, label: 'Entregue', tone: 'delivered' as const };
-    case 'read':
-    case 'seen':
-    case 'viewed':
-      return { icon: CheckCheck, label: 'Vista', tone: 'read' as const };
-    case 'played':
-      return {
-        icon: Volume2,
-        label: messageType === 'voice' ? 'Ouvida' : 'Reproduzida',
-        tone: 'played' as const,
-      };
-    case 'failed':
-    case 'error':
-      return { icon: AlertCircle, label: 'Falhou', tone: 'failed' as const };
-    case 'deleted':
-      return { icon: AlertTriangle, label: 'Apagada', tone: 'deleted' as const };
-    default:
-      // Nunca mostra o valor cru (ex.: um status novo que o WHAPI passe a
-      // enviar e que ainda não mapeamos aqui) — isso é o tipo de coisa que
-      // faz o status parecer quebrado/não confiável para quem está usando.
-      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
-  }
-};
-
-const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => getDeliveryStatusMetaFromValues(message.delivery_status, message.message_type);
-
-const formatDurationLabel = (seconds: number) => {
-  const mins = Math.floor(seconds / 60)
-    .toString()
-    .padStart(2, '0');
-  const secs = Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, '0');
-
-  return `${mins}:${secs}`;
-};
-
-function VoiceComposerTimeline({ progress = 0, recording = false }: { progress?: number; recording?: boolean }) {
-  const normalizedProgress = Math.min(100, Math.max(0, progress));
-
-  return (
-    <div
-      className={`whatsapp-inbox-voice-timeline ${recording ? 'is-recording' : ''}`}
-      role="progressbar"
-      aria-label={recording ? 'Gravação em andamento' : 'Progresso da nota de voz'}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={recording ? undefined : Math.round(normalizedProgress)}
-    >
-      <span
-        className="whatsapp-inbox-voice-timeline-fill"
-        style={recording ? undefined : { width: `${normalizedProgress}%` }}
-      />
-    </div>
-  );
-}
-
-function useResolvedMediaUrl(message: CommWhatsAppMessage) {
-  const buildMediaRequestKey = (retry: number) => [
-    message.external_message_id ?? '',
-    message.media_id ?? '',
-    message.media_url ?? '',
-    retry,
-  ].join('\u001f');
-  const [mediaUrl, setMediaUrl] = useState<string | null>(whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retryNonce, setRetryNonce] = useState(0);
-  const mediaRequestKey = buildMediaRequestKey(retryNonce);
-  const [resolvedMediaRequestKey, setResolvedMediaRequestKey] = useState(mediaRequestKey);
-
-  useEffect(() => {
-    let active = true;
-    let retainedLocalPreview = false;
-    let retainedMediaObjectUrl = false;
-
-    setResolvedMediaRequestKey(mediaRequestKey);
-    setMediaUrl(null);
-    setLoading(false);
-    setError(null);
-
-    const rememberedPreview = whatsappMediaRepository.retainLocalPreview(message.external_message_id);
-    if (rememberedPreview) {
-      retainedLocalPreview = true;
-      setMediaUrl(rememberedPreview);
-      setLoading(false);
-      setError(null);
-
-      if (!message.media_id || (message.external_message_id && message.media_id === message.external_message_id)) {
-        return () => {
-          active = false;
-          if (retainedLocalPreview) {
-            whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
-          }
-        };
-      }
-    }
-
-    if (message.media_id && message.external_message_id && message.media_id === message.external_message_id) {
-      setMediaUrl(null);
-      setLoading(false);
-      setError(null);
-      return () => {
-        active = false;
-        if (retainedLocalPreview) {
-          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
-        }
-      };
-    }
-
-    if (!message.media_id) {
-      setMediaUrl(message.media_url?.trim() || null);
-      setLoading(false);
-      setError(null);
-      return () => {
-        active = false;
-        if (retainedLocalPreview) {
-          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
-        }
-      };
-    }
-
-    setLoading(true);
-    setError(null);
-
-    retainedMediaObjectUrl = true;
-    void whatsappMediaRepository
-      .resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url, forceRefresh: retryNonce > 0 })
-      .then((resolved) => {
-        if (!active) return;
-        setMediaUrl(resolved);
-        if (resolved && retainedLocalPreview) {
-          whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
-          retainedLocalPreview = false;
-        }
-      })
-      .catch((resolveError) => {
-        if (!active) return;
-        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Não foi possível carregar a mídia.';
-        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponível no momento.' : resolvedMessage);
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      if (retainedLocalPreview) {
-        whatsappMediaRepository.releaseLocalPreview(message.external_message_id);
-      }
-      if (retainedMediaObjectUrl) {
-        whatsappMediaRepository.releaseObjectUrl(message.media_id);
-      }
-    };
-  }, [mediaRequestKey, message.external_message_id, message.media_id, message.media_url, retryNonce]);
-
-  const retry = useCallback(() => {
-    setError(null);
-    setRetryNonce((current) => current + 1);
-  }, []);
-
-  const isCurrentMediaRequest = resolvedMediaRequestKey === mediaRequestKey;
-
-  return {
-    mediaUrl: isCurrentMediaRequest ? mediaUrl : null,
-    loading: isCurrentMediaRequest ? loading : true,
-    error: isCurrentMediaRequest ? error : null,
-    retry,
-  };
-}
-
-const isChatMediaViewerMessage = (message: CommWhatsAppMessage) => {
-  const kind = message.message_type.trim().toLowerCase();
-  return (kind === 'image' || isVideoLikeMessageType(kind)) && message.delivery_status.trim().toLowerCase() !== 'deleted';
-};
-
-function WhatsAppMediaViewerThumb({
-  message,
-  active,
-  onSelect,
-}: {
-  message: CommWhatsAppMessage;
-  active: boolean;
-  onSelect: (messageId: string) => void;
-}) {
-  const { mediaUrl, loading } = useResolvedMediaUrl(message);
-  const isVideo = isVideoLikeMessageType(message.message_type);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(message.id)}
-      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[var(--success)] ring-offset-2 ring-offset-[var(--bg-canvas)]' : 'opacity-60 hover:opacity-90'}`}
-      aria-label="Abrir mídia"
-      aria-current={active ? 'true' : undefined}
-    >
-      {mediaUrl ? (
-        isVideo ? (
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
-            <source src={mediaUrl} type={message.media_mime_type || undefined} />
-          </video>
-        ) : (
-          <img src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
-        )
-      ) : (
-        <span className="flex h-full w-full items-center justify-center bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)]">
-          {loading ? '...' : 'Mídia'}
-        </span>
-      )}
-      {isVideo ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--bg-canvas)_20%,transparent)] text-[var(--text-primary)]">
-          <Play className="h-4 w-4 fill-current" />
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-function WhatsAppMediaViewer({
-  messages,
-  selectedMessageId,
-  contactName,
-  onSelect,
-  onClose,
-}: {
-  messages: CommWhatsAppMessage[];
-  selectedMessageId: string;
-  contactName: string;
-  onSelect: (messageId: string) => void;
-  onClose: () => void;
-}) {
-  const selectedIndex = Math.max(0, messages.findIndex((message) => message.id === selectedMessageId));
-  const selectedMessage = messages[selectedIndex] ?? messages[0];
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(selectedMessage);
-  const isVideo = selectedMessage ? isVideoLikeMessageType(selectedMessage.message_type) : false;
-  const canGoPrevious = selectedIndex > 0;
-  const canGoNext = selectedIndex < messages.length - 1;
-  const selectedName = selectedMessage?.media_file_name || (isVideo ? 'Vídeo' : 'Imagem');
-  const selectedAuthor = selectedMessage?.direction === 'outbound' ? 'Você' : contactName;
-  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
-  const [rotation, setRotation] = useState(0);
-
-  useEffect(() => {
-    setRotation(0);
-  }, [selectedMessageId]);
-
-  const goToIndex = useCallback((nextIndex: number) => {
-    const nextMessage = messages[nextIndex];
-    if (nextMessage) {
-      onSelect(nextMessage.id);
-    }
-  }, [messages, onSelect]);
-
-  const scrollThumbnails = useCallback((direction: 'previous' | 'next') => {
-    const target = thumbnailStripRef.current;
-    if (!target) {
-      return;
-    }
-
-    const amount = Math.max(260, target.clientWidth * 0.72);
-    target.scrollBy({ left: direction === 'previous' ? -amount : amount, behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-        return;
-      }
-
-      if (event.key === 'ArrowLeft' && canGoPrevious) {
-        event.preventDefault();
-        goToIndex(selectedIndex - 1);
-      }
-
-      if (event.key === 'ArrowRight' && canGoNext) {
-        event.preventDefault();
-        goToIndex(selectedIndex + 1);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canGoNext, canGoPrevious, goToIndex, onClose, selectedIndex]);
-
-  if (!selectedMessage) {
-    return null;
-  }
-
-  const isDarkThemeActive = typeof document !== 'undefined'
-    && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
-
-  const viewer = (
-    <div className={`whatsapp-inbox-media-viewer comm-whatsapp-media-viewer modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]`} role="dialog" aria-modal="true">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] px-4 py-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
-          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {mediaUrl && !isVideo ? (
-            <button
-              type="button"
-              onClick={() => setRotation((prev) => (prev + 1) % 4)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
-              aria-label="Rotacionar imagem"
-              title={`Rotacionar (${rotation * 90}°)`}
-            >
-              <RotateCw className="h-5 w-5" />
-            </button>
-          ) : null}
-          {mediaUrl ? (
-            <a
-              href={mediaUrl}
-              download={selectedName}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
-              aria-label="Baixar mídia"
-              title="Baixar"
-            >
-              <Download className="h-5 w-5" />
-            </a>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
-            aria-label="Fechar"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      </header>
-
-      <main className="relative flex min-h-0 flex-1 items-center justify-center px-4 py-5">
-        {canGoPrevious ? (
-          <button
-            type="button"
-            onClick={() => goToIndex(selectedIndex - 1)}
-            className="whatsapp-inbox-media-viewer-nav left-4"
-            aria-label="Mídia anterior"
-          >
-            <ChevronLeft className="h-7 w-7" />
-          </button>
-        ) : null}
-
-        <div className="flex h-full w-full items-center justify-center">
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Carregando mídia...
-            </div>
-          ) : mediaUrl ? (
-            isVideo ? (
-              <video controls autoPlay className="max-h-full max-w-full bg-[var(--overlay)] object-contain">
-                <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
-              </video>
-            ) : (
-              <img
-                src={mediaUrl}
-                alt={selectedName}
-                className="max-h-full max-w-full object-contain transition-transform duration-300"
-                style={{ transform: `rotate(${rotation * 90}deg)` }}
-              />
-            )
-          ) : (
-            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 text-sm text-[var(--text-secondary)]">
-              {error || 'Mídia indisponível no momento.'}
-            </div>
-          )}
-        </div>
-
-        {canGoNext ? (
-          <button
-            type="button"
-            onClick={() => goToIndex(selectedIndex + 1)}
-            className="whatsapp-inbox-media-viewer-nav right-4"
-            aria-label="Próxima mídia"
-          >
-            <ChevronRight className="h-7 w-7" />
-          </button>
-        ) : null}
-      </main>
-
-      {messages.length > 1 ? (
-        <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-[var(--border-subtle)] px-16 py-4">
-          <button
-            type="button"
-            onClick={() => scrollThumbnails('previous')}
-            className="whatsapp-inbox-media-viewer-strip-nav left-4"
-            aria-label="Rolar miniaturas para trás"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div ref={thumbnailStripRef} className="flex gap-3 overflow-x-auto py-1">
-            {messages.map((message) => (
-              <WhatsAppMediaViewerThumb
-                key={message.id}
-                message={message}
-                active={message.id === selectedMessage.id}
-                onSelect={onSelect}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => scrollThumbnails('next')}
-            className="whatsapp-inbox-media-viewer-strip-nav right-4"
-            aria-label="Rolar miniaturas para frente"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </footer>
-      ) : null}
-    </div>
-  );
-
-  return typeof document === 'undefined' ? viewer : createPortal(viewer, document.body);
-}
-
-function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) {
-  const meta = getDeliveryStatusMeta(message);
-  const Icon = meta.icon;
-
-  return (
-    <span
-      className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone} inline-flex shrink-0 items-center whitespace-nowrap`}
-      title={meta.label}
-      aria-label={`Status: ${meta.label}`}
-    >
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-    </span>
-  );
-}
-
-function MediaSendingOverlay({
-  progress,
-  onCancel,
-}: {
-  progress: number | null;
-  onCancel?: () => void;
-}) {
-  return (
-    <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-primary)]" />
-        <span>{progress === null ? 'Enviando' : `${progress}%`}</span>
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="ml-1 text-[var(--text-secondary)] underline decoration-current/40 underline-offset-2 transition hover:text-[var(--text-primary)]"
-          >
-            Cancelar
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppAudioPlayerCard({
-  kind,
-  mediaUrl,
-  mediaMimeType,
-  fileName,
-  durationSeconds,
-  canTranscribe,
-  hasTranscription,
-  transcriptionStatus,
-  transcribing,
-  onTranscribe,
-  loading,
-  error,
-  mediaSending,
-  mediaSendingProgress,
-  onCancelMediaUpload,
-}: {
-  kind: 'audio' | 'voice';
-  mediaUrl: string | null;
-  mediaMimeType?: string | null;
-  fileName?: string | null;
-  durationSeconds?: number | null;
-  canTranscribe?: boolean;
-  hasTranscription?: boolean;
-  transcriptionStatus?: CommWhatsAppMessage['transcription_status'];
-  transcribing?: boolean;
-  onTranscribe?: () => void;
-  loading: boolean;
-  error: string | null;
-  mediaSending: boolean;
-  mediaSendingProgress: number | null;
-  onCancelMediaUpload?: () => void;
-}) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [resolvedDuration, setResolvedDuration] = useState(durationSeconds ?? 0);
-  const [playbackRate, setPlaybackRate] = useState<(typeof AUDIO_PLAYBACK_RATES)[number]>(1);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const handleLoadedMetadata = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        setResolvedDuration(audio.duration);
-      }
-    };
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      audio.currentTime = 0;
-    };
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, [mediaUrl]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) audio.playbackRate = playbackRate;
-  }, [mediaUrl, playbackRate]);
-
-  const handleTogglePlayback = () => {
-    const audio = audioRef.current;
-    if (!audio || !mediaUrl) return;
-
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    void audio.play().then(() => setIsPlaying(true)).catch(() => undefined);
-  };
-
-  const duration = Math.max(resolvedDuration || 0, durationSeconds || 0);
-  const waveformBars =
-    kind === 'voice'
-      ? DEFAULT_WAVEFORM
-      : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.62 : value * 0.92));
-  const playedBars = duration > 0 ? Math.min(waveformBars.length, Math.ceil((currentTime / duration) * waveformBars.length)) : 0;
-
-  const handleSeek = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const mediaDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : duration;
-    if (mediaDuration <= 0) return;
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    if (bounds.width <= 0) return;
-
-    const progress = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
-    const nextTime = Math.min(progress * mediaDuration, Math.max(0, mediaDuration - 0.05));
-    audio.currentTime = nextTime;
-    setCurrentTime(nextTime);
-
-    if (audio.paused) {
-      void audio.play().then(() => setIsPlaying(true)).catch(() => undefined);
-    }
-  };
-
-  const formatPlaybackRate = (rate: number) => `${rate.toString().replace('.', ',')}×`;
-  const handleCyclePlaybackRate = () => {
-    setPlaybackRate((currentRate) => {
-      const currentIndex = AUDIO_PLAYBACK_RATES.indexOf(currentRate);
-      return AUDIO_PLAYBACK_RATES[(currentIndex + 1) % AUDIO_PLAYBACK_RATES.length];
-    });
-  };
-
-  const transcriptionAction = transcriptionStatus === 'processing' || transcribing ? (
-    <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status whatsapp-inbox-audio-transcribe-button" role="status" aria-live="polite">
-      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-      <span>Transcrevendo...</span>
-    </span>
-  ) : canTranscribe ? (
-      <button
-        type="button"
-        onClick={onTranscribe}
-        className="whatsapp-inbox-transcribe-button whatsapp-inbox-audio-transcribe-button"
-        aria-label={transcriptionStatus === 'failed' ? 'Tentar transcrever novamente' : transcriptionStatus === 'completed' ? 'Retranscrever áudio' : 'Transcrever áudio'}
-        title={transcriptionStatus === 'failed' ? 'Tentar transcrever novamente' : transcriptionStatus === 'completed' ? 'Retranscrever áudio' : 'Transcrever áudio'}
-      >
-        <FileText className="h-3 w-3" aria-hidden="true" />
-        <span>{transcriptionStatus === 'failed' ? 'Tentar novamente' : hasTranscription ? 'Retranscrever' : 'Transcrever'}</span>
-      </button>
-  ) : null;
-
-  if (!mediaUrl) {
-    return (
-      <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-        <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-          {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
-          <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
-        </div>
-        {transcriptionAction ? <div className="shrink-0 self-center">{transcriptionAction}</div> : null}
-        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'} ${isPlaying ? 'is-playing' : ''}`}>
-      <audio ref={audioRef} preload="metadata">
-        <source src={mediaUrl} type={mediaMimeType || undefined} />
-      </audio>
-
-      <div className="min-w-0 flex-1">
-        <div className="whatsapp-inbox-audio-native-content">
-          <button
-            type="button"
-            onClick={handleTogglePlayback}
-            className="whatsapp-inbox-audio-native-play"
-            aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
-          >
-            {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
-          </button>
-
-          <div className="min-w-0 flex-1">
-            <div className="mb-1.5 flex items-center justify-between gap-3">
-              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
-              </p>
-              <div className="flex shrink-0 items-center gap-2">
-                {transcriptionAction}
-                <button
-                  type="button"
-                  onClick={handleCyclePlaybackRate}
-                  className="whatsapp-inbox-audio-speed-trigger"
-                  aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}. Clique para mudar`}
-                  title="Clique para mudar a velocidade"
-                >
-                  {formatPlaybackRate(playbackRate)}
-                </button>
-                <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
-                  {formatDurationLabel(Math.round(duration))}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="whatsapp-inbox-audio-native-waveform"
-              onClick={handleSeek}
-              aria-label={`Reproduzir áudio a partir de uma posição. Posição atual: ${formatDurationLabel(Math.round(currentTime))} de ${formatDurationLabel(Math.round(duration))}`}
-            >
-              {waveformBars.map((bar, index) => (
-                <span
-                  key={`${kind}-${index}-${bar}`}
-                  className={`whatsapp-inbox-audio-native-waveform-bar ${index < playedBars ? 'is-played' : ''} ${isPlaying ? 'is-active' : ''}`}
-                  style={{ height: `${Math.max(9, Math.round(bar * 20))}px` }}
-                />
-              ))}
-            </button>
-            <p className="mt-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
-              {formatDurationLabel(Math.round(currentTime))} reproduzidos
-            </p>
-          </div>
-        </div>
-      </div>
-      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-    </div>
-  );
-}
-
-function RetryMediaButton({
-  loading,
-  onRetry,
-}: {
-  loading: boolean;
-  onRetry: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      onClick={onRetry}
-      disabled={loading}
-      variant="soft"
-      size="sm"
-      className="whatsapp-inbox-retry-button"
-    >
-      {loading ? <Loader2 className="animate-spin" /> : <SendHorizontal className="kds-control-icon" />}
-      Reenviar
-    </Button>
-  );
-}
-
-function InboxFilterChip({
-  active,
-  label,
-  onClick,
-  compact = false,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  compact?: boolean;
-}) {
-  return (
-    <Button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      variant={active ? 'soft' : 'secondary'}
-      size="sm"
-      className={compact ? 'text-[11px]' : 'text-xs'}
-    >
-      {label}
-    </Button>
-  );
-}
-
-function InboxFilterGroup<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-  compact = false,
-}: {
-  label: string;
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (value: T) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        {options.map((option) => (
-          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InboxMultiFilterGroup({
-  label,
-  values,
-  options,
-  onChange,
-  compact = false,
-  variant = 'chips',
-}: {
-  label: string;
-  values: string[];
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string[]) => void;
-  compact?: boolean;
-  variant?: 'chips' | 'list';
-}) {
-  const normalizedValues = values.map((value) => value.toLowerCase());
-
-  const toggleValue = (value: string) => {
-    const normalized = value.toLowerCase();
-    const next = normalizedValues.includes(normalized)
-      ? values.filter((item) => item.toLowerCase() !== normalized)
-      : [...values, value];
-    onChange(next);
-  };
-
-  if (variant === 'list') {
-    return (
-      <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
-          {values.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => onChange([])}
-              className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary)] transition hover:text-[var(--brand-primary-hover)]"
-            >
-              Limpar
-            </button>
-          ) : null}
-        </div>
-        <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
-          {options.map((option) => {
-            const selected = normalizedValues.includes(option.value.toLowerCase());
-            return (
-              <label
-                key={option.value}
-                className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)]"
-              >
-                <Checkbox checked={selected} onChange={() => toggleValue(option.value)} />
-                <span className="truncate">{option.label}</span>
-              </label>
-            );
-          })}
-          {options.length === 0 ? <p className="px-2 py-3 text-xs text-[var(--text-muted)]">Nenhuma opção disponível</p> : null}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
-        {options.map((option) => (
-          <InboxFilterChip
-            key={option.value}
-            active={normalizedValues.includes(option.value.toLowerCase())}
-            label={option.label}
-            onClick={() => toggleValue(option.value)}
-            compact={compact}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppGalleryMediaTile({
-  message,
-  onOpenImage,
-  className,
-  overlayLabel,
-  mediaSending = false,
-  mediaSendingProgress = null,
-  onCancelMediaUpload,
-}: {
-  message: CommWhatsAppMessage;
-  onOpenImage: (messageId: string) => void;
-  className?: string;
-  overlayLabel?: string;
-  mediaSending?: boolean;
-  mediaSendingProgress?: number | null;
-  onCancelMediaUpload?: () => void;
-}) {
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
-  const normalizedKind = isVideoLikeMessageType(message.message_type) ? 'video' : 'image';
-  const baseClassName = `relative block overflow-hidden rounded-[var(--kds-radius-lg)] bg-[var(--bg-inset)] ${className ?? ''}`.trim();
-
-  if (normalizedKind === 'image') {
-    return (
-      <div className={baseClassName}>
-        {mediaUrl ? (
-          <button
-            type="button"
-            onClick={() => onOpenImage(message.id)}
-            className="relative block h-full w-full overflow-hidden"
-          >
-            <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
-            {overlayLabel ? (
-              <span className="absolute inset-0 flex items-center justify-center bg-[var(--overlay)] text-base font-semibold text-[var(--text-on-brand)]">
-                {overlayLabel}
-              </span>
-            ) : null}
-          </button>
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-            {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
-          </div>
-        )}
-        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-      </div>
-    );
-  }
-
-  const secondaryLabel = message.media_duration_seconds && message.media_duration_seconds > 0
-    ? formatDurationLabel(Math.round(message.media_duration_seconds))
-    : formatFileSize(message.media_size_bytes) || 'Video';
-
-  return (
-    <div className={baseClassName}>
-      {mediaUrl ? (
-        <button type="button" onClick={() => onOpenImage(message.id)} className="relative block h-full w-full overflow-hidden">
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
-            <source src={mediaUrl} type={message.media_mime_type || undefined} />
-          </video>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-[var(--overlay)] px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
-            <span className="inline-flex items-center gap-1.5 truncate">
-              <Play className="h-3.5 w-3.5 fill-current" />
-              <span className="truncate">{secondaryLabel}</span>
-            </span>
-            {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
-          </div>
-        </button>
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-          {loading ? 'Carregando video...' : error || 'Video indisponivel'}
-        </div>
-      )}
-      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-    </div>
-  );
-}
-
-function WhatsAppMediaGroupBody({
-  messages,
-  onOpenImage,
-  mediaSendingMessageId,
-  mediaSendingProgress = null,
-  onCancelMediaUpload,
-}: {
-  messages: CommWhatsAppMessage[];
-  onOpenImage: (messageId: string) => void;
-  mediaSendingMessageId?: string | null;
-  mediaSendingProgress?: number | null;
-  onCancelMediaUpload?: () => void;
-}) {
-  const visibleMessages = messages.slice(0, 4);
-  const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
-
-  return (
-    <div className="grid w-[13.75rem] max-w-full grid-cols-2 gap-1.5">
-      {visibleMessages.map((message, index) => {
-        const isWideHero = messages.length === 3 && index === 0;
-        const overlayLabel = hiddenCount > 0 && index === visibleMessages.length - 1 ? `+${hiddenCount}` : undefined;
-
-        return (
-          <WhatsAppGalleryMediaTile
-            key={message.id}
-            message={message}
-            onOpenImage={onOpenImage}
-            className={isWideHero ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}
-            overlayLabel={overlayLabel}
-            mediaSending={message.id === mediaSendingMessageId}
-            mediaSendingProgress={message.id === mediaSendingMessageId ? mediaSendingProgress : null}
-            onCancelMediaUpload={message.id === mediaSendingMessageId ? onCancelMediaUpload : undefined}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function InboxChatListItem({
-  chat,
-  selected,
-  connectedUserName,
-  draftPreview,
-  favorito,
-  onSelect,
-  menuOpen,
-  menuBusy,
-  onToggleMenu,
-  onOpenContextMenu,
-  menuTriggerRef,
-}: {
-  chat: CommWhatsAppChat;
-  selected: boolean;
-  connectedUserName: string | null;
-  favorito?: boolean;
-  draftPreview: string;
-  onSelect: (chatId: string) => void;
-  menuOpen: boolean;
-  menuBusy: boolean;
-  onToggleMenu: (chatId: string) => void;
-  onOpenContextMenu: (chatId: string, anchor: PointerAnchor) => void;
-  menuTriggerRef: (node: HTMLButtonElement | null) => void;
-}) {
-  const rawLastMessageText = String(chat.last_message_text ?? '').trim();
-  const visibleLastMessageText = getVisiblePreviewText(chat.last_message_text);
-  const previewIconType = getChatPreviewIconType(visibleLastMessageText);
-  const outboundPreviewStatusMeta = chat.last_message_direction === 'outbound'
-    ? getDeliveryStatusMetaFromValues(chat.last_message_delivery_status)
-    : null;
-  const OutboundPreviewStatusIcon = outboundPreviewStatusMeta?.icon;
-  const hasUnreadBadge = chat.unread_count > 0 || chat.manual_unread;
-
-  return (
-    <div
-      className={`group/chat relative whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        onOpenContextMenu(chat.id, { x: event.clientX, y: event.clientY });
-      }}
-    >
-      <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <LeadFavoriteBadge favorito={favorito} />
-                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
-                  {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
-                  {getSafeChatDisplayName(chat, connectedUserName)}
-                </p>
-                <WhatsAppPresenceIndicator chat={chat} compact />
-                {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
-                {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
-                {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-start">
-              <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
-            </div>
-          </div>
-          <p className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
-            {draftPreview ? (
-              <>
-                <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
-                <span>{draftPreview}</span>
-              </>
-            ) : visibleLastMessageText ? (
-              <>
-                {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
-                  <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
-                    <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
-                  </span>
-                ) : null}
-                {previewIconType ? (
-                  <ChatPreviewIcon type={previewIconType} />
-                ) : (
-                  <span>{visibleLastMessageText}</span>
-                )}
-              </>
-            ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'}
-          </p>
-          {hasUnreadBadge ? (
-            <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
-              {chat.unread_count > 0 ? chat.unread_count : '•'}
-            </span>
-          ) : null}
-        </button>
-      </div>
-
-      <button
-        ref={menuTriggerRef}
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggleMenu(chat.id);
-        }}
-        className={cx(
-          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
-          menuOpen ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
-          selected ? 'opacity-100' : '',
-        )}
-        aria-label="Abrir menu da conversa"
-        aria-expanded={menuOpen}
-        disabled={menuBusy}
-      >
-        {menuBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
-      </button>
-    </div>
-  );
-}
-
-function InboxMessageSearchListItem({
-  result,
-  selected,
-  connectedUserName,
-  favorito,
-  onSelect,
-}: {
-  result: CommWhatsAppMessageSearchResult;
-  selected: boolean;
-  connectedUserName?: string | null;
-  favorito?: boolean;
-  onSelect: (chatId: string) => void;
-}) {
-  const messagePreviewText = getMessageSearchPreviewText(result.message);
-  const messagePreviewIconType = getChatPreviewIconType(messagePreviewText);
-
-  if (!messagePreviewText) {
-    return null;
-  }
-
-  return (
-    <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
-      <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="whatsapp-inbox-heading flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
-                <LeadFavoriteBadge favorito={favorito} />
-                {getSafeChatDisplayName(result.chat, connectedUserName)}
-              </p>
-              {messagePreviewText ? (
-                <p className="mt-px truncate text-sm text-[var(--text-secondary)]">
-                  {messagePreviewIconType ? (
-                    <ChatPreviewIcon type={messagePreviewIconType} />
-                  ) : (
-                    messagePreviewText
-                  )}
-                </p>
-              ) : null}
-            </div>
-            <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">
-              {formatMessageTime(result.message.message_at)}
-            </span>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppMessageBody({
-  message,
-  onOpenImage,
-  onOpenQuotedMessage,
-  onTranscribe,
-  onSelectInteractiveReply,
-  onOpenSharedContactChat,
-  onSaveSharedContact,
-  sharedContactActionKey,
-  transcribing,
-  mediaSending,
-  mediaSendingProgress,
-  onCancelMediaUpload,
-}: {
-  message: CommWhatsAppMessage;
-  onOpenImage: (messageId: string) => void;
-  onOpenQuotedMessage: (externalMessageId: string) => void;
-  onTranscribe: (message: CommWhatsAppMessage) => void;
-  onSelectInteractiveReply: (message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => void;
-  onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
-  onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
-  sharedContactActionKey: string | null;
-  transcribing: boolean;
-  mediaSending: boolean;
-  mediaSendingProgress: number | null;
-  onCancelMediaUpload?: () => void;
-}) {
-  const { mediaUrl, loading, error, retry } = useResolvedMediaUrl(message);
-  const [showOriginalText, setShowOriginalText] = useState(false);
-  const kind = message.message_type.trim().toLowerCase();
-  const caption = getMessageVisibleCaption(message);
-  const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
-  const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
-  const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
-  const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
-  const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
-  const interactiveInfo = useMemo(() => getMessageInteractiveInfo(message), [message]);
-  const inviteInfo = useMemo(() => getMessageInviteInfo(message), [message]);
-  const visibleTextContent = getVisiblePreviewText(message.text_content, message.message_type);
-
-  useEffect(() => {
-    setShowOriginalText(false);
-  }, [message.id, editInfo.originalText, message.text_content, message.media_caption]);
-
-  const editInfoNode = editInfo.edited ? (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2.5">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-        <span>Editada</span>
-        {editInfo.previousText ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowOriginalText((current) => !current)}
-            className="normal-case tracking-normal"
-          >
-            {showOriginalText ? 'Ocultar alterações' : 'Ver antes e depois'}
-          </Button>
-        ) : null}
-      </div>
-      {showOriginalText && editInfo.previousText ? (
-        <div className="mt-2 grid gap-2">
-          <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Antes</p>
-            <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-muted)] line-through opacity-85" text={editInfo.previousText} />
-          </div>
-          {editInfo.currentText ? (
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Depois</p>
-              <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]" text={editInfo.currentText} />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  ) : null;
-  const linkPreviewContent = linkPreview ? (
-    <>
-      {linkPreview.previewImage ? (
-        <div className="h-40 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-inset)]">
-          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="h-full w-full object-cover" loading="lazy" />
-        </div>
-      ) : null}
-      <div className="space-y-1.5 px-3 py-3">
-        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">{linkPreview.title}</p> : null}
-        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--text-secondary)]">{linkPreview.description}</p> : null}
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">{linkPreview.domain || 'Link'}</p>
-      </div>
-    </>
-  ) : null;
-  const linkPreviewNode = linkPreviewContent
-    ? linkPreview?.url
-      ? (
-        <a
-          href={linkPreview.url}
-          target="_blank"
-          rel="noreferrer"
-          className="block w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] transition hover:border-[var(--border-strong)]"
-        >
-          {linkPreviewContent}
-        </a>
-      )
-      : (
-        <div className="w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
-          {linkPreviewContent}
-        </div>
-      )
-    : null;
-  const quotedExternalMessageId = quoteInfo?.externalMessageId;
-  const quotePreviewContent = quoteInfo ? (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
-        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
-      </div>
-    </div>
-  ) : null;
-  const quotePreviewNode = quoteInfo ? quotedExternalMessageId ? (
-    <button
-      type="button"
-      onClick={() => onOpenQuotedMessage(quotedExternalMessageId)}
-      className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
-      title="Ir para a mensagem respondida"
-      aria-label={`Ir para a mensagem respondida: ${quoteInfo.previewText}`}
-    >
-      {quotePreviewContent}
-    </button>
-  ) : (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
-      {quotePreviewContent}
-    </div>
-  ) : null;
-  const visibleContactItems = contactCardInfo?.items.slice(0, 3) ?? [];
-  const hiddenContactCount = contactCardInfo ? Math.max(0, contactCardInfo.count - visibleContactItems.length) : 0;
-  const contactCardNode = contactCardInfo ? (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-3">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
-          <UserRound className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            {contactCardInfo.kind === 'contact'
-              ? 'Contato compartilhado'
-              : contactCardInfo.count > 0
-                ? `${contactCardInfo.count} contatos compartilhados`
-                : 'Contatos compartilhados'}
-          </p>
-          {visibleContactItems.length > 0 ? (
-            <div className="space-y-2">
-              {visibleContactItems.map((item, index) => (
-                <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5">
-                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{item.name || 'Contato sem nome'}</p>
-                  {item.phoneNumber ? (
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
-                  ) : null}
-                  {item.phoneNumber ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onOpenSharedContactChat(item)}
-                        disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
-                        className={inboxInlineActionClassName}
-                      >
-                        {sharedContactActionKey === `open:${item.phoneNumber}` ? 'Abrindo...' : 'Abrir chat'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onSaveSharedContact(item)}
-                        disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
-                        className={inboxInlineActionClassName}
-                        title={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
-                      >
-                        {sharedContactActionKey === `save:${item.phoneNumber}` ? 'Salvando...' : 'Salvar contato'}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">{message.text_content || '[Contato]'}</p>
-          )}
-          {hiddenContactCount > 0 ? (
-            <p className="text-xs text-[var(--text-secondary)]">+{hiddenContactCount} contato(s)</p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  ) : null;
-
-  const interactiveNode = interactiveInfo ? (
-    interactiveInfo.kind === 'reply' ? (
-      <div className="flex items-start gap-2">
-        <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-70" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Opção selecionada</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">
-            {interactiveInfo.selectedReply?.title || interactiveInfo.selectedReply?.id || '[Resposta interativa]'}
-          </p>
-        </div>
-      </div>
-    ) : (
-      <div className="w-[280px] max-w-full overflow-hidden">
-        {interactiveInfo.header ? (
-          <p className="border-b border-[var(--border-subtle)] py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
-            {interactiveInfo.header}
-          </p>
-        ) : null}
-        <div className="space-y-1.5 py-1">
-          {interactiveInfo.body ? (
-            <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={interactiveInfo.body} />
-          ) : null}
-          {interactiveInfo.footer ? (
-            <p className="text-xs text-[var(--text-muted)]">{interactiveInfo.footer}</p>
-          ) : null}
-        </div>
-        {interactiveInfo.buttons.length > 0 ? (
-          <div className="border-t border-[var(--border-subtle)]">
-            {interactiveInfo.buttons.map((button, index) => (
-              <button
-                type="button"
-                key={button.id ?? `${button.title}-${index}`}
-                onClick={() => onSelectInteractiveReply(message, button)}
-                disabled={message.direction !== 'inbound' || (!button.title && !button.id)}
-                className={cx(
-                  'w-full py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))] transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent',
-                  index > 0 ? 'border-t border-[var(--border-subtle)]' : null,
-                )}
-              >
-                {button.title || button.id}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {interactiveInfo.sections.length > 0 ? (
-          <div className="border-t border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
-            {interactiveInfo.sections.map((section, sectionIndex) => (
-              <div key={section.title ?? `section-${sectionIndex}`} className="py-2.5">
-                {section.title ? (
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</p>
-                ) : null}
-                <div className="mt-1.5 space-y-1.5">
-                  {section.rows.map((row, rowIndex) => (
-                    <button
-                      type="button"
-                      key={row.id ?? `${section.title}-row-${rowIndex}`}
-                      onClick={() => onSelectInteractiveReply(message, row)}
-                      disabled={message.direction !== 'inbound' || (!row.title && !row.id)}
-                      className="w-full rounded-md py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
-                    >
-                      <p className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</p>
-                      {row.description ? (
-                        <p className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</p>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    )
-  ) : null;
-
-  const inviteLabel = inviteInfo?.kind === 'group_invite'
-    ? 'Convite para grupo'
-    : inviteInfo?.kind === 'newsletter_invite'
-      ? 'Convite para canal'
-      : 'Convite de administrador';
-  const inviteIcon = inviteInfo?.kind === 'group_invite'
-    ? <Users className="h-5 w-5" />
-    : inviteInfo?.kind === 'newsletter_invite'
-      ? <Radio className="h-5 w-5" />
-      : <ShieldCheck className="h-5 w-5" />;
-  const inviteExpirationLabel = inviteInfo?.expiration
-    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(inviteInfo.expiration * 1000))
-    : null;
-  const inviteNode = inviteInfo ? (
-    <div className="w-[320px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
-      {inviteInfo.preview ? (
-        <div className="h-36 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-          <img src={inviteInfo.preview} alt="Prévia do convite" className="h-full w-full object-cover" loading="lazy" />
-        </div>
-      ) : null}
-      <div className="space-y-3 px-3 py-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-            {inviteIcon}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{inviteLabel}</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-[var(--text-primary)]">{inviteInfo.title}</p>
-            {inviteInfo.newsletterName ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{inviteInfo.newsletterName}</p> : null}
-          </div>
-        </div>
-        {inviteInfo.description ? <p className="text-sm leading-6 text-[var(--text-secondary)]">{inviteInfo.description}</p> : null}
-        {inviteInfo.body ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={inviteInfo.body} /> : null}
-        {inviteExpirationLabel ? <p className="text-xs text-[var(--text-muted)]">Validade: {inviteExpirationLabel}</p> : null}
-        {inviteInfo.url ? (
-          <a
-            href={inviteInfo.url}
-            target="_blank"
-            rel="noreferrer"
-            className={cx(inboxInlineActionClassName, 'inline-flex items-center gap-1.5')}
-          >
-            <Link2 className="h-3.5 w-3.5" />
-            Abrir convite
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        ) : (
-          <p className="text-xs font-medium text-[var(--text-muted)]">Convite recebido sem link disponível.</p>
-        )}
-      </div>
-    </div>
-  ) : null;
-
-  const hasPreservableDeletedMedia = deletedInfo.deleted
-    && (kind === 'image' || kind === 'sticker' || isVideoLikeMessageType(kind) || kind === 'document' || kind === 'audio' || kind === 'voice')
-    && Boolean(message.media_id || message.media_url);
-
-  const deletedBannerNode = deletedInfo.deleted ? (
-    <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-3 text-[var(--danger-text)]">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        <span>Mensagem apagada</span>
-      </div>
-      <p className="mt-2 text-xs text-[var(--text-muted)]">
-        {deletedInfo.deletedBy === 'self'
-          ? 'Você apagou esta mensagem no WhatsApp.'
-          : deletedInfo.deletedBy === 'contact'
-            ? 'O contato apagou esta mensagem no WhatsApp.'
-            : 'Mensagem apagada no WhatsApp.'}
-        {hasPreservableDeletedMedia ? ' O arquivo continua disponível abaixo.' : ''}
-      </p>
-      {!hasPreservableDeletedMedia ? (
-        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)] line-through opacity-85" text={deletedInfo.preservedText} />
-      ) : null}
-    </div>
-  ) : null;
-
-  if (deletedInfo.deleted && !hasPreservableDeletedMedia) {
-    return deletedBannerNode;
-  }
-
-  if (kind === 'image' || kind === 'sticker') {
-    const isSticker = kind === 'sticker';
-    const unavailableLabel = isSticker ? 'Figurinha indisponível' : 'Imagem indisponível';
-    const loadingLabel = isSticker ? 'Carregando figurinha...' : 'Carregando imagem...';
-    const altLabel = message.media_file_name || (isSticker ? 'Figurinha enviada' : 'Imagem enviada');
-
-    return (
-      <div className="space-y-3">
-        {deletedBannerNode}
-        {quotePreviewNode}
-        <div className={cx(
-          'relative max-w-full',
-          isSticker ? 'w-fit' : 'w-[13.75rem]',
-          caption ? 'overflow-hidden rounded-[var(--kds-radius-lg)]' : null,
-        )}>
-          <div className="relative">
-            {mediaUrl ? (
-              <button
-                type="button"
-                onClick={() => onOpenImage(message.id)}
-                className={isSticker
-                  ? 'whatsapp-inbox-media-content block w-fit max-w-[180px] overflow-hidden rounded-2xl bg-transparent text-left transition'
-                  : `whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-              >
-                <img
-                  src={mediaUrl}
-                  alt={altLabel}
-                  className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'block h-[11rem] w-full object-cover'}
-                  loading="lazy"
-                />
-              </button>
-            ) : (
-              <div className={isSticker
-                ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
-                : `flex h-40 w-[13.75rem] max-w-full items-center justify-center border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-              >
-                {loading ? loadingLabel : error || unavailableLabel}
-              </div>
-            )}
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-          </div>
-          {caption ? (
-            <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
-          ) : null}
-        </div>
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (isVideoLikeMessageType(kind)) {
-    return (
-      <div className="space-y-3">
-        {deletedBannerNode}
-        {quotePreviewNode}
-        <div className={cx(
-          'relative w-[13.75rem] max-w-full',
-          caption ? 'overflow-hidden rounded-[var(--kds-radius-lg)]' : null,
-        )}>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => onOpenImage(message.id)}
-              className={`whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
-              aria-label={`Abrir ${message.media_file_name || 'vídeo'}`}
-            >
-              {mediaUrl ? (
-                <video muted playsInline preload="metadata" className="block h-[11rem] w-full bg-[var(--overlay)] object-cover">
-                  <source src={mediaUrl} type={message.media_mime_type || undefined} />
-                </video>
-              ) : (
-                <div className={`flex h-[11rem] items-center justify-center bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
-                  {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
-                </div>
-              )}
-            </button>
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-          </div>
-          {caption ? (
-            <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
-          ) : null}
-        </div>
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (kind === 'document') {
-    const extension = message.media_file_name?.split('.').pop()?.toUpperCase() || 'DOC';
-
-    if (isPdfDocumentMessage(message)) {
-      const pdfFileName = message.media_file_name || 'Documento PDF';
-      const pdfBubbleWidth = getVisualMediaBubbleWidth(message);
-      const pdfCard = (
-        <div className={cx(
-          'whatsapp-inbox-document-card overflow-hidden',
-          pdfBubbleWidth,
-          caption ? 'border-0 rounded-t-[var(--kds-radius-lg)]' : 'rounded-2xl border',
-        )}>
-          <div className="whatsapp-inbox-document-preview relative h-36 overflow-hidden bg-[var(--bg-inset)]">
-            {mediaUrl ? (
-              <iframe
-                src={`${mediaUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                title={`Prévia de ${pdfFileName}`}
-                className="pointer-events-none h-full w-full border-0 bg-[var(--bg-surface)]"
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-[var(--text-muted)]">
-                <FileText className="h-8 w-8 text-[var(--danger-text)]" />
-                <span>{loading ? 'Carregando prévia...' : error || 'Prévia indisponível'}</span>
-              </div>
-            )}
-            <span className="absolute left-3 top-3 inline-flex items-center rounded-md bg-[var(--danger-text)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-on-brand)] shadow-sm">
-              PDF
-            </span>
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-          </div>
-          <div className="border-t border-[var(--border-subtle)] px-3 py-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[10px] font-bold tracking-[0.08em] text-[var(--danger-text)]">
-                PDF
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--text-primary)]" title={pdfFileName}>{pdfFileName}</p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  {formatFileSize(message.media_size_bytes) || 'Documento'} · PDF
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {mediaUrl ? (
-                <>
-                  <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
-                    Abrir
-                  </a>
-                  <a href={mediaUrl} download={pdfFileName} className={inboxInlineActionClassName}>
-                    <Download className="h-3.5 w-3.5" />
-                    Baixar
-                  </a>
-                </>
-              ) : (
-                <>
-                  <span className="text-xs text-[var(--text-muted)]">{loading ? 'Carregando arquivo...' : error || 'Arquivo indisponível'}</span>
-                  {error ? (
-                    <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
-                      Tentar novamente
-                    </button>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-
-      return (
-        <div className="space-y-3">
-          {deletedBannerNode}
-          {quotePreviewNode}
-          <div className={caption ? `${pdfBubbleWidth} max-w-full overflow-hidden rounded-[var(--kds-radius-lg)]` : undefined}>
-            {pdfCard}
-            {caption ? (
-              <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
-            ) : null}
-          </div>
-          {editInfoNode}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        {deletedBannerNode}
-        {quotePreviewNode}
-        <div className="whatsapp-inbox-document-card relative flex items-center gap-3 rounded-2xl border px-3 py-3">
-          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tracking-[0.08em]">
-            {extension.slice(0, 4)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
-            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes) || 'Documento anexo'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {mediaUrl ? (
-              <>
-                <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
-                  Abrir
-                </a>
-                <a
-                  href={mediaUrl}
-                  download={message.media_file_name || 'documento'}
-                  className={inboxInlineActionClassName}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Baixar
-                </a>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
-                {error ? (
-                  <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
-                    Tentar novamente
-                  </button>
-                ) : null}
-              </div>
-            )}
-          </div>
-          {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
-        </div>
-        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (kind === 'audio' || kind === 'voice') {
-    const transcriptionStatus = message.transcription_status || 'idle';
-    const canTranscribe = Boolean(message.media_id || message.media_url);
-
-    return (
-      <div className="space-y-3">
-        {deletedBannerNode}
-        {quotePreviewNode}
-        <WhatsAppAudioPlayerCard
-          kind={kind}
-          mediaUrl={mediaUrl}
-          mediaMimeType={message.media_mime_type}
-          fileName={message.media_file_name}
-          durationSeconds={message.media_duration_seconds}
-          canTranscribe={canTranscribe}
-          hasTranscription={Boolean(message.transcription_text?.trim())}
-          transcriptionStatus={transcriptionStatus}
-          transcribing={transcribing}
-          onTranscribe={() => onTranscribe(message)}
-          loading={loading}
-          error={error}
-          mediaSending={mediaSending}
-          mediaSendingProgress={mediaSendingProgress}
-          onCancelMediaUpload={onCancelMediaUpload}
-        />
-        <div className="space-y-2">
-          {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Transcrição</p>
-                {message.transcription_provider ? (
-                  <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
-                    {message.transcription_provider}
-                  </span>
-                ) : null}
-              </div>
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
-                {message.transcription_text}
-              </p>
-            </div>
-          ) : null}
-
-          {transcriptionStatus === 'failed' && message.transcription_error ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-[var(--danger-text)]">{message.transcription_error}</span>
-            </div>
-          ) : null}
-        </div>
-        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (kind === 'contact' || kind === 'contact_list') {
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        {contactCardNode || <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Contato]'} />}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (interactiveInfo && (kind === 'interactive' || kind === 'hsm' || kind === 'carousel' || kind === 'reply')) {
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        {interactiveNode}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (inviteInfo) {
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        {inviteNode}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {quotePreviewNode}
-      {linkPreviewNode}
-      {visibleTextContent ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={visibleTextContent} /> : null}
-      {editInfoNode}
-    </div>
-  );
-}
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
@@ -2472,9 +426,6 @@ export default function WhatsAppInboxScreen() {
   const [chatAgendaSummaryError, setChatAgendaSummaryError] = useState<string | null>(null);
   const [chatAgendaSummary, setChatAgendaSummary] = useState<ChatAgendaSummary>({ pendingCount: 0, nextReminder: null });
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
-  const [leadSearchResults, setLeadSearchResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
-  const [leadSearchLoading, setLeadSearchLoading] = useState(false);
-  const [leadSearchError, setLeadSearchError] = useState<string | null>(null);
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
   const [leadMutationLoadingChatId, setLeadMutationLoadingChatId] = useState<string | null>(null);
   const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
@@ -2483,20 +434,24 @@ export default function WhatsAppInboxScreen() {
   const [scheduledMessagesPanelOpen, setScheduledMessagesPanelOpen] = useState(false);
   const [allScheduledMessagesPanelOpen, setAllScheduledMessagesPanelOpen] = useState(false);
   const [startChatQuery, setStartChatQuery] = useState('');
-  const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
-  const [savedContactsLoading, setSavedContactsLoading] = useState(false);
-  const [savedContactsLoadingMore, setSavedContactsLoadingMore] = useState(false);
-  const [savedContactsTotal, setSavedContactsTotal] = useState(0);
-  const [savedContactsHasMore, setSavedContactsHasMore] = useState(false);
-  const [savedContactsPage, setSavedContactsPage] = useState(1);
   const [savedContactNameRevision, setSavedContactNameRevision] = useState(0);
-  const [crmStartResults, setCrmStartResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
-  const [crmStartLoading, setCrmStartLoading] = useState(false);
-  const [startChatSourcesError, setStartChatSourcesError] = useState<string | null>(null);
   const [manualStartPhone, setManualStartPhone] = useState('');
   const [startingChatKey, setStartingChatKey] = useState<string | null>(null);
   const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
   const { pollingEnabled } = useWindowPollingState();
+  const {
+    savedContacts,
+    savedContactsLoading,
+    savedContactsLoadingMore,
+    savedContactsTotal,
+    savedContactsHasMore,
+    crmStartResults,
+    crmStartLoading,
+    startChatSourcesError,
+    refreshStartChatSources,
+    handleLoadMoreSavedContacts,
+    handleRetryStartChatSources,
+  } = useInboxStartChatSources({ isOpen: startChatModalOpen, query: startChatQuery });
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const chatMessageSearchInputRef = useRef<HTMLInputElement | null>(null);
@@ -2520,11 +475,9 @@ export default function WhatsAppInboxScreen() {
   const localOutgoingMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
-  const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const chatInboxActionLockRef = useRef(new KeyedActionLock());
   const autonomousAttendanceLockRef = useRef(new KeyedActionLock());
   const contactSaveLockRef = useRef(new KeyedActionLock());
-  const savedContactsLoadMoreLockRef = useRef(new KeyedActionLock());
   const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
   const olderMessagesLoadLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
@@ -2532,9 +485,7 @@ export default function WhatsAppInboxScreen() {
   const statusRefreshInFlightGenerationRef = useRef<number | null>(null);
   const lastPendingStatusRefreshKeyRef = useRef('');
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
-  const activeSendOperationsByChatIdRef = useRef<Map<string, number>>(new Map());
   const composerSendLockRef = useRef(new ComposerSendLock());
-  const retryingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
   const chatReadMutationVersionByChatIdRef = useRef<Map<string, number>>(new Map());
@@ -2551,7 +502,6 @@ export default function WhatsAppInboxScreen() {
   const archivedChatsPageRef = useRef<number>(0);
   const latestChatsLoadedAtRef = useRef<number>(0);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
-  const latestCrmStartResultsRef = useRef<CommWhatsAppLeadSearchResult[]>([]);
   const outgoingMessageOrderAtByExternalIdRef = useRef<Map<string, string>>(new Map());
   const outgoingMessageOrderAtByClientRequestIdRef = useRef<Map<string, string>>(new Map());
   const savedContactLookupInFlightKeysRef = useRef<Set<string>>(new Set());
@@ -2604,11 +554,8 @@ export default function WhatsAppInboxScreen() {
   const messageDraftRef = useRef('');
   const replySuggestionRequestIdRef = useRef(0);
   const replySuggestionKeyRef = useRef('');
-  const leadSearchRequestIdRef = useRef(0);
-  const startChatSourcesRequestIdRef = useRef(0);
   const quickRepliesLoadRequestIdRef = useRef(0);
   const quickRepliesSaveRequestIdRef = useRef(0);
-  const startChatContactsSyncedRef = useRef(false);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const {
     searchDraft,
@@ -2762,63 +709,7 @@ export default function WhatsAppInboxScreen() {
   });
   const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
-  const beginSendOperation = useCallback((chatId: string) => {
-    const activeOperations = activeSendOperationsByChatIdRef.current.get(chatId) ?? 0;
-    activeSendOperationsByChatIdRef.current.set(chatId, activeOperations + 1);
-    setSendingByChatId((current) => ({ ...current, [chatId]: true }));
-
-    let released = false;
-    return () => {
-      if (released) {
-        return;
-      }
-
-      released = true;
-      const remainingOperations = Math.max(0, (activeSendOperationsByChatIdRef.current.get(chatId) ?? 1) - 1);
-      if (remainingOperations > 0) {
-        activeSendOperationsByChatIdRef.current.set(chatId, remainingOperations);
-        return;
-      }
-
-      activeSendOperationsByChatIdRef.current.delete(chatId);
-      setSendingByChatId((current) => {
-        if (!current[chatId]) {
-          return current;
-        }
-
-        const next = { ...current };
-        delete next[chatId];
-        return next;
-      });
-    };
-  }, []);
-
-  const enqueueChatSend = useCallback((chatId: string, task: () => Promise<void>) => {
-    const previous = sendQueueByChatIdRef.current.get(chatId) ?? Promise.resolve();
-    const next = previous
-      .catch(() => undefined)
-      .then(async () => {
-        const release = beginSendOperation(chatId);
-        try {
-          await task();
-        } finally {
-          release();
-        }
-      });
-
-    sendQueueByChatIdRef.current.set(chatId, next);
-    void next
-      .catch((error) => {
-        console.error('[WhatsAppInbox] erro na fila de envio', error);
-      })
-      .finally(() => {
-        if (sendQueueByChatIdRef.current.get(chatId) === next) {
-          sendQueueByChatIdRef.current.delete(chatId);
-        }
-      });
-
-    return next;
-  }, [beginSendOperation]);
+  const { enqueueChatSend } = useInboxSendQueue({ setSendingByChatId });
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -2867,6 +758,12 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const {
+    results: leadSearchResults,
+    loading: leadSearchLoading,
+    error: leadSearchError,
+    refreshDrawerSearch,
+  } = useInboxLeadSearch({ isOpen: leadDrawerOpen, query: leadSearchQuery, selectedChat });
   const sending = selectedChatId ? Boolean(sendingByChatId[selectedChatId]) : false;
   const sendingDrawerMedia = selectedChatId ? Boolean(sendingDrawerMediaByChatId[selectedChatId]) : false;
   const mediaUploadProgress = selectedChatId ? mediaUploadProgressByChatId[selectedChatId] ?? null : null;
@@ -3162,6 +1059,27 @@ export default function WhatsAppInboxScreen() {
     });
   }, [buildChatsSignature]);
 
+  const {
+    handleStartChatFromSavedContact,
+    handleStartChatFromLead,
+    handleStartChatFromManual,
+    handleOpenAgendaLeadChat,
+    handleOpenSharedContactChat,
+  } = useInboxChatCreation({
+    chats,
+    latestChatsRef,
+    startingChatKey,
+    manualStartPhone,
+    setStartingChatKey,
+    setSharedContactActionKey,
+    setManualStartPhone,
+    setSelectedChatId,
+    setStartChatModalOpen,
+    setSearchDraft,
+    setSearch,
+    upsertChatLocally,
+  });
+
   const rememberOutgoingMessageOrder = useCallback((message: CommWhatsAppMessage) => {
     const orderAt = getMessageClientOrderAt(message) || message.message_at;
     if (!orderAt) {
@@ -3451,91 +1369,10 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewDuration(null);
   }, [clearMediaUploadProgress, resetComposerDraft, selectedChatId, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
 
-  const messageTimelineItems = useMemo(() => {
-    const items: Array<
-      | { type: 'day'; key: string; label: string }
-      | { type: 'message'; key: string; message: CommWhatsAppMessage }
-      | { type: 'media-group'; key: string; messages: CommWhatsAppMessage[] }
-    > = [];
-    let previousDayKey = '';
-
-    const canGroupMediaMessages = (current: CommWhatsAppMessage, next: CommWhatsAppMessage) => {
-      if (!isGalleryMediaMessage(current) || !isGalleryMediaMessage(next)) {
-        return false;
-      }
-
-      if (current.direction !== next.direction || current.direction === 'system') {
-        return false;
-      }
-
-      if (current.delivery_status === 'deleted' || next.delivery_status === 'deleted') {
-        return false;
-      }
-
-      if (getMessageVisibleCaption(current) || getMessageVisibleCaption(next)) {
-        return false;
-      }
-
-      if (hasMessageQuote(current) || hasMessageQuote(next)) {
-        return false;
-      }
-
-      if (getMessageReactions(current).length > 0 || getMessageReactions(next).length > 0) {
-        return false;
-      }
-
-      const currentTimestamp = getMessageTimestampMs(current.message_at);
-      const nextTimestamp = getMessageTimestampMs(next.message_at);
-      if (currentTimestamp === null || nextTimestamp === null || nextTimestamp < currentTimestamp) {
-        return false;
-      }
-
-      return nextTimestamp - currentTimestamp <= GALLERY_GROUP_MAX_GAP_MS;
-    };
-
-    for (let index = 0; index < visibleMessages.length; index += 1) {
-      const message = visibleMessages[index];
-      if (!message) {
-        continue;
-      }
-
-      const dayKey = getMessageDayKey(message.message_at);
-      if (dayKey && dayKey !== previousDayKey) {
-        items.push({
-          type: 'day',
-          key: `day:${dayKey}`,
-          label: formatMessageDaySeparatorLabel(message.message_at),
-        });
-        previousDayKey = dayKey;
-      }
-
-      if (isGalleryMediaMessage(message) && !getMessageVisibleCaption(message)) {
-        const groupedMessages = [message];
-
-        while (index + 1 < visibleMessages.length && visibleMessages[index + 1] && canGroupMediaMessages(groupedMessages[groupedMessages.length - 1], visibleMessages[index + 1])) {
-          groupedMessages.push(visibleMessages[index + 1] as CommWhatsAppMessage);
-          index += 1;
-        }
-
-        if (groupedMessages.length > 1) {
-          items.push({
-            type: 'media-group',
-            key: `media-group:${groupedMessages.map((item) => item.id).join(':')}`,
-            messages: groupedMessages,
-          });
-          continue;
-        }
-      }
-
-      items.push({
-        type: 'message',
-        key: `message:${message.id}`,
-        message,
-      });
-    }
-
-    return items;
-  }, [visibleMessages]);
+  const messageTimelineItems = useMemo(
+    () => buildInboxMessageTimeline(visibleMessages),
+    [visibleMessages],
+  );
 
   const openReactionPickerMessage = useMemo(() => {
     if (!openReactionPickerMessageId) {
@@ -4160,103 +1997,6 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const refreshDrawerSearch = useCallback(async (query: string, phoneNumber?: string | null) => {
-    const requestId = ++leadSearchRequestIdRef.current;
-    const normalizedQuery = query.trim();
-    const normalizedPhone = phoneNumber?.trim() || null;
-
-    setLeadSearchLoading(true);
-    setLeadSearchError(null);
-    try {
-      const results = await whatsappContactsRepository.searchLeads({
-        query: normalizedQuery,
-        phoneNumbers: normalizedPhone ? [normalizedPhone] : undefined,
-        limit: 20,
-      });
-
-      if (requestId !== leadSearchRequestIdRef.current) {
-        return;
-      }
-
-      setLeadSearchResults(results);
-    } catch (error) {
-      if (requestId !== leadSearchRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao buscar leads para o drawer', error);
-      setLeadSearchResults([]);
-      setLeadSearchError(error instanceof Error ? error.message : 'Não foi possível buscar leads agora.');
-    } finally {
-      if (requestId === leadSearchRequestIdRef.current) {
-        setLeadSearchLoading(false);
-      }
-    }
-  }, []);
-
-  const refreshStartChatSources = useCallback(async (query: string, page: number = 1, appendSavedContacts: boolean = false, forceSavedContactsSync: boolean = false) => {
-    const requestId = ++startChatSourcesRequestIdRef.current;
-    const normalizedQuery = query.trim();
-
-    if (appendSavedContacts) {
-      setSavedContactsLoadingMore(true);
-    } else {
-      setSavedContactsLoading(true);
-      setCrmStartLoading(true);
-    }
-    setStartChatSourcesError(null);
-
-    try {
-      const contactsPagePromise = whatsappContactsRepository.listSaved({
-        query: normalizedQuery,
-        page,
-        pageSize: 50,
-        forceSync: forceSavedContactsSync,
-      });
-      const leadsPromise = appendSavedContacts
-        ? Promise.resolve(latestCrmStartResultsRef.current)
-        : whatsappContactsRepository.searchLeads({ query: normalizedQuery, limit: 20 });
-
-      const [contactsPage, leads] = await Promise.all([contactsPagePromise, leadsPromise]);
-
-      if (requestId !== startChatSourcesRequestIdRef.current) {
-        return;
-      }
-
-      setSavedContacts((current) => (
-        appendSavedContacts
-          ? mergeSavedContactPages(current, contactsPage.contacts)
-          : contactsPage.contacts
-      ));
-      setSavedContactsTotal(contactsPage.total);
-      setSavedContactsHasMore(contactsPage.hasMore);
-      setSavedContactsPage(page);
-      setCrmStartResults(leads);
-      setStartChatSourcesError(null);
-    } catch (error) {
-      if (requestId !== startChatSourcesRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao carregar fontes para novo chat', error);
-      const message = error instanceof Error ? error.message : 'Não foi possível carregar os contatos salvos.';
-      toast.error(message);
-      setStartChatSourcesError(message);
-      if (!appendSavedContacts) {
-        setCrmStartResults([]);
-      }
-    } finally {
-      if (requestId === startChatSourcesRequestIdRef.current) {
-        if (appendSavedContacts) {
-          setSavedContactsLoadingMore(false);
-        } else {
-          setSavedContactsLoading(false);
-          setCrmStartLoading(false);
-        }
-      }
-    }
-  }, []);
-
   const suggestedLead = useMemo(() => {
     if (!leadDrawerOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
       return null;
@@ -4510,10 +2250,6 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
-
-  useEffect(() => {
-    latestCrmStartResultsRef.current = crmStartResults;
-  }, [crmStartResults]);
 
   useEffect(() => {
     let active = true;
@@ -5215,62 +2951,6 @@ export default function WhatsAppInboxScreen() {
   }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
 
   useEffect(() => {
-    if (!leadDrawerOpen || !selectedChat || selectedChat.lead_id) {
-      leadSearchRequestIdRef.current += 1;
-      setLeadSearchLoading(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void refreshDrawerSearch(leadSearchQuery, selectedChat.phone_number);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      leadSearchRequestIdRef.current += 1;
-    };
-  }, [leadDrawerOpen, leadSearchQuery, refreshDrawerSearch, selectedChat]);
-
-  useEffect(() => {
-    if (!startChatModalOpen) {
-      startChatContactsSyncedRef.current = false;
-      startChatSourcesRequestIdRef.current += 1;
-      setSavedContactsLoading(false);
-      setSavedContactsLoadingMore(false);
-      setCrmStartLoading(false);
-      setStartChatSourcesError(null);
-      return;
-    }
-
-    const forceSavedContactsSync = !startChatContactsSyncedRef.current;
-    startChatContactsSyncedRef.current = true;
-    const timeoutId = window.setTimeout(() => {
-      void refreshStartChatSources(startChatQuery, 1, false, forceSavedContactsSync);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      startChatSourcesRequestIdRef.current += 1;
-    };
-  }, [refreshStartChatSources, startChatModalOpen, startChatQuery]);
-
-  const handleLoadMoreSavedContacts = useCallback(() => {
-    if (!savedContactsHasMore || savedContactsLoadingMore || savedContactsLoading) {
-      return;
-    }
-    if (!savedContactsLoadMoreLockRef.current.tryAcquire('saved-contacts')) {
-      return;
-    }
-
-    void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true)
-      .finally(() => savedContactsLoadMoreLockRef.current.release('saved-contacts'));
-  }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
-
-  const handleRetryStartChatSources = useCallback(() => {
-    void refreshStartChatSources(startChatQuery, 1, false, false);
-  }, [refreshStartChatSources, startChatQuery]);
-
-  useEffect(() => {
     const map = new Map(savedContactNameByPhoneRef.current);
     const manualOverrides = new Map(savedContactNameOverrideByPhoneRef.current);
     addSavedContactsToNameMap(map, savedContacts, manualOverrides);
@@ -5315,74 +2995,29 @@ export default function WhatsAppInboxScreen() {
     const loadPromise = (async () => {
       try {
         const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
-        const fetchChatSection = async (archivedFilter: 'active' | 'archived') => {
-          const all: CommWhatsAppChat[] = [];
-          let offset = 0;
-          const isArchivedPartial = partialArchived && archivedFilter === 'archived';
-          const maxPages = isArchivedPartial ? Math.max(1, archivedChatsPageRef.current) : Number.POSITIVE_INFINITY;
-          let pagesFetched = 0;
-
-          while (pagesFetched < maxPages) {
-            if (requestId !== chatsRequestIdRef.current) {
-              return all;
-            }
-
-            let page: CommWhatsAppChat[] = [];
-            for (let attempt = 0; attempt <= EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
-              page = await whatsappConversationsRepository.list({
-                activityFilter: chatActivityFilter,
-                leadStatusFilters,
-                leadResponsavelFilters,
-                archivedFilter,
-                limit: CHAT_PAGE_SIZE,
-                offset,
-              });
-
-              if (requestId !== chatsRequestIdRef.current) {
-                return all;
-              }
-
-              const shouldRetryEmptyFirstPage = page.length === 0
-                && offset === 0
-                && !hasLoadFilters
-                && archivedFilter === 'active'
-                && attempt < EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length;
-
-              if (!shouldRetryEmptyFirstPage) {
-                break;
-              }
-
-              console.debug('[WhatsAppInbox] lista ativa veio vazia; tentando novamente antes de aceitar estado vazio', {
-                attempt: attempt + 1,
-                delayMs: EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt],
-              });
-              await waitForChatListRetry(EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt]);
-
-              if (requestId !== chatsRequestIdRef.current) {
-                return all;
-              }
-            }
-
-            all.push(...page);
-            pagesFetched += 1;
-
-            if (page.length < CHAT_PAGE_SIZE) {
-              break;
-            }
-
-            offset += page.length;
-          }
-
-          if (isArchivedPartial && requestId === chatsRequestIdRef.current) {
-            setArchivedChatsHasMore(offset > 0 && all.length >= CHAT_PAGE_SIZE);
-            setArchivedChatsPage(pagesFetched);
-          }
-
-          return all;
-        };
-
         const fetchedSectionResults = await Promise.allSettled(
-          requestedSections.map(async (section) => ({ section, data: await fetchChatSection(section) })),
+          requestedSections.map(async (section) => {
+            const result = await loadInboxChatSection({
+              section,
+              listPage: (params) => whatsappConversationsRepository.list(params),
+              activityFilter: chatActivityFilter,
+              leadStatusFilters,
+              leadResponsavelFilters,
+              hasLoadFilters,
+              partialArchived,
+              archivedPage: archivedChatsPageRef.current,
+              pageSize: CHAT_PAGE_SIZE,
+              isRequestCurrent: () => requestId === chatsRequestIdRef.current,
+              waitBeforeRetry: waitForChatListRetry,
+            });
+
+            if (partialArchived && section === 'archived' && requestId === chatsRequestIdRef.current) {
+              setArchivedChatsHasMore(result.hasMore);
+              setArchivedChatsPage(result.pagesFetched);
+            }
+
+            return { section, data: result.chats };
+          }),
         );
 
         if (requestId !== chatsRequestIdRef.current) {
@@ -6224,44 +3859,11 @@ export default function WhatsAppInboxScreen() {
     };
   }, [loadChats, loadOperationalState, refreshArchivedChatsCount]);
 
-  const applyRealtimeChatChangeRef = useRef(applyRealtimeChatChange);
-  applyRealtimeChatChangeRef.current = applyRealtimeChatChange;
-
-  useEffect(() => {
-    if (!channelState?.id) {
-      return;
-    }
-
-    const unsubscribe = subscribeToInboxChats(
-      channelState.id,
-      (payload) => applyRealtimeChatChangeRef.current(payload),
-      (status) => {
-        if (status === 'unavailable') {
-          console.warn('[WhatsAppInbox] realtime de chats indisponivel; polling permanece ativo.');
-        }
-      },
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [channelState?.id]);
-
-  useEffect(() => {
-    if (!channelState?.id) return undefined;
-
-    const unsubscribe = subscribeToInboxPresences(
-      channelState.id,
-      applyRealtimePresenceChange,
-      (status) => {
-        if (status === 'unavailable') {
-          console.warn('[WhatsAppInbox] realtime de presencas indisponivel; polling permanece ativo.');
-        }
-      },
-    );
-
-    return () => unsubscribe();
-  }, [applyRealtimePresenceChange, channelState?.id]);
+  useInboxChannelSubscriptions({
+    channelId: channelState?.id ?? null,
+    onChatChange: applyRealtimeChatChange,
+    onPresenceChange: applyRealtimePresenceChange,
+  });
 
   useEffect(() => {
     if (!selectedChat?.id) return undefined;
@@ -6367,8 +3969,6 @@ export default function WhatsAppInboxScreen() {
       followUpScheduleRequestIdRef.current += 1;
       composerRewriteRequestIdRef.current += 1;
       replySuggestionRequestIdRef.current += 1;
-      leadSearchRequestIdRef.current += 1;
-      startChatSourcesRequestIdRef.current += 1;
       quickRepliesLoadRequestIdRef.current += 1;
       quickRepliesSaveRequestIdRef.current += 1;
       clearScheduledMessageStatusRefreshes();
@@ -6393,105 +3993,20 @@ export default function WhatsAppInboxScreen() {
     [clearScheduledMessageStatusRefreshes],
   );
 
-  useEffect(() => {
-    if (!pollingEnabled) {
-      return;
-    }
-
-    let timeoutId: number;
-
-    const scheduleNext = () => {
-      const backoffLevel = chatPollBackoffRef.current;
-      const delay = backoffLevel > 0
-        ? Math.min(CHAT_POLL_INTERVAL_MS * Math.pow(2, backoffLevel), MAX_CHAT_POLL_BACKOFF_MS)
-        : computeChatPollIntervalMs(
-            chatPollIdleCyclesRef.current,
-            CHAT_POLL_INTERVAL_MS,
-            MAX_CHAT_POLL_IDLE_INTERVAL_MS,
-          );
-
-      timeoutId = window.setTimeout(() => {
-        void loadChats();
-        scheduleNext();
-      }, delay);
-    };
-
-    scheduleNext();
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadChats, pollingEnabled]);
-
-  useEffect(() => {
-    if (!pollingEnabled) {
-      return;
-    }
-
-    let timeoutId: number;
-
-    const scheduleNext = () => {
-      timeoutId = window.setTimeout(() => {
-        void refreshArchivedChatsCount();
-        scheduleNext();
-      }, ARCHIVED_CHATS_COUNT_POLL_INTERVAL_MS);
-    };
-
-    scheduleNext();
-
-    return () => window.clearTimeout(timeoutId);
-  }, [pollingEnabled, refreshArchivedChatsCount]);
-
-  useEffect(() => {
-    if (!pollingEnabled) {
-      return;
-    }
-
-    let timeoutId: number;
-
-    const scheduleNext = () => {
-      const delay = computeOperationalStatePollIntervalMs(
-        isChannelConnectedRef.current,
-        OPERATIONAL_STATE_POLL_INTERVAL_MS,
-        OPERATIONAL_STATE_DEGRADED_POLL_INTERVAL_MS,
-      );
-
-      timeoutId = window.setTimeout(() => {
-        void loadOperationalState();
-        scheduleNext();
-      }, delay);
-    };
-
-    scheduleNext();
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadOperationalState, pollingEnabled]);
-
-  useEffect(() => {
-    if (!pollingEnabled || !selectedChatId) return;
-
-    let timeoutId: number;
-
-    // BUG FIX (BUG #16): nao pausamos mais o polling de mensagens enquanto
-    // o "Carregar mais antigas" esta em andamento. O proprio loadMessages
-    // ja respeita pollingMessagesChatIdRef para evitar requests concorrentes.
-    const scheduleNext = () => {
-      const delay = computeMessagePollIntervalMs(
-        isMessageRealtimeHealthyRef.current,
-        MESSAGE_POLL_INTERVAL_MS,
-        MESSAGE_POLL_SAFETY_NET_INTERVAL_MS,
-      );
-
-      timeoutId = window.setTimeout(() => {
-        if (!loadingOlderMessages) {
-          void loadMessages(getSelectedChatSnapshot(selectedChatId), 'poll');
-        }
-        scheduleNext();
-      }, delay);
-    };
-
-    scheduleNext();
-
-    return () => window.clearTimeout(timeoutId);
-  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChatId]);
+  useInboxPolling({
+    pollingEnabled,
+    selectedChatId,
+    loadingOlderMessages,
+    chatPollBackoffRef,
+    chatPollIdleCyclesRef,
+    isChannelConnectedRef,
+    isMessageRealtimeHealthyRef,
+    loadChats,
+    refreshArchivedChatsCount,
+    loadOperationalState,
+    getSelectedChatSnapshot,
+    loadMessages,
+  });
 
   useEffect(() => {
     if (!selectedChat || loadingOlderMessages) {
@@ -7130,108 +4645,47 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null, onSent?: () => void | Promise<void>): Promise<void> => {
-    if (textSegments.length === 0) {
-      return Promise.resolve();
-    }
-
-    const optimisticTimestamps = allocateOptimisticMessageTimestamps(chat.id, textSegments.length);
-    const queuedMessages: QueuedTextMessage[] = textSegments.map((segment, index) => {
-      const clientRequestId = createClientRequestId();
-      const optimisticMessage = buildOptimisticOutgoingMessage({
-        chat,
-        messageType: 'text',
-        textContent: segment,
-        clientRequestId,
-        messageAt: optimisticTimestamps[index],
-        metadata: quotePayload && index === 0
-          ? {
-              quote: {
-                external_message_id: quotePayload.quotedMessageId,
-                author_phone: quotePayload.quotedAuthorPhone || null,
-                quoted_type: quotePayload.quotedType || null,
-                preview_text: quotePayload.quotedPreviewText || null,
-              },
-            }
-          : undefined,
-      });
-
-      appendLocalOutgoingMessage(optimisticMessage, {
-        kind: 'text',
-        text: segment,
-        clientRequestId,
-      });
-      applyOptimisticChatSummary(chat, segment, optimisticMessage.message_at);
-
-      return { segment, optimisticMessage, clientRequestId };
-    });
-
-    return enqueueChatSend(chat.id, async () => {
-      let hadSuccessfulSend = false;
-      let stopAfterDefinitiveFailure = false;
-
-      for (const queued of queuedMessages) {
-        if (stopAfterDefinitiveFailure) {
-          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-            delivery_status: 'failed',
-            status_updated_at: new Date().toISOString(),
-            error_message: QUEUED_TEXT_SEND_INTERRUPTED_MESSAGE,
-          });
-          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, 'failed');
-          continue;
-        }
-
-        try {
-          const sendResult = await whatsappMessagesRepository.sendText(chat.external_chat_id, queued.segment, {
-            clientRequestId: queued.clientRequestId,
-            ...(quotePayload && queued === queuedMessages[0] ? quotePayload : {}),
-          });
-          hadSuccessfulSend = true;
-          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-            external_message_id: sendResult.messageId,
-            delivery_status: sendResult.status,
-            status_updated_at: new Date().toISOString(),
-            error_message: null,
-          });
-          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, sendResult.status);
-          if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-            scheduleMessageStatusRefresh({
-              chat,
-              externalMessageIds: [sendResult.messageId],
-            });
-          }
-          localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
-          // Erro ambíguo: não há confirmação de que a mensagem anterior não foi
-          // entregue, então mantemos como "sending" para não oferecer reenvio
-          // imediato do mesmo texto e arriscar duplicar para o contato.
-          const status = error instanceof CommWhatsAppAmbiguousSendError ? 'sending' : 'failed';
-          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-            delivery_status: status,
-            status_updated_at: new Date().toISOString(),
-            error_message: message,
-          });
-          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, status);
-          stopAfterDefinitiveFailure = !shouldContinueQueuedTextSendAfterFailure(
-            error instanceof CommWhatsAppAmbiguousSendError,
-          );
-        }
-      }
-
-      if (hadSuccessfulSend) {
-        void Promise.resolve(onSent?.()).catch((error) => {
-          console.error('[WhatsAppInbox] erro ao atualizar auditoria do follow-up enviado', error);
-        });
-        // BUG FIX (BUG #13): erro de pós-envio agora avisa o usuário
-        // de forma discreta (warning), em vez de falhar silenciosamente.
-        void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
-          console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
-          toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
-        });
-      }
-    });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
+  const { sendTextSegments, handleSendMessage, handleSendDrawerMedia } = useInboxMessageSending({
+    selectedChat,
+    mediaDrawerSendDisabledReason,
+    messageDraft,
+    pendingAttachments,
+    replyTargetMessage,
+    sendDisabledReason,
+    composerSendLock: composerSendLockRef.current,
+    mediaUploadAbortControllersRef,
+    localOutgoingRetryPayloadRef,
+    refreshableOutboundStatuses: REFRESHABLE_OUTBOUND_STATUSES,
+    resolveComposerVariables,
+    resetComposerAfterQueue,
+    setReplyTargetMessage,
+    setSendingDrawerMediaByChatId,
+    enqueueChatSend,
+    allocateOptimisticMessageTimestamps,
+    appendLocalOutgoingMessage,
+    applyOptimisticChatSummary,
+    buildOptimisticOutgoingMessage,
+    patchLocalOutgoingMessage,
+    updateOptimisticChatPreviewStatus,
+    setMediaUploadProgress: setMediaUploadProgressForSelectedChat,
+    updateMediaUploadProgress,
+    clearMediaUploadProgress,
+    loadChats,
+    loadMessages,
+    scheduleMessageStatusRefresh,
+  });
+  const { handleRetryMediaMessage } = useInboxMessageRetry({
+    selectedChat,
+    localOutgoingRetryPayloadRef,
+    setRetryingMessageId,
+    refreshableOutboundStatuses: REFRESHABLE_OUTBOUND_STATUSES,
+    enqueueChatSend,
+    patchLocalOutgoingMessage,
+    removeLocalOutgoingMessage,
+    loadChats,
+    loadMessages,
+    scheduleMessageStatusRefresh,
+  });
 
   const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
     if (!selectedChat || message.direction !== 'inbound') return;
@@ -7252,212 +4706,6 @@ export default function WhatsAppInboxScreen() {
     sendTextSegments(selectedChat, [replyText], getQuotePayloadFromMessage(message));
   }, [selectedChat, sendDisabledReason, sendTextSegments]);
 
-  const handleSendMessage = useCallback(() => {
-    if (!selectedChat) return;
-
-    const resolvedMessageDraft = resolveComposerVariables(messageDraft);
-    const text = resolvedMessageDraft.trim();
-    const textSegments = splitWhatsAppMessageSegments(resolvedMessageDraft);
-    const attachmentsSnapshot = [...pendingAttachments];
-    if (!text && attachmentsSnapshot.length === 0) return;
-
-    if (sendDisabledReason) {
-      toast.error(sendDisabledReason);
-      return;
-    }
-
-    const snapshotKey = buildComposerQueueSnapshotKey(selectedChat.id, messageDraft, attachmentsSnapshot);
-    if (!composerSendLockRef.current.tryAcquire(snapshotKey)) {
-      return;
-    }
-
-    resetComposerAfterQueue();
-
-    try {
-      const replyTargetSnapshot = replyTargetMessage;
-      const quotePayload = replyTargetSnapshot ? getQuotePayloadFromMessage(replyTargetSnapshot) : null;
-      let queuedSend: Promise<void>;
-      if (attachmentsSnapshot.length > 0) {
-        const sendChatId = selectedChat.id;
-        const optimisticTimestamps = allocateOptimisticMessageTimestamps(sendChatId, attachmentsSnapshot.length);
-        const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
-          const caption = index === 0 && attachment.kind !== 'voice' ? text || undefined : undefined;
-          const clientRequestId = createClientRequestId();
-          const localPreviewUrl = attachment.previewUrl?.startsWith('blob:') ? URL.createObjectURL(attachment.file) : attachment.previewUrl ?? null;
-          const optimisticMessage = buildOptimisticOutgoingMessage({
-            chat: selectedChat,
-            messageType: attachment.kind,
-            textContent: buildMediaSummaryText(attachment.kind),
-            clientRequestId,
-            messageAt: optimisticTimestamps[index],
-            mediaUrl: localPreviewUrl,
-            mediaMimeType: attachment.file.type || null,
-            mediaFileName: attachment.file.name,
-            mediaSizeBytes: attachment.file.size,
-            mediaDurationSeconds: attachment.durationSeconds ?? null,
-            mediaCaption: attachment.kind === 'voice' ? null : caption ?? null,
-            metadata: quotePayload && index === 0
-              ? {
-                  quote: {
-                    external_message_id: quotePayload.quotedMessageId,
-                    author_phone: quotePayload.quotedAuthorPhone || null,
-                    quoted_type: quotePayload.quotedType || null,
-                    preview_text: quotePayload.quotedPreviewText || null,
-                  },
-                }
-              : undefined,
-          });
-
-          appendLocalOutgoingMessage(optimisticMessage, {
-            kind: 'media',
-            mediaKind: attachment.kind,
-            file: attachment.file,
-            caption,
-            durationSeconds: attachment.durationSeconds,
-            waveform: attachment.waveformPayload || undefined,
-            fileName: attachment.file.name,
-            previewUrl: localPreviewUrl,
-            clientRequestId,
-          });
-          applyOptimisticChatSummary(selectedChat, optimisticMessage.text_content ?? '', optimisticMessage.message_at);
-
-          return { attachment, caption, optimisticMessage, clientRequestId };
-        });
-
-        queuedSend = enqueueChatSend(sendChatId, async () => {
-          let shouldStopQueue = false;
-          let hadSuccessfulSend = false;
-          let firstErrorMessage = '';
-          let hadAmbiguousSend = false;
-          let activeAbortController: AbortController | null = null;
-
-          try {
-            for (let index = 0; index < attachmentsToSend.length; index += 1) {
-              const queued = attachmentsToSend[index];
-
-              if (shouldStopQueue) {
-                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-                  delivery_status: 'failed',
-                  status_updated_at: new Date().toISOString(),
-                  error_message: 'Envio interrompido antes deste item. Toque em reenviar para tentar novamente.',
-                });
-                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'failed');
-                continue;
-              }
-
-              const abortController = new AbortController();
-              activeAbortController = abortController;
-              setMediaUploadProgressForSelectedChat({
-                chatId: sendChatId,
-                attachmentId: queued.optimisticMessage.id,
-                currentIndex: index + 1,
-                total: attachmentsToSend.length,
-                progress: 0,
-                fileName: queued.attachment.file.name,
-              });
-              mediaUploadAbortControllersRef.current.set(sendChatId, abortController);
-
-              try {
-                const sendResult = await whatsappMediaRepository.send({
-                  chatId: selectedChat.external_chat_id,
-                  kind: queued.attachment.kind,
-                  file: queued.attachment.file,
-                  caption: queued.caption,
-                  durationSeconds: queued.attachment.durationSeconds,
-                  waveform: queued.attachment.kind === 'voice' ? queued.attachment.waveformPayload || undefined : undefined,
-                  clientRequestId: queued.clientRequestId,
-                  ...(quotePayload && index === 0 ? quotePayload : {}),
-                  onUploadProgress: (progress) => {
-                    updateMediaUploadProgress(sendChatId, queued.optimisticMessage.id, progress);
-                  },
-                  signal: abortController.signal,
-                });
-
-                if (queued.optimisticMessage.media_url && sendResult.messageId) {
-                  whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, queued.optimisticMessage.media_url);
-                }
-
-                hadSuccessfulSend = true;
-                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-                  external_message_id: sendResult.messageId,
-                  delivery_status: sendResult.status,
-                  status_updated_at: new Date().toISOString(),
-                  error_message: null,
-                });
-                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, sendResult.status);
-                if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-                  scheduleMessageStatusRefresh({
-                    chat: selectedChat,
-                    externalMessageIds: [sendResult.messageId],
-                  });
-                }
-                if (sendResult.messageId || sendResult.status.trim().toLowerCase() !== 'sending') {
-                  localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
-                }
-              } catch (error) {
-                const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
-                firstErrorMessage = firstErrorMessage || message;
-                if (error instanceof CommWhatsAppMediaSendTimeoutError || error instanceof CommWhatsAppAmbiguousSendError) {
-                  hadAmbiguousSend = true;
-                  patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-                    delivery_status: 'sending',
-                    status_updated_at: new Date().toISOString(),
-                    error_message: 'Envio ainda em confirmação. Evite reenviar por enquanto.',
-                  });
-                  updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'sending');
-                  continue;
-                }
-
-                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-                  delivery_status: 'failed',
-                  status_updated_at: new Date().toISOString(),
-                  error_message: message,
-                });
-                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'failed');
-                shouldStopQueue = true;
-              }
-            }
-          } finally {
-            clearMediaUploadProgress(sendChatId);
-            if (activeAbortController && mediaUploadAbortControllersRef.current.get(sendChatId) === activeAbortController) {
-              mediaUploadAbortControllersRef.current.delete(sendChatId);
-            }
-          }
-
-          if (hadSuccessfulSend || hadAmbiguousSend) {
-            void (async () => {
-              await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-            })().catch((error) => {
-              console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de midia', error);
-            });
-          }
-
-          if (hadAmbiguousSend) {
-            toast.info('Um ou mais arquivos ainda estão confirmando envio. Aguarde antes de reenviar.');
-          } else if (firstErrorMessage) {
-            if (firstErrorMessage === 'Envio de mídia cancelado.') {
-              toast.info('Upload interrompido. As mensagens que falharam permaneceram no chat para reenvio.');
-            } else {
-              toast.error(firstErrorMessage);
-            }
-          }
-        });
-      } else {
-        queuedSend = sendTextSegments(selectedChat, textSegments, quotePayload);
-      }
-      void queuedSend.then(
-        () => composerSendLockRef.current.release(snapshotKey),
-        () => composerSendLockRef.current.release(snapshotKey),
-      );
-      setReplyTargetMessage(null);
-    } catch (error) {
-      composerSendLockRef.current.release(snapshotKey);
-      console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
-      const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
-      toast.error(message);
-    }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, clearMediaUploadProgress, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, setMediaUploadProgressForSelectedChat, updateMediaUploadProgress, updateOptimisticChatPreviewStatus]);
-
   useEffect(() => {
     if (!voiceAttachment) {
       autoSendVoiceRef.current = false;
@@ -7476,156 +4724,6 @@ export default function WhatsAppInboxScreen() {
     const activeChatId = selectedChatIdRef.current;
     if (activeChatId) {
       mediaUploadAbortControllersRef.current.get(activeChatId)?.abort();
-    }
-  };
-
-  const handleRetryMediaMessage = async (message: CommWhatsAppMessage) => {
-    if (retryingMessageIdsRef.current.has(message.id)) {
-      return;
-    }
-
-    const targetChat = selectedChat;
-    if (!targetChat || targetChat.id !== message.chat_id) {
-      return;
-    }
-
-    retryingMessageIdsRef.current.add(message.id);
-    setRetryingMessageId(message.id);
-
-    try {
-      await enqueueChatSend(targetChat.id, async () => {
-        const localRetryPayload = localOutgoingRetryPayloadRef.current.get(message.id);
-
-        if (localRetryPayload) {
-          let keepRetryPayload = false;
-          patchLocalOutgoingMessage(message.id, {
-            delivery_status: 'pending',
-            status_updated_at: new Date().toISOString(),
-            error_message: null,
-          });
-
-          const retryClientRequestId = localRetryPayload.clientRequestId || createClientRequestId();
-          if (!localRetryPayload.clientRequestId) {
-            localOutgoingRetryPayloadRef.current.set(message.id, {
-              ...localRetryPayload,
-              clientRequestId: retryClientRequestId,
-            } as LocalOutgoingRetryPayload);
-          }
-
-          if (localRetryPayload.kind === 'text') {
-            const sendResult = await whatsappMessagesRepository.sendText(targetChat.external_chat_id, localRetryPayload.text, {
-              clientRequestId: retryClientRequestId,
-            });
-            patchLocalOutgoingMessage(message.id, {
-              external_message_id: sendResult.messageId,
-              delivery_status: sendResult.status,
-              status_updated_at: new Date().toISOString(),
-              error_message: null,
-            });
-            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-              scheduleMessageStatusRefresh({
-                chat: targetChat,
-                externalMessageIds: [sendResult.messageId],
-              });
-            }
-            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-          } else if (localRetryPayload.kind === 'media') {
-            const sendResult = await whatsappMediaRepository.send({
-              chatId: targetChat.external_chat_id,
-              kind: localRetryPayload.mediaKind,
-              file: localRetryPayload.file,
-              caption: localRetryPayload.caption,
-              durationSeconds: localRetryPayload.durationSeconds,
-              waveform: localRetryPayload.waveform,
-              clientRequestId: retryClientRequestId,
-            });
-            if (message.media_url && sendResult.messageId) {
-              whatsappMediaRepository.rememberLocalPreview(sendResult.messageId, message.media_url);
-            }
-            patchLocalOutgoingMessage(message.id, {
-              external_message_id: sendResult.messageId,
-              delivery_status: sendResult.status,
-              status_updated_at: new Date().toISOString(),
-              error_message: null,
-            });
-            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-              scheduleMessageStatusRefresh({
-                chat: targetChat,
-                externalMessageIds: [sendResult.messageId],
-              });
-            }
-            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-          } else {
-            const sendResult = await whatsappMediaRepository.sendRemote({
-              chatId: targetChat.external_chat_id,
-              kind: localRetryPayload.mediaKind,
-              remoteUrl: localRetryPayload.remoteUrl,
-              fileName: localRetryPayload.fileName,
-              mimeType: localRetryPayload.mimeType,
-              caption: localRetryPayload.caption,
-              clientRequestId: retryClientRequestId,
-            });
-            patchLocalOutgoingMessage(message.id, {
-              external_message_id: sendResult.messageId,
-              delivery_status: sendResult.status,
-              status_updated_at: new Date().toISOString(),
-              error_message: null,
-            });
-            if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-              scheduleMessageStatusRefresh({
-                chat: targetChat,
-                externalMessageIds: [sendResult.messageId],
-              });
-            }
-            keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
-          }
-
-          if (!keepRetryPayload) {
-            localOutgoingRetryPayloadRef.current.delete(message.id);
-          }
-          await Promise.all([loadMessages(targetChat, 'send'), loadChats()]);
-          return;
-        }
-
-        if (!message.media_id) {
-          removeLocalOutgoingMessage(message.id);
-          toast.error('Não foi possível reenviar esta mensagem local.');
-          return;
-        }
-
-        await whatsappMediaRepository.retry(message.id, {
-          clientRequestId: createClientRequestId(),
-        });
-        await Promise.all([loadMessages(targetChat, 'send'), loadChats()]);
-      });
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao reenviar mensagem', error);
-      const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
-      if (error instanceof CommWhatsAppMediaSendTimeoutError || error instanceof CommWhatsAppAmbiguousSendError) {
-        patchLocalOutgoingMessage(message.id, {
-          delivery_status: 'sending',
-          status_updated_at: new Date().toISOString(),
-          error_message: 'Envio ainda em confirmação. Evite reenviar por enquanto.',
-        });
-        toast.info('Envio ainda em confirmação. Aguarde antes de reenviar.');
-        void Promise.all([loadMessages(targetChat, 'send'), loadChats()]).catch((refreshError) => {
-          console.error('[WhatsAppInbox] erro ao atualizar conversa apos timeout de reenvio', refreshError);
-        });
-        return;
-      }
-
-      if (localOutgoingRetryPayloadRef.current.has(message.id)) {
-        patchLocalOutgoingMessage(message.id, {
-          delivery_status: 'failed',
-          status_updated_at: new Date().toISOString(),
-          error_message: messageText,
-        });
-      } else {
-        toast.error(messageText);
-      }
-    } finally {
-      retryingMessageIdsRef.current.delete(message.id);
-      setRetryingMessageId((current) => (current === message.id ? null : current));
     }
   };
 
@@ -8022,424 +5120,40 @@ export default function WhatsAppInboxScreen() {
     setCreateLeadDraft(null);
   }, []);
 
-  const handleCreateLeadFromChatSaved = useCallback(async (lead: Lead) => {
-    const targetChatId = createLeadDraft?.chatId;
-
-    if (!targetChatId) {
-      return;
-    }
-    if (!leadMutationLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    setCreateLeadDraft(null);
-    setLeadMutationLoadingChatId(targetChatId);
-
-    const requestId = ++leadMutationRequestIdRef.current;
-
-    try {
-      const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, lead.id);
-      upsertChatLocally(updatedChat);
-
-      const isCurrentTarget = requestId === leadMutationRequestIdRef.current
-        && selectedChatIdRef.current === targetChatId;
-      if (isCurrentTarget) {
-        setSelectedChatId(updatedChat.id);
-        await loadLeadPanel(updatedChat);
-      }
-      await loadChats();
-
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      toast.success('Lead criado e vinculado a conversa.');
-    } catch (error) {
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao vincular lead criado no chat', error);
-      toast.error('Lead criado, mas não foi possível vinculá-lo ao chat.');
-    } finally {
-      leadMutationLockRef.current.release(targetChatId);
-      setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
-    }
-  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, upsertChatLocally]);
-
-  const handleLinkLead = useCallback(async (leadId: string) => {
-    if (!selectedChat || selectedChat.is_group) {
-      return;
-    }
-
-    const targetChatId = selectedChat.id;
-    if (!leadMutationLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    const requestId = ++leadMutationRequestIdRef.current;
-    setLeadMutationLoadingChatId(targetChatId);
-    setLinkLoadingLeadId(leadId);
-    try {
-      const updatedChat = await whatsappContactsRepository.linkLead(targetChatId, leadId);
-      upsertChatLocally(updatedChat);
-      if (requestId === leadMutationRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setSelectedChatId(updatedChat.id);
-        await loadLeadPanel(updatedChat);
-      }
-      await loadChats();
-
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      toast.success('Lead vinculado a conversa.');
-    } catch (error) {
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao vincular lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível vincular o lead ao chat.');
-    } finally {
-      if (requestId === leadMutationRequestIdRef.current) {
-        setLinkLoadingLeadId((current) => (current === leadId ? null : current));
-      }
-      leadMutationLockRef.current.release(targetChatId);
-      setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
-    }
-  }, [loadChats, loadLeadPanel, selectedChat, upsertChatLocally]);
-
-  const handleUnlinkLead = async () => {
-    if (!selectedChat || selectedChat.is_group) {
-      return;
-    }
-
-    const targetChatId = selectedChat.id;
-    if (!leadMutationLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    const requestId = ++leadMutationRequestIdRef.current;
-    setLeadMutationLoadingChatId(targetChatId);
-
-    try {
-      const updatedChat = await whatsappContactsRepository.unlinkLead(targetChatId);
-      upsertChatLocally(updatedChat);
-
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      setLeadPanel(null);
-      setLeadContracts([]);
-      setLeadContractsError(null);
-      setLeadSearchQuery('');
-      toast.success('Lead desvinculado da conversa.');
-    } catch (error) {
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao desvincular lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível desvincular o lead do chat.');
-    } finally {
-      leadMutationLockRef.current.release(targetChatId);
-      setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
-    }
-  };
-
-  const handleLeadStatusChange = async (_leadId: string, newStatus: string) => {
-    if (!selectedChat || selectedChat.is_group || !leadPanel) {
-      return;
-    }
-
-    const normalizedStatus = normalizeLeadStatusLabel(newStatus);
-    const targetChatId = selectedChat.id;
-    if (!leadMutationLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    const requestId = ++leadMutationRequestIdRef.current;
-    setLeadMutationLoadingChatId(targetChatId);
-    const statusReminderLeadSnapshot = {
-      id: leadPanel.id,
-      nome_completo: leadPanel.nome_completo,
-      telefone: leadPanel.telefone,
-      responsavel: leadPanel.responsavel_value ?? leadPanel.responsavel_label ?? '',
-    } satisfies Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
-
-    try {
-      await whatsappContactsRepository.updateLeadStatus(targetChatId, newStatus);
-
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        void loadChats();
-        return;
-      }
-
-      if (shouldPromptFirstReminderAfterQuote(newStatus)) {
-        setStatusReminderLead(statusReminderLeadSnapshot);
-        setStatusReminderPromptMessage('Deseja agendar o primeiro lembrete após a proposta enviada?');
-      } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
-        await clearInboxLeadAgenda(leadPanel.id);
-        setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      }
-
-      await Promise.all([
-        loadLeadPanel(selectedChat),
-        loadChats(),
-        loadChatAgendaSummary(leadPanel.id, leadContracts.map((contract) => contract.id)),
-      ]);
-    } catch (error) {
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao atualizar status do lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o status do lead.');
-      throw error;
-    } finally {
-      leadMutationLockRef.current.release(targetChatId);
-      setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
-    }
-  };
-
-  const handleLeadResponsavelChange = async (_leadId: string, responsavelValue: string) => {
-    if (!selectedChat || selectedChat.is_group) {
-      return;
-    }
-
-    const targetChatId = selectedChat.id;
-    if (!leadMutationLockRef.current.tryAcquire(targetChatId)) {
-      return;
-    }
-
-    const requestId = ++leadMutationRequestIdRef.current;
-    setLeadMutationLoadingChatId(targetChatId);
-    try {
-      await whatsappContactsRepository.updateLeadResponsible(targetChatId, responsavelValue);
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      await Promise.all([
-        loadLeadPanel(selectedChat),
-        loadChats(),
-      ]);
-    } catch (error) {
-      if (requestId !== leadMutationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao atualizar responsável do lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o responsável do lead.');
-    } finally {
-      leadMutationLockRef.current.release(targetChatId);
-      setLeadMutationLoadingChatId((current) => (current === targetChatId ? null : current));
-    }
-  };
+  const {
+    handleCreateLeadFromChatSaved,
+    handleLinkLead,
+    handleUnlinkLead,
+    handleLeadStatusChange,
+    handleLeadResponsavelChange,
+  } = useInboxLeadMutations({
+    selectedChat,
+    selectedChatIdRef,
+    leadPanel,
+    leadContracts,
+    createLeadChatId: createLeadDraft?.chatId ?? null,
+    leadMutationLockRef,
+    leadMutationRequestIdRef,
+    setLeadMutationLoadingChatId,
+    setLinkLoadingLeadId,
+    closeCreateLeadDraft: handleCloseCreateLeadFromChat,
+    setSelectedChatId,
+    setLeadPanel,
+    setLeadContracts,
+    setLeadContractsError,
+    setLeadSearchQuery,
+    setStatusReminderLead,
+    setStatusReminderPromptMessage,
+    setChatAgendaSummary,
+    upsertChatLocally,
+    loadLeadPanel,
+    loadChats,
+    loadChatAgendaSummary,
+  });
 
   const handleViewLeadInCrm = () => {
     navigate('/painel/leads');
   };
-
-  const handleStartChatFromSavedContact = async (contact: CommWhatsAppPhoneContact) => {
-    if (startingChatKey) {
-      return;
-    }
-
-    if (!contact.phone_number) {
-      toast.error('Este contato ainda não possui telefone confirmado.');
-      return;
-    }
-
-    const actionKey = `saved:${contact.phone_digits}`;
-    setStartingChatKey(actionKey);
-    try {
-      const result = await whatsappContactsRepository.startChat({
-        source: 'saved_contact',
-        phoneNumber: contact.phone_number,
-        displayName: contact.display_name,
-        contactId: contact.contact_id,
-      });
-
-      setSearchDraft('');
-      setSearch('');
-      upsertChatLocally(result.chat);
-      setSelectedChatId(result.chat.id);
-      setStartChatModalOpen(false);
-      toast.success('Conversa pronta para atendimento.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao iniciar chat por contato salvo', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do contato salvo.');
-    } finally {
-      setStartingChatKey((current) => (current === actionKey ? null : current));
-    }
-  };
-
-  const handleStartChatFromLead = async (lead: CommWhatsAppLeadSearchResult) => {
-    if (startingChatKey) {
-      return;
-    }
-
-    const actionKey = `crm:${lead.id}`;
-    setStartingChatKey(actionKey);
-    try {
-      const result = await whatsappContactsRepository.startChat({
-        source: 'crm',
-        leadId: lead.id,
-      });
-
-      setSearchDraft('');
-      setSearch('');
-      upsertChatLocally(result.chat);
-      setSelectedChatId(result.chat.id);
-      setStartChatModalOpen(false);
-      toast.success('Conversa do lead aberta no inbox.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao iniciar chat por lead do CRM', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do lead do CRM.');
-    } finally {
-      setStartingChatKey((current) => (current === actionKey ? null : current));
-    }
-  };
-
-  const handleOpenAgendaLeadChat = useCallback(async (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => {
-    if (startingChatKey) {
-      return;
-    }
-
-    const phoneKeys = collectPhoneLookupKeys(lead.telefone);
-    const localExistingChat = latestChatsRef.current.find((chat) => {
-      if (lead.id && chat.lead_id === lead.id) {
-        return true;
-      }
-
-      if (phoneKeys.length === 0) {
-        return false;
-      }
-
-      const chatPhoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
-      return chatPhoneKeys.some((key) => phoneKeys.includes(key));
-    }) ?? null;
-
-    if (localExistingChat) {
-      setSelectedChatId(localExistingChat.id);
-      return;
-    }
-
-    if (!lead.id && !lead.telefone?.trim()) {
-      toast.error('Não foi possível abrir uma conversa para este lead.');
-      return;
-    }
-
-    const openingKey = `agenda:${lead.id || lead.telefone || 'lead'}`;
-    setStartingChatKey(openingKey);
-
-    try {
-      const persistedExistingChat = await whatsappContactsRepository.findExistingChat({
-        leadId: lead.id,
-        phoneDigits: phoneKeys,
-      });
-
-      if (persistedExistingChat) {
-        upsertChatLocally(persistedExistingChat);
-        setSelectedChatId(persistedExistingChat.id);
-        return;
-      }
-
-      const result = lead.id
-        ? await whatsappContactsRepository.startChat({
-            source: 'crm',
-            leadId: lead.id,
-          })
-        : await whatsappContactsRepository.startChat({
-            source: 'manual',
-            phoneNumber: lead.telefone ?? '',
-          });
-
-      setSearchDraft('');
-      setSearch('');
-      upsertChatLocally(result.chat);
-      setSelectedChatId(result.chat.id);
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao abrir chat a partir da agenda', error);
-      throw error;
-    } finally {
-      setStartingChatKey((current) => (current === openingKey ? null : current));
-    }
-  }, [setSearch, setSearchDraft, startingChatKey, upsertChatLocally]);
-
-  const handleStartChatFromManual = async () => {
-    if (startingChatKey) {
-      return;
-    }
-
-    const actionKey = 'manual';
-    setStartingChatKey(actionKey);
-    try {
-      const result = await whatsappContactsRepository.startChat({
-        source: 'manual',
-        phoneNumber: manualStartPhone,
-      });
-
-      setSearchDraft('');
-      setSearch('');
-      upsertChatLocally(result.chat);
-      setSelectedChatId(result.chat.id);
-      setStartChatModalOpen(false);
-      setManualStartPhone('');
-      toast.success('Conversa aberta pelo número informado.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao iniciar chat manual', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa pelo número informado.');
-    } finally {
-      setStartingChatKey((current) => (current === actionKey ? null : current));
-    }
-  };
-
-  const handleOpenSharedContactChat = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
-    const phoneNumber = contact.phoneNumber?.trim() ?? '';
-    if (!phoneNumber) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
-      return;
-    }
-
-    const phoneKeys = collectPhoneLookupKeys(phoneNumber);
-    if (phoneKeys.length === 0) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
-      return;
-    }
-
-    const actionKey = `open:${phoneNumber}`;
-    setSharedContactActionKey(actionKey);
-
-    try {
-      const localExistingChat = chats.find((chat) => {
-        const chatPhoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
-        return chatPhoneKeys.some((key) => phoneKeys.includes(key));
-      }) ?? null;
-
-      if (localExistingChat) {
-        setSelectedChatId(localExistingChat.id);
-        return;
-      }
-
-      const persistedExistingChat = await whatsappContactsRepository.findExistingChat({ phoneDigits: phoneKeys });
-      if (persistedExistingChat) {
-        upsertChatLocally(persistedExistingChat);
-        setSelectedChatId(persistedExistingChat.id);
-        return;
-      }
-
-      const result = await whatsappContactsRepository.startChat({
-        source: 'manual',
-        phoneNumber,
-      });
-
-      setSearchDraft('');
-      setSearch('');
-      upsertChatLocally(result.chat);
-      setSelectedChatId(result.chat.id);
-      toast.success('Conversa aberta com o contato compartilhado.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao abrir contato compartilhado', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a conversa do contato compartilhado.');
-    } finally {
-      setSharedContactActionKey((current) => (current === actionKey ? null : current));
-    }
-  }, [chats, setSearch, setSearchDraft, upsertChatLocally]);
 
   const handleSaveSharedContact = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
     const displayName = contact.name?.trim() ?? '';
@@ -9296,107 +6010,6 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const handleSendDrawerMedia = useCallback(async (item: {
-    sendKind: 'image' | 'video';
-    sendUrl: string;
-    title: string;
-    mimeType: string;
-    previewUrl?: string;
-  }) => {
-    if (!selectedChat) {
-      return;
-    }
-
-    if (mediaDrawerSendDisabledReason) {
-      toast.error(mediaDrawerSendDisabledReason);
-      throw new Error(mediaDrawerSendDisabledReason);
-    }
-
-    const clientRequestId = createClientRequestId();
-    const [messageAt] = allocateOptimisticMessageTimestamps(selectedChat.id, 1);
-    const optimisticMessage = buildOptimisticOutgoingMessage({
-      chat: selectedChat,
-      messageType: item.sendKind,
-      textContent: buildMediaSummaryText(item.sendKind),
-      clientRequestId,
-      messageAt,
-      mediaUrl: item.previewUrl ?? item.sendUrl,
-      mediaMimeType: item.mimeType,
-      mediaFileName: item.title,
-      metadata: {
-        local_media_source: 'drawer',
-      },
-    });
-
-    appendLocalOutgoingMessage(optimisticMessage, {
-      kind: 'remote_media',
-      mediaKind: item.sendKind,
-      remoteUrl: item.sendUrl,
-      mimeType: item.mimeType,
-      fileName: item.title,
-      previewUrl: item.previewUrl ?? item.sendUrl,
-      clientRequestId,
-    });
-    applyOptimisticChatSummary(selectedChat, optimisticMessage.text_content ?? '', optimisticMessage.message_at);
-
-    const sendChatId = selectedChat.id;
-    return enqueueChatSend(sendChatId, async () => {
-      setSendingDrawerMediaByChatId((current) => ({ ...current, [sendChatId]: true }));
-
-      try {
-        const sendResult = await whatsappMediaRepository.sendRemote({
-          chatId: selectedChat.external_chat_id,
-          kind: item.sendKind,
-          remoteUrl: item.sendUrl,
-          fileName: item.title,
-          mimeType: item.mimeType,
-          clientRequestId,
-        });
-
-        patchLocalOutgoingMessage(optimisticMessage.id, {
-          external_message_id: sendResult.messageId,
-          delivery_status: sendResult.status,
-          status_updated_at: new Date().toISOString(),
-          error_message: null,
-        });
-        updateOptimisticChatPreviewStatus(selectedChat.id, optimisticMessage.message_at, sendResult.status);
-        if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
-          scheduleMessageStatusRefresh({
-            chat: selectedChat,
-            externalMessageIds: [sendResult.messageId],
-          });
-        }
-        localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
-
-        void (async () => {
-          await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-        })().catch((error) => {
-          console.error('[WhatsAppInbox] erro ao atualizar conversa apos midia da gaveta', error);
-        });
-      } catch (error) {
-        console.error('[WhatsAppInbox] erro ao enviar mídia da gaveta', error);
-        const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia agora.';
-        patchLocalOutgoingMessage(optimisticMessage.id, {
-          delivery_status: 'failed',
-          status_updated_at: new Date().toISOString(),
-          error_message: message,
-        });
-        updateOptimisticChatPreviewStatus(selectedChat.id, optimisticMessage.message_at, 'failed');
-        throw error instanceof Error ? error : new Error(message);
-      } finally {
-        setSendingDrawerMediaByChatId((current) => {
-          if (!current[sendChatId]) {
-            return current;
-          }
-
-          const next = { ...current };
-          delete next[sendChatId];
-          return next;
-        });
-      }
-    });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);
-
   const handleRegenerateFollowUp = useCallback((options: { customInstructions?: string } = {}) => {
     void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions);
   }, [followUpCustomInstructions, handleGenerateFollowUp]);
@@ -9931,311 +6544,62 @@ export default function WhatsAppInboxScreen() {
         )}
 
         <section className="grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-r-none lg:border-r ${selectedChat ? 'hidden lg:flex' : 'flex'}`}>
-          <div className="whatsapp-inbox-sidebar-header border-b p-4">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
-                </p>
-                <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
-                  <IconButton
-                    variant={archivedSectionOpen ? 'soft' : 'ghost'}
-                    className="relative shrink-0"
-                    size="md" onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
-                    aria-label="Chats arquivados"
-                    title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
-                  >
-                    <span className="relative inline-flex">
-                      <Archive className="kds-control-icon" />
-                      {archivedChatsCountValue > 0 ? (
-                        <span
-                          className="kds-sidebar-badge whatsapp-inbox-count-badge"
-                          aria-label={`${archivedChatsCountValue} chats arquivados`}
-                        >
-                          {archivedChatsCountValue > 9 ? '9+' : archivedChatsCountValue}
-                        </span>
-                      ) : null}
-                    </span>
-                  </IconButton>
-                  <IconButton
-                    variant="ghost"
-                    className="shrink-0"
-                    size="md" onClick={() => setWhatsAppAgendaOpen(true)}
-                    aria-label="Agenda do WhatsApp"
-                    title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissão para acessar a agenda'}
-                    disabled={!canViewAgenda}
-                  >
-                    <Calendar className="kds-control-icon" />
-                  </IconButton>
-                  <IconButton
-                    variant={allScheduledMessagesPanelOpen ? 'soft' : 'ghost'}
-                    className="shrink-0"
-                    size="md" onClick={() => setAllScheduledMessagesPanelOpen(true)}
-                    aria-label="Mensagens agendadas"
-                    title="Mensagens agendadas"
-                  >
-                    <CalendarClock className="kds-control-icon" />
-                  </IconButton>
-                  <IconButton
-                    variant="ghost"
-                    className="shrink-0"
-                    size="md" onClick={() => setWhatsAppDashboardOpen(true)}
-                    aria-label="Painel WhatsApp"
-                    title="Painel WhatsApp"
-                  >
-                    <Cog className="kds-control-icon" />
-                  </IconButton>
-                  <IconButton
-                    variant="ghost"
-                    className="shrink-0"
-                    size="md" onClick={() => setStartChatModalOpen(true)}
-                    aria-label="Novo chat"
-                    title="Novo chat"
-                  >
-                    <Plus className="kds-control-icon" />
-                  </IconButton>
-                </ButtonGroup>
-              </div>
-
-              <SearchInput
-                value={searchDraft}
-                onChange={(event) => setSearchDraft(event.target.value)}
-                placeholder="Buscar por nome ou telefone"
-                className="whatsapp-inbox-search-input"
-              />
-
-              <div className="flex items-center gap-2 overflow-visible pb-1">
-                <InboxFilterChip
-                  active={!hasActiveChatFilters}
-                  label="Todas"
-                  onClick={() => {
-                    setChatActivityFilter('all');
-                    setLeadStatusFilters([]);
-                    setAdvancedFiltersOpen(false);
-                  }}
-                />
-
-                <div className="relative shrink-0">
-                  <Button
-                    type="button"
-                    ref={advancedFiltersTriggerRef}
-                    onClick={() => setAdvancedFiltersOpen((current) => !current)}
-                    variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
-                    size="sm"
-                    
-                  >
-                    <SlidersHorizontal className="kds-control-icon" />
-                    Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
-            {archivedSectionOpen ? (
-              <div className="sticky top-0 z-[1] flex items-center gap-2 border-b bg-[var(--bg-surface)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
-                <Archive className="h-4 w-4 text-[var(--text-muted)]" />
-                <span>Conversas arquivadas</span>
-                <span className="ml-auto text-xs font-medium text-[var(--text-muted)]">
-                  {archivedChatsLoading ? 'Carregando...' : archivedChatsCountValue > 0 ? `${archivedChatsCountValue} ${archivedChatsCountValue === 1 ? 'chat' : 'chats'}` : '0 chats'}
-                </span>
-              </div>
-            ) : null}
-            {chatRefreshError && !chatLoadError ? (
-              <Alert
-                tone="warning"
-                title="Conversas não atualizadas"
-                action={(
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleRetryChatLoad}
-                    loading={loading}
-                  >
-                    Atualizar
-                  </Button>
-                )}
-                className="m-3"
-              >
-                {chatRefreshError}
-              </Alert>
-            ) : null}
-            {loading ? (
-                <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Carregando conversas...
-              </div>
-            ) : chatLoadError ? (
-              <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--danger)] p-6 text-center" role="alert">
-                <AlertTriangle className="h-8 w-8 text-[var(--danger)]" />
-                <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
-                    Não foi possível carregar as conversas
-                  </p>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    Verifique sua conexão ou sessão e tente novamente. Seus chats não foram apagados.
-                  </p>
-                </div>
-                <Button variant="secondary" size="sm" onClick={handleRetryChatLoad}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages && !chatSearchError && !messageSearchError ? (
-              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
-                <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
-                <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
-                    Nenhum resultado encontrado
-                  </p>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    Busque pelo nome do contato, telefone ou trecho de mensagem.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {chatSearchError || messageSearchError ? (
-                  <Alert
-                    tone="warning"
-                    title="Busca incompleta"
-                    action={(
-                      <Button type="button" variant="secondary" size="sm" onClick={retrySearch}>
-                        Tentar novamente
-                      </Button>
-                    )}
-                    className="m-3"
-                  >
-                    {chatSearchError ?? messageSearchError}
-                    {chatSearchError && messageSearchError ? ' Algumas mensagens também não puderam ser consultadas.' : ''}
-                  </Alert>
-                ) : null}
-                {sidebarChats.length > 0 ? (
-                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    Conversas
-                  </div>
-                ) : null}
-                {searchingChats && sidebarChats.length === 0 ? (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Buscando conversas...
-                  </div>
-                ) : null}
-                {sidebarChats.map((chat) => (
-                  <InboxChatListItem
-                    key={chat.id}
-                    chat={chat}
-                    selected={chat.id === selectedChatId}
-                    connectedUserName={channelState?.connected_user_name ?? null}
-                    draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
-                    favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false}
-                    onSelect={(chatId) => {
-                      setChatMenuPointerAnchor(null);
-                      setOpenChatMenuChatId(null);
-                      upsertChatLocally(chat);
-                      setSelectedChatId(chatId);
-                    }}
-                    menuOpen={openChatMenuChatId === chat.id}
-                    menuBusy={updatingChatStateId === chat.id}
-                    onToggleMenu={handleToggleChatMenu}
-                    onOpenContextMenu={handleOpenChatMenuFromContext}
-                    menuTriggerRef={(node) => {
-                      if (node) {
-                        chatMenuTriggerRefs.current[chat.id] = node;
-                      } else {
-                        delete chatMenuTriggerRefs.current[chat.id];
-                      }
-                    }}
-                  />
-                ))}
-                {filteredMessageSearchResults.length > 0 || searchingMessages ? (
-                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                    Mensagens
-                  </div>
-                ) : null}
-                {searchingMessages ? (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Buscando mensagens...
-                  </div>
-                ) : null}
-                {filteredMessageSearchResults.map((result) => (
-                  <InboxMessageSearchListItem
-                    key={result.message.id}
-                    result={result}
-                    selected={result.chat.id === selectedChatId}
-                    connectedUserName={channelState?.connected_user_name ?? null}
-                    favorito={result.chat.lead_id ? favoritedLeadIds.has(result.chat.lead_id) : false}
-                    onSelect={() => handleSelectMessageSearchResult(result)}
-                  />
-                ))}
-              </>
-            )) : archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0 ? (
-              <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Carregando conversas arquivadas...
-              </div>
-            ) : sidebarChats.length === 0 ? (
-              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
-                {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
-                <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
-                    {archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}
-                  </p>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    {archivedSectionOpen
-                      ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
-                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {sidebarChats.map((chat) => (
-                  <InboxChatListItem
-                    key={chat.id}
-                    chat={chat}
-                    selected={chat.id === selectedChatId}
-                    connectedUserName={channelState?.connected_user_name ?? null}
-                    draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
-                    favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false}
-                    onSelect={(chatId) => {
-                      setChatMenuPointerAnchor(null);
-                      setOpenChatMenuChatId(null);
-                      setSelectedChatId(chatId);
-                    }}
-                    menuOpen={openChatMenuChatId === chat.id}
-                    menuBusy={updatingChatStateId === chat.id}
-                    onToggleMenu={handleToggleChatMenu}
-                    onOpenContextMenu={handleOpenChatMenuFromContext}
-                    menuTriggerRef={(node) => {
-                      if (node) {
-                        chatMenuTriggerRefs.current[chat.id] = node;
-                      } else {
-                        delete chatMenuTriggerRefs.current[chat.id];
-                      }
-                    }}
-                  />
-                ))}
-                {archivedSectionOpen && archivedChatsHasMore ? (
-                  <div className="px-4 py-3">
-                    <Button
-                      variant="secondary"
-                      className="w-full"
-                      onClick={() => void handleLoadMoreArchivedChats()}
-                      loading={archivedChatsLoadingMore}
-                      disabled={archivedChatsLoadingMore}
-                    >
-                      {archivedChatsLoadingMore ? 'Carregando...' : 'Carregar mais arquivados'}
-                    </Button>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
+        <WhatsAppInboxSidebar
+          archivedSectionOpen={archivedSectionOpen}
+          archivedChatsCount={archivedChatsCountValue}
+          archivedChatsLoading={archivedChatsLoading}
+          archivedChatsLoadingMore={archivedChatsLoadingMore}
+          archivedChatsHasMore={archivedChatsHasMore}
+          onSwitchArchivedSection={handleSwitchArchivedSection}
+          onLoadMoreArchivedChats={() => void handleLoadMoreArchivedChats()}
+          onOpenAgenda={() => setWhatsAppAgendaOpen(true)}
+          onOpenScheduledMessages={() => setAllScheduledMessagesPanelOpen(true)}
+          onOpenDashboard={() => setWhatsAppDashboardOpen(true)}
+          onStartChat={() => setStartChatModalOpen(true)}
+          canViewAgenda={canViewAgenda}
+          allScheduledMessagesPanelOpen={allScheduledMessagesPanelOpen}
+          searchDraft={searchDraft}
+          onSearchDraftChange={setSearchDraft}
+          hasActiveChatFilters={hasActiveChatFilters}
+          activeChatFiltersCount={activeChatFiltersCount}
+          advancedFiltersOpen={advancedFiltersOpen}
+          onToggleAdvancedFilters={() => setAdvancedFiltersOpen((current) => !current)}
+          onClearFilters={() => {
+            setChatActivityFilter('all');
+            setLeadStatusFilters([]);
+            setAdvancedFiltersOpen(false);
+          }}
+          chatRefreshError={chatRefreshError}
+          chatLoadError={chatLoadError}
+          loading={loading}
+          onRetryChatLoad={handleRetryChatLoad}
+          sidebarChats={sidebarChats}
+          filteredMessageSearchResults={filteredMessageSearchResults}
+          search={search}
+          searchingChats={searchingChats}
+          searchingMessages={searchingMessages}
+          chatSearchError={chatSearchError}
+          messageSearchError={messageSearchError}
+          onRetrySearch={retrySearch}
+          selectedChatId={selectedChatId}
+          connectedUserName={channelState?.connected_user_name ?? null}
+          composerDraftsByChatId={composerDraftsByChatId}
+          favoritedLeadIds={favoritedLeadIds}
+          onSelectChat={(chat) => {
+            setChatMenuPointerAnchor(null);
+            setOpenChatMenuChatId(null);
+            if (search) {
+              upsertChatLocally(chat);
+            }
+            setSelectedChatId(chat.id);
+          }}
+          onSelectMessageSearchResult={handleSelectMessageSearchResult}
+          openChatMenuChatId={openChatMenuChatId}
+          updatingChatStateId={updatingChatStateId}
+          onToggleChatMenu={handleToggleChatMenu}
+          onOpenChatMenuFromContext={handleOpenChatMenuFromContext}
+          chatMenuTriggerRefs={chatMenuTriggerRefs}
+        />
 
         <div
           className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-l-none lg:border-l-0 ${selectedChat ? 'flex' : 'hidden lg:flex'}`}
@@ -10259,655 +6623,117 @@ export default function WhatsAppInboxScreen() {
               </div>
           ) : (
             <>
-              <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
-                <div className="flex min-w-0 items-start gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      suppressAutoChatSelectionRef.current = true;
-                      selectedChatIdRef.current = null;
-                      chatIdFromUrlRef.current = null;
-                      setSelectedChatId(null);
-                    }}
-                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] lg:hidden"
-                    aria-label="Voltar para a lista de conversas"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                      <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
-                        {selectedChat.is_group ? <Users className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
-                        {!selectedChat.is_group && leadPanel?.id ? (
-                          <LeadFavoriteToggle
-                            leadId={leadPanel.id}
-                            favorito={favoritedLeadIds.has(leadPanel.id)}
-                            size="sm"
-                          />
-                        ) : null}
-                        <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
-                      </p>
-                      {!selectedChat.is_group && selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
-                        <StatusDropdown
-                          currentStatus={leadPanel.status_nome}
-                          leadId={leadPanel.id}
-                          onStatusChange={handleLeadStatusChange}
-                          statusOptions={leadStatuses}
-                          disabled={selectedChatLeadMutationLoading}
-                        />
-                      ) : null}
-                      {!selectedChat.is_group && selectedChatWasAutoLinked ? (
-                        <Badge tone="primary" size="sm" className="uppercase tracking-[0.12em]">
-                          Auto
-                        </Badge>
-                      ) : null}
-                      {!selectedChat.is_group && selectedChat.autonomous_attendance_status === 'active' ? (
-                        <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase">
-                          <Bot className="h-3 w-3" aria-hidden="true" />
-                          IA atendendo
-                        </OperationalStatusBadge>
-                      ) : !selectedChat.is_group && selectedChat.autonomous_attendance_status === 'handed_off' ? (
-                        <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase">
-                          <Bot className="h-3 w-3" aria-hidden="true" />
-                          IA encerrada
-                        </OperationalStatusBadge>
-                      ) : null}
-                    </div>
-                    <IconButton
-                      ref={threadActionsMenuTriggerRef}
-                      type="button"
-                      onClick={() => setThreadActionsMenuOpen((current) => !current)}
-                      variant={threadActionsMenuOpen ? 'secondary' : 'soft'}
-                      className="shrink-0 lg:hidden"
-                      aria-label="Abrir ações da conversa"
-                      aria-expanded={threadActionsMenuOpen}
-                      title="Ações da conversa"
-                     size="lg">
-                      <MoreHorizontal aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                  {!selectedChat.is_group ? (
-                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
-                      <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
-                      <WhatsAppPresenceIndicator chat={selectedChat} />
-                      {!selectedChatForPresentation?.saved_contact_name ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSaveContactName(selectedChatDisplayName);
-                            setSaveContactDialogOpen(true);
-                          }}
-                          className="text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                        >
-                          + Salvar contato
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSaveContactName(selectedChatForPresentation?.saved_contact_name || selectedChatDisplayName);
-                            setSaveContactDialogOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Renomear contato
-                        </button>
-                      )}
-                      {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
-                    </div>
-                  ) : null}
-                  {nextChatReminderSummary ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge
-                        tone={chatAgendaSummaryError
-                          ? 'warning'
-                          : chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete)
-                            ? 'danger'
-                            : 'neutral'}
-                        icon={Calendar}
-                        title={chatAgendaSummaryError ? 'Abra as informações do lead para tentar carregar a agenda novamente.' : undefined}
-                      >
-                        <span className="min-w-0 max-w-full truncate">{nextChatReminderSummary}</span>
-                      </Badge>
-                    </div>
-                  ) : null}
-                  </div>
-                </div>
-                <div className="hidden min-w-0 shrink-0 items-start lg:flex lg:justify-end">
-                  <div className="whatsapp-inbox-thread-actions flex min-w-0 items-center gap-2 lg:justify-end">
-                    <ButtonGroup className="whatsapp-inbox-action-group" role="group" aria-label="Ações da conversa">
-                    {!selectedChat.is_group && selectedChat.lead_id ? (
-                      <IconButton
-                        type="button"
-                        onClick={() => (
-                          isSelectedChatWaitingForQuote
-                            ? undefined
-                            :
-                          selectedChat.autonomous_attendance_status === 'active'
-                            ? void handleDeactivateAutonomousAttendance(selectedChat)
-                            : void handleActivateAutonomousAttendance(selectedChat)
-                        )}
-                        disabled={isSelectedChatWaitingForQuote}
-                        variant="icon"
-                        loading={assumingControlChatId === selectedChat.id}
-                        aria-label={isSelectedChatWaitingForQuote
-                          ? 'IA encerrada enquanto aguarda cotação'
-                          : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
-                        title={isSelectedChatWaitingForQuote
-                          ? 'IA encerrada enquanto aguarda cotação'
-                          : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}
-                        className={cx(
-                          'whatsapp-inbox-ai-toggle',
-                          selectedChat.autonomous_attendance_status === 'active'
-                            ? 'is-active'
-                            : 'is-inactive',
-                        )}
-                       size="md">
-                        {selectedChat.autonomous_attendance_status === 'active' ? (
-                          <Pause aria-hidden="true" />
-                        ) : (
-                          <Bot aria-hidden="true" />
-                        )}
-                      </IconButton>
-                    ) : null}
-                    <IconButton
-                      type="button"
-                      onClick={() => setChatFilesOpen(true)}
-                      variant={chatFilesOpen ? 'secondary' : 'ghost'}
-                      aria-label="Arquivos da conversa"
-                      title="Arquivos da conversa"
-                      size="md"
-                    >
-                      <FolderOpen className="kds-control-icon" aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      type="button"
-                      onClick={handleToggleChatMessageSearch}
-                      variant={chatMessageSearchOpen ? 'secondary' : 'ghost'}
-                      aria-label="Pesquisar mensagens neste chat"
-                      title="Pesquisar neste chat"
-                     size="md">
-                      <Search className="kds-control-icon" />
-                    </IconButton>
-                    <IconButton
-                      type="button"
-                      onClick={() => setScheduledMessagesPanelOpen(true)}
-                      variant={scheduledMessagesPanelOpen ? 'secondary' : 'ghost'}
-                      aria-label="Ver mensagens agendadas desta conversa"
-                      title="Mensagens agendadas desta conversa"
-                     size="md">
-                      <CalendarClock className="kds-control-icon" />
-                    </IconButton>
-                    <IconButton
-                      type="button"
-                      onClick={() => void handleCopyChatTranscript()}
-                      variant="ghost"
-                      aria-label="Copiar conversa formatada"
-                      title="Copiar conversa formatada"
-                      disabled={copyingTranscript}
-                     size="md">
-                      {copyingTranscript ? <Loader2 className="animate-spin" /> : <Copy aria-hidden="true" />}
-                    </IconButton>
-                    <IconButton
-                      type="button"
-                      onClick={() => void handleRecoverChatHistory()}
-                      variant="ghost"
-                      aria-label="Recuperar mensagens antigas do chat"
-                      title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
-                      disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}
-                     size="md">
-                      {syncingHistoryChatId === selectedChat.id ? <Loader2 className="animate-spin" /> : <Download aria-hidden="true" />}
-                    </IconButton>
-                    {!selectedChat.is_group ? <IconButton
-                      type="button"
-                      onClick={handleOpenFollowUpModal}
-                      variant="ghost"
-                      aria-label="Gerar follow-up com IA"
-                      title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
-                      disabled={Boolean(followUpGenerationDisabledReason)}
-                      size="md">
-                      {generatingFollowUp ? <Loader2 className="animate-spin" /> : <Sparkles className="kds-control-icon" />}
-                    </IconButton> : null}
-                    {!selectedChat.is_group ? <IconButton
-                      type="button"
-                      onClick={handleOpenLeadDrawer}
-                      variant="ghost"
-                      aria-label="Abrir informações do lead"
-                      title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
-                     size="md">
-                      <span className="relative inline-flex">
-                        <Info className="kds-control-icon" />
-                        {chatAgendaSummary.pendingCount > 0 ? (
-                          <span
-                            className="kds-sidebar-badge whatsapp-inbox-count-badge"
-                            aria-label={`${chatAgendaSummary.pendingCount} lembretes pendentes`}
-                          >
-                            {chatAgendaSummary.pendingCount > 9 ? '9+' : chatAgendaSummary.pendingCount}
-                          </span>
-                        ) : null}
-                      </span>
-                    </IconButton> : null}
-                    </ButtonGroup>
-                  </div>
-                </div>
-              </div>
+              <WhatsAppThreadHeader
+                selectedChat={selectedChat}
+                selectedChatForPresentation={selectedChatForPresentation}
+                selectedChatDisplayName={selectedChatDisplayName}
+                leadPanel={leadPanel}
+                leadStatuses={leadStatuses}
+                favoritedLeadIds={favoritedLeadIds}
+                selectedChatLeadMutationLoading={selectedChatLeadMutationLoading}
+                selectedChatWasAutoLinked={selectedChatWasAutoLinked}
+                isSelectedChatWaitingForQuote={isSelectedChatWaitingForQuote}
+                assumingControl={assumingControlChatId === selectedChat.id}
+                chatFilesOpen={chatFilesOpen}
+                chatMessageSearchOpen={chatMessageSearchOpen}
+                scheduledMessagesPanelOpen={scheduledMessagesPanelOpen}
+                copyingTranscript={copyingTranscript}
+                syncingHistory={syncingHistoryChatId === selectedChat.id}
+                historyRecoveryDisabledReason={historyRecoveryDisabledReason}
+                followUpGenerationDisabledReason={followUpGenerationDisabledReason}
+                generatingFollowUp={generatingFollowUp}
+                threadActionsMenuOpen={threadActionsMenuOpen}
+                threadActionsMenuTriggerRef={threadActionsMenuTriggerRef}
+                chatAgendaSummary={chatAgendaSummary}
+                nextChatReminderSummary={nextChatReminderSummary}
+                chatAgendaSummaryError={chatAgendaSummaryError}
+                onBack={() => {
+                  suppressAutoChatSelectionRef.current = true;
+                  selectedChatIdRef.current = null;
+                  chatIdFromUrlRef.current = null;
+                  setSelectedChatId(null);
+                }}
+                onLeadStatusChange={handleLeadStatusChange}
+                onSaveContact={(name) => {
+                  setSaveContactName(name);
+                  setSaveContactDialogOpen(true);
+                }}
+                onToggleAutonomousAttendance={() => {
+                  if (isSelectedChatWaitingForQuote) {
+                    return;
+                  }
+                  if (selectedChat.autonomous_attendance_status === 'active') {
+                    void handleDeactivateAutonomousAttendance(selectedChat);
+                  } else {
+                    void handleActivateAutonomousAttendance(selectedChat);
+                  }
+                }}
+                onOpenChatFiles={() => setChatFilesOpen(true)}
+                onToggleChatMessageSearch={handleToggleChatMessageSearch}
+                onOpenScheduledMessages={() => setScheduledMessagesPanelOpen(true)}
+                onCopyTranscript={() => void handleCopyChatTranscript()}
+                onRecoverHistory={() => void handleRecoverChatHistory()}
+                onOpenFollowUp={handleOpenFollowUpModal}
+                onOpenLeadDrawer={handleOpenLeadDrawer}
+                onToggleThreadActionsMenu={() => setThreadActionsMenuOpen((current) => !current)}
+              />
 
               {chatMessageSearchOpen ? (
-                <div className="border-b bg-[var(--bg-elevated)] px-5 py-3">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <SearchInput
-                        ref={chatMessageSearchInputRef}
-                        value={chatMessageSearchDraft}
-                        onChange={(event) => setChatMessageSearchDraft(event.target.value)}
-                        placeholder="Pesquisar mensagens neste chat"
-                        size="sm"
-                        autoComplete="off"
-                        onKeyDown={(event) => {
-                          if (event.key === 'Escape') {
-                            setChatMessageSearchOpen(false);
-                          }
-                        }}
-                      />
-                    <IconButton
-                      type="button"
-                        onClick={() => {
-                          setChatMessageSearchDraft('');
-                          setChatMessageSearchOpen(false);
-                        }}
-                        variant="ghost"
-                        aria-label="Fechar busca no chat"
-                        title="Fechar busca"
-                       size="md">
-                        <X aria-hidden="true" />
-                    </IconButton>
-                    </div>
-
-                    {chatMessageSearch ? (
-                      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
-                        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
-                          <span>
-                            {chatMessageSearchError
-                              ? 'Busca indisponível'
-                              : searchingChatMessages
-                              ? 'Buscando neste chat...'
-                              : `${chatMessageSearchResults.length} resultado${chatMessageSearchResults.length === 1 ? '' : 's'}`}
-                          </span>
-                          {searchingChatMessages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                        </div>
-
-                        {chatMessageSearchError ? (
-                          <div className="flex items-start gap-2 px-3 py-3 text-sm text-[var(--text-secondary)]" role="alert">
-                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-warning)]" aria-hidden="true" />
-                            <div className="min-w-0">
-                              <p>{chatMessageSearchError}</p>
-                              <button
-                                type="button"
-                                className="mt-2 font-medium text-[var(--text-link)] hover:underline"
-                                onClick={retryChatMessageSearch}
-                              >
-                                Tentar novamente
-                              </button>
-                            </div>
-                          </div>
-                        ) : !searchingChatMessages && chatMessageSearchResults.length === 0 ? (
-                          <div className="px-3 py-3 text-sm text-[var(--text-secondary)]">
-                            Nenhuma mensagem encontrada neste chat.
-                          </div>
-                        ) : (
-                          <div className="max-h-52 overflow-y-auto py-1">
-                            {chatMessageSearchResults.map((result) => {
-                              const messagePreviewText = getMessageSearchPreviewText(result.message);
-                              const messagePreviewIconType = getChatPreviewIconType(messagePreviewText);
-                              if (!messagePreviewText) {
-                                return null;
-                              }
-
-                              return (
-                                <button
-                                  key={result.message.id}
-                                  type="button"
-                                  onClick={() => handleSelectChatMessageSearchResult(result)}
-                                  className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none"
-                                >
-                                  <span className="min-w-0">
-                                    <span className="block truncate text-sm font-medium text-[var(--text-primary)]">
-                                      {messagePreviewIconType ? <ChatPreviewIcon type={messagePreviewIconType} /> : messagePreviewText}
-                                    </span>
-                                    <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
-                                      {result.message.direction === 'outbound' ? 'Você' : 'Contato'}
-                                    </span>
-                                  </span>
-                                  <span className="shrink-0 pt-0.5 text-[11px] font-medium text-[var(--text-muted)]">
-                                    {formatMessageTime(result.message.message_at)}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-[var(--text-muted)]">
-                        Digite um trecho da mensagem, legenda ou transcrição para localizar no histórico deste chat.
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <WhatsAppChatMessageSearch
+                  inputRef={chatMessageSearchInputRef}
+                  draft={chatMessageSearchDraft}
+                  query={chatMessageSearch}
+                  searching={searchingChatMessages}
+                  error={chatMessageSearchError}
+                  results={chatMessageSearchResults}
+                  onDraftChange={setChatMessageSearchDraft}
+                  onClose={() => {
+                    setChatMessageSearchDraft('');
+                    setChatMessageSearchOpen(false);
+                  }}
+                  onRetry={retryChatMessageSearch}
+                  onSelect={handleSelectChatMessageSearchResult}
+                />
               ) : null}
 
-              <div
-                ref={messagesContainerRef}
-                onScroll={handleMessagesScroll}
-                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
-              >
-                {messageLoadErrorNotice}
-                {(hasOlderMessages || loadingOlderMessages) && (
-                  <div className="sticky top-0 z-[1] flex justify-center pb-3">
-                    <Button
-                      type="button"
-                      onClick={() => void handleLoadOlderMessages()}
-                      disabled={loadingOlderMessages}
-                      variant="secondary"
-                      size="sm"
-                      className="whatsapp-inbox-load-older"
-                    >
-                      {loadingOlderMessages ? (
-                        <Loader2 className="animate-spin" />
-                      ) : (
-                        <ChevronUp className="kds-control-icon" />
-                      )}
-                      {loadingOlderMessages ? 'Carregando...' : 'Carregar mais'}
-                    </Button>
-                  </div>
-                )}
-
-                {loadingMessages && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Carregando mensagens...
-                  </div>
-                ) : !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Atualizando histórico desta conversa...
-                  </div>
-                ) : !messageLoadError && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                    Nenhuma mensagem carregada para esta conversa.
-                  </div>
-                ) : (
-                  messageTimelineItems.map((item) => {
-                    if (item.type === 'day') {
-                      return (
-                        <div key={item.key} className="flex w-full justify-center py-1">
-                          <div className="whatsapp-inbox-day-divider rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm">
-                            {item.label}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    if (item.type === 'media-group') {
-                      const groupMessages = item.messages.filter(Boolean);
-                      if (groupMessages.length === 0) {
-                        return null;
-                      }
-
-                      const lastMessage = groupMessages[groupMessages.length - 1];
-
-                      const groupHighlighted = groupMessages.some((message) => message.id === highlightedMessageId);
-                      const groupMediaSendingMessage = groupMessages.find((message) => (
-                        message.id === mediaUploadProgress?.attachmentId || message.id === retryingMessageId
-                      )) ?? groupMessages.find((message) => isMediaSendingMessage(
-                        message,
-                        mediaUploadProgress,
-                        retryingMessageId === message.id,
-                      ));
-                      const groupMediaSendingProgress = groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id
-                        ? mediaUploadProgress.progress
-                        : null;
-                      const canCancelGroupMediaUpload = Boolean(
-                        groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id,
-                      );
-                      const mediaGroupMeta = (
-                        <div className={`whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center gap-2 px-1 text-[11px] font-medium ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                            <span>{formatMessageTime(lastMessage.message_at)}</span>
-                            {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
-                          </span>
-                        </div>
-                      );
-
-                      return (
-                        <div
-                          key={item.key}
-                          ref={(node) => {
-                            for (const groupMessage of groupMessages) {
-                              if (node) {
-                                messageBubbleRefs.current[groupMessage.id] = node;
-                              } else {
-                                delete messageBubbleRefs.current[groupMessage.id];
-                              }
-                            }
-                          }}
-                          className={`message-bubble-row flex w-full ${getMessageRowClasses(lastMessage.direction)}`}
-                        >
-                          <div className="relative max-w-[82%] pb-2">
-                            {isGroupChatMessage(selectedChat, lastMessage) && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
-                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
-                            ) : null}
-                            <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              <WhatsAppMediaGroupBody
-                                messages={groupMessages}
-                                onOpenImage={setLightboxMessageId}
-                                mediaSendingMessageId={groupMediaSendingMessage?.id}
-                                mediaSendingProgress={groupMediaSendingProgress}
-                                onCancelMediaUpload={canCancelGroupMediaUpload ? handleCancelMediaUpload : undefined}
-                              />
-                            </div>
-                            {mediaGroupMeta}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    const { message } = item;
-                    if (!message) {
-                      return null;
-                    }
-
-                    const reactions = getMessageReactions(message);
-                    const reactionTooltipText = getReactionTooltipText(message);
-                    const showEditAction = canEditOutboundMessage(message);
-                    const showDeleteAction = canDeleteOutboundMessage(message);
-                    const showReplyForwardActions = canReplyOrForwardMessage(message);
-                    const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
-                    const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
-                    const isGroupMessage = isGroupChatMessage(selectedChat, message);
-                    const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
-                    const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
-                    const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
-                      const messageMeta = (
-                        <div className={cx(
-                        'whatsapp-inbox-message-meta flex w-full flex-wrap items-center gap-1.5 text-[11px] font-medium',
-                        reactions.length > 0
-                          ? `mt-0 px-1 ${messageMetaJustify}`
-                          : isGroupMessage
-                          ? `mt-1 px-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`
-                          : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message)
-                            ? `mt-1 px-1 ${messageMetaJustify}`
-                            : `mt-2 px-1 ${messageMetaJustify}`,
-                      )}>
-                        <span className={`${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
-                          <span>{formatMessageTime(message.message_at)}</span>
-                          {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
-                        </span>
-                        {message.direction === 'outbound' || showEditAction || showDeleteAction || showReplyForwardActions ? (
-                          <button
-                            ref={(node) => {
-                              if (node) {
-                                messageActionTriggerRefs.current[message.id] = node;
-                              } else {
-                                delete messageActionTriggerRefs.current[message.id];
-                              }
-                            }}
-                            type="button"
-                            onClick={() => handleToggleMessageActionMenu(message.id)}
-                            className={cx(
-                              `${messageMetaActionsOrder} inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]`,
-                              openMessageActionMenuMessageId === message.id
-                                ? 'bg-[var(--bg-hover)] opacity-100'
-                                : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
-                            )}
-                            aria-label="Mais acoes da mensagem"
-                            aria-expanded={openMessageActionMenuMessageId === message.id}
-                            title="Mais acoes"
-                          >
-                            <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
-                          </button>
-                        ) : null}
-                        {showReplyForwardActions ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleToggleStarMessage(message)}
-                            disabled={starringMessageIds.has(message.id)}
-                            aria-busy={starringMessageIds.has(message.id)}
-                            className={cx(
-                              'order-2 inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] disabled:pointer-events-none disabled:opacity-60',
-                              isMessageStarred(message)
-                                ? 'text-[var(--accent-gold)]'
-                                : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
-                            )}
-                            aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
-                            title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
-                          >
-                            {starringMessageIds.has(message.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />}
-                        </button>
-                        ) : null}
-                        {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                          <span className="order-4 inline-flex">
-                            <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
-                          </span>
-                        ) : null}
-                        {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
-                          <span className="order-4 whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Reenviando</span>
-                          </span>
-                        ) : null}
-                      </div>
-                    );
-
-                    return (
-                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`}>
-                        <div
-                          ref={(node) => {
-                            if (node) {
-                              reactionAnchorRefs.current[message.id] = node;
-                              messageBubbleRefs.current[message.id] = node;
-                            } else {
-                              delete reactionAnchorRefs.current[message.id];
-                              delete messageBubbleRefs.current[message.id];
-                            }
-                          }}
-                          className="relative max-w-[80%]"
-                        >
-                          <div className="relative">
-                            {message.direction !== 'system' && message.external_message_id ? (
-                              <>
-                                <button
-                                  ref={(node) => {
-                                    if (node) {
-                                      reactionTriggerRefs.current[message.id] = node;
-                                    } else {
-                                      delete reactionTriggerRefs.current[message.id];
-                                    }
-                                  }}
-                                  type="button"
-                                  onClick={() => handleToggleReactionPicker(message.id)}
-                                  className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--bg-hover)] focus:opacity-100`}
-                                  aria-label="Reagir à mensagem"
-                                  title="Reagir"
-                                >
-                                  <Smile className="h-4 w-4" />
-                                </button>
-
-                              </>
-                            ) : null}
-
-                            {isGroupMessage && message.sender_name ? (
-                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
-                            ) : null}
-                            <div
-                              className={cx(
-                                isBubblelessMediaMessage(message)
-                                  ? hasVisualMediaCaption(message)
-                                    ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                                    : 'whatsapp-inbox-media-message'
-                                  : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`,
-                                highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
-                              )}
-                              onContextMenu={(event) => {
-                                if (message.direction !== 'outbound' && !showEditAction && !showDeleteAction && !showReplyForwardActions) {
-                                  return;
-                                }
-
-                                event.preventDefault();
-                                handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
-                              }}
-                            >
-                              <WhatsAppMessageBody
-                                message={message}
-                                onOpenImage={setLightboxMessageId}
-                                onOpenQuotedMessage={handleOpenQuotedMessage}
-                                onTranscribe={(target) => void handleTranscribeMessage(target)}
-                                onSelectInteractiveReply={handleSelectInteractiveReply}
-                                onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
-                                onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
-                                sharedContactActionKey={sharedContactActionKey}
-                                transcribing={transcribingMessageId === message.id}
-                                mediaSending={mediaSending}
-                                mediaSendingProgress={mediaSendingProgress}
-                                onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
-                              />
-                            </div>
-
-                          </div>
-
-                          {reactions.length > 0 ? (
-                            <div className="relative mt-1 min-h-[28px]">
-                              <div className={cx(
-                                'absolute inset-y-0 z-[1] flex max-w-[90%] items-center',
-                                message.direction === 'outbound' ? 'left-0' : 'right-0',
-                              )}>
-                                <div
-                                  className="flex max-w-full flex-wrap gap-1"
-                                  title={reactionTooltipText || undefined}
-                                >
-                                  {reactions.map((reaction) => (
-                                    <span
-                                      key={`${message.id}:${reaction.emoji}`}
-                                      className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
-                                    >
-                                      <span className="text-sm leading-none">{reaction.emoji}</span>
-                                      {reaction.count > 1 ? <span>{reaction.count}</span> : null}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                              {messageMeta}
-                            </div>
-                          ) : messageMeta}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
+              <WhatsAppMessageThread
+                messagesContainerRef={messagesContainerRef}
+                messageBubbleRefs={messageBubbleRefs}
+                reactionAnchorRefs={reactionAnchorRefs}
+                reactionTriggerRefs={reactionTriggerRefs}
+                messageActionTriggerRefs={messageActionTriggerRefs}
+                handleMessagesScroll={handleMessagesScroll}
+                messageLoadErrorNotice={messageLoadErrorNotice}
+                hasOlderMessages={hasOlderMessages}
+                loadingOlderMessages={loadingOlderMessages}
+                handleLoadOlderMessages={handleLoadOlderMessages}
+                loadingMessages={loadingMessages}
+                messageLoadError={messageLoadError}
+                threadReconcileChatId={threadReconcileChatId}
+                selectedChat={selectedChat}
+                messages={messages}
+                messageTimelineItems={messageTimelineItems}
+                highlightedMessageId={highlightedMessageId}
+                mediaUploadProgress={mediaUploadProgress}
+                retryingMessageId={retryingMessageId}
+                localOutgoingRetryPayloadRef={localOutgoingRetryPayloadRef}
+                setLightboxMessageId={setLightboxMessageId}
+                handleCancelMediaUpload={handleCancelMediaUpload}
+                openMessageActionMenuMessageId={openMessageActionMenuMessageId}
+                handleToggleMessageActionMenu={handleToggleMessageActionMenu}
+                starringMessageIds={starringMessageIds}
+                handleToggleStarMessage={(message) => void handleToggleStarMessage(message)}
+                setRetryPendingMessage={setRetryPendingMessage}
+                handleToggleReactionPicker={handleToggleReactionPicker}
+                handleOpenMessageActionMenuFromContext={handleOpenMessageActionMenuFromContext}
+                handleOpenQuotedMessage={handleOpenQuotedMessage}
+                handleTranscribeMessage={handleTranscribeMessage}
+                handleSelectInteractiveReply={handleSelectInteractiveReply}
+                handleOpenSharedContactChat={handleOpenSharedContactChat}
+                handleSaveSharedContact={handleSaveSharedContact}
+                sharedContactActionKey={sharedContactActionKey}
+                transcribingMessageId={transcribingMessageId}
+              />
               {removedAttachmentForUndo ? (
                 <div className="mx-2.5 mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] sm:mx-3">
                   <span className="truncate">Anexo removido: {removedAttachmentForUndo.file.name}</span>
@@ -10921,810 +6747,80 @@ export default function WhatsAppInboxScreen() {
                 </div>
               ) : null}
 
-              <div className="whatsapp-inbox-composer-area relative z-10 min-h-0 overflow-visible border-t p-2.5 sm:p-3">
-                <div className={`whatsapp-inbox-composer rounded-xl border transition-shadow ${composerFocused ? 'is-focused' : ''} ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept={attachmentInputAccept}
-                    className="hidden"
-                    onChange={handleAttachmentInputChange}
-                  />
-
-                  {voiceAttachment ? (
-                    <>
-                      <audio ref={voicePreviewAudioRef} src={voiceAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
-                      <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleClearAttachment()}
-                          className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                          aria-label="Descartar nota de voz"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-
-                          <button
-                            type="button"
-                            onClick={handleToggleVoicePreviewPlayback}
-                            className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
-                            aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
-                          >
-                            {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-                          </button>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1.5 flex items-center justify-between gap-3">
-                            <span className="whatsapp-inbox-voice-label">Nota de voz</span>
-                            <span className="whatsapp-inbox-voice-time">
-                              {formatDurationLabel(Math.max(0, Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : 0)))} / {formatDurationLabel(Math.max(0, Math.round(voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0)))}
-                            </span>
-                          </div>
-                          <VoiceComposerTimeline
-                            progress={
-                              (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0) > 0
-                                ? (voicePreviewCurrentTime / (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 1)) * 100
-                                : 0
-                            }
-                          />
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleClearAttachment();
-                            void handleStartVoiceRecording();
-                          }}
-                          className="whatsapp-inbox-voice-side-action is-accent inline-flex items-center justify-center rounded-full transition"
-                          aria-label="Regravar nota de voz"
-                        >
-                          <Mic className="h-4 w-4" />
-                        </button>
-
-                          <button
-                            type="button"
-                            onClick={handleSendCurrentVoiceRecording}
-                            disabled={Boolean(sendDisabledReason)}
-                            className="whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition"
-                            aria-label="Enviar nota de voz"
-                          >
-                            <SendHorizontal className="h-5 w-5" />
-                          </button>
-                      </div>
-                    </>
-                  ) : voiceRecordingState === 'recording' ? (
-                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
-                      <button
-                        type="button"
-                        onClick={handleCancelVoiceRecording}
-                        className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                        aria-label="Descartar gravação"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1.5 flex items-center justify-between gap-3">
-                          <span className="whatsapp-inbox-voice-label is-recording">
-                            <span className="whatsapp-inbox-voice-recording-dot" />
-                            Gravando
-                          </span>
-                          <span className="whatsapp-inbox-voice-time">{formatDurationLabel(voiceRecordingSeconds)}</span>
-                        </div>
-                        <VoiceComposerTimeline recording />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleStopVoiceRecording()}
-                        className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                        aria-label="Parar gravação"
-                      >
-                        <Pause className="h-4 w-4 fill-current" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleSendCurrentVoiceRecording}
-                        disabled={Boolean(sendDisabledReason)}
-                        className="whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition"
-                        aria-label="Parar e enviar nota de voz"
-                      >
-                        <SendHorizontal className="h-5 w-5" />
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {replyTargetMessage ? (
-                    <div className="mb-3 flex items-start gap-3 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2.5">
-                      <Reply className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">Respondendo</p>
-                        <p className="truncate text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(replyTargetMessage)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setReplyTargetMessage(null)}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)]"
-                        aria-label="Cancelar resposta"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {documentComposerAttachments.length > 0 && selectedDocumentComposerAttachment ? (() => {
-                    const selectedExtension = selectedDocumentComposerAttachment.file.name.split('.').pop()?.toUpperCase() || 'DOC';
-                    const selectedIsPdf = selectedDocumentComposerAttachment.file.type === 'application/pdf' || selectedExtension === 'PDF';
-                    const selectedUploading = sending && mediaUploadProgress?.attachmentId === selectedDocumentComposerAttachment.id;
-
-                    return (
-                      <div className="whatsapp-inbox-document-composer mb-3 overflow-hidden rounded-2xl border">
-                        <div className="whatsapp-inbox-document-composer-header flex items-center justify-between gap-3 border-b px-3 py-2.5">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{selectedDocumentComposerAttachment.file.name}</p>
-                            <p className="text-xs text-[var(--text-muted)]">
-                              {formatFileSize(selectedDocumentComposerAttachment.file.size) || 'Documento'} · {selectedExtension}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleClearAttachment()}
-                            className="whatsapp-inbox-media-composer-close inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
-                            aria-label="Remover documentos"
-                            title="Remover documentos"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-
-                        <div className="whatsapp-inbox-document-composer-stage relative flex min-h-[min(48vh,30rem)] items-center justify-center p-3 sm:p-4">
-                          {selectedIsPdf && selectedDocumentComposerAttachment.previewUrl ? (
-                            <iframe
-                              src={`${selectedDocumentComposerAttachment.previewUrl}#toolbar=1&navpanes=0`}
-                              title={selectedDocumentComposerAttachment.file.name}
-                              className="whatsapp-inbox-document-composer-pdf h-[min(46vh,28rem)] w-full rounded-xl border"
-                            />
-                          ) : (
-                            <div className="whatsapp-inbox-document-composer-fallback flex max-w-md flex-col items-center gap-3 rounded-2xl border px-6 py-8 text-center">
-                              <div className="whatsapp-inbox-document-composer-extension flex h-16 min-w-16 items-center justify-center rounded-2xl border px-3 text-sm font-bold tracking-[0.08em]">
-                                {selectedExtension.slice(0, 4)}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Preview indisponível para este formato</p>
-                                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                                  O arquivo será enviado normalmente. PDFs podem ser visualizados antes do envio.
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedUploading ? (
-                            <div className="absolute bottom-3 left-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--bg-canvas)_60%,transparent)] p-1 backdrop-blur">
-                              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
-                                <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress?.progress ?? 0}%` }} />
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <div className="whatsapp-inbox-document-composer-caption flex items-center gap-2 border-t px-3 py-2.5">
-                          <button
-                            type="button"
-                            onClick={handleToggleMediaDrawer}
-                            disabled={!selectedChat}
-                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                            aria-label="Emoji, GIF e figurinha"
-                            aria-expanded={mediaDrawerOpen}
-                            title="Emoji, GIF e figurinha"
-                          >
-                            <Smile className="h-5 w-5" />
-                          </button>
-                          <textarea
-                            ref={composerTextareaRef}
-                            rows={1}
-                            value={messageDraft}
-                            onChange={handleComposerChange}
-                            onPaste={handleComposerPaste}
-                            onKeyDown={handleComposerKeyDown}
-                            onClick={(event) => syncComposerSelection(event.currentTarget)}
-                            onKeyUp={(event) => syncComposerSelection(event.currentTarget)}
-                            onSelect={(event) => syncComposerSelection(event.currentTarget)}
-                            onFocus={(event) => {
-                              setComposerFocused(true);
-                              syncComposerSelection(event.currentTarget);
-                            }}
-                            onBlur={() => setComposerFocused(false)}
-                            placeholder="Digite uma mensagem"
-                            disabled={generatingFollowUp || sending}
-                            className="whatsapp-inbox-composer-input min-h-10 flex-1 resize-none border-none bg-transparent px-0 py-2 text-sm leading-6 focus:outline-none"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleComposerSubmit}
-                            disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                            className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60"
-                            aria-label="Enviar documento"
-                            title={sendDisabledReason ?? undefined}
-                          >
-                            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
-                          </button>
-                        </div>
-
-                        <div className="whatsapp-inbox-document-composer-strip flex items-center justify-center gap-2 border-t px-3 py-3">
-                          <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-1">
-                            {documentComposerAttachments.map((attachment) => {
-                              const extension = attachment.file.name.split('.').pop()?.toUpperCase() || 'DOC';
-                              const selected = attachment.id === selectedDocumentComposerAttachment.id;
-                              return (
-                                <div key={attachment.id} className={`whatsapp-inbox-document-composer-item relative flex h-14 min-w-[12rem] max-w-[16rem] shrink-0 items-center gap-2 overflow-hidden rounded-xl border px-2.5 transition ${selected ? 'is-selected' : ''}`}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedDocumentComposerAttachmentId(attachment.id)}
-                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                                    aria-label="Selecionar documento"
-                                  >
-                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-full border px-1 text-[10px] font-bold tracking-[0.08em]">
-                                      {extension.slice(0, 4)}
-                                    </span>
-                                    <span className="min-w-0">
-                                      <span className="block truncate text-xs font-semibold">{attachment.file.name}</span>
-                                      <span className="block truncate text-[11px] opacity-70">{formatFileSize(attachment.file.size) || extension}</span>
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleClearAttachment(attachment.id)}
-                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                                    aria-label="Remover documento"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            <button
-                              type="button"
-                              onClick={() => handleAttachmentMenuAction('document')}
-                              disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
-                              className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label="Adicionar documento"
-                              title="Adicionar documento"
-                            >
-                              <Plus className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })() : null}
-
-                  {visualComposerAttachments.length > 0 && selectedMediaComposerAttachment ? (
-                    <div className="whatsapp-inbox-media-composer mb-3 overflow-hidden rounded-2xl border">
-                      <div className="whatsapp-inbox-media-composer-stage relative flex min-h-[min(48vh,30rem)] items-center justify-center px-4 py-5 sm:px-8">
-                        <button
-                          type="button"
-                          onClick={() => handleClearAttachment()}
-                          className="whatsapp-inbox-media-composer-close absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full transition"
-                          aria-label="Fechar preview de mídia"
-                          title="Remover mídias"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-
-                        {selectedMediaComposerAttachment.kind === 'image' && selectedMediaComposerAttachment.previewUrl ? (
-                          <img
-                            src={selectedMediaComposerAttachment.previewUrl}
-                            alt={selectedMediaComposerAttachment.file.name}
-                            className="whatsapp-inbox-media-composer-preview max-h-[min(44vh,28rem)] max-w-full object-contain"
-                          />
-                        ) : selectedMediaComposerAttachment.kind === 'video' && selectedMediaComposerAttachment.previewUrl ? (
-                          <video
-                            controls
-                            preload="metadata"
-                            className="whatsapp-inbox-media-composer-preview max-h-[min(44vh,28rem)] max-w-full object-contain"
-                          >
-                            <source src={selectedMediaComposerAttachment.previewUrl} type={selectedMediaComposerAttachment.file.type || undefined} />
-                          </video>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
-                            <Images className="h-10 w-10" />
-                            <span className="text-sm font-semibold">Preview indisponível</span>
-                          </div>
-                        )}
-
-                        {sending && mediaUploadProgress ? (
-                          <div className="absolute bottom-3 left-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--bg-canvas)_60%,transparent)] p-1 backdrop-blur">
-                            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
-                              <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress.progress ?? 0}%` }} />
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="whatsapp-inbox-media-composer-caption flex items-center gap-2 border-t px-3 py-2.5">
-                        <button
-                          type="button"
-                          onClick={handleToggleMediaDrawer}
-                          disabled={!selectedChat}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                          aria-label="Emoji, GIF e figurinha"
-                          aria-expanded={mediaDrawerOpen}
-                          title="Emoji, GIF e figurinha"
-                        >
-                          <Smile className="h-5 w-5" />
-                        </button>
-                        <textarea
-                          ref={composerTextareaRef}
-                          rows={1}
-                          value={messageDraft}
-                          onChange={handleComposerChange}
-                          onPaste={handleComposerPaste}
-                          onKeyDown={handleComposerKeyDown}
-                          onClick={(event) => syncComposerSelection(event.currentTarget)}
-                          onKeyUp={(event) => syncComposerSelection(event.currentTarget)}
-                          onSelect={(event) => syncComposerSelection(event.currentTarget)}
-                          onFocus={(event) => {
-                            setComposerFocused(true);
-                            syncComposerSelection(event.currentTarget);
-                          }}
-                          onBlur={() => setComposerFocused(false)}
-                          placeholder="Digite uma mensagem"
-                          disabled={generatingFollowUp || sending}
-                          className="whatsapp-inbox-composer-input min-h-10 flex-1 resize-none border-none bg-transparent px-0 py-2 text-sm leading-6 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleComposerSubmit}
-                          disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                          className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label="Enviar mídia"
-                          title={sendDisabledReason ?? undefined}
-                        >
-                          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
-                        </button>
-                      </div>
-
-                      <div className="whatsapp-inbox-media-composer-strip flex items-center justify-center gap-2 border-t px-3 py-3">
-                        <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-1">
-                          {visualComposerAttachments.map((attachment) => {
-                            const selected = attachment.id === selectedMediaComposerAttachment.id;
-                            return (
-                              <div
-                                key={attachment.id}
-                                className={`whatsapp-inbox-media-composer-thumb relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border transition ${selected ? 'is-selected' : ''}`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedMediaComposerAttachmentId(attachment.id)}
-                                  className="flex h-full w-full items-center justify-center overflow-hidden"
-                                  aria-label={`Selecionar ${attachment.kind === 'image' ? 'imagem' : 'vídeo'}`}
-                                >
-                                  {attachment.kind === 'image' && attachment.previewUrl ? (
-                                    <img src={attachment.previewUrl} alt="" className="h-full w-full object-cover" />
-                                  ) : attachment.kind === 'video' && attachment.previewUrl ? (
-                                    <video preload="metadata" className="h-full w-full object-cover">
-                                      <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
-                                    </video>
-                                  ) : (
-                                    <Images className="h-5 w-5" />
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleClearAttachment(attachment.id)}
-                                  className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                                  aria-label="Remover mídia"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                          <button
-                            type="button"
-                            onClick={() => handleAttachmentMenuAction('media')}
-                            disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
-                            className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label="Adicionar mídia"
-                            title="Adicionar foto ou vídeo"
-                          >
-                            <Plus className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {voiceRecordingState === 'recording' || voiceAttachment || visualComposerAttachments.length > 0 || documentComposerAttachments.length > 0 ? null : (
-                  <>
-                  {(replySuggestionLoading || replySuggestionText || replySuggestionError) && !quickReplyMenuOpen ? (
-                    <div className="mb-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-sm">
-                      <div className="flex items-start gap-2">
-                        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                          {replySuggestionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                              Sugestão da IA
-                            </p>
-                            {replySuggestionText ? (
-                              <span className="hidden text-[11px] text-[var(--text-muted)] sm:inline">Tab para aplicar</span>
-                            ) : null}
-                          </div>
-                          {replySuggestionText ? (
-                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">{replySuggestionText}</p>
-                          ) : replySuggestionError ? (
-                            <p className="mt-1 text-sm leading-6 text-[var(--danger-text)]">{replySuggestionError}</p>
-                          ) : (
-                            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Analisando histórico e padrão de atendimento...</p>
-                          )}
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            {replySuggestionText ? (
-                              <Button type="button" size="sm"  onClick={handleApplyReplySuggestion}>
-                                Aplicar
-                              </Button>
-                            ) : null}
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              
-                              onClick={() => void handleGenerateReplySuggestion(true)}
-                              disabled={replySuggestionLoading}
-                            >
-                              {replySuggestionText ? 'Gerar outra' : 'Gerar sugestão'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              
-                              onClick={handleDismissReplySuggestion}
-                              disabled={replySuggestionLoading && !replySuggestionText}
-                            >
-                              Ignorar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                    <ButtonGroup
-                      className={cx('whatsapp-inbox-composer-button-group relative shrink-0', isComposerExpanded ? 'self-end' : 'self-center')}
-                      role="group"
-                      aria-label="Ações de composição da mensagem"
-                    >
-                      <Popover open={attachmentMenuOpen} onOpenChange={setAttachmentMenuOpen}>
-                        <PopoverTrigger
-                          onClick={() => {
-                            setComposerAiMenuOpen(false);
-                            setMediaDrawerOpen(false);
-                          }}
-                        >
-                          <IconButton
-                            variant="ghost"
-                            size="md"
-                            disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
-                            className={cx('whatsapp-inbox-composer-icon', attachmentMenuOpen && 'is-open')}
-                            aria-label="Anexar"
-                            aria-expanded={attachmentMenuOpen}
-                          >
-                            <Plus className={cx('kds-control-icon transition', attachmentMenuOpen && 'rotate-45')} />
-                          </IconButton>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="top"
-                          align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
-                          aria-label="Anexar arquivo"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleAttachmentMenuAction('document')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--text-secondary)]">
-                              <FileText className="h-4 w-4" />
-                            </span>
-                            <span>Documento</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAttachmentMenuAction('media')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              <Images className="h-4 w-4" />
-                            </span>
-                            <span>Fotos e vídeos</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAttachmentMenuAction('audio')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
-                              <FileAudio className="h-4 w-4" />
-                            </span>
-                            <span>Áudio</span>
-                          </button>
-                        </PopoverContent>
-                      </Popover>
-                        <IconButton
-                          variant="ghost"
-                          size="md"
-                          ref={mediaDrawerTriggerRef}
-                          onClick={handleToggleMediaDrawer}
-                          disabled={!selectedChat}
-                          className={cx('whatsapp-inbox-composer-icon', mediaDrawerOpen && 'is-open')}
-                          aria-label="Emoji, GIF e figurinha"
-                          aria-expanded={mediaDrawerOpen}
-                          title="Emoji, GIF e figurinha"
-                        >
-                          <Smile className="kds-control-icon" />
-                        </IconButton>
-
-                      <Popover open={composerAiMenuOpen} onOpenChange={setComposerAiMenuOpen}>
-                        <PopoverTrigger
-                          onClick={() => {
-                            setAttachmentMenuOpen(false);
-                            setMediaDrawerOpen(false);
-                          }}
-                        >
-                          <IconButton
-                            variant="ghost"
-                            size="md"
-                            disabled={(Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)) || rewritingComposer}
-                            className={cx('whatsapp-inbox-composer-icon', (composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || rewritingComposer || replySuggestionText) && 'is-open')}
-                            aria-label={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
-                            aria-expanded={composerAiMenuOpen}
-                            aria-busy={rewritingComposer || replySuggestionLoading}
-                            title={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
-                          >
-                            {replySuggestionLoading || rewritingComposer ? <Loader2 className="kds-control-icon animate-spin" /> : <Sparkles className="kds-control-icon" />}
-                          </IconButton>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="top"
-                          align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
-                          aria-label="Ações de inteligência artificial"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComposerAiMenuOpen(false);
-                              handleQuickRewriteComposerText('grammar');
-                            }}
-                            disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
-                            title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-                            </span>
-                            <span>Corrigir texto</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComposerAiMenuOpen(false);
-                              handleQuickRewriteComposerText('adapt_context');
-                            }}
-                            disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
-                            title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                            </span>
-                            <span>Adaptar ao contexto</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComposerAiMenuOpen(false);
-                              handleOpenComposerRewriteModal();
-                            }}
-                            disabled={Boolean(composerRewriteDisabledReason)}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
-                            title={composerRewriteDisabledReason ?? 'Abrir opções de reescrita'}
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
-                              <SlidersHorizontal className="h-4 w-4" />
-                            </span>
-                            <span>Mais opções</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setComposerAiMenuOpen(false);
-                              void handleGenerateReplySuggestion(true);
-                            }}
-                            disabled={Boolean(replySuggestionDisabledReason) || replySuggestionLoading}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
-                            title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
-                              {replySuggestionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                            </span>
-                            <span>Sugerir resposta</span>
-                          </button>
-                          <div className="my-1 border-t border-[var(--border-subtle)]" />
-                          <div className="grid grid-cols-3 gap-1 px-1 pb-1" aria-label="Formatacao do texto">
-                            <button
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setComposerAiMenuOpen(false);
-                                handleApplyComposerTextFormat('bold');
-                              }}
-                              disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label="Negrito"
-                              title="Negrito"
-                            >
-                              B
-                            </button>
-                            <button
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setComposerAiMenuOpen(false);
-                                handleApplyComposerTextFormat('italic');
-                              }}
-                              disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs italic transition disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label="Italico"
-                              title="Italico"
-                            >
-                              I
-                            </button>
-                            <button
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setComposerAiMenuOpen(false);
-                                handleApplyComposerTextFormat('strike');
-                              }}
-                              disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-full text-xs line-through transition disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label="Riscado"
-                              title="Riscado"
-                            >
-                              S
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </ButtonGroup>
-
-                    <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
-                      {quickReplyMenuOpen && (
-                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xl">
-                          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                              Mensagens rápidas por atalho
-                            </span>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              
-                              onMouseDown={(event) => {
-                                event.preventDefault();
-                                handleOpenQuickReplySettings();
-                              }}
-                            >
-                              Gerenciar
-                            </Button>
-                          </div>
-                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
-                            {quickReplyMenuHasResults ? (
-                              filteredQuickReplyOptions.map((option, index) => {
-                                const isActive = index === quickReplyActiveIndex;
-
-                                return (
-                                  <button
-                                    key={option.id}
-                                    type="button"
-                                    className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--brand-primary-soft)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
-                                    onMouseDown={(event) => {
-                                      event.preventDefault();
-                                      handleInsertQuickReply(option);
-                                    }}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="truncate text-sm font-semibold">{option.name}</span>
-                                        <code className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-gold-hover)]">
-                                          /{option.shortcut}
-                                        </code>
-                                      </div>
-                                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">
-                                        {option.preview}
-                                      </p>
-                                    </div>
-                                  </button>
-                                );
-                              })
-                            ) : (
-                              <div className="px-4 py-4 text-sm text-[var(--text-secondary)]">
-                                <p className="font-medium">{quickReplyEmptyStateMessage}</p>
-                                {quickRepliesLoadError ? (
-                                  <div className="mt-2 flex items-center justify-between gap-3">
-                                    <p className="text-xs leading-5 text-[var(--text-muted)]">
-                                      Tente novamente ou use <strong>Gerenciar</strong> para conferir as mensagens salvas.
-                                    </p>
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      size="sm"
-                                      onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => setQuickRepliesLoadRetryToken((current) => current + 1)}
-                                    >
-                                      Tentar novamente
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                                    Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <textarea
-                        ref={composerTextareaRef}
-                        rows={1}
-                        value={messageDraft}
-                        onChange={handleComposerChange}
-                        onPaste={handleComposerPaste}
-                        onKeyDown={handleComposerKeyDown}
-                        onClick={(event) => syncComposerSelection(event.currentTarget)}
-                        onKeyUp={(event) => syncComposerSelection(event.currentTarget)}
-                        onSelect={(event) => syncComposerSelection(event.currentTarget)}
-                        onFocus={(event) => {
-                          setComposerFocused(true);
-                          syncComposerSelection(event.currentTarget);
-                        }}
-                        onBlur={() => setComposerFocused(false)}
-                        placeholder="Digite uma mensagem"
-                        disabled={generatingFollowUp}
-                        className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
-                      <button
-                        type="button"
-                        onClick={handleComposerSubmit}
-                        disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
-                        title={sendDisabledReason ?? undefined}
-                      >
-                        {voiceRecordingState === 'requesting' ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : hasSendPayload ? (
-                          <SendHorizontal className="h-5 w-5" />
-                        ) : (
-                          <Mic className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  </>
-                  )}
-                </div>
-              </div>
+              <WhatsAppComposer
+                fileInputRef={fileInputRef}
+                attachmentInputAccept={attachmentInputAccept}
+                handleAttachmentInputChange={handleAttachmentInputChange}
+                composerFocused={composerFocused}
+                isVoiceComposerMode={isVoiceComposerMode}
+                isComposerExpanded={isComposerExpanded}
+                voiceAttachment={voiceAttachment}
+                voiceRecordingState={voiceRecordingState}
+                voiceRecordingSeconds={voiceRecordingSeconds}
+                voicePreviewPlaying={voicePreviewPlaying}
+                voicePreviewDuration={voicePreviewDuration}
+                voicePreviewCurrentTime={voicePreviewCurrentTime}
+                voicePreviewAudioRef={voicePreviewAudioRef}
+                sendDisabledReason={sendDisabledReason}
+                handleClearAttachment={handleClearAttachment}
+                handleToggleVoicePreviewPlayback={handleToggleVoicePreviewPlayback}
+                handleStartVoiceRecording={handleStartVoiceRecording}
+                handleSendCurrentVoiceRecording={handleSendCurrentVoiceRecording}
+                handleCancelVoiceRecording={handleCancelVoiceRecording}
+                handleStopVoiceRecording={handleStopVoiceRecording}
+                replyTargetMessage={replyTargetMessage}
+                setReplyTargetMessage={setReplyTargetMessage}
+                documentComposerAttachments={documentComposerAttachments}
+                selectedDocumentComposerAttachment={selectedDocumentComposerAttachment}
+                sending={sending}
+                mediaUploadProgress={mediaUploadProgress}
+                handleToggleMediaDrawer={handleToggleMediaDrawer}
+                selectedChat={selectedChat}
+                mediaDrawerOpen={mediaDrawerOpen}
+                setMediaDrawerOpen={setMediaDrawerOpen}
+                composerTextareaRef={composerTextareaRef}
+                messageDraft={messageDraft}
+                handleComposerChange={handleComposerChange}
+                handleComposerPaste={handleComposerPaste}
+                handleComposerKeyDown={handleComposerKeyDown}
+                syncComposerSelection={syncComposerSelection}
+                setComposerFocused={setComposerFocused}
+                generatingFollowUp={generatingFollowUp}
+                handleComposerSubmit={handleComposerSubmit}
+                hasSendPayload={hasSendPayload}
+                setSelectedDocumentComposerAttachmentId={setSelectedDocumentComposerAttachmentId}
+                handleAttachmentMenuAction={handleAttachmentMenuAction}
+                visualComposerAttachments={visualComposerAttachments}
+                selectedMediaComposerAttachment={selectedMediaComposerAttachment}
+                setSelectedMediaComposerAttachmentId={setSelectedMediaComposerAttachmentId}
+                attachmentMenuOpen={attachmentMenuOpen}
+                setAttachmentMenuOpen={setAttachmentMenuOpen}
+                mediaDrawerTriggerRef={mediaDrawerTriggerRef}
+                composerAiMenuOpen={composerAiMenuOpen}
+                setComposerAiMenuOpen={setComposerAiMenuOpen}
+                composerRewriteModalOpen={composerRewriteModalOpen}
+                composerRewriteDisabledReason={composerRewriteDisabledReason}
+                replySuggestionDisabledReason={replySuggestionDisabledReason}
+                rewritingComposer={rewritingComposer}
+                replySuggestionLoading={replySuggestionLoading}
+                replySuggestionText={replySuggestionText}
+                replySuggestionError={replySuggestionError}
+                handleOpenComposerRewriteModal={handleOpenComposerRewriteModal}
+                handleQuickRewriteComposerText={handleQuickRewriteComposerText}
+                handleApplyReplySuggestion={handleApplyReplySuggestion}
+                handleDismissReplySuggestion={handleDismissReplySuggestion}
+                handleGenerateReplySuggestion={handleGenerateReplySuggestion}
+                handleApplyComposerTextFormat={handleApplyComposerTextFormat}
+                quickReplyMenuOpen={quickReplyMenuOpen}
+                quickReplyMenuHasResults={quickReplyMenuHasResults}
+                filteredQuickReplyOptions={filteredQuickReplyOptions}
+                quickReplyActiveIndex={quickReplyActiveIndex}
+                handleOpenQuickReplySettings={handleOpenQuickReplySettings}
+                handleInsertQuickReply={handleInsertQuickReply}
+                quickReplyEmptyStateMessage={quickReplyEmptyStateMessage}
+                quickRepliesLoadError={quickRepliesLoadError}
+                setQuickRepliesLoadRetryToken={setQuickRepliesLoadRetryToken}
+              />
             </>
           )}
         </div>
@@ -11773,84 +6869,38 @@ export default function WhatsAppInboxScreen() {
             />
           ) : null}
 
-        {forwardingMessage ? (
-          <Dialog
-            open
-            onOpenChange={(open) => {
-              if (!open) handleCloseForwardMessageModal();
-            }}
-            size="sm"
-            closeOnEscape={false}
-            closeOnOverlay={false}
-            aria-label="Encaminhar mensagem"
-            className="comm-whatsapp-overlay"
-          >
-              <DialogHeader onClose={handleCloseForwardMessageModal}>
-                <div>
-                  <DialogTitle>Encaminhar mensagem</DialogTitle>
-                  <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</p>
-                </div>
-              </DialogHeader>
-              <DialogBody className="space-y-3">
-                <SearchInput
-                  value={forwardSearch}
-                  onChange={(event) => setForwardSearch(event.target.value)}
-                  placeholder="Buscar conversa"
-                />
-                <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
-                  {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
-                    const isSelected = forwardingTargetIds.includes(chat.id);
-                    return (
-                      <button
-                        key={chat.id}
-                        type="button"
-                        onClick={() => handleToggleForwardTarget(chat.id)}
-                        disabled={forwardingInProgress}
-                        className={cx(
-                          'flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70',
-                          isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : '',
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
-                            <LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />
-                            {getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}
-                          </p>
-                          <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
-                        </div>
-                        {isSelected ? (
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]">
-                            <Check className="h-3 w-3" />
-                          </span>
-                        ) : (
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
-                        )}
-                      </button>
-                    );
-                  }) : (
-                    <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-secondary)]">
-                      Nenhuma conversa encontrada.
-                    </div>
-                  )}
-                </div>
-              </DialogBody>
-              <DialogFooter className="gap-2">
-                <Button variant="secondary" onClick={handleCloseForwardMessageModal} disabled={forwardingInProgress}>
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => void handleForwardToSelectedChats()}
-                  loading={forwardingInProgress}
-                  disabled={forwardingInProgress || forwardingTargetIds.length === 0}
-                >
-                  {forwardingTargetIds.length > 0
-                    ? `Encaminhar para ${forwardingTargetIds.length} ${forwardingTargetIds.length === 1 ? 'conversa' : 'conversas'}`
-                    : 'Encaminhar'}
-                </Button>
-              </DialogFooter>
-          </Dialog>
-        ) : null}
+        <WhatsAppInboxDialogs
+          forwardingMessage={forwardingMessage}
+          forwardSearch={forwardSearch}
+          forwardTargetChats={forwardTargetChats}
+          forwardingTargetIds={forwardingTargetIds}
+          forwardingInProgress={forwardingInProgress}
+          connectedUserName={channelState?.connected_user_name ?? null}
+          favoritedLeadIds={favoritedLeadIds}
+          onCloseForwardMessage={handleCloseForwardMessageModal}
+          onForwardSearchChange={setForwardSearch}
+          onToggleForwardTarget={handleToggleForwardTarget}
+          onForwardToSelectedChats={() => void handleForwardToSelectedChats()}
+          chatPendingDeletion={chatPendingDeletion}
+          deletingChatId={deletingChatId}
+          onCloseChatDeletion={() => setChatPendingDeletion(null)}
+          onDeleteChat={handleDeleteChat}
+          messagePendingDeletion={messagePendingDeletion}
+          deletingMessageId={deletingMessageId}
+          onCloseMessageDeletion={() => setMessagePendingDeletion(null)}
+          onDeleteMessage={handleDeleteMessage}
+          retryPendingMessage={retryPendingMessage}
+          retryingMessageId={retryingMessageId}
+          onCloseRetryMessage={() => setRetryPendingMessage(null)}
+          onRetryMediaMessage={handleRetryMediaMessage}
+          saveContactDialogOpen={saveContactDialogOpen}
+          savedContactNameExists={Boolean(selectedChatForPresentation?.saved_contact_name)}
+          saveContactName={saveContactName}
+          savingContact={savingContact}
+          onCloseSaveContact={() => setSaveContactDialogOpen(false)}
+          onSaveContactNameChange={setSaveContactName}
+          onSaveContact={() => void handleSaveContactToPhonebook()}
+        />
 
         {composerRewriteModalOpen ? (
           <WhatsAppComposerRewriteModal
@@ -11964,96 +7014,6 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        <ConfirmDialog
-          open={Boolean(chatPendingDeletion)}
-          onOpenChange={(open) => {
-            if (!open) setChatPendingDeletion(null);
-          }}
-          onConfirm={async () => {
-            if (!chatPendingDeletion) return;
-            await handleDeleteChat(chatPendingDeletion);
-            setChatPendingDeletion(null);
-          }}
-          title="Excluir conversa"
-          description="Excluir esta conversa da Inbox? Novas mensagens recebidas do contato podem reabrir a conversa."
-          confirmLabel="Excluir"
-          destructive
-          loading={Boolean(chatPendingDeletion && deletingChatId === chatPendingDeletion.id)}
-        />
-
-        <ConfirmDialog
-          open={Boolean(messagePendingDeletion)}
-          onOpenChange={(open) => {
-            if (!open) setMessagePendingDeletion(null);
-          }}
-          onConfirm={async () => {
-            if (!messagePendingDeletion) return;
-            await handleDeleteMessage(messagePendingDeletion);
-            setMessagePendingDeletion(null);
-          }}
-          title="Apagar mensagem"
-          description="Apagar esta mensagem no WhatsApp para todos?"
-          confirmLabel="Apagar"
-          destructive
-          loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)}
-        />
-
-        <ConfirmDialog
-          open={Boolean(retryPendingMessage)}
-          onOpenChange={(open) => {
-            if (!open) setRetryPendingMessage(null);
-          }}
-          onConfirm={async () => {
-            if (!retryPendingMessage) return;
-            await handleRetryMediaMessage(retryPendingMessage);
-            setRetryPendingMessage(null);
-          }}
-          title="Reenviar mensagem"
-          description="Confirme que a mensagem anterior realmente não chegou no WhatsApp antes de reenviar. Reenviar uma mensagem que já foi entregue cria uma duplicata para o contato."
-          confirmLabel="Reenviar mesmo assim"
-          loading={Boolean(retryPendingMessage && retryingMessageId === retryPendingMessage.id)}
-        />
-
-        <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">
-          <DialogHeader onClose={() => setSaveContactDialogOpen(false)} showCloseButton>
-            <DialogTitle>{selectedChatForPresentation?.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="space-y-4">
-            <DialogDescription>
-              {selectedChatForPresentation?.saved_contact_name
-                ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'
-                : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}
-            </DialogDescription>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">
-                Nome do contato
-              </label>
-              <Input
-                id="save-contact-name"
-                type="text"
-                value={saveContactName}
-                onChange={(e) => setSaveContactName(e.target.value)}
-                placeholder="Nome do contato"
-                autoFocus
-                disabled={savingContact}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !savingContact) {
-                    void handleSaveContactToPhonebook();
-                  }
-                }}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSaveContactDialogOpen(false)} disabled={savingContact}>
-                Cancelar
-              </Button>
-              <Button variant="primary" onClick={handleSaveContactToPhonebook} loading={savingContact} disabled={savingContact}>
-                {selectedChatForPresentation?.saved_contact_name ? 'Renomear' : 'Salvar'}
-              </Button>
-            </div>
-          </DialogBody>
-        </Dialog>
-
         {leadDrawerOpen && !selectedChat?.is_group ? (
           <WhatsAppLeadDrawer
             isOpen
@@ -12163,132 +7123,38 @@ export default function WhatsAppInboxScreen() {
 
         </Suspense>
 
-        <PanelPopoverShell
-          ref={reactionPickerRef}
-          isOpen={Boolean(openReactionPickerMessage && reactionPickerPosition)}
-          position={reactionPickerPosition}
-          onClose={() => setOpenReactionPickerMessageId(null)}
-          ariaLabel="Seletor de reacoes da mensagem"
-          className="before:hidden border-none bg-transparent p-0 shadow-none"
-          style={{
-            width: REACTION_PICKER_WIDTH_PX,
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 6,
-            overflow: 'visible',
-            borderRadius: 9999,
-            padding: '6px 8px',
-            border: '1px solid var(--border-default)',
-            background: 'var(--bg-elevated)',
-            boxShadow: 'var(--shadow-popover)',
-          }}
-        >
-          {openReactionPickerMessage
-            ? REACTION_OPTIONS.map((emoji) => {
-                const selected = getOwnReactionEmoji(openReactionPickerMessage) === emoji;
-                return (
-                  <button
-                    key={`${openReactionPickerMessage.id}:${emoji}`}
-                    type="button"
-                    onClick={() => void handleReactToMessage(openReactionPickerMessage, emoji)}
-                    disabled={reactingMessageIds.has(openReactionPickerMessage.id)}
-                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-[1.45rem] leading-none transition ${selected ? 'bg-[var(--brand-primary-soft)] scale-105' : 'hover:bg-[var(--bg-hover)]'}`}
-                    aria-label={`Reagir com ${emoji}`}
-                  >
-                    {emoji}
-                  </button>
-                );
-              })
-            : null}
-        </PanelPopoverShell>
-
-        <PanelPopoverShell
-          ref={messageActionMenuRef}
-          isOpen={Boolean(openMessageActionMenuMessage && messageActionMenuPosition)}
-          position={messageActionMenuPosition}
-          onClose={() => {
+        <WhatsAppMessagePopovers
+          reactionPickerRef={reactionPickerRef}
+          reactionPickerPosition={reactionPickerPosition}
+          openReactionPickerMessage={openReactionPickerMessage}
+          reactionOptions={REACTION_OPTIONS}
+          reactingMessageIds={reactingMessageIds}
+          onCloseReactionPicker={() => setOpenReactionPickerMessageId(null)}
+          onReactToMessage={(message, emoji) => void handleReactToMessage(message, emoji)}
+          messageActionMenuRef={messageActionMenuRef}
+          messageActionMenuPosition={messageActionMenuPosition}
+          openMessageActionMenuMessage={openMessageActionMenuMessage}
+          starringMessageIds={starringMessageIds}
+          deletingMessageId={deletingMessageId}
+          onCloseMessageActionMenu={() => {
             setMessageActionMenuPointerAnchor(null);
             setOpenMessageActionMenuMessageId(null);
           }}
-          ariaLabel="Menu da mensagem"
-          className="before:hidden overflow-y-auto rounded-2xl border-[var(--border-default)] bg-[var(--bg-elevated)] p-1 shadow-2xl"
-          style={{ width: messageActionMenuPosition?.width ?? 268, maxHeight: messageActionMenuPosition?.maxHeight }}
-        >
-          {openMessageActionMenuMessage ? (
-            <div className="flex flex-col gap-1">
-              {openMessageActionMenuMessage.direction === 'outbound' ? (
-                <button
-                  type="button"
-                  onClick={() => handleOpenMessageDetails(openMessageActionMenuMessage)}
-                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                >
-                  <Info className="h-4 w-4 shrink-0" />
-                  <span>Dados da mensagem</span>
-                </button>
-              ) : null}
-              {canReplyOrForwardMessage(openMessageActionMenuMessage) ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleReplyToMessage(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                  >
-                    <Reply className="h-4 w-4 shrink-0" />
-                    <span>Responder mensagem</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenForwardMessageModal(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                  >
-                    <Forward className="h-4 w-4 shrink-0" />
-                    <span>Encaminhar mensagem</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleToggleStarMessage(openMessageActionMenuMessage);
-                      setOpenMessageActionMenuMessageId(null);
-                      setMessageActionMenuPointerAnchor(null);
-                    }}
-                    disabled={starringMessageIds.has(openMessageActionMenuMessage.id)}
-                    className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:pointer-events-none disabled:opacity-60"
-                  >
-                    {starringMessageIds.has(openMessageActionMenuMessage.id) ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Star className={cx('h-4 w-4 shrink-0', isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : '')} />}
-                    <span>{isMessageStarred(openMessageActionMenuMessage) ? 'Remover estrela' : 'Estrelar mensagem'}</span>
-                  </button>
-                </>
-              ) : null}
-              {canEditOutboundMessage(openMessageActionMenuMessage) ? (
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditMessageModal(openMessageActionMenuMessage)}
-                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
-                >
-                  <Pencil className="h-4 w-4 shrink-0" />
-                  <span>{openMessageActionMenuMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda'}</span>
-                </button>
-              ) : null}
-              {canDeleteOutboundMessage(openMessageActionMenuMessage) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMessageActionMenuPointerAnchor(null);
-                    setOpenMessageActionMenuMessageId(null);
-                    setMessagePendingDeletion(openMessageActionMenuMessage);
-                  }}
-                  disabled={deletingMessageId === openMessageActionMenuMessage.id}
-                  className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
-                >
-                  {deletingMessageId === openMessageActionMenuMessage.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
-                  <span>Apagar mensagem</span>
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </PanelPopoverShell>
+          onOpenMessageDetails={handleOpenMessageDetails}
+          onReplyToMessage={handleReplyToMessage}
+          onOpenForwardMessageModal={handleOpenForwardMessageModal}
+          onToggleStarMessage={(message) => {
+            void handleToggleStarMessage(message);
+            setOpenMessageActionMenuMessageId(null);
+            setMessageActionMenuPointerAnchor(null);
+          }}
+          onOpenEditMessageModal={handleOpenEditMessageModal}
+          onRequestDeleteMessage={(message) => {
+            setMessageActionMenuPointerAnchor(null);
+            setOpenMessageActionMenuMessageId(null);
+            setMessagePendingDeletion(message);
+          }}
+        />
 
         <PanelPopoverShell
           ref={chatMenuRef}

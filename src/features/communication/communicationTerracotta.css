@@ -1027,3 +1027,17 @@
   background: var(--bg-elevated);
   color: var(--text-secondary);
 }
+
+.comm-whatsapp-reaction-picker {
+  display: flex;
+  width: 15.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1-5);
+  overflow: visible;
+  border: 1px solid var(--border-default);
+  border-radius: 9999px;
+  padding: var(--space-1-5) var(--space-2);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-popover);
+}

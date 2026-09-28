@@ -1,3 +1,14 @@
+export const INBOX_POLLING_INTERVALS = {
+  chats: 8000,
+  maxChatIdle: 30000,
+  maxChatBackoff: 60000,
+  archivedChatCount: 30000,
+  messages: 5000,
+  messageSafetyNet: 20000,
+  operationalState: 30000,
+  operationalStateDegraded: 10000,
+} as const;
+
 /**
  * Intervalo de polling de mensagens: quando o Realtime confirmou SUBSCRIBED,
  * o polling vira só uma rede de segurança (intervalo mais longo). Quando o

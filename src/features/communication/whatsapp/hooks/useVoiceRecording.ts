@@ -1,19 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { CommWhatsAppMediaSendKind } from '../data';
+import type { PendingAttachment } from '../domain/outgoingMessageTypes';
 import { toast } from '../../../../lib/toast';
 
 export type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
-
-type PendingAttachment = {
-  id: string;
-  file: File;
-  kind: CommWhatsAppMediaSendKind;
-  durationSeconds?: number;
-  previewUrl?: string | null;
-  waveform?: number[];
-  waveformPayload?: string | null;
-};
 
 const DEFAULT_WAVEFORM = [0.4, 0.6, 0.8, 0.6, 0.4, 0.6, 0.8, 0.6, 0.4, 0.6, 0.8, 0.6, 0.4];
 

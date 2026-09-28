@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 
 import { isSupabaseConnectivityError } from '../../../../infrastructure/supabase';
 import { toast } from '../../../../lib/toast';
@@ -15,15 +15,12 @@ import type { CommWhatsAppChat } from '../domain/types';
 import { applyPendingChatInboxState, type PendingChatInboxStatePatch } from '../pendingChatInboxState';
 import { loadInboxChatSection } from '../data/inboxChatLoader';
 import { whatsappConversationsRepository } from '../data/conversationsRepository';
-import { KeyedActionLock } from '../components/keyedActionLock';
+import { useInboxArchivedChatSections } from './useInboxArchivedChatSections';
+import type { InboxChatLoadOptions } from './inboxChatLoaderTypes';
+
+export type { InboxChatLoadOptions } from './inboxChatLoaderTypes';
 
 type CurrentValue<T> = { current: T };
-
-export type InboxChatLoadOptions = {
-  sections?: ChatSection[];
-  partialArchived?: boolean;
-  preferredSection?: ChatSection;
-};
 
 type InboxChatLoaderOptions = {
   chatActivityFilter: ChatActivityFilter;
@@ -113,13 +110,6 @@ export const useInboxChatLoader = ({
     chatPollBackoffRef,
     latestChatsLoadedAtRef,
   } = refs;
-  const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
-  const archivedSectionLoadRequestIdRef = useRef(0);
-
-  useEffect(() => () => {
-    archivedSectionLoadRequestIdRef.current += 1;
-  }, []);
-
   const loadChats = useCallback(async (loadOptions: InboxChatLoadOptions = {}) => {
     // Polling refreshes only the visible section; the other section stays cached.
     const requestedSections = loadOptions.sections
@@ -400,151 +390,47 @@ export const useInboxChatLoader = ({
     suppressAutoChatSelectionRef,
   ]);
 
-  const handleLoadMoreArchivedChats = useCallback(async () => {
-    if (archivedChatsLoading || archivedChatsLoadingMore || !archivedChatsHasMore) {
-      return;
-    }
-    if (!archivedChatsLoadMoreLockRef.current.tryAcquire('archived')) {
-      return;
-    }
-
-    setArchivedChatsLoadingMore(true);
-    const nextPageIndex = archivedChatsPage;
-    const chatsRequestId = chatsRequestIdRef.current;
-
-    try {
-      const page = await whatsappConversationsRepository.list({
-        activityFilter: chatActivityFilter,
-        leadStatusFilters,
-        leadResponsavelFilters,
-        archivedFilter: 'archived',
-        limit: pageSize,
-        offset: nextPageIndex * pageSize,
-      });
-
-      if (chatsRequestId !== chatsRequestIdRef.current) {
-        return;
-      }
-
-      setArchivedChatsHasMore(page.length >= pageSize);
-      setArchivedChatsPage(nextPageIndex + 1);
-
-      setChats((current) => {
-        const previousChatsById = new Map(current.map((chat) => [chat.id, chat] as const));
-        const transformed = applyPendingChatInboxState(
-          applyFrontendSavedContactNames(
-            applyPrefetchedLeadNames(page.map((chat) => {
-              const previousChat = previousChatsById.get(chat.id) ?? null;
-              const canonicalSavedContactName = getSavedContactNameForPhone(
-                chat.phone_digits || chat.phone_number,
-                savedContactNameOverrideByPhoneRef.current,
-                savedContactNameByPhoneRef.current,
-              );
-              return preserveUsefulChatPreview(
-                stabilizeChatIdentityForLocalMerge(chat, previousChat, canonicalSavedContactName),
-                previousChat,
-              );
-            })),
-          ),
-          pendingChatInboxStateRef.current,
-        );
-
-        const nextById = new Map<string, CommWhatsAppChat>();
-        for (const chat of current) {
-          nextById.set(chat.id, chat);
-        }
-        for (const chat of transformed) {
-          nextById.set(chat.id, chat);
-        }
-
-        const sorted = sortChatsByInboxOrder(Array.from(nextById.values()));
-        chatsSignatureRef.current = buildChatsSignature(sorted);
-        return sorted;
-      });
-    } catch (error) {
-      if (chatsRequestId !== chatsRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao carregar mais arquivados', error);
-      if (!isSupabaseConnectivityError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mais conversas arquivadas.');
-      }
-    } finally {
-      archivedChatsLoadMoreLockRef.current.release('archived');
-      if (chatsRequestId === chatsRequestIdRef.current) {
-        setArchivedChatsLoadingMore(false);
-      }
-    }
-  }, [
-    applyFrontendSavedContactNames,
-    applyPrefetchedLeadNames,
-    archivedChatsHasMore,
-    archivedChatsLoading,
-    archivedChatsLoadingMore,
-    archivedChatsPage,
-    buildChatsSignature,
-    chatActivityFilter,
-    chatsRequestIdRef,
-    chatsSignatureRef,
-    leadResponsavelFilters,
-    leadStatusFilters,
-    pageSize,
-    pendingChatInboxStateRef,
-    savedContactNameByPhoneRef,
-    savedContactNameOverrideByPhoneRef,
-    setArchivedChatsHasMore,
-    setArchivedChatsLoadingMore,
-    setArchivedChatsPage,
-    setChats,
-  ]);
-
-  const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
-    setArchivedSectionOpen(nextArchivedSectionOpen);
-
-    const currentSelectedChat = selectedChatIdRef.current
-      ? latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null
-      : null;
-
-    if (currentSelectedChat && Boolean(currentSelectedChat.is_archived) !== nextArchivedSectionOpen) {
-      const nextChat = sortChatsByInboxOrder(latestChatsRef.current.filter((candidate) => (
-        candidate.id !== currentSelectedChat.id
-        && Boolean(candidate.is_archived) === nextArchivedSectionOpen
-        && chatMatchesActiveFilters(candidate)
-      )))[0] ?? null;
-      chatIdFromUrlRef.current = nextChat?.id ?? null;
-      setSelectedChatId(nextChat?.id ?? null);
-    }
-
-    if (nextArchivedSectionOpen) {
-      const loadRequestId = ++archivedSectionLoadRequestIdRef.current;
-      setArchivedChatsLoading(true);
-      setArchivedChatsLoadingMore(false);
-      void loadChats({ sections: ['archived', 'active'], partialArchived: true, preferredSection: 'archived' })
-        .catch(() => undefined)
-        .finally(() => {
-          if (loadRequestId === archivedSectionLoadRequestIdRef.current) {
-            setArchivedChatsLoading(false);
-          }
-        });
-      void refreshArchivedChatsCount();
-    } else {
-      archivedSectionLoadRequestIdRef.current += 1;
-      setArchivedChatsLoading(false);
-      void loadChats({ sections: ['active'], preferredSection: 'active' });
-    }
-  }, [
-    chatMatchesActiveFilters,
-    chatIdFromUrlRef,
-    latestChatsRef,
+  const archivedChatSections = useInboxArchivedChatSections({
+    filters: {
+      activityFilter: chatActivityFilter,
+      leadStatusFilters,
+      leadResponsavelFilters,
+      matchesActiveFilters: chatMatchesActiveFilters,
+    },
+    pagination: {
+      pageSize,
+      loading: archivedChatsLoading,
+      loadingMore: archivedChatsLoadingMore,
+      hasMore: archivedChatsHasMore,
+      page: archivedChatsPage,
+    },
+    refs: {
+      chatsRequestIdRef,
+      chatsSignatureRef,
+      chatIdFromUrlRef,
+      latestChatsRef,
+      pendingChatInboxStateRef,
+      savedContactNameByPhoneRef,
+      savedContactNameOverrideByPhoneRef,
+      selectedChatIdRef,
+    },
+    state: {
+      setArchivedChatsLoading,
+      setArchivedChatsLoadingMore,
+      setArchivedChatsHasMore,
+      setArchivedChatsPage,
+      setArchivedSectionOpen,
+      setChats,
+      setSelectedChatId,
+    },
+    chatCollection: {
+      applyFrontendSavedContactNames,
+      applyPrefetchedLeadNames,
+      buildChatsSignature,
+    },
     loadChats,
     refreshArchivedChatsCount,
-    selectedChatIdRef,
-    setArchivedChatsLoading,
-    setArchivedChatsLoadingMore,
-    setArchivedSectionOpen,
-    setSelectedChatId,
-  ]);
+  });
 
-  return { loadChats, handleLoadMoreArchivedChats, handleSwitchArchivedSection };
+  return { loadChats, ...archivedChatSections };
 };

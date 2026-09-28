@@ -97,6 +97,7 @@ import type { Lead } from '../../domain/types';
 import {
   listLeads,
   listLeadsByStatuses,
+  persistKanbanStatusChange,
   persistLeadStatusChange,
   subscribeToLeadChanges,
   updateLeadDetails,
@@ -163,6 +164,69 @@ test('persiste o status usando também a chave do status atual', async () => {
       ultimo_contato: '2026-09-26T12:05:00.000Z',
     },
   ]);
+});
+
+test('informa falha ao gravar a interação do histórico de status', async () => {
+  const interactionError = new Error('interação indisponível');
+  mocks.query.insert.mockImplementation(
+    () => Promise.resolve({ error: interactionError }) as unknown as Query,
+  );
+
+  await assert.rejects(
+    persistLeadStatusChange({
+      lead: {
+        id: 'lead-1',
+        nome_completo: 'Lead de teste',
+        telefone: '5511999999999',
+        status: 'Novo',
+        status_id: 'status-old',
+        responsavel: 'Luiza',
+        data_criacao: '2026-09-26T12:00:00.000Z',
+        arquivado: false,
+        created_at: '2026-09-26T12:00:00.000Z',
+        updated_at: '2026-09-26T12:00:00.000Z',
+      } as Lead,
+      newStatus: 'Atendimento',
+      newStatusId: 'status-new',
+      timestamp: '2026-09-26T12:05:00.000Z',
+    }),
+    interactionError,
+  );
+
+  mocks.query.insert.mockReturnValue(mocks.query);
+});
+
+test('informa falha ao gravar o histórico no Kanban', async () => {
+  const historyError = new Error('histórico indisponível');
+  let insertCount = 0;
+  mocks.query.insert.mockImplementation(() => {
+    insertCount += 1;
+    return Promise.resolve({ error: insertCount === 2 ? historyError : null }) as unknown as Query;
+  });
+
+  await assert.rejects(
+    persistKanbanStatusChange({
+      lead: {
+        id: 'lead-1',
+        nome_completo: 'Lead de teste',
+        telefone: '5511999999999',
+        status: 'Novo',
+        status_id: 'status-old',
+        responsavel: 'Luiza',
+        data_criacao: '2026-09-26T12:00:00.000Z',
+        arquivado: false,
+        created_at: '2026-09-26T12:00:00.000Z',
+        updated_at: '2026-09-26T12:00:00.000Z',
+      } as Lead,
+      newStatus: 'Atendimento',
+      newStatusId: 'status-new',
+      responsible: 'Luiza',
+      timestamp: '2026-09-26T12:05:00.000Z',
+    }),
+    historyError,
+  );
+
+  mocks.query.insert.mockReturnValue(mocks.query);
 });
 
 test('ignora eventos tardios de leads depois do unsubscribe', () => {

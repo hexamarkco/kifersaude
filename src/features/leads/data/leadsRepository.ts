@@ -209,7 +209,7 @@ export async function persistLeadStatusChange(params: {
     throw error;
   }
 
-  await supabase.from('interactions').insert([
+  const { error: interactionError } = await supabase.from('interactions').insert([
     {
       lead_id: lead.id,
       tipo: 'Observação',
@@ -217,7 +217,11 @@ export async function persistLeadStatusChange(params: {
       responsavel: lead.responsavel,
     },
   ]);
-  await supabase.from('lead_status_history').insert([
+  if (interactionError) {
+    throw interactionError;
+  }
+
+  const { error: historyError } = await supabase.from('lead_status_history').insert([
     {
       lead_id: lead.id,
       status_anterior: lead.status,
@@ -225,6 +229,9 @@ export async function persistLeadStatusChange(params: {
       responsavel: lead.responsavel,
     },
   ]);
+  if (historyError) {
+    throw historyError;
+  }
 }
 
 export async function persistKanbanStatusChange(params: {
@@ -241,18 +248,25 @@ export async function persistKanbanStatusChange(params: {
     .eq('id', lead.id);
   if (error) throw error;
 
-  await databaseClient.from('interactions').insert({
+  const { error: interactionError } = await databaseClient.from('interactions').insert({
     lead_id: lead.id,
     tipo: 'Observacao',
     descricao: `Status alterado de "${lead.status}" para "${newStatus}" (via Kanban)`,
     responsavel: responsible,
   });
-  await databaseClient.from('lead_status_history').insert({
+  if (interactionError) {
+    throw interactionError;
+  }
+
+  const { error: historyError } = await databaseClient.from('lead_status_history').insert({
     lead_id: lead.id,
     status_anterior: lead.status as string,
     status_novo: newStatus,
     responsavel: responsible,
   });
+  if (historyError) {
+    throw historyError;
+  }
 }
 
 export async function clearLeadReminders(leadId: string): Promise<void> {

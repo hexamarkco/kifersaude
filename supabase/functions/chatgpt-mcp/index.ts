@@ -12,7 +12,7 @@ import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
-import { getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from './mcp-discovery.ts';
+import { attachMcpOAuthSecuritySchemes, getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from './mcp-discovery.ts';
 
 /**
  * Endpoint MCP remoto para consultas no Kifer Saude.
@@ -767,6 +767,7 @@ const tools = [
 ];
 
 const discoveryTools = tools as readonly McpToolDescriptor[];
+const exposedTools = attachMcpOAuthSecuritySchemes(discoveryTools);
 
 const ADMIN_READ_TOOLS = new Set([
   'kifer_list_records', 'kifer_get_record', 'kifer_search', 'kifer_get_lead_360', 'kifer_get_whatsapp_transcript',
@@ -926,7 +927,7 @@ Deno.serve(async (request: Request) => {
       instructions: 'Servidor do Kifer Saude com três primitivas MCP: ferramentas para ações e consultas, recursos para contexto seguro e prompts para workflows compostos. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
     });
   }
-  if (rpc.method === 'tools/list') return resultResponse(rpc.id, { tools });
+  if (rpc.method === 'tools/list') return resultResponse(rpc.id, { tools: exposedTools });
   if (rpc.method === 'resources/list') return resultResponse(rpc.id, { resources: MCP_RESOURCES });
   if (rpc.method === 'resources/read') {
     const result = readMcpResource(rpc.params?.uri, discoveryTools);

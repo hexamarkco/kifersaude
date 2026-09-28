@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { resolveOAuthResource } from './oauth-resource.ts';
 
 const FUNCTION_PATH = '/functions/v1/chatgpt-mcp';
 const AUTHORIZE_PATH = '/oauth/authorize';
@@ -22,12 +23,14 @@ type AuthorizationRequest = {
   state: string;
   codeChallenge: string;
   scope: string;
+  resource: string;
 };
 
 type OAuthTokenRecord = {
   user_id: string;
   client_id: string;
   scope: string;
+  resource: string;
 };
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -107,7 +110,7 @@ const normalizeScope = (rawScope: string): { scope?: string; error?: string } =>
   return { scope: [...scopes].sort().join(' ') };
 };
 
-const parseAuthorizationRequest = (url: URL): { request?: AuthorizationRequest; error?: string } => {
+const parseAuthorizationRequest = (url: URL, expectedResource: string): { request?: AuthorizationRequest; error?: string } => {
   const config = oauthConfig();
   if (!config.redirectUri) return { error: 'OAuth ainda nao foi configurado no servidor.' };
   const clientId = text(url.searchParams.get('client_id'));
@@ -116,6 +119,7 @@ const parseAuthorizationRequest = (url: URL): { request?: AuthorizationRequest; 
   const codeChallenge = text(url.searchParams.get('code_challenge'));
   const codeChallengeMethod = text(url.searchParams.get('code_challenge_method'));
   const scopeResult = normalizeScope(text(url.searchParams.get('scope')));
+  const resource = resolveOAuthResource(url.searchParams.get('resource'), expectedResource);
 
   if (text(url.searchParams.get('response_type')) !== 'code') return { error: 'Somente response_type=code e suportado.' };
   if (clientId !== config.clientId) return { error: 'Cliente OAuth desconhecido.' };
@@ -123,8 +127,9 @@ const parseAuthorizationRequest = (url: URL): { request?: AuthorizationRequest; 
   if (!state) return { error: 'O parametro state e obrigatorio.' };
   if (codeChallengeMethod !== 'S256' || !isSafeCodeChallenge(codeChallenge)) return { error: 'PKCE S256 e obrigatorio.' };
   if (scopeResult.error || !scopeResult.scope) return { error: scopeResult.error || 'Escopo OAuth invalido.' };
+  if (!resource) return { error: 'Recurso OAuth nao permitido.' };
 
-  return { request: { clientId, redirectUri, state, codeChallenge, scope: scopeResult.scope } };
+  return { request: { clientId, redirectUri, state, codeChallenge, scope: scopeResult.scope, resource } };
 };
 
 const createAuthorizationCode = async (admin: SupabaseClient, request: AuthorizationRequest, userId: string): Promise<string> => {
@@ -132,14 +137,14 @@ const createAuthorizationCode = async (admin: SupabaseClient, request: Authoriza
   const expiresAt = new Date(Date.now() + AUTHORIZATION_CODE_LIFETIME_SECONDS * 1000).toISOString();
   const { error } = await admin.from('chatgpt_mcp_oauth_authorization_codes').insert({
     code_hash: await sha256(code), user_id: userId, client_id: request.clientId, redirect_uri: request.redirectUri,
-    code_challenge: request.codeChallenge, scope: request.scope, expires_at: expiresAt,
+    code_challenge: request.codeChallenge, scope: request.scope, resource: request.resource, expires_at: expiresAt,
   });
   if (error) throw new Error(`Falha ao criar autorizacao OAuth: ${error.message}`);
   return code;
 };
 
 const authorizeGet = (request: Request): Response => {
-  const parsed = parseAuthorizationRequest(new URL(request.url));
+  const parsed = parseAuthorizationRequest(new URL(request.url), getBaseUrl(request));
   if (!parsed.request) return new Response(parsed.error || 'Solicitacao OAuth invalida.', { status: 400, headers: { 'Cache-Control': 'no-store' } });
   const authorizationUiUrl = oauthConfig().authorizationUiUrl;
   if (!authorizationUiUrl) return new Response('OAuth ainda nao foi configurado no servidor.', { status: 503, headers: { 'Cache-Control': 'no-store' } });
@@ -149,20 +154,21 @@ const authorizeGet = (request: Request): Response => {
   destination.searchParams.set('state', parsed.request.state);
   destination.searchParams.set('code_challenge', parsed.request.codeChallenge);
   destination.searchParams.set('scope', parsed.request.scope);
+  destination.searchParams.set('resource', parsed.request.resource);
   return new Response(null, { status: 303, headers: { Location: destination.toString(), 'Cache-Control': 'no-store' } });
 };
 
-const parseAuthorizationPayload = (payload: unknown): { request?: AuthorizationRequest; error?: string } => {
+const parseAuthorizationPayload = (payload: unknown, expectedResource: string): { request?: AuthorizationRequest; error?: string } => {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { error: 'Solicitacao OAuth invalida.' };
   const values = payload as Record<string, unknown>;
   const url = new URL('https://oauth.invalid');
-  for (const field of ['client_id', 'redirect_uri', 'state', 'code_challenge', 'scope']) {
+  for (const field of ['client_id', 'redirect_uri', 'state', 'code_challenge', 'scope', 'resource']) {
     const value = text(values[field]);
     if (value) url.searchParams.set(field, value);
   }
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('code_challenge_method', 'S256');
-  return parseAuthorizationRequest(url);
+  return parseAuthorizationRequest(url, expectedResource);
 };
 
 const completeAuthorization = async (request: Request): Promise<Response> => {
@@ -173,7 +179,7 @@ const completeAuthorization = async (request: Request): Promise<Response> => {
   } catch {
     return json({ error: 'Corpo JSON invalido.' }, 400);
   }
-  const parsed = parseAuthorizationPayload(payload);
+  const parsed = parseAuthorizationPayload(payload, getBaseUrl(request));
   if (!parsed.request) return json({ error: parsed.error || 'Solicitacao OAuth invalida.' }, 400);
   const bearer = (request.headers.get('Authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || '';
   if (!bearer) return json({ error: 'Faca login como administrador para continuar.' }, 401);
@@ -206,13 +212,13 @@ const issueTokens = async (admin: SupabaseClient, record: OAuthTokenRecord): Pro
   const now = Date.now();
   const { error } = await admin.from('chatgpt_mcp_oauth_access_tokens').insert({
     token_hash: await sha256(accessToken), user_id: record.user_id, client_id: record.client_id, scope: record.scope,
-    expires_at: new Date(now + ACCESS_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
+    resource: record.resource, expires_at: new Date(now + ACCESS_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
   });
   if (error) throw new Error(`Falha ao criar token de acesso: ${error.message}`);
   if (record.scope.split(' ').includes('offline_access')) {
     const { error: refreshError } = await admin.from('chatgpt_mcp_oauth_refresh_tokens').insert({
       token_hash: await sha256(refreshToken), user_id: record.user_id, client_id: record.client_id, scope: record.scope,
-      expires_at: new Date(now + REFRESH_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
+      resource: record.resource, expires_at: new Date(now + REFRESH_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
     });
     if (refreshError) throw new Error(`Falha ao criar token de renovacao: ${refreshError.message}`);
   }
@@ -222,21 +228,22 @@ const issueTokens = async (admin: SupabaseClient, record: OAuthTokenRecord): Pro
   };
 };
 
-const consumeAuthorizationCode = async (admin: SupabaseClient, code: string, clientId: string, redirectUri: string, codeVerifier: string): Promise<OAuthTokenRecord | null> => {
+const consumeAuthorizationCode = async (admin: SupabaseClient, code: string, clientId: string, redirectUri: string, codeVerifier: string, resource: string): Promise<OAuthTokenRecord | null> => {
   const { data, error } = await admin.from('chatgpt_mcp_oauth_authorization_codes')
     .delete().eq('code_hash', await sha256(code)).eq('client_id', clientId).eq('redirect_uri', redirectUri).gt('expires_at', new Date().toISOString())
-    .select('user_id,client_id,scope,code_challenge').maybeSingle();
+    .select('user_id,client_id,scope,code_challenge,resource').maybeSingle();
   if (error) throw new Error(`Falha ao validar codigo OAuth: ${error.message}`);
-  if (!data || !equalStrings(await sha256(codeVerifier), text(data.code_challenge))) return null;
-  return { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope) };
+  if (!data || (text(data.resource) && text(data.resource) !== resource) || !equalStrings(await sha256(codeVerifier), text(data.code_challenge))) return null;
+  return { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope), resource };
 };
 
-const consumeRefreshToken = async (admin: SupabaseClient, refreshToken: string, clientId: string): Promise<OAuthTokenRecord | null> => {
+const consumeRefreshToken = async (admin: SupabaseClient, refreshToken: string, clientId: string, resource: string): Promise<OAuthTokenRecord | null> => {
   const { data, error } = await admin.from('chatgpt_mcp_oauth_refresh_tokens')
     .update({ revoked_at: new Date().toISOString() }).eq('token_hash', await sha256(refreshToken)).eq('client_id', clientId).is('revoked_at', null).gt('expires_at', new Date().toISOString())
-    .select('user_id,client_id,scope').maybeSingle();
+    .select('user_id,client_id,scope,resource').maybeSingle();
   if (error) throw new Error(`Falha ao renovar token OAuth: ${error.message}`);
-  return data ? { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope) } : null;
+  if (!data || (text(data.resource) && text(data.resource) !== resource)) return null;
+  return { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope), resource };
 };
 
 const ensureActiveAdmin = async (admin: SupabaseClient, userId: string): Promise<{ email: string } | null> => {
@@ -251,6 +258,8 @@ const tokenEndpoint = async (request: Request): Promise<Response> => {
   const config = oauthConfig();
   const clientId = text(form.get('client_id'));
   if (clientId !== config.clientId) return tokenError('invalid_client', 'Cliente OAuth desconhecido.', 401);
+  const resource = resolveOAuthResource(form.get('resource'), getBaseUrl(request));
+  if (!resource) return tokenError('invalid_target', 'Recurso OAuth nao permitido.');
   try {
     const admin = getAdmin();
     const grantType = text(form.get('grant_type'));
@@ -260,11 +269,11 @@ const tokenEndpoint = async (request: Request): Promise<Response> => {
       const code = text(form.get('code'));
       const verifier = text(form.get('code_verifier'));
       if (!code || !verifier || !redirectUri) return tokenError('invalid_request', 'code, code_verifier e redirect_uri sao obrigatorios.');
-      record = await consumeAuthorizationCode(admin, code, clientId, redirectUri, verifier);
+      record = await consumeAuthorizationCode(admin, code, clientId, redirectUri, verifier, resource);
     } else if (grantType === 'refresh_token') {
       const refreshToken = text(form.get('refresh_token'));
       if (!refreshToken) return tokenError('invalid_request', 'refresh_token e obrigatorio.');
-      record = await consumeRefreshToken(admin, refreshToken, clientId);
+      record = await consumeRefreshToken(admin, refreshToken, clientId, resource);
     } else {
       return tokenError('unsupported_grant_type', 'Grant OAuth nao suportado.');
     }
@@ -304,9 +313,9 @@ export async function authenticateOAuthAccessToken(request: Request): Promise<OA
   if (!received) return null;
   const admin = getAdmin();
   const { data, error } = await admin.from('chatgpt_mcp_oauth_access_tokens')
-    .select('user_id,client_id,scope').eq('token_hash', await sha256(received)).is('revoked_at', null).gt('expires_at', new Date().toISOString()).maybeSingle();
+    .select('user_id,client_id,scope,resource').eq('token_hash', await sha256(received)).is('revoked_at', null).gt('expires_at', new Date().toISOString()).maybeSingle();
   if (error) throw new Error(`Falha ao validar token OAuth: ${error.message}`);
-  if (!data || text(data.client_id) !== oauthConfig().clientId || !text(data.scope).split(' ').includes('kifer.read')) return null;
+  if (!data || (text(data.resource) && text(data.resource) !== getBaseUrl(request)) || text(data.client_id) !== oauthConfig().clientId || !text(data.scope).split(' ').includes('kifer.read')) return null;
   const user = await ensureActiveAdmin(admin, text(data.user_id));
   return user ? { userId: text(data.user_id), actor: `chatgpt:${user.email}` } : null;
 }

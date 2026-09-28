@@ -4,7 +4,9 @@ O endpoint `chatgpt-mcp` permite consultar dados atuais do CRM e executar açõe
 
 ## Limites de segurança
 
-- O acesso do ChatGPT exige OAuth com PKCE S256 e uma conta com perfil `admin` no CRM.
+- O acesso do ChatGPT exige OAuth com PKCE S256, vínculo do token ao URI do recurso MCP e uma conta com perfil `admin` no CRM.
+- Cada ferramenta anuncia o esquema OAuth e o escopo `kifer.read`; o servidor valida o recurso nos pedidos de autorização, troca/renovação de token e uso do token.
+- Tabelas de códigos, tokens e auditoria são acessíveis somente pela Edge Function via `service_role`; o cliente não consulta esses registros diretamente.
 - Tokens de autorização, acesso e renovação são armazenados somente como hashes, têm validade limitada e são invalidados quando a conta deixa de ser administradora.
 - As ferramentas de leitura continuam anotadas como `readOnlyHint`. As ações de escrita são schemas fechados, com validação de entidades, auditoria e OAuth de administrador.
 - Consultas genéricas de registro exigem OAuth de administrador e aceitam somente catálogos sem dados de clientes. Leads, contratos, titulares, dependentes, documentos, conversas, mensagens e conflitos não podem ser consultados por `select *` genérico.

@@ -2,12 +2,25 @@ export type McpToolDescriptor = {
   name: string;
   description?: string;
   inputSchema?: unknown;
+  securitySchemes?: readonly McpToolSecurityScheme[];
   annotations?: {
     readOnlyHint?: boolean;
     destructiveHint?: boolean;
     openWorldHint?: boolean;
   };
 };
+
+export type McpToolSecurityScheme = {
+  type: 'oauth2';
+  scopes: readonly string[];
+};
+
+export const attachMcpOAuthSecuritySchemes = (
+  tools: readonly McpToolDescriptor[],
+): McpToolDescriptor[] => tools.map((tool) => ({
+  ...tool,
+  securitySchemes: [{ type: 'oauth2', scopes: ['kifer.read'] }],
+}));
 
 export type McpResourceDescriptor = {
   uri: string;

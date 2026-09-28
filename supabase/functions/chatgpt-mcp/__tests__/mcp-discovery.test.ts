@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from '../mcp-discovery';
+import { attachMcpOAuthSecuritySchemes, getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from '../mcp-discovery';
 
 const tools: readonly McpToolDescriptor[] = [
   { name: 'kifer_get_operational_overview', annotations: { readOnlyHint: true } },
@@ -9,6 +9,12 @@ const tools: readonly McpToolDescriptor[] = [
 ];
 
 describe('MCP discovery primitives', () => {
+  it('declares the OAuth requirement on every exposed tool', () => {
+    expect(attachMcpOAuthSecuritySchemes(tools).map(({ securitySchemes }) => securitySchemes)).toEqual(
+      tools.map(() => [{ type: 'oauth2', scopes: ['kifer.read'] }]),
+    );
+  });
+
   it('publishes deterministic safe resources and prompts', () => {
     expect(MCP_RESOURCES.map(({ uri }) => uri)).toEqual([
       'kifer://capabilities/catalog',

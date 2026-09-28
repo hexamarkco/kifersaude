@@ -199,6 +199,32 @@ export const useInboxMessageSending = ({
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, localOutgoingRetryPayloadRef, patchLocalOutgoingMessage, refreshableOutboundStatuses, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
 
+  const handleSelectInteractiveReply = useCallback((
+    message: CommWhatsAppMessage,
+    option: { id: string | null; title: string | null },
+  ) => {
+    if (!selectedChat || message.direction !== 'inbound') {
+      return;
+    }
+
+    const replyText = (option.title || option.id || '').trim();
+    if (!replyText) {
+      return;
+    }
+
+    if (sendDisabledReason) {
+      toast.error(sendDisabledReason);
+      return;
+    }
+
+    // A Whapi expoe a leitura e o envio de mensagens interativas, mas nao um
+    // endpoint para sintetizar o evento nativo de "button reply" recebido de
+    // uma mensagem de terceiros. Enviamos o titulo escolhido como texto, citado
+    // na mensagem original — formato que os bots de atendimento usam como
+    // fallback e que deixa a escolha visivel no historico.
+    void sendTextSegments(selectedChat, [replyText], getQuotePayloadFromMessage(message));
+  }, [selectedChat, sendDisabledReason, sendTextSegments]);
+
   const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
 
@@ -499,5 +525,5 @@ export const useInboxMessageSending = ({
     });
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, localOutgoingRetryPayloadRef, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, refreshableOutboundStatuses, scheduleMessageStatusRefresh, selectedChat, setSendingDrawerMediaByChatId, updateOptimisticChatPreviewStatus]);
 
-  return { sendTextSegments, handleSendMessage, handleSendDrawerMedia };
+  return { sendTextSegments, handleSendMessage, handleSendDrawerMedia, handleSelectInteractiveReply };
 };

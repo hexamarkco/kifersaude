@@ -2,17 +2,9 @@ import { useCallback, useEffect, type Dispatch, type KeyboardEvent, type SetStat
 
 import type { PendingAttachment } from '../domain/outgoingMessageTypes';
 import type { VoiceRecordingState } from './useVoiceRecording';
+import type { InboxQuickReplyOption } from './useInboxQuickReplyComposer';
 
 type CurrentValue<Value> = { current: Value };
-
-export type InboxQuickReplyOption = {
-  id: string;
-  name: string;
-  shortcut: string;
-  text: string;
-  preview: string;
-  searchValue: string;
-};
 
 type InboxComposerSubmissionOptions = {
   generatingFollowUp: boolean;

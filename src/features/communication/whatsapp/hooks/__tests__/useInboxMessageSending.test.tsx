@@ -174,6 +174,22 @@ const createAttachment = (name: string) => ({
   previewUrl: `https://example.test/${name}.png`,
 });
 
+const createInteractiveMessage = (overrides: Partial<CommWhatsAppMessage> = {}): CommWhatsAppMessage => ({
+  id: 'message-1',
+  chat_id: 'chat-1',
+  channel_id: 'channel-1',
+  external_message_id: 'external-message-1',
+  direction: 'inbound',
+  message_type: 'buttons',
+  delivery_status: 'received',
+  text_content: '[Botoes] Quer continuar?',
+  sender_phone: '+55 11 98888-8888',
+  message_at: '2026-09-28T12:00:00.000Z',
+  metadata: {},
+  created_at: '2026-09-28T12:00:00.000Z',
+  ...overrides,
+});
+
 const resetMocks = () => {
   mocks.sendText.mockReset();
   mocks.sendMedia.mockReset();
@@ -280,6 +296,87 @@ test('envio de mídia remota da gaveta reconcilia status e libera o indicador', 
     assert.deepEqual(state.patches.map(({ patch }) => patch.delivery_status), ['sent']);
     assert.deepEqual(state.statusRefreshes.map(({ externalMessageIds }) => externalMessageIds), [['remote-1']]);
     assert.deepEqual(state.drawerSendingStates, [{ 'chat-1': true }, {}]);
+  } finally {
+    view.unmount();
+  }
+});
+
+test('resposta interativa envia o título escolhido como texto citado na mensagem original', async () => {
+  resetMocks();
+  mocks.sendText.mockResolvedValue({ messageId: 'reply-1', status: 'sent' });
+  const state = createOptions({ messageDraft: '', pendingAttachments: [] });
+  let sending: MessageSending | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { sending = value; }} />);
+
+  try {
+    assert.ok(sending);
+    act(() => sending?.handleSelectInteractiveReply(
+      createInteractiveMessage(),
+      { id: 'option-yes', title: '  Quero continuar  ' },
+    ));
+    await act(async () => { await Promise.all(state.pendingSends); });
+
+    assert.equal(mocks.sendText.mock.calls.length, 1);
+    assert.equal(mocks.sendText.mock.calls[0]?.[0], '5511999999999@s.whatsapp.net');
+    assert.equal(mocks.sendText.mock.calls[0]?.[1], 'Quero continuar');
+    const sendOptions = mocks.sendText.mock.calls[0]?.[2] as Record<string, unknown>;
+    assert.equal(sendOptions.quotedMessageId, 'external-message-1');
+    assert.equal(sendOptions.quotedAuthorPhone, '+55 11 98888-8888');
+    assert.equal(sendOptions.quotedType, 'buttons');
+    assert.equal(sendOptions.quotedPreviewText, 'Quer continuar?');
+    assert.deepEqual(state.appended[0]?.metadata.quote, {
+      external_message_id: 'external-message-1',
+      author_phone: '+55 11 98888-8888',
+      quoted_type: 'buttons',
+      preview_text: 'Quer continuar?',
+    });
+  } finally {
+    view.unmount();
+  }
+});
+
+test('ignora respostas interativas que não sejam recebidas ou não tenham texto', () => {
+  resetMocks();
+  const state = createOptions({ messageDraft: '', pendingAttachments: [] });
+  let sending: MessageSending | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { sending = value; }} />);
+
+  try {
+    assert.ok(sending);
+    act(() => sending?.handleSelectInteractiveReply(
+      createInteractiveMessage({ direction: 'outbound' }),
+      { id: 'option-yes', title: 'Sim' },
+    ));
+    act(() => sending?.handleSelectInteractiveReply(
+      createInteractiveMessage(),
+      { id: 'option-yes', title: '   ' },
+    ));
+    assert.equal(state.pendingSends.length, 0);
+    assert.equal(mocks.sendText.mock.calls.length, 0);
+  } finally {
+    view.unmount();
+  }
+});
+
+test('respeita o bloqueio do canal antes de enfileirar uma resposta interativa', () => {
+  resetMocks();
+  const state = createOptions({
+    sendDisabledReason: 'Canal WhatsApp desconectado.',
+    messageDraft: '',
+    pendingAttachments: [],
+  });
+  let sending: MessageSending | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { sending = value; }} />);
+
+  try {
+    assert.ok(sending);
+    act(() => sending?.handleSelectInteractiveReply(
+      createInteractiveMessage(),
+      { id: 'option-yes', title: 'Sim' },
+    ));
+
+    assert.equal(state.pendingSends.length, 0);
+    assert.deepEqual(mocks.toastError.mock.calls[0], ['Canal WhatsApp desconectado.']);
   } finally {
     view.unmount();
   }

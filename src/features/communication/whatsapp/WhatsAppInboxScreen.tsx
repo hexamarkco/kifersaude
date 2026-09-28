@@ -12,23 +12,17 @@ import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
-import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
-  whatsappMediaRepository,
-  whatsappMessagesRepository,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppOperationalState,
 } from './data';
-import { configService } from '../../config';
-import type { Lead } from '../../leads';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
 import {
   canReplyOrForwardMessage,
   getMessageSearchPreviewText,
-  getQuotePayloadFromMessage,
 } from './domain/messagePresentation';
 import {
   dedupeObviousDuplicateMessages,
@@ -39,17 +33,7 @@ import {
   getSafeChatDisplayName,
   sortChatsByInboxOrder,
 } from './domain/chatPresentation';
-import {
-  buildTranscriptLine,
-  normalizeSystemTimeZone,
-} from './domain/messageTranscript';
 import { shouldHideTechnicalMessage } from './domain/messageVisibility';
-import {
-  buildQuickReplyShortcut,
-  getActiveQuickReplyMatch,
-  normalizeQuickReplyLookup,
-  summarizeQuickReplyPreview,
-} from './domain/quickReplies';
 import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppMessageThread } from './components/WhatsAppMessageThread';
 import { WhatsAppComposer } from './components/WhatsAppComposer';
@@ -83,7 +67,7 @@ import {
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { lazyWithChunkRecovery } from '../../../routes/lazyImport';
-import { useInboxPolling } from './hooks/useInboxPolling';
+import { useInboxPollingController } from './hooks/useInboxPollingController';
 import { useInboxStartChatSources } from './hooks/useInboxStartChatSources';
 import { useInboxLeadSearch } from './hooks/useInboxLeadSearch';
 import { useInboxMessageSending } from './hooks/useInboxMessageSending';
@@ -95,12 +79,12 @@ import { useInboxComposerAttachments } from './hooks/useInboxComposerAttachments
 import { useInboxMediaUploadController } from './hooks/useInboxMediaUploadController';
 import type { InboxMessageLoadReason } from './hooks/useInboxMessageLoader';
 import { useInboxConversationDataLoader } from './hooks/useInboxConversationDataLoader';
+import { useInboxChatMediaOpener } from './hooks/useInboxChatMediaOpener';
+import { useInboxTranscriptExport } from './hooks/useInboxTranscriptExport';
 import { useInboxLeadPanel } from './hooks/useInboxLeadPanel';
 import { useInboxChatMutations } from './hooks/useInboxChatMutations';
 import { useInboxOperationalState } from './hooks/useInboxOperationalState';
 import { useInboxOptimisticOutgoingMessages } from './hooks/useInboxOptimisticOutgoingMessages';
-import { useInboxMessageStatusRefresh } from './hooks/useInboxMessageStatusRefresh';
-import { useInboxSelectedChatPreviewRefresh } from './hooks/useInboxSelectedChatPreviewRefresh';
 import { useInboxSelectedLeadRealtime } from './hooks/useInboxSelectedLeadRealtime';
 import { useInboxMessageReactionActions } from './hooks/useInboxMessageReactionActions';
 import { useInboxMessageMutations } from './hooks/useInboxMessageMutations';
@@ -111,6 +95,7 @@ import { useInboxFollowUpComposer } from './hooks/useInboxFollowUpComposer';
 import { useInboxChatListModel } from './hooks/useInboxChatListModel';
 import { useInboxContactIdentity } from './hooks/useInboxContactIdentity';
 import { useInboxComposerTextActions } from './hooks/useInboxComposerTextActions';
+import { useInboxQuickReplyComposer } from './hooks/useInboxQuickReplyComposer';
 import { useInboxQuickReplies } from './hooks/useInboxQuickReplies';
 import { useInboxMessageForwarding } from './hooks/useInboxMessageForwarding';
 import { useInboxHistoryRecovery } from './hooks/useInboxHistoryRecovery';
@@ -124,7 +109,7 @@ import { useInboxMessageThreadController } from './hooks/useInboxMessageThreadCo
 import { useInboxChatCollection } from './hooks/useInboxChatCollection';
 import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState';
 import { useInboxMessageViewport } from './hooks/useInboxMessageViewport';
-import { useInboxComposerSubmission, type InboxQuickReplyOption as QuickReplyOption } from './hooks/useInboxComposerSubmission';
+import { useInboxComposerSubmission } from './hooks/useInboxComposerSubmission';
 import {
   useInboxSelectedChatLifecycle,
   type InboxCreateLeadDraft,
@@ -223,7 +208,6 @@ export default function WhatsAppInboxScreen() {
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
-  const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<InboxOverlayPosition | null>(null);
   const [sendingDrawerMediaByChatId, setSendingDrawerMediaByChatId] = useState<Record<string, boolean>>({});
@@ -636,117 +620,6 @@ export default function WhatsAppInboxScreen() {
     forwardSearch,
   });
 
-  const quickReplyLead = useMemo<Lead | null>(() => {
-    if (!selectedChat) {
-      return null;
-    }
-
-    const timestamp = new Date().toISOString();
-    return {
-      id: leadPanel?.id ?? selectedChat.lead_id ?? selectedChat.id,
-      nome_completo: getSafeChatDisplayName(selectedChatForPresentation, operationalState?.channel?.connected_user_name ?? null),
-      telefone: leadPanel?.telefone || selectedChat.phone_number || '',
-      email: '',
-      cidade: '',
-      origem: null,
-      status: leadPanel?.status_value ?? selectedChat.lead_status ?? null,
-      responsavel: leadPanel?.responsavel_value ?? null,
-      data_criacao: timestamp,
-      arquivado: false,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-  }, [leadPanel, operationalState?.channel?.connected_user_name, selectedChat, selectedChatForPresentation]);
-  const resolveComposerVariables = useCallback((value: string) => {
-    return quickReplyLead ? applyTemplateVariables(value, quickReplyLead) : value;
-  }, [quickReplyLead]);
-  const quickReplyOptions = useMemo(() => {
-    const usedShortcuts = new Set<string>();
-
-    return quickReplies
-      .map((quickReply, index) => {
-        const name = quickReply.name?.trim() || `Mensagem rapida ${index + 1}`;
-        const rawText = quickReply.text.trim();
-        const resolvedText = quickReplyLead ? applyTemplateVariables(rawText, quickReplyLead) : rawText;
-        const text = resolvedText.trim();
-
-        if (!text) {
-          return null;
-        }
-
-        const baseShortcut = buildQuickReplyShortcut(quickReply.shortcut || name, index);
-        let shortcut = baseShortcut;
-        let duplicateIndex = 2;
-
-        while (usedShortcuts.has(shortcut)) {
-          shortcut = `${baseShortcut}-${duplicateIndex}`;
-          duplicateIndex += 1;
-        }
-
-        usedShortcuts.add(shortcut);
-
-        return {
-          id: quickReply.id,
-          name,
-          shortcut,
-          text,
-          preview: summarizeQuickReplyPreview(text),
-          searchValue: normalizeQuickReplyLookup(`${shortcut} ${name} ${text}`),
-        } as QuickReplyOption;
-      })
-      .filter((option): option is QuickReplyOption => option !== null);
-  }, [quickReplies, quickReplyLead]);
-  const activeQuickReplyMatch = useMemo(
-    () => getActiveQuickReplyMatch(messageDraft, composerSelection),
-    [composerSelection, messageDraft],
-  );
-  const activeQuickReplyKey = activeQuickReplyMatch
-    ? `${activeQuickReplyMatch.start}:${activeQuickReplyMatch.query}`
-    : null;
-  const filteredQuickReplyOptions = useMemo(() => {
-    if (!activeQuickReplyMatch) {
-      return [];
-    }
-
-    const query = normalizeQuickReplyLookup(activeQuickReplyMatch.query);
-
-    return quickReplyOptions
-      .map((option, index) => {
-        if (query && !option.searchValue.includes(query)) {
-          return null;
-        }
-
-        const normalizedName = normalizeQuickReplyLookup(option.name);
-        const rank = query.length === 0
-          ? 0
-          : option.shortcut.startsWith(query)
-            ? 0
-            : normalizedName.startsWith(query)
-              ? 1
-              : 2;
-
-        return { option, rank, index };
-      })
-      .filter((item): item is { option: QuickReplyOption; rank: number; index: number } => item !== null)
-      .sort((a, b) => {
-        if (a.rank !== b.rank) {
-          return a.rank - b.rank;
-        }
-
-        return a.index - b.index;
-      })
-      .map((item) => item.option);
-  }, [activeQuickReplyMatch, quickReplyOptions]);
-  const quickReplyMenuHasResults = filteredQuickReplyOptions.length > 0;
-  const quickReplyMenuOpen =
-    composerFocused
-    && activeQuickReplyMatch !== null
-    && activeQuickReplyKey !== dismissedQuickReplyKey;
-  const quickReplyEmptyStateMessage = quickRepliesLoadError
-    ? 'Não foi possível carregar as mensagens rápidas.'
-    : quickReplyOptions.length === 0
-      ? 'Nenhuma mensagem rapida cadastrada ainda.'
-      : 'Nenhum atalho encontrado para esse termo.';
   const hasActiveChatFilters =
     chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
   const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length + leadResponsavelFilters.length;
@@ -1226,25 +1099,28 @@ export default function WhatsAppInboxScreen() {
     latestMessagesRef.current = messages;
   }, [messages]);
 
-  useEffect(() => {
-    if (!quickReplyMenuOpen || !quickReplyMenuHasResults) {
-      setQuickReplyActiveIndex(0);
-      return;
-    }
-
-    setQuickReplyActiveIndex((current) => Math.min(current, filteredQuickReplyOptions.length - 1));
-  }, [filteredQuickReplyOptions.length, quickReplyMenuHasResults, quickReplyMenuOpen]);
-
-  useEffect(() => {
-    if (!activeQuickReplyKey) {
-      setDismissedQuickReplyKey(null);
-      return;
-    }
-
-    if (dismissedQuickReplyKey && dismissedQuickReplyKey !== activeQuickReplyKey) {
-      setDismissedQuickReplyKey(null);
-    }
-  }, [activeQuickReplyKey, dismissedQuickReplyKey]);
+  const {
+    resolveComposerVariables,
+    activeQuickReplyMatch,
+    activeQuickReplyKey,
+    filteredQuickReplyOptions,
+    quickReplyMenuHasResults,
+    quickReplyMenuOpen,
+    quickReplyEmptyStateMessage,
+  } = useInboxQuickReplyComposer({
+    quickReplies,
+    quickRepliesLoadError,
+    selectedChat,
+    selectedChatForPresentation,
+    leadPanel,
+    connectedUserName: operationalState?.channel?.connected_user_name ?? null,
+    messageDraft,
+    composerSelection,
+    composerFocused,
+    setQuickReplyActiveIndex,
+    dismissedQuickReplyKey,
+    setDismissedQuickReplyKey,
+  });
 
   useClickOutside(
     Boolean(openReactionPickerMessageId),
@@ -1722,44 +1598,43 @@ export default function WhatsAppInboxScreen() {
     [],
   );
 
-  useInboxPolling({
-    pollingEnabled,
-    loading,
-    selectedChatId,
-    loadingOlderMessages,
-    chatPollBackoffRef,
-    chatPollIdleCyclesRef,
-    isChannelConnectedRef,
-    isMessageRealtimeHealthyRef,
-    latestChatsLoadedAtRef,
-    selectedChatIdRef,
-    loadChats,
-    refreshArchivedChatsCount,
-    loadOperationalState,
-    getSelectedChatSnapshot,
-    loadMessages,
-  });
-
-  useInboxSelectedChatPreviewRefresh({
-    selectedChat,
-    loadingOlderMessages,
-    refs: {
-      latestMessagesRef,
-      messagesSignatureRef,
-      lastSelectedChatPreviewRefreshKeyRef,
+  const { scheduleMessageStatusRefresh } = useInboxPollingController({
+    realtimeRefs: { isChannelConnectedRef, isMessageRealtimeHealthyRef },
+    polling: {
+      pollingEnabled,
+      loading,
+      selectedChatId,
+      loadingOlderMessages,
+      chatPollBackoffRef,
+      chatPollIdleCyclesRef,
+      latestChatsLoadedAtRef,
+      selectedChatIdRef,
+      loadChats,
+      refreshArchivedChatsCount,
+      loadOperationalState,
+      getSelectedChatSnapshot,
+      loadMessages,
     },
-    getSelectedChatSnapshot,
-    loadMessages,
-  });
-
-  const { scheduleMessageStatusRefresh } = useInboxMessageStatusRefresh({
-    refs: { latestMessagesRef, loadChatsRef, loadMessagesRef },
-    pollingEnabled,
-    selectedChatId,
-    selectedChat,
-    visibleMessages,
-    refreshableOutboundStatuses: REFRESHABLE_OUTBOUND_STATUSES,
-    setLocalOutgoingMessages,
+    selectedChatPreviewRefresh: {
+      selectedChat,
+      loadingOlderMessages,
+      refs: {
+        latestMessagesRef,
+        messagesSignatureRef,
+        lastSelectedChatPreviewRefreshKeyRef,
+      },
+      getSelectedChatSnapshot,
+      loadMessages,
+    },
+    messageStatusRefresh: {
+      refs: { latestMessagesRef, loadChatsRef, loadMessagesRef },
+      pollingEnabled,
+      selectedChatId,
+      selectedChat,
+      visibleMessages,
+      refreshableOutboundStatuses: REFRESHABLE_OUTBOUND_STATUSES,
+      setLocalOutgoingMessages,
+    },
   });
 
   useEffect(() => {
@@ -1798,7 +1673,12 @@ export default function WhatsAppInboxScreen() {
     resizeComposerTextarea();
   }, [messageDraft, pendingAttachments.length, resizeComposerTextarea, selectedChatId, voiceAttachment?.id]);
 
-  const { sendTextSegments, handleSendMessage, handleSendDrawerMedia } = useInboxMessageSending({
+  const {
+    sendTextSegments,
+    handleSendMessage,
+    handleSendDrawerMedia,
+    handleSelectInteractiveReply,
+  } = useInboxMessageSending({
     selectedChat,
     mediaDrawerSendDisabledReason,
     messageDraft,
@@ -1891,25 +1771,6 @@ export default function WhatsAppInboxScreen() {
     closeMessageActionMenu,
     setForwardSearch,
   });
-
-  const handleSelectInteractiveReply = useCallback((message: CommWhatsAppMessage, option: { id: string | null; title: string | null }) => {
-    if (!selectedChat || message.direction !== 'inbound') return;
-
-    const replyText = (option.title || option.id || '').trim();
-    if (!replyText) return;
-
-    if (sendDisabledReason) {
-      toast.error(sendDisabledReason);
-      return;
-    }
-
-    // A Whapi expoe a leitura e o envio de mensagens interativas, mas nao um
-    // endpoint para sintetizar o evento nativo de "button reply" recebido de
-    // uma mensagem de terceiros. Enviamos o titulo escolhido como texto,
-    // citado na mensagem original — formato que os bots de atendimento usam
-    // como fallback e que deixa a escolha visivel no historico.
-    sendTextSegments(selectedChat, [replyText], getQuotePayloadFromMessage(message));
-  }, [selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
     if (!canReplyOrForwardMessage(message)) {
@@ -2049,39 +1910,10 @@ export default function WhatsAppInboxScreen() {
     handleStopVoiceRecording,
   });
 
-  const handleCopyChatTranscript = useCallback(async () => {
-    if (!selectedChat || copyingTranscript) {
-      return;
-    }
-
-    setCopyingTranscript(true);
-
-    try {
-      const [allMessages, systemSettings] = await Promise.all([
-        whatsappMessagesRepository.listAll(selectedChat.id),
-        configService.getSystemSettings(),
-      ]);
-
-      const timeZone = normalizeSystemTimeZone(systemSettings?.timezone);
-      const transcript = allMessages
-        .map((message) => buildTranscriptLine(message, selectedChatTranscriptLabel, timeZone))
-        .filter((line): line is string => Boolean(line))
-        .join('\n');
-
-      if (!transcript) {
-        toast.error('Não há histórico útil suficiente para copiar.');
-        return;
-      }
-
-      await navigator.clipboard.writeText(transcript);
-      toast.success('Conversa copiada no formato do follow-up.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao copiar conversa formatada', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível copiar a conversa.');
-    } finally {
-      setCopyingTranscript(false);
-    }
-  }, [copyingTranscript, selectedChat, selectedChatTranscriptLabel]);
+  const { copyingTranscript, handleCopyChatTranscript } = useInboxTranscriptExport({
+    chatId: selectedChat?.id ?? null,
+    leadLabel: selectedChatTranscriptLabel,
+  });
 
   const {
     handleUpdateChatInboxState,
@@ -2118,35 +1950,7 @@ export default function WhatsAppInboxScreen() {
     setMediaDrawerOpen((current) => !current);
   }, [setAttachmentMenuOpen, setComposerAiMenuOpen]);
 
-  const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
-    const mediaId = message.media_id?.trim() || null;
-    try {
-      const url = await whatsappMediaRepository.resolveObjectUrl({
-        mediaId: message.media_id,
-        mediaUrl: message.media_url,
-      });
-      if (!url) {
-        if (mediaId) {
-          whatsappMediaRepository.releaseObjectUrl(mediaId);
-        }
-        toast.error('Arquivo indisponível no momento.');
-        return;
-      }
-      window.open(url, '_blank', 'noopener,noreferrer');
-
-      // A nova aba precisa de um tempo para iniciar o carregamento antes que
-      // a URL temporária seja liberada do cache local.
-      if (mediaId) {
-        window.setTimeout(() => whatsappMediaRepository.releaseObjectUrl(mediaId), 60_000);
-      }
-    } catch (error) {
-      if (mediaId) {
-        whatsappMediaRepository.releaseObjectUrl(mediaId);
-      }
-      console.error('[WhatsAppInbox] erro ao abrir arquivo do chat', error);
-      toast.error('Não foi possível abrir este arquivo.');
-    }
-  }, []);
+  const { handleOpenChatFile } = useInboxChatMediaOpener();
 
   const selectionContextValue = useMemo<WhatsAppInboxSelectionContextValue>(() => ({
     selectedChatId,

@@ -6,7 +6,6 @@ import '../communicationTerracotta.css';
 import {
   Alert,
   Button,
-  LoadingState,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
@@ -32,6 +31,7 @@ import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
 import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } from './components/WhatsAppInboxConversationPane';
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
+import { WhatsAppInboxLazyLoadingFallback } from './components/WhatsAppInboxLazyLoadingFallback';
 import { formatConnectionStatusLabel } from './domain/inboxPresentation';
 import type { InboxMessageScrollMode } from './domain/inboxMessageScroll';
 import { KeyedActionLock } from './components/keyedActionLock';
@@ -125,28 +125,6 @@ const WhatsAppQuickRepliesModal = lazyWithChunkRecovery(() => import('./componen
 const WhatsAppStartChatModal = lazyWithChunkRecovery(() => import('./components/WhatsAppStartChatModal'));
 const WhatsAppScheduleMessageModal = lazyWithChunkRecovery(() => import('./components/WhatsAppScheduleMessageModal'));
 const WhatsAppScheduledMessagesPanel = lazyWithChunkRecovery(() => import('./components/WhatsAppScheduledMessagesPanel'));
-
-function InboxLazyLoadingFallback() {
-  return (
-    <div
-      className="kds-dialog-overlay modal-theme-host painel-theme kifer-ds"
-      role="status"
-      aria-live="polite"
-      aria-label="Abrindo janela"
-    >
-      <div className="kds-dialog-backdrop" aria-hidden="true" />
-      <div className="kds-dialog-container pointer-events-none">
-        <div className="kds-dialog max-w-sm p-6" aria-hidden="true">
-          <LoadingState
-            compact
-            label="Abrindo janela"
-            description="Só um instante."
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const CHAT_PAGE_SIZE = 250;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
@@ -2109,7 +2087,7 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        <Suspense fallback={<InboxLazyLoadingFallback />}>
+        <Suspense fallback={<WhatsAppInboxLazyLoadingFallback />}>
           {quickRepliesModalOpen ? (
             <WhatsAppQuickRepliesModal
               isOpen

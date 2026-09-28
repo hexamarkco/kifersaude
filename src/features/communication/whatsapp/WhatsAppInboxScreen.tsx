@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Copy, Download, FolderOpen, Info, Loader2, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -36,6 +36,7 @@ import {
 import { shouldHideTechnicalMessage } from './domain/messageVisibility';
 import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppMessageThread } from './components/WhatsAppMessageThread';
+import { WhatsAppThreadActionsMenu } from './components/WhatsAppThreadActionsMenu';
 import { WhatsAppComposer } from './components/WhatsAppComposer';
 import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
 import { WhatsAppThreadHeader } from './components/WhatsAppThreadHeader';
@@ -2645,134 +2646,34 @@ export default function WhatsAppInboxScreen() {
           ) : null}
         </PanelPopoverShell>
 
-        <PanelPopoverShell
-          ref={threadActionsMenuRef}
+        <WhatsAppThreadActionsMenu
+          menuRef={threadActionsMenuRef}
           isOpen={Boolean(selectedChat && threadActionsMenuOpen && threadActionsMenuPosition)}
           position={threadActionsMenuPosition}
-          onClose={() => setThreadActionsMenuOpen(false)}
-          ariaLabel="Ações da conversa"
-          role="menu"
-          className="kds-dropdown-menu before:hidden overflow-y-auto p-1"
-          style={{ width: threadActionsMenuPosition?.width ?? 288, maxHeight: threadActionsMenuPosition?.maxHeight }}
-        >
-          {selectedChat ? (
-            <div className="flex flex-col gap-1">
-              {!selectedChat.is_group && selectedChat.lead_id ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setThreadActionsMenuOpen(false);
-                    if (isSelectedChatWaitingForQuote) {
-                      return;
-                    }
-                    if (selectedChat.autonomous_attendance_status === 'active') {
-                      void handleDeactivateAutonomousAttendance(selectedChat);
-                    } else {
-                      void handleActivateAutonomousAttendance(selectedChat);
-                    }
-                  }}
-                  disabled={assumingControlChatId === selectedChat.id || isSelectedChatWaitingForQuote}
-                  className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-                >
-                  {assumingControlChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bot className="h-4 w-4 shrink-0" />}
-                  <span>{isSelectedChatWaitingForQuote
-                    ? 'IA encerrada enquanto aguarda cotação'
-                    : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
-                </button>
-              ) : null}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  setChatFilesOpen(true);
-                }}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-              >
-                <FolderOpen className="h-4 w-4 shrink-0" />
-                <span>Arquivos da conversa</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  handleToggleChatMessageSearch();
-                }}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-              >
-                <Search className="h-4 w-4 shrink-0" />
-                <span>Pesquisar neste chat</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  setScheduledMessagesPanelOpen(true);
-                }}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-              >
-                <CalendarClock className="h-4 w-4 shrink-0" />
-                <span>Mensagens agendadas desta conversa</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  void handleCopyChatTranscript();
-                }}
-                disabled={copyingTranscript}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-              >
-                {copyingTranscript ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Copy className="h-4 w-4 shrink-0" />}
-                <span>Copiar conversa formatada</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  void handleRecoverChatHistory();
-                }}
-                disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-                title={historyRecoveryDisabledReason ?? undefined}
-              >
-                {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
-                <span>Recuperar histórico antigo</span>
-              </button>
-              {!selectedChat.is_group ? <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  handleOpenFollowUpModal();
-                }}
-                disabled={Boolean(followUpGenerationDisabledReason)}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-                title={followUpGenerationDisabledReason ?? undefined}
-              >
-                {generatingFollowUp ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
-                <span>Gerar follow-up com IA</span>
-              </button> : null}
-              {!selectedChat.is_group ? <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setThreadActionsMenuOpen(false);
-                  handleOpenLeadDrawer();
-                }}
-                className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-              >
-                <Info className="h-4 w-4 shrink-0" />
-                <span>{selectedChat.lead_id ? 'Informações do lead' : 'Vincular lead do CRM'}</span>
-              </button> : null}
-            </div>
-          ) : null}
-        </PanelPopoverShell>
+          selectedChat={selectedChat}
+          setOpen={setThreadActionsMenuOpen}
+          assumingControlChatId={assumingControlChatId}
+          isSelectedChatWaitingForQuote={isSelectedChatWaitingForQuote}
+          copyingTranscript={copyingTranscript}
+          historyRecoveryDisabledReason={historyRecoveryDisabledReason}
+          syncingHistoryChatId={syncingHistoryChatId}
+          followUpGenerationDisabledReason={followUpGenerationDisabledReason}
+          generatingFollowUp={generatingFollowUp}
+          onToggleAutonomousAttendance={(chat) => {
+            if (chat.autonomous_attendance_status === 'active') {
+              void handleDeactivateAutonomousAttendance(chat);
+            } else {
+              void handleActivateAutonomousAttendance(chat);
+            }
+          }}
+          onOpenChatFiles={() => setChatFilesOpen(true)}
+          onToggleChatMessageSearch={handleToggleChatMessageSearch}
+          onOpenScheduledMessages={() => setScheduledMessagesPanelOpen(true)}
+          onCopyTranscript={() => void handleCopyChatTranscript()}
+          onRecoverHistory={() => void handleRecoverChatHistory()}
+          onOpenFollowUp={handleOpenFollowUpModal}
+          onOpenLeadDrawer={handleOpenLeadDrawer}
+        />
 
         <PanelPopoverShell
           ref={advancedFiltersRef}

@@ -61,6 +61,7 @@ import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { isChatMediaViewerMessage } from './domain/mediaViewerPresentation';
 import { buildInboxMessageTimeline } from './domain/inboxMessageTimeline';
 import { formatConnectionStatusLabel } from './domain/inboxPresentation';
+import type { InboxMessageScrollMode } from './domain/inboxMessageScroll';
 import { KeyedActionLock } from './components/keyedActionLock';
 import {
   InboxFilterGroup,
@@ -122,6 +123,12 @@ import { useInboxBootstrap } from './hooks/useInboxBootstrap';
 import { useInboxMessageThreadController } from './hooks/useInboxMessageThreadController';
 import { useInboxChatCollection } from './hooks/useInboxChatCollection';
 import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState';
+import { useInboxMessageViewport } from './hooks/useInboxMessageViewport';
+import {
+  useInboxOverlayPositions,
+  type InboxOverlayPosition,
+  type InboxPointerAnchor,
+} from './hooks/useInboxOverlayPositions';
 import type { ChatActivityFilter } from './domain/chatFilters';
 
 const LeadForm = lazyWithChunkRecovery(() => import('../../../components/LeadForm'));
@@ -163,14 +170,10 @@ function InboxLazyLoadingFallback() {
 }
 
 const CHAT_PAGE_SIZE = 250;
-const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-const REACTION_PICKER_WIDTH_PX = 252;
-const REACTION_PICKER_HEIGHT_PX = 52;
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
 
-type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
 type QuickReplyOption = {
   id: string;
   name: string;
@@ -183,20 +186,6 @@ type CreateLeadDraft = {
   chatId: string;
   initialValues: Partial<Lead>;
 };
-type PointerAnchor = {
-  x: number;
-  y: number;
-};
-
-const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
-  left: anchor.x,
-  right: anchor.x,
-  top: anchor.y,
-  bottom: anchor.y,
-  width: 0,
-  height: 0,
-});
-
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -212,7 +201,7 @@ export default function WhatsAppInboxScreen() {
   const [chatRefreshError, setChatRefreshError] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
+  const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<InboxOverlayPosition | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [leadResponsavelFilters, setLeadResponsavelFilters] = useState<string[]>([]);
@@ -242,7 +231,7 @@ export default function WhatsAppInboxScreen() {
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
-  const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [mediaDrawerPosition, setMediaDrawerPosition] = useState<InboxOverlayPosition | null>(null);
   const [sendingDrawerMediaByChatId, setSendingDrawerMediaByChatId] = useState<Record<string, boolean>>({});
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
   const [dismissedQuickReplyKey, setDismissedQuickReplyKey] = useState<string | null>(null);
@@ -262,16 +251,16 @@ export default function WhatsAppInboxScreen() {
   const [replyTargetMessage, setReplyTargetMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
-  const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
+  const [reactionPickerPosition, setReactionPickerPosition] = useState<InboxOverlayPosition | null>(null);
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
-  const [messageActionMenuPosition, setMessageActionMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
-  const [messageActionMenuPointerAnchor, setMessageActionMenuPointerAnchor] = useState<PointerAnchor | null>(null);
+  const [messageActionMenuPosition, setMessageActionMenuPosition] = useState<InboxOverlayPosition | null>(null);
+  const [messageActionMenuPointerAnchor, setMessageActionMenuPointerAnchor] = useState<InboxPointerAnchor | null>(null);
   const [messageDetailsMessageId, setMessageDetailsMessageId] = useState<string | null>(null);
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
-  const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
-  const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
+  const [chatMenuPosition, setChatMenuPosition] = useState<InboxOverlayPosition | null>(null);
+  const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<InboxPointerAnchor | null>(null);
   const [threadActionsMenuOpen, setThreadActionsMenuOpen] = useState(false);
-  const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<InboxOverlayPosition | null>(null);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -346,7 +335,7 @@ export default function WhatsAppInboxScreen() {
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
   const messagesCacheByChatIdRef = useRef<Map<string, { messages: CommWhatsAppMessage[]; signature: string; hasOlderMessages: boolean }>>(new Map());
-  const pendingScrollModeRef = useRef<ScrollMode>(null);
+  const pendingScrollModeRef = useRef<InboxMessageScrollMode>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const pendingScrollHeightRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
@@ -525,11 +514,6 @@ export default function WhatsAppInboxScreen() {
   const getSelectedChatSnapshot = useCallback((chatId: string | null) => {
     if (!chatId) return null;
     return latestChatsRef.current.find((chat) => chat.id === chatId) ?? null;
-  }, []);
-
-  const isScrolledNearBottom = useCallback((element: HTMLDivElement) => {
-    const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
-    return remaining <= SCROLL_BOTTOM_THRESHOLD_PX;
   }, []);
 
   const archivedChatsCountValue = archivedChatsCount ?? 0;
@@ -904,12 +888,12 @@ export default function WhatsAppInboxScreen() {
     setOpenMessageActionMenuMessageId((current) => (current === messageId ? null : messageId));
   }, []);
 
-  const handleOpenChatMenuFromContext = useCallback((chatId: string, anchor: PointerAnchor) => {
+  const handleOpenChatMenuFromContext = useCallback((chatId: string, anchor: InboxPointerAnchor) => {
     setChatMenuPointerAnchor(anchor);
     setOpenChatMenuChatId(chatId);
   }, []);
 
-  const handleOpenMessageActionMenuFromContext = useCallback((messageId: string, anchor: PointerAnchor) => {
+  const handleOpenMessageActionMenuFromContext = useCallback((messageId: string, anchor: InboxPointerAnchor) => {
     setOpenReactionPickerMessageId(null);
     setMessageActionMenuPointerAnchor(anchor);
     setOpenMessageActionMenuMessageId(messageId);
@@ -1355,326 +1339,39 @@ export default function WhatsAppInboxScreen() {
     setMediaDrawerOpen(false);
   }, [selectedChatId]);
 
-  useLayoutEffect(() => {
-    if (!openReactionPickerMessageId || typeof window === 'undefined') {
-      setReactionPickerPosition((current) => (current === null ? current : null));
-      return;
-    }
-
-    const syncPosition = () => {
-      const anchor = reactionAnchorRefs.current[openReactionPickerMessageId];
-      if (!anchor) {
-        setReactionPickerPosition((current) => (current === null ? current : null));
-        return;
-      }
-
-      const anchorRect = anchor.getBoundingClientRect();
-      const containerRect = messagesContainerRef.current?.getBoundingClientRect() ?? null;
-      const viewportPadding = 12;
-      const containerPadding = 12;
-      const boundsLeft = containerRect
-        ? Math.max(viewportPadding, containerRect.left + containerPadding)
-        : viewportPadding;
-      const boundsRight = containerRect
-        ? Math.min(window.innerWidth - viewportPadding, containerRect.right - containerPadding)
-        : window.innerWidth - viewportPadding;
-      const maxLeft = Math.max(boundsLeft, boundsRight - REACTION_PICKER_WIDTH_PX);
-      const preferredLeft = anchorRect.left + (anchorRect.width - REACTION_PICKER_WIDTH_PX) / 2;
-      const left = Math.min(Math.max(boundsLeft, preferredLeft), maxLeft);
-      const maxTop = Math.max(viewportPadding, window.innerHeight - REACTION_PICKER_HEIGHT_PX - viewportPadding);
-      const top = Math.min(
-        Math.max(viewportPadding, anchorRect.top - REACTION_PICKER_HEIGHT_PX - 8),
-        maxTop,
-      );
-
-      setReactionPickerPosition((current) => {
-        if (current && current.top === top && current.left === left) {
-          return current;
-        }
-
-        return { top, left };
-      });
-    };
-
-    syncPosition();
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [openReactionPickerMessageId]);
-
-  useLayoutEffect(() => {
-    if (!openMessageActionMenuMessageId || typeof window === 'undefined') {
-      setMessageActionMenuPosition((current) => (current === null ? current : null));
-      return;
-    }
-
-    const syncPosition = () => {
-      const trigger = messageActionMenuPointerAnchor
-        ? null
-        : messageActionTriggerRefs.current[openMessageActionMenuMessageId];
-      if (!trigger && !messageActionMenuPointerAnchor) {
-        setMessageActionMenuPosition((current) => (current === null ? current : null));
-        return;
-      }
-
-      const triggerRect = messageActionMenuPointerAnchor
-        ? createVirtualAnchorRect(messageActionMenuPointerAnchor)
-        : trigger!.getBoundingClientRect();
-      const menuWidth = 268;
-      const estimatedMenuHeight = 236;
-      const viewportPadding = 12;
-      const gap = 6;
-      const availableBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
-      const availableAbove = triggerRect.top - viewportPadding;
-      const openUpward = availableBelow < Math.min(estimatedMenuHeight, 180) && availableAbove > availableBelow;
-      const maxAvailableHeight = Math.max(120, (openUpward ? availableAbove : availableBelow) - gap);
-      const maxHeight = Math.min(estimatedMenuHeight, maxAvailableHeight);
-      const measuredMenuHeight = Math.ceil(messageActionMenuRef.current?.getBoundingClientRect().height ?? 0);
-      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || estimatedMenuHeight);
-      const left = Math.max(
-        viewportPadding,
-        Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
-      );
-      const top = openUpward
-        ? Math.max(viewportPadding, triggerRect.top - effectiveMenuHeight - gap)
-        : Math.min(window.innerHeight - maxHeight - viewportPadding, triggerRect.bottom + gap);
-
-      setMessageActionMenuPosition((current) => {
-        if (
-          current
-          && current.top === top
-          && current.left === left
-          && current.width === menuWidth
-          && current.maxHeight === maxHeight
-        ) {
-          return current;
-        }
-
-        return {
-          top,
-          left,
-          width: menuWidth,
-          maxHeight,
-        };
-      });
-    };
-
-    syncPosition();
-    const frameId = window.requestAnimationFrame(syncPosition);
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [messageActionMenuPointerAnchor, openMessageActionMenuMessageId]);
-
-  useLayoutEffect(() => {
-    if (!openChatMenuChatId || typeof window === 'undefined') {
-      setChatMenuPosition((current) => (current === null ? current : null));
-      return;
-    }
-
-    const syncPosition = () => {
-      const trigger = chatMenuPointerAnchor
-        ? null
-        : chatMenuTriggerRefs.current[openChatMenuChatId];
-      if (!trigger && !chatMenuPointerAnchor) {
-        setChatMenuPosition((current) => (current === null ? current : null));
-        return;
-      }
-
-      const triggerRect = chatMenuPointerAnchor
-        ? createVirtualAnchorRect(chatMenuPointerAnchor)
-        : trigger!.getBoundingClientRect();
-      const menuWidth = 248;
-      const menuHeight = 232;
-      const viewportPadding = 12;
-      const gap = 6;
-      const availableBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
-      const availableAbove = triggerRect.top - viewportPadding;
-      const openUpward = availableBelow < Math.min(menuHeight, 180) && availableAbove > availableBelow;
-      const maxHeight = Math.max(160, Math.min(menuHeight, (openUpward ? availableAbove : availableBelow) - gap));
-      const measuredMenuHeight = Math.ceil(chatMenuRef.current?.getBoundingClientRect().height ?? 0);
-      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || menuHeight);
-      const left = Math.max(
-        viewportPadding,
-        Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
-      );
-      const top = openUpward
-        ? Math.max(viewportPadding, triggerRect.top - effectiveMenuHeight - gap)
-        : Math.min(window.innerHeight - maxHeight - viewportPadding, triggerRect.bottom + gap);
-
-      setChatMenuPosition((current) => {
-        if (
-          current
-          && current.top === top
-          && current.left === left
-          && current.width === menuWidth
-          && current.maxHeight === maxHeight
-        ) {
-          return current;
-        }
-
-        return {
-          top,
-          left,
-          width: menuWidth,
-          maxHeight,
-        };
-      });
-    };
-
-    syncPosition();
-    const frameId = window.requestAnimationFrame(syncPosition);
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [chatMenuPointerAnchor, openChatMenuChatId]);
-
   useClickOutside(
     advancedFiltersOpen,
     () => [advancedFiltersRef.current, advancedFiltersTriggerRef.current],
     () => setAdvancedFiltersOpen(false),
   );
 
-  useLayoutEffect(() => {
-    if (!advancedFiltersOpen || !advancedFiltersTriggerRef.current || typeof window === 'undefined') {
-      return;
-    }
-
-    const syncPosition = () => {
-      const triggerRect = advancedFiltersTriggerRef.current?.getBoundingClientRect();
-      if (!triggerRect) {
-        return;
-      }
-
-      const viewportPadding = 16;
-      const panelWidth = Math.min(292, window.innerWidth - viewportPadding * 2);
-      const nextLeft = Math.min(
-        Math.max(viewportPadding, triggerRect.left),
-        window.innerWidth - panelWidth - viewportPadding,
-      );
-
-      const nextTop = triggerRect.bottom + 8;
-      setAdvancedFiltersPosition((current) => (
-        current && current.top === nextTop && current.left === nextLeft
-          ? current
-          : { top: nextTop, left: nextLeft }
-      ));
-    };
-
-    syncPosition();
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [advancedFiltersOpen]);
-
-  useLayoutEffect(() => {
-    if (!threadActionsMenuOpen || !threadActionsMenuTriggerRef.current || typeof window === 'undefined') {
-      setThreadActionsMenuPosition((current) => (current === null ? current : null));
-      return;
-    }
-
-    const syncPosition = () => {
-      const triggerRect = threadActionsMenuTriggerRef.current?.getBoundingClientRect();
-      if (!triggerRect) {
-        return;
-      }
-
-      const viewportPadding = 12;
-      const width = Math.min(288, window.innerWidth - viewportPadding * 2);
-      const maxHeight = Math.min(420, window.innerHeight - viewportPadding * 2);
-      const left = Math.min(
-        Math.max(viewportPadding, triggerRect.right - width),
-        window.innerWidth - width - viewportPadding,
-      );
-      const top = Math.min(
-        triggerRect.bottom + 8,
-        window.innerHeight - maxHeight - viewportPadding,
-      );
-
-      setThreadActionsMenuPosition((current) => (
-        current
-        && current.top === top
-        && current.left === left
-        && current.width === width
-        && current.maxHeight === maxHeight
-          ? current
-          : { top, left, width, maxHeight }
-      ));
-    };
-
-    syncPosition();
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [threadActionsMenuOpen]);
-
-  useLayoutEffect(() => {
-    if (!mediaDrawerOpen || !mediaDrawerTriggerRef.current || typeof window === 'undefined') {
-      return;
-    }
-
-    const syncPosition = () => {
-      const triggerRect = mediaDrawerTriggerRef.current?.getBoundingClientRect();
-      if (!triggerRect) {
-        return;
-      }
-
-      const viewportPadding = 12;
-      const panelWidth = Math.min(360, window.innerWidth - viewportPadding * 2);
-      const panelHeight = Math.min(400, window.innerHeight - viewportPadding * 2);
-      const left = Math.min(
-        Math.max(viewportPadding, triggerRect.left),
-        window.innerWidth - panelWidth - viewportPadding,
-      );
-      const top = Math.max(viewportPadding, triggerRect.top - panelHeight - 8);
-
-      setMediaDrawerPosition((current) => (
-        current
-        && current.top === top
-        && current.left === left
-        && current.width === panelWidth
-        && current.maxHeight === panelHeight
-          ? current
-          : {
-              top,
-              left,
-              width: panelWidth,
-              maxHeight: panelHeight,
-            }
-      ));
-    };
-
-    syncPosition();
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [mediaDrawerOpen]);
+  useInboxOverlayPositions({
+    openReactionPickerMessageId,
+    openMessageActionMenuMessageId,
+    messageActionMenuPointerAnchor,
+    openChatMenuChatId,
+    chatMenuPointerAnchor,
+    advancedFiltersOpen,
+    threadActionsMenuOpen,
+    mediaDrawerOpen,
+    refs: {
+      messagesContainerRef,
+      reactionAnchorRefs,
+      messageActionTriggerRefs,
+      messageActionMenuRef,
+      chatMenuTriggerRefs,
+      chatMenuRef,
+      advancedFiltersTriggerRef,
+      threadActionsMenuTriggerRef,
+      mediaDrawerTriggerRef,
+    },
+    setReactionPickerPosition,
+    setMessageActionMenuPosition,
+    setChatMenuPosition,
+    setAdvancedFiltersPosition,
+    setThreadActionsMenuPosition,
+    setMediaDrawerPosition,
+  });
 
   useEffect(() => {
     const audio = voicePreviewAudioRef.current;
@@ -1868,6 +1565,23 @@ export default function WhatsAppInboxScreen() {
     },
     upsertChatLocally,
     loadChats,
+  });
+
+  const { handleMessagesScroll } = useInboxMessageViewport({
+    refs: {
+      messagesContainerRef,
+      messageBubbleRefs,
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+      isNearBottomRef,
+    },
+    messages,
+    localOutgoingMessages,
+    selectedChatId,
+    highlightedMessageId,
+    setHighlightedMessageId,
+    markSelectedChatReadIfEligible,
   });
 
   const handleRetryChatLoad = useCallback(() => {
@@ -2071,63 +1785,6 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     clearManualUnreadSkipReadForOtherChats(selectedChatId);
   }, [clearManualUnreadSkipReadForOtherChats, selectedChatId]);
-
-  useLayoutEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    if (pendingScrollModeRef.current === 'bottom') {
-      container.scrollTop = container.scrollHeight;
-      isNearBottomRef.current = true;
-    } else if (pendingScrollModeRef.current === 'preserve' && pendingScrollTopRef.current !== null) {
-      container.scrollTop = pendingScrollTopRef.current;
-    } else if (
-      pendingScrollModeRef.current === 'prepend' &&
-      pendingScrollTopRef.current !== null &&
-      pendingScrollHeightRef.current !== null
-    ) {
-      const delta = container.scrollHeight - pendingScrollHeightRef.current;
-      container.scrollTop = pendingScrollTopRef.current + Math.max(delta, 0);
-    }
-
-    pendingScrollModeRef.current = null;
-    pendingScrollTopRef.current = null;
-    pendingScrollHeightRef.current = null;
-  }, [localOutgoingMessages, messages, selectedChatId]);
-
-  useLayoutEffect(() => {
-    if (!highlightedMessageId) {
-      return;
-    }
-
-    const messageNode = messageBubbleRefs.current[highlightedMessageId];
-    if (!messageNode) {
-      return;
-    }
-
-    messageNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [highlightedMessageId, messages]);
-
-  useEffect(() => {
-    if (!highlightedMessageId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setHighlightedMessageId((current) => (current === highlightedMessageId ? null : current));
-    }, 3200);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [highlightedMessageId]);
-
-  const handleMessagesScroll = useCallback(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-    isNearBottomRef.current = isScrolledNearBottom(container);
-    if (isNearBottomRef.current) {
-      markSelectedChatReadIfEligible('scroll');
-    }
-  }, [isScrolledNearBottom, markSelectedChatReadIfEligible]);
 
   const resizeComposerTextarea = useCallback((target?: HTMLTextAreaElement | null) => {
     const textarea = target ?? composerTextareaRef.current;

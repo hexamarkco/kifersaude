@@ -1173,11 +1173,18 @@ export const commWhatsAppCampaignService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel pausar o disparo.'));
     }
 
-    await supabase
+    const { error: targetsError } = await supabase
       .from('comm_whatsapp_campaign_targets')
       .update({ status: 'scheduled', locked_at: null, lock_token: null })
       .eq('campaign_id', campaignId)
       .eq('status', 'sending');
+
+    if (targetsError) {
+      throw new Error(await getSupabaseErrorMessage(
+        targetsError,
+        'Disparo pausado, mas nao foi possivel liberar todos os contatos em processamento.',
+      ));
+    }
   },
 
   async resumeCampaign(campaign: CommWhatsAppCampaign): Promise<void> {

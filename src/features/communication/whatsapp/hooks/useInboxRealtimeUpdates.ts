@@ -1,7 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { whatsappMediaRepository } from '../data';
 import {
   applyChatPresenceUpdate,
   preserveUsefulChatPreview,
@@ -10,14 +9,12 @@ import {
 } from '../domain/chatPresentation';
 import { selectReplacementChatId } from '../domain/chatLoadState';
 import { mergeMessages } from '../domain/messageTimeline';
-import { messagesReferToSameOutgoing } from '../domain/messageMetadata';
 import { getSavedContactNameForPhone } from '../domain/contactLookup';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPresence } from '../domain/types';
 import {
   applyPendingChatInboxState,
   type PendingChatInboxStatePatch,
 } from '../pendingChatInboxState';
-import type { LocalOutgoingRetryPayload } from '../domain/outgoingMessageTypes';
 
 type CurrentValue<T> = { current: T };
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -40,21 +37,18 @@ type InboxRealtimeUpdatesOptions = {
     pendingScrollTopRef: CurrentValue<number | null>;
     pendingScrollHeightRef: CurrentValue<number | null>;
     messagesContainerRef: CurrentValue<HTMLDivElement | null>;
-    localOutgoingRetryPayloadRef: CurrentValue<Map<string, LocalOutgoingRetryPayload>>;
-    localOutgoingMediaPreviewUrlsRef: CurrentValue<Map<string, string>>;
     loadChatsRef: CurrentValue<() => Promise<unknown> | void>;
   };
   setSelectedChatId: Dispatch<SetStateAction<string | null>>;
   setChats: Dispatch<SetStateAction<CommWhatsAppChat[]>>;
   setMessages: Dispatch<SetStateAction<CommWhatsAppMessage[]>>;
-  setLocalOutgoingMessages: Dispatch<SetStateAction<CommWhatsAppMessage[]>>;
   buildChatsSignature: (chats: CommWhatsAppChat[]) => string;
   buildMessagesSignature: (messages: CommWhatsAppMessage[]) => string;
   chatMatchesActiveFilters: (chat: CommWhatsAppChat) => boolean;
   applyFrontendSavedContactNames: (chats: CommWhatsAppChat[]) => CommWhatsAppChat[];
   applyPrefetchedLeadNames: (chats: CommWhatsAppChat[]) => CommWhatsAppChat[];
   applyOutgoingOrderToServerMessage: (message: CommWhatsAppMessage) => CommWhatsAppMessage;
-  rememberOutgoingMessageOrder: (message: CommWhatsAppMessage) => void;
+  reconcileLocalOutgoingMessages: (chatId: string, serverMessages: CommWhatsAppMessage[]) => void;
 };
 
 export const useInboxRealtimeUpdates = ({
@@ -62,14 +56,13 @@ export const useInboxRealtimeUpdates = ({
   setSelectedChatId,
   setChats,
   setMessages,
-  setLocalOutgoingMessages,
   buildChatsSignature,
   buildMessagesSignature,
   chatMatchesActiveFilters,
   applyFrontendSavedContactNames,
   applyPrefetchedLeadNames,
   applyOutgoingOrderToServerMessage,
-  rememberOutgoingMessageOrder,
+  reconcileLocalOutgoingMessages,
 }: InboxRealtimeUpdatesOptions) => {
   const {
     chatPollBackoffRef,
@@ -88,8 +81,6 @@ export const useInboxRealtimeUpdates = ({
     pendingScrollTopRef,
     pendingScrollHeightRef,
     messagesContainerRef,
-    localOutgoingRetryPayloadRef,
-    localOutgoingMediaPreviewUrlsRef,
     loadChatsRef,
   } = refs;
 
@@ -250,43 +241,20 @@ export const useInboxRealtimeUpdates = ({
       return nextMessages;
     });
 
-    if (incomingMessage) {
-      setLocalOutgoingMessages((current) => {
-        let changed = false;
-        const nextLocalMessages = current.filter((message) => {
-          if (message.chat_id !== targetChatId || !messagesReferToSameOutgoing(message, incomingMessage)) {
-            return true;
-          }
-
-          changed = true;
-          rememberOutgoingMessageOrder(message);
-          localOutgoingRetryPayloadRef.current.delete(message.id);
-          const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-          const incomingExternalMessageId = String(incomingMessage.external_message_id ?? '').trim();
-          if (previewUrl && incomingExternalMessageId) {
-            whatsappMediaRepository.rememberLocalPreview(incomingExternalMessageId, previewUrl);
-          }
-          localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
-          return false;
-        });
-
-        return changed ? nextLocalMessages : current;
-      });
+    if (orderedIncomingMessage) {
+      reconcileLocalOutgoingMessages(targetChatId, [orderedIncomingMessage]);
     }
   }, [
     applyOutgoingOrderToServerMessage,
     buildMessagesSignature,
     isNearBottomRef,
-    localOutgoingMediaPreviewUrlsRef,
-    localOutgoingRetryPayloadRef,
     messagesContainerRef,
     messagesSignatureRef,
     pendingScrollHeightRef,
     pendingScrollModeRef,
     pendingScrollTopRef,
-    rememberOutgoingMessageOrder,
+    reconcileLocalOutgoingMessages,
     selectedChatIdRef,
-    setLocalOutgoingMessages,
     setMessages,
   ]);
 

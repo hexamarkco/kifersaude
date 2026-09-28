@@ -18,7 +18,6 @@ const mocks = vi.hoisted(() => {
   return {
     getThread: createMock(),
     listPage: createMock(),
-    rememberLocalPreview: createMock(),
     toastError: createMock(),
   };
 });
@@ -26,7 +25,6 @@ const mocks = vi.hoisted(() => {
 vi.mock('../../data', () => ({
   whatsappConversationsRepository: { getThread: mocks.getThread },
   whatsappMessagesRepository: { listPage: mocks.listPage },
-  whatsappMediaRepository: { rememberLocalPreview: mocks.rememberLocalPreview },
 }));
 
 vi.mock('../../../../lib/toast', () => ({
@@ -87,15 +85,12 @@ const applyStateUpdate = <Value,>(update: SetStateAction<Value>, previous: Value
 
 const createOptions = () => {
   const currentMessages: { value: CommWhatsAppMessage[] } = { value: [] };
-  const currentLocalMessages: { value: CommWhatsAppMessage[] } = { value: [] };
   const loadingStates: boolean[] = [];
   const olderMessageStates: boolean[] = [];
   const loadErrors: Array<string | null> = [];
   const reconcileChatIds: Array<string | null> = [];
   const chatUpserts: CommWhatsAppChat[] = [];
-  const rememberedOrders: CommWhatsAppMessage[] = [];
-  const retryPayloads = new Map<string, { kind: 'media' }>();
-  const previewUrls = new Map<string, string>();
+  const reconciliations: Array<{ chatId: string; messages: CommWhatsAppMessage[] }> = [];
   const cache = new Map<string, { messages: CommWhatsAppMessage[]; signature: string; hasOlderMessages: boolean }>();
   const options: LoaderOptions = {
     selectedChatIdRef: { current: 'chat-1' },
@@ -108,8 +103,6 @@ const createOptions = () => {
     pendingScrollHeightRef: { current: null },
     isNearBottomRef: { current: true },
     messagesContainerRef: { current: null },
-    localOutgoingRetryPayloadRef: { current: retryPayloads as LoaderOptions['localOutgoingRetryPayloadRef']['current'] },
-    localOutgoingMediaPreviewUrlsRef: { current: previewUrls },
     setMessages: (next) => {
       currentMessages.value = typeof next === 'function' ? next(currentMessages.value) : next;
     },
@@ -125,28 +118,22 @@ const createOptions = () => {
     setHasOlderMessages: (hasOlder) => {
       olderMessageStates.push(applyStateUpdate(hasOlder, olderMessageStates[olderMessageStates.length - 1] ?? false));
     },
-    setLocalOutgoingMessages: (next) => {
-      currentLocalMessages.value = typeof next === 'function' ? next(currentLocalMessages.value) : next;
-    },
     setLeadPanel: (leadPanel) => { applyStateUpdate(leadPanel, null); },
     applyOutgoingOrderToServerMessage: (message) => message,
     buildMessagesSignature: (messages) => messages.map((message) => message.id).join('|'),
-    rememberOutgoingMessageOrder: (message) => { rememberedOrders.push(message); },
+    reconcileLocalOutgoingMessages: (chatId, messages) => { reconciliations.push({ chatId, messages }); },
     upsertChatLocally: (chat) => { chatUpserts.push(chat); },
   };
 
   return {
     options,
     currentMessages,
-    currentLocalMessages,
     loadingStates,
     olderMessageStates,
     loadErrors,
     reconcileChatIds,
     chatUpserts,
-    rememberedOrders,
-    retryPayloads,
-    previewUrls,
+    reconciliations,
     cache,
   };
 };
@@ -154,7 +141,6 @@ const createOptions = () => {
 const resetMocks = () => {
   mocks.getThread.mockReset();
   mocks.listPage.mockReset();
-  mocks.rememberLocalPreview.mockReset();
   mocks.toastError.mockReset();
 };
 
@@ -184,7 +170,7 @@ test('carregamento inicial hidrata thread, indicador de paginação e cache', as
   }
 });
 
-test('poll mescla mensagens, limpa otimista sincronizada e preserva preview local', async () => {
+test('poll mescla mensagens e delega a reconciliação da fila otimista', async () => {
   resetMocks();
   const state = createOptions();
   const chat = createChat();
@@ -192,9 +178,6 @@ test('poll mescla mensagens, limpa otimista sincronizada e preserva preview loca
   syncedMessage.external_message_id = 'provider-message-id';
   const latestInbound = { ...createMessage('inbound'), direction: 'inbound' as const };
   state.options.latestMessagesRef.current = [latestInbound];
-  state.currentLocalMessages.value = [createMessage('local-message-id')];
-  state.retryPayloads.set('local-message-id', { kind: 'media' });
-  state.previewUrls.set('local-message-id', 'blob:local-preview');
   mocks.listPage.mockResolvedValue({ messages: [syncedMessage], hasMore: false });
   let loader: Loader | null = null;
   const view = render(<Harness options={state.options} capture={(value) => { loader = value; }} />);
@@ -205,10 +188,7 @@ test('poll mescla mensagens, limpa otimista sincronizada e preserva preview loca
 
     assert.equal(mocks.listPage.mock.calls[0]?.[0], chat.id);
     assert.deepEqual(state.currentMessages.value.map(({ id }) => id), ['inbound', 'local-message-id']);
-    assert.deepEqual(state.currentLocalMessages.value, []);
-    assert.equal(state.retryPayloads.has('local-message-id'), false);
-    assert.equal(state.previewUrls.has('local-message-id'), false);
-    assert.deepEqual(mocks.rememberLocalPreview.mock.calls[0], ['provider-message-id', 'blob:local-preview']);
+    assert.deepEqual(state.reconciliations, [{ chatId: chat.id, messages: state.currentMessages.value }]);
     assert.equal(state.cache.get(chat.id)?.hasOlderMessages, false);
   } finally {
     view.unmount();

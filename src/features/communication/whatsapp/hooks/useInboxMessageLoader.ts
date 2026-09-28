@@ -2,14 +2,11 @@ import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 
 import {
   whatsappConversationsRepository,
-  whatsappMediaRepository,
   whatsappMessagesRepository,
   type CommWhatsAppLeadPanel,
 } from '../data';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
-import { messagesReferToSameOutgoing } from '../domain/messageMetadata';
 import { mergeMessages } from '../domain/messageTimeline';
-import type { LocalOutgoingRetryPayload } from '../domain/outgoingMessageTypes';
 import { KeyedPromiseQueue } from '../components/keyedPromiseQueue';
 import { toast } from '../../../../lib/toast';
 
@@ -34,18 +31,15 @@ type InboxMessageLoaderOptions = {
   pendingScrollHeightRef: CurrentValue<number | null>;
   isNearBottomRef: CurrentValue<boolean>;
   messagesContainerRef: CurrentValue<HTMLDivElement | null>;
-  localOutgoingRetryPayloadRef: CurrentValue<Map<string, LocalOutgoingRetryPayload>>;
-  localOutgoingMediaPreviewUrlsRef: CurrentValue<Map<string, string>>;
   setMessages: Dispatch<SetStateAction<CommWhatsAppMessage[]>>;
   setMessageLoadError: Dispatch<SetStateAction<string | null>>;
   setLoadingMessages: Dispatch<SetStateAction<boolean>>;
   setThreadReconcileChatId: Dispatch<SetStateAction<string | null>>;
   setHasOlderMessages: Dispatch<SetStateAction<boolean>>;
-  setLocalOutgoingMessages: Dispatch<SetStateAction<CommWhatsAppMessage[]>>;
   setLeadPanel: Dispatch<SetStateAction<CommWhatsAppLeadPanel | null>>;
   applyOutgoingOrderToServerMessage: (message: CommWhatsAppMessage) => CommWhatsAppMessage;
   buildMessagesSignature: (messages: CommWhatsAppMessage[]) => string;
-  rememberOutgoingMessageOrder: (message: CommWhatsAppMessage) => void;
+  reconcileLocalOutgoingMessages: (chatId: string, serverMessages: CommWhatsAppMessage[]) => void;
   upsertChatLocally: (chat: CommWhatsAppChat) => void;
 };
 
@@ -63,18 +57,15 @@ export const useInboxMessageLoader = ({
   pendingScrollHeightRef,
   isNearBottomRef,
   messagesContainerRef,
-  localOutgoingRetryPayloadRef,
-  localOutgoingMediaPreviewUrlsRef,
   setMessages,
   setMessageLoadError,
   setLoadingMessages,
   setThreadReconcileChatId,
   setHasOlderMessages,
-  setLocalOutgoingMessages,
   setLeadPanel,
   applyOutgoingOrderToServerMessage,
   buildMessagesSignature,
-  rememberOutgoingMessageOrder,
+  reconcileLocalOutgoingMessages,
   upsertChatLocally,
 }: InboxMessageLoaderOptions) => {
   const pollingMessagesChatIdRef = useRef<string | null>(null);
@@ -166,38 +157,7 @@ export const useInboxMessageLoader = ({
           ? orderedData
           : mergeMessages(latestMessagesRef.current, orderedData);
         const nextSignature = buildMessagesSignature(nextMessages);
-        setLocalOutgoingMessages((current) => {
-          const nextLocalMessages: CommWhatsAppMessage[] = [];
-
-          for (const message of current) {
-            if (message.chat_id !== targetChatId) {
-              nextLocalMessages.push(message);
-              continue;
-            }
-
-            const externalId = String(message.external_message_id ?? '').trim();
-            const syncedServerMessage = nextMessages.find((serverMessage) => (
-              messagesReferToSameOutgoing(message, serverMessage)
-            )) ?? null;
-            const alreadySynced = Boolean(syncedServerMessage);
-
-            if (alreadySynced) {
-              rememberOutgoingMessageOrder(message);
-              localOutgoingRetryPayloadRef.current.delete(message.id);
-              const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-              const syncedExternalMessageId = String(syncedServerMessage?.external_message_id ?? externalId).trim();
-              if (previewUrl && syncedExternalMessageId) {
-                whatsappMediaRepository.rememberLocalPreview(syncedExternalMessageId, previewUrl);
-              }
-              localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
-              continue;
-            }
-
-            nextLocalMessages.push(message);
-          }
-
-          return nextLocalMessages;
-        });
+        reconcileLocalOutgoingMessages(targetChatId, nextMessages);
 
         if (nextSignature === messagesSignatureRef.current) {
           if (reason === 'initial') {
@@ -263,8 +223,6 @@ export const useInboxMessageLoader = ({
     buildMessagesSignature,
     isNearBottomRef,
     latestMessagesRef,
-    localOutgoingMediaPreviewUrlsRef,
-    localOutgoingRetryPayloadRef,
     messagesCacheByChatIdRef,
     messagesContainerRef,
     messagesRequestIdRef,
@@ -272,12 +230,11 @@ export const useInboxMessageLoader = ({
     pendingScrollHeightRef,
     pendingScrollModeRef,
     pendingScrollTopRef,
-    rememberOutgoingMessageOrder,
+    reconcileLocalOutgoingMessages,
     selectedChatIdRef,
     setHasOlderMessages,
     setLeadPanel,
     setLoadingMessages,
-    setLocalOutgoingMessages,
     setMessageLoadError,
     setMessages,
     setThreadReconcileChatId,

@@ -6,7 +6,6 @@ import { test, vi } from 'vitest';
 import { render } from '../../../../../testing-library/react';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPresence } from '../../domain/types';
 import { buildPendingChatInboxStatePatch, type PendingChatInboxStatePatch } from '../../pendingChatInboxState';
-import type { LocalOutgoingRetryPayload } from '../../domain/outgoingMessageTypes';
 import { useInboxRealtimeUpdates } from '../useInboxRealtimeUpdates';
 
 type MockFunction = ((...args: unknown[]) => unknown) & {
@@ -15,16 +14,10 @@ type MockFunction = ((...args: unknown[]) => unknown) & {
 };
 
 const mocks = vi.hoisted(() => ({
-  rememberLocalPreview: vi.fn() as unknown as MockFunction,
-  rememberOutgoingMessageOrder: vi.fn() as unknown as MockFunction,
   loadChats: vi.fn() as unknown as MockFunction,
 }));
 
 const resetMocks = () => Object.values(mocks).forEach((mock) => mock.mockReset());
-
-vi.mock('../../data', () => ({
-  whatsappMediaRepository: { rememberLocalPreview: mocks.rememberLocalPreview },
-}));
 
 type RealtimeUpdates = ReturnType<typeof useInboxRealtimeUpdates>;
 type RealtimeUpdatesOptions = Parameters<typeof useInboxRealtimeUpdates>[0];
@@ -96,13 +89,12 @@ const applyStateUpdate = <Value,>(update: SetStateAction<Value>, previous: Value
 
 const createOptions = (initialChats: CommWhatsAppChat[] = [], selectedChatId: string | null = null) => {
   const initialMessages: CommWhatsAppMessage[] = [];
-  const initialLocalMessages: CommWhatsAppMessage[] = [];
   const state = {
     chats: initialChats,
     messages: initialMessages,
-    localMessages: initialLocalMessages,
     selectedChatId,
   };
+  const outgoingReconciliations: Array<{ chatId: string; messages: CommWhatsAppMessage[] }> = [];
   const refs: RealtimeUpdatesOptions['refs'] = {
     chatPollBackoffRef: { current: 3 },
     chatPollIdleCyclesRef: { current: 4 },
@@ -120,8 +112,6 @@ const createOptions = (initialChats: CommWhatsAppChat[] = [], selectedChatId: st
     pendingScrollTopRef: { current: null },
     pendingScrollHeightRef: { current: null },
     messagesContainerRef: { current: { scrollTop: 137 } as HTMLDivElement },
-    localOutgoingRetryPayloadRef: { current: new Map<string, LocalOutgoingRetryPayload>() },
-    localOutgoingMediaPreviewUrlsRef: { current: new Map<string, string>() },
     loadChatsRef: { current: () => mocks.loadChats() as Promise<void> },
   };
   const options: RealtimeUpdatesOptions = {
@@ -136,21 +126,18 @@ const createOptions = (initialChats: CommWhatsAppChat[] = [], selectedChatId: st
     setMessages: (next) => {
       state.messages = applyStateUpdate(next, state.messages);
     },
-    setLocalOutgoingMessages: (next) => {
-      state.localMessages = applyStateUpdate(next, state.localMessages);
-    },
     buildChatsSignature: (chats) => JSON.stringify(chats.map((chat) => [chat.id, chat.is_archived, chat.display_name, chat.presence_status])),
     buildMessagesSignature: (messages) => JSON.stringify(messages.map((message) => [message.id, message.delivery_status])),
     chatMatchesActiveFilters: () => true,
     applyFrontendSavedContactNames: (chats) => chats,
     applyPrefetchedLeadNames: (chats) => chats,
     applyOutgoingOrderToServerMessage: (message) => message,
-    rememberOutgoingMessageOrder: (message) => mocks.rememberOutgoingMessageOrder(message),
+    reconcileLocalOutgoingMessages: (chatId, messages) => outgoingReconciliations.push({ chatId, messages }),
   };
   refs.chatsSignatureRef.current = options.buildChatsSignature(initialChats);
   refs.messagesSignatureRef.current = options.buildMessagesSignature(initialMessages);
 
-  return { options, refs, state };
+  return { options, refs, state, outgoingReconciliations };
 };
 
 const chatPayload = (
@@ -254,31 +241,16 @@ test('nova mensagem preserva posição de leitura quando operador não está no 
   assert.equal(refs.pendingScrollHeightRef.current, null);
 });
 
-test('reconcilia envio otimista, limpa retry e transfere prévia local para o id do servidor', () => {
+test('encaminha a confirmação realtime do envio ao reconciliador da fila otimista', () => {
   resetMocks();
-  const localMessage = createMessage('local-1', 'chat-1', { client_request_id: 'request-1' }, {
-    external_message_id: null,
-    source: 'local',
-  });
   const serverMessage = createMessage('server-1', 'chat-1', { client_request_id: 'request-1' }, {
     external_message_id: 'external-1',
   });
-  const { options, refs, state } = createOptions([], 'chat-1');
-  state.localMessages = [localMessage];
-  refs.localOutgoingRetryPayloadRef.current.set(localMessage.id, {
-    kind: 'text',
-    text: 'Olá',
-    clientRequestId: 'request-1',
-  });
-  refs.localOutgoingMediaPreviewUrlsRef.current.set(localMessage.id, 'blob:local-preview');
+  const { options, outgoingReconciliations } = createOptions([], 'chat-1');
   let updates!: RealtimeUpdates;
 
   render(<Harness options={options} capture={(value) => { updates = value; }} />);
   act(() => updates.applyRealtimeMessageChange(messagePayload('INSERT', serverMessage, null)));
 
-  assert.deepEqual(state.localMessages, []);
-  assert.equal(refs.localOutgoingRetryPayloadRef.current.has(localMessage.id), false);
-  assert.equal(refs.localOutgoingMediaPreviewUrlsRef.current.has(localMessage.id), false);
-  assert.deepEqual(mocks.rememberLocalPreview.mock.calls[0], ['external-1', 'blob:local-preview']);
-  assert.equal(mocks.rememberOutgoingMessageOrder.mock.calls.length, 1);
+  assert.deepEqual(outgoingReconciliations, [{ chatId: 'chat-1', messages: [serverMessage] }]);
 });

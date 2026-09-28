@@ -20,28 +20,20 @@ import {
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
+import { canReplyOrForwardMessage } from './domain/messagePresentation';
 import {
-  canReplyOrForwardMessage,
-  getMessageSearchPreviewText,
-} from './domain/messagePresentation';
-import {
-  dedupeObviousDuplicateMessages,
   formatMessageTime,
-  mergeMessages,
 } from './domain/messageTimeline';
 import {
   getSafeChatDisplayName,
   sortChatsByInboxOrder,
 } from './domain/chatPresentation';
-import { shouldHideTechnicalMessage } from './domain/messageVisibility';
 import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppThreadActionsMenu } from './components/WhatsAppThreadActionsMenu';
 import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
 import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } from './components/WhatsAppInboxConversationPane';
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
-import { isChatMediaViewerMessage } from './domain/mediaViewerPresentation';
-import { buildInboxMessageTimeline } from './domain/inboxMessageTimeline';
 import { formatConnectionStatusLabel } from './domain/inboxPresentation';
 import type { InboxMessageScrollMode } from './domain/inboxMessageScroll';
 import { KeyedActionLock } from './components/keyedActionLock';
@@ -110,6 +102,7 @@ import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState
 import { useInboxMessageViewport } from './hooks/useInboxMessageViewport';
 import { useInboxComposerSubmission } from './hooks/useInboxComposerSubmission';
 import { useInboxViewportLayout } from './hooks/useInboxViewportLayout';
+import { useInboxMessageThreadViewModel } from './hooks/useInboxMessageThreadViewModel';
 import {
   useInboxSelectedChatLifecycle,
   type InboxCreateLeadDraft,
@@ -629,43 +622,25 @@ export default function WhatsAppInboxScreen() {
     upsertChatLocally,
   });
 
-  const visibleMessages = useMemo(() => {
-    const filteredMessages = messages
-      .filter((message) => !shouldHideTechnicalMessage(message))
-      .map(applyOutgoingOrderToServerMessage);
-
-    if (!selectedChatId) {
-      return filteredMessages;
-    }
-
-    const localForChat = localOutgoingMessages.filter((message) => message.chat_id === selectedChatId);
-    if (localForChat.length === 0) {
-      return dedupeObviousDuplicateMessages(filteredMessages);
-    }
-
-    return dedupeObviousDuplicateMessages(mergeMessages(filteredMessages, localForChat));
-  }, [applyOutgoingOrderToServerMessage, localOutgoingMessages, messages, selectedChatId]);
-
-  const mediaViewerMessages = useMemo(
-    () => visibleMessages.filter(isChatMediaViewerMessage),
-    [visibleMessages],
-  );
-  const lastUsefulVisibleMessage = useMemo(() => {
-    for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
-      const message = visibleMessages[index];
-      if (message && message.direction !== 'system' && getMessageSearchPreviewText(message).trim()) {
-        return message;
-      }
-    }
-
-    return null;
-  }, [visibleMessages]);
-
-  useEffect(() => {
-    if (lightboxMessageId && !mediaViewerMessages.some((message) => message.id === lightboxMessageId)) {
-      setLightboxMessageId(null);
-    }
-  }, [lightboxMessageId, mediaViewerMessages]);
+  const {
+    visibleMessages,
+    mediaViewerMessages,
+    lastUsefulVisibleMessage,
+    messageTimelineItems,
+    openReactionPickerMessage,
+    openMessageActionMenuMessage,
+    messageDetailsMessage,
+  } = useInboxMessageThreadViewModel({
+    messages,
+    localOutgoingMessages,
+    selectedChatId,
+    applyOutgoingOrderToServerMessage,
+    lightboxMessageId,
+    setLightboxMessageId,
+    openReactionPickerMessageId,
+    openMessageActionMenuMessageId,
+    messageDetailsMessageId,
+  });
 
   const resetComposerAfterQueue = useCallback(() => {
     resetComposerDraft();
@@ -683,29 +658,6 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewDuration(null);
   }, [clearMediaUploadProgress, clearPendingAttachments, resetComposerDraft, selectedChatId, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
 
-  const messageTimelineItems = useMemo(
-    () => buildInboxMessageTimeline(visibleMessages),
-    [visibleMessages],
-  );
-
-  const openReactionPickerMessage = useMemo(() => {
-    if (!openReactionPickerMessageId) {
-      return null;
-    }
-
-    return visibleMessages.find((message) => message.id === openReactionPickerMessageId) ?? null;
-  }, [openReactionPickerMessageId, visibleMessages]);
-  const openMessageActionMenuMessage = useMemo(() => {
-    if (!openMessageActionMenuMessageId) {
-      return null;
-    }
-
-    return visibleMessages.find((message) => message.id === openMessageActionMenuMessageId) ?? null;
-  }, [openMessageActionMenuMessageId, visibleMessages]);
-  const messageDetailsMessage = useMemo(() => {
-    if (!messageDetailsMessageId) return null;
-    return visibleMessages.find((message) => message.id === messageDetailsMessageId) ?? null;
-  }, [messageDetailsMessageId, visibleMessages]);
   const openChatMenuChat = useMemo(() => {
     if (!openChatMenuChatId) {
       return null;

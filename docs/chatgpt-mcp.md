@@ -58,6 +58,20 @@ O agendador oferece `kifer_update_scheduled_whatsapp_sequence` para editar sequ�
 | `kifer_delete_followup_step` / `kifer_reorder_followup_steps` | `flow_id` e etapa / lista completa de IDs | Remove ou reordena etapas somente quando não há jobs pendentes ou em processamento no fluxo. |
 | `kifer_clone_followup_flow` | fluxo de origem e sobrescritas fechadas | Copia fluxo e etapas com novos IDs; bloqueia etapas destrutivas, webhook e e-mail. |
 
+### Disparos WhatsApp
+
+O MCP expõe o módulo real de `/painel/disparos` sobre `comm_whatsapp_campaigns`, `comm_whatsapp_campaign_steps` e `comm_whatsapp_campaign_targets`. Ele não cria uma segunda campanha nem reutiliza follow-up flows. Criação/importação são não-enviadoras; a ativação é uma ação separada e chama o `comm-whatsapp-campaign-worker` existente.
+
+| Grupo | Ferramentas | Contrato resumido |
+| --- | --- | --- |
+| Leitura | `kifer_list_whatsapp_campaigns`, `kifer_get_whatsapp_campaign`, `kifer_preview_whatsapp_campaign`, `kifer_list_whatsapp_campaign_contacts`, `kifer_get_whatsapp_campaign_contact`, `kifer_get_whatsapp_campaign_metrics` | Filtros/paginação, configuração segura, preview determinístico com validação de contatos/variáveis/opt-out/janela, contatos com telefone mascarado e métricas iguais às da UI. Payloads de contato e URLs de mídia não são devolvidos sem filtragem. |
+| Escrita | `kifer_create_whatsapp_campaign`, `kifer_update_whatsapp_campaign`, `kifer_import_whatsapp_campaign_contacts` | Campanha começa em `draft`; atualização exige `expected_updated_at`; importação aceita lotes `contacts[]`, normaliza/deduplica e nunca cria leads. |
+| Controle | `kifer_activate_whatsapp_campaign`, `kifer_pause_whatsapp_campaign`, `kifer_resume_whatsapp_campaign`, `kifer_schedule_whatsapp_campaign`, `kifer_remove_whatsapp_campaign_contact`, `kifer_delete_whatsapp_campaign` | Estados e validações compatíveis com a UI; remoção de contato é lógica; exclusão de campanha bloqueia processamento iniciado. |
+
+Todas as mutações exigem OAuth de administrador, `client_request_id` estável e, quando há concorrência, `expected_updated_at`. A migration `20261014010000_mcp_whatsapp_campaign_actions.sql` mantém apenas o envelope de idempotência/auditoria; a fonte de verdade continua sendo o módulo `comm_*`. O worker revalida `contact_permission_policies` no escopo `commercial` antes de cada envio e `create_leads_from_csv` permanece falso para o caminho MCP.
+
+O endpoint também publica recursos MCP (`kifer://capabilities/catalog`, guias de operação segura e workflows compostos) e prompts de planejamento/triagem. Eles orientam composição de ferramentas sem liberar SQL, RPC arbitrária, credenciais ou escrita implícita. A importação atual aceita `contacts[]` em lotes de até 500 registros; o runtime JSON-RPC deste endpoint não recebe arquivos anexados como argumento top-level, portanto CSV deve ser convertido para esses lotes pelo conector/agente sem enviar base64 gigante.
+
 Para uma etapa `send_message`, `action_config.messages` e `kifer_update_followup_step_messages.messages` aceitam itens na ordem enviada: `{ "template_id": "..." }`, `{ "custom": { "type": "text", "text": "..." } }` ou `{ "ai": { "instruction": "..." } }`. Templates precisam existir na biblioteca do fluxo; seus IDs continuam ocultos nas respostas de leitura. A IA usa a configuração central da Feature `automation.message_generate` e não é gerada durante a alteração do fluxo.
 
 ### Módulos administrativos da expansão
@@ -123,7 +137,7 @@ O schema de oportunidades registra grupos comerciais e preserva histórico de v�
 
 ## Inventário
 
-O registry atual publica 108 ferramentas únicas: 29 de leitura e 79 de escrita. A classificação funcional exclusiva é 23 de comunicação, 22 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
+O registry atual publica 123 ferramentas únicas: 35 de leitura e 88 de escrita. A classificação funcional exclusiva é 38 de comunicação, 22 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.
 
 ## Migration adicional
 

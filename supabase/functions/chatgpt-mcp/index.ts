@@ -10,7 +10,9 @@ import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, M
 import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
 import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from './media-read-action.ts';
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
+import { executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
+import { getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from './mcp-discovery.ts';
 
 /**
  * Endpoint MCP remoto para consultas no Kifer Saude.
@@ -760,8 +762,11 @@ const tools = [
   ...MCP_CONTACT_PERMISSION_TOOLS,
   ...MCP_INBOX_TOOLS,
   ...MCP_IDENTITY_CONFLICT_TOOLS,
+  ...MCP_WHATSAPP_CAMPAIGN_TOOLS,
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
+
+const discoveryTools = tools as readonly McpToolDescriptor[];
 
 const ADMIN_READ_TOOLS = new Set([
   'kifer_list_records', 'kifer_get_record', 'kifer_search', 'kifer_get_lead_360', 'kifer_get_whatsapp_transcript',
@@ -774,6 +779,7 @@ const ADMIN_READ_TOOLS = new Set([
   ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name === 'kifer_list_documents' || name === 'kifer_get_document'),
   ...MCP_CONTACT_PERMISSION_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES,
 ]);
 
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
@@ -795,6 +801,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
     ...MCP_INBOX_WRITE_TOOL_NAMES,
     ...MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
@@ -806,6 +813,23 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
   if (ADMIN_READ_TOOLS.has(name)) {
     const authorizationError = mcpAdminAuthorizationError(actorId);
     if (authorizationError) return toToolResult(authorizationError);
+  }
+  const campaignRead = await executeMcpWhatsAppCampaignReadAction({ supabase, toolName: name, arguments: args });
+  if (campaignRead) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: 'comm_whatsapp_campaigns',
+      requestSummary: {
+        campaign_id: safeUuid(args.campaign_id) ? text(args.campaign_id) : null,
+        target_id: safeUuid(args.target_id) ? text(args.target_id) : null,
+        argument_keys: Object.keys(args).sort(),
+        page: args.page,
+        page_size: args.page_size,
+      },
+    });
+    return toToolResult(campaignRead);
   }
   const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (commercialReadResult) return toToolResult(commercialReadResult);
@@ -893,12 +917,28 @@ Deno.serve(async (request: Request) => {
   if (rpc.method === 'initialize') {
     return resultResponse(rpc.id, {
       protocolVersion: MCP_PROTOCOL_VERSION,
-      capabilities: { tools: { listChanged: false } },
+      capabilities: {
+        tools: { listChanged: false },
+        resources: { listChanged: false, subscribe: false },
+        prompts: { listChanged: false },
+      },
       serverInfo: { name: 'kifer-saude-crm', version: '1.2.0' },
-      instructions: 'Servidor do Kifer Saude orientado a leitura, com ações comerciais de escrita explicitamente declaradas. Fluxos de follow-up aceitam texto, template e mensagens IA; a IA usa a configuração central e só é executada no envio. Nunca use nem sugira SQL, RPC ou requisições arbitrárias. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário.',
+      instructions: 'Servidor do Kifer Saude com três primitivas MCP: ferramentas para ações e consultas, recursos para contexto seguro e prompts para workflows compostos. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
     });
   }
   if (rpc.method === 'tools/list') return resultResponse(rpc.id, { tools });
+  if (rpc.method === 'resources/list') return resultResponse(rpc.id, { resources: MCP_RESOURCES });
+  if (rpc.method === 'resources/read') {
+    const result = readMcpResource(rpc.params?.uri, discoveryTools);
+    if (!result.ok) return errorResponse(rpc.id, -32602, result.message);
+    return resultResponse(rpc.id, { contents: result.contents });
+  }
+  if (rpc.method === 'prompts/list') return resultResponse(rpc.id, { prompts: MCP_PROMPTS });
+  if (rpc.method === 'prompts/get') {
+    const result = getMcpPrompt(rpc.params?.name, rpc.params?.arguments);
+    if (!result.ok) return errorResponse(rpc.id, -32602, result.message);
+    return resultResponse(rpc.id, result.prompt);
+  }
   if (rpc.method !== 'tools/call') return errorResponse(rpc.id, -32601, 'Metodo MCP nao suportado.');
 
   const toolName = text(rpc.params?.name);

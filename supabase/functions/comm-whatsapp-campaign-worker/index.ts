@@ -32,7 +32,8 @@ import {
 } from '../_shared/campaign-intent-classification.ts';
 import { mapWithConcurrency } from '../_shared/concurrency.ts';
 import { composePrompt } from '../_shared/prompt-composer.ts';
-import { formatGreetingTitle, getGreetingForDate } from '../_shared/greeting.ts';
+import { getGreetingForDate } from '../_shared/greeting.ts';
+import { resolveCommWhatsAppCampaignMessage } from '../_shared/comm-whatsapp-campaign-template.ts';
 import { createSupabaseAdminClient } from '../_shared/supabase-admin.ts';
 import {
   assertContactPermissionForSend,
@@ -424,29 +425,16 @@ const resolveCampaignGreeting = (now = new Date()): string =>
     Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
   );
 
-// {{primeiro_nome}} sempre sai so com a inicial maiuscula, independente de
-// como o nome esta cadastrado (tudo maiusculo, tudo minusculo, etc.).
-const formatFirstNameTitle = (value: string): string => {
-  const trimmed = value.trim();
-  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1).toLowerCase()}` : '';
-};
-
 const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
-  const greeting = resolveCampaignGreeting();
-  const replacements: Record<string, string> = {
-    nome: lead?.nome_completo || target?.display_name || '',
-    primeiro_nome: formatFirstNameTitle((lead?.nome_completo || target?.display_name || '').split(/\s+/).filter(Boolean)[0] || ''),
-    telefone: lead?.telefone || target?.phone_number || '',
+  return resolveCommWhatsAppCampaignMessage(template, {
+    name: lead?.nome_completo || target?.display_name || '',
+    phone: lead?.telefone || target?.phone_number || '',
     status: lead?.status || '',
-    responsavel: lead?.responsavel || '',
-    saudacao: greeting,
-    saudacao_titulo: formatGreetingTitle(greeting),
-    saudacao_capitalizada: formatGreetingTitle(greeting),
-  };
-
-  return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');
+    responsible: lead?.responsavel || '',
+    greeting: resolveCampaignGreeting(),
+  });
 };
 
 const extractJsonObject = (value: string): Record<string, unknown> => {

@@ -22,6 +22,7 @@ import {
 import { executeMcpInboxAction, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
 import { executeMcpIdentityConflictResolution, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { executeMcpWhatsAppMediaReadAction } from './media-read-action.ts';
+import { executeMcpWhatsAppCampaignWriteAction, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
@@ -2917,7 +2918,11 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     : rawContractId || null;
   const clientRequestId = isHolderImportAction ? null : text(args.client_request_id) || null;
   try {
-    if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
+    if ((MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpWhatsAppCampaignWriteAction({ supabase, toolName, arguments: args, actorId: actor.actorId }) as McpWriteResult;
+    }
+    else if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_send_whatsapp_media') { actionType = 'whatsapp_media_send'; result = await sendWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
     else if (toolName === 'kifer_upload_scheduled_whatsapp_media') { actionType = 'whatsapp_schedule_media_upload'; result = await uploadScheduledWhatsAppMedia(supabase, args, actor); }
@@ -3019,7 +3024,16 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
       });
     }
   } else {
-    const auditRequest = isHolderImportAction
+    const isCampaignAction = (MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);
+    const auditRequest = isCampaignAction
+      ? {
+          campaign_id: safeUuid(args.campaign_id) ? text(args.campaign_id) : null,
+          target_id: safeUuid(args.target_id) ? text(args.target_id) : null,
+          client_request_id: safeRequestId(args.client_request_id) ? text(args.client_request_id) : null,
+          contact_count: Array.isArray(args.contacts) ? args.contacts.length : undefined,
+          expected_updated_at: text(args.expected_updated_at) || null,
+        }
+      : isHolderImportAction
       ? {
           contract_id: safeUuid(args.contract_id) ? text(args.contract_id) : null,
           import_id: safeUuid(args.import_id) ? text(args.import_id) : null,

@@ -17,19 +17,14 @@ import {
   whatsappConversationsRepository,
   whatsappMediaRepository,
   whatsappMessagesRepository,
-  commWhatsAppService,
-  listInboxAgendaReminders,
-  subscribeToInboxReminders,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppOperationalState,
-  type InboxAgendaSummaryReminder,
 } from './data';
 import { configService } from '../../config';
 import type { Lead } from '../../leads';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
-import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
 import {
   canReplyOrForwardMessage,
@@ -42,7 +37,6 @@ import {
   mergeMessages,
 } from './domain/messageTimeline';
 import {
-  applyChatPresenceUpdate,
   applySavedContactName,
   getSafeChatDisplayName,
   preserveUsefulChatPreview,
@@ -132,6 +126,10 @@ import { useInboxQuickReplies } from './hooks/useInboxQuickReplies';
 import { useInboxMessageForwarding } from './hooks/useInboxMessageForwarding';
 import { useInboxHistoryRecovery } from './hooks/useInboxHistoryRecovery';
 import { useInboxContactActions } from './hooks/useInboxContactActions';
+import { useInboxChatAgendaSummary } from './hooks/useInboxChatAgendaSummary';
+import { useInboxArchivedChatCount } from './hooks/useInboxArchivedChatCount';
+import { useInboxBootstrap } from './hooks/useInboxBootstrap';
+import { useInboxSelectedChatPresence } from './hooks/useInboxSelectedChatPresence';
 import type { ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -195,10 +193,6 @@ type QuickReplyOption = {
   preview: string;
   searchValue: string;
 };
-type ChatAgendaSummary = {
-  pendingCount: number;
-  nextReminder: InboxAgendaSummaryReminder | null;
-};
 type CreateLeadDraft = {
   chatId: string;
   initialValues: Partial<Lead>;
@@ -248,7 +242,6 @@ export default function WhatsAppInboxScreen() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
-  const [archivedChatsCount, setArchivedChatsCount] = useState<number | null>(null);
   const [archivedChatsLoading, setArchivedChatsLoading] = useState(false);
   const [archivedChatsLoadingMore, setArchivedChatsLoadingMore] = useState(false);
   const [archivedChatsHasMore, setArchivedChatsHasMore] = useState(false);
@@ -312,9 +305,6 @@ export default function WhatsAppInboxScreen() {
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
   const [statusReminderLead, setStatusReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
   const [statusReminderPromptMessage, setStatusReminderPromptMessage] = useState<string | null>(null);
-  const [chatAgendaSummaryLoading, setChatAgendaSummaryLoading] = useState(false);
-  const [chatAgendaSummaryError, setChatAgendaSummaryError] = useState<string | null>(null);
-  const [chatAgendaSummary, setChatAgendaSummary] = useState<ChatAgendaSummary>({ pendingCount: 0, nextReminder: null });
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
   const [leadMutationLoadingChatId, setLeadMutationLoadingChatId] = useState<string | null>(null);
@@ -328,6 +318,7 @@ export default function WhatsAppInboxScreen() {
   const [startingChatKey, setStartingChatKey] = useState<string | null>(null);
   const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
   const { pollingEnabled } = useWindowPollingState();
+  const { archivedChatsCount, refreshArchivedChatsCount } = useInboxArchivedChatCount();
   const {
     savedContacts,
     savedContactsLoading,
@@ -396,11 +387,7 @@ export default function WhatsAppInboxScreen() {
   const leadContractsRequestIdRef = useRef(0);
   const leadMutationRequestIdRef = useRef(0);
   const leadMutationLockRef = useRef(new KeyedActionLock());
-  const chatAgendaSummaryRequestIdRef = useRef(0);
-  const archivedChatsCountRequestIdRef = useRef(0);
-  const archivedChatsCountLoadLockRef = useRef(new KeyedActionLock());
   const messageDraftRef = useRef('');
-  const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const {
     localOutgoingMessages,
     setLocalOutgoingMessages,
@@ -1184,55 +1171,6 @@ export default function WhatsAppInboxScreen() {
     upsertChatLocally,
   });
 
-  const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
-    const requestId = ++chatAgendaSummaryRequestIdRef.current;
-
-    if (!leadId) {
-      chatAgendaSummaryLeadIdRef.current = null;
-      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      setChatAgendaSummaryError(null);
-      setChatAgendaSummaryLoading(false);
-      return;
-    }
-
-    const shouldShowLoading = chatAgendaSummaryLeadIdRef.current !== leadId;
-    chatAgendaSummaryLeadIdRef.current = leadId;
-
-    if (shouldShowLoading) {
-      setChatAgendaSummaryLoading(true);
-    }
-
-    try {
-      const reminders = await listInboxAgendaReminders(leadId, contractIds);
-      const pendingReminders = reminders
-        .filter((reminder) => !reminder.lido)
-        .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime());
-
-      if (requestId !== chatAgendaSummaryRequestIdRef.current || chatAgendaSummaryLeadIdRef.current !== leadId) {
-        return;
-      }
-
-      setChatAgendaSummary({
-        pendingCount: pendingReminders.length,
-        nextReminder: pendingReminders[0] ?? null,
-      });
-      setChatAgendaSummaryError(null);
-    } catch (error) {
-      if (requestId !== chatAgendaSummaryRequestIdRef.current || chatAgendaSummaryLeadIdRef.current !== leadId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
-      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      setChatAgendaSummaryError(
-        error instanceof Error ? error.message : 'Não foi possível consultar os lembretes deste chat.',
-      );
-    } finally {
-      if (requestId === chatAgendaSummaryRequestIdRef.current && chatAgendaSummaryLeadIdRef.current === leadId) {
-        setChatAgendaSummaryLoading(false);
-      }
-    }
-  }, []);
-
   const suggestedLead = useMemo(() => {
     if (!leadDrawerOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
       return null;
@@ -1458,28 +1396,6 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [channelState, connectionStatusLabel, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
-  const nextChatReminderSummary = useMemo(() => {
-    if (chatAgendaSummaryLoading && chatAgendaSummary.pendingCount === 0 && !chatAgendaSummary.nextReminder) {
-      return 'Agenda: carregando lembretes...';
-    }
-
-    if (!leadPanel?.id) {
-      return null;
-    }
-
-    if (chatAgendaSummaryError) {
-      return 'Agenda: não foi possível consultar';
-    }
-
-    if (!chatAgendaSummary.nextReminder) {
-      return chatAgendaSummary.pendingCount > 0 ? `Agenda: ${chatAgendaSummary.pendingCount} pendente(s).` : 'Agenda em dia';
-    }
-
-    const reminder = chatAgendaSummary.nextReminder;
-    const prefix = isOverdue(reminder.data_lembrete) ? 'Próximo lembrete atrasado' : 'Próximo lembrete';
-    return `${prefix}: ${reminder.titulo} · ${formatDateTimeFullBR(reminder.data_lembrete)}`;
-  }, [chatAgendaSummary, chatAgendaSummaryError, chatAgendaSummaryLoading, leadPanel?.id]);
-
   useEffect(() => {
     latestChatsRef.current = chats;
   }, [chats]);
@@ -1988,29 +1904,20 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChat?.lead_id) {
       leadPanelRequestIdRef.current += 1;
       leadContractsRequestIdRef.current += 1;
-      chatAgendaSummaryRequestIdRef.current += 1;
-      chatAgendaSummaryLeadIdRef.current = null;
       setLeadPanel(null);
       setLeadPanelError(null);
       setLeadPanelLoading(false);
       setLeadContracts([]);
       setLeadContractsLoading(false);
       setLeadContractsError(null);
-      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      setChatAgendaSummaryError(null);
-      setChatAgendaSummaryLoading(false);
       return;
     }
 
     if (leadPanel?.id !== selectedChat.lead_id) {
-      chatAgendaSummaryLeadIdRef.current = null;
       setLeadPanel(null);
       setLeadPanelError(null);
       setLeadContracts([]);
       setLeadContractsError(null);
-      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      setChatAgendaSummaryError(null);
-      setChatAgendaSummaryLoading(true);
     }
   }, [leadPanel?.id, selectedChat?.id, selectedChat?.lead_id]);
 
@@ -2018,9 +1925,6 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChat?.lead_id) {
       setLeadPanel(null);
       setLeadPanelError(null);
-      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
-      setChatAgendaSummaryError(null);
-      setChatAgendaSummaryLoading(false);
       return;
     }
 
@@ -2030,58 +1934,43 @@ export default function WhatsAppInboxScreen() {
     void loadLeadPanel(currentSelectedChat);
   }, [loadLeadPanel, selectedChat?.lead_id, selectedChatId]);
 
-  useEffect(() => {
-    void loadChatAgendaSummary(
-      leadPanel?.id ?? null,
-      leadContracts.map((contract) => contract.id),
-    );
-  }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
+  const {
+    chatAgendaSummary,
+    chatAgendaSummaryLoading,
+    chatAgendaSummaryError,
+    setChatAgendaSummary,
+    loadChatAgendaSummary,
+  } = useInboxChatAgendaSummary({
+    selectedChatLeadId: selectedChat?.lead_id ?? null,
+    leadPanelId: leadPanel?.id ?? null,
+    leadContracts,
+  });
 
-  useEffect(() => {
-    if (!leadPanel?.id) {
-      return;
+  const nextChatReminderSummary = useMemo(() => {
+    if (chatAgendaSummaryLoading && chatAgendaSummary.pendingCount === 0 && !chatAgendaSummary.nextReminder) {
+      return 'Agenda: carregando lembretes...';
     }
 
-    const unsubscribe = subscribeToInboxReminders(leadPanel.id, leadContracts.map((contract) => contract.id), () => {
-      void loadChatAgendaSummary(
-        leadPanel.id,
-        leadContracts.map((contract) => contract.id),
-      );
-    });
+    if (!leadPanel?.id) {
+      return null;
+    }
 
-    return () => {
-      unsubscribe();
-    };
-  }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
+    if (chatAgendaSummaryError) {
+      return 'Agenda: não foi possível consultar';
+    }
+
+    if (!chatAgendaSummary.nextReminder) {
+      return chatAgendaSummary.pendingCount > 0 ? `Agenda: ${chatAgendaSummary.pendingCount} pendente(s).` : 'Agenda em dia';
+    }
+
+    const reminder = chatAgendaSummary.nextReminder;
+    const prefix = isOverdue(reminder.data_lembrete) ? 'Próximo lembrete atrasado' : 'Próximo lembrete';
+    return `${prefix}: ${reminder.titulo} · ${formatDateTimeFullBR(reminder.data_lembrete)}`;
+  }, [chatAgendaSummary, chatAgendaSummaryError, chatAgendaSummaryLoading, leadPanel?.id]);
 
   useEffect(() => {
     synchronizeSavedContacts(savedContacts);
   }, [savedContacts, synchronizeSavedContacts]);
-
-  const refreshArchivedChatsCount = useCallback(async () => {
-    if (!archivedChatsCountLoadLockRef.current.tryAcquire('archived-count')) {
-      return;
-    }
-
-    const requestId = ++archivedChatsCountRequestIdRef.current;
-
-    try {
-      const count = await whatsappConversationsRepository.getArchivedCount();
-      if (requestId !== archivedChatsCountRequestIdRef.current) {
-        return;
-      }
-      setArchivedChatsCount(count);
-    } catch (error) {
-      if (requestId !== archivedChatsCountRequestIdRef.current) {
-        return;
-      }
-      if (!isSupabaseConnectivityError(error)) {
-        console.warn('[WhatsAppInbox] erro ao carregar contagem de arquivados', error);
-      }
-    } finally {
-      archivedChatsCountLoadLockRef.current.release('archived-count');
-    }
-  }, []);
 
   const { loadChats, handleLoadMoreArchivedChats, handleSwitchArchivedSection } = useInboxChatLoader({
     chatActivityFilter,
@@ -2275,26 +2164,12 @@ export default function WhatsAppInboxScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  useEffect(() => {
-    let active = true;
-
-    const bootstrap = async () => {
-      setLoading(true);
-      // Recarrega a seção que está visível. Quando filtros mudam com
-      // "Arquivadas" aberta, buscar apenas "Ativas" deixava a lista visível
-      // com dados do filtro anterior até o usuário alternar de seção.
-      await Promise.all([loadChats(), loadOperationalState(), refreshArchivedChatsCount()]);
-      if (active) {
-        setLoading(false);
-      }
-    };
-
-    void bootstrap();
-
-    return () => {
-      active = false;
-    };
-  }, [loadChats, loadOperationalState, refreshArchivedChatsCount]);
+  useInboxBootstrap({
+    loadChats,
+    loadOperationalState,
+    refreshArchivedChatsCount,
+    setLoading,
+  });
 
   useInboxChannelSubscriptions({
     channelId: channelState?.id ?? null,
@@ -2302,29 +2177,7 @@ export default function WhatsAppInboxScreen() {
     onPresenceChange: applyRealtimePresenceChange,
   });
 
-  useEffect(() => {
-    if (!selectedChat?.id) return undefined;
-    let active = true;
-
-    void commWhatsAppService.ensureChatPresence(selectedChat.id)
-      .then((result) => {
-        if (!active) return;
-        setChats((current) => applyChatPresenceUpdate(current, {
-          chatId: selectedChat.id,
-          status: result.presence?.status ?? null,
-          lastSeenAt: result.presence?.last_seen_at ?? null,
-          updatedAt: result.presence?.observed_at ?? null,
-        }));
-      })
-      .catch((error) => {
-        if (!active || isSupabaseConnectivityError(error)) return;
-        console.warn('[WhatsAppInbox] nao foi possivel ativar presenca da conversa', error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedChat?.id]);
+  useInboxSelectedChatPresence({ selectedChatId, setChats });
 
   useInboxMessageSelection({
     selectedChatId,
@@ -2361,8 +2214,6 @@ export default function WhatsAppInboxScreen() {
       messagesRequestIdRef.current += 1;
       leadPanelRequestIdRef.current += 1;
       leadContractsRequestIdRef.current += 1;
-      chatAgendaSummaryRequestIdRef.current += 1;
-      archivedChatsCountRequestIdRef.current += 1;
 
     },
     [],

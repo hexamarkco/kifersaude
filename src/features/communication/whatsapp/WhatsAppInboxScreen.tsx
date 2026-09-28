@@ -1,5 +1,4 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Copy, Download, FolderOpen, Info, Loader2, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -20,7 +19,6 @@ import {
   whatsappFollowUpService,
   whatsappMediaRepository,
   whatsappMessagesRepository,
-  loadInboxChatSection,
   commWhatsAppService,
   approveInboxFollowUpSchedule,
   clearInboxLeadAgenda,
@@ -34,7 +32,6 @@ import {
   updateInboxFollowUpSentAudits,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
-  type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
   type CommWhatsAppFollowUpEmotionalContext,
@@ -49,7 +46,7 @@ import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPresence } from './domain/types';
+import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
 import {
   canDeleteOutboundMessage,
   canEditOutboundMessage,
@@ -66,12 +63,10 @@ import {
   getMessageClientRequestId,
   getMessageMetadataRecord,
   getOwnReactionEmoji,
-  messagesReferToSameOutgoing,
 } from './domain/messageMetadata';
 import {
   compareMessageChronology,
   dedupeObviousDuplicateMessages,
-  findMessageByIdOrExternalId,
   formatMessageTime,
   getMessageTimestampMs,
   mergeMessages,
@@ -87,12 +82,6 @@ import {
   sortChatsByInboxOrder,
   stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
-import {
-  preserveChatsFromPartialLoad,
-  selectInitialChatId,
-  selectReplacementChatId,
-  shouldPreserveSelectedChatAfterLoad,
-} from './domain/chatLoadState';
 import { shouldShowBlockingMessageLoader } from './domain/messageLoadState';
 import { addSavedContactsToNameMap, applyManualSavedContactNameToMaps, applySavedContactNameFromLookup, applySavedContactNameToContact, collectPhoneLookupKeys, getSavedContactNameForPhone, resolveSavedContactName } from './domain/contactLookup';
 import {
@@ -123,13 +112,8 @@ import { WhatsAppChatMessageSearch } from './components/WhatsAppChatMessageSearc
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { isChatMediaViewerMessage } from './domain/mediaViewerPresentation';
 import { buildInboxMessageTimeline } from './domain/inboxMessageTimeline';
-import {
-  createPendingAttachmentFromFile,
-  formatConnectionStatusLabel,
-  normalizePastedImageFile,
-} from './domain/inboxPresentation';
+import { formatConnectionStatusLabel } from './domain/inboxPresentation';
 import { KeyedActionLock } from './components/keyedActionLock';
-import { KeyedPromiseQueue } from './components/keyedPromiseQueue';
 import {
   InboxFilterGroup,
   InboxMultiFilterGroup,
@@ -142,7 +126,6 @@ import { useInboxChannelSubscriptions } from './hooks/useInboxChannelSubscriptio
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft } from './hooks/useComposerDraft';
-import { useVoiceRecording } from './hooks/useVoiceRecording';
 import { useChatSearch } from './hooks/useChatSearch';
 import { useChatMessageSearch } from './hooks/useChatMessageSearch';
 import { useClickOutside } from './hooks/useClickOutside';
@@ -153,12 +136,8 @@ import {
   resolveDeliveryStatus,
 } from './messageStatus';
 import {
-  applyPendingChatInboxState,
-  buildPendingChatInboxStatePatch,
-  clearPendingChatReadFields,
   clearPendingChatReadState,
   mergePendingChatInboxState,
-  stripPendingChatInboxMetadata,
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { normalizeWhapiDirectChatId } from './whatsAppChatId';
@@ -171,7 +150,15 @@ import { useInboxMessageRetry } from './hooks/useInboxMessageRetry';
 import { useInboxSendQueue } from './hooks/useInboxSendQueue';
 import { useInboxChatCreation } from './hooks/useInboxChatCreation';
 import { useInboxLeadMutations } from './hooks/useInboxLeadMutations';
-import type { LocalOutgoingRetryPayload, PendingAttachment } from './domain/outgoingMessageTypes';
+import { useInboxComposerAttachments } from './hooks/useInboxComposerAttachments';
+import { useInboxMessageLoader, type InboxMessageLoadReason } from './hooks/useInboxMessageLoader';
+import { useInboxMessageNavigation } from './hooks/useInboxMessageNavigation';
+import { useInboxLeadPanel } from './hooks/useInboxLeadPanel';
+import { useInboxChatMutations } from './hooks/useInboxChatMutations';
+import { useInboxChatLoader } from './hooks/useInboxChatLoader';
+import { useInboxOperationalState } from './hooks/useInboxOperationalState';
+import { useInboxRealtimeUpdates } from './hooks/useInboxRealtimeUpdates';
+import type { LocalOutgoingRetryPayload } from './domain/outgoingMessageTypes';
 import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 import {
@@ -220,9 +207,6 @@ function InboxLazyLoadingFallback() {
 }
 
 const MESSAGE_PAGE_SIZE = 50;
-// Quantidade de conversas cujo último resultado de mensagens fica em cache em memória,
-// permitindo reabrir uma conversa recém-vista sem exibir o spinner de carregamento.
-const MESSAGES_CACHE_MAX_CHATS = 20;
 const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
@@ -236,14 +220,7 @@ const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000,
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
 const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
-type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
-type ChatLoadOptions = {
-  sections?: Array<'active' | 'archived'>;
-  partialArchived?: boolean;
-  preferredSection?: 'active' | 'archived';
-};
-type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type QuickReplyOption = {
   id: string;
   name: string;
@@ -276,12 +253,7 @@ const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
 
 const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
 
-const MEDIA_ATTACHMENT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.heic,.heif,video/*,.mp4,.mov,.avi,.mkv,.webm';
-const DOCUMENT_ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
-const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
-const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
 const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
@@ -302,8 +274,6 @@ export default function WhatsAppInboxScreen() {
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [leadResponsavelFilters, setLeadResponsavelFilters] = useState<string[]>([]);
-  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
-  const [attachmentInputAccept, setAttachmentInputAccept] = useState(DEFAULT_ATTACHMENT_ACCEPT);
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
@@ -399,13 +369,6 @@ export default function WhatsAppInboxScreen() {
   const [threadActionsMenuOpen, setThreadActionsMenuOpen] = useState(false);
   const [threadActionsMenuPosition, setThreadActionsMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
-  const [removedAttachmentForUndo, setRemovedAttachmentForUndo] = useState<PendingAttachment | null>(null);
-  const removedAttachmentUndoTimeoutRef = useRef<number | null>(null);
-  const [isDraggingFilesOverThread, setIsDraggingFilesOverThread] = useState(false);
-  const threadDragCounterRef = useRef(0);
-  const [selectedMediaComposerAttachmentId, setSelectedMediaComposerAttachmentId] = useState<string | null>(null);
-  const [selectedDocumentComposerAttachmentId, setSelectedDocumentComposerAttachmentId] = useState<string | null>(null);
   const [mediaUploadProgressByChatId, setMediaUploadProgressByChatId] = useState<Record<string, MediaUploadProgress>>({});
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
@@ -455,7 +418,6 @@ export default function WhatsAppInboxScreen() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const chatMessageSearchInputRef = useRef<HTMLInputElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -471,14 +433,10 @@ export default function WhatsAppInboxScreen() {
   const chatMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
   const mediaUploadAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
-  const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const localOutgoingMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
-  const chatInboxActionLockRef = useRef(new KeyedActionLock());
-  const autonomousAttendanceLockRef = useRef(new KeyedActionLock());
   const contactSaveLockRef = useRef(new KeyedActionLock());
-  const archivedChatsLoadMoreLockRef = useRef(new KeyedActionLock());
   const olderMessagesLoadLockRef = useRef(new KeyedActionLock());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const statusRefreshGenerationRef = useRef(0);
@@ -497,7 +455,7 @@ export default function WhatsAppInboxScreen() {
   const savedContactNameOverrideByPhoneRef = useRef<Map<string, string>>(new Map());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
-  const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: MessageLoadReason) => Promise<unknown> | void>(() => {});
+  const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: InboxMessageLoadReason) => Promise<unknown> | void>(() => {});
   const archivedSectionOpenRef = useRef<boolean>(false);
   const archivedChatsPageRef = useRef<number>(0);
   const latestChatsLoadedAtRef = useRef<number>(0);
@@ -532,11 +490,8 @@ export default function WhatsAppInboxScreen() {
   const messagesRequestIdRef = useRef(0);
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
   const chatsLoadKeyRef = useRef<string | null>(null);
-  const pollingMessagesChatIdRef = useRef<string | null>(null);
-  const messageLoadQueueRef = useRef(new KeyedPromiseQueue());
   const olderMessagesRequestIdRef = useRef(0);
   const quotedMessageNavigationRequestIdRef = useRef(0);
-  const operationalStateRequestIdRef = useRef(0);
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
   const leadMutationRequestIdRef = useRef(0);
@@ -544,8 +499,6 @@ export default function WhatsAppInboxScreen() {
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const archivedChatsCountRequestIdRef = useRef(0);
   const archivedChatsCountLoadLockRef = useRef(new KeyedActionLock());
-  const operationalStateLoadLockRef = useRef(new KeyedActionLock());
-  const archivedSectionLoadRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
   const followUpScheduleRequestIdRef = useRef(0);
   const composerRewriteRequestIdRef = useRef(0);
@@ -576,30 +529,6 @@ export default function WhatsAppInboxScreen() {
     pendingChatInboxStateRef,
     sortChats: sortChatsByInboxOrder,
   });
-  const voiceAttachment = useMemo(
-    () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
-    [pendingAttachments],
-  );
-  const nonVoiceAttachments = useMemo(
-    () => pendingAttachments.filter((attachment) => attachment.kind !== 'voice'),
-    [pendingAttachments],
-  );
-  const visualComposerAttachments = useMemo(
-    () => nonVoiceAttachments.filter((attachment) => attachment.kind === 'image' || attachment.kind === 'video'),
-    [nonVoiceAttachments],
-  );
-  const documentComposerAttachments = useMemo(
-    () => nonVoiceAttachments.filter((attachment) => attachment.kind !== 'image' && attachment.kind !== 'video'),
-    [nonVoiceAttachments],
-  );
-  const selectedMediaComposerAttachment = useMemo(
-    () => visualComposerAttachments.find((attachment) => attachment.id === selectedMediaComposerAttachmentId) ?? visualComposerAttachments[0] ?? null,
-    [selectedMediaComposerAttachmentId, visualComposerAttachments],
-  );
-  const selectedDocumentComposerAttachment = useMemo(
-    () => documentComposerAttachments.find((attachment) => attachment.id === selectedDocumentComposerAttachmentId) ?? documentComposerAttachments[0] ?? null,
-    [documentComposerAttachments, selectedDocumentComposerAttachmentId],
-  );
   const {
     messageDraft,
     composerSelection,
@@ -655,7 +584,6 @@ export default function WhatsAppInboxScreen() {
   }, [composerFocused, selectedChatId]);
 
   const hasTypedMessage = messageDraft.trim().length > 0;
-  const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
   const connectionStatusLabel = useMemo(
@@ -687,28 +615,6 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [connectionStatusLabel, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
-  const {
-    voiceRecordingState,
-    voiceRecordingSeconds,
-    voicePreviewPlaying,
-    voicePreviewDuration,
-    voicePreviewCurrentTime,
-    voicePreviewAudioRef,
-    autoSendVoiceRef,
-    handleStartVoiceRecording,
-    handleStopVoiceRecording,
-    handleCancelVoiceRecording,
-    handleToggleVoicePreviewPlayback,
-    handleClearVoiceAttachment: handleClearVoiceAttachmentFromHook,
-    setVoicePreviewPlaying,
-    setVoicePreviewCurrentTime,
-    setVoicePreviewDuration,
-  } = useVoiceRecording({
-    sendDisabledReason,
-    onAttachmentChange: setPendingAttachments,
-  });
-  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
-
   const { enqueueChatSend } = useInboxSendQueue({ setSendingByChatId });
 
   const buildChatsSignature = useCallback(
@@ -758,6 +664,57 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const clearMediaUploadProgress = useCallback((chatId: string, attachmentId?: string) => {
+    setMediaUploadProgressByChatId((current) => clearMediaUploadProgressForChat(current, chatId, attachmentId));
+  }, []);
+  const {
+    pendingAttachments,
+    clearPendingAttachments,
+    removedAttachmentForUndo,
+    attachmentInputAccept,
+    attachmentMenuOpen,
+    setAttachmentMenuOpen,
+    isDraggingFilesOverThread,
+    setSelectedMediaComposerAttachmentId,
+    setSelectedDocumentComposerAttachmentId,
+    fileInputRef,
+    voiceAttachment,
+    visualComposerAttachments,
+    documentComposerAttachments,
+    selectedMediaComposerAttachment,
+    selectedDocumentComposerAttachment,
+    isVoiceComposerMode,
+    voiceRecordingState,
+    voiceRecordingSeconds,
+    voicePreviewPlaying,
+    voicePreviewDuration,
+    voicePreviewCurrentTime,
+    voicePreviewAudioRef,
+    autoSendVoiceRef,
+    handleStartVoiceRecording,
+    handleStopVoiceRecording,
+    handleCancelVoiceRecording,
+    handleToggleVoicePreviewPlayback,
+    setVoicePreviewPlaying,
+    setVoicePreviewCurrentTime,
+    setVoicePreviewDuration,
+    handleAttachmentMenuAction,
+    handleAttachmentInputChange,
+    handleComposerPaste,
+    handleClearAttachment,
+    handleUndoRemoveAttachment,
+    handleThreadDragEnter,
+    handleThreadDragOver,
+    handleThreadDragLeave,
+    handleThreadDrop,
+  } = useInboxComposerAttachments({
+    selectedChatId,
+    selectedChat,
+    generatingFollowUp,
+    sendDisabledReason,
+    clearMediaUploadProgress,
+  });
+  const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const {
     results: leadSearchResults,
     loading: leadSearchLoading,
@@ -1349,13 +1306,9 @@ export default function WhatsAppInboxScreen() {
     setMediaUploadProgressByChatId((current) => updateMediaUploadProgressForChat(current, chatId, attachmentId, progress));
   }, []);
 
-  const clearMediaUploadProgress = useCallback((chatId: string, attachmentId?: string) => {
-    setMediaUploadProgressByChatId((current) => clearMediaUploadProgressForChat(current, chatId, attachmentId));
-  }, []);
-
   const resetComposerAfterQueue = useCallback(() => {
     resetComposerDraft();
-    setPendingAttachments([]);
+    clearPendingAttachments();
     setReplyTargetMessage(null);
     if (selectedChatId) {
       clearMediaUploadProgress(selectedChatId);
@@ -1367,7 +1320,7 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewPlaying(false);
     setVoicePreviewCurrentTime(0);
     setVoicePreviewDuration(null);
-  }, [clearMediaUploadProgress, resetComposerDraft, selectedChatId, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
+  }, [clearMediaUploadProgress, clearPendingAttachments, resetComposerDraft, selectedChatId, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
 
   const messageTimelineItems = useMemo(
     () => buildInboxMessageTimeline(visibleMessages),
@@ -1575,173 +1528,44 @@ export default function WhatsAppInboxScreen() {
     });
   }, [applyFrontendSavedContactNames, chats, selectedChat]);
 
-  const applyRealtimeChatChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {
-    const incomingChat = payload.new as CommWhatsAppChat | null;
-    const previousChat = payload.old as Partial<CommWhatsAppChat> | null;
-    const changedChatId = incomingChat?.id ?? previousChat?.id ?? null;
-
-    if (!changedChatId) {
-      return;
-    }
-
-    chatPollBackoffRef.current = 0;
-    chatPollIdleCyclesRef.current = 0;
-
-    if (incomingChat?.merged_into_chat_id && selectedChatIdRef.current === incomingChat.id) {
-      setSelectedChatId(incomingChat.merged_into_chat_id);
-      void loadChatsRef.current();
-    }
-
-    const selectedChatWasRemoved = selectedChatIdRef.current === changedChatId
-      && !incomingChat?.merged_into_chat_id
-      && (payload.eventType === 'DELETE' || Boolean(incomingChat?.deleted_at));
-    if (selectedChatWasRemoved) {
-      const selectedChatBeforeRemoval = latestChatsRef.current.find((chat) => chat.id === changedChatId);
-      const preferredSection = (selectedChatBeforeRemoval?.is_archived ?? archivedSectionOpenRef.current)
-        ? 'archived'
-        : 'active';
-      const replacementChatId = selectReplacementChatId({
-        chats: latestChatsRef.current.filter((chat) => (
-          chatMatchesActiveFilters(chat)
-          && Boolean(chat.is_archived) === (preferredSection === 'archived')
-        )),
-        removedChatId: changedChatId,
-        preferredSection,
-      });
-      chatIdFromUrlRef.current = replacementChatId;
-      setSelectedChatId(replacementChatId);
-    }
-
-    setChats((current) => {
-      let next = current.filter((chat) => chat.id !== changedChatId);
-
-        if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at && !incomingChat.merged_into_chat_id) {
-          const existingChat = current.find((chat) => chat.id === incomingChat.id) ?? null;
-          const canonicalSavedContactName = getSavedContactNameForPhone(
-            incomingChat.phone_digits || incomingChat.phone_number,
-            savedContactNameOverrideByPhoneRef.current,
-            savedContactNameByPhoneRef.current,
-          );
-          const hydratedChat = applyPendingChatInboxState(
-            applyFrontendSavedContactNames(applyPrefetchedLeadNames([preserveUsefulChatPreview(
-              stabilizeChatIdentityForLocalMerge(incomingChat, existingChat, canonicalSavedContactName),
-              existingChat,
-            )])),
-            pendingChatInboxStateRef.current,
-          )[0];
-        const shouldKeepSelectedChat = selectedChatIdRef.current === hydratedChat.id;
-
-        if (chatMatchesActiveFilters(hydratedChat) || shouldKeepSelectedChat) {
-          next = [...next, hydratedChat];
-        }
-      }
-
-      next = sortChatsByInboxOrder(next);
-      const nextSignature = buildChatsSignature(next);
-      if (nextSignature === chatsSignatureRef.current) {
-        return current;
-      }
-
-      chatsSignatureRef.current = nextSignature;
-      return next;
-    });
-  }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, buildChatsSignature, chatMatchesActiveFilters]);
-
-  const applyRealtimePresenceChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppPresence>) => {
-    const incomingPresence = payload.new as Partial<CommWhatsAppPresence> | null;
-    const previousPresence = payload.old as Partial<CommWhatsAppPresence> | null;
-    const targetChatId = incomingPresence?.chat_id ?? previousPresence?.chat_id ?? null;
-    if (!targetChatId) return;
-
-    setChats((current) => {
-      const next = applyChatPresenceUpdate(current, {
-        chatId: targetChatId,
-        status: payload.eventType === 'DELETE' ? null : incomingPresence?.status ?? null,
-        lastSeenAt: payload.eventType === 'DELETE' ? null : incomingPresence?.last_seen_at ?? null,
-        updatedAt: payload.eventType === 'DELETE' ? null : incomingPresence?.observed_at ?? null,
-      });
-
-      if (next !== current) {
-        chatsSignatureRef.current = buildChatsSignature(next);
-      }
-
-      return next;
-    });
-  }, [buildChatsSignature]);
-
-  const applyRealtimeMessageChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {
-    const incomingMessage = payload.new as CommWhatsAppMessage | null;
-    const previousMessage = payload.old as Partial<CommWhatsAppMessage> | null;
-    const targetChatId = incomingMessage?.chat_id ?? previousMessage?.chat_id ?? null;
-    const orderedIncomingMessage = incomingMessage ? applyOutgoingOrderToServerMessage(incomingMessage) : null;
-
-    if (!targetChatId || selectedChatIdRef.current !== targetChatId) {
-      return;
-    }
-
-    setMessages((current) => {
-      const nextMessages = payload.eventType === 'DELETE'
-        ? current.filter((message) => message.id !== previousMessage?.id)
-        : orderedIncomingMessage
-          ? mergeMessages(current, [orderedIncomingMessage])
-          : current;
-      const nextSignature = buildMessagesSignature(nextMessages);
-
-      if (nextSignature === messagesSignatureRef.current) {
-        return current;
-      }
-
-      messagesSignatureRef.current = nextSignature;
-
-      if (payload.eventType === 'INSERT') {
-        if (isNearBottomRef.current) {
-          pendingScrollModeRef.current = 'bottom';
-          pendingScrollTopRef.current = null;
-          pendingScrollHeightRef.current = null;
-        } else {
-          pendingScrollModeRef.current = 'preserve';
-          pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
-          pendingScrollHeightRef.current = null;
-        }
-      } else if (payload.eventType === 'UPDATE' && isNearBottomRef.current) {
-        pendingScrollModeRef.current = 'bottom';
-        pendingScrollTopRef.current = null;
-        pendingScrollHeightRef.current = null;
-      } else {
-        pendingScrollModeRef.current = null;
-      }
-
-      return nextMessages;
-    });
-
-    if (incomingMessage) {
-      setLocalOutgoingMessages((current) => {
-        let changed = false;
-        const nextLocalMessages = current.filter((message) => {
-          if (message.chat_id !== targetChatId) {
-            return true;
-          }
-
-          if (!messagesReferToSameOutgoing(message, incomingMessage)) {
-            return true;
-          }
-
-          changed = true;
-          rememberOutgoingMessageOrder(message);
-          localOutgoingRetryPayloadRef.current.delete(message.id);
-          const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-          const incomingExternalMessageId = String(incomingMessage.external_message_id ?? '').trim();
-          if (previewUrl && incomingExternalMessageId) {
-            whatsappMediaRepository.rememberLocalPreview(incomingExternalMessageId, previewUrl);
-          }
-          localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
-          return false;
-        });
-
-        return changed ? nextLocalMessages : current;
-      });
-    }
-  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
+  const {
+    applyRealtimeChatChange,
+    applyRealtimePresenceChange,
+    applyRealtimeMessageChange,
+  } = useInboxRealtimeUpdates({
+    refs: {
+      chatPollBackoffRef,
+      chatPollIdleCyclesRef,
+      selectedChatIdRef,
+      archivedSectionOpenRef,
+      latestChatsRef,
+      chatIdFromUrlRef,
+      savedContactNameOverrideByPhoneRef,
+      savedContactNameByPhoneRef,
+      pendingChatInboxStateRef,
+      chatsSignatureRef,
+      messagesSignatureRef,
+      isNearBottomRef,
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+      messagesContainerRef,
+      localOutgoingRetryPayloadRef,
+      localOutgoingMediaPreviewUrlsRef,
+      loadChatsRef,
+    },
+    setSelectedChatId,
+    setChats,
+    setMessages,
+    setLocalOutgoingMessages,
+    buildChatsSignature,
+    buildMessagesSignature,
+    chatMatchesActiveFilters,
+    applyFrontendSavedContactNames,
+    applyPrefetchedLeadNames,
+    applyOutgoingOrderToServerMessage,
+    rememberOutgoingMessageOrder,
+  });
 
   const { isRealtimeHealthy: isMessageRealtimeHealthy } = useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
 
@@ -1809,100 +1633,24 @@ export default function WhatsAppInboxScreen() {
     });
   }, [patchMessageLocally]);
 
-  const loadLeadContracts = useCallback(async (leadId: string | null) => {
-    const requestId = ++leadContractsRequestIdRef.current;
-
-    if (!leadId) {
-      setLeadContracts([]);
-      setLeadContractsError(null);
-      setLeadContractsLoading(false);
-      return;
-    }
-
-    setLeadContractsLoading(true);
-    try {
-      const contracts = await whatsappContactsRepository.listLeadContracts(leadId);
-      if (requestId !== leadContractsRequestIdRef.current) {
-        return;
-      }
-      setLeadContracts(contracts);
-      setLeadContractsError(null);
-    } catch (error) {
-      if (requestId !== leadContractsRequestIdRef.current) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao carregar contratos do lead', error);
-      setLeadContracts([]);
-      setLeadContractsError(error instanceof Error ? error.message : 'Não foi possível carregar os contratos do lead.');
-    } finally {
-      if (requestId === leadContractsRequestIdRef.current) {
-        setLeadContractsLoading(false);
-      }
-    }
-  }, []);
-
-  const loadLeadPanel = useCallback(async (chat: CommWhatsAppChat | null) => {
-    const requestId = ++leadPanelRequestIdRef.current;
-    const targetChatId = chat?.id ?? null;
-
-    if (!chat?.lead_id) {
-      setLeadPanel(null);
-      setLeadPanelError(null);
-      setLeadPanelLoading(false);
-      setLeadContracts([]);
-      setLeadContractsLoading(false);
-      setLeadContractsError(null);
-      return;
-    }
-
-    setLeadPanelLoading(true);
-    setLeadPanelError(null);
-    try {
-      const lead = await whatsappContactsRepository.getLeadPanel(chat.id);
-      if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      setLeadPanel(lead);
-      setLeadPanelLoading(false);
-      const nextLeadStatus = lead?.status_value ?? lead?.status_nome ?? null;
-      const shouldHydrateChatFromLead = Boolean(
-        lead
-          && ((lead.nome_completo && chat.lead_name !== lead.nome_completo)
-            || (nextLeadStatus && chat.lead_status !== nextLeadStatus)),
-      );
-      if (shouldHydrateChatFromLead && lead) {
-        upsertChatLocally({
-          ...chat,
-          lead_name: lead.nome_completo || chat.lead_name,
-          lead_status: nextLeadStatus,
-        });
-      }
-      if (lead?.nome_completo) {
-        const phoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
-        for (const key of phoneKeys) {
-          prefetchedLeadNameByPhoneRef.current.set(key, lead.nome_completo);
-        }
-        if (phoneKeys.length > 0) {
-          setChats((current) => applyFrontendSavedContactNames(applyPrefetchedLeadNames(current)));
-        }
-      }
-      void loadLeadContracts(lead?.id ?? null);
-    } catch (error) {
-      if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao carregar painel do lead', error);
-      setLeadPanel(null);
-      setLeadPanelError(error instanceof Error ? error.message : 'Não foi possível carregar as informações do lead.');
-      setLeadContracts([]);
-      setLeadContractsLoading(false);
-      setLeadContractsError(null);
-    } finally {
-      if (requestId === leadPanelRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setLeadPanelLoading(false);
-      }
-    }
-  }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, loadLeadContracts, upsertChatLocally]);
+  const { loadLeadContracts, loadLeadPanel } = useInboxLeadPanel({
+    refs: {
+      leadPanelRequestIdRef,
+      leadContractsRequestIdRef,
+      selectedChatIdRef,
+      prefetchedLeadNameByPhoneRef,
+    },
+    setLeadPanel,
+    setLeadPanelError,
+    setLeadPanelLoading,
+    setLeadContracts,
+    setLeadContractsError,
+    setLeadContractsLoading,
+    setChats,
+    applyFrontendSavedContactNames,
+    applyPrefetchedLeadNames,
+    upsertChatLocally,
+  });
 
   useEffect(() => {
     const leadId = selectedChat?.lead_id?.trim();
@@ -2307,39 +2055,6 @@ export default function WhatsAppInboxScreen() {
       setDismissedQuickReplyKey(null);
     }
   }, [activeQuickReplyKey, dismissedQuickReplyKey]);
-
-  useEffect(() => {
-    const nextPreviewUrls = new Map<string, string>();
-
-    for (const attachment of pendingAttachments) {
-      if (attachment.previewUrl?.startsWith('blob:')) {
-        nextPreviewUrls.set(attachment.id, attachment.previewUrl);
-      }
-    }
-
-    for (const [attachmentId, previewUrl] of attachmentPreviewUrlsRef.current.entries()) {
-      if (!nextPreviewUrls.has(attachmentId) && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    }
-
-    attachmentPreviewUrlsRef.current = nextPreviewUrls;
-  }, [pendingAttachments]);
-
-  useEffect(() => () => {
-    for (const previewUrl of attachmentPreviewUrlsRef.current.values()) {
-      if (previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    }
-    attachmentPreviewUrlsRef.current.clear();
-  }, []);
-
-  useEffect(() => () => {
-    if (removedAttachmentUndoTimeoutRef.current) {
-      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
-    }
-  }, []);
 
   useClickOutside(
     Boolean(openReactionPickerMessageId),
@@ -2834,36 +2549,11 @@ export default function WhatsAppInboxScreen() {
     setFollowUpNextAction(null);
   }, []);
 
-  const loadOperationalState = useCallback(async () => {
-    if (!operationalStateLoadLockRef.current.tryAcquire('operational-state')) {
-      return;
-    }
-
-    const requestId = ++operationalStateRequestIdRef.current;
-
-    try {
-      const state = await whatsappConversationsRepository.getOperationalState();
-      if (requestId !== operationalStateRequestIdRef.current) {
-        return;
-      }
-
-      setOperationalState((current) => state ?? current);
-      setOperationalStateError(null);
-      setOperationalStateLoaded(true);
-    } catch (error) {
-      if (requestId !== operationalStateRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao carregar estado operacional', error);
-      setOperationalStateError(
-        error instanceof Error ? error.message : 'Não foi possível carregar o estado operacional do WhatsApp.',
-      );
-      setOperationalStateLoaded(true);
-    } finally {
-      operationalStateLoadLockRef.current.release('operational-state');
-    }
-  }, []);
+  const { loadOperationalState } = useInboxOperationalState({
+    setOperationalState,
+    setOperationalStateError,
+    setOperationalStateLoaded,
+  });
 
   useEffect(() => {
     if (!leadDrawerOpen) {
@@ -2960,265 +2650,6 @@ export default function WhatsAppInboxScreen() {
     setChats((current) => applyFrontendSavedContactNames(current));
   }, [applyFrontendSavedContactNames, savedContacts]);
 
-  const loadChats = useCallback(async (loadOptions: ChatLoadOptions = {}) => {
-    // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario
-    // esta visualizando. Os chats da outra secao continuam em memoria (e sao
-    // recarregados sob demanda quando o usuario alterna). Isso reduz drasticamente
-    // o trafego de polling (8s) em contas com muitos chats arquivados.
-    const requestedSections = loadOptions.sections
-      ?? (archivedSectionOpenRef.current ? (['archived'] as const) : (['active'] as const));
-    const preferredSection = loadOptions.preferredSection
-      ?? (requestedSections.length === 1
-        ? requestedSections[0]
-        : archivedSectionOpenRef.current ? 'archived' : 'active');
-    // Secao arquivada carrega parcialmente (pagina a pagina com "Carregar mais")
-    // por padrao quando o chamador nao pede explicitamente as secoes (ex.: polling).
-    const partialArchived = loadOptions.partialArchived ?? !loadOptions.sections;
-
-    const loadKey = JSON.stringify({
-      activity: chatActivityFilter,
-      statuses: leadStatusFilters.map((status) => status.trim()).filter(Boolean).sort(),
-      responsaveis: leadResponsavelFilters.map((id) => id.trim()).filter(Boolean).sort(),
-      sections: [...requestedSections].sort(),
-      partialArchived,
-      preferredSection,
-    });
-
-    if (chatsLoadPromiseRef.current && chatsLoadKeyRef.current === loadKey) {
-      return chatsLoadPromiseRef.current;
-    }
-
-    chatsLoadKeyRef.current = loadKey;
-    const requestId = ++chatsRequestIdRef.current;
-    setArchivedChatsLoadingMore(false);
-    let didApplyChatLoad = false;
-    const loadPromise = (async () => {
-      try {
-        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
-        const fetchedSectionResults = await Promise.allSettled(
-          requestedSections.map(async (section) => {
-            const result = await loadInboxChatSection({
-              section,
-              listPage: (params) => whatsappConversationsRepository.list(params),
-              activityFilter: chatActivityFilter,
-              leadStatusFilters,
-              leadResponsavelFilters,
-              hasLoadFilters,
-              partialArchived,
-              archivedPage: archivedChatsPageRef.current,
-              pageSize: CHAT_PAGE_SIZE,
-              isRequestCurrent: () => requestId === chatsRequestIdRef.current,
-              waitBeforeRetry: waitForChatListRetry,
-            });
-
-            if (partialArchived && section === 'archived' && requestId === chatsRequestIdRef.current) {
-              setArchivedChatsHasMore(result.hasMore);
-              setArchivedChatsPage(result.pagesFetched);
-            }
-
-            return { section, data: result.chats };
-          }),
-        );
-
-        if (requestId !== chatsRequestIdRef.current) {
-          return;
-        }
-
-        const fetchedSections: Array<{ section: 'active' | 'archived'; data: CommWhatsAppChat[] }> = [];
-        const failedSections: Array<'active' | 'archived'> = [];
-        let firstSectionError: unknown = null;
-        fetchedSectionResults.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            fetchedSections.push(result.value);
-            return;
-          }
-
-          failedSections.push(requestedSections[index]);
-          firstSectionError ??= result.reason;
-        });
-
-        if (fetchedSections.length === 0) {
-          throw firstSectionError ?? new Error('Não foi possível carregar as conversas.');
-        }
-
-        const fetchedSectionSet = new Set(fetchedSections.map(({ section }) => section));
-        const fetchedChatIds = new Set<string>();
-        const fetchedFlat: CommWhatsAppChat[] = [];
-        for (const bucket of fetchedSections) {
-          for (const chat of bucket.data) {
-            fetchedFlat.push(chat);
-            fetchedChatIds.add(chat.id);
-          }
-        }
-
-        const previousChats = latestChatsRef.current;
-        const previousChatsById = new Map(previousChats.map((chat) => [chat.id, chat] as const));
-        const unexpectedlyEmptySections = new Set(
-          fetchedSections
-            .filter(({ section, data }) => {
-              if (data.length > 0 || hasLoadFilters) {
-                return false;
-              }
-
-              return previousChats.some((chat) => (
-                !chat.deleted_at
-                && (chat.is_archived ? 'archived' : 'active') === section
-              ));
-            })
-            .map(({ section }) => section),
-        );
-
-        if (unexpectedlyEmptySections.size > 0) {
-          console.debug('[WhatsAppInbox] refetch de chats retornou secao vazia; preservando lista atual', {
-            sections: Array.from(unexpectedlyEmptySections),
-            requestedSections,
-            previousChatsLen: previousChats.length,
-          });
-        }
-
-        const preservedFromOtherSections = preserveChatsFromPartialLoad({
-          previousChats,
-          refreshedChatIds: fetchedChatIds,
-          loadedSections: fetchedSectionSet,
-          unexpectedlyEmptySections,
-        });
-
-        const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
-
-        const refreshedChats = applyPendingChatInboxState(
-          applyFrontendSavedContactNames(
-            applyPrefetchedLeadNames(mergedData.map((chat) => {
-              const previousChat = previousChatsById.get(chat.id) ?? null;
-              // O nome salvo do próprio chat pode ser uma cópia antiga do
-              // provedor. Só o cache de contatos confirma uma troca durante
-              // o merge; sem essa confirmação, o nome já estabilizado vence.
-              const canonicalSavedContactName = getSavedContactNameForPhone(
-                chat.phone_digits || chat.phone_number,
-                savedContactNameOverrideByPhoneRef.current,
-                savedContactNameByPhoneRef.current,
-              );
-              return preserveUsefulChatPreview(
-                stabilizeChatIdentityForLocalMerge(chat, previousChat, canonicalSavedContactName),
-                previousChat,
-              );
-            })),
-          ),
-          pendingChatInboxStateRef.current,
-        );
-        const currentSelectedChatId = selectedChatIdRef.current;
-        const preservedSelectedChat = currentSelectedChatId
-          ? previousChats.find((chat) => chat.id === currentSelectedChatId) ?? null
-          : null;
-        const shouldPreserveSelectedChat = shouldPreserveSelectedChatAfterLoad({
-          selectedChat: preservedSelectedChat,
-          refreshedChatIds: new Set(refreshedChats.map((chat) => chat.id)),
-          loadedSections: Array.from(fetchedSectionSet),
-          unexpectedlyEmptySections,
-        });
-        const hydratedData = sortChatsByInboxOrder(
-          shouldPreserveSelectedChat && preservedSelectedChat
-            ? [...refreshedChats, preservedSelectedChat]
-            : refreshedChats,
-        );
-
-        const nextSignature = buildChatsSignature(hydratedData);
-
-        setChatLoadError(false);
-        setChatRefreshError(
-          failedSections.length > 0
-            ? `Não foi possível atualizar ${failedSections.map((section) => section === 'active' ? 'as conversas ativas' : 'as conversas arquivadas').join(' e ')}. A lista disponível continua visível.`
-            : null,
-        );
-
-        const chatsChanged = nextSignature !== chatsSignatureRef.current;
-        if (chatsChanged) {
-          chatPollIdleCyclesRef.current = 0;
-          chatsSignatureRef.current = nextSignature;
-          setChats(hydratedData);
-        } else {
-          chatPollIdleCyclesRef.current += 1;
-        }
-
-        const requestedChatId = chatIdFromUrlRef.current;
-        const requestedChat = requestedChatId
-          ? hydratedData.find((chat) => chat.id === requestedChatId) ?? null
-          : null;
-        if (requestedChat) {
-          setArchivedSectionOpen(Boolean(requestedChat.is_archived));
-        }
-
-        setSelectedChatId((current) => {
-          if (requestedChat) {
-            return requestedChat.id;
-          }
-
-          // No mobile, voltar para a lista é uma escolha explícita. Não deixe
-          // um refetch/realtime reabrir o primeiro chat enquanto ela estiver ativa.
-          if (suppressAutoChatSelectionRef.current) {
-            return null;
-          }
-
-          // Em telas mobile a coluna de conversas é a tela inicial do Inbox.
-          // Só abrimos a thread de imediato quando existe um deep link explícito.
-          const isMobileInboxLayout = typeof window !== 'undefined'
-            && window.matchMedia('(max-width: 1023px)').matches;
-          if (!current && isMobileInboxLayout && !requestedChatId) {
-            return null;
-          }
-
-          if (requestedChatId && current === requestedChatId) {
-            return current;
-          }
-
-          if (current && hydratedData.some((chat) => chat.id === current)) {
-            return current;
-          }
-
-          return selectInitialChatId(hydratedData, preferredSection);
-        });
-        chatPollBackoffRef.current = 0;
-        didApplyChatLoad = true;
-      } catch (error) {
-        if (requestId !== chatsRequestIdRef.current) {
-          return;
-        }
-
-        console.error('[WhatsAppInbox] erro ao carregar chats', error);
-
-        if (latestChatsRef.current.length === 0) {
-          setChatLoadError(true);
-          setChatRefreshError(null);
-        } else {
-          setChatRefreshError(
-            isSupabaseConnectivityError(error)
-              ? 'Não foi possível atualizar as conversas. A lista exibida pode estar desatualizada.'
-              : 'A atualização das conversas falhou. A lista exibida pode estar desatualizada.',
-          );
-        }
-
-        if (isSupabaseConnectivityError(error)) {
-          chatPollBackoffRef.current = Math.min(chatPollBackoffRef.current + 1, 10);
-          return;
-        }
-
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
-      }
-    })().finally(() => {
-      if (didApplyChatLoad && requestId === chatsRequestIdRef.current) {
-        latestChatsLoadedAtRef.current = Date.now();
-      }
-      if (chatsLoadPromiseRef.current === loadPromise) {
-        chatsLoadPromiseRef.current = null;
-        chatsLoadKeyRef.current = null;
-      }
-    });
-
-    chatsLoadPromiseRef.current = loadPromise;
-    return loadPromise;
-  }, [applyFrontendSavedContactNames, applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, leadResponsavelFilters]);
-
-  loadChatsRef.current = loadChats;
-
   const refreshArchivedChatsCount = useCallback(async () => {
     if (!archivedChatsCountLoadLockRef.current.tryAcquire('archived-count')) {
       return;
@@ -3244,136 +2675,55 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const handleLoadMoreArchivedChats = useCallback(async () => {
-    if (archivedChatsLoading || archivedChatsLoadingMore || !archivedChatsHasMore) {
-      return;
-    }
-    if (!archivedChatsLoadMoreLockRef.current.tryAcquire('archived')) {
-      return;
-    }
-
-    setArchivedChatsLoadingMore(true);
-    const nextPageIndex = archivedChatsPage;
-    const chatsRequestId = chatsRequestIdRef.current;
-
-    try {
-      const page = await whatsappConversationsRepository.list({
-        activityFilter: chatActivityFilter,
-        leadStatusFilters,
-        leadResponsavelFilters,
-        archivedFilter: 'archived',
-        limit: CHAT_PAGE_SIZE,
-        offset: nextPageIndex * CHAT_PAGE_SIZE,
-      });
-
-      if (chatsRequestId !== chatsRequestIdRef.current) {
-        return;
-      }
-
-      setArchivedChatsHasMore(page.length >= CHAT_PAGE_SIZE);
-      setArchivedChatsPage(nextPageIndex + 1);
-
-      setChats((current) => {
-        const previousChats = current;
-        const previousChatsById = new Map(previousChats.map((chat) => [chat.id, chat] as const));
-        const transformed = applyPendingChatInboxState(
-          applyFrontendSavedContactNames(
-            applyPrefetchedLeadNames(page.map((chat) => {
-              const previousChat = previousChatsById.get(chat.id) ?? null;
-              const canonicalSavedContactName = getSavedContactNameForPhone(
-                chat.phone_digits || chat.phone_number,
-                savedContactNameOverrideByPhoneRef.current,
-                savedContactNameByPhoneRef.current,
-              );
-              return preserveUsefulChatPreview(
-                stabilizeChatIdentityForLocalMerge(chat, previousChat, canonicalSavedContactName),
-                previousChat,
-              );
-            })),
-          ),
-          pendingChatInboxStateRef.current,
-        );
-
-        const nextById = new Map<string, CommWhatsAppChat>();
-        for (const chat of current) {
-          nextById.set(chat.id, chat);
-        }
-        for (const chat of transformed) {
-          nextById.set(chat.id, chat);
-        }
-
-        const sorted = sortChatsByInboxOrder(Array.from(nextById.values()));
-        chatsSignatureRef.current = buildChatsSignature(sorted);
-        return sorted;
-      });
-    } catch (error) {
-      if (chatsRequestId !== chatsRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao carregar mais arquivados', error);
-      if (!isSupabaseConnectivityError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mais conversas arquivadas.');
-      }
-    } finally {
-      archivedChatsLoadMoreLockRef.current.release('archived');
-      if (chatsRequestId === chatsRequestIdRef.current) {
-        setArchivedChatsLoadingMore(false);
-      }
-    }
-  }, [
-    applyFrontendSavedContactNames,
-    applyPrefetchedLeadNames,
-    buildChatsSignature,
+  const { loadChats, handleLoadMoreArchivedChats, handleSwitchArchivedSection } = useInboxChatLoader({
     chatActivityFilter,
     leadStatusFilters,
     leadResponsavelFilters,
-    archivedChatsHasMore,
+    pageSize: CHAT_PAGE_SIZE,
     archivedChatsLoading,
     archivedChatsLoadingMore,
+    archivedChatsHasMore,
     archivedChatsPage,
-  ]);
+    refs: {
+      archivedSectionOpenRef,
+      archivedChatsPageRef,
+      chatsRequestIdRef,
+      chatsLoadPromiseRef,
+      chatsLoadKeyRef,
+      latestChatsRef,
+      selectedChatIdRef,
+      chatIdFromUrlRef,
+      suppressAutoChatSelectionRef,
+      pendingChatInboxStateRef,
+      savedContactNameByPhoneRef,
+      savedContactNameOverrideByPhoneRef,
+      chatsSignatureRef,
+      chatPollIdleCyclesRef,
+      chatPollBackoffRef,
+      latestChatsLoadedAtRef,
+    },
+    setArchivedChatsLoading,
+    setArchivedChatsLoadingMore,
+    setArchivedChatsHasMore,
+    setArchivedChatsPage,
+    setChatLoadError,
+    setChatRefreshError,
+    setChats,
+    setArchivedSectionOpen,
+    setSelectedChatId,
+    applyFrontendSavedContactNames,
+    applyPrefetchedLeadNames,
+    buildChatsSignature,
+    chatMatchesActiveFilters,
+    refreshArchivedChatsCount,
+  });
+
+  loadChatsRef.current = loadChats;
 
   const handleRetryChatLoad = useCallback(() => {
     setLoading(true);
     void loadChats().finally(() => setLoading(false));
   }, [loadChats]);
-
-  const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
-    setArchivedSectionOpen(nextArchivedSectionOpen);
-
-    const currentSelectedChat = selectedChatIdRef.current
-      ? latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null
-      : null;
-
-    if (currentSelectedChat && Boolean(currentSelectedChat.is_archived) !== nextArchivedSectionOpen) {
-      const nextChat = sortChatsByInboxOrder(latestChatsRef.current.filter((candidate) => (
-        candidate.id !== currentSelectedChat.id
-        && Boolean(candidate.is_archived) === nextArchivedSectionOpen
-        && chatMatchesActiveFilters(candidate)
-      )))[0] ?? null;
-      chatIdFromUrlRef.current = nextChat?.id ?? null;
-      setSelectedChatId(nextChat?.id ?? null);
-    }
-
-    if (nextArchivedSectionOpen) {
-      const loadRequestId = ++archivedSectionLoadRequestIdRef.current;
-      setArchivedChatsLoading(true);
-      setArchivedChatsLoadingMore(false);
-      void loadChats({ sections: ['archived', 'active'], partialArchived: true, preferredSection: 'archived' })
-        .catch(() => undefined)
-        .finally(() => {
-          if (loadRequestId === archivedSectionLoadRequestIdRef.current) {
-            setArchivedChatsLoading(false);
-          }
-        });
-      void refreshArchivedChatsCount();
-    } else {
-      archivedSectionLoadRequestIdRef.current += 1;
-      setArchivedChatsLoading(false);
-      void loadChats({ sections: ['active'], preferredSection: 'active' });
-    }
-  }, [chatMatchesActiveFilters, loadChats, refreshArchivedChatsCount]);
 
   useWhatsAppInboxDeepLink({
     searchParams,
@@ -3386,175 +2736,31 @@ export default function WhatsAppInboxScreen() {
     loadChats,
   });
 
-  const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
-    const targetChatId = chat?.id ?? selectedChatIdRef.current;
-    if (!targetChatId) {
-      setMessages([]);
-      setMessageLoadError(null);
-      return;
-    }
-
-    if (reason === 'poll' && pollingMessagesChatIdRef.current === targetChatId) {
-      return;
-    }
-
-    if (reason === 'poll') {
-      pollingMessagesChatIdRef.current = targetChatId;
-    }
-
-    const runLoad = async () => {
-      const requestId = ++messagesRequestIdRef.current;
-
-      const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
-
-      if (reason === 'initial') {
-        setMessageLoadError(null);
-      }
-
-      if (shouldShowBlockingLoader) {
-        setLoadingMessages(true);
-      }
-
-      try {
-        let data: CommWhatsAppMessage[] = [];
-        let hasMore = false;
-        let threadChat: CommWhatsAppChat | null = null;
-        let threadLead: CommWhatsAppLeadPanel | null = null;
-
-      if (reason === 'initial') {
-        const thread = await whatsappConversationsRepository.getThread(targetChatId, {
-          limit: MESSAGE_PAGE_SIZE,
-        });
-
-        data = thread.messages;
-        hasMore = thread.hasMore;
-        threadChat = thread.chat;
-        threadLead = thread.lead;
-
-        if (data.length === 0 && Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim())) {
-          setThreadReconcileChatId(targetChatId);
-          console.warn('[WhatsAppInbox] thread retornou vazio apesar de preview', {
-            chatId: targetChatId,
-          });
-        }
-      } else {
-        const page = await whatsappMessagesRepository.listPage(targetChatId, {
-          limit: MESSAGE_PAGE_SIZE,
-        });
-
-        data = page.messages;
-        hasMore = page.hasMore;
-      }
-
-      if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-
-      setMessageLoadError(null);
-
-      if (threadChat) {
-        upsertChatLocally(threadChat);
-      }
-
-      if (threadLead) {
-        setLeadPanel(threadLead);
-      }
-
-      const stillEmptyDespitePreview = reason === 'initial'
-        && data.length === 0
-        && Boolean(threadChat?.last_message_at || threadChat?.last_message_text?.trim());
-      setThreadReconcileChatId(stillEmptyDespitePreview ? targetChatId : null);
-
-      const orderedData = data.map(applyOutgoingOrderToServerMessage);
-      const nextMessages = reason === 'initial' ? orderedData : mergeMessages(latestMessagesRef.current, orderedData);
-      const nextSignature = buildMessagesSignature(nextMessages);
-      setLocalOutgoingMessages((current) => {
-        const nextLocalMessages: CommWhatsAppMessage[] = [];
-
-        for (const message of current) {
-          if (message.chat_id !== targetChatId) {
-            nextLocalMessages.push(message);
-            continue;
-          }
-
-          const externalId = String(message.external_message_id ?? '').trim();
-          const syncedServerMessage = nextMessages.find((serverMessage) => messagesReferToSameOutgoing(message, serverMessage)) ?? null;
-          const alreadySynced = Boolean(syncedServerMessage);
-
-          if (alreadySynced) {
-            rememberOutgoingMessageOrder(message);
-            localOutgoingRetryPayloadRef.current.delete(message.id);
-            const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-            const syncedExternalMessageId = String(syncedServerMessage?.external_message_id ?? externalId).trim();
-            if (previewUrl && syncedExternalMessageId) {
-              whatsappMediaRepository.rememberLocalPreview(syncedExternalMessageId, previewUrl);
-            }
-            localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
-            continue;
-          }
-
-          nextLocalMessages.push(message);
-        }
-
-        return nextLocalMessages;
-      });
-
-      if (nextSignature === messagesSignatureRef.current) {
-        if (reason === 'initial') {
-          setHasOlderMessages(hasMore);
-        }
-        return;
-      }
-
-      messagesSignatureRef.current = nextSignature;
-      if (reason === 'initial') {
-        setHasOlderMessages(hasMore);
-      }
-
-      if (reason === 'initial' || reason === 'send' || isNearBottomRef.current) {
-        pendingScrollModeRef.current = 'bottom';
-        pendingScrollTopRef.current = null;
-        pendingScrollHeightRef.current = null;
-      } else {
-        pendingScrollModeRef.current = 'preserve';
-        pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
-        pendingScrollHeightRef.current = null;
-      }
-
-      setMessages(nextMessages);
-
-      const cache = messagesCacheByChatIdRef.current;
-      cache.delete(targetChatId);
-      cache.set(targetChatId, { messages: nextMessages, signature: nextSignature, hasOlderMessages: hasMore });
-      if (cache.size > MESSAGES_CACHE_MAX_CHATS) {
-        const oldestKey = cache.keys().next().value;
-        if (oldestKey !== undefined) {
-          cache.delete(oldestKey);
-        }
-      }
-      } catch (error) {
-        if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-          return;
-        }
-
-        console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
-        setMessageLoadError('Não foi possível carregar as mensagens desta conversa.');
-        if (reason !== 'initial') {
-          toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
-        }
-      } finally {
-        if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-          setLoadingMessages(false);
-        }
-
-        if (reason === 'poll' && pollingMessagesChatIdRef.current === targetChatId) {
-          pollingMessagesChatIdRef.current = null;
-        }
-      }
-    };
-
-    return messageLoadQueueRef.current.enqueue(targetChatId, runLoad);
-  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder, upsertChatLocally]);
+  const { loadMessages } = useInboxMessageLoader({
+    selectedChatIdRef,
+    messagesRequestIdRef,
+    latestMessagesRef,
+    messagesSignatureRef,
+    messagesCacheByChatIdRef,
+    pendingScrollModeRef,
+    pendingScrollTopRef,
+    pendingScrollHeightRef,
+    isNearBottomRef,
+    messagesContainerRef,
+    localOutgoingRetryPayloadRef,
+    localOutgoingMediaPreviewUrlsRef,
+    setMessages,
+    setMessageLoadError,
+    setLoadingMessages,
+    setThreadReconcileChatId,
+    setHasOlderMessages,
+    setLocalOutgoingMessages,
+    setLeadPanel,
+    applyOutgoingOrderToServerMessage,
+    buildMessagesSignature,
+    rememberOutgoingMessageOrder,
+    upsertChatLocally,
+  });
 
   loadMessagesRef.current = loadMessages;
 
@@ -3571,121 +2777,39 @@ export default function WhatsAppInboxScreen() {
     }
   }, [getSelectedChatSnapshot, loadMessages, selectedChat]);
 
-  const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
-    const targetChat = result.chat;
-    const targetMessageId = result.message.id;
-    const requestId = ++messageSearchSelectionRequestIdRef.current;
-    const isChangingChat = selectedChatIdRef.current !== targetChat.id;
-
-    setChatMenuPointerAnchor(null);
-    setOpenChatMenuChatId(null);
-    upsertChatLocally(targetChat);
-
-    if (isChangingChat) {
-      pendingMessageSearchChatIdRef.current = targetChat.id;
-      selectedChatIdRef.current = targetChat.id;
-      messagesRequestIdRef.current += 1;
-      messagesSignatureRef.current = '';
-      latestMessagesRef.current = [];
-      setMessages([]);
-      setMessageLoadError(null);
-      setHasOlderMessages(false);
-      setThreadReconcileChatId(null);
-      setSelectedChatId(targetChat.id);
-    }
-
-    if (findMessageByIdOrExternalId(latestMessagesRef.current, targetMessageId, targetChat.id)) {
-      setHighlightedMessageId(targetMessageId);
-      return;
-    }
-
-    setLoadingMessages(true);
-
-    let fallbackLoadStarted = false;
-    void whatsappMessagesRepository.listContext(targetChat.id, targetMessageId).then((contextMessages) => {
-      if (requestId !== messageSearchSelectionRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
-        return;
-      }
-
-      const nextMessages = contextMessages.length > 0
-        ? mergeMessages(contextMessages, [result.message])
-        : [result.message];
-
-      messagesSignatureRef.current = buildMessagesSignature(nextMessages);
-      pendingScrollModeRef.current = null;
-      pendingScrollTopRef.current = null;
-      pendingScrollHeightRef.current = null;
-      pendingMessageSearchChatIdRef.current = null;
-      setHasOlderMessages(nextMessages.length > 0);
-      setMessages(nextMessages);
-      setHighlightedMessageId(targetMessageId);
-    }).catch((error) => {
-      if (requestId !== messageSearchSelectionRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
-        return;
-      }
-
-      pendingMessageSearchChatIdRef.current = null;
-      console.error('[WhatsAppInbox] erro ao carregar contexto da mensagem buscada', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a mensagem encontrada.');
-      fallbackLoadStarted = true;
-      return loadMessages(targetChat, 'initial');
-    }).finally(() => {
-      if (!fallbackLoadStarted && requestId === messageSearchSelectionRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
-        setLoadingMessages(false);
-      }
-    });
-  }, [buildMessagesSignature, loadMessages, upsertChatLocally]);
-
-  const handleOpenQuotedMessage = useCallback(async (quotedExternalMessageId: string) => {
-    const targetMessage = findMessageByIdOrExternalId(latestMessagesRef.current, quotedExternalMessageId);
-    if (targetMessage) {
-      setHighlightedMessageId(targetMessage.id);
-      return;
-    }
-
-    const targetChat = selectedChat;
-    if (!targetChat) {
-      return;
-    }
-
-    const requestId = ++quotedMessageNavigationRequestIdRef.current;
-    setLoadingMessages(true);
-
-    try {
-      const allMessages = await whatsappMessagesRepository.listAll(targetChat.id);
-      if (requestId !== quotedMessageNavigationRequestIdRef.current || selectedChatIdRef.current !== targetChat.id) {
-        return;
-      }
-
-      const loadedTargetMessage = findMessageByIdOrExternalId(allMessages, quotedExternalMessageId);
-      if (!loadedTargetMessage) {
-        toast.info('Não foi possível localizar a mensagem original nesta conversa.');
-        return;
-      }
-
-      const nextSignature = buildMessagesSignature(allMessages);
-      messagesSignatureRef.current = nextSignature;
-      pendingScrollModeRef.current = null;
-      pendingScrollTopRef.current = null;
-      pendingScrollHeightRef.current = null;
-      setHasOlderMessages(false);
-      setMessages(allMessages);
-      messagesCacheByChatIdRef.current.set(targetChat.id, {
-        messages: allMessages,
-        signature: nextSignature,
-        hasOlderMessages: false,
-      });
-      setHighlightedMessageId(loadedTargetMessage.id);
-    } catch (error) {
-      if (requestId === quotedMessageNavigationRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível localizar a mensagem original.');
-      }
-    } finally {
-      if (requestId === quotedMessageNavigationRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
-        setLoadingMessages(false);
-      }
-    }
-  }, [buildMessagesSignature, selectedChat]);
+  const {
+    handleSelectMessageSearchResult,
+    handleOpenQuotedMessage,
+    handleSelectChatMessageSearchResult,
+  } = useInboxMessageNavigation({
+    selectedChat,
+    refs: {
+      selectedChatIdRef,
+      latestMessagesRef,
+      messagesRequestIdRef,
+      messagesSignatureRef,
+      messagesCacheByChatIdRef,
+      pendingScrollModeRef,
+      pendingScrollTopRef,
+      pendingScrollHeightRef,
+      messageSearchSelectionRequestIdRef,
+      pendingMessageSearchChatIdRef,
+      quotedMessageNavigationRequestIdRef,
+      composerTextareaRef,
+    },
+    setChatMenuPointerAnchor,
+    setOpenChatMenuChatId,
+    setMessages,
+    setMessageLoadError,
+    setLoadingMessages,
+    setHasOlderMessages,
+    setThreadReconcileChatId,
+    setSelectedChatId,
+    setHighlightedMessageId,
+    buildMessagesSignature,
+    loadMessages,
+    upsertChatLocally,
+  });
 
   const handleToggleChatMessageSearch = useCallback(() => {
     setChatMessageSearchOpen((current) => {
@@ -3696,11 +2820,6 @@ export default function WhatsAppInboxScreen() {
       return nextOpen;
     });
   }, []);
-
-  const handleSelectChatMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
-    handleSelectMessageSearchResult(result);
-    window.setTimeout(() => composerTextareaRef.current?.focus(), 0);
-  }, [handleSelectMessageSearchResult]);
 
   useEffect(() => {
     setChatMessageSearchDraft('');
@@ -3898,16 +3017,10 @@ export default function WhatsAppInboxScreen() {
       lastSelectedChatPreviewRefreshKeyRef.current = '';
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
-      setPendingAttachments([]);
       setReplyTargetMessage(null);
       cancelVoiceRecordingRef.current();
       messagesSignatureRef.current = '';
       pendingMessageSearchChatIdRef.current = null;
-      if (removedAttachmentUndoTimeoutRef.current) {
-        window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
-        removedAttachmentUndoTimeoutRef.current = null;
-      }
-      setRemovedAttachmentForUndo(null);
       return;
     }
 
@@ -3915,13 +3028,7 @@ export default function WhatsAppInboxScreen() {
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
-    setPendingAttachments([]);
     setReplyTargetMessage(null);
-    if (removedAttachmentUndoTimeoutRef.current) {
-      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
-      removedAttachmentUndoTimeoutRef.current = null;
-    }
-    setRemovedAttachmentForUndo(null);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setThreadReconcileChatId(null);
@@ -3959,12 +3066,10 @@ export default function WhatsAppInboxScreen() {
       cancelVoiceRecordingRef.current();
       chatsRequestIdRef.current += 1;
       messagesRequestIdRef.current += 1;
-      operationalStateRequestIdRef.current += 1;
       leadPanelRequestIdRef.current += 1;
       leadContractsRequestIdRef.current += 1;
       chatAgendaSummaryRequestIdRef.current += 1;
       archivedChatsCountRequestIdRef.current += 1;
-      archivedSectionLoadRequestIdRef.current += 1;
       followUpGenerationRequestIdRef.current += 1;
       followUpScheduleRequestIdRef.current += 1;
       composerRewriteRequestIdRef.current += 1;
@@ -4462,177 +3567,6 @@ export default function WhatsAppInboxScreen() {
   useLayoutEffect(() => {
     resizeComposerTextarea();
   }, [messageDraft, pendingAttachments.length, resizeComposerTextarea, selectedChatId, voiceAttachment?.id]);
-
-  const handleAttachmentMenuAction = (action: AttachmentMenuAction) => {
-    if (voiceRecordingState !== 'idle') {
-      return;
-    }
-
-    if (action === 'contact') {
-      setAttachmentMenuOpen(false);
-      return;
-    }
-
-    const nextAccept = action === 'document'
-      ? DOCUMENT_ATTACHMENT_ACCEPT
-      : action === 'audio'
-        ? AUDIO_ATTACHMENT_ACCEPT
-        : MEDIA_ATTACHMENT_ACCEPT;
-
-    setAttachmentInputAccept(nextAccept);
-
-    setAttachmentMenuOpen(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.accept = nextAccept;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (voiceRecordingState !== 'idle') {
-      event.target.value = '';
-      return;
-    }
-
-    const nextFiles = Array.from(event.target.files ?? []);
-    if (nextFiles.length === 0) {
-      event.target.value = '';
-      return;
-    }
-
-    const nextAttachments = nextFiles.map(createPendingAttachmentFromFile);
-
-    setPendingAttachments((current) => {
-      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
-      return [...preserved, ...nextAttachments];
-    });
-
-    event.target.value = '';
-  };
-
-  const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    if (voiceRecordingState !== 'idle' || generatingFollowUp) {
-      return;
-    }
-
-    const clipboardItems = Array.from(event.clipboardData.items ?? []);
-    const imageFilesFromItems = clipboardItems
-      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-      .map((item) => item.getAsFile())
-      .filter((file): file is File => Boolean(file));
-    const imageFiles = imageFilesFromItems.length > 0
-      ? imageFilesFromItems
-      : Array.from(event.clipboardData.files ?? []).filter((file) => file.type.startsWith('image/'));
-
-    if (imageFiles.length === 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const pastedAttachments = imageFiles
-      .map(normalizePastedImageFile)
-      .map(createPendingAttachmentFromFile);
-
-    setPendingAttachments((current) => {
-      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
-      return [...preserved, ...pastedAttachments];
-    });
-  };
-
-  const handleClearAttachment = (attachmentId?: string) => {
-    const removedAttachment = attachmentId ? pendingAttachments.find((a) => a.id === attachmentId) ?? null : null;
-
-    if (!attachmentId || removedAttachment?.kind === 'voice') {
-      handleClearVoiceAttachmentFromHook();
-    }
-    setPendingAttachments((current) => {
-      if (!attachmentId) {
-        return [];
-      }
-      return current.filter((attachment) => attachment.id !== attachmentId);
-    });
-    if (selectedChatId) {
-      clearMediaUploadProgress(selectedChatId);
-    }
-
-    if (removedAttachment && removedAttachment.kind !== 'voice') {
-      if (removedAttachmentUndoTimeoutRef.current) {
-        window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
-      }
-      setRemovedAttachmentForUndo(removedAttachment);
-      removedAttachmentUndoTimeoutRef.current = window.setTimeout(() => {
-        setRemovedAttachmentForUndo(null);
-        removedAttachmentUndoTimeoutRef.current = null;
-      }, 6000);
-    }
-  };
-
-  const handleUndoRemoveAttachment = () => {
-    if (!removedAttachmentForUndo) {
-      return;
-    }
-
-    if (removedAttachmentUndoTimeoutRef.current) {
-      window.clearTimeout(removedAttachmentUndoTimeoutRef.current);
-      removedAttachmentUndoTimeoutRef.current = null;
-    }
-
-    const restoredAttachment = createPendingAttachmentFromFile(removedAttachmentForUndo.file);
-    setPendingAttachments((current) => [...current, restoredAttachment]);
-    setRemovedAttachmentForUndo(null);
-  };
-
-  const handleThreadDragEnter = (event: DragEvent<HTMLDivElement>) => {
-    if (!selectedChat || voiceRecordingState !== 'idle' || !Array.from(event.dataTransfer.types).includes('Files')) {
-      return;
-    }
-    event.preventDefault();
-    threadDragCounterRef.current += 1;
-    setIsDraggingFilesOverThread(true);
-  };
-
-  const handleThreadDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!selectedChat || voiceRecordingState !== 'idle' || !Array.from(event.dataTransfer.types).includes('Files')) {
-      return;
-    }
-    event.preventDefault();
-  };
-
-  const handleThreadDragLeave = (event: DragEvent<HTMLDivElement>) => {
-    if (!Array.from(event.dataTransfer.types).includes('Files')) {
-      return;
-    }
-    event.preventDefault();
-    threadDragCounterRef.current = Math.max(0, threadDragCounterRef.current - 1);
-    if (threadDragCounterRef.current === 0) {
-      setIsDraggingFilesOverThread(false);
-    }
-  };
-
-  const handleThreadDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (!Array.from(event.dataTransfer.types).includes('Files')) {
-      return;
-    }
-    event.preventDefault();
-    threadDragCounterRef.current = 0;
-    setIsDraggingFilesOverThread(false);
-
-    if (!selectedChat || voiceRecordingState !== 'idle') {
-      return;
-    }
-
-    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
-    if (droppedFiles.length === 0) {
-      return;
-    }
-
-    const nextAttachments = droppedFiles.map(createPendingAttachmentFromFile);
-    setPendingAttachments((current) => {
-      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
-      return [...preserved, ...nextAttachments];
-    });
-  };
 
   const handleSendCurrentVoiceRecording = () => {
     if (voiceRecordingState === 'recording') {
@@ -5794,191 +4728,40 @@ export default function WhatsAppInboxScreen() {
     }
   }, [historyRecoveryDisabledReason, loadChats, loadMessages, selectedChat]);
 
-  const handleUpdateChatInboxState = useCallback(async (
-    chat: CommWhatsAppChat,
-    options: {
-      isArchived?: boolean | null;
-      isMuted?: boolean | null;
-      isPinned?: boolean | null;
-      markAsUnread?: boolean | null;
+  const {
+    handleUpdateChatInboxState,
+    handleDeactivateAutonomousAttendance,
+    handleActivateAutonomousAttendance,
+    handleDeleteChat,
+  } = useInboxChatMutations({
+    assumingControlChatId,
+    deletingChatId,
+    refs: {
+      pendingChatInboxStateRef,
+      manualUnreadSkipReadChatIdRef,
+      chatReadMutationVersionByChatIdRef,
+      archivedSectionOpenRef,
+      latestChatsRef,
+      selectedChatIdRef,
+      chatsSignatureRef,
     },
-  ) => {
-    if (!chatInboxActionLockRef.current.tryAcquire(chat.id)) {
-      return;
-    }
-
-    setUpdatingChatStateId(chat.id);
-    let hasFieldsToApply = false;
-
-    try {
-      if (typeof options.markAsUnread === 'boolean') {
-        const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(chat.id) ?? 0) + 1;
-        chatReadMutationVersionByChatIdRef.current.set(chat.id, readMutationVersion);
-        clearPendingChatReadFields(pendingChatInboxStateRef.current, chat.id);
-      }
-
-      const fieldsOnlyPatch = stripPendingChatInboxMetadata(buildPendingChatInboxStatePatch(chat, options));
-      const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
-      hasFieldsToApply = Object.keys(fieldsOnlyPatch).length > 0;
-      if (hasFieldsToApply) {
-        mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, pendingPatch);
-        upsertChatLocally({ ...chat, ...fieldsOnlyPatch });
-      }
-
-      if (options.markAsUnread === true && selectedChatIdRef.current === chat.id) {
-        manualUnreadSkipReadChatIdRef.current = chat.id;
-      }
-
-      // Ao desarquivar a conversa aberta dentro de Arquivadas, levamos o usuario
-      // de volta para Conversas mantendo o chat selecionado. Arquivar a conversa
-      // aberta na Inbox continua selecionando o proximo chat ativo.
-      const shouldMoveSelectedUnarchivedChatToActive = (
-        options.isArchived === false
-        && selectedChatIdRef.current === chat.id
-        && archivedSectionOpenRef.current
-      );
-      const shouldRotateSelection = (
-        typeof options.isArchived === 'boolean'
-        && selectedChatIdRef.current === chat.id
-        && !shouldMoveSelectedUnarchivedChatToActive
-        // se o usuario esta na secao "Arquivadas" e desarquivou, idem
-        && options.isArchived !== archivedSectionOpenRef.current
-      );
-
-      if (shouldMoveSelectedUnarchivedChatToActive) {
-        setArchivedSectionOpen(false);
-        void loadChats({ sections: ['active'] });
-      } else if (shouldRotateSelection) {
-        const nextChat = latestChatsRef.current.find((candidate) => (
-          candidate.id !== chat.id
-          && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
-        )) ?? null;
-        setSelectedChatId(nextChat?.id ?? null);
-      }
-
-      const updatedChat = await whatsappConversationsRepository.updateInboxState(chat.id, options);
-
-      // Sanidade: confirma que o servidor refletiu o que pedimos. Caso
-      // contrario, mantemos o patch otimista vivo dentro da janela de
-      // protecao para evitar reversao temporaria pelo realtime/refetch.
-      const archiveConfirmed = typeof options.isArchived !== 'boolean' || updatedChat.is_archived === options.isArchived;
-      const muteConfirmed = typeof options.isMuted !== 'boolean' || updatedChat.is_muted === options.isMuted;
-      const pinConfirmed = typeof options.isPinned !== 'boolean' || updatedChat.is_pinned === options.isPinned;
-
-      if (archiveConfirmed && muteConfirmed && pinConfirmed && typeof options.isArchived !== 'boolean') {
-        pendingChatInboxStateRef.current.delete(chat.id);
-      }
-      upsertChatLocally(updatedChat);
-
-      if (typeof options.isArchived === 'boolean') {
-        void refreshArchivedChatsCount();
-        if (archiveConfirmed) {
-          toast.success(options.isArchived ? 'Conversa arquivada.' : 'Conversa removida dos arquivados.');
-        } else {
-          toast.warning('Conversa atualizada, mas o servidor reverteu o arquivamento. Verifique se há mensagens novas chegando.');
-        }
-      } else if (typeof options.isMuted === 'boolean') {
-        toast.success(options.isMuted ? 'Conversa silenciada.' : 'Conversa com notificação restaurada.');
-      } else if (typeof options.isPinned === 'boolean') {
-        toast.success(options.isPinned ? 'Conversa fixada.' : 'Conversa desafixada.');
-      } else if (typeof options.markAsUnread === 'boolean') {
-        toast.success(options.markAsUnread ? 'Conversa marcada como não lida.' : 'Conversa marcada como lida.');
-      }
-    } catch (error) {
-      pendingChatInboxStateRef.current.delete(chat.id);
-      if (hasFieldsToApply) {
-        upsertChatLocally(chat);
-      }
-      console.error('[WhatsAppInbox] erro ao atualizar estado do chat', error);
-      if (options.markAsUnread === true && manualUnreadSkipReadChatIdRef.current === chat.id) {
-        manualUnreadSkipReadChatIdRef.current = null;
-      }
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar esta conversa.');
-    } finally {
-      chatInboxActionLockRef.current.release(chat.id);
-      setUpdatingChatStateId((current) => (current === chat.id ? null : current));
-    }
-  }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);
-
-  const handleDeactivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
-    if (assumingControlChatId || !autonomousAttendanceLockRef.current.tryAcquire(chat.id)) {
-      return;
-    }
-
-    setAssumingControlChatId(chat.id);
-    try {
-      const updatedChat = await whatsappConversationsRepository.setAutonomousAttendanceStatus(chat.id, 'inactive');
-      upsertChatLocally(updatedChat);
-      toast.success('Atendimento autônomo desativado nesta conversa.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao desativar atendimento autonomo', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível desativar o atendimento autônomo desta conversa.');
-    } finally {
-      autonomousAttendanceLockRef.current.release(chat.id);
-      setAssumingControlChatId((current) => (current === chat.id ? null : current));
-    }
-  }, [assumingControlChatId, upsertChatLocally]);
-
-  const handleActivateAutonomousAttendance = useCallback(async (chat: CommWhatsAppChat) => {
-    if (assumingControlChatId || !autonomousAttendanceLockRef.current.tryAcquire(chat.id)) {
-      return;
-    }
-
-    setAssumingControlChatId(chat.id);
-    try {
-      const updatedChat = await whatsappConversationsRepository.setAutonomousAttendanceStatus(chat.id, 'active');
-      upsertChatLocally(updatedChat);
-      toast.success('Atendimento autônomo ativado nesta conversa.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao ativar atendimento autonomo', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível ativar o atendimento autônomo desta conversa.');
-    } finally {
-      autonomousAttendanceLockRef.current.release(chat.id);
-      setAssumingControlChatId((current) => (current === chat.id ? null : current));
-    }
-  }, [assumingControlChatId, upsertChatLocally]);
-
-  const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
-    if (deletingChatId) {
-      return;
-    }
-    if (!chatInboxActionLockRef.current.tryAcquire(chat.id)) {
-      return;
-    }
-
-    setDeletingChatId(chat.id);
-    try {
-      await whatsappConversationsRepository.delete(chat.id);
-
-      setChats((current) => {
-        const next = current.filter((candidate) => candidate.id !== chat.id);
-        chatsSignatureRef.current = buildChatsSignature(next);
-        return next;
-      });
-
-      if (selectedChatIdRef.current === chat.id) {
-        const nextChat = sortChatsByInboxOrder(latestChatsRef.current.filter((candidate) => (
-          candidate.id !== chat.id
-          && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
-        )))[0] ?? null;
-        setSelectedChatId(nextChat?.id ?? null);
-      }
-
-      toast.success('Conversa excluida da Inbox.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao excluir conversa', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível excluir esta conversa.');
-    } finally {
-      chatInboxActionLockRef.current.release(chat.id);
-      setDeletingChatId((current) => (current === chat.id ? null : current));
-    }
-  }, [buildChatsSignature, deletingChatId]);
+    setUpdatingChatStateId,
+    setAssumingControlChatId,
+    setDeletingChatId,
+    setArchivedSectionOpen,
+    setSelectedChatId,
+    setChats,
+    upsertChatLocally,
+    loadChats,
+    refreshArchivedChatsCount,
+    buildChatsSignature,
+  });
 
   const handleToggleMediaDrawer = useCallback(() => {
     setAttachmentMenuOpen(false);
     setComposerAiMenuOpen(false);
     setMediaDrawerOpen((current) => !current);
-  }, []);
+  }, [setAttachmentMenuOpen]);
 
   const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
     const mediaId = message.media_id?.trim() || null;
@@ -6427,32 +5210,6 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     setMediaDrawerOpen(false);
   }, [selectedChatId]);
-
-  useEffect(() => {
-    if (visualComposerAttachments.length === 0) {
-      if (selectedMediaComposerAttachmentId !== null) {
-        setSelectedMediaComposerAttachmentId(null);
-      }
-      return;
-    }
-
-    if (!selectedMediaComposerAttachmentId || !visualComposerAttachments.some((attachment) => attachment.id === selectedMediaComposerAttachmentId)) {
-      setSelectedMediaComposerAttachmentId(visualComposerAttachments[0].id);
-    }
-  }, [selectedMediaComposerAttachmentId, visualComposerAttachments]);
-
-  useEffect(() => {
-    if (documentComposerAttachments.length === 0) {
-      if (selectedDocumentComposerAttachmentId !== null) {
-        setSelectedDocumentComposerAttachmentId(null);
-      }
-      return;
-    }
-
-    if (!selectedDocumentComposerAttachmentId || !documentComposerAttachments.some((attachment) => attachment.id === selectedDocumentComposerAttachmentId)) {
-      setSelectedDocumentComposerAttachmentId(documentComposerAttachments[0].id);
-    }
-  }, [documentComposerAttachments, selectedDocumentComposerAttachmentId]);
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (quickReplyMenuOpen && quickReplyMenuHasResults) {

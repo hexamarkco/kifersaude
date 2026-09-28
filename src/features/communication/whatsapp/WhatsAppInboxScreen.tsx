@@ -14,7 +14,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
-  whatsappConversationsRepository,
   whatsappMediaRepository,
   whatsappMessagesRepository,
   type CommWhatsAppLeadContractSummary,
@@ -37,14 +36,9 @@ import {
   mergeMessages,
 } from './domain/messageTimeline';
 import {
-  applySavedContactName,
   getSafeChatDisplayName,
-  preserveUsefulChatPreview,
-  resolveStableDeliveryStatus,
   sortChatsByInboxOrder,
-  stabilizeChatIdentityForLocalMerge,
 } from './domain/chatPresentation';
-import { getSavedContactNameForPhone } from './domain/contactLookup';
 import {
   buildTranscriptLine,
   normalizeSystemTimeZone,
@@ -85,7 +79,6 @@ import {
   getMessageDisplayMetadataSignature,
 } from './messageStatus';
 import {
-  mergePendingChatInboxState,
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
 import { lazyWithChunkRecovery } from '../../../routes/lazyImport';
@@ -127,6 +120,8 @@ import { useInboxSelectedChatPresence } from './hooks/useInboxSelectedChatPresen
 import { useInboxRealtimeController } from './hooks/useInboxRealtimeController';
 import { useInboxBootstrap } from './hooks/useInboxBootstrap';
 import { useInboxMessageThreadController } from './hooks/useInboxMessageThreadController';
+import { useInboxChatCollection } from './hooks/useInboxChatCollection';
+import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState';
 import type { ChatActivityFilter } from './domain/chatFilters';
 
 const LeadForm = lazyWithChunkRecovery(() => import('../../../components/LeadForm'));
@@ -778,46 +773,19 @@ export default function WhatsAppInboxScreen() {
     chatActivityFilter !== 'all' || leadStatusFilters.length > 0 || leadResponsavelFilters.length > 0;
   const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length + leadResponsavelFilters.length;
 
-  const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
-    setChats((current) => {
-      if (nextChat.deleted_at || nextChat.merged_into_chat_id) {
-        const filtered = current.filter((chat) => chat.id !== nextChat.id);
-        chatsSignatureRef.current = buildChatsSignature(filtered);
-        return filtered;
-      }
-
-      const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
-      const knownSavedContactName = getSavedContactNameForPhone(
-        nextChat.phone_digits || nextChat.phone_number,
-        savedContactNameOverrideByPhoneRef.current,
-        savedContactNameByPhoneRef.current,
-      );
-      const stableNextChat = stabilizeChatIdentityForLocalMerge(
-        applySavedContactName(nextChat, knownSavedContactName),
-        previousChat,
-        knownSavedContactName,
-      );
-      const hydratedNextChat = preserveUsefulChatPreview(stableNextChat, previousChat);
-      const exists = Boolean(previousChat);
-      const updated = exists
-        ? current.map((chat) => (chat.id === nextChat.id
-          ? preserveUsefulChatPreview(
-              stabilizeChatIdentityForLocalMerge({ ...chat, ...hydratedNextChat }, chat, knownSavedContactName),
-              chat,
-            )
-          : chat))
-        : [hydratedNextChat, ...current];
-
-      const sorted = sortChatsByInboxOrder(updated);
-      const nextSignature = buildChatsSignature(sorted);
-      if (nextSignature === chatsSignatureRef.current) {
-        return current;
-      }
-
-      chatsSignatureRef.current = nextSignature;
-      return sorted;
-    });
-  }, [buildChatsSignature, savedContactNameByPhoneRef, savedContactNameOverrideByPhoneRef]);
+  const { upsertChatLocally } = useInboxChatCollection({
+    setChats,
+    chatsSignatureRef,
+    savedContactNameOverrideByPhoneRef,
+    savedContactNameByPhoneRef,
+    buildChatsSignature,
+  });
+  const { applyOptimisticChatSummary, updateOptimisticChatPreviewStatus } = useInboxOptimisticChatState({
+    refs: { pendingChatInboxStateRef, chatReadMutationVersionByChatIdRef, chatsSignatureRef },
+    setChats,
+    upsertChatLocally,
+    buildChatsSignature,
+  });
 
   const {
     handleStartChatFromSavedContact,
@@ -877,74 +845,6 @@ export default function WhatsAppInboxScreen() {
       setLightboxMessageId(null);
     }
   }, [lightboxMessageId, mediaViewerMessages]);
-
-  const applyOptimisticChatSummary = useCallback((chat: CommWhatsAppChat, summaryText: string, messageAt: string) => {
-    const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(chat.id) ?? 0) + 1;
-    chatReadMutationVersionByChatIdRef.current.set(chat.id, readMutationVersion);
-    const readPatch: PendingChatInboxStatePatch = {
-      unread_count: 0,
-      manual_unread: false,
-      manual_unread_at: null,
-      last_read_at: messageAt,
-    };
-
-    mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, {
-      ...readPatch,
-      is_archived: chat.is_archived,
-      archived_at: chat.archived_at,
-      last_message_text: summaryText,
-      last_message_direction: 'outbound',
-      last_message_at: messageAt,
-      last_message_delivery_status: 'pending',
-    });
-
-    upsertChatLocally({
-      ...chat,
-      ...readPatch,
-      is_archived: chat.is_archived,
-      archived_at: chat.archived_at,
-      last_message_text: summaryText,
-      last_message_direction: 'outbound',
-      last_message_at: messageAt,
-      last_message_delivery_status: 'pending',
-      updated_at: messageAt,
-    });
-
-    void whatsappConversationsRepository.markRead(chat.id, {
-      messageAt,
-    }).then(() => {
-      if (chatReadMutationVersionByChatIdRef.current.get(chat.id) !== readMutationVersion) {
-        return;
-      }
-      chatReadMutationVersionByChatIdRef.current.delete(chat.id);
-    }).catch((error) => {
-      if (chatReadMutationVersionByChatIdRef.current.get(chat.id) !== readMutationVersion) {
-        return;
-      }
-      chatReadMutationVersionByChatIdRef.current.delete(chat.id);
-      console.error('[WhatsAppInbox] erro ao avancar leitura apos envio', error);
-    });
-  }, [upsertChatLocally]);
-
-  const updateOptimisticChatPreviewStatus = useCallback((chatId: string, messageAt: string, deliveryStatus: string) => {
-    const pendingState = pendingChatInboxStateRef.current.get(chatId);
-    if (pendingState?.last_message_at === messageAt) {
-      pendingChatInboxStateRef.current.set(chatId, {
-        ...pendingState,
-        last_message_delivery_status: resolveStableDeliveryStatus(deliveryStatus, pendingState.last_message_delivery_status),
-      });
-    }
-
-    setChats((current) => {
-      const next = current.map((chat) => (
-        chat.id === chatId && chat.last_message_at === messageAt
-          ? { ...chat, last_message_delivery_status: resolveStableDeliveryStatus(deliveryStatus, chat.last_message_delivery_status) }
-          : chat
-      ));
-      chatsSignatureRef.current = buildChatsSignature(next);
-      return next;
-    });
-  }, [buildChatsSignature]);
 
   const resetComposerAfterQueue = useCallback(() => {
     resetComposerDraft();

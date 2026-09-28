@@ -16,53 +16,31 @@ import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
   whatsappContactsRepository,
   whatsappConversationsRepository,
-  whatsappFollowUpService,
   whatsappMediaRepository,
   whatsappMessagesRepository,
   commWhatsAppService,
-  approveInboxFollowUpSchedule,
-  clearInboxLeadAgenda,
-  insertInboxLegacyFollowUpAudits,
   listInboxAgendaReminders,
-  markInboxRemindersRead,
-  scheduleInboxFollowUp,
   subscribeToInboxReminders,
-  updateInboxFollowUpSentAudit,
-  updateInboxFollowUpSentAudits,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppOperationalState,
-  type CommWhatsAppFollowUpEmotionalContext,
-  type CommWhatsAppFollowUpNextAction,
-  type CommWhatsAppFollowUpVariation,
-  type CommWhatsAppRewriteTone,
   type InboxAgendaSummaryReminder,
 } from './data';
 import { configService, type IntegrationSetting } from '../../config';
 import type { Lead } from '../../leads';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
-import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import { isSupabaseConnectivityError } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from './domain/types';
 import {
-  canDeleteOutboundMessage,
-  canEditOutboundMessage,
   canReplyOrForwardMessage,
-  getMessageEditableText,
   getMessageSearchPreviewText,
   getQuotePayloadFromMessage,
   normalizeInboxSearch,
 } from './domain/messagePresentation';
 import {
-  buildDeletedMessageSummary,
-  getDeletedMessageMarker,
-} from './domain/messageMetadata';
-import {
-  compareMessageChronology,
   dedupeObviousDuplicateMessages,
   formatMessageTime,
-  getMessageTimestampMs,
   mergeMessages,
 } from './domain/messageTimeline';
 import {
@@ -111,7 +89,6 @@ import {
   InboxFilterGroup,
   InboxMultiFilterGroup,
 } from './components/WhatsAppInboxList';
-import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import { ComposerSendLock } from './components/composerSendLock';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
@@ -127,11 +104,9 @@ import {
   getMessageDisplayMetadataSignature,
 } from './messageStatus';
 import {
-  clearPendingChatReadState,
   mergePendingChatInboxState,
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
-import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 import { lazyWithChunkRecovery } from '../../../routes/lazyImport';
 import { useInboxPolling } from './hooks/useInboxPolling';
 import { useInboxStartChatSources } from './hooks/useInboxStartChatSources';
@@ -156,7 +131,11 @@ import { useInboxMessageStatusRefresh } from './hooks/useInboxMessageStatusRefre
 import { useInboxSelectedChatPreviewRefresh } from './hooks/useInboxSelectedChatPreviewRefresh';
 import { useInboxSelectedLeadRealtime } from './hooks/useInboxSelectedLeadRealtime';
 import { useInboxMessageReactionActions } from './hooks/useInboxMessageReactionActions';
-import { resolveBatchFollowUpFinalStatus, type BatchFollowUpFinalStatus } from './domain/batchFollowUpOutcome';
+import { useInboxMessageMutations } from './hooks/useInboxMessageMutations';
+import { useInboxBatchFollowUpSender } from './hooks/useInboxBatchFollowUpSender';
+import { useInboxComposerAi } from './hooks/useInboxComposerAi';
+import { useInboxMarkChatRead } from './hooks/useInboxMarkChatRead';
+import { useInboxFollowUpComposer } from './hooks/useInboxFollowUpComposer';
 import { createChatFilterMatcher, type ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -213,7 +192,6 @@ const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
-const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
 type QuickReplyOption = {
@@ -300,29 +278,7 @@ export default function WhatsAppInboxScreen() {
   const [savingContact, setSavingContact] = useState(false);
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
-  const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
-  const [followUpDraft, setFollowUpDraft] = useState('');
-  const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
-  const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
-  const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
-  const [followUpEmotionalContext, setFollowUpEmotionalContext] = useState<CommWhatsAppFollowUpEmotionalContext | null>(null);
-  const [followUpCurrentAction, setFollowUpCurrentAction] = useState<'send' | 'wait'>('send');
-  const [followUpCurrentActionReason, setFollowUpCurrentActionReason] = useState<string | null>(null);
-  const [followUpOpportunityRecommendation, setFollowUpOpportunityRecommendation] = useState<'continue' | 'pause' | 'mark_lost_recommended'>('continue');
-  const [followUpGenerationId, setFollowUpGenerationId] = useState<string | null>(null);
-  const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
-  const [schedulingFollowUpNextAction, setSchedulingFollowUpNextAction] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
-  const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
-  const [composerRewriteSource, setComposerRewriteSource] = useState('');
-  const [composerRewriteDraft, setComposerRewriteDraft] = useState('');
-  const [composerRewriteCustomInstructions, setComposerRewriteCustomInstructions] = useState('');
-  const [composerRewriteTone, setComposerRewriteTone] = useState<CommWhatsAppRewriteTone>('grammar');
-  const [composerAiMenuOpen, setComposerAiMenuOpen] = useState(false);
-  const [rewritingComposer, setRewritingComposer] = useState(false);
-  const [replySuggestionText, setReplySuggestionText] = useState('');
-  const [replySuggestionLoading, setReplySuggestionLoading] = useState(false);
-  const [replySuggestionError, setReplySuggestionError] = useState<string | null>(null);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
@@ -331,16 +287,8 @@ export default function WhatsAppInboxScreen() {
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
   const [dismissedQuickReplyKey, setDismissedQuickReplyKey] = useState<string | null>(null);
   const [sendingByChatId, setSendingByChatId] = useState<Record<string, boolean>>({});
-  const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [retryPendingMessage, setRetryPendingMessage] = useState<CommWhatsAppMessage | null>(null);
-  const deletingMessageLockRef = useRef(new KeyedActionLock());
-  const transcriptionMessageLockRef = useRef(new KeyedActionLock());
-  const editingMessageLockRef = useRef(new KeyedActionLock());
-  const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
-  const [editingMessageDraft, setEditingMessageDraft] = useState('');
-  const [savingMessageEdit, setSavingMessageEdit] = useState(false);
-  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [replyTargetMessage, setReplyTargetMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
@@ -427,8 +375,6 @@ export default function WhatsAppInboxScreen() {
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
   const chatReadMutationVersionByChatIdRef = useRef<Map<string, number>>(new Map());
-  const pendingChatReadKeysRef = useRef<Set<string>>(new Set());
-  const attemptedChatReadAtByKeyRef = useRef<Map<string, number>>(new Map());
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const savedContactNameByPhoneRef = useRef<Map<string, string>>(new Map());
@@ -473,14 +419,7 @@ export default function WhatsAppInboxScreen() {
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const archivedChatsCountRequestIdRef = useRef(0);
   const archivedChatsCountLoadLockRef = useRef(new KeyedActionLock());
-  const followUpGenerationRequestIdRef = useRef(0);
-  const followUpScheduleRequestIdRef = useRef(0);
-  const composerRewriteRequestIdRef = useRef(0);
-  const composerRewriteModalOpenRef = useRef(false);
-  const composerRewriteSourceRef = useRef('');
   const messageDraftRef = useRef('');
-  const replySuggestionRequestIdRef = useRef(0);
-  const replySuggestionKeyRef = useRef('');
   const quickRepliesLoadRequestIdRef = useRef(0);
   const quickRepliesSaveRequestIdRef = useRef(0);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
@@ -1444,6 +1383,34 @@ export default function WhatsAppInboxScreen() {
     setOpenMessageActionMenuMessageId,
   });
 
+  const closeMessageActionMenu = useCallback(() => {
+    setMessageActionMenuPointerAnchor(null);
+    setOpenMessageActionMenuMessageId(null);
+  }, []);
+
+  const {
+    editingMessage,
+    editingMessageDraft,
+    setEditingMessageDraft,
+    savingMessageEdit,
+    deletingMessageId,
+    transcribingMessageId,
+    handleOpenEditMessageModal,
+    handleCloseEditMessageModal,
+    handleSaveEditedMessage,
+    handleDeleteMessage,
+    handleTranscribeMessage,
+  } = useInboxMessageMutations({
+    selectedChatId,
+    patchMessageLocally,
+    setChats,
+    closeMessageActionMenu,
+  });
+
+  const { handleBatchSendFollowUp } = useInboxBatchFollowUpSender({
+    refs: { latestChatsRef, loadChatsRef, loadMessagesRef },
+  });
+
   const { loadLeadContracts, loadLeadPanel } = useInboxLeadPanel({
     refs: {
       leadPanelRequestIdRef,
@@ -1542,17 +1509,13 @@ export default function WhatsAppInboxScreen() {
       .toLowerCase();
     return normalizedStatus === 'aguardando cotacao';
   }, [leadPanel?.status_nome, selectedChat?.lead_status]);
-  const followUpGenerationDisabledReason = useMemo(() => {
+  const followUpGenerationBaseDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para gerar o follow-up.';
     }
 
     if (selectedChat.is_group) {
       return 'Grupos são conversas manuais e não participam de follow-ups ou IA autônoma.';
-    }
-
-    if (generatingFollowUp) {
-      return 'Gerando follow-up com IA...';
     }
 
     if (sending) {
@@ -1568,8 +1531,8 @@ export default function WhatsAppInboxScreen() {
     }
 
     return null;
-  }, [generatingFollowUp, pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
-  const composerRewriteDisabledReason = useMemo(() => {
+  }, [pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
+  const composerRewriteBaseDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para reescrever a mensagem.';
     }
@@ -1582,12 +1545,8 @@ export default function WhatsAppInboxScreen() {
       return 'Finalize a gravação de áudio antes de reescrever a mensagem.';
     }
 
-    if (rewritingComposer) {
-      return 'Reescrevendo mensagem com IA...';
-    }
-
     return null;
-  }, [messageDraft, rewritingComposer, selectedChat, voiceRecordingState]);
+  }, [messageDraft, selectedChat, voiceRecordingState]);
   const replySuggestionDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para sugerir resposta.';
@@ -1630,13 +1589,45 @@ export default function WhatsAppInboxScreen() {
 
     return `${selectedChatId}:${lastMessageSignature}:${messageDraft.trim()}`;
   }, [lastUsefulVisibleMessage, messageDraft, selectedChatId]);
-  useEffect(() => {
-    replySuggestionKeyRef.current = replySuggestionKey;
-    replySuggestionRequestIdRef.current += 1;
-    setReplySuggestionLoading(false);
-    setReplySuggestionText('');
-    setReplySuggestionError(null);
-  }, [replySuggestionKey]);
+  const {
+    composerAiMenuOpen,
+    setComposerAiMenuOpen,
+    composerRewriteModalOpen,
+    composerRewriteSource,
+    setComposerRewriteSource,
+    composerRewriteDraft,
+    setComposerRewriteDraft,
+    composerRewriteCustomInstructions,
+    setComposerRewriteCustomInstructions,
+    composerRewriteTone,
+    setComposerRewriteTone,
+    rewritingComposer,
+    replySuggestionText,
+    replySuggestionLoading,
+    replySuggestionError,
+    handleCloseComposerRewriteModal,
+    handleQuickRewriteComposerText,
+    handleOpenComposerRewriteModal,
+    handleRegenerateComposerRewrite,
+    handleApplyComposerRewrite,
+    handleGenerateReplySuggestion,
+    handleApplyReplySuggestion,
+    handleDismissReplySuggestion,
+  } = useInboxComposerAi({
+    selectedChatId,
+    selectedChatIdRef,
+    replySuggestionKey,
+    replySuggestionDisabledReason,
+    composerRewriteDisabledReason: composerRewriteBaseDisabledReason,
+    messageDraft,
+    messageDraftRef,
+    setMessageDraft,
+    setComposerSelection,
+    setComposerFocused,
+    composerTextareaRef,
+  });
+  const composerRewriteDisabledReason = composerRewriteBaseDisabledReason
+    ?? (rewritingComposer ? 'Reescrevendo mensagem com IA...' : null);
   const historyRecoveryDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para recuperar mensagens antigas.';
@@ -1909,8 +1900,6 @@ export default function WhatsAppInboxScreen() {
     setSaveContactDialogOpen(false);
     setSaveContactName('');
     setCreateLeadDraft(null);
-    setEditingMessage(null);
-    setEditingMessageDraft('');
     setMessagePendingDeletion(null);
     setRetryPendingMessage(null);
     setStatusReminderLead(null);
@@ -1919,13 +1908,6 @@ export default function WhatsAppInboxScreen() {
     setScheduledMessagesPanelOpen(false);
     setChatFilesOpen(false);
     setMediaDrawerOpen(false);
-    composerRewriteRequestIdRef.current += 1;
-    composerRewriteModalOpenRef.current = false;
-    composerRewriteSourceRef.current = '';
-    setComposerRewriteModalOpen(false);
-    setComposerRewriteSource('');
-    setComposerRewriteDraft('');
-    setComposerAiMenuOpen(false);
   }, [selectedChatId]);
 
   useLayoutEffect(() => {
@@ -2295,19 +2277,6 @@ export default function WhatsAppInboxScreen() {
     }
   }, [selectedChatId]);
 
-  const resetFollowUpComposer = useCallback(() => {
-    setFollowUpDraft('');
-    setFollowUpCustomInstructions('');
-    setFollowUpVariations([]);
-    setFollowUpAiContextRationale(null);
-    setFollowUpEmotionalContext(null);
-    setFollowUpCurrentAction('send');
-    setFollowUpCurrentActionReason(null);
-    setFollowUpOpportunityRecommendation('continue');
-    setFollowUpGenerationId(null);
-    setFollowUpNextAction(null);
-  }, []);
-
   const { loadOperationalState } = useInboxOperationalState({
     setOperationalState,
     setOperationalStateError,
@@ -2323,13 +2292,6 @@ export default function WhatsAppInboxScreen() {
   }, [leadDrawerOpen, selectedChatId]);
 
   useEffect(() => {
-    followUpGenerationRequestIdRef.current += 1;
-    followUpScheduleRequestIdRef.current += 1;
-    setFollowUpModalOpen(false);
-    setGeneratingFollowUp(false);
-    setSchedulingFollowUpNextAction(false);
-    resetFollowUpComposer();
-
     if (!selectedChat?.lead_id) {
       leadPanelRequestIdRef.current += 1;
       leadContractsRequestIdRef.current += 1;
@@ -2357,7 +2319,7 @@ export default function WhatsAppInboxScreen() {
       setChatAgendaSummaryError(null);
       setChatAgendaSummaryLoading(true);
     }
-  }, [leadPanel?.id, resetFollowUpComposer, selectedChat?.id, selectedChat?.lead_id]);
+  }, [leadPanel?.id, selectedChat?.id, selectedChat?.lead_id]);
 
   useEffect(() => {
     if (!selectedChat?.lead_id) {
@@ -2478,6 +2440,23 @@ export default function WhatsAppInboxScreen() {
   });
 
   loadChatsRef.current = loadChats;
+
+  const {
+    markSelectedChatReadIfEligible,
+    clearManualUnreadSkipReadForOtherChats,
+  } = useInboxMarkChatRead({
+    refs: {
+      selectedChatIdRef,
+      latestChatsRef,
+      latestMessagesRef,
+      isNearBottomRef,
+      pendingChatInboxStateRef,
+      manualUnreadSkipReadChatIdRef,
+      chatReadMutationVersionByChatIdRef,
+    },
+    upsertChatLocally,
+    loadChats,
+  });
 
   const handleRetryChatLoad = useCallback(() => {
     setLoading(true);
@@ -2691,10 +2670,6 @@ export default function WhatsAppInboxScreen() {
       leadContractsRequestIdRef.current += 1;
       chatAgendaSummaryRequestIdRef.current += 1;
       archivedChatsCountRequestIdRef.current += 1;
-      followUpGenerationRequestIdRef.current += 1;
-      followUpScheduleRequestIdRef.current += 1;
-      composerRewriteRequestIdRef.current += 1;
-      replySuggestionRequestIdRef.current += 1;
       quickRepliesLoadRequestIdRef.current += 1;
       quickRepliesSaveRequestIdRef.current += 1;
 
@@ -2742,222 +2717,13 @@ export default function WhatsAppInboxScreen() {
     setLocalOutgoingMessages,
   });
 
-  const markSelectedChatReadIfEligible = useCallback((source: 'auto' | 'scroll') => {
-    const currentChat = selectedChatIdRef.current
-      ? latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null
-      : null;
-
-    if (!currentChat || !isNearBottomRef.current) {
-      console.debug('[WhatsAppInbox][mark-read] skip:not-ready-or-not-bottom', {
-        source,
-        selectedChatId: selectedChatIdRef.current,
-        hasCurrentChat: Boolean(currentChat),
-        isNearBottom: isNearBottomRef.current,
-      });
-      return;
-    }
-
-    const skipManualUnreadRead = manualUnreadSkipReadChatIdRef.current === currentChat.id
-      && currentChat.manual_unread
-      && currentChat.unread_count <= 0;
-
-    if (source !== 'scroll' && skipManualUnreadRead) {
-      console.debug('[WhatsAppInbox][mark-read] skip:manual-unread-protection', {
-        source,
-        chatId: currentChat.id,
-        unreadCount: currentChat.unread_count,
-        manualUnread: currentChat.manual_unread,
-      });
-      return;
-    }
-
-    // Manual unread is an explicit reminder; selecting/opening the chat should
-    // not clear it until the user reaches the end of the message timeline.
-    if (source !== 'scroll' && currentChat.manual_unread && currentChat.unread_count <= 0) {
-      console.debug('[WhatsAppInbox][mark-read] skip:manual-unread-await-scroll', {
-        source,
-        chatId: currentChat.id,
-        unreadCount: currentChat.unread_count,
-        manualUnread: currentChat.manual_unread,
-      });
-      return;
-    }
-
-    if (currentChat.unread_count <= 0 && !currentChat.manual_unread) {
-      console.debug('[WhatsAppInbox][mark-read] skip:already-read', {
-        source,
-        chatId: currentChat.id,
-        unreadCount: currentChat.unread_count,
-        manualUnread: currentChat.manual_unread,
-        lastReadAt: currentChat.last_read_at,
-        lastMessageAt: currentChat.last_message_at,
-      });
-      return;
-    }
-
-    const renderedMessagesForChat = latestMessagesRef.current
-      .filter((message) => message.chat_id === currentChat.id)
-      .sort(compareMessageChronology);
-    const latestRenderedMessage = renderedMessagesForChat[renderedMessagesForChat.length - 1];
-    const latestRenderedMessageAtMs = getMessageTimestampMs(latestRenderedMessage?.message_at);
-    const selectedChatLastMessageAtMs = getMessageTimestampMs(currentChat.last_message_at);
-
-    if (selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || latestRenderedMessageAtMs < selectedChatLastMessageAtMs)) {
-      console.debug('[WhatsAppInbox][mark-read] skip:last-message-not-rendered', {
-        source,
-        chatId: currentChat.id,
-        selectedChatLastMessageAt: currentChat.last_message_at,
-        selectedChatLastMessageAtMs,
-        latestRenderedMessageAt: latestRenderedMessage?.message_at ?? null,
-        latestRenderedMessageAtMs,
-        renderedMessagesForChat: renderedMessagesForChat.length,
-      });
-      return;
-    }
-
-    const readAt = selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || selectedChatLastMessageAtMs >= latestRenderedMessageAtMs)
-      ? currentChat.last_message_at
-      : latestRenderedMessage?.message_at ?? new Date().toISOString();
-    const readPatch: PendingChatInboxStatePatch = {
-      unread_count: 0,
-      manual_unread: false,
-      manual_unread_at: null,
-      last_read_at: readAt,
-    };
-    const readKey = `${currentChat.id}:${readAt ?? ''}`;
-    const lastAttemptAt = attemptedChatReadAtByKeyRef.current.get(readKey) ?? 0;
-    const retryCooldownActive = Date.now() - lastAttemptAt < CHAT_READ_RETRY_COOLDOWN_MS;
-
-    if (pendingChatReadKeysRef.current.has(readKey) || retryCooldownActive) {
-      console.debug('[WhatsAppInbox][mark-read] skip:in-flight-or-cooldown', {
-        source,
-        chatId: currentChat.id,
-        readAt,
-        readKey,
-        inFlight: pendingChatReadKeysRef.current.has(readKey),
-        retryCooldownActive,
-        msSinceLastAttempt: lastAttemptAt > 0 ? Date.now() - lastAttemptAt : null,
-      });
-      return;
-    }
-
-    const readMutationVersion = (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) ?? 0) + 1;
-    chatReadMutationVersionByChatIdRef.current.set(currentChat.id, readMutationVersion);
-    pendingChatReadKeysRef.current.add(readKey);
-    attemptedChatReadAtByKeyRef.current.set(readKey, Date.now());
-
-    console.debug('[WhatsAppInbox][mark-read] request:start', {
-      source,
-      chatId: currentChat.id,
-      readAt,
-      readKey,
-      unreadCountBefore: currentChat.unread_count,
-      manualUnreadBefore: currentChat.manual_unread,
-      lastReadAtBefore: currentChat.last_read_at,
-      lastMessageAt: currentChat.last_message_at,
-      latestRenderedMessageAt: latestRenderedMessage?.message_at ?? null,
-      isNearBottom: isNearBottomRef.current,
-    });
-
-    mergePendingChatInboxState(pendingChatInboxStateRef.current, currentChat.id, readPatch);
-    upsertChatLocally({ ...currentChat, ...readPatch });
-
-    if (manualUnreadSkipReadChatIdRef.current === currentChat.id) {
-      manualUnreadSkipReadChatIdRef.current = null;
-    }
-
-    void whatsappConversationsRepository.markRead(currentChat.id, {
-      messageAt: readAt,
-    }).then((result) => {
-      if (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) !== readMutationVersion) {
-        return;
-      }
-
-      const latestChat = latestChatsRef.current.find((chat) => chat.id === currentChat.id) ?? currentChat;
-
-      console.debug('[WhatsAppInbox][mark-read] request:success', {
-        source,
-        chatId: currentChat.id,
-        readAt,
-        result,
-        latestChatBeforePatch: {
-          unreadCount: latestChat.unread_count,
-          manualUnread: latestChat.manual_unread,
-          manualUnreadAt: latestChat.manual_unread_at,
-          lastReadAt: latestChat.last_read_at,
-          lastMessageAt: latestChat.last_message_at,
-        },
-      });
-
-      const confirmedPatch: PendingChatInboxStatePatch = {
-        unread_count: result.unreadCount,
-        manual_unread: result.unreadCount > 0 ? latestChat.manual_unread : false,
-        manual_unread_at: result.unreadCount > 0 ? latestChat.manual_unread_at : null,
-        last_read_at: result.lastReadAt ?? readAt,
-      };
-
-      clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
-
-      upsertChatLocally({
-        ...latestChat,
-        ...confirmedPatch,
-      });
-
-      console.debug('[WhatsAppInbox][mark-read] local:patched-from-confirmation', {
-        source,
-        chatId: currentChat.id,
-        readAt,
-        confirmedPatch,
-      });
-
-      if (result.unreadCount > 0) {
-        console.warn('[WhatsAppInbox] leitura confirmada com nao lidas remanescentes', {
-          chatId: currentChat.id,
-          readAt,
-          result,
-        });
-      } else {
-        attemptedChatReadAtByKeyRef.current.delete(readKey);
-      }
-      chatReadMutationVersionByChatIdRef.current.delete(currentChat.id);
-    }).catch((error) => {
-      if (chatReadMutationVersionByChatIdRef.current.get(currentChat.id) !== readMutationVersion) {
-        return;
-      }
-
-      clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
-      chatReadMutationVersionByChatIdRef.current.delete(currentChat.id);
-      console.error('[WhatsAppInbox][mark-read] request:error', {
-        source,
-        chatId: currentChat.id,
-        readAt,
-        readKey,
-        error,
-      });
-      toast.error(error instanceof Error ? error.message : 'Não foi possível marcar a conversa como lida.');
-      void loadChats().catch((loadError) => {
-        console.error('[WhatsAppInbox][mark-read] reload-after-error:error', loadError);
-      });
-    }).finally(() => {
-      pendingChatReadKeysRef.current.delete(readKey);
-      console.debug('[WhatsAppInbox][mark-read] request:finished', {
-        source,
-        chatId: currentChat.id,
-        readAt,
-        readKey,
-      });
-    });
-  }, [loadChats, upsertChatLocally]);
-
   useEffect(() => {
     markSelectedChatReadIfEligible('auto');
   }, [markSelectedChatReadIfEligible, selectedChat, visibleMessages]);
 
   useEffect(() => {
-    if (manualUnreadSkipReadChatIdRef.current && manualUnreadSkipReadChatIdRef.current !== selectedChatId) {
-      manualUnreadSkipReadChatIdRef.current = null;
-    }
-  }, [selectedChatId]);
+    clearManualUnreadSkipReadForOtherChats(selectedChatId);
+  }, [clearManualUnreadSkipReadForOtherChats, selectedChatId]);
 
   useLayoutEffect(() => {
     const container = messagesContainerRef.current;
@@ -3103,6 +2869,40 @@ export default function WhatsAppInboxScreen() {
     loadMessages,
     scheduleMessageStatusRefresh,
   });
+  const {
+    followUpModalOpen,
+    followUpDraft,
+    setFollowUpDraft,
+    followUpCustomInstructions,
+    setFollowUpCustomInstructions,
+    followUpVariations,
+    followUpAiContextRationale,
+    followUpEmotionalContext,
+    followUpCurrentAction,
+    followUpCurrentActionReason,
+    followUpOpportunityRecommendation,
+    followUpNextAction,
+    schedulingFollowUpNextAction,
+    followUpGenerationDisabledReason,
+    handleCloseFollowUpModal,
+    handleOpenFollowUpModal,
+    handleRegenerateFollowUp,
+    handleScheduleFollowUpNextAction,
+    handleSendFollowUpDraft,
+  } = useInboxFollowUpComposer({
+    selectedChat,
+    selectedChatIdRef,
+    selectedChatDisplayName,
+    generatingFollowUp,
+    setGeneratingFollowUp,
+    leadPanelId: leadPanel?.id ?? null,
+    leadContracts,
+    canEditAgenda,
+    followUpGenerationBaseDisabledReason,
+    sendDisabledReason,
+    loadChatAgendaSummary,
+    sendTextSegments,
+  });
   const { handleRetryMediaMessage } = useInboxMessageRetry({
     selectedChat,
     localOutgoingRetryPayloadRef,
@@ -3155,23 +2955,6 @@ export default function WhatsAppInboxScreen() {
       mediaUploadAbortControllersRef.current.get(activeChatId)?.abort();
     }
   };
-
-  const handleOpenEditMessageModal = useCallback((message: CommWhatsAppMessage) => {
-    if (!canEditOutboundMessage(message)) {
-      toast.error('Esta mensagem não pode ser editada no momento.');
-      return;
-    }
-
-    setEditingMessage(message);
-    setEditingMessageDraft(getMessageEditableText(message));
-    setMessageActionMenuPointerAnchor(null);
-    setOpenMessageActionMenuMessageId(null);
-  }, []);
-
-  const handleCloseEditMessageModal = useCallback(() => {
-    setEditingMessage(null);
-    setEditingMessageDraft('');
-  }, []);
 
   const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
     if (!canReplyOrForwardMessage(message)) {
@@ -3251,169 +3034,6 @@ export default function WhatsAppInboxScreen() {
       setForwardingInProgress(false);
     }
   }, [forwardingInProgress, forwardingMessage, forwardingTargetIds, forwardTargetChats, handleCloseForwardMessageModal, loadChats, loadMessages]);
-
-  const handleSaveEditedMessage = useCallback(async () => {
-    if (!editingMessage) {
-      return;
-    }
-
-    const targetMessage = editingMessage;
-    if (!editingMessageLockRef.current.tryAcquire(targetMessage.id)) {
-      return;
-    }
-
-    const nextText = editingMessageDraft.trim();
-    if (!nextText) {
-      editingMessageLockRef.current.release(targetMessage.id);
-      toast.error('Digite o novo texto da mensagem.');
-      return;
-    }
-
-    const previousText = getMessageEditableText(targetMessage);
-    if (previousText === nextText) {
-      editingMessageLockRef.current.release(targetMessage.id);
-      handleCloseEditMessageModal();
-      return;
-    }
-
-    setSavingMessageEdit(true);
-
-    try {
-      const result = await whatsappMessagesRepository.edit(targetMessage.id, nextText);
-      const editedText = result.editedText || nextText;
-      const editedAt = result.editedAt || new Date().toISOString();
-      const metadata = targetMessage.metadata && typeof targetMessage.metadata === 'object' && !Array.isArray(targetMessage.metadata)
-        ? targetMessage.metadata as Record<string, unknown>
-        : {};
-      const existingHistory = Array.isArray(metadata.edit_history) ? metadata.edit_history : [];
-      const isMediaMessage = targetMessage.message_type.trim().toLowerCase() !== 'text';
-
-      patchMessageLocally(targetMessage.id, {
-        text_content: editedText,
-        media_caption: isMediaMessage ? editedText : targetMessage.media_caption,
-        status_updated_at: editedAt,
-        metadata: {
-          ...metadata,
-          edited: true,
-          edited_at: editedAt,
-          original_text_content: String(metadata.original_text_content ?? '').trim() || previousText || null,
-          edit_action_type: 'manual_edit',
-          edit_history: [
-            ...existingHistory,
-            {
-              at: editedAt,
-              previous_text: previousText || null,
-              next_text: editedText,
-              action_type: 'manual_edit',
-            },
-          ].slice(-10),
-        },
-      });
-
-      const editedMessageAt = getMessageTimestampMs(targetMessage.message_at);
-      setChats((current) => current.map((chat) => (
-        chat.id === targetMessage.chat_id
-        && editedMessageAt !== null
-        && getMessageTimestampMs(chat.last_message_at) === editedMessageAt
-          ? { ...chat, last_message_text: editedText, updated_at: editedAt }
-          : chat
-      )));
-
-      toast.success('Mensagem editada no WhatsApp.');
-      handleCloseEditMessageModal();
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao editar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível editar a mensagem no WhatsApp.');
-    } finally {
-      editingMessageLockRef.current.release(targetMessage.id);
-      setSavingMessageEdit(false);
-    }
-  }, [editingMessage, editingMessageDraft, handleCloseEditMessageModal, patchMessageLocally]);
-
-  const handleDeleteMessage = useCallback(async (message: CommWhatsAppMessage) => {
-    if (!canDeleteOutboundMessage(message)) {
-      toast.error('Esta mensagem não pode ser apagada no momento.');
-      return;
-    }
-
-    if (!deletingMessageLockRef.current.tryAcquire(message.id)) {
-      return;
-    }
-
-    setDeletingMessageId(message.id);
-
-    try {
-      const result = await whatsappMessagesRepository.delete(message.id);
-      const deletedAt = result.deletedAt || new Date().toISOString();
-      const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-        ? message.metadata as Record<string, unknown>
-        : {};
-      const preservedText = getMessageEditableText(message) || String(message.text_content ?? message.media_caption ?? '').trim() || getDeletedMessageMarker(message.message_type);
-
-      patchMessageLocally(message.id, {
-        delivery_status: 'deleted',
-        status_updated_at: deletedAt,
-        metadata: {
-          ...metadata,
-          deleted: true,
-          deleted_at: deletedAt,
-          deleted_action_type: 'manual_delete',
-          deleted_by: 'self',
-          deleted_original_text_content: String(metadata.deleted_original_text_content ?? '').trim() || preservedText,
-        },
-      });
-
-      setChats((current) => current.map((chat) => chat.id === message.chat_id && chat.last_message_at === message.message_at
-        ? { ...chat, last_message_text: buildDeletedMessageSummary(message.message_type, preservedText), updated_at: deletedAt }
-        : chat));
-
-      toast.success('Mensagem apagada no WhatsApp.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao apagar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível apagar a mensagem no WhatsApp.');
-    } finally {
-      deletingMessageLockRef.current.release(message.id);
-      setDeletingMessageId((current) => (current === message.id ? null : current));
-    }
-  }, [patchMessageLocally]);
-
-  const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
-    if (!transcriptionMessageLockRef.current.tryAcquire(message.id)) {
-      return;
-    }
-
-    setTranscribingMessageId(message.id);
-    patchMessageLocally(message.id, {
-      transcription_status: 'processing',
-      transcription_error: null,
-    });
-
-    try {
-      const result = await whatsappMessagesRepository.transcribe(message.id, {
-        force: message.transcription_status === 'failed' || Boolean(message.transcription_text?.trim()),
-      });
-
-      patchMessageLocally(message.id, {
-        transcription_text: result.transcription_text,
-        transcription_status: result.transcription_status,
-        transcription_provider: result.transcription_provider ?? null,
-        transcription_model: result.transcription_model ?? null,
-        transcription_error: null,
-        transcription_updated_at: new Date().toISOString(),
-      });
-      toast.success('Transcrição concluída.');
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Não foi possível transcrever este áudio.';
-      patchMessageLocally(message.id, {
-        transcription_status: 'failed',
-        transcription_error: messageText,
-      });
-      toast.error(messageText);
-    } finally {
-      transcriptionMessageLockRef.current.release(message.id);
-      setTranscribingMessageId((current) => (current === message.id ? null : current));
-    }
-  };
 
   const handleRefreshLeadContracts = useCallback(() => {
     void loadLeadContracts(leadPanel?.id ?? null);
@@ -3740,291 +3360,6 @@ export default function WhatsAppInboxScreen() {
     }
   }, [quickReplyIntegration, savingQuickReplies]);
 
-  const handleCloseFollowUpModal = useCallback(() => {
-    followUpGenerationRequestIdRef.current += 1;
-    followUpScheduleRequestIdRef.current += 1;
-    setGeneratingFollowUp(false);
-    setSchedulingFollowUpNextAction(false);
-    setFollowUpModalOpen(false);
-  }, []);
-
-  const handleCloseComposerRewriteModal = useCallback(() => {
-    composerRewriteRequestIdRef.current += 1;
-    composerRewriteModalOpenRef.current = false;
-    composerRewriteSourceRef.current = '';
-    setComposerRewriteModalOpen(false);
-    setComposerRewriteSource('');
-    setComposerRewriteDraft('');
-    setComposerRewriteCustomInstructions('');
-    setComposerRewriteTone('grammar');
-  }, []);
-
-  const applyTextToComposer = useCallback((nextValue: string) => {
-    const nextCursor = nextValue.length;
-
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setComposerFocused(true);
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [setComposerFocused, setComposerSelection, setMessageDraft]);
-
-  const rewriteComposerText = useCallback(async (
-    sourceText: string,
-    tone: CommWhatsAppRewriteTone,
-    customInstructions: string,
-    options: { applyToComposer?: boolean; successMessage?: string } = {},
-  ) => {
-    if (!sourceText.trim()) {
-      toast.error('Digite uma mensagem para reescrever com IA.');
-      return;
-    }
-
-    const requestId = ++composerRewriteRequestIdRef.current;
-    const targetChatId = selectedChat?.id ?? null;
-    const sourceSnapshot = sourceText;
-    setRewritingComposer(true);
-
-    try {
-      const result = await whatsappFollowUpService.rewrite({
-        message: sourceText,
-        chatId: targetChatId,
-        tone,
-        customInstructions,
-      });
-      if (requestId !== composerRewriteRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      const rewrittenText = result.text.trim();
-      if (options.applyToComposer) {
-        if (messageDraftRef.current !== sourceSnapshot) {
-          return;
-        }
-        applyTextToComposer(rewrittenText);
-        if (options.successMessage) {
-          toast.success(options.successMessage);
-        }
-      } else {
-        if (!composerRewriteModalOpenRef.current || composerRewriteSourceRef.current !== sourceSnapshot) {
-          return;
-        }
-        setComposerRewriteDraft(rewrittenText);
-      }
-    } catch (error) {
-      if (requestId !== composerRewriteRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao reescrever mensagem do composer', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível reescrever a mensagem com IA.');
-    } finally {
-      if (requestId === composerRewriteRequestIdRef.current) {
-        setRewritingComposer(false);
-      }
-    }
-  }, [applyTextToComposer, selectedChat?.id]);
-
-  const handleQuickRewriteComposerText = useCallback((tone: CommWhatsAppRewriteTone) => {
-    if (composerRewriteDisabledReason) {
-      toast.error(composerRewriteDisabledReason);
-      return;
-    }
-
-    const successMessage = tone === 'adapt_context'
-      ? 'Mensagem adaptada ao contexto.'
-      : 'Mensagem corrigida.';
-    void rewriteComposerText(messageDraft, tone, '', { applyToComposer: true, successMessage });
-  }, [composerRewriteDisabledReason, messageDraft, rewriteComposerText]);
-
-  const handleOpenComposerRewriteModal = useCallback(() => {
-    if (composerRewriteDisabledReason) {
-      toast.error(composerRewriteDisabledReason);
-      return;
-    }
-
-    const sourceText = messageDraft;
-    composerRewriteRequestIdRef.current += 1;
-    composerRewriteModalOpenRef.current = true;
-    composerRewriteSourceRef.current = sourceText;
-    setComposerRewriteSource(sourceText);
-    setComposerRewriteDraft('');
-    setComposerRewriteCustomInstructions('');
-    setComposerRewriteTone('grammar');
-    setComposerRewriteModalOpen(true);
-  }, [composerRewriteDisabledReason, messageDraft]);
-
-  const handleRegenerateComposerRewrite = useCallback(() => {
-    void rewriteComposerText(composerRewriteSource, composerRewriteTone, composerRewriteCustomInstructions);
-  }, [composerRewriteCustomInstructions, composerRewriteSource, composerRewriteTone, rewriteComposerText]);
-
-  const handleApplyComposerRewrite = useCallback(() => {
-    if (!composerRewriteDraft.trim()) {
-      return;
-    }
-
-    applyTextToComposer(composerRewriteDraft);
-    handleCloseComposerRewriteModal();
-  }, [applyTextToComposer, composerRewriteDraft, handleCloseComposerRewriteModal]);
-
-  const handleGenerateReplySuggestion = useCallback(async (manual = false) => {
-    if (!selectedChatId || replySuggestionDisabledReason) {
-      if (manual && replySuggestionDisabledReason) {
-        toast.error(replySuggestionDisabledReason);
-      }
-      return;
-    }
-
-    const requestId = ++replySuggestionRequestIdRef.current;
-    const requestKey = replySuggestionKey;
-
-    setReplySuggestionLoading(true);
-    setReplySuggestionError(null);
-
-    try {
-      const result = await whatsappFollowUpService.suggestReply({
-        chatId: selectedChatId,
-        composerDraft: messageDraft,
-        mode: messageDraft.trim() ? 'complete_draft' : 'suggest_reply',
-      });
-
-      if (requestId !== replySuggestionRequestIdRef.current || requestKey !== replySuggestionKeyRef.current) {
-        return;
-      }
-
-      setReplySuggestionText(result.text.trim());
-    } catch (error) {
-      if (requestId !== replySuggestionRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao sugerir resposta com IA', error);
-      const message = error instanceof Error ? error.message : 'Não foi possível sugerir uma resposta com IA.';
-      setReplySuggestionError(message);
-      setReplySuggestionText('');
-      if (manual) {
-        toast.error(message);
-      }
-    } finally {
-      if (requestId === replySuggestionRequestIdRef.current) {
-        setReplySuggestionLoading(false);
-      }
-    }
-  }, [messageDraft, replySuggestionDisabledReason, replySuggestionKey, selectedChatId]);
-
-  const handleApplyReplySuggestion = useCallback(() => {
-    const nextValue = replySuggestionText.trim();
-    if (!nextValue) {
-      return;
-    }
-
-    const nextCursor = nextValue.length;
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setComposerFocused(true);
-    setReplySuggestionText('');
-    setReplySuggestionError(null);
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [replySuggestionText, setComposerFocused, setComposerSelection, setMessageDraft]);
-
-  const handleDismissReplySuggestion = useCallback(() => {
-    setReplySuggestionText('');
-    setReplySuggestionError(null);
-  }, []);
-
-  const handleGenerateFollowUp = useCallback(async (
-    customInstructions: string,
-  ) => {
-    if (!selectedChat) {
-      return;
-    }
-
-    if (followUpGenerationDisabledReason) {
-      return;
-    }
-
-    const requestId = ++followUpGenerationRequestIdRef.current;
-    const targetChatId = selectedChat.id;
-    console.debug('[FollowUpAI][inbox] request', {
-      chatId: selectedChat.id,
-      customInstructions,
-      selectedChat,
-    });
-    setGeneratingFollowUp(true);
-
-    try {
-      const result = await whatsappFollowUpService.generate(selectedChat.id, {
-        customInstructions,
-        triggerSource: 'individual',
-      });
-      console.debug('[FollowUpAI][inbox] response', {
-        requestId,
-        chatId: selectedChat.id,
-        result,
-      });
-      if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        console.debug('[FollowUpAI][inbox] response ignored due to stale request', {
-          requestId,
-          activeRequestId: followUpGenerationRequestIdRef.current,
-          targetChatId,
-          selectedChatId: selectedChatIdRef.current,
-        });
-        return;
-      }
-      setFollowUpDraft(result.text ?? '');
-      setFollowUpVariations(result.variations ?? []);
-      setFollowUpCustomInstructions(customInstructions);
-      setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
-      setFollowUpEmotionalContext(result.aiContext?.emotionalContext ?? null);
-      setFollowUpCurrentAction(result.currentAction ?? 'send');
-      setFollowUpCurrentActionReason(result.currentActionReason ?? null);
-      setFollowUpOpportunityRecommendation(result.opportunityRecommendation ?? 'continue');
-      setFollowUpGenerationId(result.generationId ?? null);
-      setFollowUpNextAction(result.nextAction ?? null);
-    } catch (error) {
-      if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        console.debug('[FollowUpAI][inbox] error ignored due to stale request', {
-          requestId,
-          activeRequestId: followUpGenerationRequestIdRef.current,
-          targetChatId,
-          selectedChatId: selectedChatIdRef.current,
-          error,
-        });
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o follow-up com IA.');
-    } finally {
-      if (requestId === followUpGenerationRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setGeneratingFollowUp(false);
-      }
-    }
-  }, [followUpGenerationDisabledReason, selectedChat]);
-
-  const handleOpenFollowUpModal = useCallback(() => {
-    if (followUpGenerationDisabledReason) {
-      toast.error(followUpGenerationDisabledReason);
-      return;
-    }
-
-    setFollowUpModalOpen(true);
-  }, [followUpGenerationDisabledReason]);
-
   const handleCopyChatTranscript = useCallback(async () => {
     if (!selectedChat || copyingTranscript) {
       return;
@@ -4155,7 +3490,7 @@ export default function WhatsAppInboxScreen() {
     setAttachmentMenuOpen(false);
     setComposerAiMenuOpen(false);
     setMediaDrawerOpen((current) => !current);
-  }, [setAttachmentMenuOpen]);
+  }, [setAttachmentMenuOpen, setComposerAiMenuOpen]);
 
   const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
     const mediaId = message.media_id?.trim() || null;
@@ -4186,404 +3521,6 @@ export default function WhatsAppInboxScreen() {
       toast.error('Não foi possível abrir este arquivo.');
     }
   }, []);
-
-  const handleRegenerateFollowUp = useCallback((options: { customInstructions?: string } = {}) => {
-    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions);
-  }, [followUpCustomInstructions, handleGenerateFollowUp]);
-
-  const handleScheduleFollowUpNextAction = useCallback(async () => {
-    if (!selectedChat || !followUpNextAction?.suggestedDateTime) {
-      return;
-    }
-
-    const leadId = selectedChat.lead_id ?? leadPanel?.id ?? null;
-    if (!leadId) {
-      toast.error('Vincule um lead antes de agendar a próxima ação.');
-      return;
-    }
-
-    if (!canEditAgenda) {
-      toast.error('Você não tem permissão para editar a agenda.');
-      return;
-    }
-
-    const requestId = ++followUpScheduleRequestIdRef.current;
-    const targetChatId = selectedChat.id;
-    setSchedulingFollowUpNextAction(true);
-    try {
-      const description = [
-        followUpNextAction.reason,
-        followUpNextAction.giveUpRecommendation,
-      ].filter(Boolean).join('\n\n');
-
-      const result = await scheduleInboxFollowUp({
-        leadId,
-        title: followUpNextAction.title || `Follow-up: ${selectedChatDisplayName}`,
-        description: description || null,
-        dueAt: followUpNextAction.suggestedDateTime,
-        priority: followUpNextAction.priority,
-      });
-
-      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      await loadChatAgendaSummary(leadId, leadContracts.map((contract) => contract.id));
-      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      toast.success(result.inserted === false ? 'Este follow-up já estava agendado.' : 'Próximo follow-up agendado.');
-      setFollowUpNextAction(null);
-    } catch (error) {
-      if (requestId !== followUpScheduleRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
-        return;
-      }
-      console.error('[WhatsAppInbox] erro ao agendar proxima acao do follow-up', error);
-      toast.error('Não foi possível agendar a próxima ação.');
-    } finally {
-      if (requestId === followUpScheduleRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setSchedulingFollowUpNextAction(false);
-      }
-    }
-  }, [canEditAgenda, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat, selectedChatDisplayName]);
-
-  const handleBatchSendFollowUp = useCallback(async (results: Array<{
-    chatId: string;
-    externalChatId: string | null;
-    textSegments: string[];
-    reminderId: string;
-    leadId: string;
-    phone: string | null;
-    currentAction: 'send' | 'wait';
-    generationId: string | null;
-    approvedScheduleAction: 'schedule' | 'no_schedule';
-    approvedScheduleDate: string | null;
-    scheduleReason: string | null;
-    opportunityRecommendation: 'continue' | 'pause' | 'mark_lost_recommended';
-  }>, options?: {
-    onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
-  }) => {
-    const chats = latestChatsRef.current;
-    const sentIds: string[] = [];
-    const failures: string[] = [];
-    const warnings: string[] = [];
-    const approvedSchedules: Array<{ leadId: string; generationId: string | null; sourceReminderId: string; dueAt: string; reason: string | null }> = [];
-    const statusUpdates = new Map<string, { chatId: string; leadId: string; status: BatchFollowUpFinalStatus; reminderId: string }>();
-    const resolvedReminderIds = new Set<string>();
-    let waitWithoutScheduleCount = 0;
-    const legacyAuditEntries: Array<{
-      lead_id: string;
-      chat_id: string;
-      text_content: string;
-      next_action_title: string | null;
-      next_action_due_at: string | null;
-    }> = [];
-
-    for (const [index, result] of results.entries()) {
-      const totalSegments = result.textSegments.length;
-      const chat = chats.find((c) => c.id === result.chatId)
-        ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
-        ?? chats.find((c) => c.lead_id === result.leadId);
-      const finalStatus = resolveBatchFollowUpFinalStatus({
-        approvedScheduleAction: result.approvedScheduleAction,
-        approvedScheduleDate: result.approvedScheduleDate,
-        opportunityRecommendation: result.opportunityRecommendation,
-        currentLeadStatus: chat?.lead_status,
-      });
-
-      if (result.currentAction === 'wait') {
-        if (result.approvedScheduleAction === 'schedule' && result.approvedScheduleDate) {
-          approvedSchedules.push({
-            leadId: result.leadId,
-            generationId: result.generationId,
-            sourceReminderId: result.reminderId,
-            dueAt: result.approvedScheduleDate,
-            reason: result.scheduleReason,
-          });
-          options?.onProgress?.({
-            reminderId: result.reminderId,
-            status: 'sent',
-            sentSegments: 0,
-            totalSegments: 0,
-          });
-        } else {
-          waitWithoutScheduleCount += 1;
-          if (finalStatus) {
-            statusUpdates.set(result.leadId, {
-              chatId: result.chatId,
-              leadId: result.leadId,
-              status: finalStatus,
-              reminderId: result.reminderId,
-            });
-          } else {
-            resolvedReminderIds.add(result.reminderId);
-          }
-          options?.onProgress?.({
-            reminderId: result.reminderId,
-            status: 'sent',
-            sentSegments: 0,
-            totalSegments: 0,
-          });
-        }
-        continue;
-      }
-      options?.onProgress?.({
-        reminderId: result.reminderId,
-        status: 'sending',
-        sentSegments: 0,
-        totalSegments,
-      });
-
-      const phoneChatId = normalizeWhapiDirectChatId(result.phone);
-      const externalChatId = normalizeWhapiDirectChatId(chat?.external_chat_id)
-        || normalizeWhapiDirectChatId(result.externalChatId)
-        || phoneChatId;
-
-      if (chat?.identity_conflict) {
-        const errorMessage = 'Identidade WhatsApp pendente de revisão manual.';
-        failures.push(`Lead ${result.leadId}: ${errorMessage}`);
-        options?.onProgress?.({
-          reminderId: result.reminderId,
-          status: 'failed',
-          sentSegments: 0,
-          totalSegments,
-          errorMessage,
-        });
-        continue;
-      }
-
-      if (!externalChatId) {
-        const errorMessage = 'Sem conversa externa ou telefone valido.';
-        failures.push(`Lead ${result.leadId}: ${errorMessage}`);
-        options?.onProgress?.({
-          reminderId: result.reminderId,
-          status: 'failed',
-          sentSegments: 0,
-          totalSegments,
-          errorMessage,
-        });
-        continue;
-      }
-
-      if (result.textSegments.length === 0) {
-        const errorMessage = 'Mensagem vazia.';
-        failures.push(`Lead ${result.leadId}: ${errorMessage}`);
-        options?.onProgress?.({
-          reminderId: result.reminderId,
-          status: 'failed',
-          sentSegments: 0,
-          totalSegments,
-          errorMessage,
-        });
-        continue;
-      }
-
-      try {
-        for (const [segmentIndex, segment] of result.textSegments.entries()) {
-          await whatsappMessagesRepository.sendText(externalChatId, segment, {
-            clientRequestId: `follow-up:${result.reminderId}:${segmentIndex}`,
-          });
-          options?.onProgress?.({
-            reminderId: result.reminderId,
-            status: 'sending',
-            sentSegments: segmentIndex + 1,
-            totalSegments,
-          });
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.';
-        failures.push(`Lead ${result.leadId}: ${message}`);
-        options?.onProgress?.({
-          reminderId: result.reminderId,
-          status: 'failed',
-          sentSegments: 0,
-          totalSegments,
-          errorMessage: message,
-        });
-        if (index < results.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        }
-        continue;
-      }
-
-      sentIds.push(result.reminderId);
-      if (!finalStatus) {
-        if (result.approvedScheduleAction !== 'schedule' || !result.approvedScheduleDate) {
-          resolvedReminderIds.add(result.reminderId);
-        }
-      } else {
-        statusUpdates.set(result.leadId, {
-          chatId: result.chatId,
-          leadId: result.leadId,
-          status: finalStatus,
-          reminderId: result.reminderId,
-        });
-      }
-      options?.onProgress?.({
-        reminderId: result.reminderId,
-        status: 'sent',
-        sentSegments: totalSegments,
-        totalSegments,
-      });
-      if (result.approvedScheduleAction === 'schedule' && result.approvedScheduleDate) {
-        approvedSchedules.push({
-          leadId: result.leadId,
-          generationId: result.generationId,
-          sourceReminderId: result.reminderId,
-          dueAt: result.approvedScheduleDate,
-          reason: result.scheduleReason,
-        });
-      }
-      if (!result.generationId) {
-        legacyAuditEntries.push({
-          lead_id: result.leadId,
-          chat_id: result.chatId,
-          text_content: result.textSegments.join('\n\n'),
-          next_action_title: null,
-          next_action_due_at: result.approvedScheduleDate,
-        });
-      }
-      if (index < results.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
-    }
-
-    if (sentIds.length === 0 && approvedSchedules.length === 0 && waitWithoutScheduleCount === 0) {
-      throw new Error(failures[0] || 'Nenhum follow-up selecionado possui mensagem para enviar ou agenda aprovada.');
-    }
-
-    let scheduledCount = 0;
-    for (const schedule of approvedSchedules) {
-      const title = 'Follow-up';
-      const description = schedule.reason || 'Lembrete aprovado após revisão do follow-up gerado por IA.';
-      try {
-        const scheduledReminder = await scheduleInboxFollowUp({
-          leadId: schedule.leadId,
-          title,
-          description,
-          dueAt: schedule.dueAt,
-          priority: 'normal',
-          generationId: schedule.generationId,
-          origin: 'follow_up_v2_batch',
-        });
-        scheduledCount += 1;
-        resolvedReminderIds.add(schedule.sourceReminderId);
-        if (schedule.generationId) {
-          try {
-            await approveInboxFollowUpSchedule({
-              generationId: schedule.generationId,
-              dueAt: schedule.dueAt,
-              reminderId: scheduledReminder.reminderId,
-            });
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'erro desconhecido';
-            warnings.push(`Lembrete criado, mas a proveniência não foi atualizada: ${message}`);
-          }
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'erro desconhecido';
-        warnings.push(`Erro ao agendar proximo follow-up para lead ${schedule.leadId}: ${message}`);
-      }
-    }
-
-    for (const statusUpdate of statusUpdates.values()) {
-      try {
-        await whatsappContactsRepository.updateLeadStatus(statusUpdate.chatId, statusUpdate.status);
-        if (statusUpdate.status === 'Perdido') {
-          await clearInboxLeadAgenda(statusUpdate.leadId);
-        }
-        resolvedReminderIds.add(statusUpdate.reminderId);
-        options?.onProgress?.({
-          reminderId: statusUpdate.reminderId,
-          status: 'sent',
-          sentSegments: 0,
-          totalSegments: 0,
-          finalStatus: statusUpdate.status,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'erro desconhecido';
-        warnings.push(`Follow-up concluído, mas não foi possível mover o lead ${statusUpdate.leadId} para ${statusUpdate.status}: ${message}`);
-      }
-    }
-
-    try {
-      await markInboxRemindersRead([...resolvedReminderIds]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'erro desconhecido';
-      warnings.push(`Erro ao marcar lembretes como lidos: ${message}`);
-    }
-
-    const sentAtActual = new Date().toISOString();
-    const generatedAuditUpdates = results
-      .filter((result) => sentIds.includes(result.reminderId) && result.generationId)
-      .map((result) => ({ id: result.generationId as string, sentText: result.textSegments.join('\n\n') }));
-    if (generatedAuditUpdates.length > 0) {
-      try {
-        await updateInboxFollowUpSentAudits(generatedAuditUpdates, sentAtActual);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'erro desconhecido';
-        warnings.push(`Follow-ups enviados, mas a auditoria V2 não foi atualizada: ${message}`);
-      }
-    }
-
-    if (legacyAuditEntries.length > 0) {
-      try {
-        await insertInboxLegacyFollowUpAudits(legacyAuditEntries);
-      } catch (auditError) {
-        console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
-        warnings.push('Follow-ups enviados, mas não foi possível registrar a auditoria.');
-      }
-    }
-
-    void Promise.all([loadChatsRef.current(), loadMessagesRef.current(null, 'send')]).catch((refreshError) => {
-      console.error('[WhatsAppInbox] erro ao atualizar conversas apos envio batch', refreshError);
-      toast.warning('Follow-ups enviados, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
-    });
-
-    const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
-    if (failures.length > 0) {
-      toast.warning(`${msg} ${failures.length} falharam.`);
-    } else if (warnings.length > 0) {
-      toast.warning(msg);
-    } else {
-      toast.success(msg);
-    }
-
-    return {
-      sentCount: sentIds.length,
-      scheduledCount,
-      failedCount: failures.length,
-      errorMessage: [...failures, ...warnings].slice(0, 3).join('\n') || undefined,
-    };
-  }, []);
-
-  const handleSendFollowUpDraft = useCallback(async () => {
-    if (!selectedChat) {
-      return;
-    }
-
-    const textSegments = splitWhatsAppMessageSegments(followUpDraft);
-    if (textSegments.length === 0) {
-      return;
-    }
-
-    if (sendDisabledReason) {
-      toast.error(sendDisabledReason);
-      return;
-    }
-
-    try {
-      const sentText = textSegments.join('\n\n');
-      const generationId = followUpGenerationId;
-      sendTextSegments(selectedChat, textSegments, null, generationId
-        ? () => updateInboxFollowUpSentAudit(generationId, sentText)
-        : undefined);
-      resetFollowUpComposer();
-      handleCloseFollowUpModal();
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.');
-    }
-  }, [followUpDraft, followUpGenerationId, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleComposerSubmit = () => {
     if (generatingFollowUp) return;

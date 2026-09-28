@@ -14,7 +14,13 @@ import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templat
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { whatsappFollowUpService, type CommWhatsAppFollowUpEmotionalContext, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone, type CommWhatsAppScheduleRecommendation } from '../data';
 import { toast } from '../../../../lib/toast';
-import type { BatchFollowUpFinalStatus, BatchFollowUpOpportunityRecommendation } from '../domain/batchFollowUpOutcome';
+import type { BatchFollowUpFinalStatus } from '../domain/batchFollowUpOutcome';
+import type {
+  BatchFollowUpSendItem,
+  BatchFollowUpSendOptions,
+  BatchFollowUpSendProgress,
+  BatchFollowUpSendSummary,
+} from '../domain/batchFollowUpTypes';
 import {
   AiContextPanel,
   ChatBubblePreview,
@@ -76,41 +82,17 @@ type BatchItemState = {
   sendSegmentsTotal: number;
 };
 
-type SentSummary = {
-  sentCount: number;
-  scheduledCount: number;
-  failedCount: number;
-  errorMessage?: string;
-};
+type SentSummary = BatchFollowUpSendSummary;
 
-export type WhatsAppBatchFollowUpSendProgress = {
-  reminderId: string;
-  status: 'queued' | 'sending' | 'sent' | 'failed';
-  sentSegments: number;
-  totalSegments: number;
-  finalStatus?: BatchFollowUpFinalStatus | null;
-  errorMessage?: string;
-};
+export type WhatsAppBatchFollowUpSendProgress = BatchFollowUpSendProgress;
 
 type WhatsAppBatchFollowUpModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSendBatchFollowUps?: (results: Array<{
-    chatId: string;
-    externalChatId: string | null;
-    textSegments: string[];
-    reminderId: string;
-    leadId: string;
-    phone: string | null;
-    currentAction: 'send' | 'wait';
-    generationId: string | null;
-    approvedScheduleAction: 'schedule' | 'no_schedule';
-    approvedScheduleDate: string | null;
-    scheduleReason: string | null;
-    opportunityRecommendation: BatchFollowUpOpportunityRecommendation;
-  }>, options?: {
-    onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
-  }) => Promise<SentSummary>;
+  onSendBatchFollowUps?: (
+    results: BatchFollowUpSendItem[],
+    options?: BatchFollowUpSendOptions,
+  ) => Promise<SentSummary>;
 };
 
 // ---- Helpers ----

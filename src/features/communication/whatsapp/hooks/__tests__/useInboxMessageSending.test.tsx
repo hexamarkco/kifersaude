@@ -252,6 +252,49 @@ test('uma falha definitiva interrompe o restante da fila de anexos', async () =>
   }
 });
 
+test('envio bem-sucedido mantém legenda e citação somente no primeiro anexo', async () => {
+  resetMocks();
+  mocks.sendMedia
+    .mockResolvedValueOnce({ messageId: 'media-1', status: 'sent' })
+    .mockResolvedValueOnce({ messageId: 'media-2', status: 'delivered' });
+  const quoteMessage = createInteractiveMessage();
+  const state = createOptions({
+    messageDraft: 'Legenda da conversa',
+    pendingAttachments: [createAttachment('arquivo-1'), createAttachment('arquivo-2')],
+    replyTargetMessage: quoteMessage,
+  });
+  let sending: MessageSending | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { sending = value; }} />);
+
+  try {
+    assert.ok(sending);
+    act(() => sending?.handleSendMessage());
+    await act(async () => { await Promise.all(state.pendingSends); });
+
+    assert.equal(mocks.sendMedia.mock.calls.length, 2);
+    const firstSend = mocks.sendMedia.mock.calls[0]?.[0] as Record<string, unknown>;
+    const secondSend = mocks.sendMedia.mock.calls[1]?.[0] as Record<string, unknown>;
+    assert.equal(firstSend.caption, 'Legenda da conversa');
+    assert.equal(firstSend.quotedMessageId, 'external-message-1');
+    assert.equal(secondSend.caption, undefined);
+    assert.equal(secondSend.quotedMessageId, undefined);
+    assert.deepEqual(state.appended[0]?.metadata.quote, {
+      external_message_id: 'external-message-1',
+      author_phone: '+55 11 98888-8888',
+      quoted_type: 'buttons',
+      preview_text: 'Quer continuar?',
+    });
+    assert.deepEqual(state.appended[1]?.metadata, {});
+    assert.deepEqual(state.statusRefreshes.map(({ externalMessageIds }) => externalMessageIds), [['media-1'], ['media-2']]);
+    assert.deepEqual(state.clearedProgress, ['chat-1']);
+    assert.equal(state.activeUploads.current.size, 0);
+    assert.equal((state.options.resetComposerAfterQueue as MockFunction).mock.calls.length, 1);
+    assert.deepEqual((state.options.setReplyTargetMessage as MockFunction).mock.calls[0], [null]);
+  } finally {
+    view.unmount();
+  }
+});
+
 test('o lock impede o envio duplicado do mesmo snapshot do composer', async () => {
   resetMocks();
   mocks.sendText.mockResolvedValue({ messageId: 'external-1', status: 'sent' });
@@ -296,6 +339,33 @@ test('envio de mídia remota da gaveta reconcilia status e libera o indicador', 
     assert.deepEqual(state.patches.map(({ patch }) => patch.delivery_status), ['sent']);
     assert.deepEqual(state.statusRefreshes.map(({ externalMessageIds }) => externalMessageIds), [['remote-1']]);
     assert.deepEqual(state.drawerSendingStates, [{ 'chat-1': true }, {}]);
+  } finally {
+    view.unmount();
+  }
+});
+
+test('bloqueia envio remoto da gaveta quando o canal está indisponível', async () => {
+  resetMocks();
+  const state = createOptions({ mediaDrawerSendDisabledReason: 'Canal WhatsApp desconectado.' });
+  let sending: MessageSending | null = null;
+  const view = render(<Harness options={state.options} capture={(value) => { sending = value; }} />);
+
+  try {
+    assert.ok(sending);
+    const activeSending = sending as MessageSending;
+
+    await act(async () => {
+      await assert.rejects(() => activeSending.handleSendDrawerMedia({
+        sendKind: 'image',
+        sendUrl: 'https://media.example/image.png',
+        title: 'imagem.png',
+        mimeType: 'image/png',
+      }), /Canal WhatsApp desconectado/);
+    });
+
+    assert.equal(state.pendingSends.length, 0);
+    assert.equal(state.appended.length, 0);
+    assert.deepEqual(mocks.toastError.mock.calls[0], ['Canal WhatsApp desconectado.']);
   } finally {
     view.unmount();
   }

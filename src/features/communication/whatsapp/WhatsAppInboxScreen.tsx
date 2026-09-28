@@ -107,6 +107,7 @@ import { useInboxRealtimeController } from './hooks/useInboxRealtimeController';
 import { useInboxBootstrap } from './hooks/useInboxBootstrap';
 import { useInboxMessageThreadController } from './hooks/useInboxMessageThreadController';
 import { useInboxChatCollection } from './hooks/useInboxChatCollection';
+import { useInboxChatSelectionController } from './hooks/useInboxChatSelectionController';
 import { useInboxOptimisticChatState } from './hooks/useInboxOptimisticChatState';
 import { useInboxMessageViewport } from './hooks/useInboxMessageViewport';
 import { useInboxComposerSubmission } from './hooks/useInboxComposerSubmission';
@@ -630,6 +631,14 @@ export default function WhatsAppInboxScreen() {
     savedContactNameOverrideByPhoneRef,
     savedContactNameByPhoneRef,
     buildChatsSignature,
+  });
+  const { handleSelectSidebarChat, handleBackToChatList } = useInboxChatSelectionController({
+    search,
+    refs: { selectedChatIdRef, chatIdFromUrlRef, suppressAutoChatSelectionRef },
+    setChatMenuPointerAnchor,
+    setOpenChatMenuChatId,
+    setSelectedChatId,
+    upsertChatLocally,
   });
   const { applyOptimisticChatSummary, updateOptimisticChatPreviewStatus } = useInboxOptimisticChatState({
     refs: { pendingChatInboxStateRef, chatReadMutationVersionByChatIdRef, chatsSignatureRef },
@@ -2034,14 +2043,7 @@ export default function WhatsAppInboxScreen() {
           connectedUserName={channelState?.connected_user_name ?? null}
           composerDraftsByChatId={composerDraftsByChatId}
           favoritedLeadIds={favoritedLeadIds}
-          onSelectChat={(chat) => {
-            setChatMenuPointerAnchor(null);
-            setOpenChatMenuChatId(null);
-            if (search) {
-              upsertChatLocally(chat);
-            }
-            setSelectedChatId(chat.id);
-          }}
+          onSelectChat={handleSelectSidebarChat}
           onSelectMessageSearchResult={handleSelectMessageSearchResult}
           openChatMenuChatId={openChatMenuChatId}
           updatingChatStateId={updatingChatStateId}
@@ -2096,12 +2098,7 @@ export default function WhatsAppInboxScreen() {
                 chatAgendaSummary={chatAgendaSummary}
                 nextChatReminderSummary={nextChatReminderSummary}
                 chatAgendaSummaryError={chatAgendaSummaryError}
-                onBack={() => {
-                  suppressAutoChatSelectionRef.current = true;
-                  selectedChatIdRef.current = null;
-                  chatIdFromUrlRef.current = null;
-                  setSelectedChatId(null);
-                }}
+                onBack={handleBackToChatList}
                 onLeadStatusChange={handleLeadStatusChange}
                 onSaveContact={(name) => {
                   setSaveContactName(name);

@@ -131,6 +131,7 @@ import { useInboxContactIdentity } from './hooks/useInboxContactIdentity';
 import { useInboxComposerTextActions } from './hooks/useInboxComposerTextActions';
 import { useInboxQuickReplies } from './hooks/useInboxQuickReplies';
 import { useInboxMessageForwarding } from './hooks/useInboxMessageForwarding';
+import { useInboxHistoryRecovery } from './hooks/useInboxHistoryRecovery';
 import type { ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -264,7 +265,6 @@ export default function WhatsAppInboxScreen() {
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
-  const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [sendingDrawerMediaByChatId, setSendingDrawerMediaByChatId] = useState<Record<string, boolean>>({});
@@ -382,9 +382,7 @@ export default function WhatsAppInboxScreen() {
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
   const suppressAutoChatSelectionRef = useRef(false);
-  const historyRecoveryCursorByChatIdRef = useRef<Map<string, { nextOffset: number; timeTo: number }>>(new Map());
 
-  const historyRecoveryLockRef = useRef(new KeyedActionLock());
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
@@ -1376,21 +1374,6 @@ export default function WhatsAppInboxScreen() {
   });
   const composerRewriteDisabledReason = composerRewriteBaseDisabledReason
     ?? (rewritingComposer ? 'Reescrevendo mensagem com IA...' : null);
-  const historyRecoveryDisabledReason = useMemo(() => {
-    if (!selectedChat) {
-      return 'Selecione uma conversa para recuperar mensagens antigas.';
-    }
-
-    if (!selectedChat.external_chat_id?.trim()) {
-      return 'Conversa sem identificador externo para consultar na Whapi.';
-    }
-
-    if (syncingHistoryChatId === selectedChat.id) {
-      return 'Recuperando mensagens antigas pela Whapi...';
-    }
-
-    return sendDisabledReason;
-  }, [selectedChat, sendDisabledReason, syncingHistoryChatId]);
   const mediaDrawerSendDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para enviar GIFs e figurinhas.';
@@ -2204,6 +2187,12 @@ export default function WhatsAppInboxScreen() {
 
   loadMessagesRef.current = loadMessages;
 
+  const {
+    syncingChatId: syncingHistoryChatId,
+    disabledReason: historyRecoveryDisabledReason,
+    handleRecoverHistory: handleRecoverChatHistory,
+  } = useInboxHistoryRecovery({ selectedChat, sendDisabledReason, loadChats, loadMessages });
+
   const handleRetryMessageLoad = useCallback(async () => {
     if (!selectedChat) {
       return;
@@ -2887,69 +2876,6 @@ export default function WhatsAppInboxScreen() {
       setCopyingTranscript(false);
     }
   }, [copyingTranscript, selectedChat, selectedChatTranscriptLabel]);
-
-  const handleRecoverChatHistory = useCallback(async () => {
-    if (!selectedChat) {
-      return;
-    }
-
-    if (historyRecoveryDisabledReason) {
-      toast.error(historyRecoveryDisabledReason);
-      return;
-    }
-
-    const targetChat = selectedChat;
-    if (!historyRecoveryLockRef.current.tryAcquire(targetChat.id)) {
-      return;
-    }
-
-    setSyncingHistoryChatId(targetChat.id);
-
-    try {
-      const savedCursor = historyRecoveryCursorByChatIdRef.current.get(targetChat.id);
-      let timeTo = savedCursor?.timeTo ?? Math.floor(Date.now() / 1000);
-      let offset = savedCursor?.nextOffset ?? 0;
-      let pages = 0;
-      let imported = 0;
-      let hasMore = true;
-
-      while (hasMore && pages < 10) {
-        const result = await whatsappConversationsRepository.syncHistory(targetChat.external_chat_id, {
-          offset,
-          count: 100,
-          timeTo,
-        });
-        imported += result.imported;
-        hasMore = result.hasMore && result.nextOffset !== null;
-        timeTo = result.timeTo ?? timeTo;
-        offset = result.nextOffset ?? offset;
-        if (hasMore) {
-          historyRecoveryCursorByChatIdRef.current.set(targetChat.id, { nextOffset: offset, timeTo });
-        } else {
-          historyRecoveryCursorByChatIdRef.current.delete(targetChat.id);
-        }
-        pages += 1;
-      }
-
-      await Promise.all([loadMessages(targetChat, 'initial'), loadChats()]);
-
-      if (imported > 0) {
-        toast.success(
-          hasMore
-            ? `Histórico sincronizado (${imported} mensagens). Ainda há mais mensagens; execute a recuperação novamente para continuar.`
-            : `Histórico sincronizado (${imported} mensagens). Use "Carregar mais" para navegar nas mais antigas.`,
-        );
-      } else {
-        toast.info('A Whapi não retornou mensagens adicionais para esta conversa agora.');
-      }
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao recuperar historico do chat', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível recuperar mais mensagens deste chat.');
-    } finally {
-      historyRecoveryLockRef.current.release(targetChat.id);
-      setSyncingHistoryChatId((current) => (current === targetChat.id ? null : current));
-    }
-  }, [historyRecoveryDisabledReason, loadChats, loadMessages, selectedChat]);
 
   const {
     handleUpdateChatInboxState,

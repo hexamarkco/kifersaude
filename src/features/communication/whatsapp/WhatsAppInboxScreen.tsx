@@ -14,7 +14,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
-  whatsappContactsRepository,
   whatsappConversationsRepository,
   whatsappMediaRepository,
   whatsappMessagesRepository,
@@ -132,6 +131,7 @@ import { useInboxComposerTextActions } from './hooks/useInboxComposerTextActions
 import { useInboxQuickReplies } from './hooks/useInboxQuickReplies';
 import { useInboxMessageForwarding } from './hooks/useInboxMessageForwarding';
 import { useInboxHistoryRecovery } from './hooks/useInboxHistoryRecovery';
+import { useInboxContactActions } from './hooks/useInboxContactActions';
 import type { ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -359,7 +359,6 @@ export default function WhatsAppInboxScreen() {
   const chatMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
   const mediaUploadAbortControllersRef = useRef<Map<string, AbortController>>(new Map());
-  const contactSaveLockRef = useRef(new KeyedActionLock());
   const lastSelectedChatPreviewRefreshKeyRef = useRef('');
   const composerSendLockRef = useRef(new ComposerSendLock());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
@@ -2746,83 +2745,18 @@ export default function WhatsAppInboxScreen() {
     navigate('/painel/leads');
   };
 
-  const handleSaveSharedContact = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
-    const displayName = contact.name?.trim() ?? '';
-    const phoneNumber = contact.phoneNumber?.trim() ?? '';
-
-    if (!displayName) {
-      toast.error('O contato compartilhado precisa de um nome para ser salvo.');
-      return;
-    }
-
-    if (!phoneNumber) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
-      return;
-    }
-
-    const actionKey = `save:${phoneNumber}`;
-    setSharedContactActionKey(actionKey);
-
-    try {
-      await whatsappContactsRepository.save({
-        phoneNumber,
-        displayName,
-      });
-
-      rememberManualSavedContactName(phoneNumber, displayName);
-      void refreshStartChatSources(startChatQuery, 1, false);
-      void loadChats();
-      toast.success('Contato salvo com sucesso.');
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao salvar contato compartilhado', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato compartilhado.');
-    } finally {
-      setSharedContactActionKey((current) => (current === actionKey ? null : current));
-    }
-  }, [loadChats, refreshStartChatSources, rememberManualSavedContactName, startChatQuery]);
-
-  const handleSaveContactToPhonebook = useCallback(async () => {
-    const name = saveContactName.trim();
-    if (!name) {
-      toast.error('Informe um nome para salvar o contato.');
-      return;
-    }
-    if (!selectedChat) return;
-
-    const targetChat = selectedChatForPresentation ?? selectedChat;
-    if (!contactSaveLockRef.current.tryAcquire(targetChat.id)) {
-      return;
-    }
-
-    const isRenaming = Boolean(targetChat.saved_contact_name?.trim());
-
-    setSavingContact(true);
-    try {
-      if (isRenaming) {
-        await whatsappContactsRepository.rename({
-          phoneNumber: targetChat.phone_number,
-          displayName: name,
-        });
-        toast.success('Contato renomeado com sucesso.');
-      } else {
-        await whatsappContactsRepository.save({
-          phoneNumber: targetChat.phone_number,
-          displayName: name,
-        });
-        toast.success('Contato salvo com sucesso.');
-      }
-      rememberManualSavedContactName(targetChat.phone_digits || targetChat.phone_number, name);
-      setSaveContactDialogOpen(false);
-      void refreshStartChatSources(startChatQuery, 1, false);
-      void loadChats();
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao salvar contato', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato.');
-    } finally {
-      contactSaveLockRef.current.release(targetChat.id);
-      setSavingContact(false);
-    }
-  }, [rememberManualSavedContactName, saveContactName, selectedChat, selectedChatForPresentation, loadChats, refreshStartChatSources, startChatQuery]);
+  const { handleSaveSharedContact, handleSaveContactToPhonebook } = useInboxContactActions({
+    selectedChat,
+    selectedChatForPresentation,
+    saveContactName,
+    setSavingContact,
+    setSaveContactDialogOpen,
+    setSharedContactActionKey,
+    startChatQuery,
+    refreshStartChatSources,
+    rememberManualSavedContactName,
+    loadChats,
+  });
 
   const {
     syncComposerSelection,

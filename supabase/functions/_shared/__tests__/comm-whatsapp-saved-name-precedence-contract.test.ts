@@ -7,6 +7,10 @@ const migrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261013150000_preserve_persisted_chat_saved_name.sql'),
   'utf8',
 );
+const manualPrecedenceMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260928002436_comm_whatsapp_manual_saved_name_precedence.sql'),
+  'utf8',
+);
 
 test('nome salvo no chat vence leituras temporarias do cache do provedor', () => {
   assert.match(migrationSource, /NULLIF\(btrim\(chat\.saved_contact_name\), ''\) AS saved_contact_name/);
@@ -18,4 +22,17 @@ test('nome salvo no chat vence leituras temporarias do cache do provedor', () =>
 test('resolvedor usa phone_number quando phone_digits nao esta preenchido', () => {
   assert.match(migrationSource, /NULLIF\(btrim\(chat\.phone_digits\), ''\)/);
   assert.match(migrationSource, /NULLIF\(btrim\(chat\.phone_number\), ''\)/);
+});
+
+test('sobrescrita manual vence uma copia antiga do nome no chat', () => {
+  const manualLookupIndex = manualPrecedenceMigrationSource.indexOf('Manual rows are checked before');
+  const persistedFallbackIndex = manualPrecedenceMigrationSource.indexOf(
+    "SELECT NULLIF(btrim(chat.saved_contact_name), '')",
+    manualLookupIndex,
+  );
+
+  assert.ok(manualLookupIndex >= 0);
+  assert.ok(persistedFallbackIndex > manualLookupIndex);
+  assert.match(manualPrecedenceMigrationSource, /is_manual_contact_cache_row/);
+  assert.match(manualPrecedenceMigrationSource, /manual_override_name/);
 });

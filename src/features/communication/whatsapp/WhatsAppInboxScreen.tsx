@@ -59,6 +59,7 @@ import { useInboxMessageSending } from './hooks/useInboxMessageSending';
 import { useInboxMessageActionController } from './hooks/useInboxMessageActionController';
 import { useInboxMessageRetry } from './hooks/useInboxMessageRetry';
 import { useInboxSendQueue } from './hooks/useInboxSendQueue';
+import { useInboxOptimisticMessageTimestamps } from './hooks/useInboxOptimisticMessageTimestamps';
 import { useInboxChatCreation } from './hooks/useInboxChatCreation';
 import { useInboxLeadMutations } from './hooks/useInboxLeadMutations';
 import { useInboxComposerAttachments } from './hooks/useInboxComposerAttachments';
@@ -289,7 +290,6 @@ export default function WhatsAppInboxScreen() {
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
   const chatReadMutationVersionByChatIdRef = useRef<Map<string, number>>(new Map());
-  const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
   const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: InboxMessageLoadReason) => Promise<unknown> | void>(() => {});
@@ -429,14 +429,7 @@ export default function WhatsAppInboxScreen() {
     [],
   );
 
-  const allocateOptimisticMessageTimestamps = useCallback((chatId: string, count: number) => {
-    const safeCount = Math.max(0, count);
-    const previousTimestamp = optimisticMessageTimestampByChatIdRef.current.get(chatId) ?? 0;
-    const firstTimestamp = Math.max(Date.now(), previousTimestamp + 1);
-    optimisticMessageTimestampByChatIdRef.current.set(chatId, firstTimestamp + safeCount - 1);
-
-    return Array.from({ length: safeCount }, (_, index) => new Date(firstTimestamp + index).toISOString());
-  }, []);
+  const { allocateOptimisticMessageTimestamps } = useInboxOptimisticMessageTimestamps();
 
   const getSelectedChatSnapshot = useCallback((chatId: string | null) => {
     if (!chatId) return null;

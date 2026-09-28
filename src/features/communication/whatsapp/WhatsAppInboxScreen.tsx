@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Copy, Download, FolderOpen, Info, Loader2, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -69,7 +69,6 @@ import {
   summarizeQuickReplyPreview,
   type WhatsAppQuickReply,
 } from './domain/quickReplies';
-import { type WhatsAppTextFormat } from './components/WhatsAppFormattedText';
 import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppMessageThread } from './components/WhatsAppMessageThread';
 import { WhatsAppComposer } from './components/WhatsAppComposer';
@@ -135,6 +134,7 @@ import { useInboxMarkChatRead } from './hooks/useInboxMarkChatRead';
 import { useInboxFollowUpComposer } from './hooks/useInboxFollowUpComposer';
 import { useInboxChatListModel } from './hooks/useInboxChatListModel';
 import { useInboxContactIdentity } from './hooks/useInboxContactIdentity';
+import { useInboxComposerTextActions } from './hooks/useInboxComposerTextActions';
 import type { ChatActivityFilter } from './domain/chatFilters';
 import {
   clearMediaUploadProgressForChat,
@@ -2930,122 +2930,24 @@ export default function WhatsAppInboxScreen() {
     }
   }, [rememberManualSavedContactName, saveContactName, selectedChat, selectedChatForPresentation, loadChats, refreshStartChatSources, startChatQuery]);
 
-  const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
-    if (!target) {
-      return;
-    }
-
-    const nextSelection = {
-      start: target.selectionStart ?? target.value.length,
-      end: target.selectionEnd ?? target.value.length,
-    };
-
-    setComposerSelection((current) => {
-      if (current.start === nextSelection.start && current.end === nextSelection.end) {
-        return current;
-      }
-
-      return nextSelection;
-    });
-  }, [setComposerSelection]);
-
-  const handleComposerChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageDraft(event.target.value);
-    syncComposerSelection(event.target);
-    resizeComposerTextarea(event.target);
-  };
-
-  const handleInsertQuickReply = useCallback((option: QuickReplyOption) => {
-    const textarea = composerTextareaRef.current;
-    const nextSelection = textarea
-      ? {
-          start: textarea.selectionStart ?? composerSelection.start,
-          end: textarea.selectionEnd ?? composerSelection.end,
-        }
-      : composerSelection;
-    const match = getActiveQuickReplyMatch(messageDraft, nextSelection) ?? activeQuickReplyMatch;
-
-    if (!match) {
-      return;
-    }
-
-    const nextValue = `${messageDraft.slice(0, match.start)}${option.text}${messageDraft.slice(match.end)}`;
-    const nextCursor = match.start + option.text.length;
-
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setDismissedQuickReplyKey(null);
-    setQuickReplyActiveIndex(0);
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [activeQuickReplyMatch, composerSelection, messageDraft, setComposerSelection, setMessageDraft]);
-
-  const handleInsertEmoji = useCallback((emoji: string) => {
-    const textarea = composerTextareaRef.current;
-    const nextSelection = textarea
-      ? {
-          start: textarea.selectionStart ?? composerSelection.start,
-          end: textarea.selectionEnd ?? composerSelection.end,
-        }
-      : composerSelection;
-
-    const nextValue = `${messageDraft.slice(0, nextSelection.start)}${emoji}${messageDraft.slice(nextSelection.end)}`;
-    const nextCursor = nextSelection.start + emoji.length;
-
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setComposerFocused(true);
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [composerSelection, messageDraft, setComposerFocused, setComposerSelection, setMessageDraft]);
-
-  const handleApplyComposerTextFormat = useCallback((format: WhatsAppTextFormat) => {
-    const textarea = composerTextareaRef.current;
-    const nextSelection = textarea
-      ? {
-          start: textarea.selectionStart ?? composerSelection.start,
-          end: textarea.selectionEnd ?? composerSelection.end,
-        }
-      : composerSelection;
-    const marker = format === 'strike' ? '~' : format === 'italic' ? '_' : '*';
-    const selectedText = messageDraft.slice(nextSelection.start, nextSelection.end);
-    const hasSelection = nextSelection.end > nextSelection.start;
-    const insertion = hasSelection ? `${marker}${selectedText}${marker}` : `${marker}${marker}`;
-    const nextValue = `${messageDraft.slice(0, nextSelection.start)}${insertion}${messageDraft.slice(nextSelection.end)}`;
-    const nextCursor = hasSelection
-      ? nextSelection.end + marker.length * 2
-      : nextSelection.start + marker.length;
-
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setComposerFocused(true);
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [composerSelection, messageDraft, setComposerFocused, setComposerSelection, setMessageDraft]);
+  const {
+    syncComposerSelection,
+    handleComposerChange,
+    handleInsertQuickReply,
+    handleInsertEmoji,
+    handleApplyComposerTextFormat,
+  } = useInboxComposerTextActions({
+    textareaRef: composerTextareaRef,
+    messageDraft,
+    setMessageDraft,
+    composerSelection,
+    setComposerSelection,
+    setComposerFocused,
+    activeQuickReplyMatch,
+    setDismissedQuickReplyKey,
+    setQuickReplyActiveIndex,
+    resizeComposerTextarea,
+  });
 
   const handleOpenQuickReplySettings = useCallback(() => {
     setQuickRepliesModalOpen(true);

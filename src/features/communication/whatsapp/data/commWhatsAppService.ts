@@ -20,6 +20,7 @@ import type {
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
+import { resolveWhatsAppGroupDisplayName } from '../domain/chatPresentation';
 import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, mergeSavedContactPages, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
 import { createLocalMediaPreviewCache } from './localMediaPreviewCache';
@@ -1550,7 +1551,26 @@ export const commWhatsAppService = {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
     }
 
-    return (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
+    const chats = (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
+    const groupChats = chats.filter((chat) => chat.is_group);
+    if (groupChats.length === 0) return chats;
+
+    const { data: groupMetadata, error: groupMetadataError } = await supabase
+      .from('comm_whatsapp_groups')
+      .select('chat_id, name')
+      .in('chat_id', groupChats.map((chat) => chat.id))
+      .overrideTypes<Array<{ chat_id: string; name: string }>, { merge: false }>();
+    if (groupMetadataError) {
+      console.warn('[WhatsAppInbox] não foi possível carregar os nomes salvos dos grupos', groupMetadataError.message);
+      return chats;
+    }
+
+    const groupNamesByChatId = new Map((groupMetadata ?? []).map((group) => [group.chat_id, group.name]));
+    return chats.map((chat) => {
+      if (!chat.is_group) return chat;
+      const displayName = resolveWhatsAppGroupDisplayName(groupNamesByChatId.get(chat.id), chat.display_name);
+      return displayName === chat.display_name ? chat : { ...chat, display_name: displayName };
+    });
   },
 
   async exportInboxConversations(params: {

@@ -252,6 +252,22 @@ test('uses the group name and never falls back to a phone identity for groups', 
   assert.equal(getSafeChatDisplayName(group), 'Equipe de Atendimento');
 });
 
+test('does not replace a known group name with the generic group fallback', () => {
+  const previous = createChat({
+    id: 'group-1',
+    is_group: true,
+    external_chat_id: '120363012345678901@g.us',
+    display_name: 'Equipe de Atendimento',
+    phone_number: '',
+    phone_digits: '',
+    lead_id: null,
+  });
+  const incoming = { ...previous, display_name: 'GRUPO' };
+
+  assert.equal(getSafeChatDisplayName(incoming), 'Grupo');
+  assert.equal(stabilizeChatIdentityForLocalMerge(incoming, previous).display_name, 'Equipe de Atendimento');
+});
+
 test('ignores presence updates that cannot change the loaded chat list', () => {
   const chat = createChat({
     presence_status: 'typing',

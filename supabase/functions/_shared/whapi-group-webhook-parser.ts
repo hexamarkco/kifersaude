@@ -51,6 +51,14 @@ const text = (value: unknown): string => {
   return '';
 };
 
+export const resolveWhapiGroupName = (...candidates: unknown[]): string => {
+  for (const candidate of candidates) {
+    const name = text(candidate);
+    if (name && name.toLocaleLowerCase() !== 'grupo') return name;
+  }
+  return 'Grupo';
+};
+
 const normalizeParticipantRank = (value: unknown): WhapiGroupParticipant['rank'] => {
   const rank = text(value).toLowerCase();
   if (rank === 'creator' || rank === 'superadmin' || rank === 'owner') return 'creator';
@@ -96,7 +104,7 @@ export const normalizeWhapiGroupSnapshot = (value: unknown): WhapiGroupSnapshot 
 
   return {
     id,
-    name: text(value.name ?? value.subject ?? value.chat_name) || 'Grupo',
+    name: text(value.name ?? value.subject ?? value.chat_name),
     description: text(value.description),
     chatPic: text(value.chat_pic ?? value.picture),
     chatPicFull: text(value.chat_pic_full ?? value.picture_full),
@@ -163,8 +171,11 @@ export const extractWhapiGroupEvents = (payload: unknown): WhapiGroupEventItem[]
   for (const raw of extractPayloadArray(payload, 'groups_updates')) {
     const before = isRecord(raw.before_update) ? raw.before_update : {};
     const after = isRecord(raw.after_update) ? raw.after_update : {};
-    const snapshot = normalizeWhapiGroupSnapshot(after) ?? normalizeWhapiGroupSnapshot(before);
+    const afterSnapshot = normalizeWhapiGroupSnapshot(after);
+    const beforeSnapshot = normalizeWhapiGroupSnapshot(before);
+    const snapshot = afterSnapshot ?? beforeSnapshot;
     if (!snapshot) continue;
+    snapshot.name = resolveWhapiGroupName(afterSnapshot?.name, beforeSnapshot?.name);
     const changes = Array.isArray(raw.changes) ? raw.changes.map(text).filter(Boolean) : [];
     result.push({
       groupId: snapshot.id,

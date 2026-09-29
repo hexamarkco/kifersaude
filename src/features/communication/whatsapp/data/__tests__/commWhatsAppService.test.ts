@@ -39,6 +39,25 @@ const mocks = vi.hoisted(() => {
   query.range.mockResolvedValue({ data: [], error: null });
   query.maybeSingle.mockResolvedValue({ data: null, error: null });
 
+  const groupQuery: Query = {
+    select: createMock<[string], Query>(),
+    eq: createMock<[string, unknown], Query>(),
+    in: createMock<[string, string[]], Query>(),
+    order: createMock<[string, { ascending: boolean }], Query>(),
+    limit: createMock<[number], Query>(),
+    range: createMock<[number, number], Promise<{ data: unknown[]; error: unknown | null }>>(),
+    overrideTypes: createMock<[], Promise<{ data: unknown[]; error: unknown | null }>>(),
+    maybeSingle: createMock<[], Promise<{ data: unknown; error: unknown | null }>>(),
+  };
+  groupQuery.select.mockReturnValue(groupQuery);
+  groupQuery.eq.mockReturnValue(groupQuery);
+  groupQuery.in.mockReturnValue(groupQuery);
+  groupQuery.order.mockReturnValue(groupQuery);
+  groupQuery.limit.mockReturnValue(groupQuery);
+  groupQuery.range.mockResolvedValue({ data: [], error: null });
+  groupQuery.overrideTypes.mockResolvedValue({ data: [], error: null });
+  groupQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
+
   const from = createMock<[string], Query>();
   const rpc = createMock<
     [string, Record<string, unknown>],
@@ -53,7 +72,7 @@ const mocks = vi.hoisted(() => {
   const waitForSupabaseSession = createMock<[{ errorMessage: string }], Promise<void>>();
   const getSession = createMock<[], Promise<{ data: { session: { access_token: string } | null }; error: unknown | null }>>();
 
-  from.mockReturnValue(query);
+  from.mockImplementation((table) => table === 'comm_whatsapp_groups' ? groupQuery : query);
   rpc.mockResolvedValue({ data: [], error: null });
   getSupabaseErrorMessage.mockImplementation(async (_error, fallback) => fallback);
   isSupabaseFunctionFetchError.mockReturnValue(false);
@@ -62,6 +81,7 @@ const mocks = vi.hoisted(() => {
 
   return {
     from,
+    groupQuery,
     getSupabaseErrorMessage,
     getSession,
     invoke,
@@ -402,6 +422,32 @@ test('repete a lista do Inbox quando a RPC sofre timeout transitório', async ()
   assert.equal(rpcCalls[0]?.[0], 'comm_whatsapp_list_chats_with_presence');
   assert.equal(rpcCalls[1]?.[0], 'comm_whatsapp_list_chats_with_presence');
   mocks.rpc.mockResolvedValue({ data: [], error: null });
+});
+
+test('recupera o nome do cadastro do grupo quando o chat está marcado só como Grupo', async () => {
+  mocks.rpc.mockResolvedValue({
+    data: [
+      { id: 'group-1', is_group: true, display_name: 'GRUPO' },
+      { id: 'group-2', is_group: true, display_name: 'Grupo salvo no chat' },
+      { id: 'chat-1', is_group: false, display_name: 'Contato' },
+    ],
+    error: null,
+  });
+  mocks.groupQuery.overrideTypes.mockResolvedValue({
+    data: [
+      { chat_id: 'group-1', name: 'Equipe de Atendimento' },
+      { chat_id: 'group-2', name: 'GRUPO' },
+    ],
+    error: null,
+  });
+
+  const chats = await commWhatsAppService.listChats();
+
+  assert.equal(chats[0]?.display_name, 'Equipe de Atendimento');
+  assert.equal(chats[1]?.display_name, 'Grupo salvo no chat');
+  assert.equal(chats[2]?.display_name, 'Contato');
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+  mocks.groupQuery.overrideTypes.mockResolvedValue({ data: [], error: null });
 });
 
 test('repete a lista do Inbox quando o fetch rejeita por timeout', async () => {

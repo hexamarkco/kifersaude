@@ -5,6 +5,7 @@ import {
   buildWhapiGroupEventReceiptKey,
   extractWhapiGroupEvents,
   normalizeWhapiGroupSnapshot,
+  resolveWhapiGroupName,
 } from '../whapi-group-webhook-parser';
 
 test('normalizes a group snapshot and preserves participant roles', () => {
@@ -28,6 +29,14 @@ test('normalizes a group snapshot and preserves participant roles', () => {
   assert.equal(snapshot?.createdAt, '1713791253');
   assert.equal(snapshot?.createdBy, '919984351847');
   assert.deepEqual(snapshot?.participants.map((participant) => participant.rank), ['creator', 'member']);
+});
+
+test('keeps a missing provider name distinguishable from the generic group label', () => {
+  const snapshot = normalizeWhapiGroupSnapshot({ id: '120363012345678901@g.us' });
+
+  assert.equal(snapshot?.name, '');
+  assert.equal(resolveWhapiGroupName('Grupo', 'Equipe de Atendimento'), 'Equipe de Atendimento');
+  assert.equal(resolveWhapiGroupName('GRUPO'), 'Grupo');
 });
 
 test('extracts post, participant and patch events in payload order', () => {
@@ -65,4 +74,16 @@ test('accepts participant metadata before a full group snapshot', () => {
   assert.equal(event?.groupId, '120363012345678901@g.us');
   assert.equal(event?.participantIds[0], '5511999999999@s.whatsapp.net');
   assert.equal(event?.action, 'request');
+});
+
+test('keeps the prior group name when an update omits its new name field', () => {
+  const [event] = extractWhapiGroupEvents({
+    groups_updates: [{
+      before_update: { id: '120363012345678901@g.us', name: 'Equipe de Atendimento' },
+      after_update: { id: '120363012345678901@g.us' },
+      changes: ['description'],
+    }],
+  });
+
+  assert.equal(event?.snapshot?.name, 'Equipe de Atendimento');
 });

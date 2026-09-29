@@ -318,10 +318,9 @@ async function persistMessageFromWebhook(
   const isGroup = isWhapiGroupChatId(externalChatId);
   const phoneDigits = isGroup ? '' : extractPhoneFromChatId(externalChatId);
   const messageName = getDirectChatDisplayNameCandidate(message, direction);
-  const groupName = toTrimmedString(message.chat_name)
-    || (isRecord(message.chat) ? toTrimmedString(message.chat.name ?? message.chat.subject) : '')
-    || existingChat.displayName
-    || 'Grupo';
+  const incomingGroupName = toTrimmedString(message.chat_name)
+    || (isRecord(message.chat) ? toTrimmedString(message.chat.name ?? message.chat.subject) : '');
+  const groupName = incomingGroupName || existingChat.displayName || 'Grupo';
   const senderId = normalizeWhapiParticipantId(message.from ?? message.sender ?? message.author);
   const groupSenderName = toTrimmedString(message.from_name)
     || toTrimmedString(message.sender_name)
@@ -442,7 +441,7 @@ async function persistMessageFromWebhook(
     await ensureWhapiGroupChatMetadata(supabaseAdmin, {
       channelId: channel.id,
       groupId: externalChatId,
-      name: groupName,
+      name: incomingGroupName || null,
     });
   }
 

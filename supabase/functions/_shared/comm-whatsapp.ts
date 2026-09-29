@@ -19,6 +19,7 @@ import {
 } from './comm-whatsapp/identity.ts';
 import {
   normalizeWhapiGroupSnapshot,
+  resolveWhapiGroupName,
   type WhapiGroupEventItem,
   type WhapiGroupSnapshot,
 } from './whapi-group-webhook-parser.ts';
@@ -3095,7 +3096,7 @@ const groupTimestampToIso = (value: string): string | null => {
 
 const buildFallbackGroupSnapshot = (groupId: string, raw: Record<string, unknown> = {}): WhapiGroupSnapshot => ({
   id: normalizeWhapiChatId(groupId),
-  name: toTrimmedString(raw.name ?? raw.subject ?? raw.chat_name) || 'Grupo',
+  name: toTrimmedString(raw.name ?? raw.subject ?? raw.chat_name),
   description: toTrimmedString(raw.description),
   chatPic: toTrimmedString(raw.chat_pic ?? raw.picture),
   chatPicFull: toTrimmedString(raw.chat_pic_full ?? raw.picture_full),
@@ -3112,11 +3113,41 @@ const buildFallbackGroupSnapshot = (groupId: string, raw: Record<string, unknown
 export async function persistWhapiGroupSnapshot(
   supabaseAdmin: SupabaseClient,
   params: { channelId: string; snapshot: WhapiGroupSnapshot },
-): Promise<{ chatId: string; groupId: string }> {
+): Promise<{ chatId: string; groupId: string; name: string }> {
   const snapshot = params.snapshot;
   if (!isWhapiGroupChatId(snapshot.id)) {
     throw new Error('Snapshot de grupo invalido.');
   }
+
+  let storedGroupName: string | null = null;
+  let storedChatName: string | null = null;
+  if (resolveWhapiGroupName(snapshot.name) === 'Grupo') {
+    const { data: existingGroup, error: existingGroupError } = await supabaseAdmin
+      .from('comm_whatsapp_groups')
+      .select('name')
+      .eq('channel_id', params.channelId)
+      .eq('external_group_id', snapshot.id)
+      .maybeSingle();
+    if (existingGroupError) {
+      throw new Error(`Nao foi possivel carregar o nome atual do grupo: ${existingGroupError.message}`);
+    }
+    storedGroupName = toTrimmedString(existingGroup?.name) || null;
+
+    if (resolveWhapiGroupName(storedGroupName) === 'Grupo') {
+      const { data: existingChat, error: existingChatError } = await supabaseAdmin
+        .from('comm_whatsapp_chats')
+        .select('display_name')
+        .eq('channel_id', params.channelId)
+        .eq('external_chat_id', snapshot.id)
+        .maybeSingle();
+      if (existingChatError) {
+        throw new Error(`Nao foi possivel carregar o nome atual do chat de grupo: ${existingChatError.message}`);
+      }
+      storedChatName = toTrimmedString(existingChat?.display_name) || null;
+    }
+  }
+
+  const groupName = resolveWhapiGroupName(snapshot.name, storedGroupName, storedChatName);
 
   const { data: chat, error: chatError } = await supabaseAdmin
     .from('comm_whatsapp_chats')
@@ -3125,7 +3156,7 @@ export async function persistWhapiGroupSnapshot(
       external_chat_id: snapshot.id,
       phone_number: '',
       phone_digits: '',
-      display_name: snapshot.name || 'Grupo',
+      display_name: groupName,
       is_group: true,
       auto_link_blocked: true,
       last_message_direction: 'system',
@@ -3142,13 +3173,13 @@ export async function persistWhapiGroupSnapshot(
       channel_id: params.channelId,
       chat_id: chat.id,
       external_group_id: snapshot.id,
-      name: snapshot.name || 'Grupo',
+      name: groupName,
       description: snapshot.description || null,
       chat_pic: snapshot.chatPic || null,
       chat_pic_full: snapshot.chatPicFull || null,
       created_at_provider: groupTimestampToIso(snapshot.createdAt),
       created_by: snapshot.createdBy || null,
-      name_at: groupTimestampToIso(snapshot.nameAt) || (snapshot.name ? getNowIso() : null),
+      name_at: groupTimestampToIso(snapshot.nameAt) || (resolveWhapiGroupName(snapshot.name) !== 'Grupo' ? getNowIso() : null),
       admin_add_member_mode: snapshot.adminAddMemberMode,
       last_synced_at: getNowIso(),
       raw_metadata: snapshot.raw,
@@ -3201,7 +3232,7 @@ export async function persistWhapiGroupSnapshot(
     }
   }
 
-  return { chatId: chat.id, groupId: group.id };
+  return { chatId: chat.id, groupId: group.id, name: groupName };
 }
 
 export async function ensureWhapiGroupChatMetadata(
@@ -3215,7 +3246,7 @@ export async function ensureWhapiGroupChatMetadata(
 
   return persistWhapiGroupSnapshot(supabaseAdmin, {
     channelId: params.channelId,
-    snapshot: buildFallbackGroupSnapshot(groupId, { name: params.name || 'Grupo' }),
+    snapshot: buildFallbackGroupSnapshot(groupId, { name: params.name }),
   });
 }
 
@@ -4637,7 +4668,7 @@ const syncWhapiGroupChatMessages = async (
       channelId: channel.id,
       externalChatId,
       phoneNumber: null,
-      displayName: groupSnapshot.name || 'Grupo',
+      displayName: ensuredGroup.name,
       pushName: null,
       lastMessageText: summaryText,
       lastMessageDirection: direction,
@@ -4668,7 +4699,7 @@ const syncWhapiGroupChatMessages = async (
         chat_id: externalChatId,
         from: toTrimmedString(message.from) || null,
         from_name: senderName,
-        chat_name: groupSnapshot.name,
+        chat_name: ensuredGroup.name,
         link_preview: linkPreviewMeta,
         ...(senderId ? { sender_id: senderId } : {}),
         ...(inviteMeta ? { invite: inviteMeta } : {}),

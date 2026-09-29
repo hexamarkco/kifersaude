@@ -79,6 +79,14 @@ export const getValidWhatsAppDisplayName = (value: unknown) => {
   return /[\p{L}\p{N}]/u.test(normalized) ? normalized : '';
 };
 
+export const resolveWhatsAppGroupDisplayName = (...candidates: unknown[]) => {
+  for (const candidate of candidates) {
+    const name = getValidWhatsAppDisplayName(candidate);
+    if (name && name.toLocaleLowerCase() !== 'grupo') return name;
+  }
+  return 'Grupo';
+};
+
 export const applySavedContactName = (
   chat: CommWhatsAppChat,
   savedContactName?: string | null,
@@ -103,7 +111,7 @@ export const getSafeChatDisplayName = (
   if (!chat) return 'Conversa';
 
   if (chat.is_group) {
-    return getValidWhatsAppDisplayName(chat.display_name) || 'Grupo';
+    return resolveWhatsAppGroupDisplayName(chat.display_name);
   }
 
   const savedContactName = getValidWhatsAppDisplayName(chat.saved_contact_name);
@@ -145,7 +153,7 @@ export const stabilizeChatIdentityForLocalMerge = (
       auto_link_blocked: true,
       saved_contact_name: null,
       push_name: null,
-      display_name: getValidWhatsAppDisplayName(incoming.display_name) || 'Grupo',
+      display_name: resolveWhatsAppGroupDisplayName(incoming.display_name, previous?.display_name),
     };
   }
   // Eventos de realtime podem carregar uma identidade antiga do provedor.

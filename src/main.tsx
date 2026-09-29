@@ -6,6 +6,7 @@ import { ConfigProvider } from './contexts/ConfigContext';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import ToastViewport from './components/ui/ToastViewport';
 import NoIndex from './components/seo/NoIndex';
+import { VercelSpeedInsights } from './app/VercelSpeedInsights';
 import {
   AiSandboxChatWrapper,
   BlogTab,
@@ -43,6 +44,7 @@ createRoot(document.getElementById('root')!).render(
     <AppErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <VercelSpeedInsights />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
             <Route path="/" element={<HomePage />} />

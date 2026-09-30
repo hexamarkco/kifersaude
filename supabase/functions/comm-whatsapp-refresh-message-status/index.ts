@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -12,6 +12,7 @@ import {
   fetchWhapiMessageStatuses,
   getNowIso,
   isInboxWhapiChatId,
+  isWhapiGroupChatId,
   isRecord,
   normalizeWhapiChatId,
   resolveCommWhatsAppCanonicalChatRoute,
@@ -33,6 +34,7 @@ type RefreshBody = {
   chatId?: string;
   externalMessageIds?: string[];
   limit?: number;
+  source?: string;
 };
 
 type MessageRow = {
@@ -40,6 +42,7 @@ type MessageRow = {
   chat_id: string;
   external_message_id: string;
   delivery_status: string;
+  delivery_status_checked_at: string | null;
 };
 
 type ChatRow = {
@@ -59,6 +62,42 @@ type RefreshedStatus = {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const REFRESHABLE_STATUSES = ['pending', 'queued', 'sending', 'sent', 'delivered'];
 const normalizeStatus = (value: unknown) => toTrimmedString(value).toLowerCase();
+const STATUS_RANKS: Record<string, number> = {
+  pending: 0,
+  queued: 0,
+  sending: 0,
+  sent: 1,
+  received: 1,
+  failed: 2,
+  error: 2,
+  delivered: 3,
+  read: 4,
+  seen: 4,
+  viewed: 4,
+  played: 5,
+  deleted: 6,
+};
+const CRON_REFRESH_BATCH_LIMIT = 12;
+const CRON_REFRESH_STALE_AFTER_MS = 5 * 60 * 1000;
+const CRON_REFRESH_CONCURRENCY = 4;
+
+const resolveHighestStatus = (statuses: Array<Record<string, unknown>>) => statuses.reduce<{
+  status: string;
+  rank: number;
+  timestamp: number;
+}>((best, item) => {
+  const status = toTrimmedString(item.status);
+  const rank = STATUS_RANKS[normalizeStatus(status)];
+  if (!status || rank === undefined) return best;
+
+  const timestampValue = Date.parse(toTrimmedString(item.timestamp));
+  const timestamp = Number.isFinite(timestampValue) ? timestampValue : Number.NEGATIVE_INFINITY;
+  if (rank > best.rank || (rank === best.rank && timestamp > best.timestamp)) {
+    return { status, rank, timestamp };
+  }
+
+  return best;
+}, { status: '', rank: -1, timestamp: Number.NEGATIVE_INFINITY }).status;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -96,15 +135,19 @@ async function loadRefreshableMessages(
     chatId?: string | null;
     externalMessageIds: string[];
     limit: number;
+    staleBefore?: string | null;
   },
 ) {
   let query = supabaseAdmin
     .from('comm_whatsapp_messages')
-    .select('id,chat_id,external_message_id,delivery_status')
+    .select('id,chat_id,external_message_id,delivery_status,delivery_status_checked_at')
     .eq('channel_id', params.channelId)
     .eq('direction', 'outbound')
     .not('external_message_id', 'is', null)
-    .order('message_at', { ascending: false })
+    .order(params.staleBefore ? 'delivery_status_checked_at' : 'message_at', {
+      ascending: Boolean(params.staleBefore),
+      nullsFirst: Boolean(params.staleBefore),
+    })
     .limit(params.limit);
 
   if (params.chatId) {
@@ -117,12 +160,33 @@ async function loadRefreshableMessages(
     query = query.in('delivery_status', REFRESHABLE_STATUSES);
   }
 
+  if (params.staleBefore) {
+    query = query.or(`delivery_status_checked_at.is.null,delivery_status_checked_at.lt.${params.staleBefore}`);
+  }
+
   const { data, error } = await query;
   if (error) {
     throw new Error(`Erro ao carregar mensagens para atualizar status: ${error.message}`);
   }
 
   return (data ?? []) as MessageRow[];
+}
+
+async function mapWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+) {
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      if (item !== undefined) await worker(item);
+    }
+  }));
 }
 
 async function loadMessageStatusById(
@@ -140,6 +204,21 @@ async function loadMessageStatusById(
   }
 
   return toTrimmedString(data?.delivery_status);
+}
+
+async function markMessageStatusChecked(
+  supabaseAdmin: SupabaseClient,
+  messageId: string,
+  checkedAt: string,
+) {
+  const { error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .update({ delivery_status_checked_at: checkedAt })
+    .eq('id', messageId);
+
+  if (error) {
+    throw new Error(`Erro ao registrar consulta do status da mensagem: ${error.message}`);
+  }
 }
 
 async function loadChatsById(
@@ -177,28 +256,40 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
+    const isServiceRequest = isServiceRoleRequest(req, serviceRoleKey);
 
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'view',
-    });
-
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), {
-        status: authResult.status,
-        headers: jsonHeaders,
+    if (!isServiceRequest) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: COMM_WHATSAPP_MODULE,
+        requiredPermission: 'view',
       });
+
+      if (!authResult.authorized) {
+        return new Response(JSON.stringify(authResult.body), {
+          status: authResult.status,
+          headers: jsonHeaders,
+        });
+      }
     }
 
     const body = (await req.json().catch(() => ({}))) as RefreshBody;
+    if (body.source === 'cron' && !isServiceRequest) {
+      return new Response(JSON.stringify({ error: 'Origem nao autorizada para reconciliacao global.' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+    const isCronRefresh = isServiceRequest && body.source === 'cron';
     const externalMessageIds = normalizeExternalMessageIds(body.externalMessageIds);
     const externalChatId = normalizeWhapiChatId(body.chatId);
-    const limit = Math.max(1, Math.min(20, Math.floor(Number(body.limit) || 10)));
+    const requestedLimit = Math.max(1, Math.min(20, Math.floor(Number(body.limit) || 10)));
+    const limit = isCronRefresh ? Math.min(CRON_REFRESH_BATCH_LIMIT, requestedLimit) : requestedLimit;
 
     if (externalChatId && !isInboxWhapiChatId(externalChatId)) {
       return new Response(JSON.stringify({ error: 'Conversa invalida para atualizar status.' }), {
@@ -207,7 +298,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!externalChatId && externalMessageIds.length === 0) {
+    if (!isCronRefresh && !externalChatId && externalMessageIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Informe a conversa ou mensagens para atualizar status.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -251,6 +342,9 @@ Deno.serve(async (req: Request) => {
       chatId: chatRoute?.chatId ?? null,
       externalMessageIds,
       limit,
+      staleBefore: isCronRefresh
+        ? new Date(Date.now() - CRON_REFRESH_STALE_AFTER_MS).toISOString()
+        : null,
     });
 
     if (rows.length === 0) {
@@ -264,14 +358,18 @@ Deno.serve(async (req: Request) => {
     const chatMessagesCache = new Map<string, Array<Record<string, unknown>>>();
     const refreshed: RefreshedStatus[] = [];
 
-    for (const row of rows) {
+    const refreshRow = async (row: MessageRow) => {
       const externalMessageId = toTrimmedString(row.external_message_id);
-      if (!externalMessageId) continue;
+      if (!externalMessageId) return;
 
       const rowChat = chatsById.get(row.chat_id);
-      let whapiMessage = await fetchWhapiMessage({ token, messageId: externalMessageId }).catch(() => null);
+      let whapiMessage = await fetchWhapiMessage({
+        token,
+        messageId: externalMessageId,
+        resync: isCronRefresh,
+      }).catch(() => null);
 
-      if (!whapiMessage && rowChat?.external_chat_id) {
+      if (!isCronRefresh && !whapiMessage && rowChat?.external_chat_id) {
         let chatMessages = chatMessagesCache.get(rowChat.external_chat_id);
         if (!chatMessages) {
           chatMessages = await fetchWhapiChatMessages({ token, chatId: rowChat.external_chat_id }).catch(() => []);
@@ -285,40 +383,47 @@ Deno.serve(async (req: Request) => {
       }
 
       let deliveryStatus = whapiMessage && isRecord(whapiMessage) ? extractWhapiMessageStatus(whapiMessage) : '';
+      let statusUpdatedAt = whapiMessage && isRecord(whapiMessage) ? getStatusTimestamp(whapiMessage) : getNowIso();
 
-      if (!deliveryStatus) {
+      if (!deliveryStatus && rowChat?.external_chat_id && isWhapiGroupChatId(rowChat.external_chat_id)) {
         const statuses = await fetchWhapiMessageStatuses({ token, messageId: externalMessageId }).catch(() => []);
-        const highestStatus = statuses.reduce((best, s) => {
-          const sStatus = toTrimmedString(s.status);
-          if (!sStatus) return best;
-          if (!best) return sStatus;
-          return normalizeStatus(sStatus) > normalizeStatus(best) ? sStatus : best;
-        }, '');
-        if (highestStatus) {
-          deliveryStatus = highestStatus;
+        const highest = resolveHighestStatus(statuses);
+        if (highest) {
+          deliveryStatus = highest;
+          statusUpdatedAt = getNowIso();
         }
       }
 
-      if (!deliveryStatus) continue;
+      if (deliveryStatus) {
+        await updateCommWhatsAppMessageStatus(supabaseAdmin, {
+          channelId: channel.id,
+          externalMessageId,
+          deliveryStatus,
+          statusUpdatedAt,
+          errorMessage: whapiMessage && isRecord(whapiMessage) ? (toTrimmedString(whapiMessage.error) || toTrimmedString(whapiMessage.details) || null) : null,
+        });
 
-      await updateCommWhatsAppMessageStatus(supabaseAdmin, {
-        channelId: channel.id,
-        externalMessageId,
-        deliveryStatus,
-        statusUpdatedAt: whapiMessage && isRecord(whapiMessage) ? getStatusTimestamp(whapiMessage) : getNowIso(),
-        errorMessage: whapiMessage && isRecord(whapiMessage) ? (toTrimmedString(whapiMessage.error) || toTrimmedString(whapiMessage.details) || null) : null,
-      });
+        const persistedStatus = await loadMessageStatusById(supabaseAdmin, row.id) || deliveryStatus;
 
-      const persistedStatus = await loadMessageStatusById(supabaseAdmin, row.id) || deliveryStatus;
+        refreshed.push({
+          id: row.id,
+          external_message_id: externalMessageId,
+          previous_status: row.delivery_status,
+          delivery_status: persistedStatus,
+          whapi_delivery_status: deliveryStatus,
+          updated: normalizeStatus(persistedStatus) !== normalizeStatus(row.delivery_status),
+        });
+      }
 
-      refreshed.push({
-        id: row.id,
-        external_message_id: externalMessageId,
-        previous_status: row.delivery_status,
-        delivery_status: persistedStatus,
-        whapi_delivery_status: deliveryStatus,
-        updated: normalizeStatus(persistedStatus) !== normalizeStatus(row.delivery_status),
-      });
+      if (isCronRefresh) {
+        await markMessageStatusChecked(supabaseAdmin, row.id, getNowIso());
+      }
+    };
+
+    if (isCronRefresh) {
+      await mapWithConcurrency(rows, CRON_REFRESH_CONCURRENCY, refreshRow);
+    } else {
+      for (const row of rows) await refreshRow(row);
     }
 
     return new Response(

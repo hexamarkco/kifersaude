@@ -217,7 +217,7 @@ export const useInboxArchivedChatSections = ({
       const loadRequestId = ++archivedSectionLoadRequestIdRef.current;
       setArchivedChatsLoading(true);
       setArchivedChatsLoadingMore(false);
-      void loadChats({ sections: ['archived', 'active'], partialArchived: true, preferredSection: 'archived' })
+      void loadChats({ sections: ['archived'], partialArchived: true, preferredSection: 'archived' })
         .catch(() => undefined)
         .finally(() => {
           if (loadRequestId === archivedSectionLoadRequestIdRef.current) {

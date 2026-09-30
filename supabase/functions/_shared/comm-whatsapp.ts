@@ -2875,13 +2875,15 @@ export async function fetchWhapiChatMessages(params: {
 export async function fetchWhapiMessage(params: {
   token: string;
   messageId: string;
+  resync?: boolean;
 }): Promise<Record<string, unknown> | null> {
   const messageId = toTrimmedString(params.messageId);
   if (!messageId) {
     return null;
   }
 
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}`, {
+  const query = params.resync ? '?resync=true' : '';
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}${query}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',

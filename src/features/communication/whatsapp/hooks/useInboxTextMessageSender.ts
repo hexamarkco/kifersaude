@@ -82,6 +82,7 @@ export const useInboxTextMessageSender = ({
 
     return enqueueChatSend(chat.id, async () => {
       let hadSuccessfulSend = false;
+      let hadAmbiguousSend = false;
       let stopAfterDefinitiveFailure = false;
 
       for (const queued of queuedMessages) {
@@ -116,7 +117,9 @@ export const useInboxTextMessageSender = ({
           const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
           // Sem confirmação de falha, a mensagem anterior pode ter sido entregue.
           // Mantê-la como "sending" evita oferecer um reenvio que gere duplicidade.
-          const status = error instanceof CommWhatsAppAmbiguousSendError ? 'sending' : 'failed';
+          const isAmbiguous = error instanceof CommWhatsAppAmbiguousSendError;
+          const status = isAmbiguous ? 'sending' : 'failed';
+          hadAmbiguousSend ||= isAmbiguous;
           patchLocalOutgoingMessage(queued.optimisticMessage.id, {
             delivery_status: status,
             status_updated_at: new Date().toISOString(),
@@ -133,9 +136,14 @@ export const useInboxTextMessageSender = ({
         void Promise.resolve(onSent?.()).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar auditoria do follow-up enviado', error);
         });
+      }
+
+      if (hadSuccessfulSend || hadAmbiguousSend) {
         void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
-          toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
+          toast.warning(hadAmbiguousSend
+            ? 'Envio ainda sem confirmação e não foi possível atualizar a conversa. Atualize a página antes de tentar novamente.'
+            : 'Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a página se necessário.');
         });
       }
     });

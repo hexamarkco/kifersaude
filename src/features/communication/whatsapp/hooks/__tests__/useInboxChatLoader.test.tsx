@@ -224,7 +224,7 @@ test('refresh da seção visível preserva a seleção arquivada em cache e subs
   }
 });
 
-test('trocar para arquivados seleciona chat compatível, carrega as duas seções e atualiza a contagem', async () => {
+test('trocar para arquivados seleciona chat compatível, carrega só a primeira página da seção e atualiza a contagem', async () => {
   resetMocks();
   const currentActive = createChat('current-active');
   const nextArchived = createChat('next-archived', true);
@@ -254,9 +254,10 @@ test('trocar para arquivados seleciona chat compatível, carrega as duas seçõe
     assert.equal(state.state.selectedChatId, nextArchived.id);
     assert.equal(state.refs.chatIdFromUrlRef.current, nextArchived.id);
     assert.equal(state.archivedCountRefreshes.current, 1);
+    assert.deepEqual(state.state.chats.map((chat) => chat.id).sort(), ['current-active', 'next-archived']);
     assert.deepEqual(
-      mocks.list.mock.calls.map(([params]) => (params as { archivedFilter: string }).archivedFilter).sort(),
-      ['active', 'archived'],
+      mocks.list.mock.calls.map(([params]) => (params as { archivedFilter: string }).archivedFilter),
+      ['archived'],
     );
     assert.equal(state.state.archivedChatsLoading, false);
   } finally {

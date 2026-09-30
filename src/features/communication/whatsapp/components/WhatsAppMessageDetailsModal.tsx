@@ -23,7 +23,7 @@ const getStatusPresentation = (status: string, messageType: string): Pick<Timeli
   switch (status) {
     case 'pending': return { label: 'Aguardando envio', tone: 'pending', icon: Clock3 };
     case 'queued': return { label: 'Na fila de envio', tone: 'pending', icon: Clock3 };
-    case 'sending': return { label: 'Enviando', tone: 'pending', icon: Clock3 };
+    case 'sending': return { label: 'Aguardando confirmação', tone: 'pending', icon: Clock3 };
     case 'sent': return { label: 'Enviada', tone: 'success', icon: Check };
     case 'received': return { label: 'Recebida', tone: 'success', icon: CheckCheck };
     case 'delivered': return { label: 'Entregue', tone: 'success', icon: CheckCheck };

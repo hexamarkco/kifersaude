@@ -27,6 +27,7 @@ type InboxChatLoaderOptions = {
   leadStatusFilters: string[];
   leadResponsavelFilters: string[];
   pageSize: number;
+  archivedPageSize: number;
   archivedChatsLoading: boolean;
   archivedChatsLoadingMore: boolean;
   archivedChatsHasMore: boolean;
@@ -72,6 +73,7 @@ export const useInboxChatLoader = ({
   leadStatusFilters,
   leadResponsavelFilters,
   pageSize,
+  archivedPageSize,
   archivedChatsLoading,
   archivedChatsLoadingMore,
   archivedChatsHasMore,
@@ -154,7 +156,7 @@ export const useInboxChatLoader = ({
               hasLoadFilters,
               partialArchived,
               archivedPage: archivedChatsPageRef.current,
-              pageSize,
+              pageSize: partialArchived && section === 'archived' ? archivedPageSize : pageSize,
               isRequestCurrent: () => requestId === chatsRequestIdRef.current,
               waitBeforeRetry: waitForChatListRetry,
             });
@@ -353,6 +355,7 @@ export const useInboxChatLoader = ({
   }, [
     applyFrontendSavedContactNames,
     applyPrefetchedLeadNames,
+    archivedPageSize,
     archivedChatsPageRef,
     archivedSectionOpenRef,
     buildChatsSignature,
@@ -392,7 +395,7 @@ export const useInboxChatLoader = ({
       matchesActiveFilters: chatMatchesActiveFilters,
     },
     pagination: {
-      pageSize,
+      pageSize: archivedPageSize,
       loading: archivedChatsLoading,
       loadingMore: archivedChatsLoadingMore,
       hasMore: archivedChatsHasMore,

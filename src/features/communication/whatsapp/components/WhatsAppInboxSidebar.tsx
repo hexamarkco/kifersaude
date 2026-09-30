@@ -240,7 +240,7 @@ export function WhatsAppInboxSidebar({
             </span>
           </div>
         ) : null}
-        {chatRefreshError && !chatLoadError ? (
+        {chatRefreshError && !chatLoadError && !(archivedSectionOpen && sidebarChats.length === 0) ? (
           <Alert
             tone="warning"
             title="Conversas não atualizadas"
@@ -311,6 +311,15 @@ export function WhatsAppInboxSidebar({
           )
         ) : archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0 ? (
           <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando conversas arquivadas...</div>
+        ) : archivedSectionOpen && chatRefreshError && sidebarChats.length === 0 ? (
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center" role="alert">
+            <AlertTriangle className="h-8 w-8 text-[var(--warning)]" />
+            <div className="space-y-1">
+              <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar os arquivados</p>
+              <p className="text-sm text-[var(--text-secondary)]">A lista não foi atualizada. Tente novamente.</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={onRetryChatLoad} loading={loading}>Tentar novamente</Button>
+          </div>
         ) : sidebarChats.length === 0 ? (
           <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
             {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}

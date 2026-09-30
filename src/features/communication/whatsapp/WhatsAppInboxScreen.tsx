@@ -127,6 +127,7 @@ const WhatsAppScheduleMessageModal = lazyWithChunkRecovery(() => import('./compo
 const WhatsAppScheduledMessagesPanel = lazyWithChunkRecovery(() => import('./components/WhatsAppScheduledMessagesPanel'));
 
 const CHAT_PAGE_SIZE = 250;
+const ARCHIVED_CHAT_PAGE_SIZE = 80;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent', 'delivered']);
@@ -1220,6 +1221,7 @@ export default function WhatsAppInboxScreen() {
       leadStatusFilters,
       leadResponsavelFilters,
       pageSize: CHAT_PAGE_SIZE,
+      archivedPageSize: ARCHIVED_CHAT_PAGE_SIZE,
       archivedChatsLoading,
       archivedChatsLoadingMore,
       archivedChatsHasMore,

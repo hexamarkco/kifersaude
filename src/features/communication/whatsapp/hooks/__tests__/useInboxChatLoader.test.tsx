@@ -135,6 +135,7 @@ const createOptions = (previousChats: CommWhatsAppChat[] = []) => {
     leadStatusFilters: [],
     leadResponsavelFilters: [],
     pageSize: 250,
+    archivedPageSize: 80,
     archivedChatsLoading: false,
     archivedChatsLoadingMore: state.archivedChatsLoadingMore,
     archivedChatsHasMore: state.archivedChatsHasMore,
@@ -254,6 +255,14 @@ test('trocar para arquivados seleciona chat compatível, carrega só a primeira 
     assert.equal(state.state.selectedChatId, nextArchived.id);
     assert.equal(state.refs.chatIdFromUrlRef.current, nextArchived.id);
     assert.equal(state.archivedCountRefreshes.current, 1);
+    assert.deepEqual(mocks.list.mock.calls[0]?.[0], {
+      activityFilter: 'all',
+      leadStatusFilters: [],
+      leadResponsavelFilters: [],
+      archivedFilter: 'archived',
+      limit: 80,
+      offset: 0,
+    });
     assert.deepEqual(state.state.chats.map((chat) => chat.id).sort(), ['current-active', 'next-archived']);
     assert.deepEqual(
       mocks.list.mock.calls.map(([params]) => (params as { archivedFilter: string }).archivedFilter),
@@ -400,8 +409,8 @@ test('carrega próxima página de arquivados no offset correto, mescla por ID e 
       leadStatusFilters: [],
       leadResponsavelFilters: [],
       archivedFilter: 'archived',
-      limit: 250,
-      offset: 500,
+      limit: 80,
+      offset: 160,
     });
     assert.deepEqual(state.state.chats.map((chat) => chat.id).sort(), ['existing-archived', 'next-archived']);
     assert.equal(state.state.archivedChatsHasMore, false);

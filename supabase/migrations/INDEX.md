@@ -1,14 +1,14 @@
 # Migrations Index
 
-Generated: 2026-09-30T18:08:11.006Z
+Generated: 2026-09-30T18:30:21.644Z
 
 ## Summary
 
-- Total SQL files: 550
-- Valid migration filenames: 550
+- Total SQL files: 551
+- Valid migration filenames: 551
 - Invalid SQL filenames: 0
 - Legacy wrapped files (format `<new>_<old>_name.sql`): 37
-- Duplicate slug groups: 36
+- Duplicate slug groups: 37
 - Exact content duplicate groups: 14
 
 ## Invalid Filenames
@@ -30,7 +30,7 @@ Generated: 2026-09-30T18:08:11.006Z
 | 2026-05 | 4 |
 | 2026-07 | 10 |
 | 2026-08 | 13 |
-| 2026-09 | 268 |
+| 2026-09 | 269 |
 | 2026-10 | 109 |
 
 ## Duplicate Slugs
@@ -122,6 +122,9 @@ Generated: 2026-09-30T18:08:11.006Z
 - `add_whatsapp_message_reads` (2 files)
   - `20260204160000_add_whatsapp_message_reads.sql`
   - `20260205172000_add_whatsapp_message_reads.sql`
+- `comm_whatsapp_status_refresh_index_trigger` (2 files)
+  - `20260930181026_comm_whatsapp_status_refresh_index_trigger.sql`
+  - `20261015020000_comm_whatsapp_status_refresh_index_trigger.sql`
 - `consolidate_security_fixes` (2 files)
   - `20251030170132_consolidate_security_fixes.sql`
   - `20251207164709_20251030170132_consolidate_security_fixes.sql`

@@ -1,11 +1,11 @@
 # Migrations Index
 
-Generated: 2026-09-28T00:30:02.966Z
+Generated: 2026-09-30T17:59:55.202Z
 
 ## Summary
 
-- Total SQL files: 546
-- Valid migration filenames: 546
+- Total SQL files: 549
+- Valid migration filenames: 549
 - Invalid SQL filenames: 0
 - Legacy wrapped files (format `<new>_<old>_name.sql`): 37
 - Duplicate slug groups: 36
@@ -30,8 +30,8 @@ Generated: 2026-09-28T00:30:02.966Z
 | 2026-05 | 4 |
 | 2026-07 | 10 |
 | 2026-08 | 13 |
-| 2026-09 | 267 |
-| 2026-10 | 106 |
+| 2026-09 | 268 |
+| 2026-10 | 108 |
 
 ## Duplicate Slugs
 

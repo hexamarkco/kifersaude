@@ -4,7 +4,7 @@ ALTER TABLE public.comm_whatsapp_messages
   ADD COLUMN IF NOT EXISTS delivery_status_checked_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS idx_comm_whatsapp_messages_delivery_status_recheck
-  ON public.comm_whatsapp_messages (delivery_status_checked_at ASC NULLS FIRST, message_at ASC)
+  ON public.comm_whatsapp_messages (channel_id, delivery_status_checked_at ASC NULLS FIRST, message_at ASC)
   WHERE direction = 'outbound'
     AND external_message_id IS NOT NULL
     AND delivery_status IN ('pending', 'queued', 'sending', 'sent', 'delivered');
@@ -15,8 +15,7 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.direction = 'outbound'
-     AND (TG_OP = 'INSERT' OR NEW.delivery_status IS DISTINCT FROM OLD.delivery_status) THEN
+  IF NEW.direction = 'outbound' THEN
     NEW.delivery_status_checked_at := now();
   END IF;
 

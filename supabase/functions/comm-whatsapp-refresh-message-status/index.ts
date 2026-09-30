@@ -85,19 +85,22 @@ const resolveHighestStatus = (statuses: Array<Record<string, unknown>>) => statu
   status: string;
   rank: number;
   timestamp: number;
+  statusUpdatedAt: string | null;
 }>((best, item) => {
   const status = toTrimmedString(item.status);
   const rank = STATUS_RANKS[normalizeStatus(status)];
   if (!status || rank === undefined) return best;
 
-  const timestampValue = Date.parse(toTrimmedString(item.timestamp));
+  const rawTimestamp = item.timestamp;
+  const statusUpdatedAt = unixTimestampToIso(rawTimestamp) ?? stringTimestampToIso(rawTimestamp);
+  const timestampValue = statusUpdatedAt ? Date.parse(statusUpdatedAt) : Number.NaN;
   const timestamp = Number.isFinite(timestampValue) ? timestampValue : Number.NEGATIVE_INFINITY;
   if (rank > best.rank || (rank === best.rank && timestamp > best.timestamp)) {
-    return { status, rank, timestamp };
+    return { status, rank, timestamp, statusUpdatedAt };
   }
 
   return best;
-}, { status: '', rank: -1, timestamp: Number.NEGATIVE_INFINITY }).status;
+}, { status: '', rank: -1, timestamp: Number.NEGATIVE_INFINITY, statusUpdatedAt: null });
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -136,6 +139,8 @@ async function loadRefreshableMessages(
     externalMessageIds: string[];
     limit: number;
     staleBefore?: string | null;
+    messageAtAfter?: string | null;
+    statuses?: string[];
   },
 ) {
   let query = supabaseAdmin
@@ -157,11 +162,14 @@ async function loadRefreshableMessages(
   if (params.externalMessageIds.length > 0) {
     query = query.in('external_message_id', params.externalMessageIds);
   } else {
-    query = query.in('delivery_status', REFRESHABLE_STATUSES);
+    query = query.in('delivery_status', params.statuses ?? REFRESHABLE_STATUSES);
   }
 
   if (params.staleBefore) {
     query = query.or(`delivery_status_checked_at.is.null,delivery_status_checked_at.lt.${params.staleBefore}`);
+  }
+  if (params.messageAtAfter) {
+    query = query.gte('message_at', params.messageAtAfter);
   }
 
   const { data, error } = await query;
@@ -337,15 +345,30 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const rows = await loadRefreshableMessages(supabaseAdmin, {
+    const staleBefore = isCronRefresh
+      ? new Date(Date.now() - CRON_REFRESH_STALE_AFTER_MS).toISOString()
+      : null;
+    let rows = await loadRefreshableMessages(supabaseAdmin, {
       channelId: channel.id,
       chatId: chatRoute?.chatId ?? null,
       externalMessageIds,
       limit,
-      staleBefore: isCronRefresh
-        ? new Date(Date.now() - CRON_REFRESH_STALE_AFTER_MS).toISOString()
-        : null,
+      staleBefore,
+      statuses: isCronRefresh ? ['pending', 'queued', 'sending'] : undefined,
     });
+
+    if (isCronRefresh && rows.length < limit) {
+      const recentlyDeliveredRows = await loadRefreshableMessages(supabaseAdmin, {
+        channelId: channel.id,
+        externalMessageIds: [],
+        limit: limit - rows.length,
+        staleBefore,
+        messageAtAfter: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        statuses: ['sent', 'delivered'],
+      });
+      const alreadySelectedIds = new Set(rows.map((row) => row.id));
+      rows = [...rows, ...recentlyDeliveredRows.filter((row) => !alreadySelectedIds.has(row.id))];
+    }
 
     if (rows.length === 0) {
       return new Response(JSON.stringify({ refreshed: [], checked: 0, updated: 0 }), {
@@ -388,9 +411,9 @@ Deno.serve(async (req: Request) => {
       if (!deliveryStatus && rowChat?.external_chat_id && isWhapiGroupChatId(rowChat.external_chat_id)) {
         const statuses = await fetchWhapiMessageStatuses({ token, messageId: externalMessageId }).catch(() => []);
         const highest = resolveHighestStatus(statuses);
-        if (highest) {
-          deliveryStatus = highest;
-          statusUpdatedAt = getNowIso();
+        if (highest.status) {
+          deliveryStatus = highest.status;
+          statusUpdatedAt = highest.statusUpdatedAt ?? getNowIso();
         }
       }
 

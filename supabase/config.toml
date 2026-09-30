@@ -53,6 +53,9 @@ verify_jwt = false
 [functions.comm-whatsapp-sync-all-chats]
 verify_jwt = false
 
+[functions.comm-whatsapp-refresh-message-status]
+verify_jwt = false
+
 # --- Dual auth (authorizeDashboardUser + isServiceRoleRequest) ---
 [functions.ai-sandbox-run-scenario]
 verify_jwt = false

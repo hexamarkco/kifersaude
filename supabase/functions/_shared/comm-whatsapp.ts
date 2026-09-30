@@ -4241,6 +4241,7 @@ export type SyncWhapiDirectChatMessagesParams = {
   offset?: number;
   count?: number;
   timeTo?: number;
+  sort?: 'asc' | 'desc';
 };
 
 export type SyncWhapiDirectChatMessagesResult = {
@@ -4370,7 +4371,7 @@ export async function syncWhapiDirectChatMessages(
     count: pageSize,
     offset,
     timeTo,
-    sort: 'asc',
+    sort: params.sort ?? 'asc',
   });
   const messages = dedupeWhapiHistoryMessages(messagePage.messages);
   const orderedMessages = [...messages].sort((a, b) => {
@@ -4588,7 +4589,7 @@ const syncWhapiGroupChatMessages = async (
     count: pageSize,
     offset,
     timeTo,
-    sort: 'asc',
+    sort: params.sort ?? 'asc',
   });
   const messages = dedupeWhapiHistoryMessages(messagePage.messages);
   const orderedMessages = [...messages].sort((a, b) => Number(a.timestamp ?? 0) - Number(b.timestamp ?? 0));

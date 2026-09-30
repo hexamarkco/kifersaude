@@ -643,6 +643,11 @@ export type CommWhatsAppSyncAllChatsBatchResult = {
   }>;
 };
 
+const SYNC_ALL_CHAT_COUNT = 4;
+const SYNC_ALL_PAGES_PER_CHAT = 1;
+const SYNC_ALL_MESSAGES_PER_PAGE = 25;
+const SYNC_ALL_MAX_BATCHES = 1_000;
+
 export type CommWhatsAppMessageSearchResult = {
   message: CommWhatsAppMessage;
   chat: CommWhatsAppChat;
@@ -2281,7 +2286,13 @@ export const commWhatsAppService = {
   },
 
   async syncAllChatsBatch(
-    options: { chatOffset?: number; chatCount?: number; pagesPerChat?: number; timeTo?: number } = {},
+    options: {
+      chatOffset?: number;
+      chatCount?: number;
+      pagesPerChat?: number;
+      messagesPerPage?: number;
+      timeTo?: number;
+    } = {},
   ): Promise<CommWhatsAppSyncAllChatsBatchResult> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-sync-all-chats', {
       body: options,
@@ -2351,8 +2362,14 @@ export const commWhatsAppService = {
     let batches = 0;
     const timeTo = Math.floor(Date.now() / 1000);
 
-    while (hasMoreChats && batches < 200) {
-      const batch = await this.syncAllChatsBatch({ chatOffset, pagesPerChat: options.pagesPerChat, timeTo });
+    while (hasMoreChats && batches < SYNC_ALL_MAX_BATCHES) {
+      const batch = await this.syncAllChatsBatch({
+        chatOffset,
+        chatCount: SYNC_ALL_CHAT_COUNT,
+        pagesPerChat: options.pagesPerChat ?? SYNC_ALL_PAGES_PER_CHAT,
+        messagesPerPage: SYNC_ALL_MESSAGES_PER_PAGE,
+        timeTo,
+      });
 
       chatsProcessed += batch.processedChats;
       importedMessages += batch.importedMessages;

@@ -446,7 +446,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               variant="secondary"
               onClick={() => void handleSyncAllChats()}
               loading={syncingAll}
-              title="Recupera mensagens que a Whapi não entregou por webhook (ex.: durante uma queda de conexão ou assinatura vencida)."
+              title="Recupera até 25 mensagens recentes por conversa que a Whapi possa não ter entregue por webhook."
             >
               {!syncingAll && <RotateCw className="kds-control-icon" />}
               Forçar sincronização geral

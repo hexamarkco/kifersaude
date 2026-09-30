@@ -32,6 +32,13 @@ test('allows automated sandbox scenarios to finish their multi-turn evaluation',
   );
 });
 
+test('allows WhatsApp full sync batches to finish within the Edge Function response window', () => {
+  assert.equal(
+    getSupabaseRequestTimeoutMs(`${supabaseFunctionsUrl}/comm-whatsapp-sync-all-chats`),
+    120_000,
+  );
+});
+
 test('reads the JSON payload from an HTTP function error', async () => {
   const error = new FunctionsHttpError(new Response(
     JSON.stringify({ error: 'Falha interna da função.' }),

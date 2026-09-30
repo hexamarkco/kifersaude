@@ -65,7 +65,7 @@ const mocks = vi.hoisted(() => {
   >();
   const invoke = createMock<[
     string,
-    { body: { action: string; phoneNumbers: string[]; forceSync: boolean } },
+    { body: Record<string, unknown> },
   ], Promise<{ data: unknown; error: unknown; response: Response | null }>>();
   const getSupabaseErrorMessage = createMock<[unknown, string], Promise<string>>();
   const isSupabaseFunctionFetchError = createMock<[unknown], boolean>();
@@ -257,6 +257,64 @@ test('lista agendamentos sem pedir colunas que nao existem no chat remoto', asyn
   assert.equal(scheduledSelects.every((fields) => !fields.includes('lead_name')), true);
   assert.equal(scheduledSelects.every((fields) => fields.includes('chat:comm_whatsapp_chats!left')), true);
   assert.equal(scheduledSelects.every((fields) => fields.includes('lead_id')), true);
+});
+
+test('limita cada lote da sincronizacao geral a mensagens recentes', async () => {
+  mocks.invoke.mockResolvedValue({
+    data: {
+      totalKnownChats: 0,
+      processedChats: 0,
+      discoveredChats: 0,
+      importedMessages: 0,
+      updatedMessages: 0,
+      identityConflicts: 0,
+      hasMoreChats: false,
+      nextChatOffset: null,
+      timeTo: 1_800_000_000,
+      chats: [],
+    },
+    error: null,
+    response: null,
+  });
+
+  await commWhatsAppService.syncAllChats();
+
+  const calls = mocks.invoke.mock.calls;
+  const [functionName, invokeOptions] = calls[calls.length - 1] ?? [];
+  assert.equal(functionName, 'comm-whatsapp-sync-all-chats');
+  assert.equal(invokeOptions?.body.chatCount, 4);
+  assert.equal(invokeOptions?.body.pagesPerChat, 1);
+  assert.equal(invokeOptions?.body.messagesPerPage, 25);
+});
+
+test('continua a sincronizacao geral por mais de 200 lotes', async () => {
+  const callsBefore = mocks.invoke.mock.calls.length;
+  mocks.invoke.mockImplementation(async (_functionName, invokeOptions) => {
+    const chatOffset = Number(invokeOptions.body.chatOffset) || 0;
+    const hasMoreChats = chatOffset < 1_600;
+
+    return {
+      data: {
+        totalKnownChats: 1_601,
+        processedChats: hasMoreChats ? 4 : 1,
+        discoveredChats: 0,
+        importedMessages: 0,
+        updatedMessages: 0,
+        identityConflicts: 0,
+        hasMoreChats,
+        nextChatOffset: hasMoreChats ? chatOffset + 4 : null,
+        timeTo: 1_800_000_000,
+        chats: [],
+      },
+      error: null,
+      response: null,
+    };
+  });
+
+  const result = await commWhatsAppService.syncAllChats();
+
+  assert.equal(result.chatsProcessed, 1_601);
+  assert.equal(mocks.invoke.mock.calls.length - callsBefore, 401);
 });
 
 test('mantém a agenda disponível quando a relação de chat falha no PostgREST', async () => {

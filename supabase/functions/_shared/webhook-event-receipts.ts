@@ -12,9 +12,9 @@ export type CommWhatsAppEventReceiptMatch = {
 
 /**
  * Registra um evento de webhook processado em `comm_whatsapp_event_receipts` para
- * dedupe. A inserção usa a constraint única de `event_key` como operação
- * atômica: se o provedor entregar o mesmo evento em paralelo, a segunda
- * tentativa retorna `false` sem gerar um conflito 409 no PostgREST.
+ * dedupe. O upsert ignora conflitos na constraint única de `event_key` como
+ * operação atômica: se o provedor entregar o mesmo evento em paralelo, a
+ * segunda tentativa retorna `false` sem gerar um conflito 409 no PostgREST.
  */
 export async function recordCommWhatsAppEventReceipt(
   supabaseAdmin: SupabaseClient,
@@ -27,7 +27,7 @@ export async function recordCommWhatsAppEventReceipt(
 ): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_event_receipts')
-    .insert(
+    .upsert(
       {
         channel_id: channelId,
         event_key: eventKey,

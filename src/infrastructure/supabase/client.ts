@@ -18,7 +18,11 @@ const SUPABASE_NETWORK_HELP =
 const DEFAULT_REQUEST_TIMEOUT_MS = 8_000;
 const AUTH_REQUEST_TIMEOUT_MS = 10_000;
 const FUNCTION_REQUEST_TIMEOUT_MS = 60_000;
+const BULK_FUNCTION_REQUEST_TIMEOUT_MS = 120_000;
 const LONG_FUNCTION_REQUEST_TIMEOUT_MS = 180_000;
+const BULK_FUNCTION_REQUEST_PATHS = new Set([
+  '/functions/v1/comm-whatsapp-sync-all-chats',
+]);
 const LONG_RUNNING_FUNCTION_PATHS = new Set([
   '/functions/v1/comm-whatsapp-generate-follow-up',
   '/functions/v1/comm-whatsapp-sync-chat',
@@ -35,6 +39,10 @@ export const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
 
   if (requestUrl.startsWith(supabaseFunctionsUrl)) {
     const pathname = new URL(requestUrl).pathname;
+    if (BULK_FUNCTION_REQUEST_PATHS.has(pathname)) {
+      return BULK_FUNCTION_REQUEST_TIMEOUT_MS;
+    }
+
     return LONG_RUNNING_FUNCTION_PATHS.has(pathname)
       ? LONG_FUNCTION_REQUEST_TIMEOUT_MS
       : FUNCTION_REQUEST_TIMEOUT_MS;

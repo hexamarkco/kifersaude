@@ -93,9 +93,9 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as SyncAllBody;
     const chatOffset = Math.max(Math.floor(Number(body.chatOffset) || 0), 0);
-    const chatCount = Math.min(Math.max(Math.floor(Number(body.chatCount) || 8), 1), 30);
-    const pagesPerChat = Math.min(Math.max(Math.floor(Number(body.pagesPerChat) || 3), 1), 10);
-    const messagesPerPage = Math.min(Math.max(Math.floor(Number(body.messagesPerPage) || 100), 1), 500);
+    const chatCount = Math.min(Math.max(Math.floor(Number(body.chatCount) || 4), 1), 30);
+    const pagesPerChat = Math.min(Math.max(Math.floor(Number(body.pagesPerChat) || 1), 1), 10);
+    const messagesPerPage = Math.min(Math.max(Math.floor(Number(body.messagesPerPage) || 25), 1), 500);
     const requestedTimeTo = Number(body.timeTo);
     const timeTo = Number.isFinite(requestedTimeTo) && requestedTimeTo > 0
       ? Math.floor(requestedTimeTo)
@@ -212,6 +212,7 @@ Deno.serve(async (req: Request) => {
             offset,
             count: messagesPerPage,
             timeTo,
+            sort: 'desc',
           });
 
           chatImported += result.inserted;

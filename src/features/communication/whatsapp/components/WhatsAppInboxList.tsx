@@ -32,8 +32,9 @@ const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, message
   switch (status) {
     case 'pending':
     case 'queued':
-    case 'sending':
       return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
+    case 'sending':
+      return { icon: Clock3, label: 'Aguardando confirmação', tone: 'pending' as const };
     case 'sent':
     case 'received':
       return { icon: Check, label: 'Enviado', tone: 'sent' as const };

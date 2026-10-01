@@ -130,6 +130,18 @@ const readSnapshot = (params: ModelParams): ModelSnapshot => {
   return JSON.parse(output) as ModelSnapshot;
 };
 
+test('encontra imediatamente o contato pelo nome salvo mesmo sem resultados remotos', () => {
+  for (const lookup of ['savedContactNameOverrides', 'synchronizedContactNames'] as const) {
+    const snapshot = readSnapshot(createParams({
+      chats: [createChat({ display_name: 'Nome antigo' })],
+      search: 'vida',
+      [lookup]: new Map([['5511999999999', 'Vida Saúde']]),
+    }));
+    assert.deepEqual(snapshot.sidebar.map((chat) => chat.id), ['chat-1']);
+    assert.equal(snapshot.sidebar[0]?.displayName, 'Vida Saúde');
+  }
+});
+
 test('preserva a conversa selecionada, aplica filtros às buscas e projeta nomes manuais', () => {
   const selected = createChat({
     id: 'selected',

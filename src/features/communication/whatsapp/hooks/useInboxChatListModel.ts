@@ -78,11 +78,6 @@ export const useInboxChatListModel = ({
     return sortChatsByInboxOrder(filtered);
   }, [archivedSectionOpen, chatMatchesActiveFilters, chats, selectedChatId]);
 
-  const localChatSearchResults = useMemo(
-    () => (search ? rankChatsBySearch(chats.filter(chatMatchesActiveFilters), search, connectedUserName) : []),
-    [chatMatchesActiveFilters, chats, connectedUserName, search],
-  );
-
   const savedContactLookupMaps = useMemo(
     () => ({
       localOverrides: savedContactNameOverrides,
@@ -90,6 +85,19 @@ export const useInboxChatListModel = ({
       revision: savedContactNameRevision,
     }),
     [savedContactNameOverrides, savedContactNameRevision, synchronizedContactNames],
+  );
+
+  const localChatSearchResults = useMemo(
+    () => (search ? rankChatsBySearch(
+      chats.map((chat) => applySavedContactNameFromLookup(
+        chat,
+        savedContactLookupMaps.localOverrides,
+        savedContactLookupMaps.synchronizedNames,
+      )).filter(chatMatchesActiveFilters),
+      search,
+      connectedUserName,
+    ) : []),
+    [chatMatchesActiveFilters, chats, connectedUserName, savedContactLookupMaps, search],
   );
 
   const savedContactsForPresentation = useMemo(

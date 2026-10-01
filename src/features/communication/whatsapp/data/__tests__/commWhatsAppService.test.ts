@@ -482,6 +482,41 @@ test('repete a lista do Inbox quando a RPC sofre timeout transitório', async ()
   mocks.rpc.mockResolvedValue({ data: [], error: null });
 });
 
+test('não multiplica consultas lentas durante uma busca de contato', async () => {
+  const callsBefore = mocks.rpc.mock.calls.length;
+  mocks.rpc.mockResolvedValue({
+    data: null,
+    error: { code: '57014', message: 'canceling statement due to statement timeout' },
+  });
+  try {
+    await assert.rejects(() => commWhatsAppService.listChats({ search: 'vida' }));
+    assert.equal(mocks.rpc.mock.calls.length - callsBefore, 1);
+  } finally {
+    mocks.rpc.mockResolvedValue({ data: [], error: null });
+  }
+});
+
+test('encaminha o cancelamento para as consultas de conversas e mensagens', async () => {
+  const controller = new AbortController();
+  const signals: AbortSignal[] = [];
+  mocks.rpc.mockImplementation(() => {
+    const response = Promise.resolve({ data: [], error: null });
+    return Object.assign(response, {
+      abortSignal: (signal: AbortSignal) => {
+        signals.push(signal);
+        return response;
+      },
+    });
+  });
+  try {
+    await commWhatsAppService.listChats({ search: 'vida', signal: controller.signal });
+    await commWhatsAppService.searchMessages({ search: 'vida', signal: controller.signal });
+    assert.deepEqual(signals, [controller.signal, controller.signal]);
+  } finally {
+    mocks.rpc.mockResolvedValue({ data: [], error: null });
+  }
+});
+
 test('recupera o nome do cadastro do grupo quando o chat está marcado só como Grupo', async () => {
   mocks.rpc.mockResolvedValue({
     data: [
@@ -554,7 +589,7 @@ test('usa a RPC compatível quando a RPC de presença não existe', async () => 
     ? { data: null, error: { code: 'PGRST202', message: 'function does not exist' } }
     : { data: [{ id: 'chat-2' }], error: null });
 
-  const chats = await commWhatsAppService.listChats();
+  const chats = await commWhatsAppService.listChats({ search: 'vida' });
 
   assert.deepEqual(chats, [{ id: 'chat-2' }]);
   assert.equal(mocks.rpc.mock.calls.length >= 2, true);

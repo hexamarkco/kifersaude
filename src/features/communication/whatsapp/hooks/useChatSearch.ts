@@ -13,6 +13,7 @@ import {
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
 
 type ChatActivityFilter = 'all' | 'unread';
+const SEARCH_TIMEOUT_MS = 10_000;
 
 type UseChatSearchParams = {
   activityFilter: ChatActivityFilter;
@@ -66,20 +67,19 @@ export const useChatSearch = ({
   }, [searchDraft, setSearch]);
 
   useEffect(() => {
-    if (!canSearchWhatsAppMessages(search)) {
-      messageSearchRequestIdRef.current += 1;
-      setMessageSearchResults([]);
-      setSearchingMessages(false);
-      setMessageSearchError(null);
-      return;
-    }
-
     if (!search) {
       setSearch('');
       return;
     }
 
     const requestId = ++chatSearchRequestIdRef.current;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      chatSearchRequestIdRef.current += 1;
+      controller.abort();
+      setSearchingChats(false);
+      setChatSearchError('A busca de conversas demorou demais. Tente novamente.');
+    }, SEARCH_TIMEOUT_MS);
     setChatSearchResults([]);
     setChatSearchError(null);
     setSearchingChats(true);
@@ -91,6 +91,7 @@ export const useChatSearch = ({
       leadResponsavelFilters,
       archivedFilter: 'all',
       limit: 500,
+      signal: controller.signal,
     }).then((results) => {
       if (requestId !== chatSearchRequestIdRef.current) {
         return;
@@ -107,6 +108,7 @@ export const useChatSearch = ({
       setChatSearchResults([]);
       setChatSearchError('Não foi possível buscar as conversas agora. Tente novamente.');
     }).finally(() => {
+      window.clearTimeout(timeoutId);
       if (requestId === chatSearchRequestIdRef.current) {
         setSearchingChats(false);
       }
@@ -114,6 +116,8 @@ export const useChatSearch = ({
 
     return () => {
       chatSearchRequestIdRef.current += 1;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [
     activityFilter,
@@ -136,6 +140,13 @@ export const useChatSearch = ({
     }
 
     const requestId = ++messageSearchRequestIdRef.current;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      messageSearchRequestIdRef.current += 1;
+      controller.abort();
+      setSearchingMessages(false);
+      setMessageSearchError('A busca de mensagens demorou demais. Tente novamente.');
+    }, SEARCH_TIMEOUT_MS);
     setMessageSearchResults([]);
     setMessageSearchError(null);
     setSearchingMessages(true);
@@ -144,6 +155,7 @@ export const useChatSearch = ({
       search,
       archivedFilter: 'all',
       limit: 30,
+      signal: controller.signal,
     }).then((results) => {
       if (requestId !== messageSearchRequestIdRef.current) {
         return;
@@ -167,6 +179,7 @@ export const useChatSearch = ({
       setMessageSearchResults([]);
       setMessageSearchError('Não foi possível buscar as mensagens agora. Tente novamente.');
     }).finally(() => {
+      window.clearTimeout(timeoutId);
       if (requestId === messageSearchRequestIdRef.current) {
         setSearchingMessages(false);
       }
@@ -174,6 +187,8 @@ export const useChatSearch = ({
 
     return () => {
       messageSearchRequestIdRef.current += 1;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [search, searchRetryNonce]);
 

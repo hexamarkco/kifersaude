@@ -28,7 +28,7 @@ vi.mock('../../data', () => ({
 const identitySortChats = <T,>(chats: T[]) => chats;
 const emptyFilters: string[] = [];
 
-const SearchHarness = () => {
+const SearchHarness = ({ term = 'fabiola' }: { term?: string }) => {
   const [query, setQuery] = useState('');
   const pendingChatInboxStateRef = useRef(new Map());
   const searchState = useChatSearch({
@@ -42,17 +42,29 @@ const SearchHarness = () => {
   return (
     <div>
       <button type="button" data-testid="search" onClick={() => {
-        setQuery('fabiola');
-        searchState.setSearch('fabiola');
+        setQuery(term);
+        searchState.setSearchDraft(term);
+        searchState.setSearch(term);
       }}>
         buscar
       </button>
       <button type="button" data-testid="retry" onClick={searchState.retrySearch}>
         tentar novamente
       </button>
+      <button type="button" data-testid="clear" onClick={() => {
+        searchState.setSearchDraft('');
+        searchState.setSearch('');
+      }}>limpar</button>
+      <button type="button" data-testid="next-search" onClick={() => {
+        searchState.setSearchDraft('vida');
+        searchState.setSearch('vida');
+      }}>trocar busca</button>
       <output data-testid="query">{query}</output>
       <output data-testid="chat-error">{searchState.chatSearchError ?? ''}</output>
       <output data-testid="message-error">{searchState.messageSearchError ?? ''}</output>
+      <output data-testid="searching-chats">{String(searchState.searchingChats)}</output>
+      <output data-testid="searching-messages">{String(searchState.searchingMessages)}</output>
+      <output data-testid="chat-count">{searchState.chatSearchResults.length}</output>
     </div>
   );
 };
@@ -79,6 +91,73 @@ test('diferencia falha na busca de uma busca sem resultados', async () => {
   assert.equal(view.container.querySelector('[data-testid="message-error"]')?.textContent, '');
 
   view.unmount();
+});
+
+test('busca contatos com uma letra sem consultar mensagens', async () => {
+  mocks.listChats.mockReset().mockResolvedValue([]);
+  mocks.searchMessages.mockReset().mockResolvedValue([]);
+  const view = render(<SearchHarness term="v" />);
+  await act(async () => {
+    (view.container.querySelector('[data-testid="search"]') as HTMLButtonElement).click();
+  });
+  assert.equal(mocks.listChats.mock.calls.length, 1);
+  assert.equal(mocks.searchMessages.mock.calls.length, 0);
+  assert.equal(view.container.querySelector('[data-testid="searching-chats"]')?.textContent, 'false');
+  view.unmount();
+});
+
+test('encerra buscas travadas e ignora resultados que chegam após o prazo', async () => {
+  vi.useFakeTimers();
+  let resolveChats: (value: unknown) => void = () => undefined;
+  mocks.listChats.mockReset().mockImplementation(() => new Promise((resolve) => {
+    resolveChats = resolve;
+  }));
+  mocks.searchMessages.mockReset().mockImplementation(() => new Promise(() => undefined));
+  const view = render(<SearchHarness />);
+  try {
+    await act(async () => {
+      (view.container.querySelector('[data-testid="search"]') as HTMLButtonElement).click();
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    assert.equal(view.container.querySelector('[data-testid="searching-chats"]')?.textContent, 'false');
+    assert.equal(view.container.querySelector('[data-testid="searching-messages"]')?.textContent, 'false');
+    assert.match(view.container.querySelector('[data-testid="chat-error"]')?.textContent ?? '', /demorou demais/);
+    assert.match(view.container.querySelector('[data-testid="message-error"]')?.textContent ?? '', /demorou demais/);
+    const chatParams = mocks.listChats.mock.calls[0]?.[0] as { signal: AbortSignal };
+    const messageParams = mocks.searchMessages.mock.calls[0]?.[0] as { signal: AbortSignal };
+    assert.equal(chatParams.signal.aborted, true);
+    assert.equal(messageParams.signal.aborted, true);
+    await act(async () => { resolveChats([{ id: 'late-chat' }]); });
+    assert.equal(view.container.querySelector('[data-testid="chat-count"]')?.textContent, '0');
+  } finally {
+    view.unmount();
+    vi.useRealTimers();
+  }
+});
+
+test('cancela a busca anterior ao trocar o termo e ao limpar o campo', async () => {
+  mocks.listChats.mockReset().mockImplementation(() => new Promise(() => undefined));
+  mocks.searchMessages.mockReset().mockImplementation(() => new Promise(() => undefined));
+  const view = render(<SearchHarness />);
+  try {
+    await act(async () => {
+      (view.container.querySelector('[data-testid="search"]') as HTMLButtonElement).click();
+    });
+    const firstParams = mocks.listChats.mock.calls[0]?.[0] as { signal: AbortSignal };
+    await act(async () => {
+      (view.container.querySelector('[data-testid="next-search"]') as HTMLButtonElement).click();
+    });
+    assert.equal(firstParams.signal.aborted, true);
+    const nextParams = mocks.listChats.mock.calls[1]?.[0] as { signal: AbortSignal };
+    await act(async () => {
+      (view.container.querySelector('[data-testid="clear"]') as HTMLButtonElement).click();
+    });
+    assert.equal(nextParams.signal.aborted, true);
+    assert.equal(view.container.querySelector('[data-testid="searching-chats"]')?.textContent, 'false');
+    assert.equal(view.container.querySelector('[data-testid="chat-error"]')?.textContent, '');
+  } finally {
+    view.unmount();
+  }
 });
 
 test('permite repetir a busca sem reaproveitar o erro anterior', async () => {

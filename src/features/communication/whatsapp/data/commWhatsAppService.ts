@@ -196,12 +196,16 @@ function isRetryableInboxChatListError(error: unknown): boolean {
 async function executeInboxChatListRpc(
   rpcName: 'comm_whatsapp_list_chats_with_presence' | 'comm_whatsapp_list_chats_with_groups',
   args: never,
+  options: { signal?: AbortSignal; retry?: boolean } = {},
 ) {
-  for (let attempt = 0; attempt <= INBOX_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
-    const retryDelayMs = INBOX_CHAT_LIST_RETRY_DELAYS_MS[attempt];
+  const retryDelays = options.retry === false ? [] : INBOX_CHAT_LIST_RETRY_DELAYS_MS;
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    options.signal?.throwIfAborted();
+    const retryDelayMs = retryDelays[attempt];
 
     try {
-      const result = await supabase.rpc(rpcName as never, args);
+      const query = supabase.rpc(rpcName as never, args);
+      const result = await (options.signal ? query.abortSignal(options.signal) : query);
       if (!result.error) {
         return result;
       }
@@ -520,6 +524,7 @@ export type CommWhatsAppMarkChatReadResult = {
 export type CommWhatsAppFollowUpIntensity = 'leve' | 'moderada' | 'direta' | 'ultima_tentativa';
 
 type ListChatsParams = {
+  signal?: AbortSignal;
   search?: string;
   activityFilter?: 'all' | 'unread';
   leadFilter?: 'all' | 'with_lead' | 'without_lead';
@@ -543,6 +548,7 @@ type ListMessagesPageParams = {
 };
 
 type SearchMessagesParams = {
+  signal?: AbortSignal;
   search: string;
   chatIds?: string[];
   archivedFilter?: 'all' | 'active' | 'archived';
@@ -1509,6 +1515,8 @@ export const commWhatsAppService = {
 
     const search = sanitizeSearch(params.search ?? '');
 
+    const readOptions = { signal: params.signal, retry: !search };
+
     const listArgs = {
       p_search: search || null,
       p_activity_filter: activityFilter,
@@ -1528,8 +1536,10 @@ export const commWhatsAppService = {
       ({ data, error } = await executeInboxChatListRpc(
         'comm_whatsapp_list_chats_with_presence',
         listArgs,
+        readOptions,
       ));
-    } catch {
+    } catch (requestError) {
+      if (search || params.signal?.aborted) throw requestError;
       // A network failure can reject the RPC promise before Supabase returns
       // its usual `{ data, error }` object. Still try the compatibility RPC so
       // a transient failure in the primary path does not blank the Inbox.
@@ -1537,16 +1547,19 @@ export const commWhatsAppService = {
       const fallback = await executeInboxChatListRpc(
         'comm_whatsapp_list_chats_with_groups',
         listArgs,
+        readOptions,
       );
       data = fallback.data;
       error = fallback.error;
     }
-    if (error && !fallbackAttempted) {
+    if (error && !fallbackAttempted && !params.signal?.aborted
+      && (!search || error.code === 'PGRST202' || error.code === '42883')) {
       // Mantém o Inbox funcional durante a janela em que o frontend pode ser
       // publicado antes da migration de presença no projeto Supabase.
       const fallback = await executeInboxChatListRpc(
         'comm_whatsapp_list_chats_with_groups',
         listArgs,
+        readOptions,
       );
       data = fallback.data;
       error = fallback.error;
@@ -1560,11 +1573,13 @@ export const commWhatsAppService = {
     const groupChats = chats.filter((chat) => chat.is_group);
     if (groupChats.length === 0) return chats;
 
-    const { data: groupMetadata, error: groupMetadataError } = await supabase
+    const groupQuery = supabase
       .from('comm_whatsapp_groups')
       .select('chat_id, name')
-      .in('chat_id', groupChats.map((chat) => chat.id))
-      .overrideTypes<Array<{ chat_id: string; name: string }>, { merge: false }>();
+      .in('chat_id', groupChats.map((chat) => chat.id));
+    const { data: groupMetadata, error: groupMetadataError } = await (
+      params.signal ? groupQuery.abortSignal(params.signal) : groupQuery
+    ).overrideTypes<Array<{ chat_id: string; name: string }>, { merge: false }>();
     if (groupMetadataError) {
       console.warn('[WhatsAppInbox] não foi possível carregar os nomes salvos dos grupos', groupMetadataError.message);
       return chats;
@@ -1712,12 +1727,13 @@ export const commWhatsAppService = {
       return [];
     }
 
-    const { data, error } = await supabase.rpc('comm_whatsapp_search_messages', {
+    const query = supabase.rpc('comm_whatsapp_search_messages', {
       p_search: search,
       p_chat_ids: chatIds.length > 0 ? chatIds : null,
       p_archived_filter: params.archivedFilter ?? 'all',
       p_limit: limit,
     });
+    const { data, error } = await (params.signal ? query.abortSignal(params.signal) : query);
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel buscar mensagens do WhatsApp.'));

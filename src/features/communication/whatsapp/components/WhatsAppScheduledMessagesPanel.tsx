@@ -15,6 +15,7 @@ import { buildSavedContactNameMap, getSavedContactNameForPhone } from '../domain
 import { getScheduledContactDisplayName } from '../domain/scheduledContactPresentation';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppScheduleMessageModal from './WhatsAppScheduleMessageModal';
+import ScheduledItemsSection from './ScheduledItemsSection';
 
 type WhatsAppScheduledMessagesPanelProps = {
   channelId?: string;
@@ -768,13 +769,12 @@ export default function WhatsAppScheduledMessagesPanel({
                 {hasListFilters ? <span>Filtro aplicado</span> : null}
               </div>
 
-              {visibleSequences.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                    <Repeat className="kds-control-icon text-[var(--brand-primary)]" />
-                    Sequências
-                  </div>
-                  {visibleSequences.map((sequence) => (
+              <ScheduledItemsSection
+                  key={`sequences:${activeView}:${searchQuery}:${startDate}:${endDate}`}
+                  title="Sequências"
+                  icon={Repeat}
+                  items={visibleSequences}
+                  renderItem={(sequence) => (
                     <ScheduledSequenceItem
                       key={sequence.id}
                       sequence={sequence}
@@ -784,9 +784,8 @@ export default function WhatsAppScheduledMessagesPanel({
                       onCancel={() => void handleCancelSequence(sequence.id)}
                       onRetry={() => void handleRetrySequence(sequence.id)}
                     />
-                  ))}
-                </div>
-              )}
+                  )}
+              />
 
               {visibleMessages.length === 0 && visibleSequences.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-4 py-10 text-center">
@@ -799,9 +798,13 @@ export default function WhatsAppScheduledMessagesPanel({
                       : 'Quando houver mensagens nesta situação, elas aparecerão aqui.'}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {visibleMessages.map((message) => (
+              ) : null}
+              <ScheduledItemsSection
+                  key={`messages:${activeView}:${searchQuery}:${startDate}:${endDate}`}
+                  title="Mensagens normais"
+                  icon={CalendarClock}
+                  items={visibleMessages}
+                  renderItem={(message) => (
                     <ScheduledMessageItem
                       key={message.id}
                       message={message}
@@ -811,9 +814,8 @@ export default function WhatsAppScheduledMessagesPanel({
                       onCancel={() => void handleCancel(message.id)}
                       onDelete={() => void handleDelete(message.id)}
                     />
-                  ))}
-                </div>
-              )}
+                  )}
+              />
                 </>
               )}
             </>

@@ -73,6 +73,61 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+test('seções recolhem e paginam independentemente, com busca em todas as páginas', async () => {
+  configureSuccessfulCounts();
+  mocks.listScheduledSequences.mockResolvedValue(Array.from({ length: 7 }, (_, index) => ({
+    ...sequence, id: `sequence-${index}`, label: `Sequência ${index}`,
+  })));
+  mocks.listScheduledMessages.mockResolvedValue(Array.from({ length: 7 }, (_, index) => ({
+    ...sequence, id: `message-${index}`, label: `Normal ${index}`,
+    message_type: 'text', text_content: `Texto ${index}`, recurrence: 'none',
+  })));
+
+  const view = render(<WhatsAppScheduledMessagesPanel channelId="channel-1" isOpen onClose={() => undefined} />);
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const getSection = (title: string) => {
+    const section = document.querySelector<HTMLElement>(`section[aria-label="${title}"]`);
+    assert.ok(section);
+    return section;
+  };
+  const sequences = getSection('Sequências');
+  const messages = getSection('Mensagens normais');
+  const click = (element: HTMLElement | null) => {
+    assert.ok(element);
+    act(() => element.click());
+  };
+  const cardCount = (section: HTMLElement, pattern: RegExp) => Array.from(section.querySelectorAll('p')).filter((element) => pattern.test(element.textContent ?? '')).length;
+  assert.equal(cardCount(sequences, /^Sequência \d$/), 5);
+  assert.equal(cardCount(messages, /^Normal \d$/), 5);
+  click(sequences.querySelector<HTMLButtonElement>('button[aria-label="Próxima página de Sequências"]'));
+  assert.equal(cardCount(sequences, /^Sequência \d$/), 2);
+  assert.equal(cardCount(messages, /^Normal \d$/), 5);
+  assert.equal(sequences.querySelector<HTMLButtonElement>('button[aria-label="Próxima página de Sequências"]')?.disabled, true);
+
+  click(sequences.querySelector('button[aria-expanded]'));
+  assert.equal(sequences.querySelector<HTMLElement>('div[id]')?.hidden, true);
+  assert.equal(messages.querySelector<HTMLElement>('div[id]')?.hidden, false);
+  click(sequences.querySelector('button[aria-expanded]'));
+  assert.match(sequences.querySelector('nav')?.textContent ?? '', /Página 2 de 2/);
+
+  const search = document.querySelector<HTMLInputElement>('#scheduled-messages-search');
+  assert.ok(search);
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'Normal 6');
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  assert.match(getSection('Mensagens normais').textContent ?? '', /Normal 6/);
+  assert.match(getSection('Mensagens normais').querySelector('nav')?.textContent ?? '', /Página 1 de 1/);
+  click(Array.from(document.querySelectorAll('button')).find((button) => button.textContent === 'Limpar') ?? null);
+  assert.match(getSection('Mensagens normais').querySelector('nav')?.textContent ?? '', /Página 1 de 2/);
+  view.unmount();
+});
+
 test('descarta sequências antigas quando uma nova carga parcial falha', async () => {
   configureSuccessfulCounts();
   const initialMessages = createDeferred<unknown[]>();

@@ -1692,7 +1692,7 @@ export default function AgendaScreen() {
                 {selectedDateSections.length > 0 ? (
                   selectedDateSections.map((section) => (
                     <section key={section.id} className="space-y-2">
-                      <div className="sticky top-0 isolate z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] py-2">
+                      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] py-2">
                         <SectionHeader
                           as="h3"
                           title={section.title}

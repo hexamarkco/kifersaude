@@ -682,22 +682,6 @@ export default function WhatsAppScheduledMessagesPanel({
                 </Alert>
               ) : null}
 
-              {messages.length === 0 && sequences.length === 0 ? (
-                <div className="text-center py-12">
-                  <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
-                  <p className="text-[var(--text-muted)]">Nenhum agendamento encontrado</p>
-                  <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
-                    Agende mensagens únicas ou sequências para envio automático
-                  </p>
-                  {onScheduleNew && (
-                    <Button onClick={onScheduleNew} size="sm">
-                      <Plus className="kds-control-icon" />
-                      Agendar nova mensagem
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <>
               <Tabs
                 items={viewTabs}
                 value={activeView}
@@ -708,6 +692,22 @@ export default function WhatsAppScheduledMessagesPanel({
                 listClassName="overflow-x-auto"
               />
 
+              {messages.length === 0 && sequences.length === 0 ? (
+                <div className="text-center py-12">
+                  <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
+                  <p className="text-[var(--text-muted)]">Nenhum agendamento nesta aba</p>
+                  <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
+                    Consulte outra aba para ver agendamentos em outras situações, incluindo o histórico.
+                  </p>
+                  {onScheduleNew && (
+                    <Button onClick={onScheduleNew} size="sm">
+                      <Plus className="kds-control-icon" />
+                      Agendar nova mensagem
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
                 <div className="space-y-1">
                   <label htmlFor="scheduled-messages-search" className="text-xs font-medium text-[var(--text-muted)]">

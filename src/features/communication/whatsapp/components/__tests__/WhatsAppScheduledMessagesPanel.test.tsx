@@ -128,6 +128,36 @@ test('seções recolhem e paginam independentemente, com busca em todas as pági
   view.unmount();
 });
 
+test('permite abrir o histórico quando não há próximos agendamentos e sair de outra aba vazia', async () => {
+  configureSuccessfulCounts();
+  mocks.listScheduledMessages.mockResolvedValue([]);
+  mocks.listScheduledSequences
+    .mockReturnValueOnce(Promise.resolve([]))
+    .mockReturnValueOnce(Promise.resolve([{ ...sequence, status: 'cancelled', label: 'Sequência do histórico' }]))
+    .mockReturnValueOnce(Promise.resolve([]));
+
+  const view = render(<WhatsAppScheduledMessagesPanel channelId="channel-1" isOpen onClose={() => undefined} />);
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  assert.match(document.body.textContent ?? '', /Nenhum agendamento nesta aba/);
+  const selectTab = async (label: string) => {
+    const tab = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((element) => element.textContent?.includes(label));
+    assert.ok(tab);
+    await act(async () => {
+      tab.click();
+    });
+  };
+  await selectTab('Histórico');
+  assert.match(document.body.textContent ?? '', /Sequência do histórico/);
+  await selectTab('Atenção');
+  assert.match(document.body.textContent ?? '', /Nenhum agendamento nesta aba/);
+  assert.equal(document.querySelectorAll('[role="tab"]').length, 4);
+  view.unmount();
+});
+
 test('descarta sequências antigas quando uma nova carga parcial falha', async () => {
   configureSuccessfulCounts();
   const initialMessages = createDeferred<unknown[]>();
@@ -237,6 +267,6 @@ test('informa quando as contagens das abas falham mesmo sem agendamentos listado
   });
 
   assert.match(document.body.textContent ?? '', /Os totais das abas estão incompletos/);
-  assert.match(document.body.textContent ?? '', /Nenhum agendamento encontrado/);
+  assert.match(document.body.textContent ?? '', /Nenhum agendamento nesta aba/);
   view.unmount();
 });

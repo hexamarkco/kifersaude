@@ -1,3 +1,21 @@
+/* Compact desktop density follows the available viewport, not the device model.
+   Scale rem-based controls, spacing and portal dialogs together while keeping
+   the user's default font size and browser zoom effective. */
+@media (min-width: 1024px) and (max-width: 1440px) {
+  html:has(.kds-app-shell) {
+    font-size: 87.5%;
+  }
+}
+
+/* 1920px at 150% display scaling leaves a 1280px desktop viewport.
+   Match the rem density of a 1536px viewport (1920px at 125%) without
+   shrinking that larger layout or depending on the viewport height. */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  html:has(.kds-app-shell) {
+    font-size: 83.333333%;
+  }
+}
+
 .painel-theme.kifer-ds,
 .modal-theme-host.painel-theme.kifer-ds {
   color-scheme: dark;

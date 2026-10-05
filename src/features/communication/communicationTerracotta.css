@@ -708,19 +708,40 @@
   font: var(--type-caption);
 }
 
-.comm-whatsapp-chat-files-tabs-list {
+.comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   width: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.comm-whatsapp-chat-files-tabs .kds-tab {
+.comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill .kds-tab {
   min-width: 0;
   min-height: var(--control-height-md);
   justify-content: center;
   gap: var(--space-2);
   padding-inline: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill .kds-tab:hover:not(:disabled) {
+  border-color: var(--brand-primary-border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill .kds-tab-active,
+.comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill .kds-tab-active:hover:not(:disabled) {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--text-primary);
 }
 
 .comm-whatsapp-chat-files-tabs .kds-tab > span {
@@ -999,7 +1020,7 @@
     padding-bottom: var(--space-4);
   }
 
-  .comm-whatsapp-chat-files-tabs-list {
+  .comm-whatsapp-chat-files-tabs-list.kds-tabs-list-pill {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

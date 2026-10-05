@@ -34,3 +34,14 @@ test('keeps technical markers when the message still has renderable content', ()
     metadata: { quote: { external_message_id: 'quoted-1', preview_text: 'Mensagem anterior' } },
   })), false);
 });
+
+test('hides album placeholders while preserving photos and real captions', () => {
+  assert.equal(shouldHideTechnicalMessage(createMessage({ message_type: 'album', text_content: '[Album]' })), true);
+  assert.equal(shouldHideTechnicalMessage(createMessage({ message_type: 'album', text_content: '[Álbum]' })), true);
+  assert.equal(shouldHideTechnicalMessage(createMessage({
+    message_type: 'image', text_content: '[Album]', media_url: 'https://example.com/image.jpg',
+  })), false);
+  assert.equal(shouldHideTechnicalMessage(createMessage({
+    message_type: 'album', text_content: '[Album]', media_caption: 'Documentos do plano',
+  })), false);
+});

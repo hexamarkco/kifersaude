@@ -161,7 +161,9 @@ describe('copy visible style', () => {
 
     assert.match(prompt, /Mostre que voce entendeu somente quando isso trouxer proximidade real/i);
     assert.match(prompt, /Faca no maximo uma pergunta/i);
-    assert.match(prompt, /ultima mensagem do LEAD.*saudacao.*ultima resposta substantiva/i);
+    assert.match(prompt, /Uma saudacao isolada pode retomar o contexto anterior/i);
+    assert.match(prompt, /um ok que aceite uma alternativa/i);
+    assert.match(prompt, /sem repetir a pergunta pendente/i);
     assert.match(prompt, /nao pode conter travessao.*dois-pontos/i);
   });
 
@@ -249,7 +251,7 @@ describe('validateAutonomousReplyOutput', () => {
     assert.equal(result.message, QUALIFICATION_CLOSURE_VALIDATION_MESSAGE);
   });
 
-  test('rejeita encerramento funcional mas seco', () => {
+  test('nao usa palavras-chave para julgar calor humano no encerramento', () => {
     const completeHistory: AutonomousMessageRow[] = [
       { role: 'lead', content: 'Pra mim, tenho 44 anos.' },
       { role: 'ai', content: 'Em qual cidade você vai usar o plano?' },
@@ -264,8 +266,7 @@ describe('validateAutonomousReplyOutput', () => {
       completeHistory,
     );
 
-    assert.equal(result.valid, false);
-    assert.equal(result.message, QUALIFICATION_CLOSURE_VALIDATION_MESSAGE);
+    assert.equal(result.valid, true);
   });
 
   test('rejeita mais de uma pergunta no mesmo turno', () => {

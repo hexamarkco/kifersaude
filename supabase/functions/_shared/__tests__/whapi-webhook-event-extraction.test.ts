@@ -300,6 +300,54 @@ test('extractWhapiInteractiveMeta reconhece uma mensagem de lista', () => {
   assert.equal(meta?.sections[0].rows[0].title, '09:00');
 });
 
+test('extractWhapiInteractiveMeta preserva as opções em action.list.sections da Whapi', () => {
+  const meta = extractWhapiInteractiveMeta({
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      header: { text: 'Atendimento' },
+      body: { text: 'Escolha uma opção' },
+      footer: { text: 'Kifer Saúde' },
+      action: {
+        list: {
+          label: 'Ver opções',
+          sections: [{ title: 'Planos', rows: [{ id: 'pme', title: 'PME', description: 'Empresarial' }] }],
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(meta, {
+    kind: 'list',
+    header: 'Atendimento',
+    body: 'Escolha uma opção',
+    footer: 'Kifer Saúde',
+    buttons: [],
+    sections: [{ title: 'Planos', rows: [{ id: 'pme', title: 'PME', description: 'Empresarial' }] }],
+    selectedReply: null,
+  });
+});
+
+test('extractWhapiInteractiveMeta reconhece listas nativas sem perder seções ou descrições', () => {
+  const sections = [{ title: 'Manhã', rows: [{ id: 'slot-1', title: '09:00', description: 'Disponível' }] }];
+  for (const list of [
+    { body: 'Escolha um horário', sections },
+    { body: 'Escolha um horário', action: { list: { sections } } },
+  ]) {
+    const meta = extractWhapiInteractiveMeta({ type: 'list', list });
+    assert.equal(meta?.kind, 'list');
+    assert.equal(meta?.body, 'Escolha um horário');
+    assert.deepEqual(meta?.sections, sections);
+  }
+  assert.equal(extractWhapiInteractiveMeta({ type: 'list', list: { sections: [null, {}] } }), null);
+});
+
+test('extractWhapiInteractiveMeta reconhece botões nativos', () => {
+  const meta = extractWhapiInteractiveMeta({ type: 'buttons', buttons: { body: 'Confirma?', buttons: [{ id: 'yes', title: 'Sim' }] } });
+  assert.equal(meta?.kind, 'buttons');
+  assert.deepEqual(meta?.buttons, [{ id: 'yes', title: 'Sim' }]);
+});
+
 test('extractWhapiInteractiveMeta reconhece a resposta que o contato escolheu (buttons_reply)', () => {
   const meta = extractWhapiInteractiveMeta({
     type: 'reply',

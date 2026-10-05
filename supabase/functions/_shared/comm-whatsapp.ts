@@ -1468,9 +1468,9 @@ const extractInteractiveText = (container: Record<string, unknown>, key: string)
  * Extrai o conteudo estruturado de mensagens interativas da Whapi (botoes,
  * listas, templates com botao e a resposta que o contato escolheu), pra
  * exibir de verdade no inbox em vez do rotulo generico "[Mensagem
- * interativa]". A Whapi encaminha o payload do WhatsApp Cloud API quase sem
- * alteracao, entao seguimos os nomes de campo de la (header/body/footer,
- * action.buttons, action.sections com rows) com fallbacks tolerantes pras
+ * interativa]". Reconhece o formato Whapi (action.list.sections) e o
+ * WhatsApp Cloud API (action.sections), preservando header/body/footer,
+ * action.buttons e rows, com fallbacks tolerantes pras
  * variacoes que ja vimos em outros pontos do parser (buttons_reply/list_reply
  * em `reply`, cards de carousel, templates hsm).
  */
@@ -1502,7 +1502,7 @@ export const extractWhapiInteractiveMeta = (message: unknown): CommWhatsAppInter
     };
   }
 
-  if (type !== 'interactive' && type !== 'hsm' && type !== 'carousel') {
+  if (!['interactive', 'hsm', 'carousel', 'list', 'buttons'].includes(type)) {
     return null;
   }
 
@@ -1512,7 +1512,11 @@ export const extractWhapiInteractiveMeta = (message: unknown): CommWhatsAppInter
       ? message.hsm
       : isRecord(message.carousel)
         ? message.carousel
-        : null;
+        : isRecord(message.list)
+          ? message.list
+          : isRecord(message.buttons)
+            ? message.buttons
+            : null;
 
   if (!container) {
     return null;
@@ -1532,7 +1536,16 @@ export const extractWhapiInteractiveMeta = (message: unknown): CommWhatsAppInter
     .map(buildInteractiveButton)
     .filter((button): button is CommWhatsAppInteractiveButton => button !== null);
 
-  const rawSections = Array.isArray(action?.sections) ? action.sections : [];
+  // Whapi usa action.list.sections; Cloud API usa action.sections e
+  // mensagens nativas de lista podem trazer sections diretamente.
+  const actionList = isRecord(action?.list) ? action.list : null;
+  const rawSections = Array.isArray(actionList?.sections)
+    ? actionList.sections
+    : Array.isArray(action?.sections)
+      ? action.sections
+      : Array.isArray(container.sections)
+        ? container.sections
+        : [];
   const sections = rawSections
     .map(buildInteractiveSection)
     .filter((section): section is CommWhatsAppInteractiveListSection => section !== null);

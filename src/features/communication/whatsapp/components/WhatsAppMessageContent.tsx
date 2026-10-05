@@ -908,7 +908,7 @@ export function WhatsAppMessageBody({
     );
   }
 
-  if (interactiveInfo && (kind === 'interactive' || kind === 'hsm' || kind === 'carousel' || kind === 'reply')) {
+  if (interactiveInfo && ['interactive', 'hsm', 'carousel', 'reply', 'list', 'buttons'].includes(kind)) {
     return (
       <div className="space-y-3">
         {quotePreviewNode}

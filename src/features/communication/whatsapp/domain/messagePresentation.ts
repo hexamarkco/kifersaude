@@ -26,7 +26,6 @@ const VISIBLE_SUMMARY_MARKERS = new Set([
   '[chamada]',
   '[fixada]',
   '[status]',
-  '[album]',
   '[resposta]',
   '[lista]',
   '[botoes]',
@@ -34,6 +33,7 @@ const VISIBLE_SUMMARY_MARKERS = new Set([
 ]);
 
 const HIDDEN_TECHNICAL_MESSAGE_MARKERS = new Set([
+  '[album]',
   '[mensagem]',
   '[mensagem sem texto]',
   '[mensagem sem conteudo]',

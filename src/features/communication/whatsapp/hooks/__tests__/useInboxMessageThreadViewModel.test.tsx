@@ -92,6 +92,25 @@ test('mantém mensagens não selecionadas sem dedupe, oculta ações técnicas e
   }
 });
 
+test('oculta o evento Album e mantém as fotos agrupadas na conversa', () => {
+  const first = createMessage('photo-1', { message_type: 'image', text_content: '[Imagem]', media_url: 'https://example.com/1.jpg' });
+  const album = createMessage('album', { message_type: 'album', text_content: '[Album]' });
+  const second = createMessage('photo-2', { message_type: 'image', text_content: '[Imagem]', media_url: 'https://example.com/2.jpg' });
+  let snapshot!: Snapshot;
+  const view = render(<Harness
+    options={createOptions({ messages: [first, album, second] })}
+    capture={(next) => { snapshot = next; }}
+  />);
+  try {
+    assert.deepEqual(snapshot.viewModel.visibleMessages.map((message) => message.id), ['photo-1', 'photo-2']);
+    const groups = snapshot.viewModel.messageTimelineItems.filter((item) => item.type === 'media-group');
+    assert.equal(groups.length, 1);
+    assert.deepEqual(groups[0].type === 'media-group' ? groups[0].messages.map((message) => message.id) : [], ['photo-1', 'photo-2']);
+  } finally {
+    view.unmount();
+  }
+});
+
 test('mescla apenas mensagens otimistas da conversa ativa e resolve seleções obsoletas', () => {
   const early = createMessage('early', { message_at: '2026-09-28T12:00:00.000Z' });
   const late = createMessage('late', { message_at: '2026-09-28T12:02:00.000Z' });

@@ -50,6 +50,7 @@ export const getOpenAiSupportedReasoningEfforts = (model: string): readonly Open
   const normalized = normalizedModel(model);
 
   if (isOpenAiProModel(normalized)) return OPENAI_REASONING_EFFORTS.pro;
+  if (/^gpt-6-(?:luna|sol)(?:-|$)/.test(normalized)) return OPENAI_REASONING_EFFORTS.gpt56;
   if (normalized.startsWith('gpt-5.6')) return OPENAI_REASONING_EFFORTS.gpt56;
   if (normalized.startsWith('gpt-5.5')) return OPENAI_REASONING_EFFORTS.gpt55;
   if (isOpenAiModernReasoningModel(normalized)) return OPENAI_REASONING_EFFORTS.modern;
@@ -108,7 +109,7 @@ export const resolveOpenAiRequestProfile = (
       tokenParameter: 'max_completion_tokens',
       reasoningEffort,
       supportedReasoningEfforts,
-      supportsTemperature: false,
+      supportsTemperature: reasoningEffort === 'none',
     };
   }
 

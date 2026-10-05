@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getOpenAiSupportedReasoningEfforts } from '../_shared/ai-provider-request-profile.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +24,7 @@ function inferCapabilities(modelId: string): string[] {
     caps.push("transcription");
   } else {
     caps.push("text", "structured_output");
-    if (id.includes("o3") || id.includes("o4") || id.includes("reason")) {
+    if (getOpenAiSupportedReasoningEfforts(id).length > 0 || id.includes("reason")) {
       caps.push("reasoning");
     }
     if (!id.includes("nano")) {

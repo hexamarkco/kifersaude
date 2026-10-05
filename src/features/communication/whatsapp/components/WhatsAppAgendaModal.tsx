@@ -796,7 +796,9 @@ export default function WhatsAppAgendaModal({
       });
     } catch (openError) {
       console.error('[WhatsAppAgendaModal] erro ao abrir chat do lead:', openError);
-      toast.error('Não foi possível abrir o chat deste lead.');
+      toast.error(openError instanceof Error && openError.message.trim()
+        ? `Não foi possível abrir o chat deste lead: ${openError.message}`
+        : 'Não foi possível abrir o chat deste lead.');
     } finally {
       setOpeningLeadChatId(null);
     }

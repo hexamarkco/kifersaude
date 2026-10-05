@@ -740,9 +740,9 @@ export const calculateCost = (
   const outputTokens = usage.outputTokens ?? 0;
 
   const inputCost = (nonCachedInput / 1_000_000) * Number(p.input_per_million);
-  const cachedCost = cachedTokens > 0 && p.cached_input_per_million
+  const cachedCost = p.cached_input_per_million !== null
     ? (cachedTokens / 1_000_000) * Number(p.cached_input_per_million)
-    : 0;
+    : (cachedTokens / 1_000_000) * Number(p.input_per_million);
   const outputCost = (outputTokens / 1_000_000) * Number(p.output_per_million);
 
   return inputCost + cachedCost + outputCost;
@@ -1166,20 +1166,20 @@ export const transcribeAudioWithRouting = async (
 ): Promise<TranscribeAudioWithRoutingResult> => {
   const startTime = Date.now();
   const runtime = await loadAiRuntimeConfig(options.supabaseAdmin);
-  const taskRoute = runtime.routing.whatsapp_audio_transcription;
+  const resolved = await resolveModelForFeature(options.supabaseAdmin, 'audio.transcribe', 'whatsapp_audio_transcription');
 
-  const preferredProvider = taskRoute.provider;
+  const preferredProvider = resolved.provider;
   const preferredProviderSettings = runtime.providers[preferredProvider];
   const preferredModel = getCompatibleTaskModel(
     'whatsapp_audio_transcription',
     preferredProvider,
     preferredProviderSettings,
-    taskRoute.model,
+    resolved.model,
   );
   const preferredDefaultModel = getTaskDefaultModel('whatsapp_audio_transcription', preferredProvider, preferredProviderSettings);
 
   const attempts: Array<{ provider: AiProvider; model: string; source: ModelResolutionSource }> = [
-    { provider: preferredProvider, model: preferredModel, source: 'ai_routing' },
+    { provider: preferredProvider, model: preferredModel, source: resolved.source },
   ];
 
   if (

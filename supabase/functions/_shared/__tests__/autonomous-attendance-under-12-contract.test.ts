@@ -11,6 +11,10 @@ const scenarioSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/ai-sandbox-run-scenario/index.ts'),
   'utf8',
 );
+const judgeSource = readFileSync(
+  resolve(process.cwd(), 'supabase/functions/ai-sandbox-run-scenario/judge-prompt.ts'),
+  'utf8',
+);
 
 test('Resposta Autônoma receives the fixed eligibility rule for children under 12', () => {
   assert.match(migrationSource, /CRIANÇA MENOR DE 12 ANOS/);
@@ -21,7 +25,8 @@ test('Resposta Autônoma receives the fixed eligibility rule for children under 
 });
 
 test('automated scenarios apply the child-under-12 rule only to child-only quotes', () => {
-  assert.match(scenarioSource, /14\. Se o lead queria plano para uma unica vida abaixo de 12 anos/);
-  assert.match(scenarioSource, /Nao aplique essa regra a adolescentes de 12 anos ou mais/);
+  assert.match(judgeSource, /14\. Se o lead queria plano para uma unica vida abaixo de 12 anos/);
+  assert.match(judgeSource, /Nao aplique essa regra a adolescentes de 12 anos ou mais/);
+  assert.match(scenarioSource, /import \{ buildJudgePrompt \} from '\.\/judge-prompt\.ts'/);
   assert.match(scenarioSource, /collectDeterministicViolations/);
 });

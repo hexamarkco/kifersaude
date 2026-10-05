@@ -131,7 +131,8 @@ test('aplica prévia e leitura otimistas e ignora confirmação de leitura obsol
   assert.equal(chat?.last_message_direction, 'outbound');
   assert.equal(chat?.last_message_delivery_status, 'pending');
   assert.equal(chat?.last_message_at, '2026-09-28T12:01:00.000Z');
-  assert.equal(chat?.is_archived, true);
+  assert.equal(chat?.is_archived, false);
+  assert.equal(chat?.archived_at, null);
   assert.equal(chat?.unread_count, 0);
   assert.equal(chat?.manual_unread, false);
   assert.equal(mounted.controller.pendingStateByChatId.get(initialChat.id)?.last_message_delivery_status, 'pending');
@@ -156,6 +157,23 @@ test('aplica prévia e leitura otimistas e ignora confirmação de leitura obsol
   assert.equal(chat?.last_message_at, '2026-09-28T12:02:00.000Z');
   mounted.view.unmount();
 });
+
+for (const isMuted of [false, true]) {
+  test(`envio desarquiva o chat e a pendência local, com is_muted=${isMuted}`, async () => {
+    mocks.markRead.mockReset();
+    mocks.markRead.mockImplementation(() => Promise.resolve());
+    const chat = createChat({ is_archived: true, archived_at: '2026-09-20T12:00:00.000Z', is_muted: isMuted });
+    const mounted = mountController(chat);
+
+    await act(async () => mounted.controller.applyOptimisticChatSummary(chat, 'Nova mensagem', '2026-09-28T12:01:00.000Z'));
+    assert.equal(mounted.controller.chats[0]?.is_archived, false);
+    assert.equal(mounted.controller.chats[0]?.archived_at, null);
+    assert.equal(mounted.controller.chats[0]?.is_muted, isMuted);
+    assert.equal(mounted.controller.pendingStateByChatId.get(chat.id)?.is_archived, false);
+    assert.equal(mounted.controller.pendingStateByChatId.get(chat.id)?.archived_at, null);
+    mounted.view.unmount();
+  });
+}
 
 test('atualiza o status do preview somente no timestamp correspondente e sem regressão', () => {
   mocks.markRead.mockReset();

@@ -13,6 +13,9 @@ describe('AI provider request profiles', () => {
     ['gpt-5.2-pro', 'follow_up_generation', 'max_completion_tokens', 'high', false],
     ['gpt-6-astra', 'follow_up_generation', 'max_completion_tokens', 'low', false],
     ['gpt-6-astra', 'rewrite_message', 'max_completion_tokens', 'low', false],
+    ['gpt-6.1-sol', 'rewrite_message', 'max_completion_tokens', 'low', false],
+    ['gpt-6-luna', 'rewrite_message', 'max_completion_tokens', 'none', true],
+    ['gpt-6-luna-2026-09-01', 'rewrite_message', 'max_completion_tokens', 'none', true],
     ['gpt-7-future', 'rewrite_message', 'max_completion_tokens', 'low', false],
     ['o3', 'follow_up_generation', 'max_completion_tokens', 'low', false],
     ['o4-mini', 'rewrite_message', 'max_completion_tokens', 'low', false],
@@ -41,6 +44,13 @@ describe('AI provider request profiles', () => {
 
   it('falls back to the safe automatic effort when a model does not support the requested value', () => {
     expect(resolveOpenAiRequestProfile('o3', 'follow_up_generation', 'none').reasoningEffort).toBe('low');
+    expect(resolveOpenAiRequestProfile('gpt-6.1-sol', 'autonomous_attendance', 'none').reasoningEffort).toBe('low');
+    expect(resolveOpenAiRequestProfile('gpt-6-luna', 'follow_up_generation', 'none')).toMatchObject({
+      reasoningEffort: 'none', supportsTemperature: true,
+    });
+    expect(resolveOpenAiRequestProfile('gpt-6-luna', 'rewrite_message', 'high')).toMatchObject({
+      reasoningEffort: 'high', supportsTemperature: false,
+    });
   });
 
 });

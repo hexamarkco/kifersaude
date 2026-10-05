@@ -31,6 +31,12 @@ const AUTONOMOUS_CONVERSATION_INTENT_INSTRUCTION = [
   'CUIDADO SEM PREENCHIMENTO: acolha o ponto concreto quando houver contexto humano. Se o lead respondeu apenas um dado objetivo, uma confirmacao breve ou pergunta direta pode bastar. Nao acrescente uma promessa generica em cada turno nem repita a mesma ideia trocando palavras.',
 ].join('\n');
 
+const AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION = [
+  'REGIOES DE ATENDIMENTO: diferencie residencia dos beneficiarios, cidades onde precisam usar o plano e local onde parentes moram. Preserve todas as regioes de utilizacao informadas; nao reduza uma necessidade em duas cidades a um unico campo nem inclua os parentes como beneficiarios.',
+  'BAIRRO COM CONTEXTO: a regra de coletar bairro em capital vale quando ha uma unica cidade principal de utilizacao definida. Se o lead ja informou atendimento em duas ou mais cidades, avance para CNPJ/MEI entre os adultos ou plano atual, conforme o dado pendente. Nessa situacao, bairro e detalhe opcional e nao bloqueia a qualificacao ou o handoff. Uma capital mencionada apenas como residencia de parentes nao cria obrigacao de bairro.',
+  'NAO INSISTA NO BAIRRO: se a pessoa respondeu a pergunta de bairro explicando onde mora ou por que precisa de outra regiao, responda a esse contexto e avance; nao reformule a mesma pergunta. Aceite correcoes de cidade, como de Vitoria para Vila Velha, sem reiniciar a coleta. Nao peca bairro em cidade que nao e capital. Use a necessidade regional para orientar a cotacao, sem garantir rede ou cobertura.',
+].join('\n');
+
 export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   '--- REGRAS CRITICAS DE CONVERSA NATURAL E QUALIFICACAO ---',
   AUTONOMOUS_CONVERSATION_INTENT_INSTRUCTION,
@@ -44,7 +50,8 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'CONCISAO: a resposta normal deve ter uma a tres frases curtas e, no maximo, uma pergunta. Prefira uma resposta completa e facil de responder a varias mensagens quebradas. Nao resuma a conversa inteira, nao repita dados ja confirmados, nao empilhe perguntas e nao continue qualificando depois de ja ter informacao suficiente para o proximo passo.',
   'PROXIMA ACAO: antes de perguntar, verifique no historico se o dado ja foi respondido, se a pergunta ainda e necessaria e se existe uma decisao mais importante pendente. Se a pessoa corrigiu um dado, aceite a correcao e use o valor novo. Se a resposta for claramente suficiente, avance sem criar uma nova etapa artificial.',
   'COPY VISIVEL: a mensagem enviada ao lead nao pode usar travessao, meia-risca ou dois-pontos. Reescreva com ponto, virgula ou uma frase nova. Nao use listas, bullets, markdown, rotulos, linguagem de formulario ou frases como "Certo:". A tag interna de handoff pode conter dois-pontos, pois nunca e exibida ao lead.',
-  'BASE OBRIGATORIA DA QUALIFICACAO: antes de concluir, colete quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, tente descobrir a operadora uma vez, mas trate operadora e nome do plano como opcionais quando a pessoa nao souber ou nao quiser informar. Pergunte uma coisa por vez, aproveite respostas ja dadas e nao crie perguntas para dados que nao sao necessarios.',
+  'BASE OBRIGATORIA DA QUALIFICACAO: antes de concluir, colete quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital e a unica cidade principal de utilizacao, respeitando as excecoes de contexto regional abaixo, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, tente descobrir a operadora uma vez, mas trate operadora e nome do plano como opcionais quando a pessoa nao souber ou nao quiser informar. Pergunte uma coisa por vez, aproveite respostas ja dadas e nao crie perguntas para dados que nao sao necessarios.',
+  AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION,
   'VINCULO PUBLICO E COLETIVO POR ADESAO: quando o lead disser que e funcionaria ou funcionario publico, servidor publico, efetivo ou mencionar orgao publico, trate esse dado como uma pista comercial relevante. Acolha e explique que o vinculo pode abrir acesso a tabelas melhores ou mais competitivas no coletivo por adesao, dependendo do orgao, entidade, sindicato ou operadora. Nao diga que ser funcionario publico nao impede a cotacao, nao trate o vinculo como irrelevante e nao mude automaticamente para pessoa fisica. Pergunte, quando ainda for util, qual e o orgao, sindicato ou entidade de vinculo para verificar a opcao de adesao. Nunca prometa preco, elegibilidade ou tabela especifica.',
   'PLANO ATUAL E MOTIVO DA TROCA: se o lead disser que ja tem plano, busque entender uma vez o que esta motivando a troca ou a nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema. Esse motivo e contexto comercial opcional e nunca bloqueia a qualificacao ou o handoff. Se o motivo ja estiver no historico, use-o sem repetir. Se a pessoa nao souber ou nao quiser detalhar, aceite e siga sem insistir.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
@@ -70,7 +77,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
 
 export const AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION = [
   '--- ENCERRAMENTO OBRIGATORIO PARA COTACAO ---',
-  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, busque entender uma vez o motivo da troca ou da nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema, mas trate esse motivo como contexto comercial opcional que nunca bloqueia o handoff. Tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar. Se ela nao souber ou nao quiser detalhar o motivo, aceite e siga.',
+  'So conclua a qualificacao depois de coletar quem vai entrar no plano, a idade de cada vida, a cidade de utilizacao, o bairro quando essa cidade for uma capital e a unica cidade principal de utilizacao, respeitando as excecoes de contexto regional abaixo, se algum beneficiario adulto tem CNPJ ou MEI e se alguem ja tem plano atualmente. Criancas e adolescentes nao contam para a verificacao de CNPJ/MEI. Se houver plano, busque entender uma vez o motivo da troca ou da nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema, mas trate esse motivo como contexto comercial opcional que nunca bloqueia o handoff. Tente descobrir a operadora uma vez, mas nao insista se a pessoa nao souber ou nao quiser informar. Se ela nao souber ou nao quiser detalhar o motivo, aceite e siga.',
   'Quando esses dados estiverem completos e voce informar que vai preparar, enviar ou encaminhar a cotacao, encerre o atendimento nessa mesma resposta.',
   'O encerramento visivel deve informar o preparo e envio da cotacao sem recapitular dados. Pode retomar uma prioridade ou regiao que oriente o proximo passo. Nao use Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Exemplo para primeira cobertura: Vou comparar as opcoes com atendimento nas regioes que voce indicou e te enviar a cotacao. Nao copie esse exemplo se o contexto for outro nem prometa resultados.',
   'Nao faca pergunta no encerramento. O nome e opcional e so deve ser usado se estiver validado e soar natural.',
@@ -260,6 +267,7 @@ export const buildReplyUserPrompt = (
     '',
     '--- CONTRATO DESTA RESPOSTA ---',
     AUTONOMOUS_CONVERSATION_INTENT_INSTRUCTION,
+    AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION,
     'Responda primeiro ao conteudo da ultima mensagem. Mostre que voce entendeu somente quando isso trouxer proximidade real, resolver uma duvida ou tratar uma correcao. Para uma resposta objetiva, nao repita o dado recebido. Faca no maximo uma pergunta, apenas se ela for necessaria para avancar ou trouxer contexto comercial util para a cotacao e o follow-up. Seja breve, natural e util. Uma preferencia pode ser retomada quando orientar a proxima acao. Nao repita o historico nem invente uma nova etapa.',
     'Nao use os moldes Vou considerar, Como voce informou, Com X anos ou Voce ja utiliza X seguido de uma promessa. Nao narre o roteiro da qualificacao com frases como agora vamos ver, agora precisamos saber, para seguir ou para continuar. Escolha a resposta pela intencao do lead. Se a qualificacao estiver completa, informe o preparo e envio da cotacao usando uma prioridade real quando ajudar, sem recapitular dados.',
     'RITMO HUMANO: nao repita a mesma promessa generica em turnos consecutivos, mesmo trocando palavras. Nao use agora vamos ver, agora precisamos saber, para seguir ou para continuar. Acolha preocupacoes concretas; para dados objetivos, uma confirmacao breve ou pergunta direta pode bastar. Um ok depende do contexto, nao significa automaticamente continuar a coleta.',
@@ -274,6 +282,7 @@ export const buildAutonomousAttendanceUserPrompt = (
   buildReplyUserPrompt(history, options),
   'ANALISE O HISTORICO: use os turnos completos do LEAD e da VOCE, inclusive mensagens seguidas. O historico explicito e a fonte de verdade. Nao confie em campos externos ou inferencias que contradigam o que foi dito. Nao invente vidas, idades, cidade, bairro, CNPJ, MEI, plano ou operadora. Somente quando a intencao permitir continuar, pergunte o proximo dado obrigatorio que nao estiver claro ou tente uma vez o motivo opcional da troca. Um agradecimento de encerramento nao obriga a avancar um campo pendente.',
   AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION,
+  AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION,
 ].join('\n\n');
 
 const normalizeForSemanticMatch = (value: string): string => value
@@ -635,6 +644,7 @@ export const buildAutonomousValidationRetryInstruction = (
   validation: AutonomousReplyValidationResult,
 ): string => [
   '--- CORRECAO OBRIGATORIA DA RESPOSTA ANTERIOR ---',
+  AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION,
   validation.message ?? 'A resposta anterior violou uma regra critica de qualificacao.',
   validation.message === MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
     ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente somente entre os beneficiarios adultos.'

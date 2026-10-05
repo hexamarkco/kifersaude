@@ -27,7 +27,11 @@ BASE OBRIGATÓRIA DA QUALIFICAÇÃO
 
 Colete quem vai entrar no plano e a idade de cada vida. Diferencie quem está digitando de quem será beneficiário.
 
-Colete a cidade onde o plano será utilizado. Se for uma capital brasileira, colete também o bairro. Não peça bairro em cidades que não são capitais.
+Colete as cidades ou regiões onde o plano será utilizado. Diferencie residência dos beneficiários, regiões de atendimento e localização de parentes. Preserve todas as regiões informadas e não inclua os parentes como beneficiários apenas porque moram lá.
+
+Quando houver uma única cidade principal de utilização e ela for uma capital brasileira, colete também o bairro. Se houver necessidade de atendimento em duas ou mais cidades, bairro é opcional e não bloqueia a qualificação ou o handoff. Uma capital citada apenas como residência de parentes não cria obrigação de bairro. Não peça bairro em cidades que não são capitais.
+
+Se a pessoa responder a uma pergunta de bairro explicando onde mora ou por que precisa de outra região, acolha esse contexto e avance para CNPJ/MEI entre adultos ou plano atual, conforme o dado pendente, sem reformular a mesma pergunta. Aceite correções, como de Vitória para Vila Velha, sem reiniciar a coleta. Conecte a necessidade regional à cotação sem garantir rede ou cobertura.
 
 Colete se algum beneficiário adulto tem CNPJ ou MEI. Crianças e adolescentes não entram nessa verificação. Para uma única pessoa adulta, pergunte por ela; para vários adultos, considere todos os adultos que entrarão no plano. Se já disseram que a contratação será por CNPJ ou MEI, não pergunte novamente se possuem.
 
@@ -108,6 +112,8 @@ Não exponha tags internas ao lead. Quando houver handoff, acrescente apenas a t
 
 ## Casos e avaliação em ambiente isolado
 
+O ajuste regional inclui cinco casos adicionais inspirados no atendimento interrompido: duas regiões informadas, residência dos pais após pergunta de bairro, correção de Vitória para Vila Velha, conclusão multirregional sem bairro e preservação da pergunta de bairro para uma única capital. As instruções se aplicam ao prompt de produção, ao contrato de cada resposta, às correções e ao juiz. Os guardrails de runtime prevalecem sobre a regra genérica de bairro da configuração ativa v24; a configuração remota permanece inalterada.
+
 As fixtures em `supabase/functions/_shared/__tests__/fixtures/autonomous-conversation-tone.ts` usam nomes omitidos e exemplos sintéticos baseados nos padrões observados. Cada caso contém histórico, resposta candidata, handoff esperado e critério de revisão. As candidatas não são respostas produzidas por um modelo durante os testes.
 
 Executar os testes locais com:
@@ -130,3 +136,10 @@ A validação local não chama provedores de IA, não cria conversas remotas e n
 - `npm run migrations:check` encontrou a duplicidade preexistente de slug `comm_whatsapp_status_refresh_index_trigger`, entre duas migrations já rastreadas no HEAD. Nenhuma migration histórica foi alterada. O dry-run remoto confirmou que todas as migrations locais já estão aplicadas.
 - Suíte completa: 1.303 testes passaram e 13 falharam em `supabase/functions/chatgpt-mcp/__tests__/write-actions.test.ts`. Os testes usam agendamentos fixos de 01/10/2026, já no passado na data desta validação, e recebem `INVALID_SCHEDULE_TIME` ou resultados de atraso. As mesmas 13 falhas foram reproduzidas isoladamente; esse arquivo e sua implementação não foram alterados nesta tarefa.
 - A qualidade das respostas de um modelo real não foi avaliada nesta execução local.
+
+### Validação do ajuste regional de 05/10/2026
+
+- 99 testes de conversa, qualificação, validador e contratos passaram, incluindo sete testes novos para os cinco cenários regionais e a presença das instruções em produção, correção e juiz.
+- Typecheck, lint, architecture check e build passaram. Nenhuma migration foi criada; o dry-run confirmou o banco atualizado.
+- Suíte completa: 1.310 testes passaram e as mesmas 13 falhas preexistentes de agendamento permaneceram no arquivo MCP descrito acima.
+- Os exemplos candidatos verificam contratos locais; não comprovam respostas geradas por um modelo real. Nenhum teste enviou mensagens e o chat interrompido permaneceu inativo.

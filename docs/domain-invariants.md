@@ -72,6 +72,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 ## Atendimento autônomo e IA
 
+- Regiões de utilização são distintas da residência dos beneficiários e da localização de parentes. Em atendimento em várias cidades, bairro é opcional e não bloqueia a qualificação; a coleta obrigatória de bairro vale para uma única cidade principal que seja capital. Uma resposta contextual à pergunta de bairro deve avançar a conversa sem reformular a mesma pergunta. Parentes mencionados não viram beneficiários por inferência.
 - Export/import de IA usa schema v3 autocontido. Overrides preservam `model_override_enabled`, `provider` e `model`; `configuration_examples`, campos `effective_*` e snapshots são apenas informativos e nunca são aplicados. Imports v1/v2 seguem suportados.
 - Payloads de geração são montados pelo perfil do provider e da família do modelo em `_shared/ai-provider-request-profile.ts`; parâmetros incompatíveis não podem ser enviados uniformemente a todos os modelos.
 - `reasoning_effort` pertence à versão da Feature: `NULL` significa automático, e valores explícitos só são oferecidos/aplicados quando o modelo efetivo declara suporte.

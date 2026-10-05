@@ -15,6 +15,34 @@ import { buildJudgePrompt } from '../../ai-sandbox-run-scenario/judge-prompt';
 import { autonomousToneScenarios } from './fixtures/autonomous-conversation-tone';
 
 describe('contextual autonomous conversation contract', () => {
+  test('regional context survives system, response and correction prompts', () => {
+    const scenario = autonomousToneScenarios.find((item) => item.key === 'relatives-location-after-neighborhood-question')!;
+    for (const prompt of [
+      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+      buildAutonomousAttendanceUserPrompt(scenario.history),
+      buildAutonomousValidationRetryInstruction({ valid: false, stopReason: 'invalid_output' }),
+    ]) {
+      expect(prompt).toContain('diferencie residencia dos beneficiarios');
+      expect(prompt).toContain('Preserve todas as regioes de utilizacao informadas');
+      expect(prompt).toContain('nem inclua os parentes como beneficiarios');
+      expect(prompt).toContain('uma unica cidade principal de utilizacao');
+      expect(prompt).toContain('bairro e detalhe opcional e nao bloqueia');
+      expect(prompt).toContain('nao reformule a mesma pergunta');
+      expect(prompt).toContain('de Vitoria para Vila Velha');
+      expect(prompt).toContain('sem garantir rede ou cobertura');
+    }
+  });
+
+  test('regional scenario judge distinguishes optional neighborhood from required data', () => {
+    const scenario = autonomousToneScenarios.find((item) => item.key === 'multi-region-completion-without-neighborhood')!;
+    const judge = buildJudgePrompt(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, scenario.history, true, scenario.handoff);
+    expect(judge.userPrompt).toContain('bairro e opcional e nao deve bloquear');
+    expect(judge.userPrompt).toContain('sem incluir parentes como beneficiarios');
+    expect(judge.userPrompt).toContain('Vitoria para Vila Velha');
+    expect(judge.userPrompt).toContain('unica cidade principal capital');
+    expect(judge.userPrompt).toContain('contexto regional do item 1');
+  });
+
   test.each(autonomousToneScenarios)('$key accepts a relevant candidate and preserves handoff', (scenario) => {
     expect(validateAutonomousReplyOutput(scenario.candidate, scenario.history)).toEqual({ valid: true });
     const reply = splitGeneratedReply(scenario.candidate, false);
@@ -25,7 +53,7 @@ describe('contextual autonomous conversation contract', () => {
   });
 
   test('production system and user prompts distinguish thanks from acceptance', () => {
-    const scenario = autonomousToneScenarios[3];
+    const scenario = autonomousToneScenarios.find((scenario) => scenario.key === 'thanks-after-guidance')!;
     const prompt = buildAutonomousAttendanceUserPrompt(scenario.history);
     for (const instructions of [prompt, AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS]) {
       expect(instructions).toContain('sem repetir a pergunta pendente');
@@ -36,7 +64,7 @@ describe('contextual autonomous conversation contract', () => {
   });
 
   test('thanks does not bypass the initial child eligibility guidance', () => {
-    const scenario = autonomousToneScenarios[3];
+    const scenario = autonomousToneScenarios.find((scenario) => scenario.key === 'thanks-after-guidance')!;
     expect(validateAutonomousReplyOutput(scenario.candidate, [scenario.history[0]]).message)
       .toBe(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
     expect(validateAutonomousReplyOutput(scenario.candidate, scenario.history)).toEqual({ valid: true });
@@ -46,14 +74,14 @@ describe('contextual autonomous conversation contract', () => {
     'Algum adulto também entrará no plano?',
     'Você precisa incluir um adulto?',
   ])('a question alone does not count as explaining child eligibility: %s', (question) => {
-    const scenario = autonomousToneScenarios[3];
+    const scenario = autonomousToneScenarios.find((scenario) => scenario.key === 'thanks-after-guidance')!;
     const history = [scenario.history[0], { role: 'ai' as const, content: question }, scenario.history[2]];
     expect(validateAutonomousReplyOutput(scenario.candidate, history).message)
       .toBe(CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE);
   });
 
   test('production prompts permit objective questions and contextual preferences without a fixed closure', () => {
-    const prompt = buildAutonomousAttendanceUserPrompt(autonomousToneScenarios[4].history, {
+    const prompt = buildAutonomousAttendanceUserPrompt(autonomousToneScenarios.find((scenario) => scenario.key === 'objective-age')!.history, {
       isFirstLeadReplyAfterApproach: true,
     });
     expect(prompt).toContain('Um dado objetivo pode receber uma pergunta direta');
@@ -78,7 +106,7 @@ describe('contextual autonomous conversation contract', () => {
   });
 
   test('scenario judge receives real history and evaluates semantics without keyword requirements', () => {
-    const scenario = autonomousToneScenarios[1];
+    const scenario = autonomousToneScenarios.find((scenario) => scenario.key === 'first-coverage')!;
     const history = [...scenario.history, { role: 'ai' as const, content: scenario.candidate }];
     const judge = buildJudgePrompt(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, history, true, scenario.handoff);
     expect(judge.systemPrompt).toContain(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS);

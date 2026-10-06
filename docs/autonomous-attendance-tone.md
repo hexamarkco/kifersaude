@@ -143,3 +143,13 @@ A validação local não chama provedores de IA, não cria conversas remotas e n
 - Typecheck, lint, architecture check e build passaram. Nenhuma migration foi criada; o dry-run confirmou o banco atualizado.
 - Suíte completa: 1.310 testes passaram e as mesmas 13 falhas preexistentes de agendamento permaneceram no arquivo MCP descrito acima.
 - Os exemplos candidatos verificam contratos locais; não comprovam respostas geradas por um modelo real. Nenhum teste enviou mensagens e o chat interrompido permaneceu inativo.
+
+### Eventos internos do WhatsApp — 06/10/2026
+
+O catch-up agendado ao ativar o atendimento após a abordagem encontrou um registro Whapi `source=system`, `message_type=unknown`, `text_content=[Mensagem]`, sem legenda ou transcrição. Esse registro é oculto no Inbox, mas antes entrava no transcript como fala do lead. Não se trata de ajuste de tom: o evento deve ser excluído antes da geração.
+
+O transcript agora ignora esse placeholder técnico. O worker filtra o histórico antes de identificar a inbound que embasa o prompt e usa o mesmo critério ao verificar novas mensagens antes de enviar. Eventos técnicos não iniciam uma conversa nem invalidam uma resposta em andamento; conteúdo real e mídia continuam contando. O webhook já impede agendamento direto por esse evento; a correção cobre também o job de catch-up da abordagem.
+
+Os testes locais cobrem a abordagem sem resposta real, evento durante geração, nova resposta real e preservação de texto literal, conteúdo desconhecido com texto útil, legenda, imagem e áudio. Nenhuma validação envia mensagens nem altera o estado do chat.
+
+Validação: 71 testes específicos passaram, incluindo dez regressões novas. Typecheck, lint, architecture check e build passaram. A suíte completa teve 1.320 testes aprovados e as mesmas 13 falhas preexistentes de agendamento. O dry-run confirmou que o banco já está atualizado; nenhuma migration foi criada.

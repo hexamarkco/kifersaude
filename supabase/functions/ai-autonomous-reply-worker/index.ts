@@ -23,7 +23,7 @@ import {
   type CommWhatsAppCanonicalChatRoute,
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
-import { isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
+import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
   buildAutonomousAttendanceUserPrompt,
@@ -90,17 +90,16 @@ async function hasNewInboundMessageSincePrompt(params: {
   const { supabaseAdmin, chatId, promptInboundMessageId } = params;
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_messages')
-    .select('id')
+    .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
     .eq('chat_id', chatId)
     .eq('direction', 'inbound')
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(CONVERSATION_HISTORY_LIMIT);
 
   if (error) throw new Error(`Erro ao verificar mensagem recebida mais recente: ${error.message}`);
 
-  return isAutonomousReplyStale(promptInboundMessageId, data?.id ?? null);
+  return isAutonomousReplyStale(promptInboundMessageId, getLatestAutonomousInboundMessageId((data ?? []) as MessageRow[]));
 }
 
 async function cancelStaleAutonomousReplyJob(params: {
@@ -602,7 +601,8 @@ Deno.serve(async (req: Request) => {
 
         if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
 
-        const fetchedHistoryRows = (historyResult.data ?? []) as AutonomousHistoryMessageRow[];
+        const fetchedHistoryRows = ((historyResult.data ?? []) as AutonomousHistoryMessageRow[])
+          .filter((row) => Boolean(getMessageContent(row)));
         if (fetchedHistoryRows[0]) {
           fetchedHistoryRows[0] = await ensureAudioTranscriptionForAutonomousReply({
             supabaseAdmin,
@@ -668,7 +668,7 @@ Deno.serve(async (req: Request) => {
         }
         conversationLockAcquired = true;
 
-        const promptInboundMessageId = fetchedHistoryRows.find((row) => row.direction === 'inbound')?.id;
+        const promptInboundMessageId = getLatestAutonomousInboundMessageId(fetchedHistoryRows);
         if (!promptInboundMessageId) {
           throw new Error('Nao foi possivel identificar a mensagem recebida que embasou a resposta autonoma.');
         }

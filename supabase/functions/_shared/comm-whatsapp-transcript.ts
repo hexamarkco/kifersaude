@@ -71,6 +71,9 @@ export const getMessageContent = (message: MessageRow) => {
   const caption = normalizeTranscriptText(toTrimmedString(message.media_caption));
   const transcription = normalizeTranscriptText(toTrimmedString(message.transcription_text));
   const kind = message.message_type.trim().toLowerCase();
+  // Eventos auxiliares da Whapi podem ter direction=inbound. O rotulo
+  // de auditoria nao e uma fala do cliente, mesmo num job de catch-up.
+  if (kind === 'unknown' && text.toLowerCase() === '[mensagem]' && !caption && !transcription) return '';
   if (kind === 'text') return text;
   if (kind === 'image') return caption ? `[Imagem] ${caption}` : '[Imagem]';
   if (kind === 'video' || kind === 'gif' || kind === 'short') return caption ? `[Video] ${caption}` : '[Video]';

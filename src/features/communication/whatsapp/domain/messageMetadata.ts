@@ -103,6 +103,10 @@ export const messagesReferToSameOutgoing = (left: CommWhatsAppMessage, right: Co
   messagesReferToSameDelivery(left, right) || left.id === right.id
 );
 
+export const isMessageForwarded = (message: CommWhatsAppMessage) => (
+  message.direction !== 'system' && getMessageMetadataRecord(message).forwarded === true
+);
+
 export const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {
   if (!message) return null;
 

@@ -1,5 +1,5 @@
 import type { MutableRefObject, ReactNode, UIEventHandler } from 'react';
-import { ChevronDown, ChevronUp, Loader2, Smile, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Forward, Loader2, Smile, Star } from 'lucide-react';
 
 import { Button } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
@@ -21,7 +21,7 @@ import {
   canReplyOrForwardMessage,
   isMessageStarred,
 } from '../domain/messagePresentation';
-import { getMessageReactions, getReactionTooltipText } from '../domain/messageMetadata';
+import { getMessageReactions, getReactionTooltipText, isMessageForwarded } from '../domain/messageMetadata';
 import { formatMessageTime } from '../domain/messageTimeline';
 import { DeliveryStatusIndicator, RetryMediaButton, WhatsAppMediaGroupBody } from './WhatsAppInboxList';
 import { WhatsAppMessageBody } from './WhatsAppMessageContent';
@@ -347,6 +347,12 @@ export function WhatsAppMessageThread({
 
                             {isGroupMessage && message.sender_name ? (
                               <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
+                            ) : null}
+                            {isMessageForwarded(message) ? (
+                              <p className="mb-1 flex items-center gap-1 px-1 text-xs italic text-[var(--text-secondary)]">
+                                <Forward className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                Encaminhada
+                              </p>
                             ) : null}
                             <div
                               className={cx(

@@ -38,3 +38,12 @@ test('does not group media with captions', () => {
 
   assert.deepEqual(timeline.map((item) => item.type), ['day', 'message', 'message']);
 });
+
+test('keeps forwarded media separate so its label does not apply to neighboring images', () => {
+  const timeline = buildInboxMessageTimeline([
+    createMessage('first', '2026-09-08T12:00:00.000Z'),
+    createMessage('forwarded', '2026-09-08T12:00:30.000Z', { metadata: { forwarded: true } }),
+    createMessage('third', '2026-09-08T12:01:00.000Z'),
+  ]);
+  assert.deepEqual(timeline.map((item) => item.type), ['day', 'message', 'message', 'message']);
+});

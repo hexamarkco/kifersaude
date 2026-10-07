@@ -78,6 +78,18 @@ export const corsHeaders = {
 };
 
 export const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+
+export const extractWhapiForwardedMeta = (message: Record<string, unknown>): Record<string, unknown> => {
+  const context = isRecord(message.context) ? message.context : null;
+  const score = context?.forwarding_score;
+  if (context?.forwarded !== true && !(typeof score === 'number' && Number.isFinite(score) && score > 0)) {
+    return {};
+  }
+  return {
+    forwarded: true,
+    ...(typeof score === 'number' && Number.isFinite(score) && score >= 0 ? { forwarding_score: score } : {}),
+  };
+};
 export const COMM_WHATSAPP_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 export const COMM_WHATSAPP_CHANNEL_SLUG = 'primary';
 export const COMM_WHATSAPP_MODULE = 'whatsapp-inbox';
@@ -4542,6 +4554,7 @@ export async function syncWhapiDirectChatMessages(
         from_name: toTrimmedString(message.from_name) || null,
         chat_name: toTrimmedString(message.chat_name) || null,
         link_preview: linkPreviewMeta,
+        ...extractWhapiForwardedMeta(message),
         ...(inviteMeta ? { invite: inviteMeta } : {}),
         ...(quoteMeta ? { quote: quoteMeta } : {}),
         ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
@@ -4717,6 +4730,7 @@ const syncWhapiGroupChatMessages = async (
         from_name: senderName,
         chat_name: ensuredGroup.name,
         link_preview: linkPreviewMeta,
+        ...extractWhapiForwardedMeta(message),
         ...(senderId ? { sender_id: senderId } : {}),
         ...(inviteMeta ? { invite: inviteMeta } : {}),
         ...(quoteMeta ? { quote: quoteMeta } : {}),

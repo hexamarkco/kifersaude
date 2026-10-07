@@ -2,6 +2,7 @@ import type { CommWhatsAppMessage } from './types';
 import {
   getMessageReactions,
   hasMessageQuote,
+  isMessageForwarded,
 } from './messageMetadata';
 import {
   getMessageVisibleCaption,
@@ -40,6 +41,9 @@ const canGroupMediaMessages = (current: CommWhatsAppMessage, next: CommWhatsAppM
   if (hasMessageQuote(current) || hasMessageQuote(next)) {
     return false;
   }
+
+  // Keep forwarded media separate so its label only describes that message.
+  if (isMessageForwarded(current) || isMessageForwarded(next)) return false;
 
   if (getMessageReactions(current).length > 0 || getMessageReactions(next).length > 0) {
     return false;

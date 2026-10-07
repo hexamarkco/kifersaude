@@ -15,6 +15,7 @@ import {
   getMessageReactions,
   getOwnReactionEmoji,
   getReactionTooltipText,
+  isMessageForwarded,
 } from '../messageMetadata';
 
 const createMessage = (overrides: Partial<CommWhatsAppMessage> = {}): CommWhatsAppMessage => ({
@@ -30,6 +31,14 @@ const createMessage = (overrides: Partial<CommWhatsAppMessage> = {}): CommWhatsA
   metadata: {},
   created_at: '2026-09-08T12:00:00.000Z',
   ...overrides,
+});
+
+test('identifies forwarded inbound and outbound messages using explicit metadata', () => {
+  assert.equal(isMessageForwarded(createMessage({ metadata: { forwarded: true } })), true);
+  assert.equal(isMessageForwarded(createMessage({ direction: 'outbound', metadata: { forwarded: true } })), true);
+  assert.equal(isMessageForwarded(createMessage()), false);
+  assert.equal(isMessageForwarded(createMessage({ metadata: { forwarded: 'false', quote: { external_message_id: 'quoted' } } })), false);
+  assert.equal(isMessageForwarded(createMessage({ direction: 'system', metadata: { forwarded: true } })), false);
 });
 
 test('reads quote, link and contact metadata used by message rendering', () => {

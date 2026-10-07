@@ -149,6 +149,12 @@ test('includes displayed metadata in the update signature', () => {
   );
 });
 
+test('refreshes the displayed signature when forwarding information arrives', () => {
+  const original = baseMessage({ metadata: {} });
+  const forwarded = baseMessage({ metadata: { forwarded: true } });
+  assert.notEqual(getMessageDisplayMetadataSignature(original), getMessageDisplayMetadataSignature(forwarded));
+});
+
 test('reconciles the link preview by WhatsApp id even without a client request id', () => {
   const local = baseMessage({
     id: 'local-link', source: 'local', external_message_id: 'external-link',

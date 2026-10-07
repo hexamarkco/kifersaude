@@ -5,6 +5,7 @@ import type { CommWhatsAppMessage } from '../domain/types';
 import {
   getMessageDisplayMetadataSignature,
   mergeCommWhatsAppMessages,
+  messagesReferToSameDelivery,
   resolveDeliveryStatus,
 } from '../messageStatus';
 
@@ -146,4 +147,50 @@ test('includes displayed metadata in the update signature', () => {
     getMessageDisplayMetadataSignature(base),
     getMessageDisplayMetadataSignature(updated),
   );
+});
+
+test('reconciles the link preview by WhatsApp id even without a client request id', () => {
+  const local = baseMessage({
+    id: 'local-link', source: 'local', external_message_id: 'external-link',
+    text_content: 'Entre neste link: https://example.com',
+    metadata: { local_outgoing: true, client_request_id: 'request-link' },
+  });
+  const preview = baseMessage({
+    id: 'server-link', external_message_id: 'external-link',
+    message_type: 'link_preview', delivery_status: 'delivered',
+    message_at: '2026-05-27T10:01:00.000Z',
+    text_content: local.text_content,
+    metadata: { link_preview: { url: 'https://example.com', title: 'Example' } },
+  });
+
+  assert.equal(messagesReferToSameDelivery(local, preview), true);
+  for (const [existing, incoming] of [[[local], [preview]], [[preview], [local]], [[local, preview], []]]) {
+    const merged = mergeCommWhatsAppMessages(existing, incoming);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].id, preview.id);
+    assert.equal(merged[0].message_type, 'link_preview');
+    assert.equal(merged[0].delivery_status, 'delivered');
+    assert.deepEqual(merged[0].metadata.link_preview, preview.metadata.link_preview);
+    assert.equal(merged[0].metadata.client_request_id, 'request-link');
+  }
+});
+
+test('a confirmation joins both the optimistic request and the earlier webhook', () => {
+  const local = baseMessage({ id: 'local-link', source: 'local', metadata: { client_request_id: 'request-link' } });
+  local.external_message_id = null;
+  const webhook = baseMessage({ id: 'server-link', message_type: 'link_preview', delivery_status: 'delivered', metadata: { link_preview: { title: 'Example' } } });
+  const confirmation = baseMessage({ id: 'server-link', metadata: { client_request_id: 'request-link' } });
+  const merged = mergeCommWhatsAppMessages([local, webhook], [confirmation]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].id, 'server-link');
+  assert.equal(merged[0].delivery_status, 'delivered');
+  assert.deepEqual(merged[0].metadata.link_preview, webhook.metadata.link_preview);
+});
+
+test('keeps independent sends and identities from other conversations separate', () => {
+  const first = baseMessage({ id: 'first', external_message_id: 'external-first', text_content: 'https://example.com' });
+  const second = baseMessage({ id: 'second', external_message_id: 'external-second', text_content: first.text_content });
+  const otherChat = baseMessage({ ...first, id: 'other-chat', chat_id: 'chat-2' });
+  const otherChannel = baseMessage({ ...first, id: 'other-channel', channel_id: 'channel-2' });
+  assert.equal(mergeCommWhatsAppMessages([first], [second, otherChat, otherChannel]).length, 4);
 });

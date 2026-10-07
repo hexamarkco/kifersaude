@@ -91,15 +91,23 @@ export const getMessageIdentityKey = (message: CommWhatsAppMessage) => {
 
   const externalMessageId = String(message.external_message_id ?? '').trim();
   if (externalMessageId) {
-    return `external:${message.channel_id}:${externalMessageId}`;
+    return `external:${message.channel_id}:${message.chat_id}:${externalMessageId}`;
   }
 
   return `id:${message.id}`;
 };
 
-export const messagesReferToSameDelivery = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => (
-  getMessageIdentityKey(left) === getMessageIdentityKey(right)
-);
+export const messagesReferToSameDelivery = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => {
+  if (left.channel_id !== right.channel_id || left.chat_id !== right.chat_id) return false;
+  if (left.id === right.id) return true;
+
+  const leftExternalId = String(left.external_message_id ?? '').trim();
+  const rightExternalId = String(right.external_message_id ?? '').trim();
+  if (leftExternalId && leftExternalId === rightExternalId) return true;
+
+  const leftRequestId = getMessageClientRequestId(left);
+  return Boolean(leftRequestId && leftRequestId === getMessageClientRequestId(right));
+};
 
 const pickStatusUpdatedAt = (left?: string | null, right?: string | null) => {
   const leftTime = left ? new Date(left).getTime() : Number.NaN;
@@ -143,25 +151,17 @@ export const mergeCommWhatsAppMessage = (
 export const mergeCommWhatsAppMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
   const map = new Map<string, CommWhatsAppMessage>();
 
-  for (const message of existing) {
-    map.set(getMessageIdentityKey(message), message);
-  }
-
-  for (const message of incoming) {
-    let key = getMessageIdentityKey(message);
-    let previous = map.get(key);
-
-    if (!previous) {
-      for (const [, value] of map) {
-        if (value.id === message.id) {
-          previous = value;
-          key = getMessageIdentityKey(value);
-          break;
-        }
+  for (const message of [...existing, ...incoming]) {
+    let merged = message;
+    // A confirmation can connect a local request to an earlier webhook that
+    // only knows the WhatsApp id. Consume both entries before storing it again.
+    for (const [key, value] of map) {
+      if (messagesReferToSameDelivery(value, message)) {
+        merged = mergeCommWhatsAppMessage(value, merged);
+        map.delete(key);
       }
     }
-
-    map.set(key, previous ? mergeCommWhatsAppMessage(previous, message) : message);
+    map.set(getMessageIdentityKey(merged), merged);
   }
 
   return Array.from(map.values());

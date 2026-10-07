@@ -173,6 +173,25 @@ test('reconcilia mensagens do servidor, limpa retry e transfere preview sem remo
   assert.equal(mounted.outgoingState.applyOutgoingOrderToServerMessage(serverMessage).metadata.client_order_at, localMessage.message_at);
 });
 
+test('remove a saída local quando o preview confirma o mesmo ID do WhatsApp sem request ID', () => {
+  const mounted = renderOutgoingState();
+  const message = mounted.outgoingState.buildOptimisticOutgoingMessage({
+    chat: createChat(), messageType: 'text',
+    textContent: 'Entre neste link: https://example.com', clientRequestId: 'request-link',
+    messageAt: '2026-09-28T12:00:00.000Z',
+  });
+  act(() => mounted.outgoingState.appendLocalOutgoingMessage(message));
+  act(() => mounted.outgoingState.patchLocalOutgoingMessage(message.id, { external_message_id: 'external-link' }));
+  const preview = createMessage('server-link', 'chat-1', {
+    external_message_id: 'external-link', message_type: 'link_preview', delivery_status: 'delivered',
+    message_at: '2026-09-28T12:01:00.000Z',
+    metadata: { link_preview: { url: 'https://example.com', title: 'Example' } },
+  });
+  act(() => mounted.outgoingState.reconcileLocalOutgoingMessages('chat-1', [preview]));
+  assert.deepEqual(mounted.outgoingState.localOutgoingMessages, []);
+  assert.equal(mounted.outgoingState.applyOutgoingOrderToServerMessage(preview).metadata.client_order_at, message.message_at);
+});
+
 test('remoção local libera preview temporário e snapshot de retry', () => {
   const mounted = renderOutgoingState();
   const revokedUrls: string[] = [];

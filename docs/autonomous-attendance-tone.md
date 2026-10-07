@@ -168,3 +168,19 @@ A configuracao remota v24, o modelo `gpt-6.1-sol`, reasoning `low` e os parametr
 A auditoria encontrou exemplos automaticos realimentando o estilo, flags globais ignorados e leitura de configuracoes globais incompativel com o banco. As seis chamadas de Priscila usaram o mesmo modelo e reasoning, sem fallback ou correcao adicional. Isso sustenta corrigir a composicao e as referencias antes de atribuir o problema ao modelo.
 
 Acrescimo proposto ao prompt editavel: avalie o ritmo da conversa inteira. Depois de duas perguntas diretas seguidas, inclua uma transicao ou orientacao util antes da proxima pergunta, sem promessa generica. Um pedido explicito de respostas objetivas permite maior concisao. Uma confirmacao natural e valida quando ajuda a orientar. Ao ouvir que nao tem CNPJ, pode explicar que tambem podemos cotar sem CNPJ e perguntar sobre plano atual. Para alguem sem cobertura, conecte a procura de protecao as opcoes que serao avaliadas na regiao informada. Evite o fechamento burocratico "vou dar andamento ao preparo da sua cotacao".
+
+### Validacao e publicacao estrutural
+
+- 89 testes especificos de helpers, tom e composicao passaram. A suite completa teve 1.334 testes aprovados e as mesmas 13 falhas preexistentes de agendamento no MCP. Nenhuma falha nova foi identificada.
+- Typecheck, lint, architecture check e build passaram. A verificacao de migrations continua apontando a duplicidade historica ja documentada; o dry-run remoto confirmou banco atualizado.
+- Commit de implementacao `d5d1d7a8`, publicado em `main`. Deploy confirmado das 29 functions afetadas transitivamente pelos modulos compartilhados, incluindo worker, dois sandboxes e consumidores do resolver global. Nenhuma migration nova.
+- A simulacao baseline reproduziu cinco perguntas seguidas e fechamento burocratico, embora aprovada pelo juiz anterior. Isso demonstra a limitacao daquele criterio de avaliacao.
+- A avaliacao real usa apenas `ai-sandbox-run-scenario`, com persona ficticia, sem envio WhatsApp. Executar `node scripts/evaluate-autonomous-tone.mjs baseline` ou `node scripts/evaluate-autonomous-tone.mjs candidate` com a CLI Supabase autenticada. A candidata executa tres repeticoes de dois cenarios, respostas objetivas e preocupacao com orcamento. Os arquivos JSON registram os vereditos; as mensagens precisam ser revisadas junto com eles.
+
+### Resultado das gerações reais
+
+As seis simulações candidatas foram aprovadas pelo juiz revisado. A revisão das mensagens confirmou transições úteis na pergunta de bairro, orientação após a ausência de CNPJ e fechamentos conectados à região ou ao orçamento. As três simulações de orçamento reconheceram a preocupação antes de perguntar a idade. Todas concluíram com `QUALIFICACAO_COMPLETA`, sem pergunta repetida ou garantia de preço e cobertura.
+
+O modelo permaneceu `gpt-6.1-sol`, com reasoning configurado como `low`. O resultado indica que as mudanças na composição e nas instruções melhoraram esses dois cenários sem trocar o modelo; a amostra não prova qualidade universal em produção. Não houve comparação entre modelos ou níveis de reasoning nesta rodada. Os casos de família, agradecimento e elegibilidade continuam cobertos por contratos e fixtures locais, sem reivindicar avaliação real desses casos.
+
+Os vereditos estão em `docs/evaluations/autonomous-tone-candidate.json`. As sete conversas sintéticas, uma baseline e seis candidatas, estão em `docs/evaluations/autonomous-tone-transcripts.json`. Nenhuma avaliação enviou mensagens reais, ativou chats de clientes ou alterou a configuração remota v24. A proposta revisada do prompt permanece disponível neste documento para uma aplicação separada.

@@ -1,0 +1,485 @@
+[
+  {
+    "scenario_key": "tone-structure-baseline-objective",
+    "conversation_id": "92174c17-b6cf-40ab-b783-ff91cf154c8c",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:46:39.907454+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, só para mim.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você pode me dizer sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você pretende utilizar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual bairro você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você já tem algum plano de saúde hoje ou está sem cobertura?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Estou sem cobertura.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou dar andamento ao preparo da sua cotação e te enviar as opções para você avaliar.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-objective",
+    "conversation_id": "4e4cd469-4161-4f1b-a307-2bc9003457cb",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:54:45.21851+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, só para mim.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você pode me dizer sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O bairro ajuda a direcionar as opções para a região que você precisa. Em qual bairro você busca atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não, estou sem plano no momento.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou comparar as opções pensando no atendimento na Tijuca e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-budget",
+    "conversation_id": "1272a1a9-b609-48e2-914e-4020bbd97609",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:55:24.35241+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, quero um plano para mim, mas estou preocupada com o valor.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O valor precisa caber no seu orçamento, e podemos comparar as alternativas sem compromisso. Qual é a sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O bairro ajuda a direcionar a busca por atendimento perto de você. Em qual bairro você precisa usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Dependendo do caso, o plano por CNPJ ou MEI pode ficar mais em conta que por pessoa física. Você tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje ou está sem cobertura?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Estou sem plano hoje.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou preparar a cotação pensando na sua preocupação com o valor e te enviar as opções para comparar com calma.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-objective",
+    "conversation_id": "4cf7822e-8345-4a50-a650-d33f164076b1",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:56:06.044559+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, só para mim.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você pode me dizer sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O bairro ajuda a direcionar a busca de atendimento perto de você. Em qual bairro você precisa usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Dependendo do caso, o plano por CNPJ ou MEI pode ficar mais em conta que por pessoa física. Você tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje ou está sem cobertura?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Estou sem cobertura.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou verificar as opções de plano individual pensando no atendimento na sua região e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-budget",
+    "conversation_id": "5dd70d8a-1739-4d67-aa44-f8b5dcee31c3",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:56:46.712589+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, quero um plano para mim, mas estou preocupada com o valor.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Sei que a mensalidade precisa caber no seu orçamento. O valor depende de alguns detalhes, como a idade e a região de atendimento. Qual é a sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "A região ajuda a direcionar as opções de atendimento. Em qual bairro você precisa usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Dependendo do caso, o plano por CNPJ ou MEI pode ficar mais em conta que por pessoa física. Você tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje ou está sem cobertura?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Estou sem plano hoje.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou preparar a cotação pensando na sua preocupação com a mensalidade e te enviar as opções para avaliar com calma.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-objective",
+    "conversation_id": "cd9ef9d5-a3a8-41ea-8c9b-610ebb97f2af",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:57:27.414897+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, só para mim.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você pode me dizer sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você pretende usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O bairro ajuda a direcionar as opções de atendimento. Em qual bairro você pretende usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Dependendo do caso, o plano por CNPJ ou MEI pode ficar mais em conta que por pessoa física. Você tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje ou está sem cobertura?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Estou sem cobertura.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou verificar as opções para atendimento na região que você indicou e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "scenario_key": "tone-structure-candidate-budget",
+    "conversation_id": "4a79e41a-2504-4a34-b86c-dace581deeef",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "created_at": "2026-10-07 21:58:06.106523+00",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa noite, quero um plano para mim, mas estou preocupada com o valor.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O valor precisa caber no seu orçamento, e podemos comparar as alternativas sem compromisso. Qual é a sua idade?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Tenho 34 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade você precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "No Rio de Janeiro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O bairro ajuda a direcionar a busca por atendimento perto de você. Em qual bairro você precisa usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Na Tijuca.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta por essa modalidade do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Você já tem algum plano de saúde hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Não tenho plano hoje.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou providenciar a cotação com atenção ao valor, para você comparar as opções com calma. Te envio assim que estiver pronta.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  }
+]

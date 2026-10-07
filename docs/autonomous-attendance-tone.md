@@ -153,3 +153,18 @@ O transcript agora ignora esse placeholder técnico. O worker filtra o históric
 Os testes locais cobrem a abordagem sem resposta real, evento durante geração, nova resposta real e preservação de texto literal, conteúdo desconhecido com texto útil, legenda, imagem e áudio. Nenhuma validação envia mensagens nem altera o estado do chat.
 
 Validação: 71 testes específicos passaram, incluindo dez regressões novas. Typecheck, lint, architecture check e build passaram. A suíte completa teve 1.320 testes aprovados e as mesmas 13 falhas preexistentes de agendamento. O dry-run confirmou que o banco já está atualizado; nenhuma migration foi criada.
+
+## Plano e revisao estrutural de 07/10/2026
+
+1. Corrigir a leitura de `ai_global_configs` para o schema real (`key`, `value`, `updated_at`) e respeitar os flags globais.
+2. Unificar a composicao do prompt no worker e nos dois sandboxes.
+3. Exigir autoria humana nas referencias de estilo e retirar a busca de situacoes similares que mistura respostas humanas e automaticas.
+4. Avaliar o ritmo no conjunto da conversa, orientar apos respostas relevantes e conectar o fechamento a necessidade real.
+5. Registrar versao e SHA-256 do prompt, sem seu conteudo, para diagnosticar divergencias.
+6. Validar contratos locais e geracoes reais somente no sandbox, publicar as functions e entregar o prompt revisado.
+
+A configuracao remota v24, o modelo `gpt-6.1-sol`, reasoning `low` e os parametros de geracao foram preservados. A proposta configuravel continua sem aplicacao remota, conforme o limite da implementacao original. Os guardrails compartilhados corrigem o comportamento no runtime.
+
+A auditoria encontrou exemplos automaticos realimentando o estilo, flags globais ignorados e leitura de configuracoes globais incompativel com o banco. As seis chamadas de Priscila usaram o mesmo modelo e reasoning, sem fallback ou correcao adicional. Isso sustenta corrigir a composicao e as referencias antes de atribuir o problema ao modelo.
+
+Acrescimo proposto ao prompt editavel: avalie o ritmo da conversa inteira. Depois de duas perguntas diretas seguidas, inclua uma transicao ou orientacao util antes da proxima pergunta, sem promessa generica. Um pedido explicito de respostas objetivas permite maior concisao. Uma confirmacao natural e valida quando ajuda a orientar. Ao ouvir que nao tem CNPJ, pode explicar que tambem podemos cotar sem CNPJ e perguntar sobre plano atual. Para alguem sem cobertura, conecte a procura de protecao as opcoes que serao avaliadas na regiao informada. Evite o fechamento burocratico "vou dar andamento ao preparo da sua cotacao".

@@ -1,9 +1,9 @@
+import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { buildJudgePrompt } from './judge-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
-import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import {
@@ -11,10 +11,7 @@ import {
   buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
-  buildReferencePrompt,
-  buildStylePrompt,
   fetchQuickReplies,
-  fetchSimilarSituations,
   getReliableLeadFirstName,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
@@ -138,7 +135,8 @@ Deno.serve(async (req: Request) => {
 
     const { data: styleMessagesData, error: styleError } = await supabaseAdmin
       .from('comm_whatsapp_messages')
-      .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
+      .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
+      .not('created_by', 'is', null)
       .eq('direction', 'outbound')
       .eq('message_type', 'text')
       .neq('delivery_status', 'failed')
@@ -146,7 +144,7 @@ Deno.serve(async (req: Request) => {
       .order('message_at', { ascending: false })
       .limit(120);
 
-    const styleMessages = (styleError ? [] : styleMessagesData ?? []) as MessageRow[];
+    const styleMessages = (styleError ? [] : styleMessagesData ?? []) as AutonomousStyleMessage[];
     const quickReplies = await fetchQuickReplies(supabaseAdmin);
     const leadSystemPrompt = buildLeadSystemPrompt(leadPersonaPrompt);
 
@@ -201,21 +199,9 @@ Deno.serve(async (req: Request) => {
     // Recalcula a cada turno com base na ultima mensagem do lead — busca
     // situacoes reais parecidas no historico do WhatsApp (pg_trgm) para
     // embasar a resposta em casos reais, alem das mensagens rapidas.
-    const buildAttendantSystemPrompt = async (): Promise<string> => {
-      const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
-      const similarSituations = lastLeadMessage ? await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4) : [];
-      const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
-      const styleBlock = buildStylePrompt(styleMessages);
-      // Use autonomous.reply featurePrompt + outputInstructions (from DB) as the system prompt,
-      // same as production. This ensures /chat and scenario test exactly what runs live.
-      return [
-        autonomousConfig.featurePrompt,
-        autonomousConfig.outputInstructions,
-        styleBlock,
-        referenceBlock,
-        AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-      ].filter(Boolean).join('\n\n');
-    };
+    const buildAttendantSystemPrompt = async (): Promise<string> => (
+      await composeAutonomousPrompt({ supabaseAdmin, config: autonomousConfig, styleMessages, quickReplies })
+    ).systemPrompt;
 
     // ---- Abertura ----
 

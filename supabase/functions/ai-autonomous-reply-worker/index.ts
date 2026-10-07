@@ -1,3 +1,4 @@
+import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { assertContactPermissionForSend } from '../_shared/contact-permissions.ts';
@@ -25,13 +26,9 @@ import {
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
-  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
   buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
-  buildReferencePrompt,
-  buildStylePrompt,
   fetchQuickReplies,
-  fetchSimilarSituations,
   getReliableLeadFirstName,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
@@ -584,7 +581,8 @@ Deno.serve(async (req: Request) => {
             .limit(CONVERSATION_HISTORY_LIMIT),
           supabaseAdmin
             .from('comm_whatsapp_messages')
-            .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
+            .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
+            .not('created_by', 'is', null)
             .eq('direction', 'outbound')
             .eq('message_type', 'text')
             .neq('delivery_status', 'failed')
@@ -685,18 +683,16 @@ Deno.serve(async (req: Request) => {
           quickReplies: quickReplies.length,
           lastLeadMessagePreview: lastLeadMessage.slice(0, 120),
         });
-        const similarSituations = await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
-        const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
-        const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY).catch(() => null);
-        const styleMessagesForPrompt = styleMessagesResult.error ? [] : styleMessages;
-        const systemPrompt = [
-          autonomousConfig?.featurePrompt,
-          autonomousConfig?.outputInstructions,
-          '',
-          buildStylePrompt(styleMessagesForPrompt),
-          referenceBlock ? `\n${referenceBlock}` : '',
-          AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-        ].filter(Boolean).join('\n');
+        const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+        const { systemPrompt, trace } = await composeAutonomousPrompt({
+          supabaseAdmin, config: autonomousConfig,
+          styleMessages: styleMessagesResult.error ? [] : styleMessagesResult.data as AutonomousStyleMessage[],
+          quickReplies,
+        });
+        await recordAutonomousAttendanceEvent({
+          supabaseAdmin, chatId: chat.id, leadId, eventType: 'prompt_composed', correlationId,
+          metadata: trace,
+        }).catch((error) => console.warn('[autonomous-prompt] trace persistence failed', String(error)));
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
         const userPrompt = buildAutonomousAttendanceUserPrompt(history, {
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
@@ -709,8 +705,8 @@ Deno.serve(async (req: Request) => {
           task: 'autonomous_attendance',
           systemPrompt,
           userPrompt,
-          temperature: autonomousConfig?.temperature || 0.6,
-          maxTokens: autonomousConfig?.maxOutputTokens || 350,
+          temperature: autonomousConfig.temperature,
+          maxTokens: autonomousConfig.maxOutputTokens,
           edgeFunction: 'ai-autonomous-reply-worker',
           leadId,
           chatId: chat.id,
@@ -747,8 +743,8 @@ Deno.serve(async (req: Request) => {
             task: 'autonomous_attendance',
             systemPrompt,
             userPrompt: retryUserPrompt,
-            temperature: autonomousConfig?.temperature || 0.6,
-            maxTokens: autonomousConfig?.maxOutputTokens || 350,
+            temperature: autonomousConfig.temperature,
+            maxTokens: autonomousConfig.maxOutputTokens,
             edgeFunction: 'ai-autonomous-reply-worker',
             leadId,
             chatId: chat.id,

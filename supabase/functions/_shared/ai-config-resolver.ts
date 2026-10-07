@@ -170,10 +170,8 @@ export async function loadGlobalConfig(
 
   const { data: config, error } = await supabaseAdmin
     .from('ai_global_configs')
-    .select('key, content, version')
+    .select('key, value, updated_at')
     .eq('key', configKey)
-    .eq('is_active', true)
-    .order('version', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -188,8 +186,8 @@ export async function loadGlobalConfig(
 
   const resolved: ResolvedAIGlobalConfig = {
     key: config.key,
-    content: config.content ?? '',
-    version: config.version,
+    content: config.value ?? '',
+    version: Date.parse(config.updated_at) || 0,
   };
 
   // Cache

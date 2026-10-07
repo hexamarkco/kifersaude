@@ -1,0 +1,15 @@
+[
+  {
+    "success": true,
+    "conversationId": "92174c17-b6cf-40ab-b783-ff91cf154c8c",
+    "scenarioKey": "tone-structure-baseline-objective",
+    "scenarioLabel": "Tone structure baseline objective",
+    "turns": 6,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": true,
+    "violations": [],
+    "notes": "A qualificação coletou todos os dados obrigatórios sem repetição e com uma pergunta por mensagem. O bairro foi solicitado corretamente para o Rio de Janeiro, e o encerramento com QUALIFICACAO_COMPLETA ocorreu no momento adequado, sem montar cotação nem prometer preço ou cobertura.",
+    "playbookImprovements": []
+  }
+]

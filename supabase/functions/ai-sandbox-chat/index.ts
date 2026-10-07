@@ -1,3 +1,4 @@
+import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
@@ -5,16 +6,11 @@ import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
 import { buildSandboxApproachMessages } from '../_shared/auto-contact-approach.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
-import type { MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import {
-  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
   buildAutonomousAttendanceUserPrompt,
   buildAutonomousValidationRetryInstruction,
   buildOpeningUserPrompt,
-  buildReferencePrompt,
-  buildStylePrompt,
   fetchQuickReplies,
-  fetchSimilarSituations,
   getReliableLeadFirstName,
   splitGeneratedReply,
   validateAutonomousReplyOutput,
@@ -89,7 +85,8 @@ Deno.serve(async (req: Request) => {
         .limit(SANDBOX_HISTORY_LIMIT),
       supabaseAdmin
         .from('comm_whatsapp_messages')
-        .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
+        .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
+        .not('created_by', 'is', null)
         .eq('direction', 'outbound')
         .eq('message_type', 'text')
         .neq('delivery_status', 'failed')
@@ -164,21 +161,12 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'A última mensagem já foi respondida.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
-
-    const lastLeadMessage = isOpeningMode ? '' : [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
-    const similarSituations = isOpeningMode ? [] : await fetchSimilarSituations(supabaseAdmin, lastLeadMessage, 4);
-    const referenceBlock = buildReferencePrompt(quickReplies, similarSituations);
-
-    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY).catch(() => null);
-    const systemPrompt = [
-      autonomousConfig?.featurePrompt,
-      autonomousConfig?.outputInstructions,
-      '',
-      buildStylePrompt(styleMessagesResult.error ? [] : styleMessages),
-      referenceBlock ? `\n${referenceBlock}` : '',
-      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-    ].filter(Boolean).join('\n');
+    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
+    const { systemPrompt } = await composeAutonomousPrompt({
+      supabaseAdmin, config: autonomousConfig,
+      styleMessages: styleMessagesResult.error ? [] : (styleMessagesResult.data ?? []) as AutonomousStyleMessage[],
+      quickReplies,
+    });
     const leadFirstName = getReliableLeadFirstName(leadName);
     const userPrompt = isOpeningMode
       ? buildOpeningUserPrompt(leadName)
@@ -193,8 +181,8 @@ Deno.serve(async (req: Request) => {
       task: 'autonomous_attendance',
       systemPrompt,
       userPrompt,
-      temperature: autonomousConfig?.temperature || 0.6,
-      maxTokens: isOpeningMode ? (autonomousConfig?.maxOutputTokens || 450) : (autonomousConfig?.maxOutputTokens || 350),
+      temperature: autonomousConfig.temperature,
+      maxTokens: autonomousConfig.maxOutputTokens,
       edgeFunction: 'ai-sandbox-chat',
       maxAttempts: 2,
       maxProviderRequestsPerAttempt: 1,

@@ -12,7 +12,7 @@ SELECT ok(
   'chat list checks saved contact cache'
 );
 SELECT ok(
-  position('contact.display_name ilike' IN lower(pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure))) > 0,
+  position('comm_whatsapp_normalize_search(contact.display_name)' IN lower(pg_get_functiondef('public.comm_whatsapp_list_chats(text, text, text, text, text, text[], text[], integer, integer)'::regprocedure))) > 0,
   'chat search includes cached saved contact name'
 );
 SELECT ok(

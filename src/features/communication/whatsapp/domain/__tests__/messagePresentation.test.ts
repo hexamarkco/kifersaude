@@ -15,7 +15,16 @@ import {
   isHiddenTechnicalMessageMarker,
   isMessageStarred,
   normalizeChatDraftPreview,
+  normalizeInboxSearch,
 } from '../messagePresentation';
+
+test('normaliza nomes sem distinguir acentos, caixa ou formatação de texto colado', () => {
+  for (const sample of ['Cláudia', 'CLAUDIA', 'Cla\u0301udia', 'Clau\u200bdia']) {
+    assert.equal(normalizeInboxSearch(sample), 'claudia');
+  }
+  assert.equal(normalizeInboxSearch(' Cla\u0301udia\u00a0   Santos '), 'claudia santos');
+  assert.equal(normalizeInboxSearch('São Gonçalo'), 'sao goncalo');
+});
 
 const createMessage = (overrides: Partial<CommWhatsAppMessage> = {}): CommWhatsAppMessage => ({
   id: 'message-1',

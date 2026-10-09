@@ -3009,6 +3009,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_status: string
+          delivery_status_checked_at: string | null
           direction: string
           error_message: string | null
           external_message_id: string | null
@@ -3042,6 +3043,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_status?: string
+          delivery_status_checked_at?: string | null
           direction: string
           error_message?: string | null
           external_message_id?: string | null
@@ -3075,6 +3077,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_status?: string
+          delivery_status_checked_at?: string | null
           direction?: string
           error_message?: string | null
           external_message_id?: string | null
@@ -7854,6 +7857,10 @@ export type Database = {
         Args: never
         Returns: number
       }
+      comm_whatsapp_invoke_message_status_reconciliation: {
+        Args: never
+        Returns: number
+      }
       comm_whatsapp_is_hidden_preview_text: {
         Args: { p_message_type?: string; p_value: string }
         Returns: boolean
@@ -7927,6 +7934,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_status: string
+          delivery_status_checked_at: string | null
           direction: string
           error_message: string | null
           external_message_id: string | null
@@ -8147,6 +8155,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_status: string
+          delivery_status_checked_at: string | null
           direction: string
           error_message: string | null
           external_message_id: string | null
@@ -8194,6 +8203,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_status: string
+          delivery_status_checked_at: string | null
           direction: string
           error_message: string | null
           external_message_id: string | null
@@ -8263,6 +8273,10 @@ export type Database = {
           p_message_type: string
           p_text_content: string
         }
+        Returns: string
+      }
+      comm_whatsapp_normalize_search: {
+        Args: { p_value: string }
         Returns: string
       }
       comm_whatsapp_open_or_create_chat: {

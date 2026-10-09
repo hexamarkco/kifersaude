@@ -2866,16 +2866,26 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
     return !settings ? errorResult('NOT_FOUND', 'Configuração de automação não encontrada.') : { success: true, settings: automationSettingsView(settings), updated_at: integration?.updated_at ?? null };
   }
   if (toolName === 'kifer_list_followup_flows' || toolName === 'kifer_get_followup_flow') {
+    const isList = toolName === 'kifer_list_followup_flows';
+    const page = boundedInteger(args.page ?? 1, 1, 10_000);
+    const pageSize = boundedInteger(args.page_size ?? 1, 1, 50);
+    if (isList && (page === null || pageSize === null || ('include_steps' in args && typeof args.include_steps !== 'boolean'))) {
+      return errorResult('INVALID_INPUT', 'Informe page entre 1 e 10000, page_size entre 1 e 50 e include_steps booleano.');
+    }
     const integration = await loadAutomationIntegration(supabase); const settings = automationSettings(integration?.settings);
     if (!settings || !Array.isArray(settings.flows)) return errorResult('NOT_FOUND', 'Fluxos de follow-up não encontrados.');
     const requestedId = toolName === 'kifer_get_followup_flow' ? text(args.flow_id) : '';
+    if (!isList && !requestedId) return errorResult('INVALID_INPUT', 'flow_id obrigatório.');
     const flows = settings.flows.map(flowRecord).filter((flow): flow is Record<string, unknown> => Boolean(flow)).filter((flow) => !requestedId || text(flow.id) === requestedId);
     if (requestedId && flows.length === 0) return errorResult('NOT_FOUND', 'Fluxo não encontrado.');
-    const summarized = await Promise.all(flows.slice(0, 50).map(async (flow) => {
+    const from = ((page ?? 1) - 1) * (pageSize ?? 1);
+    const selected = isList ? flows.slice(from, from + (pageSize ?? 1)) : flows.slice(0, 1);
+    const summarized = await Promise.all(selected.map(async (flow) => {
       const { count } = await supabase.from('auto_contact_flow_jobs').select('id', { count: 'exact', head: true }).eq('flow_id', text(flow.id)).in('status', ['pending', 'processing']);
-      return { ...flowView(flow), pending_jobs: count ?? 0 };
+      const view = flowView(flow);
+      return { ...view, ...(isList && args.include_steps === false ? { steps: [], steps_count: view.steps.length, steps_included: false } : {}), pending_jobs: count ?? 0 };
     }));
-    return toolName === 'kifer_get_followup_flow' ? { success: true, flow: summarized[0] } : { success: true, flows: summarized };
+    return isList ? { success: true, page, page_size: pageSize, total: flows.length, has_more: from + selected.length < flows.length, flows: summarized } : { success: true, flow: summarized[0] };
   }
   if (toolName === 'kifer_list_lead_statuses') {
     const { data, error } = await supabase.from('lead_status_config').select('id,nome,cor,ordem,ativo,padrao').eq('ativo', true).order('ordem', { ascending: true });

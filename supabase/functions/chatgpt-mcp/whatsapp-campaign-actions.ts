@@ -174,6 +174,14 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
 const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const safeUuid = (value: unknown): value is string => UUID.test(text(value));
+export const campaignReadAuditSummary = (args: JsonRecord) => ({
+  campaign_id: safeUuid(args.campaign_id) ? text(args.campaign_id) : null,
+  target_id: safeUuid(args.target_id) ? text(args.target_id) : null,
+  argument_keys: Object.keys(args).sort(),
+  page: args.page,
+  page_size: args.page_size,
+});
+
 const pageParams = (args: JsonRecord) => {
   const page = Number.isInteger(args.page) ? Math.max(Number(args.page), 1) : 1;
   const pageSize = Number.isInteger(args.page_size) ? Math.min(Math.max(Number(args.page_size), 1), 50) : 20;

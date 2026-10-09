@@ -10,8 +10,9 @@ import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, M
 import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
 import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from './media-read-action.ts';
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
-import { executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
+import { campaignReadAuditSummary, executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
+import { toMcpToolResult } from './tool-result.ts';
 import { attachMcpOAuthSecuritySchemes, getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from './mcp-discovery.ts';
 
 /**
@@ -25,7 +26,6 @@ import { attachMcpOAuthSecuritySchemes, getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES
 const MCP_PROTOCOL_VERSION = '2025-03-26';
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
-const MAX_TEXT_RESPONSE_LENGTH = 40_000;
 const SCHEDULED_MEDIA_REFERENCE_SCHEMA = {
   type: 'object',
   required: ['storage_path', 'message_type', 'mime_type', 'file_name'],
@@ -121,7 +121,6 @@ const READABLE_TABLE_SET = new Set<string>(READABLE_TABLES);
 const FILTER_OPERATORS = new Set(['eq', 'neq', 'ilike', 'like', 'gt', 'gte', 'lt', 'lte', 'is', 'in']);
 const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const SENSITIVE_KEY = /(?:^|_)(?:access_?token|api_?key|secret|password|credential|authorization|bearer|webhook_?secret|service_?role|private_?key|refresh_?token)(?:$|_)/i;
 
 type JsonRpcRequest = {
   jsonrpc?: string;
@@ -192,25 +191,7 @@ const equalTokens = (received: string, expected: string): boolean => {
   return result === 0;
 };
 
-const sanitize = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(sanitize);
-  if (!value || typeof value !== 'object') return value;
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, child]) => [
-      key,
-      SENSITIVE_KEY.test(key) ? '[REDACTED]' : sanitize(child),
-    ]),
-  );
-};
-
-const toToolResult = (value: unknown) => {
-  let output = JSON.stringify(sanitize(value), null, 2);
-  if (output.length > MAX_TEXT_RESPONSE_LENGTH) {
-    output = `${output.slice(0, MAX_TEXT_RESPONSE_LENGTH)}\n\n[Resposta truncada. Use page/page_size ou filtros mais especificos.]`;
-  }
-  return { content: [{ type: 'text', text: output }] };
-};
+const toToolResult = toMcpToolResult;
 
 const getSupabaseAdmin = (): SupabaseClient => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -464,7 +445,7 @@ const commercialTools = [
   { name: 'kifer_retry_automation_job', description: 'Reagenda um job falho ou ignorado. Nunca use para job concluído, pois isso pode duplicar uma ação externa. Altera dados reais.', inputSchema: { type: 'object', required: ['job_id'], additionalProperties: false, properties: { job_id: { type: 'string' }, scheduled_at: { type: 'string', format: 'date-time' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_get_automation_settings', description: 'Consulta as configurações operacionais permitidas do motor de automação. Não retorna segredos nem credenciais.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_automation_settings', description: 'Altera configurações operacionais explicitamente permitidas da automação. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['settings'], additionalProperties: false, properties: { settings: { type: 'object', minProperties: 1, additionalProperties: false, properties: { enabled: { type: 'boolean' }, auto_send: { type: 'boolean' }, timezone: { type: 'string' }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, refresh_seconds: { type: 'integer', minimum: 5, maximum: 3600 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
-  { name: 'kifer_list_followup_flows', description: 'Lista os fluxos de follow-up configurados, sem expor templates, URLs ou credenciais internas. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_list_followup_flows', description: 'Lista os fluxos de follow-up configurados com paginação, sem expor templates, URLs ou credenciais internas. Use include_steps=false para consultar somente o resumo; consulte kifer_get_followup_flow para as etapas. É somente leitura.', inputSchema: { type: 'object', additionalProperties: false, properties: { page: { type: 'integer', minimum: 1, maximum: 10000, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 1 }, include_steps: { type: 'boolean', default: true } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_get_followup_flow', description: 'Consulta detalhes operacionais de um fluxo de follow-up existente. É somente leitura.', inputSchema: { type: 'object', required: ['flow_id'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 } } }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_followup_flow', description: 'Altera nome, gatilho, ativação, horários, limites, status de gatilho e configuração das etapas existentes. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'changes'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, changes: { type: 'object', minProperties: 1, additionalProperties: false, properties: { nome: { type: 'string', minLength: 1, maxLength: 160 }, ativo: { type: 'boolean' }, trigger_type: { type: 'string', enum: ['lead_created', 'status_changed', 'status_duration', 'inactivity_duration'] }, trigger_duration_hours: { type: 'integer', minimum: 0, maximum: 8760 }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, enabled_step_ids: { type: 'array', maxItems: 101, items: { type: 'string', minLength: 1, maxLength: 160 } }, step_delays: { type: 'array', maxItems: 101, items: { type: 'object', required: ['step_id', 'delay_value', 'delay_unit'], additionalProperties: false, properties: { step_id: { type: 'string', minLength: 1, maxLength: 160 }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] } } } } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_pause_followup_flow', description: 'Pausa um fluxo de follow-up existente. Use somente quando o usuário pedir explicitamente; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id'], additionalProperties: false, properties: { flow_id: { type: 'string' } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
@@ -822,13 +803,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
       toolName: name,
       actor,
       resourceName: 'comm_whatsapp_campaigns',
-      requestSummary: {
-        campaign_id: safeUuid(args.campaign_id) ? text(args.campaign_id) : null,
-        target_id: safeUuid(args.target_id) ? text(args.target_id) : null,
-        argument_keys: Object.keys(args).sort(),
-        page: args.page,
-        page_size: args.page_size,
-      },
+      requestSummary: campaignReadAuditSummary(args),
     });
     return toToolResult(campaignRead);
   }

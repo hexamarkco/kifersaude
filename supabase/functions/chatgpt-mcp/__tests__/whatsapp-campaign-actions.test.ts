@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  campaignReadAuditSummary,
   executeMcpWhatsAppCampaignWriteAction,
   MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES,
   MCP_WHATSAPP_CAMPAIGN_TOOLS,
@@ -17,6 +18,16 @@ const makeSupabase = (response: unknown = { success: true, replayed: false }) =>
 };
 
 describe('MCP WhatsApp campaign actions', () => {
+  it('builds audit metadata for list queries without requiring campaign identifiers', () => {
+    expect(campaignReadAuditSummary({ page: 1, page_size: 1 })).toEqual({
+      campaign_id: null, target_id: null, argument_keys: ['page', 'page_size'], page: 1, page_size: 1,
+    });
+    expect(campaignReadAuditSummary({ campaign_id: ` ${campaignId} `, target_id: 'invalid', search: 'private-name' })).toMatchObject({
+      campaign_id: campaignId, target_id: null, argument_keys: ['campaign_id', 'search', 'target_id'],
+    });
+    expect(JSON.stringify(campaignReadAuditSummary({ search: 'private-name' }))).not.toContain('private-name');
+  });
+
   it('declares the complete campaign surface without follow-up-flow aliases', () => {
     const names = MCP_WHATSAPP_CAMPAIGN_TOOLS.map(({ name }) => name);
     expect(names).toHaveLength(15);

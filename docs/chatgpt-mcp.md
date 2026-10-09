@@ -137,6 +137,12 @@ O schema de oportunidades registra grupos comerciais e preserva histórico de v�
 
 `config_options` foi removida da allowlist de leitura: o recurso constava no MCP, mas não aparece no schema tipado vigente. O CRM usa hoje tabelas dedicadas e `system_configurations`; as migrations de `config_options` são históricas. Assim, o MCP deixa de anunciar uma consulta que falha no schema atual.
 
+### Paginação de fluxos e respostas grandes
+
+`kifer_list_followup_flows` aceita `page` (1–10000), `page_size` (1–50, padrão 1) e `include_steps` (padrão true). A resposta mantém `flows` e acrescenta `page`, `page_size`, `total` e `has_more`. Percorra as páginas até `has_more=false`. Para listar resumos sem textos extensos, use `include_steps=false`: cada fluxo retorna `steps=[]`, `steps_count` e `steps_included=false`. Consulte `kifer_get_followup_flow` para obter suas etapas.
+
+Respostas acima de 40 mil caracteres são primeiro compactadas sem perda de conteúdo. Se ainda excederem o limite, o MCP retorna um envelope JSON válido com `response_truncated`, `RESPONSE_TOO_LARGE` e `action_success` quando disponível. Esse erro é de apresentação: uma escrita pode já ter sido concluída. Não repita a ação com uma nova chave; consulte o registro ou recupere o resultado com a mesma chave idempotente. Para leituras, diminua a página ou restrinja os filtros.
+
 ## Inventário
 
 O registry atual publica 123 ferramentas únicas: 35 de leitura e 88 de escrita. A classificação funcional exclusiva é 38 de comunicação, 22 de automação, 6 de analytics e 57 de administração/CRM geral; esses grupos funcionais são um eixo diferente da contagem leitura/escrita. O inventário histórico tinha 45 ferramentas no commit `6ace016030`. As ações de escrita e consultas operacionais/genéricas exigem OAuth de administrador; a conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos.

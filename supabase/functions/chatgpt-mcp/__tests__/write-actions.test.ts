@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { afterEach, test, vi } from 'vitest';
+import { beforeEach, afterEach, test, vi } from 'vitest';
 
 import { executeMcpCommercialReadAction, executeMcpWriteAction } from '../write-actions';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from '../authorization';
@@ -73,7 +73,13 @@ const client = (handlers: Record<string, Result | Result[]>, rpcHandlers: Record
   };
 };
 
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -1404,6 +1410,36 @@ test('exige novo nome ao clonar fluxo', async () => {
   });
 
   assert.equal(result?.error_code, 'INVALID_INPUT');
+});
+
+test('pagina fluxos de follow-up sem omitir fluxos posteriores ao limite antigo', async () => {
+  const flows = Array.from({ length: 55 }, (_, index) => ({ id: `flow-${index}`, name: `Fluxo ${index}`, steps: [] }));
+  const supabase = client({ integration_settings: { data: { settings: { flows } } }, auto_contact_flow_jobs: { count: 2 } });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_list_followup_flows', arguments: { page: 11, page_size: 5 } });
+  assert.equal(result?.total, 55);
+  assert.equal(result?.has_more, false);
+  assert.deepEqual((result?.flows as Array<{ id: string }>).map(flow => flow.id), ['flow-50', 'flow-51', 'flow-52', 'flow-53', 'flow-54']);
+  assert.equal(supabase.calls.filter(table => table === 'auto_contact_flow_jobs').length, 5);
+});
+
+test('consulta resumo de fluxos sem repetir instruções extensas das etapas', async () => {
+  const supabase = client({ integration_settings: { data: { settings: { flows: [{ id: 'flow-1', steps: [{ actionType: 'send_message', messages: [{ ai: { instruction: 'x'.repeat(50000) } }] }] }] } } }, auto_contact_flow_jobs: { count: 0 } });
+  const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_list_followup_flows', arguments: { include_steps: false } });
+  assert.equal(result?.page_size, 1);
+  const flow = (result?.flows as Array<{ steps: unknown[]; steps_count: number; steps_included: boolean }>)[0];
+  assert.deepEqual(flow.steps, []);
+  assert.equal(flow.steps_count, 1);
+  assert.equal(flow.steps_included, false);
+  assert.ok(JSON.stringify(result).length < 40000);
+});
+
+test('recusa paginação inválida antes de consultar fluxos', async () => {
+  for (const args of [{ page: 0 }, { page_size: 51 }, { include_steps: 'false' }]) {
+    const supabase = client({});
+    const result = await executeMcpCommercialReadAction({ supabase: supabase as never, toolName: 'kifer_list_followup_flows', arguments: args });
+    assert.equal(result?.error_code, 'INVALID_INPUT');
+    assert.deepEqual(supabase.calls, []);
+  }
 });
 
 test('consulta fluxo de follow-up sem expor URLs, IDs de template ou payloads de mídia', async () => {

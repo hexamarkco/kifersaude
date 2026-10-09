@@ -626,15 +626,20 @@ export const validateAutonomousReplyOutput = (
     };
   }
 
-  if (CNPJ_OR_MEI_REGEX.test(normalizedCandidate) && visibleCandidate.includes('?')) {
-    const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
+  const businessIdQuestion = CNPJ_OR_MEI_REGEX.test(normalizedCandidate)
+    ? [...normalizedCandidate.matchAll(/([^.!?]+)\?/g)].map((match) => match[1].trim())
+      .find((question) => /\b(?:tem|temos|possui|possuem|teria|teriam|e|sao|existe|ha|numero)\b[^.!?]{0,60}\b(?:cnpj|mei)\b/.test(question)
+        || /\b(?:tem|possui|teria)\s*$/.test(question))
+    : undefined;
+  if (businessIdQuestion) {
+    const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(businessIdQuestion);
     if (isSingleAdultWithMinorsQuote(history)) {
       const addressee = getSingleAdultAddressee(history);
       const addressesAdult = addressee === 'interlocutor'
-        ? ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate)
-        : addressee ? new RegExp(`\\b(?:seu|sua)\\s+${addressee}\\b`).test(normalizedCandidate)
-          : !THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) || THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
-      const hasOtherAdultOption = /\bou\s+(?:voce|seu|sua)\b|\b(?:seu|sua)\s+\w+\s+ou\b/.test(normalizedCandidate);
+        ? ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(businessIdQuestion)
+        : addressee ? new RegExp(`\\b(?:seu|sua)\\s+${addressee}\\b`).test(businessIdQuestion)
+          : !THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) || THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(businessIdQuestion);
+      const hasOtherAdultOption = /\bou\s+(?:voce|seu|sua)\b|\b(?:seu|sua)\s+\w+\s+ou\b/.test(businessIdQuestion);
       if (hasGroupScope || hasOtherAdultOption || !addressesAdult) {
         return { valid: false, stopReason: 'invalid_output', message: SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE };
       }
@@ -642,8 +647,8 @@ export const validateAutonomousReplyOutput = (
     }
     const hasMultipleBeneficiaries = MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText);
     const isThirdPartyOnly = THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) && !hasMultipleBeneficiaries;
-    const hasThirdPartyScope = THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
-    const asksOnlyInterlocutor = ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate) && !hasGroupScope;
+    const hasThirdPartyScope = THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(businessIdQuestion);
+    const asksOnlyInterlocutor = ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(businessIdQuestion) && !hasGroupScope;
     const hasWrongScope = hasMultipleBeneficiaries
       ? !hasGroupScope
       : isThirdPartyOnly && !hasThirdPartyScope;

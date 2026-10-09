@@ -25,6 +25,13 @@ describe('adding an adult to a child quote', () => {
     expect(state.lives.items.map((life) => life.age)).toEqual([39, 5]);
   });
 
+  test('does not mistake a CNPJ acknowledgement followed by a plan question for another CNPJ question', () => {
+    const history = [...adultAddedToChildQuote, { role: 'ai' as const, content: 'Sua esposa tem CNPJ ou MEI?' }, { role: 'lead' as const, content: 'Ela não tem CNPJ nem MEI.' }];
+    expect(validateAutonomousReplyOutput('Tudo bem, podemos cotar sem CNPJ. Qual é a operadora do plano atual?', history).valid).toBe(true);
+    expect(validateAutonomousReplyOutput('Sem CNPJ, qual é a operadora do plano atual?', history).valid).toBe(true);
+    expect(validateAutonomousReplyOutput('Sua esposa pode cotar sem CNPJ. Você tem CNPJ ou MEI?', adultAddedToChildQuote).valid).toBe(false);
+  });
+
   test('a correction to the adult age preserves the child age', () => {
     const state = stateFrom([...adultAddedToChildQuote, { role: 'lead', content: 'Corrigindo, minha esposa tem 40 anos.' }]);
     expect(state.lives.items.map((life) => life.age)).toEqual([40, 4]);

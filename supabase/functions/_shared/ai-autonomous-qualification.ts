@@ -248,6 +248,7 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   let childReferenceCount = 0;
   let onlyChild = false;
   let latestAges: number[] = [];
+  const compositionMessages: string[] = [];
 
   let previousAi = '';
   for (const message of messages) {
@@ -257,7 +258,11 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     }
     const text = message.content;
     const normalizedPreviousAi = normalize(previousAi);
-    const ages = extractAgeValues(text);
+    const existingPlanOnly = onlyChild
+      && /\b(?:nosso|meu|seu|o)\s+plano\b[^.!?]{0,40}\batende\s+bem\b/i.test(text)
+      && !/\b(?:entrar|inclui|incluir|cotacao|novo)\b/i.test(text);
+    if (!existingPlanOnly) compositionMessages.push(text);
+    const ages = existingPlanOnly ? [] : extractAgeValues(text);
     const ageQuestionPending = /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi)
       && !/quantas?\s+(?:vidas?|pessoas?)/.test(normalizedPreviousAi);
     const hasPendingAge = count !== null && latestAges.length < count && /^\s*\d{1,3}\s*$/.test(text);
@@ -306,7 +311,7 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
         ? Number(text.match(/\b([1-9][0-9]?)\b/)?.[1] ?? 0) || numberWords[normalize(text.trim())] || null
         : null);
     if (extractedCount !== null) count = extractedCount;
-    if (hasAdultReference(text)) hasAdult = true;
+    if (!existingPlanOnly && hasAdultReference(text)) hasAdult = true;
     const currentChildReferenceCount = countChildReferences(text);
     if (currentChildReferenceCount > 0) {
       hasChild = true;
@@ -331,7 +336,7 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   if (onlyChild && !hasAdult) {
     if (count === null) count = latestAges.length > 1 ? latestAges.length : 1;
   }
-  const allLeadText = messages.map((row) => row.content).join(' ');
+  const allLeadText = compositionMessages.join(' ');
   if (hasAdult && hasChild && /\b(?:eu|mim)\s+e\s+(?:meu|minha|o|a)\b/i.test(allLeadText)) count = Math.max(count ?? 0, 2);
   if (hasAdult && !hasChild && /\b(?:eu|mim)\b.{0,50}\b(?:minha esposa|meu marido|ela|ele)\b/i.test(allLeadText)) count = Math.max(count ?? 0, 2);
   const leadMessages = messages.filter((row) => row.role === 'lead');

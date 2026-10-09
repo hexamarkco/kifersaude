@@ -320,7 +320,6 @@ const URGENT_COVERAGE_REGEX = /\b(urgencia|emergencia)\b/;
 const TWENTY_FOUR_HOURS_REGEX = /\b24\s*horas?\b/;
 const DEPENDENCY_EXPLANATION_REGEX = /\b(titular|dependente|mensalidade)\b/;
 const CHILD_COMPOSITION_QUESTION_REGEX = /\b(titular|dependente|mensalidade|entra\s+no\s+plano|pode\s+entrar)\b/;
-const CHILD_BENEFICIARY_CONTEXT_REGEX = /\b(filh[oa]s?|net[oa]s?|crianc[ae]s?|menor(?:es)?)\b/;
 const IDENTITY_DISCLOSURE_REGEX = /\b(?:inteligencia\s+artificial|assistente\s+virtual|chatbot|\bbot\b|automacao)\b/;
 const THIRD_PARTY_HANDOFF_REGEX = /\b(?:vou\s+(?:pedir|encaminhar|passar|transferir)[^.!?]{0,80}\b(?:time|equipe|outra\s+pessoa|especialista)|(?:time|equipe|outra\s+pessoa|especialista)[^.!?]{0,80}\b(?:vai|ira|pode)\b)\b/;
 const ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX = /\bvoce\s+(?:tem|possui|teria)\b/;
@@ -333,34 +332,16 @@ const THIRD_PARTY_ONLY_REGEX = new RegExp(
 const THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX = new RegExp(
   `(?:(?:seu|sua)\\s+(?:filh[oa]|net[oa]|sobrinh[oa]|marido|esposa|pai|mae)|\\bbeneficiari[oa]\\b|\\bquem\\s+vai\\s+entrar\\b|\\balguem\\s+que\\s+(?:vai|ira)\\s+entrar\\b)`,
 );
-const EXPLICIT_CHILD_ONLY_SCOPE_REGEX = /(?:\b(?:para|cotacao\s+para)\s+(?:o\s+|a\s+|os\s+|as\s+|meu\s+|minha\s+|meus\s+|minhas\s+)?(?:filh[oa]|net[oa]|crianca|adolescente|menor)\b|\b(?:so|somente|apenas)\s+(?:para\s+)?(?:os?\s+|as?\s+)?(?:meus?\s+|minhas?\s+)?(?:filh[oa]s?|net[oa]s?|crianc[ae]s?|adolescent(?:e|es)?|menor(?:es)?)\b)/i;
-const ADULT_BENEFICIARY_CONTEXT_REGEX = /(?:\b(?:eu|nos)\s+e\s+(?:meu|minha|meus|minhas|o|a)\b|\b(?:para|pra|pro)\s+mim\s+e\b|\beu\s+(?:tambem\s+)?vou\s+entrar\b|\b(?:vou|vamos|iremos?)\s+(?:entrar|ser\s+titular)\b|\b(?:meu|minha)\s+(?:marido|esposa|esposo|companheiro|companheira)\b)/i;
-const EXISTING_PLAN_ADULT_CONTEXT_REGEX = /\b(?:eu|nos|mae|pai|marido|esposa|esposo|companheiro|companheira)\b[^.!?]{0,60}\b(?:ja\s+temos?|temos?|possui|possuo)\s+plano\b/i;
 
 export const MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE = 'A cotacao tem mais de um beneficiario. Pergunte sobre CNPJ/MEI somente entre os beneficiarios adultos, ou nomeie os adultos envolvidos; nao pergunte apenas ao interlocutor quando houver outro adulto.';
 export const SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE = 'A cotacao tem um unico beneficiario adulto e os demais sao menores. Pergunte diretamente ao adulto se ele tem CNPJ/MEI; criancas e adolescentes nao contam para essa verificacao.';
 export const CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE = 'A cotacao e para uma unica vida abaixo de 12 anos sem adulto beneficiario confirmado. Explique que e necessario incluir um adulto para conseguir contratar, porque as operadoras nao aceitam menor de 12 anos como titular.';
 export const CHILD_ONLY_SCOPE_VALIDATION_MESSAGE = 'A regra de incluir um adulto so vale quando a cotacao e para uma unica vida abaixo de 12 anos. Nao aplique essa regra a mais de uma vida, a uma cotacao com adulto ou a adolescentes de 12 anos ou mais.';
 
-const isSingleUnderTwelveQuoteWithoutKnownAdult = (leadHistoryText: string): boolean => {
-  const agesInLeadHistory = [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)]
-    .map((match) => Number(match[1]));
-  const hasKnownSingleUnderTwelve = CHILD_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
-    && agesInLeadHistory.length === 1
-    && agesInLeadHistory.some((age) => age < 12)
-    && !agesInLeadHistory.some((age) => age >= 18);
-  const hasAdultBeneficiary = ADULT_BENEFICIARY_CONTEXT_REGEX.test(leadHistoryText)
-    && !EXISTING_PLAN_ADULT_CONTEXT_REGEX.test(leadHistoryText);
-  const hasExplicitChildOnlyScope = EXPLICIT_CHILD_ONLY_SCOPE_REGEX.test(leadHistoryText);
-  const hasPluralChildReference = /\b(?:filhos|netos|criancas|menores|adolescentes)\b/.test(leadHistoryText);
-
-  // Uma resposta curta como "neto" seguida da idade também pode representar
-  // uma única vida. Só abrimos essa inferência quando não há plural, adulto ou
-  // outra idade no histórico, evitando exigir uma frase exata do lead.
-  const hasSingleChildByContext = hasExplicitChildOnlyScope
-    || (hasKnownSingleUnderTwelve && !hasPluralChildReference && !MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText));
-
-  return hasKnownSingleUnderTwelve && hasSingleChildByContext && !hasAdultBeneficiary;
+const isSingleUnderTwelveQuoteWithoutKnownAdult = (history: AutonomousMessageRow[]): boolean => {
+  const state = extractAutonomousQualificationState(history, '1970-01-01T00:00:00.000Z');
+  return (state.lives.count === null || state.lives.count === 1) && state.lives.items.length === 1
+    && state.lives.items[0].age !== null && state.lives.items[0].age < 12;
 };
 
 const isSingleAdultWithMinorsQuote = (history: AutonomousMessageRow[]): boolean => {
@@ -544,7 +525,7 @@ export const validateAutonomousReplyOutput = (
   const leadHistoryText = normalizeForSemanticMatch(
     history.filter((row) => row.role === 'lead').map((row) => row.content).join(' '),
   );
-  const singleUnderTwelveQuoteWithoutKnownAdult = isSingleUnderTwelveQuoteWithoutKnownAdult(leadHistoryText);
+  const singleUnderTwelveQuoteWithoutKnownAdult = isSingleUnderTwelveQuoteWithoutKnownAdult(history);
   // Once explained, the eligibility rule must not force the next reply to
   // repeat it (including after a thank-you). Intent stays with the model.
   const adultRequirementAlreadyExplained = history.some((row) => {
@@ -570,7 +551,7 @@ export const validateAutonomousReplyOutput = (
   const hasUnderTwelveBeneficiary = /\b(filh|net|crianc|menor)\w*\b/.test(leadHistoryText)
     && [...leadHistoryText.matchAll(/\b(\d{1,2})\b/g)].some((match) => Number(match[1]) < 12);
   const claimsAdultIsRequired = /\badulto\b/.test(normalizedCandidate)
-    && /(?:necessari|precis|incluir|entrar|junto)/.test(normalizedCandidate);
+    && /\b(?:necessari\w*|precis\w*|obrigatori\w*)\b/.test(normalizedCandidate);
   if (hasUnderTwelveBeneficiary && !singleUnderTwelveQuoteWithoutKnownAdult && claimsAdultIsRequired) {
     return {
       valid: false,

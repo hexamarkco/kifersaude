@@ -6,6 +6,11 @@ import { adultAddedToChildQuote } from './fixtures/adult-added-to-child-quote.ts
 const stateFrom = (history = adultAddedToChildQuote) => extractAutonomousQualificationState(history, '2026-10-09T12:00:00.000Z');
 
 describe('adding an adult to a child quote', () => {
+  test('an existing family plan does not confirm adults in the child quote', () => {
+    const history = adultAddedToChildQuote.slice(0, 3);
+    expect(stateFrom(history).lives.items.map((life) => [life.role, life.age])).toEqual([['child', 4]]);
+    expect(validateAutonomousReplyOutput('Você quer avaliar uma cotação incluindo um adulto junto com seu filho?', history).valid).toBe(true);
+  });
   test('keeps both ages after the wife joins, without adding the person typing', () => {
     const state = stateFrom();
     expect(state.lives.count).toBe(2);

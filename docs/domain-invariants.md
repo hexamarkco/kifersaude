@@ -72,6 +72,8 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 ## Atendimento autônomo e IA
 
+- A composição da cotação é distinta das pessoas mencionadas no plano atual. Ao incluir um adulto numa cotação inicialmente infantil, preservar a idade da criança e acrescentar somente o adulto confirmado. CNPJ/MEI deve ser perguntado aos adultos da nova cotação, sem incluir o interlocutor quando ele apenas representa os beneficiários.
+- Falhas de geração esgotam quatro tentativas e fazem handoff `PRECISA_HUMANO`, preservando o status comercial e registrando o motivo interno. Não enviar mensagem de fallback nem marcar qualificação completa. Falhas terminais de permissão e envio ambíguo preservam seus bloqueios e não são reencaminhadas automaticamente.
 - Registros Whapi `unknown` com apenas `[Mensagem]`, sem legenda ou transcrição, são auditoria técnica: não entram no transcript, não contam como resposta do lead no catch-up e não invalidam uma geração em andamento. Mensagens reais e mídia continuam contando como inbound.
 - Regiões de utilização são distintas da residência dos beneficiários e da localização de parentes. Em atendimento em várias cidades, bairro é opcional e não bloqueia a qualificação; a coleta obrigatória de bairro vale para uma única cidade principal que seja capital. Uma resposta contextual à pergunta de bairro deve avançar a conversa sem reformular a mesma pergunta. Parentes mencionados não viram beneficiários por inferência.
 - Export/import de IA usa schema v3 autocontido. Overrides preservam `model_override_enabled`, `provider` e `model`; `configuration_examples`, campos `effective_*` e snapshots são apenas informativos e nunca são aplicados. Imports v1/v2 seguem suportados.

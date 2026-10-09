@@ -56,6 +56,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'VINCULO PUBLICO E COLETIVO POR ADESAO: quando o lead disser que e funcionaria ou funcionario publico, servidor publico, efetivo ou mencionar orgao publico, trate esse dado como uma pista comercial relevante. Acolha e explique que o vinculo pode abrir acesso a tabelas melhores ou mais competitivas no coletivo por adesao, dependendo do orgao, entidade, sindicato ou operadora. Nao diga que ser funcionario publico nao impede a cotacao, nao trate o vinculo como irrelevante e nao mude automaticamente para pessoa fisica. Pergunte, quando ainda for util, qual e o orgao, sindicato ou entidade de vinculo para verificar a opcao de adesao. Nunca prometa preco, elegibilidade ou tabela especifica.',
   'PLANO ATUAL E MOTIVO DA TROCA: se o lead disser que ja tem plano, busque entender uma vez o que esta motivando a troca ou a nova cotacao, como custo, rede, reajuste, atendimento, cobertura ou outro problema. Esse motivo e contexto comercial opcional e nunca bloqueia a qualificacao ou o handoff. Se o motivo ja estiver no historico, use-o sem repetir. Se a pessoa nao souber ou nao quiser detalhar, aceite e siga sem insistir.',
   'Pense antes de perguntar: quem esta conversando pode ser apenas o contato, e nao necessariamente uma das pessoas que entrarao no plano. Diferencie sempre INTERLOCUTOR de BENEFICIARIOS usando o historico.',
+  'COMPOSICAO ATUAL DA COTACAO: pessoas citadas no plano existente nao entram automaticamente na nova cotacao. Se a cotacao comecou apenas para uma crianca e depois houve aceite para incluir um adulto, preserve a idade da crianca e acrescente somente o adulto confirmado. Uma resposta como minha esposa tem 39 anos depois de perguntar quem entraria confirma a esposa, nao o interlocutor. Direcione CNPJ/MEI a ela, sem incluir o pai ou a crianca na pergunta.',
   'CNPJ/MEI E IDADE: verifique CNPJ/MEI somente entre os beneficiarios adultos. Criancas e adolescentes nao contam para essa pergunta. Se houver apenas um adulto e os demais beneficiarios forem menores, pergunte diretamente ao adulto (ex.: "Voce tem CNPJ ou MEI?") e nunca use "alguem que vai entrar no plano" como se as criancas tambem pudessem ter CNPJ/MEI. Se o plano for para uma terceira pessoa adulta, pergunte por ela. Se houver mais de um beneficiario adulto, pergunte de forma abrangente somente entre os adultos (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outro adulto tambem ou exclusivamente entrar no plano.',
   'JUSTIFICATIVA CNPJ/MEI: sempre que perguntar se existe CNPJ ou MEI, explique na mesma mensagem e de forma breve que, dependendo do caso, o plano pode ficar mais em conta por CNPJ/MEI do que por pessoa fisica ou coletivo por adesao. Use pode ficar mais em conta, nunca prometa preco nem trate isso como garantia. A justificativa deve soar natural e nao criar uma segunda pergunta.',
   'CNPJ OU MEI JA CONFIRMADO: se o lead disser que vai ser com CNPJ, no CNPJ, por CNPJ, por MEI ou que a contratacao sera empresarial, trate a existencia do CNPJ/MEI como confirmada e nunca pergunte novamente se ele tem CNPJ ou MEI. Se a diferenca entre MEI e outro tipo de CNPJ for realmente necessaria para a cotacao e ainda nao estiver clara, pergunte somente "Vai ser MEI ou outro tipo de CNPJ?" uma vez. Nao repita a pergunta de existencia depois dessa confirmacao.',
@@ -368,6 +369,20 @@ const isSingleAdultWithMinorsQuote = (history: AutonomousMessageRow[]): boolean 
   return adultCount === 1 && minorCount > 0;
 };
 
+// The latest explicitly aged adult identifies whom to address. Mentions of
+// the existing family plan must not turn the person typing into a beneficiary.
+const getSingleAdultAddressee = (history: AutonomousMessageRow[]): string | null => {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const row = history[index];
+    if (row.role !== 'lead') continue;
+    const text = normalizeForSemanticMatch(row.content);
+    const relation = text.match(/\b(?:meu|minha)\s+(esposa|esposo|marido|companheira|companheiro|pai|mae)\b[^.!?]{0,30}\b(\d{1,3})\s*anos?\b/);
+    if (relation && Number(relation[2]) >= 18) return relation[1];
+    if (/\b(?:tenho|fiz|eu\s+tenho)\s+(?:[2-9]\d|1[01]\d|18|19)\b/.test(text)) return 'interlocutor';
+  }
+  return null;
+};
+
 export const QUALIFICATION_REPETITION_VALIDATION_MESSAGE = 'A resposta repetiu o dado do lead com um molde artificial. Reescreva sem usar Vou considerar, Como voce informou, Com X anos ou uma frase que repita a operadora antes de avancar.';
 export const QUALIFICATION_PROCESS_NARRATION_VALIDATION_MESSAGE = 'A resposta narrou o roteiro interno da qualificacao. Reescreva falando com a pessoa e faca a pergunta de forma natural, sem "agora vamos ver", "agora precisamos saber", "para seguir" ou "para continuar".';
 export const QUALIFICATION_CLOSURE_VALIDATION_MESSAGE = 'O encerramento precisa informar o compromisso de preparar ou enviar a cotacao. Nao encerre apenas dizendo que vai preparar as opcoes.';
@@ -612,9 +627,21 @@ export const validateAutonomousReplyOutput = (
   }
 
   if (CNPJ_OR_MEI_REGEX.test(normalizedCandidate) && visibleCandidate.includes('?')) {
+    const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
+    if (isSingleAdultWithMinorsQuote(history)) {
+      const addressee = getSingleAdultAddressee(history);
+      const addressesAdult = addressee === 'interlocutor'
+        ? ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate)
+        : addressee ? new RegExp(`\\b(?:seu|sua)\\s+${addressee}\\b`).test(normalizedCandidate)
+          : !THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) || THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
+      const hasOtherAdultOption = /\bou\s+(?:voce|seu|sua)\b|\b(?:seu|sua)\s+\w+\s+ou\b/.test(normalizedCandidate);
+      if (hasGroupScope || hasOtherAdultOption || !addressesAdult) {
+        return { valid: false, stopReason: 'invalid_output', message: SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE };
+      }
+      return { valid: true };
+    }
     const hasMultipleBeneficiaries = MULTIPLE_BENEFICIARIES_REGEX.test(leadHistoryText);
     const isThirdPartyOnly = THIRD_PARTY_ONLY_REGEX.test(leadHistoryText) && !hasMultipleBeneficiaries;
-    const hasGroupScope = GROUP_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
     const hasThirdPartyScope = THIRD_PARTY_BUSINESS_ID_SCOPE_REGEX.test(normalizedCandidate);
     const asksOnlyInterlocutor = ONLY_INTERLOCUTOR_BUSINESS_ID_REGEX.test(normalizedCandidate) && !hasGroupScope;
     const hasWrongScope = hasMultipleBeneficiaries
@@ -627,13 +654,6 @@ export const validateAutonomousReplyOutput = (
         message: hasMultipleBeneficiaries
           ? MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
           : 'O interlocutor esta cotando para outra pessoa. Direcione CNPJ/MEI ao beneficiario, nao a quem esta digitando.',
-      };
-    }
-    if (isSingleAdultWithMinorsQuote(history) && hasGroupScope) {
-      return {
-        valid: false,
-        stopReason: 'invalid_output',
-        message: SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE,
       };
     }
   }
@@ -650,7 +670,7 @@ export const buildAutonomousValidationRetryInstruction = (
   validation.message === MULTIPLE_BENEFICIARIES_SCOPE_VALIDATION_MESSAGE
     ? 'Nao repita uma pergunta ja respondida. Se o lead disser pessoa fisica ou que nao possui CNPJ/MEI, aceite e avance para a cidade. Se ja tiver informado a cidade, pergunte de modo abrangente somente entre os beneficiarios adultos.'
     : validation.message === SINGLE_ADULT_WITH_MINORS_BUSINESS_ID_VALIDATION_MESSAGE
-      ? 'Pergunte diretamente ao unico adulto se ele tem CNPJ ou MEI. Nao inclua criancas ou adolescentes na pergunta e nao use alguem que vai entrar no plano.'
+      ? 'Pergunte diretamente ao unico adulto beneficiario se ele tem CNPJ ou MEI. Se quem digita nao vai entrar, direcione a pergunta a pessoa confirmada, por exemplo sua esposa. Mencoes ao plano atual nao incluem o interlocutor na nova cotacao. Nao inclua criancas ou adolescentes na pergunta e nao use alguem que vai entrar no plano.'
     : '',
   validation.message === CHILD_ONLY_ELIGIBILITY_VALIDATION_MESSAGE
     ? 'Explique brevemente que, para uma unica vida abaixo de 12 anos, e necessario incluir um adulto para conseguir contratar. Nao aplique essa regra a adolescentes de 12 anos ou mais. Depois, pergunte somente se algum adulto tambem entrara na cotacao.'

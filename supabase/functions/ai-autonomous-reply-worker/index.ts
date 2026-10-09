@@ -1,3 +1,4 @@
+import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
 import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
@@ -47,21 +48,7 @@ const MAX_JOBS_PER_RUN = 10;
 const CONVERSATION_HISTORY_LIMIT = 100;
 const MESSAGE_SEND_DELAY_MS = 1200;
 const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
-const AUTONOMOUS_MAX_JOB_ATTEMPTS = 4;
-const AUTONOMOUS_RETRY_DELAYS_MS = [15_000, 60_000, 180_000] as const;
 const AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS = 20_000;
-
-const isTerminalAutonomousReplyError = (message: string): boolean => {
-  const normalized = message
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-  return /whapi_token nao configurado|identidade do whatsapp|permissao de contato|atendimento autonomo foi desativado|chat sem lead vinculado|status atendimento nao encontrado/.test(normalized);
-};
-
-const getAutonomousRetryDelayMs = (attemptNumber: number): number => (
-  AUTONOMOUS_RETRY_DELAYS_MS[Math.min(Math.max(attemptNumber - 1, 0), AUTONOMOUS_RETRY_DELAYS_MS.length - 1)]
-);
 
 type WorkerRequestBody = {
   source?: string;
@@ -533,6 +520,7 @@ Deno.serve(async (req: Request) => {
 
       let conversationLockAcquired = false;
       let deliveryAttemptStarted = false;
+      let failureLeadId: string | null = job.lead_id;
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
           .from('comm_whatsapp_chats')
@@ -556,6 +544,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const leadId: string | null = chat.lead_id ?? job.lead_id;
+        failureLeadId = leadId;
         if (!leadId) {
           console.warn('[ai-autonomous-reply-worker] job cancelado: chat sem lead vinculado', {
             jobId: job.id,
@@ -964,9 +953,8 @@ Deno.serve(async (req: Request) => {
         const message = error instanceof Error ? error.message : String(error);
         console.error('[ai-autonomous-reply-worker] erro ao processar job', { jobId: job.id, error: message });
         const attemptNumber = (job.attempts ?? 0) + 1;
-        const shouldRetry = !deliveryAttemptStarted
-          && attemptNumber < AUTONOMOUS_MAX_JOB_ATTEMPTS
-          && !isTerminalAutonomousReplyError(message);
+        const failureAction = getAutonomousFailureAction({ message, attemptNumber, deliveryAttemptStarted });
+        const shouldRetry = failureAction === 'retry';
 
         if (shouldRetry) {
           const scheduledAt = new Date(Date.now() + getAutonomousRetryDelayMs(attemptNumber)).toISOString();
@@ -1004,6 +992,23 @@ Deno.serve(async (req: Request) => {
             .from('ai_autonomous_reply_jobs')
             .update({ status: 'failed', last_error: message })
             .eq('id', job.id);
+          if (failureAction === 'handoff' && failureLeadId) {
+            try {
+              await completeAutonomousAttendanceHandoff({
+                supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId, handoffCode: 'PRECISA_HUMANO',
+              });
+              await recordAutonomousAttendanceEvent({
+                supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId,
+                eventType: 'handoff_completed', correlationId: job.id,
+                decision: { handoffCode: 'PRECISA_HUMANO', reason: 'generation_attempts_exhausted' },
+                metadata: { jobId: job.id, attempts: attemptNumber, error: message },
+              });
+            } catch (handoffError) {
+              console.error('[ai-autonomous-reply-worker] falha no handoff apos tentativas esgotadas', {
+                jobId: job.id, error: handoffError instanceof Error ? handoffError.message : String(handoffError),
+              });
+            }
+          }
         }
       } finally {
         if (conversationLockAcquired) {

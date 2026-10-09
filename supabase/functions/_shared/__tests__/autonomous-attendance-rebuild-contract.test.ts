@@ -49,8 +49,8 @@ test('same conversation has a lease and outbound delivery key before sending', (
 });
 
 test('requeues transient worker failures instead of leaving the lead without a response', () => {
-  assert.match(workerSource, /AUTONOMOUS_MAX_JOB_ATTEMPTS/);
-  assert.match(workerSource, /AUTONOMOUS_RETRY_DELAYS_MS/);
+  assert.match(workerSource, /getAutonomousFailureAction/);
+  assert.match(workerSource, /getAutonomousRetryDelayMs/);
   assert.match(workerSource, /status: 'pending'/);
   assert.match(workerSource, /nova tentativa agendada/);
   assert.match(workerSource, /deliveryAttemptStarted/);

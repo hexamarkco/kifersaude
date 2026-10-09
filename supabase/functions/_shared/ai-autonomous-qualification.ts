@@ -168,7 +168,9 @@ const extractCount = (text: string): number | null => {
 
 const hasAdultReference = (text: string): boolean => /\b(?:eu|mim|nos|a gente|adulto|adult[ao]s?|mae|m[aã]e|pai|marido|esposa|esposo|companheir[oa]|respons[aá]vel|titular)\b/i.test(text);
 const CHILD_REFERENCE_REGEX = /\b(?:filh[oa]s?|net[oa]s?|crian[cç]a?s?|menor(?:es)?|adolescente?s?|beb[eê]s?)(?=\s|[.!?,;:]|$)/gi;
-const countChildReferences = (text: string): number => [...text.matchAll(CHILD_REFERENCE_REGEX)].length;
+const countChildReferences = (text: string): number => new Set(
+  [...text.matchAll(CHILD_REFERENCE_REGEX)].map((match) => normalize(match[0])),
+).size;
 const hasSelfOnlyReference = (text: string): boolean => /\b(?:s[oó]|somente|apenas)\s+(?:para\s+)?mim\b|\bpara\s+mim\b|\bmim\b|\beu\b/i.test(text);
 const hasExplicitChildOnlyReference = (text: string): boolean => /\b(?:para|pra|pro|cot[aá]?[cç][aã]o\s+para)\s+(?:o\s+|a\s+|meu\s+|minha\s+)?(?:filh[oa]|net[oa]|crian[cç]a|adolescente|menor)\b|\b(?:s[oó]|somente|apenas)\s+(?:para\s+)?(?:meu|minha|o|a)?\s*(?:filh[oa]|net[oa]|crian[cç]a|adolescente|menor)/i.test(text);
 
@@ -269,9 +271,22 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
         .filter((age) => age >= 0 && age <= 120));
     }
     if (ages.length > 0) {
+      // Adding an adult to a previously child-only quote is a new life, not
+      // another answer about the original child's age.
+      const addsAdult = onlyChild && count === 1
+        && latestAges.some((age) => age < 18) && ages.some((age) => age >= 18)
+        && (/entr|inclu|junto|titular/.test(normalizedPreviousAi)
+          || /\b(?:entrar|inclui|incluir|junto|titular)\b/i.test(text))
+        && !/\bnao\b[^.!?]{0,30}\b(?:entrar|incluir)\b/.test(normalize(text));
       const isCorrection = /\b(?:corrig|desculp|na verdade|fez|fiz|errei|errado)\w*/i.test(text);
-      if (isCorrection && latestAges.length > 0) {
-        latestAges = [...latestAges.slice(0, Math.max(0, latestAges.length - 1)), ...ages];
+      if (addsAdult) {
+        latestAges = [...latestAges, ...ages];
+        count = latestAges.length;
+        hasAdult = true;
+      } else if (isCorrection && latestAges.length > 0) {
+        const correctedIndex = latestAges.findLastIndex((age) => (age >= 18) === (ages[0] >= 18));
+        const index = correctedIndex >= 0 ? correctedIndex : latestAges.length - 1;
+        latestAges = [...latestAges.slice(0, index), ...ages, ...latestAges.slice(index + 1)];
       } else if (count === 1) {
         // Respostas repetidas como "46 anos" depois de "só para minha filha"
         // confirmam a mesma vida. Nunca transforme a repetição em uma nova vida.
@@ -317,8 +332,8 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     if (count === null) count = latestAges.length > 1 ? latestAges.length : 1;
   }
   const allLeadText = messages.map((row) => row.content).join(' ');
-  if (hasAdult && hasChild && /\b(?:eu|mim)\s+e\s+(?:meu|minha|o|a)\b/i.test(allLeadText)) count = 2;
-  if (hasAdult && !hasChild && /\b(?:eu|mim)\b.{0,50}\b(?:minha esposa|meu marido|ela|ele)\b/i.test(allLeadText)) count = 2;
+  if (hasAdult && hasChild && /\b(?:eu|mim)\s+e\s+(?:meu|minha|o|a)\b/i.test(allLeadText)) count = Math.max(count ?? 0, 2);
+  if (hasAdult && !hasChild && /\b(?:eu|mim)\b.{0,50}\b(?:minha esposa|meu marido|ela|ele)\b/i.test(allLeadText)) count = Math.max(count ?? 0, 2);
   const leadMessages = messages.filter((row) => row.role === 'lead');
   if (leadMessages.some((row) => hasSelfOnlyReference(row.content)) && !hasChild && count === null) count = 1;
   if (hasAdult && !hasChild && count === null) count = 1;
@@ -328,16 +343,17 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   if (safeCount !== null) {
     const adultAges = latestAges.filter((age) => age >= 18);
     const childAges = latestAges.filter((age) => age < 18);
+    const adultCount = hasAdult && hasChild ? Math.max(1, adultAges.length) : hasAdult ? safeCount : 0;
     for (let index = 0; index < safeCount; index += 1) {
       const role = hasAdult && hasChild
-        ? index === 0 ? 'adult' : 'child'
-        : onlyChild ? 'child'
+        ? index < adultCount ? 'adult' : 'child'
+        : onlyChild ? (latestAges[index] ?? 0) >= 18 ? 'adult' : 'child'
           : hasAdult ? 'adult'
             : 'unspecified';
       const age = role === 'adult'
         ? adultAges[index] ?? null
         : role === 'child'
-          ? childAges[index - (hasAdult ? 1 : 0)] ?? latestAges[index] ?? null
+          ? childAges[index - adultCount] ?? null
           : latestAges[index] ?? null;
       items.push({
         id: `life-${index + 1}`,

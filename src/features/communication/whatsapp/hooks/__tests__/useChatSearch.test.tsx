@@ -51,6 +51,7 @@ const SearchHarness = ({ term = 'fabiola' }: { term?: string }) => {
       <button type="button" data-testid="retry" onClick={searchState.retrySearch}>
         tentar novamente
       </button>
+      <button type="button" data-testid="paste" onClick={() => searchState.setSearchDraft(term)}>colar nome</button>
       <button type="button" data-testid="clear" onClick={() => {
         searchState.setSearchDraft('');
         searchState.setSearch('');
@@ -68,6 +69,25 @@ const SearchHarness = ({ term = 'fabiola' }: { term?: string }) => {
     </div>
   );
 };
+
+test('normaliza um nome colado antes das buscas debounced de conversas e mensagens', async () => {
+  vi.useFakeTimers();
+  mocks.listChats.mockReset().mockResolvedValue([]);
+  mocks.searchMessages.mockReset().mockResolvedValue([]);
+  const view = render(<SearchHarness term={' \u200eJo\u200bão\u00a0  da\nSilva\t '} />);
+  try {
+    await act(async () => {
+      (view.container.querySelector('[data-testid="paste"]') as HTMLButtonElement).click();
+    });
+    assert.equal(mocks.listChats.mock.calls.length, 0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+    assert.equal((mocks.listChats.mock.calls[0]?.[0] as { search: string }).search, 'João da Silva');
+    assert.equal((mocks.searchMessages.mock.calls[0]?.[0] as { search: string }).search, 'João da Silva');
+  } finally {
+    view.unmount();
+    vi.useRealTimers();
+  }
+});
 
 test('diferencia falha na busca de uma busca sem resultados', async () => {
   mocks.listChats.mockReset();

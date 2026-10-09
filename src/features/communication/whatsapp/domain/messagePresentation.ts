@@ -251,7 +251,14 @@ export const normalizeChatDraftPreview = (value: string) => {
   return normalized.length <= 100 ? normalized : `${normalized.slice(0, 97).trimEnd()}...`;
 };
 
-export const normalizeInboxSearch = (value: string) => value
+// Text copied from contact lists can contain non-breaking spaces, line breaks
+// and invisible formatting marks. Keep the query and local matching aligned.
+export const normalizeInboxSearchText = (value: string) => value
+  .replace(/[\u200b\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+export const normalizeInboxSearch = (value: string) => normalizeInboxSearchText(value)
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase()

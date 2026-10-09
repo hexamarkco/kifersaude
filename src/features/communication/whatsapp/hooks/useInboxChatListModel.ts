@@ -121,6 +121,9 @@ export const useInboxChatListModel = ({
             .filter(chatMatchesActiveFilters),
           search,
           connectedUserName,
+          // The server also searches contact aliases that are not necessarily
+          // included in the returned canonical identity. Do not discard them.
+          { includeUnmatched: true },
         )
       : []),
     [chatMatchesActiveFilters, chatSearchResults, connectedUserName, savedContactLookupMaps, search],
@@ -141,13 +144,22 @@ export const useInboxChatListModel = ({
   );
 
   const sidebarChats = useMemo(() => {
-    const candidates = search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats;
+    // Message search can return a fresher saved/CRM identity than the loaded
+    // list. Use it immediately when the chat name matches, without a click.
+    const messageChatsMatchingName = search ? rankChatsBySearch(
+      filteredMessageSearchResults.map((result) => result.chat),
+      search,
+      connectedUserName,
+    ) : [];
+    const candidates = search
+      ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults, messageChatsMatchingName)
+      : scopedChats;
     return candidates.map((chat) => applySavedContactNameFromLookup(
       chat,
       savedContactLookupMaps.localOverrides,
       savedContactLookupMaps.synchronizedNames,
     ));
-  }, [localChatSearchResults, remoteChatSearchResults, savedContactLookupMaps, scopedChats, search]);
+  }, [connectedUserName, filteredMessageSearchResults, localChatSearchResults, remoteChatSearchResults, savedContactLookupMaps, scopedChats, search]);
 
   const selectedChatForPresentation = useMemo(
     () => selectedChat

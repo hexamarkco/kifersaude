@@ -81,6 +81,7 @@ test('chooses stable contact names and hides a leaked connected-user name', () =
   const leakedOwnName = createChat({ display_name: 'Atendente', saved_contact_name: null, lead_id: null });
 
   assert.equal(getSafeChatDisplayName(namedChat), 'Contato salvo');
+  assert.equal(getSafeChatDisplayName({ ...namedChat, saved_contact_name: null }), 'Nome do lead');
   assert.equal(getSafeChatDisplayName(leakedOwnName, 'Atendente'), '+55 (11) 99999-9999');
 });
 
@@ -205,6 +206,16 @@ test('ranks accent-insensitive names before phone-only matches', () => {
 
   assert.deepEqual(rankChatsBySearch([phoneMatch, nameMatch], 'joao').map((chat) => chat.id), ['name']);
   assert.deepEqual(rankChatsBySearch([nameMatch, phoneMatch], '99999').map((chat) => chat.id), ['phone']);
+});
+
+test('preserva aliases remotos sem ampliar as correspondências da busca local', () => {
+  const aliasMatch = createChat({ id: 'alias', display_name: 'Clau 🌻' });
+  const nameMatch = createChat({ id: 'name', lead_name: 'Cláudia Santos' });
+  assert.deepEqual(rankChatsBySearch([aliasMatch, nameMatch], 'claudia').map((chat) => chat.id), ['name']);
+  assert.deepEqual(
+    rankChatsBySearch([aliasMatch, nameMatch], 'claudia', null, { includeUnmatched: true }).map((chat) => chat.id),
+    ['name', 'alias'],
+  );
 });
 
 test('merges duplicate search results without losing a saved contact name', () => {

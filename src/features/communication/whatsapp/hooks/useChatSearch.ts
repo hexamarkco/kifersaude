@@ -11,6 +11,7 @@ import {
   type PendingChatInboxStatePatch,
 } from '../pendingChatInboxState';
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
+import { normalizeInboxSearchText } from '../domain/messagePresentation';
 
 type ChatActivityFilter = 'all' | 'unread';
 const SEARCH_TIMEOUT_MS = 10_000;
@@ -44,6 +45,7 @@ export const useChatSearch = ({
   const messageSearchRequestIdRef = useRef(0);
 
   const setSearch = useCallback((nextSearch: string) => {
+    nextSearch = normalizeInboxSearchText(nextSearch);
     if (!nextSearch) {
       chatSearchRequestIdRef.current += 1;
       messageSearchRequestIdRef.current += 1;

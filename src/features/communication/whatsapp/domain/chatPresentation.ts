@@ -232,8 +232,12 @@ export const rankChatsBySearch = (
   items: CommWhatsAppChat[],
   query: string,
   connectedUserName?: string | null,
+  options: { includeUnmatched?: boolean } = {},
 ) => items
-  .map((chat) => ({ chat, rank: getChatSearchRank(chat, query, connectedUserName) }))
+  .map((chat) => ({
+    chat,
+    rank: getChatSearchRank(chat, query, connectedUserName) ?? (options.includeUnmatched ? 6 : null),
+  }))
   .filter((item): item is { chat: CommWhatsAppChat; rank: number } => item.rank !== null)
   .sort((a, b) => a.rank !== b.rank ? a.rank - b.rank : compareChatsByInboxOrder(a.chat, b.chat))
   .map((item) => item.chat);

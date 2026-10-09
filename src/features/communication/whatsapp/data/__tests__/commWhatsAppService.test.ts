@@ -496,6 +496,17 @@ test('não multiplica consultas lentas durante uma busca de contato', async () =
   }
 });
 
+test('envia nomes colados normalizados às RPCs de conversas e mensagens', async () => {
+  const callsBefore = mocks.rpc.mock.calls.length;
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
+  const search = ' \u200eJo\u200bão\u00a0  da\nSilva\t ';
+  await commWhatsAppService.listChats({ search });
+  await commWhatsAppService.searchMessages({ search });
+  const calls = mocks.rpc.mock.calls.slice(callsBefore);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map((call) => call[1].p_search), ['João da Silva', 'João da Silva']);
+});
+
 test('encaminha o cancelamento para as consultas de conversas e mensagens', async () => {
   const controller = new AbortController();
   const signals: AbortSignal[] = [];

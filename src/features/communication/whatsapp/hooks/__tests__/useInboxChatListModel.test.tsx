@@ -142,6 +142,37 @@ test('encontra imediatamente o contato pelo nome salvo mesmo sem resultados remo
   }
 });
 
+test('encontra nomes colados com espaços extras tanto na lista local quanto na resposta remota', () => {
+  for (const search of ['  João  da Silva  ', 'João\u00a0da\u00a0Silva', 'João\nda\tSilva', 'Jo\u200bão da Silva']) {
+    const snapshot = readSnapshot(createParams({
+      chats: [createChat({ id: 'local', saved_contact_name: 'João da Silva' })],
+      chatSearchResults: [createChat({ id: 'remote', lead_name: 'João da Silva' })],
+      search,
+    }));
+    assert.deepEqual(snapshot.sidebar.map((chat) => chat.id), ['local', 'remote'], search);
+  }
+});
+
+test('mostra a conversa encontrada pelo nome canônico das mensagens antes de abri-la', () => {
+  const claudia = createChat({ id: 'claudia', display_name: 'Cláudia Santos', push_name: 'Clau 🌻', lead_name: 'Cláudia Santos' });
+  const other = createChat({ id: 'other', display_name: 'Outra pessoa' });
+  const snapshot = readSnapshot(createParams({
+    chats: [createChat({ id: 'claudia', display_name: 'Clau 🌻' })],
+    search: 'claudia',
+    messageSearchResults: [createSearchResult(claudia), createSearchResult(claudia, 'second'), createSearchResult(other)],
+  }));
+  assert.deepEqual(snapshot.sidebar.map((chat) => chat.id), ['claudia']);
+  assert.equal(snapshot.sidebar[0]?.displayName, 'Cláudia Santos');
+});
+
+test('mantém o resultado remoto quando o servidor encontrou um alias que não veio na projeção', () => {
+  const snapshot = readSnapshot(createParams({
+    search: 'claudia',
+    chatSearchResults: [createChat({ id: 'claudia', display_name: 'Clau 🌻' })],
+  }));
+  assert.deepEqual(snapshot.sidebar.map((chat) => chat.id), ['claudia']);
+});
+
 test('preserva a conversa selecionada, aplica filtros às buscas e projeta nomes manuais', () => {
   const selected = createChat({
     id: 'selected',

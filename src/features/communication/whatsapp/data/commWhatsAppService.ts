@@ -20,6 +20,7 @@ import type {
   CommWhatsAppScheduledSequenceStep,
 } from '../domain/types';
 import { canSearchWhatsAppMessages } from '../domain/messageSearch';
+import { normalizeInboxSearchText } from '../domain/messagePresentation';
 import { resolveWhatsAppGroupDisplayName } from '../domain/chatPresentation';
 import { applyCanonicalSavedContactNames, collectPhoneLookupKeys, mergeSavedContactPages, selectPreferredSavedContacts } from '../domain/contactLookup';
 import { pollForCompletedFollowUp } from './commWhatsAppFollowUpRecovery';
@@ -1151,10 +1152,7 @@ const isUnavailableMediaError = (error: unknown) => {
 };
 
 const sanitizeSearch = (value: string) =>
-  value
-    .trim()
-    .replace(/[,%]/g, ' ')
-    .replace(/\s+/g, ' ');
+  normalizeInboxSearchText(value.replace(/[,%]/g, ' '));
 
 const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
   const context = error && typeof error === 'object' && 'context' in error

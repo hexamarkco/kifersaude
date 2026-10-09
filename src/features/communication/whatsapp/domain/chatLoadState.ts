@@ -55,21 +55,23 @@ type ShouldPreserveSelectedChatParams = {
   refreshedChatIds: ReadonlySet<string>;
   loadedSections: readonly ChatSection[];
   unexpectedlyEmptySections: ReadonlySet<ChatSection>;
+  preserveMissingSelection?: boolean;
 };
 
 /**
- * Keeps the open thread alive only while its section was not loaded or a
- * transiently empty response was explicitly detected. If a loaded section
- * omits the chat, the server state must win (archive, delete, merge or filter
- * change), otherwise the Inbox shows a stale conversation indefinitely.
+ * A paged, filtered or older response cannot prove that the open chat was
+ * removed. Complete current responses and explicit deletion/merge events
+ * can still remove the selection.
  */
 export const shouldPreserveSelectedChatAfterLoad = ({
   selectedChat,
   refreshedChatIds,
   loadedSections,
   unexpectedlyEmptySections,
+  preserveMissingSelection = false,
 }: ShouldPreserveSelectedChatParams) => {
-  if (!selectedChat || refreshedChatIds.has(selectedChat.id)) {
+  if (!selectedChat || selectedChat.deleted_at || selectedChat.merged_into_chat_id
+    || refreshedChatIds.has(selectedChat.id)) {
     return false;
   }
 
@@ -78,7 +80,7 @@ export const shouldPreserveSelectedChatAfterLoad = ({
     return true;
   }
 
-  return unexpectedlyEmptySections.has(selectedSection);
+  return preserveMissingSelection || unexpectedlyEmptySections.has(selectedSection);
 };
 
 type PreserveChatsFromPartialLoadParams = {

@@ -100,6 +100,21 @@ test('não preserva chat que já voltou na resposta atual', () => {
   );
 });
 
+test('preservação de resultado aberto não mantém conversa excluída ou mesclada', () => {
+  for (const selectedChat of [
+    createChat({ deleted_at: '2026-10-09T12:00:00Z' }),
+    createChat({ merged_into_chat_id: 'canonical-chat' }),
+  ]) {
+    assert.equal(shouldPreserveSelectedChatAfterLoad({
+      selectedChat,
+      refreshedChatIds: new Set(),
+      loadedSections: [],
+      unexpectedlyEmptySections: new Set(),
+      preserveMissingSelection: true,
+    }), false);
+  }
+});
+
 test('seleciona primeiro um chat da seção que o operador acabou de abrir', () => {
   const activeChat = createChat({ id: 'active-chat', is_archived: false });
   const archivedChat = createChat({ id: 'archived-chat', is_archived: true });

@@ -66,6 +66,7 @@ const createContext = (search: string): {
 } => {
   const calls: string[] = [];
   const refs: ControllerOptions['refs'] = {
+    latestChatsRef: { current: [] },
     selectedChatIdRef: { current: 'previous-chat' },
     chatIdFromUrlRef: { current: 'previous-chat' },
     suppressAutoChatSelectionRef: { current: false },
@@ -99,6 +100,20 @@ test('selecionar resultado da busca fecha menu, hidrata o cache e abre a convers
     'upsert:search-result',
     'selected:search-result',
   ]);
+  assert.equal(context.refs.selectedChatIdRef.current, 'search-result');
+  assert.equal(context.refs.chatIdFromUrlRef.current, 'search-result');
+  assert.equal(context.refs.latestChatsRef.current[0]?.id, 'search-result');
+  view.unmount();
+});
+
+test('abrir resultado depois de voltar à lista libera a seleção automática antes do render', () => {
+  const context = createContext('claudia');
+  const view = render(<Harness options={context.options} capture={context.capture} />);
+  context.getController()?.handleBackToChatList();
+  context.getController()?.handleSelectSidebarChat(createChat('search-result'));
+  assert.equal(context.refs.suppressAutoChatSelectionRef.current, false);
+  assert.equal(context.refs.selectedChatIdRef.current, 'search-result');
+  assert.equal(context.refs.chatIdFromUrlRef.current, 'search-result');
   view.unmount();
 });
 

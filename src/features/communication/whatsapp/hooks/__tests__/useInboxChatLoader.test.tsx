@@ -131,6 +131,7 @@ const createOptions = (previousChats: CommWhatsAppChat[] = []) => {
     latestChatsLoadedAtRef: { current: 0 },
   };
   const options: LoaderOptions = {
+    isSearching: false,
     chatActivityFilter: 'all',
     leadStatusFilters: [],
     leadResponsavelFilters: [],
@@ -189,6 +190,45 @@ const stubDesktopMatchMedia = () => {
     }
   };
 };
+
+for (const scenario of ['archived-page', 'unread-filter', 'selection-during-request', 'search'] as const) {
+  test(`refresh mantém a conversa pesquisada aberta: ${scenario}`, async () => {
+    resetMocks();
+    const selected = createChat('search-result', scenario === 'archived-page');
+    const other = createChat('other-chat', selected.is_archived);
+    const context = createOptions([other, selected]);
+    context.state.selectedChatId = selected.id;
+    context.refs.selectedChatIdRef.current = selected.id;
+    context.refs.archivedSectionOpenRef.current = selected.is_archived;
+    if (scenario === 'unread-filter') context.options.chatActivityFilter = 'unread';
+    if (scenario === 'search') context.options.isSearching = true;
+    let resolveRequest: (chats: CommWhatsAppChat[]) => void = () => {};
+    mocks.list.mockImplementation(() => new Promise<CommWhatsAppChat[]>((resolve) => { resolveRequest = resolve; }));
+    const restoreMatchMedia = stubDesktopMatchMedia();
+    let loader: Loader | null = null;
+    const view = render(<Harness options={context.options} capture={(value) => { loader = value; }} />);
+    try {
+      if (scenario === 'selection-during-request') {
+        context.state.selectedChatId = other.id;
+        context.refs.selectedChatIdRef.current = other.id;
+      }
+      await act(async () => {
+        const request = loader?.loadChats();
+        if (scenario === 'selection-during-request') {
+          context.state.selectedChatId = selected.id;
+          context.refs.selectedChatIdRef.current = selected.id;
+        }
+        resolveRequest([other]);
+        await request;
+      });
+      assert.equal(context.state.selectedChatId, selected.id);
+      assert.ok(context.state.chats.some((chat) => chat.id === selected.id));
+    } finally {
+      view.unmount();
+      restoreMatchMedia();
+    }
+  });
+}
 
 test('refresh da seção visível preserva a seleção arquivada em cache e substitui só a seção ativa', async () => {
   resetMocks();

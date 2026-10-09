@@ -23,6 +23,7 @@ export type { InboxChatLoadOptions } from './inboxChatLoaderTypes';
 type CurrentValue<T> = { current: T };
 
 type InboxChatLoaderOptions = {
+  isSearching: boolean;
   chatActivityFilter: ChatActivityFilter;
   leadStatusFilters: string[];
   leadResponsavelFilters: string[];
@@ -69,6 +70,7 @@ type InboxChatLoaderOptions = {
 const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
 
 export const useInboxChatLoader = ({
+  isSearching,
   chatActivityFilter,
   leadStatusFilters,
   leadResponsavelFilters,
@@ -138,6 +140,7 @@ export const useInboxChatLoader = ({
 
     chatsLoadKeyRef.current = loadKey;
     const requestId = ++chatsRequestIdRef.current;
+    const selectedChatIdAtRequest = selectedChatIdRef.current;
     setArchivedChatsLoadingMore(false);
     let didApplyChatLoad = false;
     const loadPromise = (async () => {
@@ -263,6 +266,9 @@ export const useInboxChatLoader = ({
           refreshedChatIds: new Set(refreshedChats.map((chat) => chat.id)),
           loadedSections: Array.from(fetchedSectionSet),
           unexpectedlyEmptySections,
+          preserveMissingSelection: isSearching || hasLoadFilters
+            || (partialArchived && Boolean(preservedSelectedChat?.is_archived))
+            || currentSelectedChatId !== selectedChatIdAtRequest,
         });
         const hydratedData = sortChatsByInboxOrder(
           shouldPreserveSelectedChat && preservedSelectedChat
@@ -369,6 +375,7 @@ export const useInboxChatLoader = ({
     chatsSignatureRef,
     latestChatsLoadedAtRef,
     latestChatsRef,
+    isSearching,
     leadResponsavelFilters,
     leadStatusFilters,
     pageSize,

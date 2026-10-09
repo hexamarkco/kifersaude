@@ -7,6 +7,7 @@ type CurrentValue<Value> = { current: Value };
 type InboxChatSelectionControllerOptions = {
   search: string;
   refs: {
+    latestChatsRef: CurrentValue<CommWhatsAppChat[]>;
     selectedChatIdRef: CurrentValue<string | null>;
     chatIdFromUrlRef: CurrentValue<string | null>;
     suppressAutoChatSelectionRef: CurrentValue<boolean>;
@@ -26,13 +27,20 @@ export const useInboxChatSelectionController = ({
   upsertChatLocally,
 }: InboxChatSelectionControllerOptions) => {
   const handleSelectSidebarChat = useCallback((chat: CommWhatsAppChat) => {
+    // In-flight refreshes must observe this click before React's effects run.
+    refs.selectedChatIdRef.current = chat.id;
+    refs.chatIdFromUrlRef.current = chat.id;
+    refs.suppressAutoChatSelectionRef.current = false;
     setChatMenuPointerAnchor(null);
     setOpenChatMenuChatId(null);
     if (search) {
+      if (!refs.latestChatsRef.current.some((cached) => cached.id === chat.id)) {
+        refs.latestChatsRef.current = [...refs.latestChatsRef.current, chat];
+      }
       upsertChatLocally(chat);
     }
     setSelectedChatId(chat.id);
-  }, [search, setChatMenuPointerAnchor, setOpenChatMenuChatId, setSelectedChatId, upsertChatLocally]);
+  }, [refs, search, setChatMenuPointerAnchor, setOpenChatMenuChatId, setSelectedChatId, upsertChatLocally]);
 
   const handleBackToChatList = useCallback(() => {
     refs.suppressAutoChatSelectionRef.current = true;

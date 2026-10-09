@@ -554,7 +554,7 @@ export default function WhatsAppInboxScreen() {
   });
   const { handleSelectSidebarChat, handleBackToChatList } = useInboxChatSelectionController({
     search,
-    refs: { selectedChatIdRef, chatIdFromUrlRef, suppressAutoChatSelectionRef },
+    refs: { latestChatsRef, selectedChatIdRef, chatIdFromUrlRef, suppressAutoChatSelectionRef },
     setChatMenuPointerAnchor,
     setOpenChatMenuChatId,
     setSelectedChatId,
@@ -1217,6 +1217,7 @@ export default function WhatsAppInboxScreen() {
     loadMessages,
   } = useInboxConversationDataLoader({
     chatLoader: {
+      isSearching: Boolean(search.trim()),
       chatActivityFilter,
       leadStatusFilters,
       leadResponsavelFilters,

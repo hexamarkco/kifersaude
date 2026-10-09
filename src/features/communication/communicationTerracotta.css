@@ -1049,16 +1049,24 @@
   color: var(--text-secondary);
 }
 
-.comm-whatsapp-reaction-picker {
+.painel-theme .comm-whatsapp-reaction-picker {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  box-sizing: border-box;
   width: 15.75rem;
+  height: 52px;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1-5);
+  gap: 0;
   overflow: visible;
   border: 1px solid var(--border-default);
-  border-radius: 9999px;
+  border-radius: var(--radius-2xl);
   padding: var(--space-1-5) var(--space-2);
   background: var(--bg-elevated);
   box-shadow: var(--shadow-popover);
+}
+
+.painel-theme .comm-whatsapp-reaction-picker > button {
+  flex: 0 0 auto;
 }

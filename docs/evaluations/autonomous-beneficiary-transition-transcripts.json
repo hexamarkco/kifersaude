@@ -1,0 +1,634 @@
+[
+  {
+    "conversation_id": "c697a4b4-8c22-4038-be6a-dc601859e223",
+    "created_at": "2026-10-09 19:15:15.187695+00",
+    "passed": null,
+    "model": null,
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você busca mais opções de pediatras sem pesar no orçamento. Para contratar, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Algum adulto também entraria na cotação com seu filho?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Entendo, incluir outra mensalidade pesa, ainda mais quando o plano já atende bem vocês dois. Em qual cidade seu filho precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você aceitaria avaliar uma cotação com apenas um de vocês junto do seu filho, para ver se cabe no orçamento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Podemos avaliar essa alternativa pensando no orçamento. Quem entraria junto com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Sua esposa tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Ela não tem CNPJ nem MEI.",
+        "handoffCode": null
+      }
+    ]
+  },
+  {
+    "conversation_id": "981d684a-950a-4b8b-b307-e9b14a918050",
+    "created_at": "2026-10-09 19:20:22.596075+00",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você busca mais opções de pediatras sem pesar no orçamento. Para contratar para seu filho, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Algum adulto também entraria na cotação?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Entendo, pagar outro plano para um adulto que já está bem atendido pesa no orçamento. Você gostaria de avaliar uma cotação para seu filho com apenas um de vocês, sem compromisso, antes de decidir?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Podemos avaliar sem compromisso. Quem entraria com seu filho, você ou sua esposa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Para avaliar as opções de atendimento pediátrico, em qual cidade vocês precisam usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O plano por CNPJ ou MEI pode ficar mais em conta, dependendo do caso. Sua esposa tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Nosso plano é Liv Saúde.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou avaliar as opções pensando no atendimento pediátrico e no orçamento de vocês e te enviar a cotação, sem compromisso.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "4b63905f-7e1b-49fd-a402-615793a2e1c9",
+    "created_at": "2026-10-09 19:21:25.305104+00",
+    "passed": false,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você busca mais opções de pediatras sem pesar no orçamento. Para contratar, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Algum adulto também entraria na cotação com seu filho?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Faz sentido não querer aumentar o gasto com outro plano para vocês quando a dificuldade está só na pediatria. Em qual cidade seu filho precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Para avaliar o custo antes de decidir, você aceitaria uma cotação do seu filho junto com você ou sua esposa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Podemos comparar o custo antes de vocês decidirem. Quem entraria com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Sua esposa tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Ela não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Temos Liv Saúde pela empresa.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou buscar opções pensando no atendimento pediátrico e no cuidado com o orçamento, e te enviar a cotação para vocês avaliarem.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "3f229a15-e8c0-464f-97c1-a23de4074a63",
+    "created_at": "2026-10-09 19:22:27.137377+00",
+    "passed": false,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você busca mais opções de pediatras sem pesar no orçamento. Para contratar para seu filho, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Algum adulto também entraria na cotação?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Incluir mais alguém seria um gasto extra quando o plano de vocês já atende bem. Em qual cidade seu filho precisa de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Qual é a operadora do plano que seu filho tem hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Liv Saúde.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "A ideia é melhorar o atendimento pediátrico sem pesar no orçamento. Você aceitaria cotar seu filho junto com apenas um de vocês para avaliar o valor antes de decidir?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Quem entraria junto com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Sua esposa tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta por essa modalidade.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Ela não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Também podemos cotar sem CNPJ. Vou comparar as alternativas pensando no custo e nas opções de atendimento pediátrico e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "3a108e62-4403-4cf9-bc15-b723dcf33dab",
+    "created_at": "2026-10-09 19:24:27.3728+00",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Ter poucas opções de pediatras dificulta mesmo, e o custo também precisa caber no orçamento. Para contratar só para ele, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Você gostaria de avaliar uma cotação com um adulto também?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O gasto extra com um adulto pesa, ainda mais quando o plano de vocês já atende bem. Você gostaria de avaliar o valor de uma opção com apenas um de vocês e seu filho, antes de decidir?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Quem entraria com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade vocês precisam de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Por CNPJ ou MEI, o plano pode ficar mais em conta do que por pessoa física, dependendo do caso. Sua esposa tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Temos Liv Saúde pela empresa.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou buscar opções pensando no custo e no atendimento pediátrico, e te enviar a cotação para vocês avaliarem com calma.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "1b423811-2148-4121-97bb-e85e5abc63ca",
+    "created_at": "2026-10-09 19:25:26.362746+00",
+    "passed": null,
+    "model": null,
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "A ideia é ter mais opções de pediatras sem pesar no orçamento. Mas é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Você gostaria de avaliar uma cotação com um adulto também?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      }
+    ]
+  },
+  {
+    "conversation_id": "5dea5e3b-5840-49d7-a270-f2deac91287c",
+    "created_at": "2026-10-09 19:30:03.92931+00",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Entendo que você busca mais opções de pediatras sem pesar no orçamento. Para contratar, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Você gostaria de avaliar uma cotação com um adulto também?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Incluir um adulto seria um gasto extra, já que o plano atual atende bem vocês dois. Você quer avaliar essa alternativa sem compromisso para saber o valor antes de decidir?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Quem entraria junto com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Para avaliar as opções de pediatria na região, em qual cidade eles vão usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Sua esposa tem CNPJ ou MEI? Dependendo do caso, o plano pode ficar mais em conta do que por pessoa física.",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Temos Liv Saúde pela empresa.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou avaliar as opções pensando no orçamento e na disponibilidade de pediatras, e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "abf0fe4a-890c-44f8-8043-a5746d23df58",
+    "created_at": "2026-10-09 19:31:03.129311+00",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Entendo, você busca mais opções de pediatras sem pesar no orçamento. Para contratar, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Você gostaria de avaliar uma cotação com um adulto também?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "O custo de incluir um adulto pesa, especialmente porque o plano atual já atende bem vocês dois. Você quer avaliar uma cotação com apenas um de vocês e seu filho para ver se cabe no orçamento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Podemos avaliar essa alternativa sem compromisso. Quem entraria com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Em qual cidade sua esposa e seu filho precisam de atendimento?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Em Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Dependendo do caso, o plano por CNPJ ou MEI pode ficar mais em conta que por pessoa física. Sua esposa tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Ela não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Nosso plano é da Liv Saúde.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou buscar opções pensando no atendimento pediátrico e no seu orçamento, e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  },
+  {
+    "conversation_id": "45e0c5b9-703f-41fa-88ce-54da736b96b9",
+    "created_at": "2026-10-09 19:32:03.17089+00",
+    "passed": true,
+    "model": "gpt-6.1-sol",
+    "messages": [
+      {
+        "role": "lead",
+        "content": "Boa tarde. Já temos plano da empresa, mas na pediatria tem poucos profissionais. Procuro um plano apenas para meu filho de 4 anos e oito meses. Um plano não caro.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Você busca mais opções de pediatras sem pesar no orçamento. Para contratar, é necessário incluir um adulto, porque as operadoras não estão aceitando menores de 12 anos como titular. Você gostaria de avaliar uma cotação com um adulto também?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Aí já vai ficar caro pois para mim e minha esposa nosso plano atende bem.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Incluir um adulto seria um gasto extra para vocês, já que o plano atual atende bem aos dois. Você quer avaliar o valor com apenas um adulto e seu filho, sem compromisso, antes de descartar essa alternativa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Pode ser.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Quem entraria com seu filho, você ou sua esposa, e qual a idade dessa pessoa?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa tem 39 anos.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Para buscar opções de atendimento pediátrico, em qual cidade vocês precisam usar o plano?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Volta Redonda.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Por CNPJ ou MEI, o plano pode ficar mais em conta do que por pessoa física, dependendo do caso. Sua esposa tem CNPJ ou MEI?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Minha esposa não tem CNPJ nem MEI.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Tudo bem, também podemos cotar sem CNPJ. Qual é a operadora do plano que vocês têm hoje?",
+        "handoffCode": null
+      },
+      {
+        "role": "lead",
+        "content": "Temos Liv Saúde pela empresa.",
+        "handoffCode": null
+      },
+      {
+        "role": "ai",
+        "content": "Vou buscar opções pensando no atendimento pediátrico e no orçamento de vocês, e te enviar a cotação.",
+        "handoffCode": "QUALIFICACAO_COMPLETA"
+      }
+    ]
+  }
+]

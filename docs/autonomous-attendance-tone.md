@@ -1,5 +1,7 @@
 # Atendimento autônomo — proposta de tom contextual
 
+Revisão de 09/10/2026: a correção de inclusão posterior de adulto, direcionamento de CNPJ/MEI, elegibilidade infantil e recuperação de falhas está documentada em [Inclusão de adulto em cotação infantil](evaluations/autonomous-beneficiary-transition.md). A proposta configurável deve manter a distinção entre pessoas citadas no plano atual e beneficiários da nova cotação e resolver a decisão de inclusão de adulto antes da coleta quando houver objeção de custo.
+
 Proposta local baseada no prompt ativo de `autonomous.reply`, versão 24, lido em 05/10/2026. Não foi aplicada ao Supabase. Ao publicar futuramente, criar uma nova versão pelo fluxo existente de configuração e preservar provider, modelo, overrides, temperatura, limites e demais campos.
 
 Os guardrails, o contrato de resposta e as correções em `ai-autonomous-helpers.ts` são usados pelo worker e pelo sandbox. Este texto alinha a configuração editável às mesmas orientações. O preparo efetivo e envio da cotação continuam com o atendimento manual; o atendente apenas comunica esse próximo passo e aciona o handoff existente.

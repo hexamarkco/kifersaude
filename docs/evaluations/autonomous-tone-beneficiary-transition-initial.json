@@ -1,0 +1,55 @@
+[
+  {
+    "repetition": 1,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "981d684a-950a-4b8b-b307-e9b14a918050",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": true,
+    "violations": [],
+    "notes": "O atendimento acolheu a preocupação com custo e pediatria, aplicou corretamente a regra para menor de 12 anos e incluiu somente a esposa confirmada na cotação. Coletou os dados obrigatórios sem repetição, dispensou bairro em Volta Redonda e encerrou com prioridade contextual e handoff QUALIFICACAO_COMPLETA adequado, sem apresentar preços ou montar uma cotação.",
+    "playbookImprovements": []
+  },
+  {
+    "repetition": 2,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "4b63905f-7e1b-49fd-a402-615793a2e1c9",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": false,
+    "violations": [
+      "17. Após a objeção de que incluir um adulto encareceria o plano, acolheu a preocupação, mas perguntou a cidade antes de resolver a decisão pendente sobre incluir um adulto. A confirmação de interesse nessa alternativa deveria ter vindo primeiro."
+    ],
+    "notes": "A qualificação final ficou completa, com filho e esposa corretamente identificados, e o handoff QUALIFICACAO_COMPLETA foi adequado. A regra para menor de 12 anos, a pergunta sobre CNPJ da esposa e o fechamento contextual foram cumpridos.",
+    "playbookImprovements": [
+      "Quando houver objeção à inclusão obrigatória de um adulto, confirme primeiro se o lead aceita cotar essa composição para avaliar o custo. Não avance para cidade ou outros dados enquanto essa decisão estiver pendente."
+    ]
+  },
+  {
+    "repetition": 3,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "3f229a15-e8c0-464f-97c1-a23de4074a63",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": false,
+    "violations": [
+      "Item 17. Diante da objeção de que incluir um adulto encareceria o plano, o atendente reconheceu o gasto, mas avançou para cidade e operadora antes de resolver a decisão sobre incluir um adulto. A alternativa de cotar com apenas um dos pais deveria ter sido oferecida naquele momento."
+    ],
+    "notes": "A qualificação terminou com os dados obrigatórios completos e o handoff QUALIFICACAO_COMPLETA foi adequado. A regra para menor de 12 anos, a identificação da esposa como beneficiária adulta e a pergunta de CNPJ/MEI foram aplicadas corretamente.",
+    "playbookImprovements": [
+      "Quando houver objeção à inclusão obrigatória de um adulto na cotação de uma criança, ofereça avaliar a cotação com apenas um adulto e aguarde o aceite antes de perguntar cidade, operadora ou outros dados. Não repita a explicação da regra já apresentada."
+    ]
+  }
+]

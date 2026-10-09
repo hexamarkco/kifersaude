@@ -1,0 +1,47 @@
+[
+  {
+    "repetition": 1,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "5dea5e3b-5840-49d7-a270-f2deac91287c",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": true,
+    "violations": [],
+    "notes": "O atendimento acolheu a preocupação com custo, aguardou o aceite para incluir um adulto e qualificou corretamente apenas o filho e a esposa. Coletou os dados necessários sem repetição, dispensou bairro em Volta Redonda e encerrou com foco em orçamento e pediatria, acionando corretamente QUALIFICACAO_COMPLETA.",
+    "playbookImprovements": []
+  },
+  {
+    "repetition": 2,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "abf0fe4a-890c-44f8-8043-a5746d23df58",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": true,
+    "violations": [],
+    "notes": "O atendimento acolheu a objeção de custo e aguardou o aceite antes de incluir a esposa, preservando a composição correta da cotação. Coletou os dados necessários sem repetições, dispensou bairro em Volta Redonda e encerrou com prioridade em pediatria e orçamento, acionando corretamente QUALIFICACAO_COMPLETA.",
+    "playbookImprovements": []
+  },
+  {
+    "repetition": 3,
+    "scenario": "wife-and-child",
+    "success": true,
+    "conversationId": "45e0c5b9-703f-41fa-88ce-54da736b96b9",
+    "scenarioKey": "tone-structure-beneficiary-transition-wife-and-child",
+    "scenarioLabel": "Tone structure beneficiary-transition wife-and-child",
+    "turns": 7,
+    "handoffTriggered": true,
+    "handoffCode": "QUALIFICACAO_COMPLETA",
+    "passed": true,
+    "violations": [],
+    "notes": "O atendimento acolheu a preocupação com o custo e aguardou o aceite antes de incluir a esposa na cotação, preservando a idade do filho. Coletou os dados necessários sem repetições, direcionou CNPJ/MEI à beneficiária adulta e encerrou com foco em pediatria e orçamento, acionando corretamente QUALIFICACAO_COMPLETA.",
+    "playbookImprovements": []
+  }
+]

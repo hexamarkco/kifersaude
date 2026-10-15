@@ -905,6 +905,18 @@ export function WhatsAppMessageBody({
       <div className="space-y-3">
         {quotePreviewNode}
         <div className="w-[280px] max-w-full space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-3">
+          {locationInfo.mapPreviewUrl ? (
+            <iframe
+              key={locationInfo.mapPreviewUrl}
+              src={locationInfo.mapPreviewUrl}
+              title={locationInfo.name ? `Mapa: ${locationInfo.name}` : 'Mapa da localização compartilhada'}
+              width="256"
+              height="180"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="block h-[180px] w-full rounded-lg border-0 bg-[var(--bg-surface)]"
+            />
+          ) : null}
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <MapPin className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
             {locationInfo.live ? 'Localização em tempo real' : 'Localização compartilhada'}

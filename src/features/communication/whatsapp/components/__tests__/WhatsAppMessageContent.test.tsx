@@ -55,6 +55,11 @@ for (const direction of ['inbound', 'outbound'] as const) {
       assert.ok(markup.includes(text));
     }
     assert.ok(!markup.includes('[Lista]'));
+    assert.ok(markup.includes('<iframe'));
+    assert.ok(markup.includes('www.openstreetmap.org/export/embed.html?'));
+    assert.ok(markup.includes('marker=-22.9%2C-43.2'));
+    assert.ok(markup.includes('title="Mapa: Clínica"'));
+    assert.ok(markup.includes('loading="lazy"'));
   });
 }
 
@@ -62,10 +67,26 @@ test('renders historical locations without coordinates without an invalid map li
   const markup = renderMessage('location', {}, 'inbound', {});
   assert.ok(markup.includes('Coordenadas indisponíveis'));
   assert.ok(!markup.includes('href='));
+  assert.ok(!markup.includes('<iframe'));
 });
 
 test('labels live locations as the last received position', () => {
   const markup = renderMessage('live_location', {}, 'inbound', { location: { latitude: 0, longitude: 0 } });
   assert.ok(markup.includes('Localização em tempo real'));
   assert.ok(markup.includes('Última posição recebida'));
+  assert.ok(markup.includes('marker=0%2C0'));
 });
+
+for (const location of [
+  { latitude: 91, longitude: -43.2 },
+  { latitude: -22.9, longitude: -181 },
+  { latitude: '', longitude: -43.2 },
+  { latitude: -22.9 },
+]) {
+test(`does not embed a map for invalid coordinates: ${JSON.stringify(location)}`, () => {
+  const markup = renderMessage('location', {}, 'inbound', { location });
+  assert.ok(markup.includes('Coordenadas indisponíveis'));
+  assert.ok(!markup.includes('<iframe'));
+  assert.ok(!markup.includes('href='));
+});
+}

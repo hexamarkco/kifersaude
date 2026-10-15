@@ -15,6 +15,10 @@ const inactivityOptimizationMigrationSource = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20260928001054_20261014030000_optimize_auto_contact_inactivity_scan.sql'),
   'utf8',
 );
+const reactivationMigrationSource = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261015020003_route_stalled_inactivity_flows_to_reactivation.sql'),
+  'utf8',
+);
 const leadsApiSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/leads-api/index.ts'),
   'utf8',
@@ -57,4 +61,19 @@ test('the inactivity scanner reads only the latest visible message per chat', ()
   assert.match(inactivityOptimizationMigrationSource, /ORDER BY m\.message_at DESC, m\.id DESC\s*LIMIT 1/);
   assert.match(inactivityOptimizationMigrationSource, /ORDER BY l\.created_at DESC\s*LIMIT 20/);
   assert.match(inactivityOptimizationMigrationSource, /v_total_leads := v_total_leads \+ 1/);
+});
+
+test('completed no-response flows move the two inactivity statuses to Reativação and stay closed until a reply', () => {
+  assert.match(reactivationMigrationSource, /triggerStatuses' @> '\["Contato Inicial"\]'/);
+  assert.match(reactivationMigrationSource, /triggerStatuses' @> '\["Atendimento"\]'/);
+  assert.match(reactivationMigrationSource, /to_jsonb\('Reativação'::text\)/);
+  assert.equal(
+    reactivationMigrationSource.match(/auto_contact_flow_completed_without_response\(/g)?.length,
+    6,
+  );
+  assert.match(reactivationMigrationSource, /last_error = 'Lead movido para Reativação após concluir o fluxo sem resposta'/);
+  assert.match(reactivationMigrationSource, /inbound\.message_at > COALESCE\(completed\.trigger_message_at, completed\.updated_at\)/);
+  assert.match(leadsApiSource, /reason: 'completed_flow_without_response'/);
+  assert.match(leadsApiSource, /!isAfter\(latestInboundAt, job\.trigger_message_at\)/);
+  assert.match(leadsApiSource, /resolveAutoContactFlowFinalStatus\(flow, job\.step_order\)/);
 });

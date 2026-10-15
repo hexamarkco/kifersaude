@@ -80,7 +80,7 @@ const MCP_INTERNAL_ACTOR_HEADER = 'X-Kifer-MCP-Actor-Id';
 const MAX_OUTBOUND_MEDIA_UPLOAD_BYTES = 32 * 1024 * 1024;
 const MEDIA_SIGNATURE_SAMPLE_BYTES = 16;
 
-const createAdminClient = () => {
+const createAdminClient = (headers: Record<string, string> = {}) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -88,7 +88,7 @@ const createAdminClient = () => {
     throw new Error('Credenciais do Supabase não configuradas.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey);
+  return createClient(supabaseUrl, serviceRoleKey, { global: { headers } });
 };
 
 const equalSecrets = (received: string, expected: string) => {
@@ -573,6 +573,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const operatorId = internalActor ? req.headers.get('X-Kifer-MCP-Operator-Id')?.trim() : authResult.user.profileId;
+    if (internalActor) {
+      const { data: authorizer, error: authorizerError } = await supabaseAdmin.from('user_profiles').select('id').eq('id', internalActor.profileId).eq('role', 'admin').maybeSingle();
+      if (authorizerError || !authorizer) return new Response(JSON.stringify({ error: 'UNAUTHORIZED', message: 'A conexão MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+      const { data: operator, error: operatorError } = await supabaseAdmin.from('production_operators').select('user_id').eq('user_id', operatorId || '').eq('active', true).maybeSingle();
+      if (!operatorId || operatorError || !operator) return new Response(JSON.stringify({ error: 'INVALID_OPERATOR', message: 'Informe um atendente operacional ativo.' }), { status: 400, headers: jsonHeaders });
+    }
+    supabaseAdmin = createAdminClient({
+      'X-Kifer-Production-Authorizer': authResult.user.profileId,
+      'X-Kifer-Production-Operator': operatorId || authResult.user.profileId,
+      'X-Kifer-Production-Source': internalActor ? 'mcp' : 'crm',
+    });
+
     const withinRateLimit = await checkCommWhatsAppActionRateLimit(
       supabaseAdmin,
       authResult.user.userId,
@@ -845,7 +858,7 @@ Deno.serve(async (req: Request) => {
           messageType: mediaKind,
           deliveryStatus,
           textContent: summaryText,
-          createdBy: authResult.user.profileId,
+          createdBy: operatorId || authResult.user.profileId,
           source: internalActor ? 'mcp' : 'api',
           senderPhone: channel.phone_number,
           senderName: channel.connected_user_name,
@@ -859,6 +872,7 @@ Deno.serve(async (req: Request) => {
           mediaDurationSeconds: mediaDurationSeconds,
           mediaCaption: mediaKind === 'voice' ? null : text || null,
           metadata: {
+            production_attribution: true,
             provider: 'whapi',
             ...(isGroup ? { is_group: true } : { contact_permission_scope: sendPurposeScope }),
             ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
@@ -1026,7 +1040,7 @@ Deno.serve(async (req: Request) => {
       messageType: mediaKind || 'text',
       deliveryStatus,
       textContent: isMediaMessage ? summaryText : text,
-      createdBy: authResult.user.profileId,
+      createdBy: operatorId || authResult.user.profileId,
       source: internalActor ? 'mcp' : 'api',
       senderPhone: channel.phone_number,
       senderName: channel.connected_user_name,
@@ -1040,6 +1054,7 @@ Deno.serve(async (req: Request) => {
       mediaDurationSeconds: mediaDurationSeconds,
       mediaCaption: mediaKind === 'voice' ? null : text || null,
       metadata: {
+            production_attribution: true,
         provider: 'whapi',
         ...(isGroup ? { is_group: true } : { contact_permission_scope: sendPurposeScope }),
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),

@@ -97,12 +97,12 @@ export async function deleteContract(contractId: string): Promise<void> {
   }
 }
 
-export async function updateContractStatus(contractId: string, status: string) {
+export async function updateContractStatus(contractId: string, status: string, saleOperator?: string) {
   const { data, error } = await databaseClient
     .from('contracts')
-    .update({ status })
+    .update({ status, ...(saleOperator ? { sale_operator_user_id: saleOperator } : {}) })
     .eq('id', contractId)
-    .select('id, status, updated_at')
+    .select('id, status, updated_at, sale_operator_user_id')
     .single();
   if (error) throw error;
   return data;

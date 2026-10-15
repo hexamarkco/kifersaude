@@ -3,18 +3,18 @@ import { toast } from '../../../lib/toast';
 import { updateContractStatus } from '../data/contractsRepository';
 import type { Contract } from '../domain/types';
 
-type StatusUpdate = Pick<Contract, 'id' | 'status' | 'updated_at'>;
+type StatusUpdate = Pick<Contract, 'id' | 'status' | 'updated_at' | 'sale_operator_user_id'>;
 
 export function useContractStatus(onSaved: (update: StatusUpdate) => void) {
   const pending = useRef(new Set<string>());
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
-  const changeStatus = async (contract: Contract, status: string) => {
+  const changeStatus = async (contract: Contract, status: string, saleOperator?: string) => {
     if (pending.current.has(contract.id) || contract.status === status) return;
     pending.current.add(contract.id);
     setSavingIds(new Set(pending.current));
     try {
-      const updated = await updateContractStatus(contract.id, status);
+      const updated = await updateContractStatus(contract.id, status, saleOperator);
       onSaved({ ...updated, updated_at: updated.updated_at ?? contract.updated_at });
       toast.success('Status do contrato atualizado.');
     } catch (error) {

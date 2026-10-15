@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { Contract } from "../contracts";
 import type { Lead } from "../leads";
 import { deduplicateBirthdayPeople } from "../reminders";
+import { TeamProduction } from "../production";
 import {
   getDateKey,
   parseDateWithoutTimezoneAsDate,
@@ -2310,6 +2311,7 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
+        <TeamProduction onNavigateToLead={handleNavigateToLead} />
         <DashboardCommercialSections
           analysis={dashboardCommercial}
           showFinancialMetrics={!isObserver}

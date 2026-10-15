@@ -3,6 +3,7 @@ import { afterEach, test } from 'vitest';
 
 import {
   extractWhapiContactPhone,
+  extractWhapiContactCardMeta,
   extractWhapiContactSaved,
   extractWhapiSavedContactName,
   fetchWhapiChatName,
@@ -61,6 +62,38 @@ test('prioritizes a profile push name over chat_name from an inbound webhook', (
   }, 'inbound');
 
   assert.equal(name, 'Klini Saúde');
+});
+
+test('does not use a shared contact card as the sender identity', () => {
+  for (const type of ['contact', 'contact_list', ' CONTACT ']) {
+    const message = {
+      type,
+      from_name: 'Mãe',
+      contact: { name: 'Rafaela', pushname: 'Rafaela', push_name: 'Rafaela' },
+    };
+    assert.equal(getDirectChatDisplayNameCandidate(message, 'inbound'), 'Mãe');
+    assert.equal(getDirectChatDisplayNameCandidate({ ...message, from_name: null }, 'inbound'), '');
+  }
+});
+
+test('keeps shared card contents separate from inbound and outbound chat names', () => {
+  const message = {
+    type: 'contact',
+    chat_name: 'Mãe',
+    contact: { name: 'Rafaela', vcard: 'BEGIN:VCARD\nFN:Rafaela\nTEL:+5521983042170\nEND:VCARD' },
+  };
+  for (const direction of ['inbound', 'outbound'] as const) {
+    assert.equal(getDirectChatDisplayNameCandidate(message, direction), 'Mãe');
+  }
+  assert.equal(extractWhapiContactCardMeta(message)?.items[0]?.name, 'Rafaela');
+});
+
+test('preserves contact identity metadata on messages without a shared card', () => {
+  assert.equal(getDirectChatDisplayNameCandidate({
+    type: 'text',
+    contact: { name: 'Contato remetente' },
+    from_name: 'Nome alternativo',
+  }, 'inbound'), 'Contato remetente');
 });
 
 test('uses contact profile metadata before a low-confidence chat label', async () => {

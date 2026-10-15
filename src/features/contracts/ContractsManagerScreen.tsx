@@ -28,6 +28,7 @@ import HolderImportPreparation from "./components/HolderImportPreparation";
 import { ContractBulkJsonImportDialog } from "./components/ContractBulkJsonImportDialog";
 import ContractStatusDropdown from "./components/ContractStatusDropdown";
 import { useContractStatus } from "./hooks/useContractStatus";
+import { useProductionOperators } from "../production";
 import {
   Badge,
   Button,
@@ -108,6 +109,7 @@ export default function ContractsManager({
   );
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const statusOptions = (options.contract_status || []).filter((option) => option.ativo);
+  const { operators: productionOperators, error: productionOperatorsError } = useProductionOperators();
   const { changeStatus, savingIds } = useContractStatus((updated) => {
     setContracts((current) => current.map((contract) =>
       contract.id === updated.id ? { ...contract, ...updated } : contract,
@@ -783,7 +785,9 @@ export default function ContractsManager({
                         canEdit={canEditContracts}
                         saving={savingIds.has(contract.id)}
                         options={statusOptions}
-                        onChange={(status) => canEditContracts ? changeStatus(contract, status) : Promise.resolve()}
+                        operators={productionOperators}
+                        operatorError={productionOperatorsError}
+                        onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
                       />
                       <span className="mt-2 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                     </TableCell>
@@ -836,7 +840,9 @@ export default function ContractsManager({
                           canEdit={canEditContracts}
                           saving={savingIds.has(contract.id)}
                           options={statusOptions}
-                          onChange={(status) => canEditContracts ? changeStatus(contract, status) : Promise.resolve()}
+                          operators={productionOperators}
+                          operatorError={productionOperatorsError}
+                          onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
                         />
                         <Badge tone="neutral" size="sm" className="px-3 py-1 text-xs">
                           {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}

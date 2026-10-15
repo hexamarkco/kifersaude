@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authenticateOAuthAccessToken, getMcpOAuthChallenge, handleOAuthRoute } from './oauth.ts';
 import { executeMcpCommercialReadAction, executeMcpWriteAction } from './write-actions.ts';
+import { productionHeaders, requiresProductionOperator, validateProductionOperator, withProductionOperator } from './production-operator.ts';
 import { MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
 import { MCP_OPPORTUNITY_TOOLS, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
 import { MCP_CONTRACT_TOOLS, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
@@ -747,7 +748,12 @@ const tools = [
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
-const discoveryTools = tools as readonly McpToolDescriptor[];
+const discoveryTools = withProductionOperator([...tools as readonly McpToolDescriptor[], {
+  name: 'kifer_list_production_operators',
+  description: 'Lista IDs e nomes dos atendentes ativos para atribuição declarada de produção. A conta ChatGPT é compartilhada; pergunte quem está operando antes de cada operação sem identificação explícita.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true },
+}]);
 const exposedTools = attachMcpOAuthSecuritySchemes(discoveryTools);
 
 const ADMIN_READ_TOOLS = new Set([
@@ -766,6 +772,12 @@ const ADMIN_READ_TOOLS = new Set([
 
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
+  if (name === 'kifer_list_production_operators') {
+    const authorizationError = mcpAdminAuthorizationError(actorId);
+    if (authorizationError) return toToolResult(authorizationError);
+    const { data, error } = await supabase.from('production_operators').select('user_id,display_name').eq('active', true).order('display_name');
+    return toToolResult(error ? { success: false, error_code: 'OPERATOR_UNAVAILABLE', message: 'Não foi possível consultar os atendentes.' } : { success: true, operators: data });
+  }
   const writeAction = new Set([
     'kifer_update_scheduled_whatsapp_sequence',
     'kifer_send_whatsapp_message', 'kifer_send_whatsapp_media', 'kifer_get_or_create_whatsapp_chat', 'kifer_upload_scheduled_whatsapp_media', 'kifer_schedule_whatsapp_message', 'kifer_schedule_whatsapp_sequence', 'kifer_bulk_schedule_whatsapp_messages', 'kifer_update_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_message', 'kifer_cancel_scheduled_whatsapp_sequence', 'kifer_retry_scheduled_whatsapp_sequence', 'kifer_create_reminder', 'kifer_update_lead_status', 'kifer_create_interaction', 'kifer_set_next_follow_up',
@@ -789,7 +801,17 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
   if (writeAction.has(name)) {
     const authorizationError = mcpWriteAuthorizationError(actorId);
     if (authorizationError) return toToolResult(authorizationError);
-    const result = await executeMcpWriteAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId } });
+    const operator = requiresProductionOperator(name) ? args.operator_user_id : undefined;
+    if (requiresProductionOperator(name)) {
+      const operatorError = await validateProductionOperator(supabase, operator);
+      if (operatorError) return toToolResult(operatorError);
+    }
+    const scopedClient = typeof operator === 'string' ? createClient(
+      Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { ...productionHeaders(actorId!, operator), ...(typeof args.sale_operator_user_id === 'string' ? { 'X-Kifer-Production-Sale-Operator': args.sale_operator_user_id } : {}) } } },
+    ) : supabase;
+    const { operator_user_id: _operator, sale_operator_user_id: _saleOperator, ...businessArgs } = args;
+    const result = await executeMcpWriteAction({ supabase: scopedClient, toolName: name, arguments: businessArgs, actor: { actor, actorId, operatorUserId: typeof operator === 'string' ? operator : undefined } });
     return toToolResult(result);
   }
   if (ADMIN_READ_TOOLS.has(name)) {

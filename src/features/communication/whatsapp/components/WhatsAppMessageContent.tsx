@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, Loader2, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, Loader2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { Button } from '../../../../design-system';
 import { getPanelButtonClass } from '../../../../components/ui/standards';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppMessage } from '../domain/types';
+import { getMessageLocationInfo } from '../domain/messageLocation';
 import {
   formatDurationLabel,
   formatFileSize,
@@ -311,6 +312,7 @@ export function WhatsAppMessageBody({
   const { mediaUrl, loading, error, retry } = useResolvedMediaUrl(message);
   const [showOriginalText, setShowOriginalText] = useState(false);
   const kind = message.message_type.trim().toLowerCase();
+  const locationInfo = getMessageLocationInfo(message);
   const caption = getMessageVisibleCaption(message);
   const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
   const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
@@ -894,6 +896,32 @@ export function WhatsAppMessageBody({
         </div>
         {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}
+      </div>
+    );
+  }
+
+  if (locationInfo) {
+    return (
+      <div className="space-y-3">
+        {quotePreviewNode}
+        <div className="w-[280px] max-w-full space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+            <MapPin className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
+            {locationInfo.live ? 'Localização em tempo real' : 'Localização compartilhada'}
+          </div>
+          {locationInfo.name ? <p className="break-words text-sm font-medium">{locationInfo.name}</p> : null}
+          {locationInfo.address ? <p className="whitespace-pre-wrap break-words text-sm text-[var(--text-secondary)]">{locationInfo.address}</p> : null}
+          {locationInfo.comment ? <p className="whitespace-pre-wrap break-words text-sm">{locationInfo.comment}</p> : null}
+          {locationInfo.mapUrl ? (
+            <>
+              <p className="text-xs text-[var(--text-muted)]">{locationInfo.latitude}, {locationInfo.longitude}</p>
+              {locationInfo.live ? <p className="text-xs text-[var(--text-muted)]">Última posição recebida.</p> : null}
+              <a href={locationInfo.mapUrl} target="_blank" rel="noopener noreferrer" className={cx(inboxInlineActionClassName, 'inline-flex items-center gap-2')}>
+                Abrir no mapa <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </>
+          ) : <p className="text-xs text-[var(--text-muted)]">Coordenadas indisponíveis nesta mensagem.</p>}
+        </div>
       </div>
     );
   }

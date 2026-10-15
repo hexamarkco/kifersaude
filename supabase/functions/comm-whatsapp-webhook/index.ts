@@ -9,6 +9,7 @@ import {
   ensurePrimaryChannel,
   ensureWhapiGroupChatMetadata,
   extractWhapiContactCardMeta,
+  extractWhapiLocationMeta,
   extractWhapiEditedMessageEvent,
   extractWhapiForwardedMeta,
   extractWhapiInviteMeta,
@@ -126,7 +127,7 @@ const createServiceClient = () => {
     throw new Error('Credenciais do Supabase nao configuradas.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey);
+  return createClient(supabaseUrl, serviceRoleKey, { global: { headers: { 'X-Kifer-Production-Source': 'external' } } });
 };
 
 const buildStatusEventKey = (eventAction: string, status: Record<string, unknown>) => {
@@ -362,6 +363,7 @@ async function persistMessageFromWebhook(
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
   const contactCardMeta = extractWhapiContactCardMeta(message);
+  const locationMeta = extractWhapiLocationMeta(message);
   const inviteMeta = extractWhapiInviteMeta(message);
   const interactiveMeta = extractWhapiInteractiveMeta(message);
   const patchStatusUpdatedAt = patch
@@ -415,6 +417,7 @@ async function persistMessageFromWebhook(
       ...(inviteMeta ? { invite: inviteMeta } : {}),
       ...(quoteMeta ? { quote: quoteMeta } : {}),
       ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+      ...(locationMeta ? { location: locationMeta } : {}),
       ...(interactiveMeta ? { interactive: interactiveMeta } : {}),
       ...(patch ? {
         whapi_patch: {

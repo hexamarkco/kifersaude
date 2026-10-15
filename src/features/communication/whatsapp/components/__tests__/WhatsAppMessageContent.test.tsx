@@ -8,11 +8,11 @@ vi.mock('../../hooks/useResolvedMediaUrl', () => ({
   useResolvedMediaUrl: () => ({ mediaUrl: null, loading: false, error: null, retry: vi.fn() }),
 }));
 
-const renderMessage = (messageType: string, interactive: Record<string, unknown>, direction: CommWhatsAppMessage['direction'] = 'inbound') => {
+const renderMessage = (messageType: string, interactive: Record<string, unknown>, direction: CommWhatsAppMessage['direction'] = 'inbound', metadata: Record<string, unknown> = { interactive }) => {
   const message: CommWhatsAppMessage = {
     id: 'message-1', chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: 'external-1',
     direction, message_type: messageType, delivery_status: 'received', text_content: '[Lista]',
-    message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z', metadata: { interactive },
+    message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z', metadata,
   };
   return renderToStaticMarkup(<WhatsAppMessageBody
     message={message} onOpenImage={vi.fn()} onOpenQuotedMessage={vi.fn()} onTranscribe={vi.fn()}
@@ -44,4 +44,28 @@ test('renders selected list replies', () => {
   const markup = renderMessage('reply', { kind: 'reply', selectedReply: { id: 'pme', title: 'PME' } });
   assert.ok(markup.includes('Opção selecionada'));
   assert.ok(markup.includes('PME'));
+});
+
+for (const direction of ['inbound', 'outbound'] as const) {
+  test(`renders ${direction} location with address and a map link`, () => {
+    const markup = renderMessage('location', {}, direction, {
+      location: { latitude: -22.9, longitude: -43.2, name: 'Clínica', address: 'Rua A, 12' },
+    });
+    for (const text of ['Localização compartilhada', 'Clínica', 'Rua A, 12', 'Abrir no mapa', 'query=-22.9%2C-43.2', 'noopener noreferrer']) {
+      assert.ok(markup.includes(text));
+    }
+    assert.ok(!markup.includes('[Lista]'));
+  });
+}
+
+test('renders historical locations without coordinates without an invalid map link', () => {
+  const markup = renderMessage('location', {}, 'inbound', {});
+  assert.ok(markup.includes('Coordenadas indisponíveis'));
+  assert.ok(!markup.includes('href='));
+});
+
+test('labels live locations as the last received position', () => {
+  const markup = renderMessage('live_location', {}, 'inbound', { location: { latitude: 0, longitude: 0 } });
+  assert.ok(markup.includes('Localização em tempo real'));
+  assert.ok(markup.includes('Última posição recebida'));
 });

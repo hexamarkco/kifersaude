@@ -11,4 +11,5 @@ export {
 } from './errors';
 export { fetchAllPages } from './pagination';
 export { getAuthenticatedUserId, waitForSupabaseSession } from './session';
-export type { Database, Json } from './database.generated';
+export type { Database } from './database';
+export type { Json } from './database.generated';

@@ -775,6 +775,12 @@ export const getDirectChatDisplayNameCandidate = (
     );
   }
 
+  // Em cartões compartilhados, `contact` é a pessoa enviada, não o remetente.
+  const messageType = toTrimmedString(message.type).toLowerCase();
+  const senderContact = messageType !== 'contact' && messageType !== 'contact_list' && isRecord(message.contact)
+    ? message.contact
+    : null;
+
   return pickHumanName(
     isRecord(message.business) ? message.business.name : null,
     isRecord(message.business) ? message.business.display_name : null,
@@ -782,9 +788,9 @@ export const getDirectChatDisplayNameCandidate = (
     isRecord(message.profile) ? message.profile.display_name : null,
     message.pushname,
     message.push_name,
-    isRecord(message.contact) ? message.contact.pushname : null,
-    isRecord(message.contact) ? message.contact.push_name : null,
-    isRecord(message.contact) ? message.contact.name : null,
+    senderContact?.pushname,
+    senderContact?.push_name,
+    senderContact?.name,
     message.from_name,
     message.notify_name,
     message.sender_name,
@@ -1382,6 +1388,27 @@ const summarizeWhapiContactCard = (card: CommWhatsAppContactCardMeta | null): st
   }
 
   return labels[0] || '[Contato]';
+};
+
+export const extractWhapiLocationMeta = (message: unknown) => {
+  if (!isRecord(message)) return null;
+  const type = toTrimmedString(message.type).toLowerCase();
+  if (type !== 'location' && type !== 'live_location') return null;
+  const location = isRecord(message[type]) ? message[type] : message.location;
+  if (!isRecord(location)) return null;
+  const readCoordinate = (value: unknown, limit: number) => {
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && !value.trim()) return null;
+    const coordinate = Number(value);
+    return Number.isFinite(coordinate) && Math.abs(coordinate) <= limit ? coordinate : null;
+  };
+  return {
+    latitude: readCoordinate(location.latitude, 90),
+    longitude: readCoordinate(location.longitude, 180),
+    name: toTrimmedString(location.name) || null,
+    address: toTrimmedString(location.address) || null,
+    comment: toTrimmedString(location.comment) || null,
+  };
 };
 
 export const extractWhapiContactCardMeta = (message: unknown): CommWhatsAppContactCardMeta | null => {
@@ -4196,6 +4223,13 @@ export async function persistCommWhatsAppMessage(
     throw new Error(`Erro ao persistir mensagem do WhatsApp: ${error.message}`);
   }
 
+  if ((input.metadata?.production_attribution === true || ['auto_contact', 'campaign', 'ai_autonomous'].includes(input.source ?? '')) && input.externalMessageId) {
+    const { error: attributionError } = await supabaseAdmin.rpc('production_message_attribution', {
+      p_external_message_id: input.externalMessageId, p_channel_id: input.channelId,
+    });
+    if (attributionError) throw new Error(`Erro ao registrar autoria da mensagem: ${attributionError.message}`);
+  }
+
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) {
     throw new Error('Persistencia da mensagem nao retornou resultado.');
@@ -4477,6 +4511,7 @@ export async function syncWhapiDirectChatMessages(
     const inviteMeta = extractWhapiInviteMeta(message);
     const quoteMeta = extractWhapiQuotedMessageMeta(message);
     const contactCardMeta = extractWhapiContactCardMeta(message);
+    const locationMeta = extractWhapiLocationMeta(message);
     const summaryText = summarizeWhapiMessage(message);
 
     if (!externalMessageId) {
@@ -4558,6 +4593,7 @@ export async function syncWhapiDirectChatMessages(
         ...(inviteMeta ? { invite: inviteMeta } : {}),
         ...(quoteMeta ? { quote: quoteMeta } : {}),
         ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+        ...(locationMeta ? { location: locationMeta } : {}),
       },
     });
 
@@ -4683,6 +4719,7 @@ const syncWhapiGroupChatMessages = async (
     const inviteMeta = extractWhapiInviteMeta(message);
     const quoteMeta = extractWhapiQuotedMessageMeta(message);
     const contactCardMeta = extractWhapiContactCardMeta(message);
+    const locationMeta = extractWhapiLocationMeta(message);
     const summaryText = summarizeWhapiMessage(message);
     const senderId = normalizeWhapiParticipantId(message.from ?? message.sender ?? message.author);
     const senderName = toTrimmedString(message.from_name)
@@ -4735,6 +4772,7 @@ const syncWhapiGroupChatMessages = async (
         ...(inviteMeta ? { invite: inviteMeta } : {}),
         ...(quoteMeta ? { quote: quoteMeta } : {}),
         ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+        ...(locationMeta ? { location: locationMeta } : {}),
       },
     });
 

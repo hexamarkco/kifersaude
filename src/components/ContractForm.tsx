@@ -17,6 +17,7 @@ import {
   type ContractPersistenceInput,
 } from "../features/contracts";
 import { ContractJsonImportDialog } from "../features/contracts/components/ContractJsonImportDialog";
+import { useProductionOperators } from "../features/production";
 import type { Lead } from "../features/leads";
 import {
   getContractBonusSummary,
@@ -294,6 +295,8 @@ export default function ContractForm({
     [contract, leadToConvert],
   );
   const [formData, setFormData] = useState<ContractFormState>(initialFormData);
+  const { operators: productionOperators, error: productionOperatorsError } = useProductionOperators();
+  const [saleOperator, setSaleOperator] = useState(contract?.sale_operator_user_id ?? "");
   const [commissionInstallments, setCommissionInstallments] = useState<
     CommissionInstallment[]
   >(() => buildCommissionInstallments(contract));
@@ -1109,6 +1112,7 @@ export default function ContractForm({
           : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
+        ...(saleOperator ? { sale_operator_user_id: saleOperator } : {}),
         observacoes_internas: formData.observacoes_internas || null,
       };
 
@@ -2258,6 +2262,15 @@ export default function ContractForm({
                     placeholder="Informe o responsável"
                   />
                 )}
+              </Field>
+
+              <Field label="Responsável pela venda (produção)">
+                <select className="kds-input w-full" value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)}>
+                  <option value="">Escolha no fechamento</option>
+                  {productionOperators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}
+                </select>
+                {productionOperatorsError && <p role="alert">{productionOperatorsError}</p>}
+                <p className="text-xs text-[var(--text-muted)]">O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.</p>
               </Field>
 
               <Field label="Observações Internas" className="md:col-span-2">

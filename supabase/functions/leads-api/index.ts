@@ -35,6 +35,7 @@ import {
   type AutoContactSchedulingSettings,
 } from './domain/scheduling.ts';
 import { resolveContinuationTriggerMessageAt } from './domain/inactivity-continuation.ts';
+import { resolveAutoContactFlowFinalStatus } from './domain/auto-contact-flow-finalization.ts';
 import {
   isAutoContactFlowOutputMessage,
   LEGACY_AUTO_CONTACT_FLOW_MESSAGE_MATCH_WINDOW_MS,
@@ -2900,6 +2901,7 @@ async function processFlowJobs({
     }
 
       const leadWithRelations = mapLeadRelationsForResponse(lead, lookups);
+      let expectedStatusId: string | null = lead.status_id ?? null;
       if (!leadWithRelations.status) {
         leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
       }
@@ -3208,7 +3210,12 @@ async function processFlowJobs({
         if (!statusId) {
           throw new Error('Status alvo não encontrado.');
         }
-        await supabase.from('leads').update({ status_id: statusId }).eq('id', lead.id);
+        const { error: statusUpdateError } = await supabase
+          .from('leads')
+          .update({ status_id: statusId })
+          .eq('id', lead.id);
+        if (statusUpdateError) throw statusUpdateError;
+        expectedStatusId = statusId;
       }
 
       if (job.action_type === 'create_task') {
@@ -3317,6 +3324,53 @@ async function processFlowJobs({
 
       if (job.action_type === 'activate_autonomous_service') {
         await activateAutonomousServiceForLead({ supabase, lead });
+      }
+
+      const finalStatus = resolveAutoContactFlowFinalStatus(flow, job.step_order);
+      let noResponseSinceLastOutbound = true;
+      if (finalStatus && flow.triggerType === 'inactivity_duration' && job.trigger_message_at) {
+        const latestInboundAt = await getLatestChatMessageAt({
+          supabase,
+          leadId: lead.id,
+          direction: 'inbound',
+          visibleOnly: true,
+        });
+        noResponseSinceLastOutbound = !latestInboundAt || !isAfter(latestInboundAt, job.trigger_message_at);
+      }
+
+      if (finalStatus && noResponseSinceLastOutbound) {
+        const finalStatusId = lookups.statusByName.get(normalizeText(finalStatus)) ?? null;
+        if (!finalStatusId) {
+          throw new Error(`Status final não encontrado: ${finalStatus}`);
+        }
+
+        if (finalStatusId !== expectedStatusId) {
+          let statusUpdate = supabase
+            .from('leads')
+            .update({ status_id: finalStatusId })
+            .eq('id', lead.id);
+          statusUpdate = typeof expectedStatusId === 'string'
+            ? statusUpdate.eq('status_id', expectedStatusId)
+            : statusUpdate.is('status_id', null);
+
+          const { data: updatedLead, error: finalStatusError } = await statusUpdate
+            .select('id')
+            .maybeSingle();
+          if (finalStatusError) throw finalStatusError;
+          if (!updatedLead) {
+            logWithContext('Skipped flow final status because the lead status changed during the last step', {
+              leadId: lead.id,
+              flowId: flow.id,
+              finalStatus,
+            });
+          }
+        }
+      } else if (finalStatus) {
+        logWithContext('Skipped flow final status because the customer replied during the last step', {
+          leadId: lead.id,
+          flowId: flow.id,
+          finalStatus,
+        });
       }
 
       await supabase
@@ -4619,6 +4673,32 @@ Deno.serve(async (req: Request) => {
           });
           const latestOutboundAt = latestOutboundMessage?.message_at ?? null;
           latestOutboundMessageId = latestOutboundMessage?.id ?? null;
+
+          const { data: completedFinalStep, error: completedFinalStepError } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('trigger_message_at, updated_at')
+            .eq('lead_id', leadId)
+            .eq('flow_id', targetFlow.id)
+            .eq('step_order', targetFlow.steps.length - 1)
+            .eq('status', 'completed')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (completedFinalStepError) throw completedFinalStepError;
+          if (completedFinalStep) {
+            const responseWindowStartedAt = completedFinalStep.trigger_message_at ?? completedFinalStep.updated_at;
+            if (!latestInboundAt || !isAfter(latestInboundAt, responseWindowStartedAt)) {
+              return new Response(JSON.stringify({
+                success: true,
+                skipped: true,
+                reason: 'completed_flow_without_response',
+              }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
 
           // If no outbound exists, or inbound is newer than outbound, skip
           if (!latestOutboundAt || (latestInboundAt && isAfter(latestInboundAt, latestOutboundAt))) {

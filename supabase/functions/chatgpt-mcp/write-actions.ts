@@ -34,7 +34,7 @@ const PRIORITIES = new Set(['baixa', 'normal', 'alta']);
 const SECRET_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64|signed[_-]?url|temporary[_-]?url)/i;
 const PRIVATE_CUSTOMER_DATA_KEY = /(?:^|_)(?:cpf|cnpj|rg|cns|email|telefone|phone(?:_number|_digits)?|endpoint(?:_normalized)?|address|endereco|logradouro|cep|data_nascimento|birth_date|nome_completo|nome_fantasia|razao_social|bairro|complemento|observacoes|descricao|message|caption|text_content|display_name|notes|reason|motivo|evidence)(?:$|_)/i;
 
-export type McpWriteActor = { actor: string; actorId: string };
+export type McpWriteActor = { actor: string; actorId: string; operatorUserId?: string };
 export type McpWriteResult = { success: boolean; [key: string]: unknown };
 
 type ActionErrorCode =
@@ -435,7 +435,7 @@ async function audit(params: {
     lead_id: params.leadId || null,
     chat_id: params.chatId || null,
     contract_id: params.contractId || null,
-    request_payload: sanitize(params.request),
+    request_payload: sanitize({ ...params.request, operator_user_id: params.actor.operatorUserId ?? null, identity_kind: params.actor.operatorUserId ? 'declared' : 'unidentified' }),
     result_payload: sanitize(params.result),
     success: params.result.success,
     error_message: params.result.success ? null : text(params.result.message) || null,
@@ -538,7 +538,7 @@ async function sendWhatsAppMessage(supabase: SupabaseClient, params: Record<stri
   let response: Response;
   let body: Record<string, unknown> = {};
   try {
-    response = await fetch(`${baseUrl}/functions/v1/comm-whatsapp-send`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kifer-MCP-Internal-Secret': secret, 'X-Kifer-MCP-Actor-Id': actor.actorId }, body: JSON.stringify({ chatId: chat.external_chat_id, text: message, clientRequestId }) });
+    response = await fetch(`${baseUrl}/functions/v1/comm-whatsapp-send`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Kifer-MCP-Internal-Secret': secret, 'X-Kifer-MCP-Actor-Id': actor.actorId, ...(actor.operatorUserId ? { 'X-Kifer-MCP-Operator-Id': actor.operatorUserId } : {}) }, body: JSON.stringify({ chatId: chat.external_chat_id, text: message, clientRequestId }) });
     const payload = await response.json().catch(() => ({}));
     body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
   } catch {
@@ -594,7 +594,7 @@ async function sendWhatsAppMedia(supabase: SupabaseClient, params: Record<string
   let response: Response;
   let body: Record<string, unknown> = {};
   try {
-    response = await fetch(`${baseUrl}/functions/v1/comm-whatsapp-send`, { method: 'POST', headers: { 'X-Kifer-MCP-Internal-Secret': secret, 'X-Kifer-MCP-Actor-Id': actor.actorId }, body: form });
+    response = await fetch(`${baseUrl}/functions/v1/comm-whatsapp-send`, { method: 'POST', headers: { 'X-Kifer-MCP-Internal-Secret': secret, 'X-Kifer-MCP-Actor-Id': actor.actorId, ...(actor.operatorUserId ? { 'X-Kifer-MCP-Operator-Id': actor.operatorUserId } : {}) }, body: form });
     const payload = await response.json().catch(() => ({}));
     body = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
   } catch {

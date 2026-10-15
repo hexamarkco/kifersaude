@@ -28,6 +28,7 @@ declare const Deno: {
 
 type ScheduledMessageRow = {
   message_id: string;
+  sequence_id?: string | null;
   channel_id: string;
   chat_id: string | null;
   phone_digits: string;
@@ -155,7 +156,7 @@ function groupSequenceClaims(rows: ScheduledSequenceStepClaim[]): Map<string, {
   return grouped;
 }
 
-const createAdminClient = () => {
+const createAdminClient = (headers: Record<string, string> = {}) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -165,6 +166,7 @@ const createAdminClient = () => {
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
+    global: { headers },
   });
 };
 
@@ -258,6 +260,14 @@ async function sendTextMessage(
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
+  const { data: schedule, error: scheduleError } = await admin.from('comm_whatsapp_scheduled_messages').select('sequence_id,created_by').eq('id', msg.message_id).single();
+  if (scheduleError || !schedule) throw new Error('Não foi possível recuperar a autoria do agendamento.');
+  const { data: scheduledOperator, error: attributionError } = await admin.rpc('production_scheduled_operator', { p_message_id: msg.message_id });
+  if (attributionError) throw new Error('Não foi possível recuperar o atendente do agendamento.');
+  admin = createAdminClient({
+    'X-Kifer-Production-Schedule-Id': schedule.sequence_id || msg.message_id,
+    'X-Kifer-Production-Schedule-Kind': schedule.sequence_id ? 'sequence' : 'message',
+  });
   const destination = await resolveScheduledDestination(admin, msg);
   if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
   const chatId = destination.chatId;
@@ -307,7 +317,7 @@ async function sendTextMessage(
     messageType: 'text',
     deliveryStatus,
     textContent: msg.text_content ?? null,
-    createdBy: null,
+    createdBy: scheduledOperator ?? null,
     source: 'scheduled',
     senderName: null,
     senderPhone: null,
@@ -320,7 +330,7 @@ async function sendTextMessage(
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: null,
-    metadata: destination.isGroup ? { is_group: true } : {},
+    metadata: { ...(destination.isGroup ? { is_group: true } : {}), production_attribution: true },
   });
 
   return { externalMessageId, deliveryStatus };
@@ -332,6 +342,14 @@ async function sendMediaMessage(
   msg: ScheduledMessageRow,
   token: string,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
+  const { data: schedule, error: scheduleError } = await admin.from('comm_whatsapp_scheduled_messages').select('sequence_id,created_by').eq('id', msg.message_id).single();
+  if (scheduleError || !schedule) throw new Error('Não foi possível recuperar a autoria do agendamento.');
+  const { data: scheduledOperator, error: attributionError } = await admin.rpc('production_scheduled_operator', { p_message_id: msg.message_id });
+  if (attributionError) throw new Error('Não foi possível recuperar o atendente do agendamento.');
+  admin = createAdminClient({
+    'X-Kifer-Production-Schedule-Id': schedule.sequence_id || msg.message_id,
+    'X-Kifer-Production-Schedule-Kind': schedule.sequence_id ? 'sequence' : 'message',
+  });
   const destination = await resolveScheduledDestination(admin, msg);
   if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
   const chatId = destination.chatId;
@@ -396,7 +414,7 @@ async function sendMediaMessage(
     messageType: msg.message_type,
     deliveryStatus,
     textContent: msg.text_content ?? null,
-    createdBy: null,
+    createdBy: scheduledOperator ?? null,
     source: 'scheduled',
     senderName: null,
     senderPhone: null,
@@ -409,7 +427,7 @@ async function sendMediaMessage(
     mediaSizeBytes: null,
     mediaDurationSeconds: null,
     mediaCaption: msg.text_content ?? null,
-    metadata: destination.isGroup ? { is_group: true } : {},
+    metadata: { ...(destination.isGroup ? { is_group: true } : {}), production_attribution: true },
   });
 
   return { externalMessageId, deliveryStatus };

@@ -391,25 +391,21 @@ export function WhatsAppMessageThread({
                           </div>
 
                           {reactions.length > 0 ? (
-                            <div className="relative mt-1 min-h-[28px]">
+                            <div className="mt-1 flex flex-col gap-1">
                               <div className={cx(
-                                'absolute inset-y-0 z-[1] flex max-w-[90%] items-center',
-                                message.direction === 'outbound' ? 'left-0' : 'right-0',
+                                'flex max-w-full flex-wrap gap-1',
+                                message.direction === 'outbound' ? 'justify-end' : 'justify-start',
                               )}>
-                                <div
-                                  className="flex max-w-full flex-wrap gap-1"
-                                  title={reactionTooltipText || undefined}
-                                >
-                                  {reactions.map((reaction) => (
-                                    <span
-                                      key={`${message.id}:${reaction.emoji}`}
-                                      className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
-                                    >
-                                      <span className="text-sm leading-none">{reaction.emoji}</span>
-                                      {reaction.count > 1 ? <span>{reaction.count}</span> : null}
-                                    </span>
-                                  ))}
-                                </div>
+                                {reactions.map((reaction) => (
+                                  <span
+                                    key={`${message.id}:${reaction.emoji}`}
+                                    title={reactionTooltipText ? `${reaction.emoji} ${reaction.actors.join(', ')}` : undefined}
+                                    className={`inline-flex min-h-[28px] shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
+                                  >
+                                    <span className="text-sm leading-none">{reaction.emoji}</span>
+                                    {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                                  </span>
+                                ))}
                               </div>
                               {messageMeta}
                             </div>

@@ -1,4 +1,5 @@
 export type Contract = {
+  sale_operator_user_id?: string | null;
   id: string;
   codigo_contrato: string;
   lead_id?: string;

@@ -4,8 +4,13 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 ## Automações de leads
 
+- Renomear `lead_status_config.nome` preserva a identidade UUID: aliases privados atualizam referências operacionais em fluxos, grafos, condições, ações, campanhas e jobs pendentes. Gravações com nomes anteriores são canonicalizadas; mensagens e histórico permanecem literais. Um alias não pode ser reutilizado para outro status. A troca apenas do rótulo de um lead com o mesmo `status_id` não dispara `status_changed`.
+
 - Execução é sequencial: somente a primeira etapa é criada inicialmente; a seguinte nasce após a conclusão real da anterior e respeita delay/janela.
 - Mensagem outbound produzida por um fluxo de inatividade não abre outro enrollment do mesmo fluxo. As etapas permanecem no enrollment atual; inbound do cliente, saída do status de gatilho ou cancelamento explícito encerram a régua.
+- Os fluxos de inatividade de `Contato Inicial` e `Atendimento` finalizam em `Reativação` após a última etapa sem resposta; esse status tira o lead dos gatilhos e encerra novas inscrições da mesma régua.
+- Uma conclusão sem resposta é terminal enquanto não houver uma resposta visível posterior à última mensagem do fluxo.
+- `finalStatus` é aplicado somente após a conclusão da última etapa e não substitui um status que mudou durante a execução.
 - A primeira etapa de inatividade ancora em `inactivity_started_at + triggerDurationHours`. Spread determinístico vale para backlog real e excesso de cap, nunca para a abordagem `lead_created`.
 - `step.messages[]` representa um pacote ordenado de mensagens na mesma etapa. Não existe modo `together`.
 - Cada item de `step.messages[]` é Template, Custom ou IA. A instrução IA é obrigatória, gera exatamente um texto no worker antes do primeiro envio e o resultado fica em `action_payload.ai_generated_messages` para retries determinísticos. Falha de geração invalida o job e cancela as próximas etapas sem fallback textual.
@@ -100,3 +105,9 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Terracota CRM é light-first; dark mode permanece opcional usando os mesmos tokens semânticos.
 - Canvas bege quente, superfícies branco quente, terracota primária, dourado de destaque e marrom profundo; cores de status só para semântica funcional.
 - Use Playfair Display em títulos e Inter em corpo/UI. Use tokens de raio `--kds-radius-*`; evite hardcodes e valide com `npm run audit:visual`.
+
+## Produção individual
+
+- Carteira, executor, autorizador OAuth e responsável pela venda são identidades distintas. No MCP compartilhado, o operador deve ser declarado em cada operação e nunca amplia a autorização.
+- Agendamentos preservam o operador original até o despacho. Alterações e cancelamentos não transferem crédito; confirmação, retry e eco são deduplicados. Automação e WhatsApp externo não recebem crédito individual.
+- A medição começa na ativação explícita; o histórico do login compartilhado permanece sem atribuição individual. Reabertura de retorno invalida a conclusão vigente e o crédito de venda é congelado no primeiro fechamento. Detalhes e ativação: [produção da equipe](team-production.md).

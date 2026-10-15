@@ -12,6 +12,8 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
@@ -62,11 +64,13 @@ export default function UsersScreen() {
   const [newUserUsername, setNewUserUsername] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserPasswordVisible, setNewUserPasswordVisible] = useState(false);
   const [newUserRole, setNewUserRole] = useState("observer");
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editUserUsername, setEditUserUsername] = useState("");
   const [editUserEmail, setEditUserEmail] = useState("");
   const [editUserPassword, setEditUserPassword] = useState("");
+  const [editUserPasswordVisible, setEditUserPasswordVisible] = useState(false);
   const [editUserRole, setEditUserRole] = useState("observer");
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -147,6 +151,7 @@ export default function UsersScreen() {
     setNewUserUsername("");
     setNewUserEmail("");
     setNewUserPassword("");
+    setNewUserPasswordVisible(false);
     setNewUserRole(profileOptions[0]?.value ?? "observer");
     setShowAddUser(false);
   };
@@ -154,6 +159,7 @@ export default function UsersScreen() {
   const resetEditForm = () => {
     setEditingUser(null);
     setEditUserPassword("");
+    setEditUserPasswordVisible(false);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -201,11 +207,12 @@ export default function UsersScreen() {
   };
 
   const startEditingUser = (userProfile: UserProfile) => {
-    setShowAddUser(false);
+    resetCreateForm();
     setEditingUser(userProfile);
     setEditUserUsername(userProfile.username);
     setEditUserEmail(userProfile.email);
     setEditUserPassword("");
+    setEditUserPasswordVisible(false);
     setEditUserRole(userProfile.role);
   };
 
@@ -245,8 +252,7 @@ export default function UsersScreen() {
       });
 
       showMessage("success", "Usuário atualizado com sucesso.");
-      setEditingUser(null);
-      setEditUserPassword("");
+      resetEditForm();
 
       const currentProfileId = user?.id;
       if (currentProfileId && editingUser.id === currentProfileId) {
@@ -519,12 +525,24 @@ export default function UsersScreen() {
 
                 <Field label="Senha">
                   <Input
-                    type="password"
+                    type={newUserPasswordVisible ? "text" : "password"}
+                    autoComplete="new-password"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     required
                     minLength={6}
                     placeholder="Digite uma senha temporária"
+                    action={
+                      <IconButton
+                        type="button"
+                        size="sm"
+                        aria-label={newUserPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+                        aria-pressed={newUserPasswordVisible}
+                        onClick={() => setNewUserPasswordVisible((visible) => !visible)}
+                      >
+                        {newUserPasswordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                      </IconButton>
+                    }
                   />
                 </Field>
 
@@ -583,11 +601,23 @@ export default function UsersScreen() {
                   description="Deixe em branco para manter a senha atual."
                 >
                   <Input
-                    type="password"
+                    type={editUserPasswordVisible ? "text" : "password"}
+                    autoComplete="new-password"
                     value={editUserPassword}
                     onChange={(e) => setEditUserPassword(e.target.value)}
                     minLength={6}
                     placeholder="Deixe em branco para manter"
+                    action={
+                      <IconButton
+                        type="button"
+                        size="sm"
+                        aria-label={editUserPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+                        aria-pressed={editUserPasswordVisible}
+                        onClick={() => setEditUserPasswordVisible((visible) => !visible)}
+                      >
+                        {editUserPasswordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                      </IconButton>
+                    }
                   />
                 </Field>
 

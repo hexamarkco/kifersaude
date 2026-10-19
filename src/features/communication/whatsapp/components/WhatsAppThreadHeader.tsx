@@ -1,4 +1,4 @@
-import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, Loader2, MoreHorizontal, Pause, Pencil, Search, Sparkles, Users } from 'lucide-react';
+import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, Loader2, MapPin, MoreHorizontal, Pause, Pencil, Search, Sparkles, Users } from 'lucide-react';
 import type { RefObject } from 'react';
 
 import {
@@ -10,7 +10,7 @@ import {
 import { LeadFavoriteToggle } from '../../../../components/LeadFavoriteStar';
 import StatusDropdown from '../../../../components/StatusDropdown';
 import { isOverdue } from '../../../../lib/dateUtils';
-import { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
+import { formatCommWhatsAppPhoneLabel, getCommWhatsAppPhoneRegion } from '../domain/phonePresentation';
 import type { CommWhatsAppChat } from '../domain/types';
 import type { CommWhatsAppLeadPanel } from '../data';
 import type { LeadStatusConfig } from '../../../leads';
@@ -98,6 +98,8 @@ export function WhatsAppThreadHeader({
   onOpenLeadDrawer,
   onToggleThreadActionsMenu,
 }: WhatsAppThreadHeaderProps) {
+  const phoneRegion = selectedChat.is_group ? null : getCommWhatsAppPhoneRegion(selectedChat.phone_number);
+
   return (
     <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
       <div className="flex min-w-0 items-start gap-2">
@@ -129,6 +131,11 @@ export function WhatsAppThreadHeader({
           {!selectedChat.is_group ? (
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
               <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
+              {phoneRegion ? (
+                <Badge tone="neutral" size="sm" icon={MapPin} className="shrink-0" title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
+                  {phoneRegion.uf} · DDD {phoneRegion.ddd}
+                </Badge>
+              ) : null}
               <WhatsAppPresenceIndicator chat={selectedChat} />
               {!selectedChatForPresentation?.saved_contact_name ? (
                 <button type="button" onClick={() => onSaveContact(selectedChatDisplayName)} className="text-xs font-semibold text-[var(--brand-primary)] hover:underline">+ Salvar contato</button>

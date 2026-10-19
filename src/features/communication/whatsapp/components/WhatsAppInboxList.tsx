@@ -1,6 +1,6 @@
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Loader2, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
-import { Button, Checkbox } from '../../../../design-system';
+import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppMessageSearchResult } from '../data';
@@ -343,6 +343,7 @@ export function WhatsAppMediaGroupBody({
 
 export function InboxChatListItem({
   chat,
+  leadStatusColor,
   selected,
   connectedUserName,
   draftPreview,
@@ -355,6 +356,7 @@ export function InboxChatListItem({
   menuTriggerRef,
 }: {
   chat: CommWhatsAppChat;
+  leadStatusColor?: string | null;
   selected: boolean;
   connectedUserName: string | null;
   favorito?: boolean;
@@ -386,13 +388,18 @@ export function InboxChatListItem({
       <div className="px-4 py-3">
         <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />
                 <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                   {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
                   {getSafeChatDisplayName(chat, connectedUserName)}
                 </p>
+                {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
+                  <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
+                    <span className="min-w-0 truncate">{chat.lead_status}</span>
+                  </OperationalStatusBadge>
+                ) : null}
                 <WhatsAppPresenceIndicator chat={chat} compact />
                 {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
                 {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
@@ -456,12 +463,14 @@ export function InboxChatListItem({
 
 export function InboxMessageSearchListItem({
   result,
+  leadStatusColor,
   selected,
   connectedUserName,
   favorito,
   onSelect,
 }: {
   result: CommWhatsAppMessageSearchResult;
+  leadStatusColor?: string | null;
   selected: boolean;
   connectedUserName?: string | null;
   favorito?: boolean;
@@ -479,11 +488,18 @@ export function InboxMessageSearchListItem({
       <div className="px-4 py-3">
         <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="whatsapp-inbox-heading flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />
-                {getSafeChatDisplayName(result.chat, connectedUserName)}
-              </p>
+                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
+                  {getSafeChatDisplayName(result.chat, connectedUserName)}
+                </p>
+                {!result.chat.is_group && result.chat.lead_id && result.chat.lead_status?.trim() ? (
+                  <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${result.chat.lead_status}`} aria-label={`Status do lead: ${result.chat.lead_status}`}>
+                    <span className="min-w-0 truncate">{result.chat.lead_status}</span>
+                  </OperationalStatusBadge>
+                ) : null}
+              </div>
               {messagePreviewText ? (
                 <p className="mt-px truncate text-sm text-[var(--text-secondary)]">
                   {messagePreviewIconType ? (

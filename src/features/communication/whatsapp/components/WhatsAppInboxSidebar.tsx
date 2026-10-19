@@ -1,5 +1,6 @@
 import { Archive, Calendar, CalendarClock, Cog, Loader2, MessageCircle, Plus, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import type { MutableRefObject } from 'react';
+import type { LeadStatusConfig } from '../../../leads';
 
 import {
   Alert,
@@ -23,6 +24,7 @@ type PointerAnchor = {
 };
 
 type WhatsAppInboxSidebarProps = {
+  leadStatuses: LeadStatusConfig[];
   archivedSectionOpen: boolean;
   archivedChatsCount: number;
   archivedChatsLoading: boolean;
@@ -69,6 +71,7 @@ type WhatsAppInboxSidebarProps = {
 };
 
 export function WhatsAppInboxSidebar({
+  leadStatuses,
   archivedSectionOpen,
   archivedChatsCount,
   archivedChatsLoading,
@@ -117,6 +120,7 @@ export function WhatsAppInboxSidebar({
     <InboxChatListItem
       key={chat.id}
       chat={chat}
+      leadStatusColor={leadStatuses.find((status) => status.nome === chat.lead_status)?.cor}
       selected={chat.id === selectedChatId}
       connectedUserName={connectedUserName}
       draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
@@ -301,6 +305,7 @@ export function WhatsAppInboxSidebar({
                 <InboxMessageSearchListItem
                   key={result.message.id}
                   result={result}
+                  leadStatusColor={leadStatuses.find((status) => status.nome === result.chat.lead_status)?.cor}
                   selected={result.chat.id === selectedChatId}
                   connectedUserName={connectedUserName}
                   favorito={result.chat.lead_id ? favoritedLeadIds.has(result.chat.lead_id) : false}

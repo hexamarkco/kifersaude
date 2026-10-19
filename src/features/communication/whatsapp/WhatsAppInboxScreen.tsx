@@ -2021,6 +2021,7 @@ export default function WhatsAppInboxScreen() {
 
         <section className="grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <WhatsAppInboxSidebar
+          leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}
           archivedChatsCount={archivedChatsCountValue}
           archivedChatsLoading={archivedChatsLoading}

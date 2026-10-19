@@ -400,7 +400,6 @@ export function InboxChatListItem({
                     <span className="min-w-0 truncate">{chat.lead_status}</span>
                   </OperationalStatusBadge>
                 ) : null}
-                <WhatsAppPresenceIndicator chat={chat} compact />
                 {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
                 {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
@@ -411,7 +410,7 @@ export function InboxChatListItem({
             </div>
           </div>
           <p className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
-            {draftPreview ? (
+            <WhatsAppPresenceIndicator chat={chat} fallback={draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
                 <span>{draftPreview}</span>
@@ -429,7 +428,7 @@ export function InboxChatListItem({
                   <span>{visibleLastMessageText}</span>
                 )}
               </>
-            ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'}
+            ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
           </p>
           {hasUnreadBadge ? (
             <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">

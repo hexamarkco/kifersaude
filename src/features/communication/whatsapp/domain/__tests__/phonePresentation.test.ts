@@ -19,6 +19,16 @@ test('identifica a região de celulares e fixos com ou sem DDI, inclusive DDD 55
   }
 });
 
+test('identifica o DDD de celulares legados com oito dígitos sem alterar o telefone', () => {
+  for (const phone of ['559391314669', '+55 (93) 9131-4669', '(93) 9131-4669', '9391314669', '5593991314669']) {
+    assert.deepEqual(getCommWhatsAppPhoneRegion(phone), { ddd: '93', uf: 'PA', name: 'Pará' });
+  }
+  for (const prefix of ['6', '7', '8', '9']) {
+    assert.equal(getCommWhatsAppPhoneRegion(`5511${prefix}1234567`)?.uf, 'SP');
+  }
+  assert.equal(formatCommWhatsAppPhoneLabel('559391314669'), '+55 (93) 9131-4669');
+});
+
 test('distingue regiões e mantém a ambiguidade do DDD 61', () => {
   const cases = [
     ['11', 'SP'], ['27', 'ES'], ['33', 'MG'], ['41', 'PR'], ['48', 'SC'],

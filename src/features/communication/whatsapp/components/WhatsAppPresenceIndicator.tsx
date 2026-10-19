@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import type { CommWhatsAppChat } from '../domain/types';
 import {
@@ -9,9 +9,11 @@ import {
 export default function WhatsAppPresenceIndicator({
   chat,
   compact = false,
+  fallback = null,
 }: {
   chat: Pick<CommWhatsAppChat, 'presence_status' | 'presence_last_seen_at' | 'presence_updated_at'>;
   compact?: boolean;
+  fallback?: ReactNode;
 }) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const presentation = getCommWhatsAppPresencePresentation(chat, nowMs);
@@ -29,7 +31,7 @@ export default function WhatsAppPresenceIndicator({
     return () => window.clearTimeout(timeoutId);
   }, [chat.presence_updated_at]);
 
-  if (!presentation) return null;
+  if (!presentation) return <>{fallback}</>;
 
   return (
     <span

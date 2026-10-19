@@ -62,7 +62,8 @@ export const getCommWhatsAppPhoneRegion = (value?: string | null) => {
   if (!/^\d{10,11}$/.test(nationalNumber)) return null;
   // Um número com + explícito só pode ser interpretado como brasileiro com DDI 55.
   if (normalized.startsWith('+') && nationalNumber === digits) return null;
-  if (!/^(?:\d{2}[2-5]\d{7}|\d{2}9\d{8})$/.test(nationalNumber)) return null;
+  // O histórico do WhatsApp também pode conter celulares sem o nono dígito.
+  if (!/^(?:\d{2}[2-9]\d{7}|\d{2}9\d{8})$/.test(nationalNumber)) return null;
 
   const ddd = nationalNumber.slice(0, 2);
   const region = BRAZILIAN_DDD_REGIONS.find(({ codes }) => codes.split(' ').includes(ddd));

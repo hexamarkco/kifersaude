@@ -44,15 +44,15 @@ const commonArgs = {
 };
 
 describe('MCP Inbox actions', () => {
-  it('declares ten unique mutation tools with closed input schemas', () => {
+  it('declares twelve unique mutation tools with closed input schemas', () => {
     const names = MCP_INBOX_TOOLS.map(({ name }) => name);
-    expect(names).toHaveLength(10);
+    expect(names).toHaveLength(12);
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(expect.arrayContaining([...MCP_INBOX_WRITE_TOOL_NAMES]));
     expect(MCP_INBOX_TOOLS.every((tool) => tool.inputSchema.additionalProperties === false)).toBe(true);
   });
 
-  it('maps all ten tools to the seven actor-aware RPCs with concurrency and idempotency arguments', async () => {
+  it('maps the existing state tools to actor-aware RPCs with concurrency and idempotency arguments', async () => {
     const cases = [
       ['kifer_archive_whatsapp_chat', 'mcp_comm_whatsapp_set_chat_archived', 'chat.archived.set', { p_is_archived: true }, {}],
       ['kifer_unarchive_whatsapp_chat', 'mcp_comm_whatsapp_set_chat_archived', 'chat.archived.set', { p_is_archived: false }, {}],
@@ -84,6 +84,46 @@ describe('MCP Inbox actions', () => {
         ...specificRpcArgs,
       });
     }
+  });
+
+  it('soft-deletes a chat only with confirmation and the current version', async () => {
+    const { client, rpc } = makeSupabase({ success: true, operation: 'chat.deleted.set', deleted: true, chat: chatState, replayed: false });
+    const result = await executeMcpInboxAction({
+      supabase: client,
+      toolName: 'kifer_delete_whatsapp_chat',
+      arguments: { ...commonArgs, confirm_delete: true },
+      actor: { actorId },
+    });
+    expect(result).toMatchObject({ success: true, deleted: true });
+    expect(rpc).toHaveBeenCalledWith('mcp_comm_whatsapp_set_chat_deleted', {
+      p_actor_user_id: actorId,
+      p_chat_id: chatId,
+      p_expected_updated_at: expectedUpdatedAt,
+      p_client_request_id: commonArgs.client_request_id,
+    });
+
+    const unconfirmed = makeSupabase();
+    const unconfirmedResult = await executeMcpInboxAction({ supabase: unconfirmed.client, toolName: 'kifer_delete_whatsapp_chat', arguments: commonArgs, actor: { actorId } });
+    expect(unconfirmedResult).toMatchObject({ success: false, error_code: 'INVALID_INPUT' });
+    expect(unconfirmed.rpc).not.toHaveBeenCalled();
+  });
+
+  it('routes autonomous attendance through the qualified, actor-audited RPC', async () => {
+    const { client, rpc } = makeSupabase({ success: true, operation: 'chat.autonomous_attendance.set', chat: chatState, replayed: false });
+    const result = await executeMcpInboxAction({
+      supabase: client,
+      toolName: 'kifer_set_whatsapp_autonomous_attendance',
+      arguments: { ...commonArgs, status: 'active', confirm_change: true },
+      actor: { actorId },
+    });
+    expect(result).toMatchObject({ success: true, autonomous_attendance_status: 'active' });
+    expect(rpc).toHaveBeenCalledWith('mcp_comm_whatsapp_set_autonomous_attendance', {
+      p_actor_user_id: actorId,
+      p_chat_id: chatId,
+      p_expected_updated_at: expectedUpdatedAt,
+      p_client_request_id: commonArgs.client_request_id,
+      p_status: 'active',
+    });
   });
 
   it('keeps microsecond timestamps intact and returns only the safe state projection', async () => {

@@ -7,6 +7,10 @@ const migration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261021205214_whatsapp_campaign_admission_safety.sql'),
   'utf8',
 );
+const pacingMigration = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261021221500_campaign_pacing_configuration.sql'),
+  'utf8',
+);
 const worker = readFileSync(
   resolve(process.cwd(), 'supabase/functions/comm-whatsapp-campaign-worker/index.ts'),
   'utf8',
@@ -77,6 +81,18 @@ test('a normal reply keeps zero-delay burst behavior while an explicit opt-out c
   assert.match(worker, /Opt-out re-check: even after responded_at is set/);
 });
 
+test('campaign cadence is persisted, applied atomically to admissions, and pauses between bubbles', () => {
+  assert.match(pacingMigration, /ADD COLUMN IF NOT EXISTS contact_interval_minutes integer/);
+  assert.match(pacingMigration, /ADD COLUMN IF NOT EXISTS inter_message_interval_minutes integer NOT NULL DEFAULT 0/);
+  assert.match(pacingMigration, /_comm_whatsapp_campaign_contact_interval_seconds/);
+  assert.match(pacingMigration, /NEW\.contact_interval_minutes := v_contact_interval/);
+  assert.match(pacingMigration, /NEW\.inter_message_interval_minutes := v_message_interval/);
+  assert.match(worker, /contact_interval_minutes,inter_message_interval_minutes/);
+  assert.match(worker, /if \(interMessageIntervalMinutes > 0\) return null/);
+  assert.match(worker, /getBetweenMessageDelayMs\(step, nextStep, campaign\.inter_message_interval_minutes\)/);
+  assert.match(worker, /hasConfiguredInterMessageWait\(steps, step, campaign\.inter_message_interval_minutes\)/);
+});
+
 test('pause and window cancellation are recoverable while other cancellations remain closed', () => {
   assert.match(worker, /resolution: 'campaign_paused'/);
   assert.match(worker, /resolution: 'send_window_closed'/);
@@ -92,4 +108,18 @@ test('campaign media is restricted to the campaign bucket, MIME allowlist and on
   assert.match(worker, /form\.append\('caption', caption\)/);
   assert.match(worker, /await sendCampaignMedia\(params\.token, chatId, step, text, assertSendPermission\)/);
   assert.match(worker, /step\.media_url \? \(step\.media_type \|\| 'document'\) : 'text'/);
+});
+
+test('orphaned media dispatch recovery restores its media type, file and caption in the inbox', () => {
+  assert.match(worker, /\.select\('message_text,media_url,media_type,media_filename'\)/);
+  assert.match(worker, /extractWhapiMediaMeta\(match\)/);
+  assert.match(worker, /messageType: isMediaMessage \? String\(stepDef\?\.media_type \|\| 'document'\) : 'text'/);
+  assert.match(worker, /mediaCaption: recoveredCaption/);
+  assert.match(worker, /reconciled_after_crash: true/);
+});
+
+test('successful WhatsApp validation writes are confirmed before campaign counters are recomputed', () => {
+  assert.match(worker, /\.select\('id'\)\s*\.maybeSingle\(\)/);
+  assert.match(worker, /if \(!updated\) return false/);
+  assert.match(worker, /for \(const campaignId of changedCampaignIds\)[\s\S]*?await recomputeCampaignCounters\(supabaseAdmin, campaignId\)/);
 });

@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
 import {
   applyCommWhatsAppMessageMutation,
@@ -54,27 +55,33 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
-
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'edit',
-    });
-
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), {
-        status: authResult.status,
-        headers: jsonHeaders,
+    const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
+    let actorUserId = '';
+    if (serviceActor.isServiceRole) {
+      if (!serviceActor.actorId || !serviceActor.authorized) {
+        return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+      }
+      actorUserId = serviceActor.actorId;
+    } else {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: COMM_WHATSAPP_MODULE,
+        requiredPermission: 'edit',
       });
+      if (!authResult.authorized) {
+        return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });
+      }
+      actorUserId = authResult.user.userId;
     }
 
     const withinRateLimit = await checkCommWhatsAppActionRateLimit(
       supabaseAdmin,
-      authResult.user.userId,
+      actorUserId,
       REACT_RATE_LIMIT_SCOPE,
       REACT_RATE_LIMIT_MAX_REQUESTS,
       REACT_RATE_LIMIT_WINDOW_SECONDS,

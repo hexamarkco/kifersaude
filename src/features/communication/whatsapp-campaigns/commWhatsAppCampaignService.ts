@@ -19,6 +19,8 @@ export type CommWhatsAppCampaign = {
   scheduled_at: string | null;
   pacing_per_minute: number;
   daily_send_limit: number | null;
+  contact_interval_minutes: number | null;
+  inter_message_interval_minutes: number;
   send_window_start: string | null;
   send_window_end: string | null;
   active_weekdays: number[];
@@ -150,6 +152,8 @@ export type CreateCampaignInput = {
   scheduledAt?: string | null;
   pacingPerMinute: number;
   dailySendLimit?: number | null;
+  contactIntervalMinutes?: number | null;
+  interMessageIntervalMinutes: number;
   sendWindowStart?: string | null;
   sendWindowEnd?: string | null;
   activeWeekdays: number[];
@@ -279,6 +283,8 @@ const CAMPAIGN_SELECT = [
   'scheduled_at',
   'pacing_per_minute',
   'daily_send_limit',
+  'contact_interval_minutes',
+  'inter_message_interval_minutes',
   'send_window_start',
   'send_window_end',
   'active_weekdays',
@@ -423,6 +429,43 @@ export const formatAdmissionInterval = (minutes: number | null): string => {
   const remaining = roundedMinutes % 60;
   return `Aprox. 1 novo contato a cada ${hours}h${remaining > 0 ? ` ${remaining}min` : ''}`;
 };
+
+/**
+ * Intervalo entre novos contatos. Sem configuração explícita, distribui a
+ * cota diária (ou o público inteiro, sem cota) pela janela de envio.
+ */
+export const computeContactIntervalMinutes = (
+  configuredMinutes: number | null | undefined,
+  dailyLimit: number | null | undefined,
+  windowStart: string | null | undefined,
+  windowEnd: string | null | undefined,
+  totalTargets: number | null | undefined,
+): number | null => {
+  if (configuredMinutes !== null && configuredMinutes !== undefined) {
+    return Math.max(Math.floor(configuredMinutes), 1);
+  }
+
+  const start = parseTimeToMinutes(windowStart);
+  const end = parseTimeToMinutes(windowEnd);
+  let windowMinutes = 24 * 60;
+  if (start !== null && end !== null && start !== end) {
+    windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
+  }
+
+  const audienceSize = Number.isFinite(totalTargets) && Number(totalTargets) > 0
+    ? Math.floor(Number(totalTargets))
+    : null;
+  const dailyCapacity = dailyLimit && dailyLimit > 0
+    ? Math.min(Math.floor(dailyLimit), audienceSize ?? Math.floor(dailyLimit))
+    : audienceSize;
+  if (!dailyCapacity || dailyCapacity <= 0) return null;
+
+  return Math.max(Math.ceil(windowMinutes / dailyCapacity), 1);
+};
+
+export const formatContactInterval = (minutes: number | null): string => (
+  minutes === null ? 'Distribuído automaticamente pela janela' : formatAdmissionInterval(minutes)
+);
 
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
@@ -989,6 +1032,8 @@ export const commWhatsAppCampaignService = {
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
+        contact_interval_minutes: input.contactIntervalMinutes ?? null,
+        inter_message_interval_minutes: input.interMessageIntervalMinutes,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         active_weekdays: input.activeWeekdays,
@@ -1077,6 +1122,8 @@ export const commWhatsAppCampaignService = {
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
+        contact_interval_minutes: input.contactIntervalMinutes ?? null,
+        inter_message_interval_minutes: input.interMessageIntervalMinutes,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         active_weekdays: input.activeWeekdays,

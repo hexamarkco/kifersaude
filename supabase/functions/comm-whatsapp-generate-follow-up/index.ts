@@ -1,5 +1,6 @@
 ﻿import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
@@ -1073,11 +1074,15 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
-    const isInternalSimulation = body.simulationMode === true
-      && isServiceRoleRequest(req, serviceRoleKey);
+    const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
 
     let generatedBy: string | null = null;
-    if (!isInternalSimulation) {
+    if (serviceActor.isServiceRole) {
+      if (!serviceActor.actorId || !serviceActor.authorized) {
+        return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+      }
+      if (body.simulationMode !== true) generatedBy = serviceActor.actorId;
+    } else {
       const authResult = await authorizeDashboardUser({
         req,
         supabaseUrl,
@@ -1095,6 +1100,7 @@ Deno.serve(async (req: Request) => {
       }
       generatedBy = authResult.user.profileId;
     }
+    const isInternalSimulation = body.simulationMode === true && serviceActor.isServiceRole && serviceActor.authorized;
 
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);

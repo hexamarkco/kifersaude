@@ -11,7 +11,12 @@ const tools: readonly McpToolDescriptor[] = [
 describe('MCP discovery primitives', () => {
   it('declares the OAuth requirement on every exposed tool', () => {
     expect(attachMcpOAuthSecuritySchemes(tools).map(({ securitySchemes }) => securitySchemes)).toEqual(
-      tools.map(() => [{ type: 'oauth2', scopes: ['kifer.read'] }]),
+      [
+        [{ type: 'oauth2', scopes: ['kifer.read'] }],
+        [{ type: 'oauth2', scopes: ['kifer.read'] }],
+        [{ type: 'oauth2', scopes: ['kifer.read', 'kifer.write'] }],
+        [{ type: 'oauth2', scopes: ['kifer.read', 'kifer.write'] }],
+      ],
     );
   });
 

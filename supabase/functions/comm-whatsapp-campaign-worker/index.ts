@@ -9,6 +9,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
+  extractWhapiMediaMeta,
   fetchWhapiChatMessages,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
@@ -21,6 +22,7 @@ import {
   resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
+  summarizeWhapiMessage,
   toTrimmedString,
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
@@ -71,6 +73,8 @@ type CampaignRow = {
   scheduled_at: string | null;
   pacing_per_minute: number;
   daily_send_limit: number | null;
+  contact_interval_minutes: number | null;
+  inter_message_interval_minutes: number;
   send_window_start: string | null;
   send_window_end: string | null;
   stop_on_reply: boolean;
@@ -504,7 +508,10 @@ const resolveCampaignGreeting = (now = new Date()): string =>
     Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
   );
 
-const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
+const resolveMessageText = (template: string, params: {
+  lead?: LeadRow | null;
+  target?: Pick<TargetRow, 'display_name' | 'phone_number'> | null;
+}) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
   return resolveCommWhatsAppCampaignMessage(template, {
@@ -801,7 +808,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,contact_interval_minutes,inter_message_interval_minutes,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -1391,10 +1398,33 @@ const findVisibleInboundCampaignReplies = async (
 const shouldStopSequenceBeforeStep = (
   step: Pick<CampaignStepRow, 'delay_amount'> | null,
   targetStatus?: string | null,
+  hasInterMessageWait = false,
 ) => {
   if (targetStatus === 'sent') return true;
   if (!step) return true;
-  return Math.max(Number(step.delay_amount) || 0, 0) > 0;
+  return hasInterMessageWait || Math.max(Number(step.delay_amount) || 0, 0) > 0;
+};
+
+const hasConfiguredInterMessageWait = (
+  steps: CampaignStepRow[],
+  currentStep: CampaignStepRow | null,
+  intervalMinutes: number,
+): boolean => {
+  if (!currentStep || intervalMinutes <= 0 || currentStep.step_kind !== 'message') return false;
+  const index = steps.findIndex((step) => step.step_index === currentStep.step_index);
+  return index > 0 && steps[index - 1]?.step_kind === 'message';
+};
+
+const getBetweenMessageDelayMs = (
+  previousStep: CampaignStepRow,
+  nextStep: CampaignStepRow,
+  intervalMinutes: number,
+): number => {
+  const configuredDelay = getDelayMs(nextStep);
+  if (previousStep.step_kind !== 'message' || nextStep.step_kind !== 'message' || intervalMinutes <= 0) {
+    return configuredDelay;
+  }
+  return Math.max(configuredDelay, intervalMinutes * 60_000);
 };
 
 const OPT_OUT_KEYWORDS = [
@@ -1472,7 +1502,11 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     const steps = stopOnReply ? await getCachedCampaignSteps(supabaseAdmin, campaign, stepsByCampaignId) : [];
     const currentStepIndex = Math.max(Number(target.current_step_index) || 0, 0);
     const currentStep = steps.find((item) => item.step_index === currentStepIndex) ?? null;
-    const shouldStop = stopOnReply && shouldStopSequenceBeforeStep(currentStep, target.status);
+    const shouldStop = stopOnReply && shouldStopSequenceBeforeStep(
+      currentStep,
+      target.status,
+      hasConfiguredInterMessageWait(steps, currentStep, campaign.inter_message_interval_minutes),
+    );
 
     const responseUpdate = shouldStop
       ? { status: 'responded', responded_at: reply.respondedAt || nowIso, chat_id: reply.chat.id }
@@ -1862,7 +1896,9 @@ async function reserveStageDispatchRetry(
 function findStageCompanions(
   steps: CampaignStepRow[],
   currentStepIndex: number,
+  interMessageIntervalMinutes: number,
 ): CampaignStepRow[] | null {
+  if (interMessageIntervalMinutes > 0) return null;
   const currentIndex = steps.findIndex((s) => s.step_index === currentStepIndex);
   if (currentIndex < 0) return null;
 
@@ -2578,7 +2614,7 @@ async function reconcileOrphanedStepDispatches(params: {
       // Load target to get chat_id / phone_digits
       const { data: target } = await supabaseAdmin
         .from('comm_whatsapp_campaign_targets')
-        .select('id,phone_digits,chat_id')
+        .select('id,phone_digits,phone_number,display_name,lead_id,chat_id')
         .eq('id', dispatch.target_id)
         .maybeSingle();
 
@@ -2595,10 +2631,20 @@ async function reconcileOrphanedStepDispatches(params: {
       // Load the step definition for message matching
       const { data: stepDef } = await supabaseAdmin
         .from('comm_whatsapp_campaign_steps')
-        .select('message_text,media_url')
+        .select('message_text,media_url,media_type,media_filename')
         .eq('campaign_id', dispatch.campaign_id)
         .eq('step_index', dispatch.step_index)
         .maybeSingle();
+      const lead = stepDef?.message_text && target.lead_id
+        ? await getLeadById(supabaseAdmin, target.lead_id)
+        : null;
+      const targetContext = {
+        display_name: target.display_name,
+        phone_number: target.phone_number || target.phone_digits,
+      };
+      const expectedText = stepDef?.message_text
+        ? resolveMessageText(stepDef.message_text, { lead, target: targetContext }).trim()
+        : '';
 
       // Try to find the message via Whapi
       let found = false;
@@ -2616,13 +2662,19 @@ async function reconcileOrphanedStepDispatches(params: {
             const msgTo = String(msg.to || msg.chat_id || '');
             if (!phoneKeys.some((key) => msgTo.includes(key))) return false;
             // Time window: within 30s of dispatch creation
-            const msgTime = new Date(String(msg.timestamp || msg.time || 0)).getTime();
+            const rawTimestamp = msg.timestamp || msg.time;
+            const timestampNumber = typeof rawTimestamp === 'number' || /^\d+(?:\.\d+)?$/.test(String(rawTimestamp ?? ''))
+              ? Number(rawTimestamp)
+              : NaN;
+            const msgTime = Number.isFinite(timestampNumber)
+              ? timestampNumber < 1_000_000_000_000 ? timestampNumber * 1000 : timestampNumber
+              : Date.parse(String(rawTimestamp || ''));
+            if (!Number.isFinite(msgTime)) return false;
             const dispatchTime = new Date(dispatch.created_at).getTime();
             if (Math.abs(msgTime - dispatchTime) > 30_000) return false;
-            // Text match (if available)
-            const msgText = String(msg.text || msg.body || '');
-            const expectedText = stepDef?.message_text || '';
-            if (expectedText && msgText && msgText.trim() !== expectedText.trim()) return false;
+            const expectedMediaType = stepDef?.media_url ? stepDef.media_type : null;
+            if (expectedMediaType && String(msg.type || '').toLowerCase() !== expectedMediaType) return false;
+            if (expectedText && summarizeWhapiMessage(msg).trim() !== expectedText) return false;
             return true;
           });
 
@@ -2633,6 +2685,14 @@ async function reconcileOrphanedStepDispatches(params: {
             const deliveryStatus = String(match.status || 'sent');
 
             if (externalMessageId) {
+              const recoveredMedia = extractWhapiMediaMeta(match);
+              const isMediaMessage = Boolean(stepDef?.media_url);
+              const recoveredMediaUrl = isMediaMessage
+                ? recoveredMedia.mediaUrl || resolveCampaignMediaPublicUrl(String(stepDef.media_url)).toString()
+                : null;
+              const recoveredCaption = isMediaMessage
+                ? expectedText || recoveredMedia.mediaCaption || null
+                : null;
               const displayName = target.phone_digits;
               await persistCommWhatsAppMessage(supabaseAdmin, {
                 channelId,
@@ -2640,34 +2700,35 @@ async function reconcileOrphanedStepDispatches(params: {
                 phoneNumber: target.phone_digits,
                 displayName,
                 pushName: null,
-                lastMessageText: stepDef?.message_text || '',
+                lastMessageText: isMediaMessage ? null : stepDef?.message_text || '',
                 lastMessageDirection: 'outbound',
                 lastMessageAt: dispatch.created_at,
                 incrementUnread: false,
                 externalMessageId,
                 direction: 'outbound',
-                messageType: 'text',
+                messageType: isMediaMessage ? String(stepDef?.media_type || 'document') : 'text',
                 deliveryStatus,
-                textContent: stepDef?.message_text || '',
+                textContent: isMediaMessage ? null : stepDef?.message_text || '',
                 createdBy: null,
                 source: 'campaign',
                 senderPhone,
                 senderName,
                 statusUpdatedAt: dispatch.created_at,
                 errorMessage: null,
-                mediaId: null,
-                mediaUrl: null,
-                mediaMimeType: null,
-                mediaFileName: null,
-                mediaSizeBytes: null,
-                mediaDurationSeconds: null,
-                mediaCaption: null,
+                mediaId: isMediaMessage ? recoveredMedia.mediaId : null,
+                mediaUrl: recoveredMediaUrl,
+                mediaMimeType: isMediaMessage ? recoveredMedia.mediaMimeType : null,
+                mediaFileName: isMediaMessage ? stepDef?.media_filename || recoveredMedia.mediaFileName : null,
+                mediaSizeBytes: isMediaMessage ? recoveredMedia.mediaSizeBytes : null,
+                mediaDurationSeconds: isMediaMessage ? recoveredMedia.mediaDurationSeconds : null,
+                mediaCaption: recoveredCaption,
                 metadata: {
                   provider: 'whapi',
                   campaign_id: dispatch.campaign_id,
                   campaign_target_id: dispatch.target_id,
                   campaign_step_index: dispatch.step_index,
                   reconciled_after_crash: true,
+                  ...(isMediaMessage ? { campaign_media_type: stepDef?.media_type || 'document' } : {}),
                 },
               });
 
@@ -3406,7 +3467,7 @@ async function sendTarget(params: {
   const nextStep = steps[stepPosition + 1] ?? null;
 
   // ── Burst detection: multiple consecutive messages in the same stage ──
-  const stageCompanions = findStageCompanions(steps, step.step_index);
+  const stageCompanions = findStageCompanions(steps, step.step_index, campaign.inter_message_interval_minutes);
   if (stageCompanions) {
     return executeStageBurst({
       supabaseAdmin,
@@ -3426,7 +3487,11 @@ async function sendTarget(params: {
   if (campaign.stop_on_reply && target.sent_at) {
     const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
     const respondedAt = target.responded_at || reply?.respondedAt || null;
-    if (respondedAt && shouldStopSequenceBeforeStep(step)) {
+    if (respondedAt && shouldStopSequenceBeforeStep(
+      step,
+      target.status,
+      hasConfiguredInterMessageWait(steps, step, campaign.inter_message_interval_minutes),
+    )) {
       await updateClaimedTarget(supabaseAdmin, target, {
         status: 'responded',
         responded_at: respondedAt,
@@ -3733,7 +3798,9 @@ async function sendTarget(params: {
 
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
   const displayName = chatRoute?.displayName || lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
-  const nextSendAt = nextStep ? new Date(Date.now() + getDelayMs(nextStep)).toISOString() : null;
+  const nextSendAt = nextStep
+    ? new Date(Date.now() + getBetweenMessageDelayMs(step, nextStep, campaign.inter_message_interval_minutes)).toISOString()
+    : null;
   const targetStatus = nextStep ? 'scheduled' : 'sent';
   const acceptedPayload = {
     externalMessageId,
@@ -3957,8 +4024,38 @@ async function validatePendingWhatsAppTargets(
   let invalidCount = 0;
   let checkedCount = 0;
   let skippedByBudget = 0;
+  const changedCampaignIds = new Set<string>();
   const nowIso = getNowIso();
   const deadline = Date.now() + WHATSAPP_VALIDATION_TIME_BUDGET_MS;
+
+  const persistWhatsAppCheck = async (
+    target: (typeof targets)[number],
+    patch: {
+      whatsapp_check_status: 'valid' | 'invalid';
+      whatsapp_checked_at: string;
+      status?: 'invalid';
+      error_message?: string;
+    },
+  ): Promise<boolean> => {
+    const { data: updated, error: updateError } = await supabaseAdmin
+      .from('comm_whatsapp_campaign_targets')
+      .update(patch)
+      .eq('id', target.id)
+      .eq('whatsapp_check_status', 'pending')
+      .select('id')
+      .maybeSingle();
+    if (updateError) {
+      console.error('[comm-whatsapp-campaign-worker] erro ao salvar validacao do WhatsApp', {
+        targetId: target.id,
+        campaignId: target.campaign_id,
+        error: updateError,
+      });
+      return false;
+    }
+    if (!updated) return false;
+    changedCampaignIds.add(target.campaign_id);
+    return true;
+  };
 
   await mapWithConcurrency(targets, WHATSAPP_VALIDATION_CONCURRENCY, async (target) => {
     if (Date.now() > deadline) {
@@ -3970,12 +4067,12 @@ async function validatePendingWhatsAppTargets(
 
     if (!phoneDigits) {
       checkedCount += 1;
-      invalidCount += 1;
-      await supabaseAdmin
-        .from('comm_whatsapp_campaign_targets')
-        .update({ whatsapp_check_status: 'invalid', whatsapp_checked_at: nowIso, status: 'invalid', error_message: 'Telefone invalido.' })
-        .eq('id', target.id)
-        .eq('whatsapp_check_status', 'pending');
+      if (await persistWhatsAppCheck(target, {
+        whatsapp_check_status: 'invalid',
+        whatsapp_checked_at: nowIso,
+        status: 'invalid',
+        error_message: 'Telefone invalido.',
+      })) invalidCount += 1;
       return;
     }
 
@@ -3989,27 +4086,45 @@ async function validatePendingWhatsAppTargets(
     }
 
     if (result.outcome === 'valid') {
-      validCount += 1;
-      await supabaseAdmin
-        .from('comm_whatsapp_campaign_targets')
-        .update({ whatsapp_check_status: 'valid', whatsapp_checked_at: nowIso })
-        .eq('id', target.id)
-        .eq('whatsapp_check_status', 'pending');
+      if (await persistWhatsAppCheck(target, { whatsapp_check_status: 'valid', whatsapp_checked_at: nowIso })) {
+        validCount += 1;
+      }
     } else {
-      invalidCount += 1;
-      await supabaseAdmin
-        .from('comm_whatsapp_campaign_targets')
-        .update({ whatsapp_check_status: 'invalid', whatsapp_checked_at: nowIso, status: 'invalid', error_message: 'Numero nao possui WhatsApp.' })
-        .eq('id', target.id)
-        .eq('whatsapp_check_status', 'pending');
-      await insertEvent(supabaseAdmin, {
-        campaignId: target.campaign_id,
-        targetId: target.id,
-        eventType: 'whatsapp_number_invalid',
-        payload: {},
+      const persisted = await persistWhatsAppCheck(target, {
+        whatsapp_check_status: 'invalid',
+        whatsapp_checked_at: nowIso,
+        status: 'invalid',
+        error_message: 'Numero nao possui WhatsApp.',
       });
+      if (!persisted) return;
+      invalidCount += 1;
+      try {
+        await insertEvent(supabaseAdmin, {
+          campaignId: target.campaign_id,
+          targetId: target.id,
+          eventType: 'whatsapp_number_invalid',
+          payload: {},
+        });
+      } catch (eventError) {
+        console.error('[comm-whatsapp-campaign-worker] erro ao registrar evento de numero WhatsApp invalido', {
+          targetId: target.id,
+          campaignId: target.campaign_id,
+          error: eventError,
+        });
+      }
     }
   });
+
+  for (const campaignId of changedCampaignIds) {
+    try {
+      await recomputeCampaignCounters(supabaseAdmin, campaignId);
+    } catch (counterError) {
+      console.error('[comm-whatsapp-campaign-worker] erro ao sincronizar contadores apos validacao de WhatsApp', {
+        campaignId,
+        error: counterError,
+      });
+    }
+  }
 
   if (skippedByBudget > 0) {
     console.warn('[comm-whatsapp-campaign-worker] validacao de WhatsApp cortada pelo orcamento de tempo do tick', {
@@ -4057,7 +4172,7 @@ async function processCampaigns(
   await reconcileResponses(supabaseAdmin, params.campaignId);
   await reactivateRecurringCampaigns(supabaseAdmin);
 
-  const campaignSelection = 'id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays';
+  const campaignSelection = 'id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,contact_interval_minutes,inter_message_interval_minutes,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays';
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
     .select(campaignSelection)
@@ -4250,7 +4365,7 @@ async function processCampaigns(
 async function reactivateRecurringCampaigns(supabaseAdmin: ReturnType<typeof createAdminClient>) {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,contact_interval_minutes,inter_message_interval_minutes,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_runs_completed')
     .eq('status', 'completed')
     .neq('recurrence_rule', 'none')
     .not('recurrence_next_run_at', 'is', null)

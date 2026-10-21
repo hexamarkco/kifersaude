@@ -10,11 +10,12 @@ const RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
 const ACCESS_TOKEN_LIFETIME_SECONDS = 60 * 60;
 const REFRESH_TOKEN_LIFETIME_SECONDS = 60 * 60 * 24 * 30;
 const AUTHORIZATION_CODE_LIFETIME_SECONDS = 5 * 60;
-const ALLOWED_SCOPES = new Set(['openid', 'offline_access', 'kifer.read']);
+const ALLOWED_SCOPES = new Set(['openid', 'offline_access', 'kifer.read', 'kifer.write']);
 
 type OAuthPrincipal = {
   actor: string;
   userId: string;
+  scope: string;
 };
 
 type AuthorizationRequest = {
@@ -317,7 +318,7 @@ export async function authenticateOAuthAccessToken(request: Request): Promise<OA
   if (error) throw new Error(`Falha ao validar token OAuth: ${error.message}`);
   if (!data || (text(data.resource) && text(data.resource) !== getBaseUrl(request)) || text(data.client_id) !== oauthConfig().clientId || !text(data.scope).split(' ').includes('kifer.read')) return null;
   const user = await ensureActiveAdmin(admin, text(data.user_id));
-  return user ? { userId: text(data.user_id), actor: `chatgpt:${user.email}` } : null;
+  return user ? { userId: text(data.user_id), actor: `chatgpt:${user.email}`, scope: text(data.scope) } : null;
 }
 
 export const getMcpOAuthChallenge = (request: Request): string =>

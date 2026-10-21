@@ -57,6 +57,8 @@ vi.mock('../../../infrastructure/supabase', () => ({
 import {
   commWhatsAppCampaignService,
   computeAdmissionIntervalMinutes,
+  computeContactIntervalMinutes,
+  formatContactInterval,
   formatAdmissionInterval,
 } from './commWhatsAppCampaignService';
 
@@ -66,6 +68,14 @@ test('ritmo da campanha deriva do limite e da janela, sem acelerar quando a divi
   assert.equal(formatAdmissionInterval(19), 'Aprox. 1 novo contato a cada 19 min');
   assert.equal(computeAdmissionIntervalMinutes(null, '09:00', '18:30', 6), 1 / 6);
   assert.equal(formatAdmissionInterval(computeAdmissionIntervalMinutes(null, '09:00', '18:30', 6)), 'Aprox. 1 novo contato a cada 10 s');
+});
+
+test('ritmo entre contatos pode ser fixado ou distribuído pela janela conforme a audiência', () => {
+  assert.equal(computeContactIntervalMinutes(7, 30, '09:00', '18:30', 500), 7);
+  assert.equal(computeContactIntervalMinutes(null, 30, '09:00', '18:30', 578), 19);
+  assert.equal(computeContactIntervalMinutes(null, null, '09:00', '18:30', 2), 285);
+  assert.equal(computeContactIntervalMinutes(null, null, '09:00', '18:30', 578), 1);
+  assert.equal(formatContactInterval(null), 'Distribuído automaticamente pela janela');
 });
 
 test('consultas de campanhas nao pedem lead_name removido dos chats remotos', async () => {

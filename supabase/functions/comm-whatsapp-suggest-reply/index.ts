@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
@@ -146,14 +147,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
-
-    const authResult = await authorizeDashboardUser({
-      req, supabaseUrl, supabaseAnonKey, supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE, requiredPermission: 'view',
-    });
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });
+    const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
+    if (serviceActor.isServiceRole) {
+      if (!serviceActor.actorId || !serviceActor.authorized) return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+    } else {
+      const authResult = await authorizeDashboardUser({ req, supabaseUrl, supabaseAnonKey, supabaseAdmin, module: COMM_WHATSAPP_MODULE, requiredPermission: 'view' });
+      if (!authResult.authorized) return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });
     }
 
     const body = (await req.json().catch(() => ({}))) as SuggestReplyBody;

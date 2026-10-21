@@ -1,6 +1,7 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import type { McpToolDescriptor } from './mcp-discovery.ts';
 import { resolveCommWhatsAppCampaignMessage } from '../_shared/comm-whatsapp-campaign-template.ts';
+import { isCampaignMarketingReviewReady } from '../_shared/campaign-marketing-eligibility.ts';
 
 type JsonRecord = Record<string, unknown>;
 type CampaignWriteResult = JsonRecord;
@@ -10,6 +11,7 @@ const REQUEST_ID = /^[A-Za-z0-9:_-]{1,128}$/;
 const CAMPAIGN_SELECT = [
   'id', 'name', 'objective', 'status', 'audience_source', 'audience_config',
   'message_text', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit',
+  'contact_interval_minutes', 'inter_message_interval_minutes',
   'send_window_start', 'send_window_end', 'active_weekdays', 'stop_on_reply',
   'create_leads_from_csv', 'validate_whatsapp_numbers', 'total_targets',
   'valid_targets', 'invalid_targets', 'pending_targets', 'sent_targets',
@@ -75,6 +77,8 @@ const CAMPAIGN_COMMON_PROPERTIES = {
   scheduled_at: { type: 'string', format: 'date-time' },
   pacing_per_minute: { type: 'integer', minimum: 1, maximum: 120, default: 12 },
   daily_send_limit: { type: ['integer', 'null'], minimum: 1 },
+  contact_interval_minutes: { type: ['integer', 'null'], minimum: 1, maximum: 1440, description: 'Intervalo mínimo entre novos contatos. Nulo distribui o público elegível pela janela de envio.' },
+  inter_message_interval_minutes: { type: 'integer', minimum: 0, maximum: 1440, default: 0, description: 'Intervalo entre balões da sequência; zero mantém o envio sequencial atual.' },
   start_hour: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' },
   end_hour: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' },
   allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } },
@@ -123,13 +127,13 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   },
   {
     name: 'kifer_create_whatsapp_campaign',
-    description: 'Cria uma campanha real no Disparos WhatsApp. Começa em draft (ou paused explicitamente), nunca envia e não cria leads; use a ferramenta de importação e depois ativação explícita.',
+    description: 'Cria uma campanha real no Disparos WhatsApp. Pode configurar o intervalo entre contatos e entre balões; começa em draft (ou paused explicitamente), nunca envia e não cria leads; use importação e depois ativação explícita.',
     inputSchema: { type: 'object', required: ['name', 'message', 'client_request_id'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto da primeira mensagem. Variáveis oficiais: {{nome}}, {{primeiro_nome}}, {{telefone}}, {{status}}, {{responsavel}}, {{saudacao}}, {{saudacao_titulo}}, {{saudacao_capitalizada}}.' }, status: { type: 'string', enum: ['draft', 'paused'], default: 'draft' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, ...CAMPAIGN_COMMON_PROPERTIES } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'kifer_update_whatsapp_campaign',
-    description: 'Atualiza somente uma campanha ainda editável, usando expected_updated_at para evitar sobrescrever alterações da UI. A validação e as etapas seguem o contrato do Disparos WhatsApp.',
+    description: 'Atualiza uma campanha ainda editável, inclusive os intervalos entre contatos e balões, usando expected_updated_at para evitar sobrescrever alterações da UI. A validação e as etapas seguem o contrato do Disparos WhatsApp.',
     inputSchema: { type: 'object', required: ['campaign_id', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096 }, ...CAMPAIGN_COMMON_PROPERTIES } },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   },
@@ -310,11 +314,49 @@ const withMetrics = (campaign: JsonRecord): JsonRecord => ({
   responded: Number(campaign.responded_targets ?? 0),
   stopped: Number(campaign.stopped_targets ?? 0),
 });
-const publicCampaign = (value: unknown): JsonRecord => {
+export const metricsFromTargetStatusCounts = (value: unknown): JsonRecord => {
+  const rows = Array.isArray(value) ? value.filter(isRecord) : [];
+  const totalOf = (statuses: string[]) => rows
+    .filter((row) => statuses.includes(text(row.status)))
+    .reduce((sum, row) => sum + Number(row.total_count ?? 0), 0);
+  const total = rows.reduce((sum, row) => sum + Number(row.total_count ?? 0), 0);
+  const invalid = totalOf(['invalid']);
+  const responded = rows.reduce((sum, row) => sum + (
+    text(row.status) === 'responded'
+      ? Number(row.total_count ?? 0)
+      : Number(row.responded_count ?? 0)
+  ), 0);
+  return {
+    total,
+    valid: Math.max(total - invalid, 0),
+    invalid,
+    pending: totalOf(['pending', 'scheduled', 'sending']),
+    sent: totalOf(['sent']),
+    failed: totalOf(['failed']),
+    responded,
+    stopped: totalOf(['stopped', 'cancelled']),
+  };
+};
+const publicCampaign = (value: unknown, currentMetrics?: JsonRecord): JsonRecord => {
   const campaign = isRecord(value) ? { ...value } : {};
   if ('audience_config' in campaign) campaign.audience_config = safeAudienceConfig(campaign.audience_config);
   delete campaign.created_by;
-  return { ...campaign, campaign_id: safeUuid(campaign.id) ? campaign.id : null, metrics: withMetrics(campaign) };
+  const metrics = currentMetrics ?? withMetrics(campaign);
+  return {
+    ...campaign,
+    ...(currentMetrics ? {
+      total_targets: metrics.total,
+      valid_targets: metrics.valid,
+      invalid_targets: metrics.invalid,
+      pending_targets: metrics.pending,
+      sent_targets: metrics.sent,
+      failed_targets: metrics.failed,
+      responded_targets: metrics.responded,
+      stopped_targets: metrics.stopped,
+    } : {}),
+    campaign_id: safeUuid(campaign.id) ? campaign.id : null,
+    metrics,
+  };
 };
 
 const errorResult = (errorCode: string, message: string): CampaignWriteResult => ({ success: false, error_code: errorCode, message });
@@ -357,6 +399,39 @@ const invokeCampaignWorker = async (supabase: SupabaseClient, campaignId: string
   return data;
 };
 
+const checkCampaignActivationReadiness = async (supabase: SupabaseClient, campaignId: string): Promise<CampaignWriteResult | null> => {
+  const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_marketing_readiness', {
+    p_campaign_id: campaignId,
+  });
+  if (error) {
+    return errorResult('INTERNAL_ERROR', 'Não foi possível validar a elegibilidade da campanha antes de prepará-la para ativação.');
+  }
+
+  const readiness = Array.isArray(data) ? data[0] : data;
+  if (!isRecord(readiness) || typeof readiness.ready !== 'boolean') {
+    return errorResult('INTERNAL_ERROR', 'A validação de elegibilidade retornou um resultado inválido.');
+  }
+  if (readiness.ready) return null;
+
+  const reasonCodes = Array.isArray(readiness.reason_codes)
+    ? readiness.reason_codes.filter((value): value is string => typeof value === 'string')
+    : [];
+  return {
+    ...errorResult(
+      'CAMPAIGN_NOT_READY',
+      `Ativação bloqueada antes da mutação: ${reasonCodes.join(', ') || 'campaign_marketing_eligibility_pending'}.`,
+    ),
+    validation: {
+      ready_to_activate: false,
+      marketing_reason_codes: reasonCodes,
+      eligible_targets: Number(readiness.eligible_targets ?? 0),
+      total_targets: Number(readiness.total_targets ?? 0),
+      pending_marketing_targets: Number(readiness.pending_targets ?? 0),
+      duplicate_targets: Number(readiness.duplicate_targets ?? 0),
+    },
+  };
+};
+
 const formatCampaignContact = (value: unknown): JsonRecord => {
   const contact = isRecord(value) ? { ...value } : {};
   const rawPhone = contact.phone_digits ?? contact.phone_number;
@@ -382,7 +457,24 @@ const listCampaigns = async (supabase: SupabaseClient, args: JsonRecord): Promis
   const orderBy = ['created_at', 'updated_at', 'scheduled_at', 'name', 'status'].includes(text(args.order_by)) ? text(args.order_by) : 'created_at';
   const { data, error, count } = await query.order(orderBy, { ascending: args.ascending === true, nullsFirst: false }).range(from, from + pageSize - 1);
   if (error) return { success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível listar as campanhas WhatsApp.' };
-  return { success: true, page, page_size: pageSize, total: count ?? 0, campaigns: (data ?? []).map(publicCampaign) };
+  const campaigns = data ?? [];
+  const statusResults = await Promise.all(campaigns.map((campaign) => supabase.rpc(
+    'get_comm_whatsapp_campaign_target_status_counts',
+    { p_campaign_id: campaign.id },
+  )));
+  if (statusResults.some(({ error: statusError }) => statusError)) {
+    return { success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível calcular os contadores atuais das campanhas.' };
+  }
+  return {
+    success: true,
+    page,
+    page_size: pageSize,
+    total: count ?? 0,
+    campaigns: campaigns.map((campaign, index) => publicCampaign(
+      campaign,
+      metricsFromTargetStatusCounts(statusResults[index].data),
+    )),
+  };
 };
 
 const getCampaignRecord = async (supabase: SupabaseClient, campaignId: string): Promise<{ campaign: JsonRecord | null; error?: JsonRecord }> => {
@@ -397,10 +489,14 @@ const getCampaign = async (supabase: SupabaseClient, args: JsonRecord): Promise<
   if (!safeUuid(campaignId)) return { success: false, error_code: 'INVALID_INPUT', message: 'campaign_id inválido.' };
   const loaded = await getCampaignRecord(supabase, campaignId);
   if (!loaded.campaign) return loaded.error ?? errorResult('CAMPAIGN_NOT_FOUND', 'Campanha não encontrada.');
-  const { data: steps, error } = await supabase.from('comm_whatsapp_campaign_steps').select(CAMPAIGN_STEP_SELECT).eq('campaign_id', campaignId).order('step_index', { ascending: true });
-  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar as etapas da campanha.');
-  const campaign = publicCampaign(loaded.campaign);
-  return { success: true, campaign, steps: (steps ?? []).map(safeCampaignStep), metrics: withMetrics(loaded.campaign) };
+  const [{ data: steps, error: stepError }, { data: statusCounts, error: statusError }] = await Promise.all([
+    supabase.from('comm_whatsapp_campaign_steps').select(CAMPAIGN_STEP_SELECT).eq('campaign_id', campaignId).order('step_index', { ascending: true }),
+    supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId }),
+  ]);
+  if (stepError || statusError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar as etapas e métricas atuais da campanha.');
+  const metrics = metricsFromTargetStatusCounts(statusCounts);
+  const campaign = publicCampaign(loaded.campaign, metrics);
+  return { success: true, campaign, steps: (steps ?? []).map(safeCampaignStep), metrics };
 };
 
 const countBlockedCampaignTargets = async (supabase: SupabaseClient, campaignId: string): Promise<number | null> => {
@@ -444,12 +540,39 @@ const isValidCampaignWeekdays = (value: unknown): boolean => {
   return days.length === value.length && days.every((day) => day >= 0 && day <= 6) && new Set(days).size === days.length;
 };
 
+const AMIL_PROMOTION_CAMPAIGN_IDS = new Set([
+  '96da372c-b76d-4e12-a4e5-a93b6c60c084',
+  '663279e5-739c-4efc-916e-cdf13142a458',
+]);
+
+const hasRequiredPromotionImage = (campaign: JsonRecord, audienceConfig: JsonRecord, steps: JsonRecord[]): boolean => {
+  const imageRequired = AMIL_PROMOTION_CAMPAIGN_IDS.has(text(campaign.id)) || audienceConfig.media_attachment_pending === true;
+  if (!imageRequired) return true;
+
+  const firstStepMessages = steps.filter((step) => Number(step.step_index) === 0 && step.step_kind === 'message');
+  const hasImageForVariant = (variant: string) => firstStepMessages.some((step) => (
+    text(step.variant_label) === variant
+      && text(step.media_type).toLowerCase() === 'image'
+      && Boolean(text(step.media_url))
+  ));
+  const hasVariantMessage = (variant: string) => firstStepMessages.some((step) => text(step.variant_label) === variant);
+  const hasSharedImage = hasImageForVariant('ANY');
+  const hasVariantImage = (variant: string) => hasImageForVariant(variant) || (!hasVariantMessage(variant) && hasSharedImage);
+
+  return campaign.ab_test_enabled === true
+    ? hasVariantImage('A') && hasVariantImage('B')
+    : hasVariantImage('A');
+};
+
 const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
   const campaignId = text(args.campaign_id);
   if (!safeUuid(campaignId)) return { success: false, error_code: 'INVALID_INPUT', message: 'campaign_id inválido.' };
   const loaded = await getCampaignRecord(supabase, campaignId);
   if (!loaded.campaign) return loaded.error ?? errorResult('CAMPAIGN_NOT_FOUND', 'Campanha não encontrada.');
-  const { data: steps, error: stepError } = await supabase.from('comm_whatsapp_campaign_steps').select('step_index,message_text').eq('campaign_id', campaignId).order('step_index', { ascending: true });
+  const { data: steps, error: stepError } = await supabase.from('comm_whatsapp_campaign_steps')
+    .select('step_index,stage_index,step_kind,message_text,media_type,media_url,variant_label')
+    .eq('campaign_id', campaignId)
+    .order('step_index', { ascending: true });
   if (stepError) return errorResult('INTERNAL_ERROR', 'Não foi possível carregar as mensagens da campanha.');
   let samples: JsonRecord[] = Array.isArray(args.samples) ? args.samples.filter(isRecord).slice(0, 5) : [];
   if (samples.length === 0) {
@@ -471,7 +594,9 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
       };
     });
   }
-  const persistedMessageSteps = (steps ?? []).filter(isRecord).filter((step) => text(step.message_text));
+  const persistedMessageSteps = (steps ?? []).filter(isRecord).filter((step) => (
+    step.step_kind === 'message' && (text(step.message_text) || text(step.media_url))
+  ));
   const messageSteps = persistedMessageSteps.length > 0
     ? persistedMessageSteps
     : text(loaded.campaign.message_text) ? [{ message_text: loaded.campaign.message_text }] : [];
@@ -480,12 +605,25 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
     return Array.from(matches, (match) => match[1]);
   }))].sort();
   const unknownVariables = variables.filter((variable) => !KNOWN_CAMPAIGN_VARIABLES.has(variable));
-  const [unnamedResult, blockedCount] = await Promise.all([
+  const [unnamedResult, blockedCount, statusCountsResult, readinessResult] = await Promise.all([
     supabase.from('comm_whatsapp_campaign_targets').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).or('display_name.is.null,display_name.eq.'),
     countBlockedCampaignTargets(supabase, campaignId),
+    supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId }),
+    supabase.rpc('get_comm_whatsapp_campaign_marketing_readiness', { p_campaign_id: campaignId }),
   ]);
+  if (statusCountsResult.error || readinessResult.error) {
+    return errorResult('INTERNAL_ERROR', 'Não foi possível confirmar a elegibilidade e os contadores atuais da campanha.');
+  }
   const campaignConfig = isRecord(loaded.campaign.audience_config) ? loaded.campaign.audience_config : {};
-  const metrics = withMetrics(loaded.campaign);
+  const metrics = metricsFromTargetStatusCounts(statusCountsResult.data);
+  const rawReadiness = Array.isArray(readinessResult.data) ? readinessResult.data[0] : readinessResult.data;
+  if (!isRecord(rawReadiness) || typeof rawReadiness.ready !== 'boolean') {
+    return errorResult('INTERNAL_ERROR', 'A validação de elegibilidade da campanha retornou um resultado inválido.');
+  }
+  const reasonCodes = Array.isArray(rawReadiness.reason_codes)
+    ? rawReadiness.reason_codes.filter((value): value is string => typeof value === 'string')
+    : [];
+  const promotionImageReady = hasRequiredPromotionImage(loaded.campaign, campaignConfig, messageSteps.filter(isRecord));
   const checks = {
     has_contacts: metrics.total > 0,
     has_message: messageSteps.length > 0,
@@ -494,12 +632,30 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
     schedule_valid: !loaded.campaign.scheduled_at || Boolean(parseDate(loaded.campaign.scheduled_at)),
     window_valid: isValidCampaignWindow(loaded.campaign.send_window_start, loaded.campaign.send_window_end),
     weekdays_valid: isValidCampaignWeekdays(loaded.campaign.active_weekdays),
+    marketing_review_ready: isCampaignMarketingReviewReady(campaignConfig),
+    required_promotion_image_ready: promotionImageReady,
+    contact_marketing_eligibility_ready: rawReadiness.ready,
+    no_blocked_targets: blockedCount === 0,
   };
-  const render = (sample: JsonRecord) => messageSteps.map((step) => resolveCommWhatsAppCampaignMessage(text(step.message_text), {
-    name: text(sample.name),
-    phone: text(sample.phone),
-    status: text(sample.status),
-    responsible: text(sample.responsavel),
+  const render = (sample: JsonRecord) => messageSteps
+    .filter((step) => text(step.message_text))
+    .map((step) => resolveCommWhatsAppCampaignMessage(text(step.message_text), {
+      name: text(sample.name),
+      phone: text(sample.phone),
+      status: text(sample.status),
+      responsible: text(sample.responsavel),
+    }));
+  const messageSequence = messageSteps.map((step) => ({
+    step_index: Number.isInteger(step.step_index) ? step.step_index : 0,
+    stage_index: Number.isInteger(step.stage_index) ? step.stage_index : 0,
+    variant: text(step.variant_label) || 'ANY',
+    rendered_text: text(step.message_text)
+      ? resolveCommWhatsAppCampaignMessage(text(step.message_text), {
+        name: '', phone: '', status: '', responsible: '',
+      })
+      : null,
+    media_attached: Boolean(text(step.media_url)),
+    media_type: text(step.media_type) || null,
   }));
   return {
     success: true,
@@ -509,13 +665,18 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
     metrics,
     validation: {
       ...checks,
-      duplicate_targets: 0,
+      duplicate_targets: Number(rawReadiness.duplicate_targets ?? 0),
       invalid_phone_targets: metrics.invalid,
       blocked_targets: blockedCount,
       contacts_without_name: unnamedResult.count ?? null,
       ready_to_activate: ['draft', 'scheduled', 'paused'].includes(text(loaded.campaign.status))
-        && Object.values(checks).every(Boolean),
+        && Object.values(checks).every(Boolean)
+        && rawReadiness.ready,
+      marketing_reason_codes: reasonCodes,
+      eligible_targets: Number(rawReadiness.eligible_targets ?? 0),
+      pending_marketing_targets: Number(rawReadiness.pending_targets ?? 0),
     },
+    message_sequence: messageSequence,
     fallback_without_name: render({ name: '', phone: '', status: '', responsavel: '' }),
     examples: samples.map((sample) => ({
       name: text(sample.name) || null,
@@ -559,7 +720,13 @@ const getCampaignMetrics = async (supabase: SupabaseClient, args: JsonRecord): P
     supabase.from('comm_whatsapp_campaign_targets').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('stopped_reason', 'contact_permission_blocked'),
   ]);
   if (statusError || failureError || optOutError) return errorResult('INTERNAL_ERROR', 'Não foi possível calcular as métricas da campanha.');
-  return { success: true, campaign_id: campaignId, metrics: { ...withMetrics(loaded.campaign), opt_outs: optOutCount ?? 0 }, status_counts: statusCounts ?? [], failure_reasons: failureReasons ?? [] };
+  return {
+    success: true,
+    campaign_id: campaignId,
+    metrics: { ...metricsFromTargetStatusCounts(statusCounts), opt_outs: optOutCount ?? 0 },
+    status_counts: statusCounts ?? [],
+    failure_reasons: failureReasons ?? [],
+  };
 };
 
 export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: JsonRecord }): Promise<JsonRecord | null> {
@@ -575,7 +742,7 @@ export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: S
 
 const campaignPatch = (args: JsonRecord): JsonRecord => {
   const patch: JsonRecord = {};
-  for (const key of ['name', 'message', 'status', 'objective', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit', 'start_hour', 'end_hour', 'allowed_weekdays', 'stop_on_reply', 'validate_whatsapp_numbers', 'steps', 'audience_config']) {
+  for (const key of ['name', 'message', 'status', 'objective', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit', 'contact_interval_minutes', 'inter_message_interval_minutes', 'start_hour', 'end_hour', 'allowed_weekdays', 'stop_on_reply', 'validate_whatsapp_numbers', 'steps', 'audience_config']) {
     if (Object.prototype.hasOwnProperty.call(args, key)) patch[key] = args[key];
   }
   return patch;
@@ -583,6 +750,21 @@ const campaignPatch = (args: JsonRecord): JsonRecord => {
 
 const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
   const patch = campaignPatch(args);
+  if (
+    ('contact_interval_minutes' in patch
+      && patch.contact_interval_minutes !== null
+      && (!Number.isInteger(patch.contact_interval_minutes) || Number(patch.contact_interval_minutes) < 1 || Number(patch.contact_interval_minutes) > 1440))
+    || ('inter_message_interval_minutes' in patch
+      && (!Number.isInteger(patch.inter_message_interval_minutes) || Number(patch.inter_message_interval_minutes) < 0 || Number(patch.inter_message_interval_minutes) > 1440))
+  ) return null;
+
+  const pacingConfig: JsonRecord = {};
+  if ('contact_interval_minutes' in patch) pacingConfig.contact_interval_minutes = patch.contact_interval_minutes;
+  if ('inter_message_interval_minutes' in patch) pacingConfig.inter_message_interval_minutes = patch.inter_message_interval_minutes;
+  if (Object.keys(pacingConfig).length > 0) {
+    const audienceConfig = isRecord(patch.audience_config) ? patch.audience_config : {};
+    patch.audience_config = { ...audienceConfig, __mcp_campaign_pacing: pacingConfig };
+  }
   if (!Object.prototype.hasOwnProperty.call(patch, 'steps')) return patch;
   const steps = normalizeCampaignSteps(patch.steps);
   if (!steps) return null;
@@ -597,6 +779,7 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
   const requestId = text(args.client_request_id);
   if (toolName !== 'kifer_create_whatsapp_campaign' && !safeUuid(campaignId)) return errorResult('INVALID_INPUT', 'campaign_id inválido.');
   if (!requestId) return errorResult('CLIENT_REQUEST_ID_REQUIRED', 'client_request_id é obrigatório para ações de campanha.');
+  if (!REQUEST_ID.test(requestId)) return errorResult('CLIENT_REQUEST_ID_INVALID', 'client_request_id deve usar apenas letras, números, :, _ ou - e ter até 128 caracteres.');
   const expectedUpdatedAt = text(args.expected_updated_at) || undefined;
   if (toolName !== 'kifer_create_whatsapp_campaign' && toolName !== 'kifer_import_whatsapp_campaign_contacts' && !expectedUpdatedAt) {
     return errorResult('EXPECTED_UPDATED_AT_REQUIRED', 'expected_updated_at é obrigatório para evitar sobrescrever alterações recentes.');
@@ -605,14 +788,14 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
 
   if (toolName === 'kifer_create_whatsapp_campaign') {
     const payload = safeCampaignPatch(args);
-    if (!payload) return errorResult('INVALID_INPUT', 'steps contém mensagem, variante, atraso ou caminho de mídia inválido.');
+    if (!payload) return errorResult('INVALID_INPUT', 'steps ou cadência contém valor, atraso ou caminho de mídia inválido.');
     result = await rpcMutation({ supabase, actorId, operation: 'create', clientRequestId: requestId, payload });
     if (isRecord(result.campaign)) result.campaign = publicCampaign(result.campaign);
     return result;
   }
   if (toolName === 'kifer_update_whatsapp_campaign') {
     const payload = safeCampaignPatch(args);
-    if (!payload) return errorResult('INVALID_INPUT', 'steps contém mensagem, variante, atraso ou caminho de mídia inválido.');
+    if (!payload) return errorResult('INVALID_INPUT', 'steps ou cadência contém valor, atraso ou caminho de mídia inválido.');
     result = await rpcMutation({ supabase, actorId, operation: 'update', campaignId, expectedUpdatedAt, clientRequestId: requestId, payload });
     if (isRecord(result.campaign)) result.campaign = publicCampaign(result.campaign);
     return result;
@@ -625,6 +808,10 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
     });
     result = await rpcMutation({ supabase, actorId, operation: 'import_contacts', campaignId, clientRequestId: requestId, payload: { contacts } });
     return result;
+  }
+  if (toolName === 'kifer_activate_whatsapp_campaign') {
+    const readinessFailure = await checkCampaignActivationReadiness(supabase, campaignId);
+    if (readinessFailure) return readinessFailure;
   }
   const operationByTool: Record<string, string> = {
     kifer_remove_whatsapp_campaign_contact: 'remove_contact',

@@ -6,10 +6,22 @@ import { MCP_LEAD_ADMIN_TOOL_NAMES } from './lead-admin-actions.ts';
 import { MCP_OPPORTUNITY_TOOLS, MCP_OPPORTUNITY_WRITE_TOOL_NAMES } from './opportunity-actions.ts';
 import { MCP_CONTRACT_TOOLS, MCP_CONTRACT_WRITE_TOOL_NAMES } from './contract-actions.ts';
 import { MCP_CONTRACT_HOLDER_IMPORT_TOOLS, MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES } from './contract-holder-import-actions.ts';
+import { MCP_CONTRACT_DEPENDENT_IMPORT_TOOLS, MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES } from './contract-dependent-import-actions.ts';
 import { MCP_CONTRACT_DOCUMENT_TOOLS, MCP_CONTRACT_DOCUMENT_TOOL_NAMES } from './contract-document-actions.ts';
 import { MCP_CONTACT_PERMISSION_TOOLS, MCP_CONTACT_PERMISSION_READ_TOOL_NAMES, MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES } from './contact-permission-actions.ts';
 import { MCP_INBOX_TOOLS, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actions.ts';
 import { MCP_WHATSAPP_MEDIA_READ_TOOL, MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES } from './media-read-action.ts';
+import { executeMcpPublicContentAction, MCP_PUBLIC_CONTENT_READ_TOOL_NAMES, MCP_PUBLIC_CONTENT_TOOLS, MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES } from './public-content-actions.ts';
+import { executeMcpAnalyticsReadAction, MCP_ANALYTICS_READ_TOOL_NAMES, MCP_ANALYTICS_TOOLS, MCP_ANALYTICS_WRITE_TOOL_NAMES } from './analytics-actions.ts';
+import { CONFIGURATION_CATEGORIES, executeMcpConfigAdminReadAction, MCP_CONFIG_ADMIN_READ_TOOL_NAMES, MCP_CONFIG_ADMIN_TOOLS, MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES } from './config-admin-actions.ts';
+import { executeMcpAiConfigReadAction, MCP_AI_CONFIG_READ_TOOL_NAMES, MCP_AI_CONFIG_TOOLS, MCP_AI_CONFIG_WRITE_TOOL_NAMES } from './ai-config-actions.ts';
+import { executeMcpUserAccessReadAction, MCP_USER_ACCESS_READ_TOOL_NAMES, MCP_USER_ACCESS_TOOLS, MCP_USER_ACCESS_WRITE_TOOL_NAMES } from './user-access-actions.ts';
+import { executeMcpAiSandboxReadAction, MCP_AI_SANDBOX_READ_TOOL_NAMES, MCP_AI_SANDBOX_TOOLS, MCP_AI_SANDBOX_WRITE_TOOL_NAMES } from './ai-sandbox-actions.ts';
+import { executeMcpWhatsAppAdminReadAction, MCP_WHATSAPP_ADMIN_READ_TOOL_NAMES, MCP_WHATSAPP_ADMIN_TOOLS, MCP_WHATSAPP_ADMIN_WRITE_TOOL_NAMES } from './whatsapp-admin-actions.ts';
+import { MCP_WHATSAPP_MESSAGE_TOOLS, MCP_WHATSAPP_MESSAGE_WRITE_TOOL_NAMES } from './whatsapp-message-actions.ts';
+import { executeMcpWhatsAppAiReadAction, MCP_WHATSAPP_AI_READ_TOOL_NAMES, MCP_WHATSAPP_AI_TOOLS, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } from './whatsapp-ai-actions.ts';
+import { executeMcpWhatsAppContactReadAction, MCP_WHATSAPP_CONTACT_READ_TOOL_NAMES, MCP_WHATSAPP_CONTACT_TOOLS, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
+import { executeMcpWhatsAppQuickReplyReadAction, MCP_WHATSAPP_QUICK_REPLY_READ_TOOL_NAMES, MCP_WHATSAPP_QUICK_REPLY_TOOLS, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { campaignReadAuditSummary, executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
@@ -740,11 +752,23 @@ const tools = [
   ...MCP_OPPORTUNITY_TOOLS,
   ...MCP_CONTRACT_TOOLS,
   ...MCP_CONTRACT_HOLDER_IMPORT_TOOLS,
+  ...MCP_CONTRACT_DEPENDENT_IMPORT_TOOLS,
   ...MCP_CONTRACT_DOCUMENT_TOOLS,
   ...MCP_CONTACT_PERMISSION_TOOLS,
   ...MCP_INBOX_TOOLS,
   ...MCP_IDENTITY_CONFLICT_TOOLS,
   ...MCP_WHATSAPP_CAMPAIGN_TOOLS,
+  ...MCP_PUBLIC_CONTENT_TOOLS,
+  ...MCP_ANALYTICS_TOOLS,
+  ...MCP_CONFIG_ADMIN_TOOLS,
+  ...MCP_AI_CONFIG_TOOLS,
+  ...MCP_USER_ACCESS_TOOLS,
+  ...MCP_AI_SANDBOX_TOOLS,
+  ...MCP_WHATSAPP_ADMIN_TOOLS,
+  ...MCP_WHATSAPP_MESSAGE_TOOLS,
+  ...MCP_WHATSAPP_AI_TOOLS,
+  ...MCP_WHATSAPP_CONTACT_TOOLS,
+  ...MCP_WHATSAPP_QUICK_REPLY_TOOLS,
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
@@ -768,9 +792,19 @@ const ADMIN_READ_TOOLS = new Set([
   ...MCP_CONTACT_PERMISSION_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES,
+  ...MCP_PUBLIC_CONTENT_READ_TOOL_NAMES,
+  ...MCP_ANALYTICS_READ_TOOL_NAMES,
+  ...MCP_CONFIG_ADMIN_READ_TOOL_NAMES,
+  ...MCP_AI_CONFIG_READ_TOOL_NAMES,
+  ...MCP_USER_ACCESS_READ_TOOL_NAMES,
+  ...MCP_AI_SANDBOX_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_ADMIN_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_AI_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_CONTACT_READ_TOOL_NAMES,
+  ...MCP_WHATSAPP_QUICK_REPLY_READ_TOOL_NAMES,
 ]);
 
-async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null) {
+async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null, writeScopeAllowed: boolean) {
   const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? (rawArguments as Record<string, unknown>) : {};
   if (name === 'kifer_list_production_operators') {
     const authorizationError = mcpAdminAuthorizationError(actorId);
@@ -791,14 +825,27 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_OPPORTUNITY_WRITE_TOOL_NAMES,
     ...MCP_CONTRACT_WRITE_TOOL_NAMES,
     ...MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES,
+    ...MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES,
     ...MCP_CONTRACT_DOCUMENT_TOOL_NAMES.filter((name) => name !== 'kifer_list_documents' && name !== 'kifer_get_document'),
     ...MCP_CONTACT_PERMISSION_WRITE_TOOL_NAMES,
     ...MCP_INBOX_WRITE_TOOL_NAMES,
     ...MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES,
     ...MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES,
+    ...MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES,
+    ...MCP_ANALYTICS_WRITE_TOOL_NAMES,
+    ...MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES,
+    ...MCP_AI_CONFIG_WRITE_TOOL_NAMES,
+    ...MCP_USER_ACCESS_WRITE_TOOL_NAMES,
+    ...MCP_AI_SANDBOX_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_ADMIN_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_MESSAGE_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_AI_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES,
+    ...MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
+    if (!writeScopeAllowed) return toToolResult({ success: false, error_code: 'INSUFFICIENT_SCOPE', message: 'Esta ferramenta exige o escopo OAuth kifer.write. Reautorize a conexão com leitura e escrita.' });
     const authorizationError = mcpWriteAuthorizationError(actorId);
     if (authorizationError) return toToolResult(authorizationError);
     const operator = requiresProductionOperator(name) ? args.operator_user_id : undefined;
@@ -829,6 +876,119 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     });
     return toToolResult(campaignRead);
   }
+  const publicContentResult = await executeMcpPublicContentAction({
+    supabase,
+    toolName: name,
+    arguments: args,
+    actor: { actor, actorId: actorId ?? '' },
+  });
+  if (publicContentResult) {
+    const resourceName = name.includes('form') ? (name.includes('submission') ? 'public_form_submissions' : 'public_forms')
+      : name.includes('blog') ? 'blog_posts' : 'public_link_items';
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName,
+      requestSummary: {
+        argument_keys: Object.keys(args).sort(),
+        form_id: UUID.test(text(args.form_id)) ? text(args.form_id) : undefined,
+        post_id: UUID.test(text(args.post_id)) ? text(args.post_id) : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+      },
+    });
+    return toToolResult(publicContentResult);
+  }
+  const analyticsResult = await executeMcpAnalyticsReadAction({ supabase, toolName: name, arguments: args });
+  if (analyticsResult) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: name.includes('production') ? 'production_activities' : 'contracts',
+      requestSummary: {
+        start_date: text(args.start_date) || undefined,
+        end_date: text(args.end_date) || undefined,
+        operator_user_id: UUID.test(text(args.operator_user_id)) ? text(args.operator_user_id) : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+      },
+    });
+    return toToolResult(analyticsResult);
+  }
+  const configAdminResult = await executeMcpConfigAdminReadAction({ supabase, toolName: name, arguments: args });
+  if (configAdminResult) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: name.includes('configuration_catalog') ? text(args.category) : 'system_settings',
+      requestSummary: {
+        category: CONFIGURATION_CATEGORIES.includes(text(args.category) as (typeof CONFIGURATION_CATEGORIES)[number]) ? text(args.category) : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+      },
+    });
+    return toToolResult(configAdminResult);
+  }
+  const aiConfigResult = await executeMcpAiConfigReadAction({ supabase, toolName: name, arguments: args });
+  if (aiConfigResult) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: name.includes('model_catalog') ? 'ai_models' : 'ai_feature_configs',
+      requestSummary: {
+        feature_id: UUID.test(text(args.feature_id)) ? text(args.feature_id) : undefined,
+        include_disabled: typeof args.include_disabled === 'boolean' ? args.include_disabled : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+      },
+    });
+    return toToolResult(aiConfigResult);
+  }
+  const userAccessResult = await executeMcpUserAccessReadAction({ supabase, toolName: name, arguments: args });
+  if (userAccessResult) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: name.includes('permission') ? 'profile_permissions' : name.includes('profile') ? 'access_profiles' : 'user_profiles',
+      requestSummary: {
+        user_id: UUID.test(text(args.user_id)) ? text(args.user_id) : undefined,
+        role: /^[a-z0-9-]{1,50}$/.test(text(args.role)) ? text(args.role) : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+        search_provided: Boolean(text(args.search)),
+      },
+    });
+    return toToolResult(userAccessResult);
+  }
+  const aiSandboxResult = await executeMcpAiSandboxReadAction({ supabase, toolName: name, arguments: args });
+  if (aiSandboxResult) {
+    await writeAuditLog({
+      supabase,
+      toolName: name,
+      actor,
+      resourceName: name === 'kifer_list_ai_sandbox_conversations' ? 'ai_sandbox_conversations' : 'ai_sandbox_messages',
+      requestSummary: {
+        conversation_id: UUID.test(text(args.conversation_id)) ? text(args.conversation_id) : undefined,
+        page: Number.isInteger(args.page) ? args.page : undefined,
+        page_size: Number.isInteger(args.page_size) ? args.page_size : undefined,
+        automated: typeof args.automated === 'boolean' ? args.automated : undefined,
+      },
+    });
+    return toToolResult(aiSandboxResult);
+  }
+  const whatsappAdminResult = await executeMcpWhatsAppAdminReadAction({ supabase, toolName: name, actor: { actor, actorId: actorId ?? '' } });
+  if (whatsappAdminResult) return toToolResult(whatsappAdminResult);
+  const whatsappAiResult = await executeMcpWhatsAppAiReadAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId: actorId ?? '' } });
+  if (whatsappAiResult) return toToolResult(whatsappAiResult);
+  const whatsappContactResult = await executeMcpWhatsAppContactReadAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId: actorId ?? '' } });
+  if (whatsappContactResult) return toToolResult(whatsappContactResult);
+  const whatsappQuickReplyResult = await executeMcpWhatsAppQuickReplyReadAction({ supabase, toolName: name, actor: { actor, actorId: actorId ?? '' } });
+  if (whatsappQuickReplyResult) return toToolResult(whatsappQuickReplyResult);
   const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (commercialReadResult) return toToolResult(commercialReadResult);
   let output: unknown;
@@ -884,12 +1044,14 @@ Deno.serve(async (request: Request) => {
   const legacyAuthenticated = Boolean(configuredToken) && equalTokens(getBearerToken(request), configuredToken);
   let actor = text(Deno.env.get('KIFER_MCP_ACTOR')) || 'chatgpt-mcp-admin';
   let actorId: string | null = null;
+  let oauthScopes = new Set(['kifer.read']);
   if (!legacyAuthenticated) {
     try {
       const oauthPrincipal = await authenticateOAuthAccessToken(request);
       if (oauthPrincipal) {
         actor = oauthPrincipal.actor;
         actorId = oauthPrincipal.userId;
+        oauthScopes = new Set(oauthPrincipal.scope.split(/\s+/).filter(Boolean));
       }
       else {
         return new Response('Nao autenticado.', {
@@ -924,10 +1086,14 @@ Deno.serve(async (request: Request) => {
       instructions: 'Servidor do Kifer Saude com três primitivas MCP: ferramentas para ações e consultas, recursos para contexto seguro e prompts para workflows compostos. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
     });
   }
-  if (rpc.method === 'tools/list') return resultResponse(rpc.id, { tools: exposedTools });
+  if (rpc.method === 'tools/list') {
+    const visibleTools = oauthScopes.has('kifer.write') ? exposedTools : exposedTools.filter((tool) => tool.annotations?.readOnlyHint === true);
+    return resultResponse(rpc.id, { tools: visibleTools });
+  }
   if (rpc.method === 'resources/list') return resultResponse(rpc.id, { resources: MCP_RESOURCES });
   if (rpc.method === 'resources/read') {
-    const result = readMcpResource(rpc.params?.uri, discoveryTools);
+    const visibleTools = oauthScopes.has('kifer.write') ? discoveryTools : discoveryTools.filter((tool) => tool.annotations?.readOnlyHint === true);
+    const result = readMcpResource(rpc.params?.uri, visibleTools);
     if (!result.ok) return errorResponse(rpc.id, -32602, result.message);
     return resultResponse(rpc.id, { contents: result.contents });
   }
@@ -942,7 +1108,7 @@ Deno.serve(async (request: Request) => {
   const toolName = text(rpc.params?.name);
   try {
     const supabase = getSupabaseAdmin();
-    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor, actorId);
+    const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor, actorId, oauthScopes.has('kifer.write'));
     return resultResponse(rpc.id, toolResult);
   } catch (error) {
     console.error('[chatgpt-mcp] erro em tools/call', { toolName, error: error instanceof Error ? error.message : error });

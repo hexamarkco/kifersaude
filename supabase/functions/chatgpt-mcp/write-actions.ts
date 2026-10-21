@@ -13,6 +13,10 @@ import {
   executeMcpContractHolderImportAction,
   MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES,
 } from './contract-holder-import-actions.ts';
+import {
+  executeMcpContractDependentImportAction,
+  MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES,
+} from './contract-dependent-import-actions.ts';
 import { executeMcpContractDocumentAction } from './contract-document-actions.ts';
 import {
   executeMcpContactPermissionReadAction,
@@ -23,6 +27,17 @@ import { executeMcpInboxAction, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actio
 import { executeMcpIdentityConflictResolution, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { executeMcpWhatsAppMediaReadAction } from './media-read-action.ts';
 import { executeMcpWhatsAppCampaignWriteAction, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
+import { executeMcpPublicContentAction, MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES } from './public-content-actions.ts';
+import { executeMcpAnalyticsWriteAction, MCP_ANALYTICS_WRITE_TOOL_NAMES } from './analytics-actions.ts';
+import { executeMcpConfigAdminWriteAction, MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES } from './config-admin-actions.ts';
+import { executeMcpAiConfigWriteAction, MCP_AI_CONFIG_WRITE_TOOL_NAMES } from './ai-config-actions.ts';
+import { executeMcpUserAccessWriteAction, MCP_USER_ACCESS_WRITE_TOOL_NAMES } from './user-access-actions.ts';
+import { executeMcpAiSandboxWriteAction, MCP_AI_SANDBOX_WRITE_TOOL_NAMES } from './ai-sandbox-actions.ts';
+import { executeMcpWhatsAppAdminWriteAction, MCP_WHATSAPP_ADMIN_WRITE_TOOL_NAMES } from './whatsapp-admin-actions.ts';
+import { executeMcpWhatsAppMessageWriteAction, MCP_WHATSAPP_MESSAGE_WRITE_TOOL_NAMES } from './whatsapp-message-actions.ts';
+import { executeMcpWhatsAppAiWriteAction, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } from './whatsapp-ai-actions.ts';
+import { executeMcpWhatsAppContactWriteAction, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
+import { executeMcpWhatsAppQuickReplyWriteAction, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
@@ -2917,16 +2932,53 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
 
 export async function executeMcpWriteAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown>; actor: McpWriteActor }): Promise<McpWriteResult | null> {
   const { supabase, toolName, arguments: args, actor } = params;
-  const isHolderImportAction = (MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);
+  if ((MCP_AI_CONFIG_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpAiConfigWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpPublicContentAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_ANALYTICS_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpAnalyticsWriteAction({ supabase, toolName, actor });
+  }
+  if ((MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpConfigAdminWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_USER_ACCESS_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpUserAccessWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_AI_SANDBOX_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpAiSandboxWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_WHATSAPP_ADMIN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpWhatsAppAdminWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_WHATSAPP_MESSAGE_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpWhatsAppMessageWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_WHATSAPP_AI_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpWhatsAppAiWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpWhatsAppContactWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpWhatsAppQuickReplyWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  const isContractPersonImportAction = (MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)
+    || (MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);
+  const contractPersonImportOperation = toolName === 'kifer_create_dependent_from_import'
+    ? 'dependent.import.consume'
+    : 'holder.import.consume';
   let result: McpWriteResult | null = null;
   let actionType = '';
-  const leadId = isHolderImportAction ? null : text(args.lead_id) || null;
-  const chatId = isHolderImportAction ? null : text(args.chat_id) || null;
+  const leadId = isContractPersonImportAction ? null : text(args.lead_id) || null;
+  const chatId = isContractPersonImportAction ? null : text(args.chat_id) || null;
   const rawContractId = text(args.contract_id);
-  let contractId = isHolderImportAction
+  let contractId = isContractPersonImportAction
     ? (safeUuid(rawContractId) ? rawContractId : null)
     : rawContractId || null;
-  const clientRequestId = isHolderImportAction ? null : text(args.client_request_id) || null;
+  const clientRequestId = isContractPersonImportAction ? null : text(args.client_request_id) || null;
   try {
     if ((MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
@@ -2980,6 +3032,10 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if ((MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
       result = await executeMcpContractHolderImportAction({ supabase, toolName, arguments: args, actor });
+    }
+    else if ((MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpContractDependentImportAction({ supabase, toolName, arguments: args, actor });
     }
     else if ((MCP_OPPORTUNITY_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-') + '-opportunity';
@@ -3043,14 +3099,15 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
           contact_count: Array.isArray(args.contacts) ? args.contacts.length : undefined,
           expected_updated_at: text(args.expected_updated_at) || null,
         }
-      : isHolderImportAction
+      : isContractPersonImportAction
       ? {
           contract_id: safeUuid(args.contract_id) ? text(args.contract_id) : null,
+          holder_id: safeUuid(args.holder_id) ? text(args.holder_id) : null,
           import_id: safeUuid(args.import_id) ? text(args.import_id) : null,
         }
       : args;
-    const auditClientRequestId = isHolderImportAction
-      ? await requestIdFingerprint(actor.actorId, 'holder.import.consume', args.client_request_id)
+    const auditClientRequestId = isContractPersonImportAction
+      ? await requestIdFingerprint(actor.actorId, contractPersonImportOperation, args.client_request_id)
       : clientRequestId;
     await audit({
       supabase,

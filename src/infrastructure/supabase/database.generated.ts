@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -1687,6 +1687,47 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_campaign_admissions: {
+        Row: {
+          admission_reason: string
+          admitted_at: string
+          campaign_id: string
+          channel_key: string
+          created_at: string
+          endpoint_hash: string | null
+          id: string
+          target_id: string
+        }
+        Insert: {
+          admission_reason?: string
+          admitted_at: string
+          campaign_id: string
+          channel_key: string
+          created_at?: string
+          endpoint_hash?: string | null
+          id?: string
+          target_id: string
+        }
+        Update: {
+          admission_reason?: string
+          admitted_at?: string
+          campaign_id?: string
+          channel_key?: string
+          created_at?: string
+          endpoint_hash?: string | null
+          id?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_campaign_admissions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_campaign_events: {
         Row: {
           campaign_id: string
@@ -2084,12 +2125,14 @@ export type Database = {
           audience_config: Json
           audience_source: string
           completed_at: string | null
+          contact_interval_minutes: number | null
           create_leads_from_csv: boolean
           created_at: string
           created_by: string | null
           daily_send_limit: number | null
           failed_targets: number
           id: string
+          inter_message_interval_minutes: number
           invalid_targets: number
           last_error: string | null
           message_text: string
@@ -2123,12 +2166,14 @@ export type Database = {
           audience_config?: Json
           audience_source?: string
           completed_at?: string | null
+          contact_interval_minutes?: number | null
           create_leads_from_csv?: boolean
           created_at?: string
           created_by?: string | null
           daily_send_limit?: number | null
           failed_targets?: number
           id?: string
+          inter_message_interval_minutes?: number
           invalid_targets?: number
           last_error?: string | null
           message_text?: string
@@ -2162,12 +2207,14 @@ export type Database = {
           audience_config?: Json
           audience_source?: string
           completed_at?: string | null
+          contact_interval_minutes?: number | null
           create_leads_from_csv?: boolean
           created_at?: string
           created_by?: string | null
           daily_send_limit?: number | null
           failed_targets?: number
           id?: string
+          inter_message_interval_minutes?: number
           invalid_targets?: number
           last_error?: string | null
           message_text?: string
@@ -5007,6 +5054,7 @@ export type Database = {
           produto_plano: string
           razao_social: string | null
           responsavel: string
+          sale_operator_user_id: string | null
           status: string
           taxa_adesao_percentual: number | null
           taxa_adesao_tipo: string | null
@@ -5045,6 +5093,7 @@ export type Database = {
           produto_plano: string
           razao_social?: string | null
           responsavel: string
+          sale_operator_user_id?: string | null
           status?: string
           taxa_adesao_percentual?: number | null
           taxa_adesao_tipo?: string | null
@@ -5083,6 +5132,7 @@ export type Database = {
           produto_plano?: string
           razao_social?: string | null
           responsavel?: string
+          sale_operator_user_id?: string | null
           status?: string
           taxa_adesao_percentual?: number | null
           taxa_adesao_tipo?: string | null
@@ -5098,6 +5148,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "leads"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_sale_operator_user_id_fkey"
+            columns: ["sale_operator_user_id"]
+            isOneToOne: false
+            referencedRelation: "production_operators"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -6231,6 +6288,113 @@ export type Database = {
         }
         Relationships: []
       }
+      production_activities: {
+        Row: {
+          action: string
+          active: boolean
+          authorizer_user_id: string | null
+          entity_id: string
+          entity_table: string
+          event_key: string
+          id: number
+          identity_kind: string
+          lead_id: string | null
+          occurred_at: string
+          operator_user_id: string | null
+          origin: string
+          scheduled: boolean
+          state: string | null
+        }
+        Insert: {
+          action: string
+          active?: boolean
+          authorizer_user_id?: string | null
+          entity_id: string
+          entity_table: string
+          event_key: string
+          id?: never
+          identity_kind: string
+          lead_id?: string | null
+          occurred_at?: string
+          operator_user_id?: string | null
+          origin: string
+          scheduled?: boolean
+          state?: string | null
+        }
+        Update: {
+          action?: string
+          active?: boolean
+          authorizer_user_id?: string | null
+          entity_id?: string
+          entity_table?: string
+          event_key?: string
+          id?: never
+          identity_kind?: string
+          lead_id?: string | null
+          occurred_at?: string
+          operator_user_id?: string | null
+          origin?: string
+          scheduled?: boolean
+          state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_activities_authorizer_user_id_fkey"
+            columns: ["authorizer_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_activities_operator_user_id_fkey"
+            columns: ["operator_user_id"]
+            isOneToOne: false
+            referencedRelation: "production_operators"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      production_operators: {
+        Row: {
+          active: boolean
+          display_name: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          display_name: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          display_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_operators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_settings: {
+        Row: {
+          singleton: boolean
+          started_at: string | null
+        }
+        Insert: {
+          singleton?: boolean
+          started_at?: string | null
+        }
+        Update: {
+          singleton?: boolean
+          started_at?: string | null
+        }
+        Relationships: []
+      }
       produtos_planos: {
         Row: {
           abrangencia: string | null
@@ -6972,6 +7136,74 @@ export type Database = {
         }
         Returns: Json
       }
+      _comm_whatsapp_campaign_contact_interval_seconds: {
+        Args: {
+          p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
+        }
+        Returns: number
+      }
+      _comm_whatsapp_campaign_marketing_review_ready: {
+        Args: { p_config: Json }
+        Returns: boolean
+      }
+      _comm_whatsapp_campaign_next_window_at: {
+        Args: {
+          p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
+          p_now: string
+          p_time_zone: string
+        }
+        Returns: string
+      }
+      _comm_whatsapp_campaign_record_admission_deferred: {
+        Args: {
+          p_campaign_id: string
+          p_channel_key: string
+          p_now: string
+          p_reason: string
+          p_retry_at: string
+          p_target_id: string
+        }
+        Returns: undefined
+      }
+      _comm_whatsapp_campaign_required_image_ready: {
+        Args: {
+          p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
+        }
+        Returns: boolean
+      }
+      _comm_whatsapp_campaign_reserve_new_contact: {
+        Args: {
+          p_campaign_id: string
+          p_channel_key: string
+          p_now: string
+          p_target_id: string
+          p_time_zone: string
+        }
+        Returns: {
+          admission_exists: boolean
+          reason: string
+          result: string
+          retry_at: string
+        }[]
+      }
+      _comm_whatsapp_campaign_target_marketing_reason: {
+        Args: { p_campaign_id: string; p_target_id: string }
+        Returns: string
+      }
+      _comm_whatsapp_campaign_window_minutes: {
+        Args: {
+          p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
+        }
+        Returns: number
+      }
+      _comm_whatsapp_campaign_window_open: {
+        Args: {
+          p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
+          p_now: string
+          p_time_zone: string
+        }
+        Returns: boolean
+      }
       _mcp_assert_active_contract_admin: {
         Args: { p_actor_user_id: string }
         Returns: undefined
@@ -7181,6 +7413,7 @@ export type Database = {
           produto_plano: string
           razao_social: string | null
           responsavel: string
+          sale_operator_user_id: string | null
           status: string
           taxa_adesao_percentual: number | null
           taxa_adesao_tipo: string | null
@@ -7303,6 +7536,7 @@ export type Database = {
         }
         Returns: Json
       }
+      activate_team_production: { Args: never; Returns: string }
       advance_scheduled_message: {
         Args: {
           p_delivery_status?: string
@@ -7410,6 +7644,14 @@ export type Database = {
       audit_run_dry_run: {
         Args: { p_batch_size?: number; p_run_id: string }
         Returns: undefined
+      }
+      auto_contact_flow_completed_without_response: {
+        Args: {
+          p_final_step_order: number
+          p_flow_id: string
+          p_lead_id: string
+        }
+        Returns: boolean
       }
       auto_contact_message_is_same_flow_output: {
         Args: {
@@ -9051,12 +9293,23 @@ export type Database = {
         Args: { target_year: number }
         Returns: undefined
       }
+      get_comm_whatsapp_campaign_admission_turn: {
+        Args: { p_channel_key: string; p_time_zone?: string }
+        Returns: {
+          available_at: string
+          campaign_id: string
+        }[]
+      }
       get_comm_whatsapp_campaign_failure_reasons: {
         Args: { p_campaign_id: string }
         Returns: {
           error_message: string
           total_count: number
         }[]
+      }
+      get_comm_whatsapp_campaign_marketing_readiness: {
+        Args: { p_campaign_id: string }
+        Returns: Json
       }
       get_comm_whatsapp_campaign_target_status_counts: {
         Args: { p_campaign_id: string }
@@ -9531,6 +9784,14 @@ export type Database = {
           moved_to_attendance: boolean
         }[]
       }
+      production_message_attribution: {
+        Args: { p_channel_id: string; p_external_message_id: string }
+        Returns: string
+      }
+      production_scheduled_operator: {
+        Args: { p_message_id: string }
+        Returns: string
+      }
       record_ai_autonomous_attendance_event: {
         Args: {
           p_autonomous_status?: string
@@ -9682,6 +9943,15 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      team_production_report: {
+        Args: {
+          p_end: string
+          p_offset?: number
+          p_operator?: string
+          p_start: string
+        }
+        Returns: Json
+      }
       trigger_lead_processing_now: { Args: never; Returns: Json }
       try_acquire_ai_autonomous_reply_lock: {
         Args: {

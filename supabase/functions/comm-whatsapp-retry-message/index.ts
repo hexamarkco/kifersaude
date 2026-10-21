@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import {
   assertContactPermissionForSend,
   ContactPermissionBlockedError,
@@ -242,27 +243,36 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
-
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'edit',
-    });
-
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), {
-        status: authResult.status,
-        headers: jsonHeaders,
+    const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
+    let actorUserId = '';
+    let actorProfileId = '';
+    if (serviceActor.isServiceRole) {
+      if (!serviceActor.actorId || !serviceActor.authorized) {
+        return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+      }
+      actorUserId = serviceActor.actorId;
+      actorProfileId = serviceActor.actorId;
+    } else {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: COMM_WHATSAPP_MODULE,
+        requiredPermission: 'edit',
       });
+      if (!authResult.authorized) {
+        return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });
+      }
+      actorUserId = authResult.user.userId;
+      actorProfileId = authResult.user.profileId;
     }
 
     const withinRateLimit = await checkCommWhatsAppActionRateLimit(
       supabaseAdmin,
-      authResult.user.userId,
+      actorUserId,
       RETRY_RATE_LIMIT_SCOPE,
       RETRY_RATE_LIMIT_MAX_REQUESTS,
       RETRY_RATE_LIMIT_WINDOW_SECONDS,
@@ -461,7 +471,7 @@ Deno.serve(async (req: Request) => {
       messageType: retryTarget.message_type,
       deliveryStatus,
       textContent: summaryText,
-      createdBy: authResult.user.profileId,
+      createdBy: actorProfileId,
       source: 'retry',
       senderName: channel.connected_user_name,
       senderPhone: channel.phone_number,

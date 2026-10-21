@@ -26,8 +26,8 @@ import { subscribeToCampaignChanges } from './campaignRealtime';
 import { getCampaignTargetDisplayName } from './domain/campaignTargetPresentation';
 import {
   commWhatsAppCampaignService,
-  computeAdmissionIntervalMinutes,
-  formatAdmissionInterval,
+  computeContactIntervalMinutes,
+  formatContactInterval,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignTargetListItem,
   type CommWhatsAppCampaignTargetStatus,
@@ -612,7 +612,7 @@ export default function WhatsAppCampaignDetailScreen() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="accent">{campaignStatusLabels[campaign.status]}</Badge>
                   <Badge tone="neutral">{campaign.audience_source.toUpperCase()}</Badge>
-                  <Badge tone="neutral">{formatAdmissionInterval(computeAdmissionIntervalMinutes(campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end, campaign.pacing_per_minute))}</Badge>
+                  <Badge tone="neutral">{formatContactInterval(computeContactIntervalMinutes(campaign.contact_interval_minutes, campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end, campaign.total_targets))}</Badge>
                 </div>
                 <div className="grid gap-3 text-sm text-[color:var(--panel-text-soft)] sm:grid-cols-2 lg:grid-cols-4">
                   <Info label="Agendado" value={formatDateTime(campaign.scheduled_at)} />

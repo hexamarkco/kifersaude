@@ -1,7 +1,8 @@
 import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { buildJudgePrompt } from './judge-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
@@ -110,8 +111,14 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
 
+    const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
     let createdBy: string | null = null;
-    if (!isServiceRoleRequest(req, serviceRoleKey)) {
+    if (serviceActor.isServiceRole) {
+      if (req.headers.has('X-Kifer-MCP-Actor-Id') && (!serviceActor.actorId || !serviceActor.authorized)) {
+        return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
+      }
+      createdBy = serviceActor.actorId;
+    } else {
       const authResult = await authorizeDashboardUser({ req, supabaseUrl, supabaseAnonKey, supabaseAdmin });
       if (!authResult.authorized) {
         return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });

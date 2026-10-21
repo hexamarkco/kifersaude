@@ -593,12 +593,14 @@ BEGIN
     result := 'rate_limited'; admission_exists := false; RETURN NEXT; RETURN;
   END IF;
 
-  -- Sum the active campaigns' admission rates for this sender. With two
-  -- campaigns at 30 contacts per 570-minute window, the shared interval is
-  -- 570 / 60 = 9.5 minutes. Campaigns without a daily cap retain their
-  -- legacy pacing rate. The campaign table has no per-campaign sender field,
-  -- so the active set is shared by all campaigns on this configured sender.
-  SELECT array_agg(candidate.id ORDER BY candidate.id), sum(candidate.rate_per_minute)
+  -- Keep configured rates from campaigns with remaining eligible audiences
+  -- in the channel denominator even after one campaign reaches its cap. This
+  -- preserves the shared interval until those targets are exhausted, so the
+  -- other campaign can still use its remaining daily admissions. Campaigns
+  -- without a daily cap retain their legacy pacing rate.
+  SELECT array_agg(candidate.id ORDER BY candidate.id)
+           FILTER (WHERE candidate.has_daily_capacity AND candidate.has_ready_target),
+         sum(candidate.rate_per_minute)
   INTO v_candidate_ids, v_rate
   FROM (
     SELECT campaign.id,
@@ -606,24 +608,33 @@ BEGIN
         WHEN campaign.daily_send_limit IS NOT NULL AND campaign.daily_send_limit > 0
           THEN campaign.daily_send_limit::numeric / public._comm_whatsapp_campaign_window_minutes(campaign)
         ELSE GREATEST(campaign.pacing_per_minute, 1)::numeric / 60
-      END AS rate_per_minute
+      END AS rate_per_minute,
+      campaign.daily_send_limit IS NULL
+        OR (SELECT count(*) FROM public.comm_whatsapp_campaign_admissions AS recent
+            WHERE recent.campaign_id = campaign.id
+              AND recent.admitted_at >= p_now - interval '24 hours') < campaign.daily_send_limit
+        AS has_daily_capacity,
+      EXISTS (
+        SELECT 1 FROM public.comm_whatsapp_campaign_targets AS ready_target
+        WHERE ready_target.campaign_id = campaign.id
+          AND ready_target.status IN ('pending', 'scheduled', 'sending', 'failed')
+          AND (ready_target.next_send_at IS NULL OR ready_target.next_send_at <= p_now)
+          AND (ready_target.next_retry_at IS NULL OR ready_target.next_retry_at <= p_now)
+          AND NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_admissions AS admitted
+            WHERE admitted.campaign_id = ready_target.campaign_id AND admitted.target_id = ready_target.id
+          )
+          AND public._comm_whatsapp_campaign_target_marketing_reason(campaign.id, ready_target.id) IS NULL
+      ) AS has_ready_target
     FROM public.comm_whatsapp_campaigns AS campaign
     WHERE campaign.status IN ('queued', 'running', 'scheduled')
       AND (campaign.scheduled_at IS NULL OR campaign.scheduled_at <= p_now)
       AND (campaign.daily_send_limit IS NULL OR campaign.daily_send_limit > 0)
       AND public._comm_whatsapp_campaign_window_open(campaign, p_now, v_time_zone)
-      AND (
-        campaign.daily_send_limit IS NULL
-        OR (SELECT count(*) FROM public.comm_whatsapp_campaign_admissions AS recent
-            WHERE recent.campaign_id = campaign.id
-              AND recent.admitted_at >= p_now - interval '24 hours') < campaign.daily_send_limit
-      )
       AND EXISTS (
         SELECT 1 FROM public.comm_whatsapp_campaign_targets AS target
         WHERE target.campaign_id = campaign.id
           AND target.status IN ('pending', 'scheduled', 'sending', 'failed')
-          AND (target.next_send_at IS NULL OR target.next_send_at <= p_now)
-          AND (target.next_retry_at IS NULL OR target.next_retry_at <= p_now)
           AND NOT EXISTS (
             SELECT 1 FROM public.comm_whatsapp_campaign_admissions AS admitted
             WHERE admitted.campaign_id = target.campaign_id AND admitted.target_id = target.id
@@ -723,7 +734,9 @@ DECLARE
   v_campaign_interval interval;
   v_channel_interval interval;
 BEGIN
-  SELECT array_agg(candidate.id ORDER BY candidate.id), sum(candidate.rate_per_minute)
+  SELECT array_agg(candidate.id ORDER BY candidate.id)
+           FILTER (WHERE candidate.has_daily_capacity AND candidate.has_ready_target),
+         sum(candidate.rate_per_minute)
   INTO v_candidate_ids, v_rate
   FROM (
     SELECT active_campaign.id,
@@ -731,24 +744,33 @@ BEGIN
         WHEN active_campaign.daily_send_limit IS NOT NULL AND active_campaign.daily_send_limit > 0
           THEN active_campaign.daily_send_limit::numeric / public._comm_whatsapp_campaign_window_minutes(active_campaign)
         ELSE GREATEST(active_campaign.pacing_per_minute, 1)::numeric / 60
-      END AS rate_per_minute
+      END AS rate_per_minute,
+      active_campaign.daily_send_limit IS NULL
+        OR (SELECT count(*) FROM public.comm_whatsapp_campaign_admissions AS recent
+            WHERE recent.campaign_id = active_campaign.id
+              AND recent.admitted_at >= v_now - interval '24 hours') < active_campaign.daily_send_limit
+        AS has_daily_capacity,
+      EXISTS (
+        SELECT 1 FROM public.comm_whatsapp_campaign_targets AS ready_target
+        WHERE ready_target.campaign_id = active_campaign.id
+          AND ready_target.status IN ('pending', 'scheduled', 'sending', 'failed')
+          AND (ready_target.next_send_at IS NULL OR ready_target.next_send_at <= v_now)
+          AND (ready_target.next_retry_at IS NULL OR ready_target.next_retry_at <= v_now)
+          AND NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_admissions AS admitted
+            WHERE admitted.campaign_id = ready_target.campaign_id AND admitted.target_id = ready_target.id
+          )
+          AND public._comm_whatsapp_campaign_target_marketing_reason(active_campaign.id, ready_target.id) IS NULL
+      ) AS has_ready_target
     FROM public.comm_whatsapp_campaigns AS active_campaign
     WHERE active_campaign.status IN ('queued', 'running', 'scheduled')
       AND (active_campaign.scheduled_at IS NULL OR active_campaign.scheduled_at <= v_now)
       AND (active_campaign.daily_send_limit IS NULL OR active_campaign.daily_send_limit > 0)
       AND public._comm_whatsapp_campaign_window_open(active_campaign, v_now, v_time_zone)
-      AND (
-        active_campaign.daily_send_limit IS NULL
-        OR (SELECT count(*) FROM public.comm_whatsapp_campaign_admissions AS recent
-            WHERE recent.campaign_id = active_campaign.id
-              AND recent.admitted_at >= v_now - interval '24 hours') < active_campaign.daily_send_limit
-      )
       AND EXISTS (
         SELECT 1 FROM public.comm_whatsapp_campaign_targets AS target
         WHERE target.campaign_id = active_campaign.id
           AND target.status IN ('pending', 'scheduled', 'sending', 'failed')
-          AND (target.next_send_at IS NULL OR target.next_send_at <= v_now)
-          AND (target.next_retry_at IS NULL OR target.next_retry_at <= v_now)
           AND NOT EXISTS (
             SELECT 1 FROM public.comm_whatsapp_campaign_admissions AS admitted
             WHERE admitted.campaign_id = target.campaign_id AND admitted.target_id = target.id

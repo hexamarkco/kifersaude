@@ -19,7 +19,7 @@
   <body>
     <main>
       <h1>Conectar CRM Kifer Saúde</h1>
-      <p>Entre com uma conta <strong>administradora</strong> do CRM para autorizar consultas somente leitura pelo ChatGPT.</p>
+      <p>Entre com uma conta <strong>administradora</strong> do CRM para autorizar o acesso solicitado pelo ChatGPT.</p>
       <p id="error" class="error hidden" role="alert"></p>
       <form id="login-form" autocomplete="on">
         <label for="email">E-mail da conta administradora</label>
@@ -29,8 +29,8 @@
         <button id="login-button" type="submit">Entrar</button>
       </form>
       <section id="consent" class="hidden">
-        <p class="access">O ChatGPT poderá consultar dados do CRM. Ele não poderá criar, alterar ou excluir informações.</p>
-        <button id="authorize-button" type="button">Autorizar consultas</button>
+        <p id="access-summary" class="access"></p>
+        <button id="authorize-button" type="button">Autorizar acesso</button>
       </section>
       <p class="note">Sua senha é validada pelo Supabase Auth e nunca é enviada ao ChatGPT.</p>
     </main>
@@ -43,6 +43,14 @@
       const loginButton = document.getElementById('login-button');
       const consent = document.getElementById('consent');
       const authorizeButton = document.getElementById('authorize-button');
+      const accessSummary = document.getElementById('access-summary');
+      const requestedScopes = new Set(params.scope.split(/\s+/).filter(Boolean));
+      const canWrite = requestedScopes.has('kifer.write');
+      const authorizeLabel = canWrite ? 'Autorizar leitura e escrita' : 'Autorizar consultas';
+      accessSummary.textContent = canWrite
+        ? 'O ChatGPT poderá consultar e alterar dados do CRM. Convites e redefinições enviam e-mails; envios de WhatsApp, exclusões e outras ações sensíveis ainda exigem confirmação explícita.'
+        : 'O ChatGPT poderá consultar dados do CRM. Esta conexão não poderá criar, alterar ou excluir informações.';
+      authorizeButton.textContent = authorizeLabel;
       let config;
       let accessToken;
       const showError = (message) => { errorElement.textContent = message; errorElement.classList.remove('hidden'); };
@@ -96,7 +104,7 @@
         } catch (error) {
           showError(error instanceof Error ? error.message : 'Não foi possível autorizar agora.');
           authorizeButton.disabled = false;
-          authorizeButton.textContent = 'Autorizar consultas';
+          authorizeButton.textContent = authorizeLabel;
         }
       }
 

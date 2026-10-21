@@ -37,8 +37,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./commWhatsAppCampaignService', () => ({
   commWhatsAppCampaignService: mocks.service,
-  computeAdmissionIntervalMinutes: vi.fn(() => 1),
-  formatAdmissionInterval: vi.fn(() => '1 minuto'),
+  computeContactIntervalMinutes: vi.fn(() => 1),
+  formatContactInterval: vi.fn(() => '1 minuto'),
 }));
 
 vi.mock('./campaignRealtime', () => ({
@@ -72,6 +72,8 @@ const campaign: CommWhatsAppCampaign = {
   scheduled_at: null,
   pacing_per_minute: 1,
   daily_send_limit: null,
+  contact_interval_minutes: null,
+  inter_message_interval_minutes: 0,
   send_window_start: null,
   send_window_end: null,
   active_weekdays: [],

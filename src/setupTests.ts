@@ -2,27 +2,31 @@ import { vi } from 'vitest';
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-if (!window.URL.createObjectURL) {
-  window.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+if (typeof window !== 'undefined') {
+  if (!window.URL.createObjectURL) {
+    window.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+  }
+
+  if (!window.URL.revokeObjectURL) {
+    window.URL.revokeObjectURL = vi.fn();
+  }
 }
 
-if (!window.URL.revokeObjectURL) {
-  window.URL.revokeObjectURL = vi.fn();
-}
-
-if (!('scrollIntoView' in Element.prototype)) {
+if (typeof Element !== 'undefined' && !('scrollIntoView' in Element.prototype)) {
   (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = vi.fn();
 }
 
-if (!navigator.mediaDevices) {
-  Object.defineProperty(navigator, 'mediaDevices', {
-    value: {
-      getUserMedia: vi.fn(),
-    },
-    configurable: true,
-  });
-} else if (!navigator.mediaDevices.getUserMedia) {
-  navigator.mediaDevices.getUserMedia = vi.fn() as unknown as typeof navigator.mediaDevices.getUserMedia;
+if (typeof navigator !== 'undefined') {
+  if (!navigator.mediaDevices) {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: vi.fn(),
+      },
+      configurable: true,
+    });
+  } else if (!navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia = vi.fn() as unknown as typeof navigator.mediaDevices.getUserMedia;
+  }
 }
 
 if (!(globalThis as typeof globalThis & { MediaRecorder?: unknown }).MediaRecorder) {

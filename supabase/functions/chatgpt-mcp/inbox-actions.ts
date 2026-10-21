@@ -102,6 +102,7 @@ const normalizeRpcResult = (value: unknown, expectedOperation: string): ActionRe
     success: true,
     operation: expectedOperation,
     ...(typeof value.value === 'boolean' ? { value: value.value } : {}),
+    ...(value.deleted === true ? { deleted: true } : {}),
     chat,
     replayed: value.replayed === true,
   };
@@ -139,6 +140,18 @@ const stateTool = (name: string, description: string) => ({
 });
 
 const CHAT_ACTION_SCHEMAS = [
+  {
+    name: 'kifer_delete_whatsapp_chat',
+    description: 'Oculta uma conversa da Inbox usando exclusão lógica; mensagens e histórico permanecem no banco. Exige confirmação, expected_updated_at e client_request_id idempotente; OAuth admin obrigatório.',
+    inputSchema: { type: 'object', required: ['chat_id', 'expected_updated_at', 'client_request_id', 'confirm_delete'], additionalProperties: false, properties: { chat_id: { type: 'string', format: 'uuid' }, expected_updated_at: EXPECTED_AT_SCHEMA, client_request_id: REQUEST_ID_SCHEMA, confirm_delete: { type: 'boolean', const: true } } },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  },
+  {
+    name: 'kifer_set_whatsapp_autonomous_attendance',
+    description: 'Ativa ou desativa o atendimento autônomo para uma conversa vinculada. Ativar pode disparar uma resposta real do WhatsApp após o intervalo do sistema; exige confirmação, expected_updated_at e client_request_id. A validação de qualificação do CRM é repetida no servidor.',
+    inputSchema: { type: 'object', required: ['chat_id', 'status', 'expected_updated_at', 'client_request_id', 'confirm_change'], additionalProperties: false, properties: { chat_id: { type: 'string', format: 'uuid' }, status: { type: 'string', enum: ['active', 'inactive'] }, expected_updated_at: EXPECTED_AT_SCHEMA, client_request_id: REQUEST_ID_SCHEMA, confirm_change: { type: 'boolean', const: true } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  },
   stateTool('kifer_archive_whatsapp_chat', 'Arquiva uma conversa do WhatsApp. Exige expected_updated_at da leitura e client_request_id idempotente; OAuth admin obrigatório.'),
   stateTool('kifer_unarchive_whatsapp_chat', 'Desarquiva uma conversa do WhatsApp. Exige expected_updated_at da leitura e client_request_id idempotente; OAuth admin obrigatório.'),
   stateTool('kifer_pin_whatsapp_chat', 'Fixe uma conversa no topo da Inbox. Exige expected_updated_at da leitura e client_request_id idempotente; OAuth admin obrigatório.'),
@@ -196,6 +209,8 @@ export const MCP_INBOX_WRITE_TOOL_NAMES = CHAT_ACTION_SCHEMAS.map(({ name }) => 
 export const MCP_INBOX_TOOLS = CHAT_ACTION_SCHEMAS;
 
 const TOOL_ARGUMENTS: Record<string, readonly string[]> = {
+  kifer_delete_whatsapp_chat: ['chat_id', 'expected_updated_at', 'client_request_id', 'confirm_delete'],
+  kifer_set_whatsapp_autonomous_attendance: ['chat_id', 'status', 'expected_updated_at', 'client_request_id', 'confirm_change'],
   kifer_archive_whatsapp_chat: ['chat_id', 'expected_updated_at', 'client_request_id'],
   kifer_unarchive_whatsapp_chat: ['chat_id', 'expected_updated_at', 'client_request_id'],
   kifer_pin_whatsapp_chat: ['chat_id', 'expected_updated_at', 'client_request_id'],
@@ -243,6 +258,25 @@ export async function executeMcpInboxAction(params: {
     p_expected_updated_at: expectedUpdatedAt,
     p_client_request_id: clientRequestId,
   };
+
+  if (toolName === 'kifer_delete_whatsapp_chat') {
+    if (args.confirm_delete !== true) return invalid('confirm_delete=true é obrigatório para ocultar a conversa da Inbox.');
+    return callInboxRpc(supabase, 'mcp_comm_whatsapp_set_chat_deleted', shared, 'chat.deleted.set');
+  }
+
+  if (toolName === 'kifer_set_whatsapp_autonomous_attendance') {
+    const status = text(args.status);
+    if (!['active', 'inactive'].includes(status)) return invalid('status deve ser active ou inactive.');
+    if (args.confirm_change !== true) return invalid('confirm_change=true é obrigatório para alterar o atendimento autônomo.');
+    const { data, error } = await supabase.rpc('mcp_comm_whatsapp_set_autonomous_attendance', {
+      ...shared,
+      p_status: status,
+    });
+    if (error) return mapRpcError(error);
+    const result = normalizeRpcResult(data, 'chat.autonomous_attendance.set');
+    if (result.success) result.autonomous_attendance_status = status;
+    return result;
+  }
 
   const state = STATE_TOOL_MAP[toolName];
   if (state) {

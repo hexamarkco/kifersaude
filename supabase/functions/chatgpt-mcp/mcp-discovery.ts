@@ -19,7 +19,10 @@ export const attachMcpOAuthSecuritySchemes = (
   tools: readonly McpToolDescriptor[],
 ): McpToolDescriptor[] => tools.map((tool) => ({
   ...tool,
-  securitySchemes: [{ type: 'oauth2', scopes: ['kifer.read'] }],
+  securitySchemes: [{
+    type: 'oauth2',
+    scopes: tool.annotations?.readOnlyHint === true ? ['kifer.read'] : ['kifer.read', 'kifer.write'],
+  }],
 }));
 
 export type McpResourceDescriptor = {

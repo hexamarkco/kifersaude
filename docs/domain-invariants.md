@@ -24,8 +24,13 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 ## Campanhas WhatsApp
 
-- O claim prioriza alvos já admitidos (`current_step_index > 0`) antes de novos contatos. Pacing/cap diário restringe admissão, não follow-ups vencidos ou mensagens imediatas do pacote.
+- A cota diária é por destinatário distinto que iniciou a campanha: `daily_send_limit=30` admite até 30 pessoas em qualquer janela móvel de 24 h; os despachos físicos do mesmo destinatário, retries e retomadas não consomem outra vaga. `comm_whatsapp_campaign_admissions` mantém a reserva idempotente mesmo após falha parcial ou limpeza de alvos recorrentes.
+- Com limite e janela configurados, a cadência por campanha é `minutos da janela / limite diário`, arredondada para cima; `pacing_per_minute` legado só vale quando não há limite diário. Duas campanhas no mesmo sender somam suas taxas e usam lock transacional por canal, com admissão round-robin e sem catch-up em rajadas.
+- A cota e a cadência valem para novos destinatários. Follow-ups de alvos já admitidos continuam sem consumir vagas novas; cada mensagem física do burst continua tendo seu próprio despacho idempotente.
+- A elegibilidade de campanha exige revisão humana registrada de finalidade/base legal e confirmação vigente dos termos promocionais. Cada endpoint precisa de política WhatsApp/commercial `allowed` e evidência `campaign_marketing_eligibility` vinculada à campanha; `unknown`, número WhatsApp válido ou origem em fatura não provam autorização. Um endpoint admitido em outra campanha nos últimos 24 h é tratado como duplicado e bloqueado.
+- A primeira mensagem pode associar mídia do bucket `whatsapp-campaign-media`; texto vira legenda do mesmo balão. Mídia não gera mensagem adicional. As campanhas Amil de outubro/2026 indicadas exigem imagem no primeiro passo antes da ativação.
 - `stop_on_reply` registra a resposta, mas não interrompe mensagens do mesmo estágio com delay zero; a parada ocorre antes da próxima espera real.
+- Opt-out explícito ou bloqueio entre mensagens cancela o restante do burst imediatamente; resposta comum dentro do mesmo estágio mantém a semântica existente. Pausa, cancelamento, janela e elegibilidade são revalidados a cada passo e novamente antes do provedor.
 - Eventos inbound sem preview visível não contam como resposta. Worker e RPC devem compartilhar essa semântica.
 - Classificação de permissão de contato e compatibilidade com intents antigas vive em `_shared/campaign-intent-classification.ts`; testes devem importar esse módulo.
 

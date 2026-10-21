@@ -59,8 +59,14 @@ const CAMPAIGN_STEP_SCHEMA = {
   additionalProperties: false,
   properties: {
     message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto literal; variáveis oficiais são renderizadas pelo worker.' },
-    delay_amount: { type: 'integer', minimum: 0, maximum: 31622400, default: 0 },
-    delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'], default: 'minutes' },
+    step_index: { type: 'integer', minimum: 0, maximum: 29 },
+    stage_index: { type: 'integer', minimum: 0, maximum: 29 },
+    step_kind: { type: 'string', enum: ['message', 'status_change'] },
+    status_to_set: { type: 'string', maxLength: 160 },
+    variant_label: { type: 'string', enum: ['ANY', 'A', 'B'] },
+    delay_amount: { type: 'integer', minimum: 0, maximum: 31622400 },
+    delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] },
+    media_storage_path: { type: ['string', 'null'], maxLength: 512, description: 'Caminho relativo de um objeto existente no bucket whatsapp-campaign-media. Nunca informe URL.' },
   },
 };
 
@@ -218,9 +224,81 @@ const safeCampaignStep = (value: unknown): JsonRecord => {
   const step = isRecord(value) ? { ...value } : {};
   if ('media_url' in step) {
     step.media_attached = Boolean(text(step.media_url));
+    const storagePath = campaignMediaStoragePath(step.media_url);
+    if (storagePath) step.media_storage_path = storagePath;
     delete step.media_url;
   }
   return step;
+};
+
+const campaignMediaStoragePath = (value: unknown): string | null => {
+  const raw = text(value);
+  const prefix = 'storage://whatsapp-campaign-media/';
+  let path = raw.startsWith(prefix) ? raw.slice(prefix.length) : '';
+  if (!path && raw) {
+    try {
+      const url = new URL(raw);
+      const publicPrefix = '/storage/v1/object/public/whatsapp-campaign-media/';
+      if (!url.search && !url.hash && url.pathname.startsWith(publicPrefix)) {
+        path = decodeURIComponent(url.pathname.slice(publicPrefix.length));
+      }
+    } catch {
+      return null;
+    }
+  }
+  if (!isSafeCampaignMediaPath(path)) return null;
+  return path;
+};
+
+const isSafeCampaignMediaPath = (value: string): boolean => {
+  if (!value || value.length > 512 || value.startsWith('/') || value.includes('\\') || value.includes('?') || value.includes('#')) return false;
+  if (Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return false;
+  if (/%(?:2e|2f|5c)/i.test(value)) return false;
+  return value.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+};
+
+const normalizeCampaignSteps = (value: unknown): JsonRecord[] | null => {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 30) return null;
+  const normalized: JsonRecord[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || 'media_url' in item || 'media_type' in item || 'media_filename' in item) return null;
+    const message = text(item.message);
+    if (!message || message.length > 4096) return null;
+    const step: JsonRecord = { message };
+    for (const key of ['step_index', 'stage_index'] as const) {
+      if (item[key] !== undefined) {
+        if (!Number.isInteger(item[key]) || Number(item[key]) < 0 || Number(item[key]) > 29) return null;
+        step[key] = Number(item[key]);
+      }
+    }
+    if (item.step_kind !== undefined) {
+      if (item.step_kind !== 'message' && item.step_kind !== 'status_change') return null;
+      step.step_kind = item.step_kind;
+    }
+    if (item.status_to_set !== undefined) {
+      const status = text(item.status_to_set);
+      if (!status || status.length > 160) return null;
+      step.status_to_set = status;
+    }
+    if (item.variant_label !== undefined) {
+      if (item.variant_label !== 'ANY' && item.variant_label !== 'A' && item.variant_label !== 'B') return null;
+      step.variant_label = item.variant_label;
+    }
+    if (item.delay_amount !== undefined) {
+      if (!Number.isInteger(item.delay_amount) || Number(item.delay_amount) < 0 || Number(item.delay_amount) > 31622400) return null;
+      step.delay_amount = Number(item.delay_amount);
+    }
+    if (item.delay_unit !== undefined) {
+      if (!['seconds', 'minutes', 'hours', 'days'].includes(String(item.delay_unit))) return null;
+      step.delay_unit = item.delay_unit;
+    }
+    if (item.media_storage_path !== undefined) {
+      if (item.media_storage_path !== null && (typeof item.media_storage_path !== 'string' || !isSafeCampaignMediaPath(item.media_storage_path))) return null;
+      step.media_storage_path = item.media_storage_path;
+    }
+    normalized.push(step);
+  }
+  return normalized;
 };
 const withMetrics = (campaign: JsonRecord): JsonRecord => ({
   total: Number(campaign.total_targets ?? 0),
@@ -503,6 +581,15 @@ const campaignPatch = (args: JsonRecord): JsonRecord => {
   return patch;
 };
 
+const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
+  const patch = campaignPatch(args);
+  if (!Object.prototype.hasOwnProperty.call(patch, 'steps')) return patch;
+  const steps = normalizeCampaignSteps(patch.steps);
+  if (!steps) return null;
+  patch.steps = steps;
+  return patch;
+};
+
 export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: SupabaseClient; toolName: string; arguments: JsonRecord; actorId: string }): Promise<CampaignWriteResult | null> {
   const { supabase, toolName, arguments: args, actorId } = params;
   if (!(MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) return null;
@@ -517,12 +604,16 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
   let result: CampaignWriteResult;
 
   if (toolName === 'kifer_create_whatsapp_campaign') {
-    result = await rpcMutation({ supabase, actorId, operation: 'create', clientRequestId: requestId, payload: campaignPatch(args) });
+    const payload = safeCampaignPatch(args);
+    if (!payload) return errorResult('INVALID_INPUT', 'steps contém mensagem, variante, atraso ou caminho de mídia inválido.');
+    result = await rpcMutation({ supabase, actorId, operation: 'create', clientRequestId: requestId, payload });
     if (isRecord(result.campaign)) result.campaign = publicCampaign(result.campaign);
     return result;
   }
   if (toolName === 'kifer_update_whatsapp_campaign') {
-    result = await rpcMutation({ supabase, actorId, operation: 'update', campaignId, expectedUpdatedAt, clientRequestId: requestId, payload: campaignPatch(args) });
+    const payload = safeCampaignPatch(args);
+    if (!payload) return errorResult('INVALID_INPUT', 'steps contém mensagem, variante, atraso ou caminho de mídia inválido.');
+    result = await rpcMutation({ supabase, actorId, operation: 'update', campaignId, expectedUpdatedAt, clientRequestId: requestId, payload });
     if (isRecord(result.campaign)) result.campaign = publicCampaign(result.campaign);
     return result;
   }

@@ -35,7 +35,8 @@ test('reconcilia respostas de campanha em uma chamada de banco por lote', () => 
 });
 
 test('reconciliação não reprocessa alvos que já têm resposta registrada', () => {
-  assert.match(reconcileSource, /\.is\('responded_at',\s*'is',\s*null\)/);
+  assert.match(reconcileSource, /\.is\('responded_at',\s*null\)/);
+  assert.doesNotMatch(reconcileSource, /\.is\('responded_at',\s*'is',\s*null\)/);
 });
 
 test('atualização condicional de resposta aceita zero linhas sem gerar 406', () => {

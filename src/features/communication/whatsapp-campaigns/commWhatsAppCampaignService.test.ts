@@ -54,7 +54,19 @@ vi.mock('../../../infrastructure/supabase', () => ({
   getSupabaseErrorMessage: vi.fn(async (_error: unknown, fallback: unknown) => String(fallback)),
 }));
 
-import { commWhatsAppCampaignService } from './commWhatsAppCampaignService';
+import {
+  commWhatsAppCampaignService,
+  computeAdmissionIntervalMinutes,
+  formatAdmissionInterval,
+} from './commWhatsAppCampaignService';
+
+test('ritmo da campanha deriva do limite e da janela, sem acelerar quando a divisão não é inteira', () => {
+  assert.equal(computeAdmissionIntervalMinutes(30, '09:00', '18:30', 12), 19);
+  assert.equal(computeAdmissionIntervalMinutes(29, '09:00', '18:30'), 20);
+  assert.equal(formatAdmissionInterval(19), 'Aprox. 1 novo contato a cada 19 min');
+  assert.equal(computeAdmissionIntervalMinutes(null, '09:00', '18:30', 6), 1 / 6);
+  assert.equal(formatAdmissionInterval(computeAdmissionIntervalMinutes(null, '09:00', '18:30', 6)), 'Aprox. 1 novo contato a cada 10 s');
+});
 
 test('consultas de campanhas nao pedem lead_name removido dos chats remotos', async () => {
   const selectCallsBefore = mocks.query.select.mock.calls.length;

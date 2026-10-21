@@ -394,8 +394,11 @@ export const computeAdmissionIntervalMinutes = (
   dailyLimit: number | null | undefined,
   windowStart: string | null | undefined,
   windowEnd: string | null | undefined,
+  legacyPacingPerMinute?: number | null,
 ): number | null => {
-  if (!dailyLimit || dailyLimit <= 0) return null;
+  if (!dailyLimit || dailyLimit <= 0) {
+    return legacyPacingPerMinute && legacyPacingPerMinute > 0 ? 1 / legacyPacingPerMinute : null;
+  }
 
   const start = parseTimeToMinutes(windowStart);
   const end = parseTimeToMinutes(windowEnd);
@@ -404,15 +407,21 @@ export const computeAdmissionIntervalMinutes = (
     windowMinutes = start < end ? end - start : (24 * 60 - start) + end;
   }
 
-  return Math.max(Math.floor(windowMinutes / dailyLimit), 1);
+  return Math.max(Math.ceil(windowMinutes / dailyLimit), 1);
 };
 
 export const formatAdmissionInterval = (minutes: number | null): string => {
-  if (minutes === null) return 'Sem limite diario definido';
-  if (minutes < 60) return `1 novo contato a cada ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const remaining = minutes % 60;
-  return `1 novo contato a cada ${hours}h${remaining > 0 ? ` ${remaining}min` : ''}`;
+  if (minutes === null) return 'Sem limite e sem intervalo mínimo';
+  const seconds = minutes * 60;
+  if (seconds < 60) {
+    const formattedSeconds = Number.isInteger(seconds) ? String(seconds) : seconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+    return `Aprox. 1 novo contato a cada ${formattedSeconds} s`;
+  }
+  const roundedMinutes = Math.ceil(minutes);
+  if (roundedMinutes < 60) return `Aprox. 1 novo contato a cada ${roundedMinutes} min`;
+  const hours = Math.floor(roundedMinutes / 60);
+  const remaining = roundedMinutes % 60;
+  return `Aprox. 1 novo contato a cada ${hours}h${remaining > 0 ? ` ${remaining}min` : ''}`;
 };
 
 const normalizePhoneDigits = (value: string) => {
@@ -973,7 +982,7 @@ export const commWhatsAppCampaignService = {
       .insert({
         name: input.name.trim(),
         objective: input.objective?.trim() || null,
-        status: input.scheduledAt ? 'scheduled' : 'draft',
+        status: 'draft',
         audience_source: input.audienceSource,
         audience_config: input.audienceConfig,
         message_text: input.messageText.trim(),
@@ -1273,11 +1282,21 @@ export const commWhatsAppCampaignService = {
   },
 
   async uploadCampaignMedia(file: File): Promise<{ url: string; type: CommWhatsAppCampaignMediaType; filename: string }> {
-    const type: CommWhatsAppCampaignMediaType = file.type.startsWith('image/')
-      ? 'image'
-      : file.type.startsWith('video/')
-        ? 'video'
-        : 'document';
+    const mediaTypeByMime: Record<string, CommWhatsAppCampaignMediaType> = {
+      'image/jpeg': 'image',
+      'image/png': 'image',
+      'image/webp': 'image',
+      'image/gif': 'image',
+      'video/mp4': 'video',
+      'application/pdf': 'document',
+    };
+    const type = mediaTypeByMime[file.type];
+    if (!type) {
+      throw new Error('A mídia precisa ser JPG, PNG, WebP, GIF, MP4 ou PDF.');
+    }
+    if (file.size <= 0 || file.size > 20 * 1024 * 1024) {
+      throw new Error('A mídia precisa ter até 20 MiB.');
+    }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'arquivo';
     const path = `${crypto.randomUUID()}-${safeName}`;

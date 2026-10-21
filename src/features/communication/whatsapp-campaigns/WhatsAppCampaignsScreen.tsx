@@ -54,6 +54,11 @@ import {
   type CommWhatsAppCampaignWorkerRun,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
+import {
+  getCampaignActivationBlocker,
+  getCampaignMarketingReviewBlocker,
+  getCampaignMediaReadinessBlocker,
+} from './domain/campaignMarketingEligibility';
 
 const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
   none: 'Não repetir',
@@ -308,6 +313,11 @@ export default function WhatsAppCampaignsScreen() {
   const [sendWindowEnd, setSendWindowEnd] = useState('');
   const [activeWeekdays, setActiveWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
+  const [pacingPerMinute, setPacingPerMinute] = useState(12);
+  const [legalBasisReviewed, setLegalBasisReviewed] = useState(false);
+  const [legalBasisReference, setLegalBasisReference] = useState('');
+  const [promotionReviewed, setPromotionReviewed] = useState(false);
+  const [promotionReference, setPromotionReference] = useState('');
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
   const [recentCampaignDays, setRecentCampaignDays] = useState(30);
@@ -344,8 +354,8 @@ export default function WhatsAppCampaignsScreen() {
   );
 
   const admissionIntervalMinutes = useMemo(
-    () => computeAdmissionIntervalMinutes(dailySendLimit, sendWindowStart, sendWindowEnd),
-    [dailySendLimit, sendWindowStart, sendWindowEnd],
+    () => computeAdmissionIntervalMinutes(dailySendLimit, sendWindowStart, sendWindowEnd, pacingPerMinute),
+    [dailySendLimit, sendWindowStart, sendWindowEnd, pacingPerMinute],
   );
   const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
@@ -459,6 +469,11 @@ export default function WhatsAppCampaignsScreen() {
     setSendWindowEnd('');
     setActiveWeekdays([1, 2, 3, 4, 5]);
     setDailySendLimit(null);
+    setPacingPerMinute(12);
+    setLegalBasisReviewed(false);
+    setLegalBasisReference('');
+    setPromotionReviewed(false);
+    setPromotionReference('');
     setReactivationMode(false);
     setInactiveDays(90);
     setRecentCampaignDays(30);
@@ -575,6 +590,17 @@ export default function WhatsAppCampaignsScreen() {
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
       setActiveWeekdays(campaign.active_weekdays?.length ? campaign.active_weekdays : [0, 1, 2, 3, 4, 5, 6]);
       setDailySendLimit(campaign.daily_send_limit ?? null);
+      setPacingPerMinute(campaign.pacing_per_minute || 12);
+      const marketingReviewValue = campaign.audience_config?.marketing_review;
+      const marketingReview = marketingReviewValue !== null
+        && typeof marketingReviewValue === 'object'
+        && !Array.isArray(marketingReviewValue)
+        ? marketingReviewValue as Record<string, unknown>
+        : {};
+      setLegalBasisReviewed(marketingReview.legal_basis_reviewed === true);
+      setLegalBasisReference(typeof marketingReview.legal_basis_reference === 'string' ? marketingReview.legal_basis_reference : '');
+      setPromotionReviewed(marketingReview.promotion_reviewed === true);
+      setPromotionReference(typeof marketingReview.promotion_reference === 'string' ? marketingReview.promotion_reference : '');
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
       if (lastContactBefore) {
@@ -636,6 +662,12 @@ export default function WhatsAppCampaignsScreen() {
               exclude_recent_campaign_days: reactivationMode ? recentCampaignDays : 0,
               exclude_opt_out: true,
             },
+            marketing_review: {
+              legal_basis_reviewed: legalBasisReviewed,
+              legal_basis_reference: legalBasisReference.trim(),
+              promotion_reviewed: promotionReviewed,
+              promotion_reference: promotionReference.trim(),
+            },
           }
         : {
             csv: {
@@ -643,6 +675,12 @@ export default function WhatsAppCampaignsScreen() {
               valid_rows: csvValidTargets.length,
               create_leads: createLeadsFromCsv,
               exclude_opt_out: true,
+            },
+            marketing_review: {
+              legal_basis_reviewed: legalBasisReviewed,
+              legal_basis_reference: legalBasisReference.trim(),
+              promotion_reviewed: promotionReviewed,
+              promotion_reference: promotionReference.trim(),
             },
           };
 
@@ -680,7 +718,7 @@ export default function WhatsAppCampaignsScreen() {
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         // Coluna mantida por compatibilidade; o intervalo de admissao real e
         // calculado direto de dailySendLimit + janela na RPC de despacho.
-        pacingPerMinute: 12,
+        pacingPerMinute,
         dailySendLimit,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
@@ -1543,13 +1581,13 @@ export default function WhatsAppCampaignsScreen() {
           )}
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Field label={<FieldLabel text="Agendar para" hint="Data e hora para o disparo começar sozinho. Deixe vazio para poder ativar manualmente a qualquer momento." />}>
+            <Field label={<FieldLabel text="Agendar para" hint="A data só entra em vigor depois da ativação explícita da campanha." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
             <Field label={<FieldLabel text="Intervalo entre contatos" hint="Só informativo, não dá pra editar: é o resultado de 'novos contatos por dia' dividido pela janela de envio. Define de quanto em quanto tempo um contato novo é admitido - o resto da sequência dele (resto da etapa 1 e as etapas seguintes) sai normalmente, sem esperar esse intervalo." />}>
               <Input value={formatAdmissionInterval(admissionIntervalMinutes)} disabled readOnly />
             </Field>
-            <Field label={<FieldLabel text="Novos contatos por dia" hint="Teto de contatos NOVOS que comecam a receber a campanha a cada 24 horas (só conta a primeira mensagem de cada um, até 120/dia). Depois de admitido, o contato recebe o resto da sequencia normalmente, sem contar de novo nesse limite. Deixe vazio para não limitar (contatos entram sem espaçamento mínimo)." />}>
+            <Field label={<FieldLabel text="Novos contatos por 24h" hint="Teto móvel de pessoas que iniciam a campanha em qualquer período de 24 horas. Cada pessoa conta uma vez; as mensagens seguintes do mesmo contato não consomem novas vagas." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
             <Field label={<FieldLabel text="Janela início" hint="Horário a partir do qual o disparo pode enviar mensagens." />}>
@@ -1582,6 +1620,32 @@ export default function WhatsAppCampaignsScreen() {
               })}
             </div>
           </Field>
+          <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+            <div>
+              <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Revisão de elegibilidade de marketing</h3>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">A ativação exige revisão humana documentada da finalidade/base legal, confirmação atual dos termos da promoção e evidência comercial específica para cada contato. Marque cada item somente após a validação correspondente; isso não altera permissões de contato.</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
+                <label className="flex items-start gap-2 text-sm text-[color:var(--panel-text)]">
+                  <Checkbox checked={legalBasisReviewed} onChange={(event) => setLegalBasisReviewed(event.target.checked)} />
+                  <span>Finalidade e base legal revisadas por pessoa autorizada</span>
+                </label>
+                <Field label={<FieldLabel text="Referência da revisão legal" hint="Identificador ou referência interna para localizar a análise." />}>
+                  <Input value={legalBasisReference} maxLength={500} onChange={(event) => setLegalBasisReference(event.target.value)} placeholder="Registro ou documento de revisão" />
+                </Field>
+              </div>
+              <div className="space-y-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
+                <label className="flex items-start gap-2 text-sm text-[color:var(--panel-text)]">
+                  <Checkbox checked={promotionReviewed} onChange={(event) => setPromotionReviewed(event.target.checked)} />
+                  <span>Termos, produtos e abrangência confirmados com a Amil</span>
+                </label>
+                <Field label={<FieldLabel text="Referência da confirmação comercial" hint="Identificador ou documento que confirma os termos vigentes." />}>
+                  <Input value={promotionReference} maxLength={500} onChange={(event) => setPromotionReference(event.target.value)} placeholder="Registro ou documento da operadora" />
+                </Field>
+              </div>
+            </div>
+          </Card>
           </>
           )}
             </DialogBody>
@@ -1629,7 +1693,7 @@ export default function WhatsAppCampaignsScreen() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
                 <PreviewMetric label="Etapas da sequência" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
-                <PreviewMetric label="Intervalo entre contatos" value={formatAdmissionInterval(computeAdmissionIntervalMinutes(activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end))} />
+                <PreviewMetric label="Intervalo entre contatos" value={formatAdmissionInterval(computeAdmissionIntervalMinutes(activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end, activationPreview.campaign.pacing_per_minute))} />
                 <PreviewMetric label="Duração estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
 
@@ -1640,9 +1704,23 @@ export default function WhatsAppCampaignsScreen() {
                     <PreviewRow label="Campanha" value={activationPreview.campaign.name} />
                     <PreviewRow label="Agendamento" value={formatDateTime(activationPreview.campaign.scheduled_at)} />
                     <PreviewRow label="Janela" value={formatSendWindow(activationPreview.campaign)} />
+                    <PreviewRow label="Novos contatos por 24h" value={activationPreview.campaign.daily_send_limit ? String(activationPreview.campaign.daily_send_limit) : 'Sem limite'} />
                     <PreviewRow label="Origem" value={activationPreview.campaign.audience_source.toUpperCase()} />
                     <PreviewRow label="Contatos processados" value={String(activationPreview.materializedTargets)} />
                   </div>
+                </Card>
+
+                <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Elegibilidade para marketing</h3>
+                  {getCampaignMarketingReviewBlocker(activationPreview.campaign.audience_config) ? (
+                    <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMarketingReviewBlocker(activationPreview.campaign.audience_config)}</p>
+                  ) : (
+                    <p className="text-sm text-[color:var(--panel-text-soft)]">Revisões da campanha registradas. O servidor ainda exige, para cada contato, permissão comercial explícita e evidência de base legal/finalidade vinculada a esta campanha.</p>
+                  )}
+                  {getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled) && (
+                    <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled)}</p>
+                  )}
+                  <p className="text-xs text-[color:var(--panel-text-muted)]">WhatsApp válido e permissão desconhecida não comprovam autorização para prospecção. Contatos sem evidência permanecem pendentes e não serão enviados.</p>
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
@@ -1709,7 +1787,7 @@ export default function WhatsAppCampaignsScreen() {
               <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha será processada automaticamente, mesmo com o navegador fechado.</p>
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
-                <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
+                <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0 || Boolean(getCampaignActivationBlocker(activationPreview.campaign, activationPreview.steps))} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
                   {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="kds-control-icon" />}
                   Confirmar ativação
                 </Button>

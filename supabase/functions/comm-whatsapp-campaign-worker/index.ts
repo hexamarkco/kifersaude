@@ -40,6 +40,7 @@ import {
   ContactPermissionBlockedError,
   ContactPermissionCheckError,
 } from '../_shared/contact-permissions.ts';
+import { isCampaignMarketingReviewReady } from '../_shared/campaign-marketing-eligibility.ts';
 
 declare const Deno: {
   env: {
@@ -169,7 +170,7 @@ type WorkerRunResult = {
 };
 
 type CampaignDispatchReservation = {
-  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost';
+  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost' | 'campaign_inactive' | 'window_closed' | 'eligibility_blocked';
   event_id: string | null;
   attempts: number | null;
   retry_at: string | null;
@@ -197,6 +198,7 @@ const getCommercialContactBlock = async (
 const MAX_SEND_ATTEMPTS = 3;
 const RETRY_BACKOFF_MINUTES = [5, 30, 120];
 const DEFAULT_CAMPAIGN_TIME_ZONE = 'America/Sao_Paulo';
+const CAMPAIGN_ADMISSION_CHANNEL_KEY = 'whatsapp';
 // Quantos alvos reivindicados são enviados em paralelo por invocação. Não muda
 // quantos alvos são processados por minuto (isso continua sendo o teto de
 // pacing_per_minute/maxLimit já aplicado no claim) — só reduz o tempo de
@@ -210,6 +212,53 @@ const getCampaignSendConcurrency = (): number => {
 };
 
 const createAdminClient = createSupabaseAdminClient;
+
+type CampaignMarketingReadiness = {
+  ready: boolean;
+  reason_codes: string[];
+  total_targets: number;
+  eligible_targets: number;
+  pending_targets: number;
+};
+
+async function getCampaignMarketingReadiness(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaignId: string,
+): Promise<CampaignMarketingReadiness> {
+  const { data, error } = await supabaseAdmin.rpc('get_comm_whatsapp_campaign_marketing_readiness', {
+    p_campaign_id: campaignId,
+  });
+  if (error) throw new Error(`Não foi possível validar elegibilidade de marketing: ${error.message}`);
+  const value = Array.isArray(data) ? data[0] : data;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('A validação de elegibilidade de marketing não retornou resultado válido.');
+  }
+  const result = value as Record<string, unknown>;
+  return {
+    ready: result.ready === true,
+    reason_codes: Array.isArray(result.reason_codes)
+      ? result.reason_codes.filter((item): item is string => typeof item === 'string')
+      : ['marketing_readiness_invalid'],
+    total_targets: Number(result.total_targets) || 0,
+    eligible_targets: Number(result.eligible_targets) || 0,
+    pending_targets: Number(result.pending_targets) || 0,
+  };
+}
+
+async function getCampaignTargetMarketingReason(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaignId: string,
+  targetId: string,
+): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.rpc('_comm_whatsapp_campaign_target_marketing_reason', {
+    p_campaign_id: campaignId,
+    p_target_id: targetId,
+  });
+  if (error) throw new Error(`Não foi possível validar elegibilidade do contato: ${error.message}`);
+  if (data === null || data === undefined || data === '') return null;
+  if (typeof data !== 'string') throw new Error('A validação do contato retornou resultado inválido.');
+  return data;
+}
 
 const createJsonResponse = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), {
   status,
@@ -342,6 +391,36 @@ class CampaignProviderAcceptedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'CampaignProviderAcceptedError';
+  }
+}
+
+class CampaignDispatchGateError extends Error {
+  constructor(
+    readonly gate: 'campaign_inactive' | 'window_closed' | 'marketing_eligibility',
+    message: string,
+    readonly reasonCode?: string,
+  ) {
+    super(message);
+    this.name = 'CampaignDispatchGateError';
+  }
+}
+
+async function assertCampaignDispatchReady(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaignId: string,
+  targetId: string,
+): Promise<void> {
+  const campaign = await getCampaign(supabaseAdmin, campaignId);
+  if (!['queued', 'running', 'scheduled'].includes(campaign.status)
+      || (campaign.scheduled_at && Date.parse(campaign.scheduled_at) > Date.now())) {
+    throw new CampaignDispatchGateError('campaign_inactive', 'A campanha foi pausada ou saiu da fila antes do envio.');
+  }
+  if (!isWithinSendWindow(campaign)) {
+    throw new CampaignDispatchGateError('window_closed', 'A janela de envio terminou antes do envio.');
+  }
+  const reasonCode = await getCampaignTargetMarketingReason(supabaseAdmin, campaignId, targetId);
+  if (reasonCode) {
+    throw new CampaignDispatchGateError('marketing_eligibility', 'A elegibilidade do contato deixou de estar comprovada.', reasonCode);
   }
 }
 
@@ -1035,9 +1114,36 @@ async function activateCampaign(
     throw new Error('Somente campanhas em rascunho, agendadas ou pausadas podem ser ativadas.');
   }
 
+  if (!isCampaignMarketingReviewReady(campaign.audience_config)) {
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      eventType: 'campaign_marketing_eligibility_blocked',
+      payload: { reason_codes: ['campaign_marketing_review_pending'] },
+      createdBy: profileId,
+    });
+    throw new Error('Ativação bloqueada: registre a revisão humana da finalidade/base legal e a confirmação vigente da promoção.');
+  }
+
   let materialized = { total: 0, valid: 0, invalid: 0 };
   if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
     materialized = await materializeCrmTargets(supabaseAdmin, campaign);
+  }
+
+  const readiness = await getCampaignMarketingReadiness(supabaseAdmin, campaign.id);
+  if (!readiness.ready) {
+    const reasons = readiness.reason_codes.length > 0 ? readiness.reason_codes.join(', ') : 'campaign_marketing_eligibility_pending';
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      eventType: 'campaign_marketing_eligibility_blocked',
+      payload: {
+        reason_codes: readiness.reason_codes,
+        eligible_targets: readiness.eligible_targets,
+        pending_targets: readiness.pending_targets,
+        total_targets: readiness.total_targets,
+      },
+      createdBy: profileId,
+    });
+    throw new Error(`Ativação bloqueada por elegibilidade de marketing (${readiness.eligible_targets}/${readiness.total_targets} contatos elegíveis): ${reasons}.`);
   }
 
   const nextStatus = campaign.scheduled_at && new Date(campaign.scheduled_at).getTime() > Date.now()
@@ -1327,7 +1433,7 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     .not('sent_at', 'is', null)
     // Alvos já respondidos não precisam voltar para a reconciliação.
     // Isso também evita updates condicionais sem nenhuma linha correspondente.
-    .is('responded_at', 'is', null)
+    .is('responded_at', null)
     .limit(500);
 
   if (campaignId) {
@@ -1609,7 +1715,7 @@ async function reconcileAcceptedCampaignPersistences(params: {
 // ── Stage burst helpers ──────────────────────────────────────────────
 
 type StageDispatchReservation = {
-  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost';
+  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost' | 'campaign_inactive' | 'window_closed' | 'eligibility_blocked';
   retry_at: string | null;
   reason: string | null;
 };
@@ -1622,7 +1728,7 @@ async function reserveStageDispatch(
     lockToken: string;
     stageIndex: number;
     expectedMessageCount: number;
-    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null }>;
+    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null; channel_id: string; time_zone: string }>;
   },
 ): Promise<StageDispatchReservation> {
   const { data, error } = await supabaseAdmin.rpc('reserve_comm_whatsapp_campaign_stage_dispatch', {
@@ -1713,7 +1819,7 @@ async function cancelFuturePendingDispatches(
 }
 
 type StageDispatchRetryReservation = {
-  result: 'reserved' | 'rate_limited' | 'lease_lost';
+  result: 'reserved' | 'rate_limited' | 'lease_lost' | 'eligibility_blocked';
   retry_at: string | null;
   reason: string | null;
 };
@@ -1725,7 +1831,7 @@ async function reserveStageDispatchRetry(
     targetId: string;
     lockToken: string;
     stageIndex: number;
-    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null }>;
+    steps: Array<{ step_index: number; stage_index: number; step_kind: string; message_text: string; media_url: string | null; channel_id: string; time_zone: string }>;
   },
 ): Promise<StageDispatchRetryReservation> {
   const { data, error } = await supabaseAdmin.rpc('reserve_comm_whatsapp_campaign_stage_dispatch_retry', {
@@ -1836,6 +1942,8 @@ async function executeStageBurst(params: {
       step_kind: s.step_kind,
       message_text: s.message_text,
       media_url: s.media_url,
+      channel_id: CAMPAIGN_ADMISSION_CHANNEL_KEY,
+      time_zone: Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
     })),
   });
 
@@ -1843,7 +1951,26 @@ async function executeStageBurst(params: {
     throw new CampaignTargetLeaseLostError();
   }
 
+  if (reservation.result === 'eligibility_blocked') {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'stopped', stopped_at: getNowIso(), stopped_reason: reservation.reason || 'campaign_marketing_eligibility_pending',
+      error_message: reservation.reason || 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_marketing_eligibility_blocked',
+      payload: { reason_code: reservation.reason || 'contact_marketing_eligibility_pending' },
+    });
+    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: reservation.reason || 'Elegibilidade de marketing pendente.' };
+  }
+
   if (reservation.result !== 'reserved') {
+    if (reservation.result === 'campaign_inactive') {
+      const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+      await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+      return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred', nextStepIndex: companions[0].step_index };
+    }
     await deferClaimedTargetForDispatchGate(supabaseAdmin, {
       target,
       retryAt: reservation.retry_at || new Date(Date.now() + 60_000).toISOString(),
@@ -1864,6 +1991,69 @@ async function executeStageBurst(params: {
     const step = companions[i];
     const dispatchKey = `${campaign.id}:${target.id}:${step.step_index}`;
 
+    const activeCampaign = await getCampaign(supabaseAdmin, campaign.id);
+    if (activeCampaign.status === 'cancelled') {
+      for (let j = i; j < companions.length; j++) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+          newStatus: 'cancelled',
+          resolution: 'campaign_cancelled',
+        });
+      }
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'cancelled', locked_at: null, lock_token: null,
+      });
+      return { status: 'cancelled', nextStepIndex: step.step_index };
+    }
+    if (activeCampaign.status === 'paused' || !['queued', 'running', 'scheduled'].includes(activeCampaign.status)) {
+      for (let j = i; j < companions.length; j++) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+          newStatus: 'cancelled',
+          resolution: 'campaign_paused',
+        });
+      }
+      await updateClaimedTarget(supabaseAdmin, target, { status: 'scheduled', locked_at: null, lock_token: null });
+      return { status: 'deferred', nextStepIndex: step.step_index };
+    }
+    if (!isWithinSendWindow(activeCampaign)) {
+      for (let j = i; j < companions.length; j++) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+          newStatus: 'cancelled',
+          resolution: 'send_window_closed',
+        });
+      }
+      await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+        target,
+        retryAt: new Date(Date.now() + 60_000).toISOString(),
+        reason: 'A janela de envio terminou durante o burst.',
+      });
+      return { status: 'deferred', nextStepIndex: step.step_index };
+    }
+
+    const marketingReason = await getCampaignTargetMarketingReason(supabaseAdmin, campaign.id, target.id);
+    if (marketingReason) {
+      for (let j = i; j < companions.length; j++) {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+          newStatus: 'cancelled',
+          resolution: 'marketing_eligibility_blocked',
+        });
+      }
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'stopped', stopped_at: getNowIso(), stopped_reason: marketingReason,
+        error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_marketing_eligibility_blocked',
+        payload: { reason_code: marketingReason, stopped_before_step: step.step_index },
+      });
+      return { status: 'stopped', nextStepIndex: step.step_index, error: marketingReason };
+    }
+
     // ── stop_on_reply check ──
     if (campaign.stop_on_reply && target.sent_at) {
       // Normal reply detection (short-circuits once responded_at is set)
@@ -1882,6 +2072,14 @@ async function executeStageBurst(params: {
               resolution: isOptOut ? 'opt_out_during_burst' : 'stop_on_reply',
             });
           }
+          await updateClaimedTarget(supabaseAdmin, target, {
+            status: isOptOut ? 'stopped' : 'responded',
+            ...(isOptOut ? { stopped_at: reply.respondedAt || nowIso, stopped_reason: 'contact_opt_out' } : {}),
+            responded_at: reply.respondedAt || target.responded_at || nowIso,
+            chat_id: reply.chat.id,
+            locked_at: null,
+            lock_token: null,
+          });
           return {
             status: isOptOut ? 'stopped' : 'responded',
             nextStepIndex: step.step_index,
@@ -1926,6 +2124,14 @@ async function executeStageBurst(params: {
                   resolution: 'opt_out_during_burst',
                 });
               }
+              await updateClaimedTarget(supabaseAdmin, target, {
+                status: 'stopped',
+                stopped_at: getNowIso(),
+                stopped_reason: 'contact_opt_out',
+                responded_at: target.responded_at || getNowIso(),
+                locked_at: null,
+                lock_token: null,
+              });
               return {
                 status: 'stopped',
                 nextStepIndex: step.step_index,
@@ -1962,6 +2168,8 @@ async function executeStageBurst(params: {
               step_kind: s.step_kind,
               message_text: s.message_text,
               media_url: s.media_url,
+              channel_id: CAMPAIGN_ADMISSION_CHANNEL_KEY,
+              time_zone: Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
             })),
           });
 
@@ -2009,7 +2217,10 @@ async function executeStageBurst(params: {
     let response: Response;
     let payload: unknown;
     try {
-      const assertSendPermission = () => assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+      const assertSendPermission = async () => {
+        await assertCampaignDispatchReady(supabaseAdmin, campaign.id, target.id);
+        await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+      };
       await assertSendPermission();
       response = step.media_url
         ? await sendCampaignMedia(params.token, chatId, step, text, assertSendPermission)
@@ -2017,6 +2228,42 @@ async function executeStageBurst(params: {
       payload = await readResponsePayload(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+      if (error instanceof CampaignDispatchGateError) {
+        const resolution = error.gate === 'window_closed' ? 'send_window_closed'
+          : error.gate === 'marketing_eligibility' ? 'marketing_eligibility_blocked'
+            : 'campaign_paused';
+        for (let j = i; j < companions.length; j++) {
+          await advanceStepDispatch(supabaseAdmin, {
+            dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+            newStatus: 'cancelled',
+            resolution,
+          });
+        }
+        await insertEvent(supabaseAdmin, {
+          campaignId: campaign.id,
+          targetId: target.id,
+          eventType: error.gate === 'marketing_eligibility' ? 'target_marketing_eligibility_blocked' : 'target_dispatch_deferred',
+          payload: { reason_code: error.reasonCode || error.gate, before_step: step.step_index },
+        });
+        if (error.gate === 'marketing_eligibility') {
+          await updateClaimedTarget(supabaseAdmin, target, {
+            status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_marketing_eligibility_pending',
+            error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+          });
+          return { status: 'stopped', nextStepIndex: step.step_index, error: error.reasonCode };
+        }
+        if (error.gate === 'window_closed') {
+          await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+            target,
+            retryAt: new Date(Date.now() + 60_000).toISOString(),
+            reason: error.message,
+          });
+          return { status: 'deferred', nextStepIndex: step.step_index };
+        }
+        const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+        await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+        return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred', nextStepIndex: step.step_index };
+      }
       if (error instanceof ContactPermissionBlockedError) {
         for (let j = i; j < companions.length; j++) {
           await advanceStepDispatch(supabaseAdmin, {
@@ -2121,9 +2368,9 @@ async function executeStageBurst(params: {
         incrementUnread: false,
         externalMessageId,
         direction: 'outbound',
-        messageType: 'text',
+        messageType: step.media_url ? (step.media_type || 'document') : 'text',
         deliveryStatus,
-        textContent: text,
+        textContent: step.media_url ? null : text,
         createdBy: campaign.created_by,
         source: 'campaign',
         senderPhone: params.senderPhone,
@@ -2131,17 +2378,18 @@ async function executeStageBurst(params: {
         statusUpdatedAt: nowIso,
         errorMessage: null,
         mediaId: null,
-        mediaUrl: null,
+        mediaUrl: step.media_url,
         mediaMimeType: null,
-        mediaFileName: null,
+        mediaFileName: step.media_filename,
         mediaSizeBytes: null,
         mediaDurationSeconds: null,
-        mediaCaption: null,
+        mediaCaption: step.media_url ? text : null,
         metadata: {
           provider: 'whapi',
           campaign_id: campaign.id,
           campaign_target_id: target.id,
           campaign_step_index: step.step_index,
+          ...(step.media_url ? { campaign_media_type: step.media_type || 'document' } : {}),
         },
       });
     } catch (error) {
@@ -2541,6 +2789,48 @@ async function releaseClaimedTarget(
   await updateClaimedTarget(supabaseAdmin, target, { status, locked_at: null, lock_token: null });
 }
 
+const CAMPAIGN_MEDIA_MAX_BYTES = 20 * 1024 * 1024;
+const CAMPAIGN_MEDIA_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4',
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+
+function resolveCampaignMediaPublicUrl(mediaUrl: string): URL {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  if (!supabaseUrl) throw new Error('SUPABASE_URL não está configurada para resolver a mídia da campanha.');
+  const base = new URL(supabaseUrl);
+  const prefix = '/storage/v1/object/public/whatsapp-campaign-media/';
+  let objectPath: string;
+
+  if (mediaUrl.startsWith('storage://whatsapp-campaign-media/')) {
+    objectPath = mediaUrl.slice('storage://whatsapp-campaign-media/'.length);
+  } else {
+    const candidate = new URL(mediaUrl);
+    if (candidate.origin !== base.origin || candidate.protocol !== base.protocol || candidate.search || candidate.hash || candidate.username || candidate.password) {
+      throw new Error('A mídia da campanha deve estar no bucket whatsapp-campaign-media.');
+    }
+    if (!candidate.pathname.startsWith(prefix)) {
+      throw new Error('A URL da mídia não aponta para o bucket permitido da campanha.');
+    }
+    try {
+      objectPath = decodeURIComponent(candidate.pathname.slice(prefix.length));
+    } catch {
+      throw new Error('O caminho da mídia da campanha é inválido.');
+    }
+  }
+
+  const segments = objectPath.split('/');
+  if (!objectPath || objectPath.length > 512 || segments.some((segment) => (
+    !segment || segment === '.' || segment === '..' || segment.includes('\\')
+      || Array.from(segment).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+  ))) {
+    throw new Error('O caminho da mídia da campanha é inválido.');
+  }
+  const encodedPath = segments.map((segment) => encodeURIComponent(segment)).join('/');
+  return new URL(`${prefix}${encodedPath}`, base.origin);
+}
+
 async function sendCampaignMedia(
   token: string,
   chatId: string,
@@ -2552,13 +2842,34 @@ async function sendCampaignMedia(
     throw new Error('Etapa sem midia valida configurada.');
   }
 
-  const mediaResponse = await fetch(step.media_url, { method: 'GET', headers: { Accept: '*/*' } });
+  const mediaResponse = await fetch(resolveCampaignMediaPublicUrl(step.media_url), {
+    method: 'GET',
+    headers: { Accept: Array.from(CAMPAIGN_MEDIA_MIME_TYPES).join(',') },
+    redirect: 'error',
+  });
   if (!mediaResponse.ok) {
     throw new Error('Nao foi possivel baixar a midia da campanha para envio.');
   }
 
   const contentType = mediaResponse.headers.get('content-type') || 'application/octet-stream';
+  if (!CAMPAIGN_MEDIA_MIME_TYPES.has(contentType.split(';', 1)[0].trim().toLowerCase())) {
+    throw new Error('O tipo MIME da mídia da campanha não é permitido.');
+  }
+  const declaredLength = Number(mediaResponse.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > CAMPAIGN_MEDIA_MAX_BYTES) {
+    throw new Error('A mídia da campanha excede o limite de 20 MiB.');
+  }
   const bytes = await mediaResponse.arrayBuffer();
+  if (bytes.byteLength === 0 || bytes.byteLength > CAMPAIGN_MEDIA_MAX_BYTES) {
+    throw new Error('O tamanho da mídia da campanha é inválido.');
+  }
+  const normalizedMimeType = contentType.split(';', 1)[0].trim().toLowerCase();
+  const compatibleType = normalizedMimeType.startsWith('image/') ? 'image'
+    : normalizedMimeType === 'video/mp4' ? 'video'
+      : 'document';
+  if (compatibleType !== step.media_type) {
+    throw new Error('O tipo da mídia não corresponde à etapa da campanha.');
+  }
   const fileName = step.media_filename || `campanha-midia.${contentType.split('/')[1] || 'bin'}`;
   const file = new File([bytes], fileName, { type: contentType });
 
@@ -3080,6 +3391,8 @@ async function sendTarget(params: {
     messageText: text,
     stepIndex: step.step_index,
     mediaUrl: step.media_url,
+    channel_id: CAMPAIGN_ADMISSION_CHANNEL_KEY,
+    time_zone: Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE,
   };
   const dispatchReservation = await reserveCampaignDispatch(supabaseAdmin, {
     campaignId: campaign.id,
@@ -3091,7 +3404,26 @@ async function sendTarget(params: {
     throw new CampaignTargetLeaseLostError();
   }
 
+  if (dispatchReservation.result === 'eligibility_blocked') {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'stopped', stopped_at: getNowIso(), stopped_reason: dispatchReservation.reason || 'campaign_marketing_eligibility_pending',
+      error_message: dispatchReservation.reason || 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_marketing_eligibility_blocked',
+      payload: { reason_code: dispatchReservation.reason || 'contact_marketing_eligibility_pending' },
+    });
+    return { status: 'stopped', reason: dispatchReservation.reason || 'Elegibilidade de marketing pendente.' };
+  }
+
   if (dispatchReservation.result !== 'reserved' || !dispatchReservation.event_id) {
+    if (dispatchReservation.result === 'campaign_inactive') {
+      const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+      await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+      return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred' };
+    }
     const retryAt = dispatchReservation.retry_at || new Date(Date.now() + 60 * 1000).toISOString();
     await deferClaimedTargetForDispatchGate(supabaseAdmin, {
       target,
@@ -3136,10 +3468,56 @@ async function sendTarget(params: {
   chatId = dispatchRoute?.externalChatId || chatId;
   phoneDigits = dispatchRoute?.phoneNumber || phoneDigits;
 
+  const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+  if (!['queued', 'running', 'scheduled'].includes(currentCampaign.status)) {
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'campaign_inactive_before_provider',
+      dispatchPermitState: 'released',
+    });
+    await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+    return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred' };
+  }
+  if (!isWithinSendWindow(currentCampaign)) {
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'send_window_closed_before_provider',
+      dispatchPermitState: 'released',
+    });
+    await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+      target,
+      retryAt: new Date(Date.now() + 60_000).toISOString(),
+      reason: 'A janela de envio terminou antes do envio.',
+    });
+    return { status: 'deferred' };
+  }
+  const marketingReason = await getCampaignTargetMarketingReason(supabaseAdmin, campaign.id, target.id);
+  if (marketingReason) {
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'marketing_eligibility_blocked_before_provider',
+      dispatchPermitState: 'released',
+    });
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'stopped', stopped_at: getNowIso(), stopped_reason: marketingReason,
+      error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_marketing_eligibility_blocked',
+      payload: { reason_code: marketingReason, stopped_before_step: step.step_index },
+    });
+    return { status: 'stopped', reason: marketingReason };
+  }
+
   let response: Response;
   let payload: unknown;
   try {
-    const assertSendPermission = () => assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+    const assertSendPermission = async () => {
+      await assertCampaignDispatchReady(supabaseAdmin, campaign.id, target.id);
+      await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
+    };
     await assertSendPermission();
     const whapi = createWhapiClient(params.token);
     response = step.media_url
@@ -3148,6 +3526,49 @@ async function sendTarget(params: {
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+    if (error instanceof CampaignDispatchGateError) {
+      await resolveCampaignSendStartedEvent(supabaseAdmin, {
+        eventId: sendStartedEvent.id,
+        resolution: error.gate === 'marketing_eligibility' ? 'marketing_eligibility_blocked_before_provider' : `${error.gate}_before_provider`,
+        dispatchPermitState: 'released',
+      });
+      if (error.gate === 'marketing_eligibility') {
+        await updateClaimedTarget(supabaseAdmin, target, {
+          status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_marketing_eligibility_pending',
+          error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+        });
+        await insertEvent(supabaseAdmin, {
+          campaignId: campaign.id,
+          targetId: target.id,
+          eventType: 'target_marketing_eligibility_blocked',
+          payload: { reason_code: error.reasonCode || 'contact_marketing_eligibility_pending', stopped_before_step: step.step_index },
+        });
+        return { status: 'stopped', reason: error.reasonCode };
+      }
+      if (error.gate === 'window_closed') {
+        await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+          target,
+          retryAt: new Date(Date.now() + 60_000).toISOString(),
+          reason: error.message,
+        });
+        await insertEvent(supabaseAdmin, {
+          campaignId: campaign.id,
+          targetId: target.id,
+          eventType: 'target_dispatch_deferred',
+          payload: { reason_code: error.gate, step_index: step.step_index },
+        });
+        return { status: 'deferred' };
+      }
+      const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+      await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_dispatch_deferred',
+        payload: { reason_code: error.gate, step_index: step.step_index },
+      });
+      return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred' };
+    }
     if (error instanceof ContactPermissionBlockedError) {
       await resolveCampaignSendStartedEvent(supabaseAdmin, {
         eventId: sendStartedEvent.id,
@@ -3298,9 +3719,9 @@ async function sendTarget(params: {
       incrementUnread: false,
       externalMessageId,
       direction: 'outbound',
-      messageType: 'text',
+      messageType: step.media_url ? (step.media_type || 'document') : 'text',
       deliveryStatus,
-      textContent: text,
+      textContent: step.media_url ? null : text,
       createdBy: campaign.created_by,
       source: 'campaign',
       senderPhone: params.senderPhone,
@@ -3308,17 +3729,18 @@ async function sendTarget(params: {
       statusUpdatedAt: nowIso,
       errorMessage: null,
       mediaId: null,
-      mediaUrl: null,
+      mediaUrl: step.media_url,
       mediaMimeType: null,
-      mediaFileName: null,
+      mediaFileName: step.media_filename,
       mediaSizeBytes: null,
       mediaDurationSeconds: null,
-      mediaCaption: null,
+      mediaCaption: step.media_url ? text : null,
       metadata: {
         provider: 'whapi',
         campaign_id: campaign.id,
         campaign_target_id: target.id,
         campaign_step_index: step.step_index,
+        ...(step.media_url ? { campaign_media_type: step.media_type || 'document' } : {}),
       },
     });
   } catch (error) {
@@ -3577,15 +3999,42 @@ async function processCampaigns(
   let stopped = 0;
 
   for (const campaign of campaigns) {
+    let readiness: CampaignMarketingReadiness;
+    try {
+      readiness = await getCampaignMarketingReadiness(supabaseAdmin, campaign.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao validar elegibilidade de marketing.';
+      await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'paused', last_error: message }).eq('id', campaign.id);
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        eventType: 'campaign_marketing_readiness_failed_closed',
+        payload: { error: message },
+      });
+      continue;
+    }
+    if (!readiness.ready) {
+      const message = `Elegibilidade de marketing pendente (${readiness.eligible_targets}/${readiness.total_targets} contatos elegíveis): ${readiness.reason_codes.join(', ') || 'campaign_marketing_eligibility_pending'}.`;
+      await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'paused', last_error: message }).eq('id', campaign.id);
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        eventType: 'campaign_marketing_eligibility_blocked',
+        payload: {
+          reason_codes: readiness.reason_codes,
+          eligible_targets: readiness.eligible_targets,
+          pending_targets: readiness.pending_targets,
+          total_targets: readiness.total_targets,
+        },
+      });
+      continue;
+    }
     if (!isWithinSendWindow(campaign)) {
       await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'scheduled', last_error: null }).eq('id', campaign.id);
       continue;
     }
 
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
-    // pacing_per_minute so espaca a admissao de contatos novos (reforcado na
-    // RPC de reserva de despacho); alvos ja admitidos podem ser reivindicados
-    // livremente ate o teto geral da invocacao, sem depender do ritmo.
+    // A RPC transacional aplica cota por novos destinatários e cadence por
+    // janela. Alvos já admitidos continuam sem consumir novas vagas.
     const campaignLimit = maxLimit - processed;
     if (campaignLimit <= 0) break;
 

@@ -30,6 +30,25 @@ Para criar uma política, `expected_updated_at` pode ser omitido. Para alterar u
 
 RPCs de validação retornam erros SQL identificáveis: `MCP_ADMIN_REQUIRED`, `CONTACT_PERMISSION_INVALID_CHANNEL`, `CONTACT_PERMISSION_INVALID_ENDPOINT`, `CONTACT_PERMISSION_INVALID_SCOPE`, `CONTACT_PERMISSION_INVALID_STATE`, `CONTACT_PERMISSION_LEAD_ENDPOINT_MISMATCH`, `CONTACT_PERMISSION_BULK_LIMIT`, `CONTACT_PERMISSION_DUPLICATE_BULK_TARGET` e `CONTACT_PERMISSION_IDEMPOTENCY_CONFLICT`. Evidência deve ser objeto JSON de até 8 KiB; motivo aceita até 1.000 caracteres.
 
+## Elegibilidade de marketing para campanhas
+
+Uma política `allowed` em `commercial` é necessária, mas sozinha não autoriza prospecção. A campanha também precisa registrar em `audience_config.marketing_review` as revisões humanas de finalidade/base legal e da promoção. Cada contato precisa guardar, em `contact_permission_policies.evidence`, evidência específica para a campanha, por exemplo:
+
+```json
+{
+  "campaign_marketing_eligibility": {
+    "<campaign_id>": {
+      "status": "approved",
+      "purpose": "marketing",
+      "legal_basis": "referência validada pela pessoa responsável",
+      "evidence_reference": "registro rastreável da validação"
+    }
+  }
+}
+```
+
+O estado `unknown` permanece bloqueado; nem a validade do WhatsApp, nem uma fatura histórica, CNPJ/MEI, DDD ou a presença do número no CRM autorizam mudar a política para `allowed`. Bloqueios `global`/`commercial`, opt-outs e endpoints já admitidos em outra campanha nas últimas 24 horas continuam impedindo novas admissões. Revisões e evidências devem apontar para documentação verificável, ser registradas por operador autorizado e manter os eventos/auditoria existentes. Para promoções Amil, confirme antes a vigência, região, produto, elegibilidade MEI, mínimo de vidas e se o contrato precisa estar aprovado/assinado em outubro; DDD não demonstra residência. A campanha de outubro/2026 identificada também não pode ser ativada sem imagem no primeiro passo.
+
 ## Guard de envio e respostas
 
 `supabase/functions/_shared/contact-permissions.ts` expõe `assertContactPermissionForSend(client, endpoint, scope)`. Ele chama `check_contact_permission_for_send(channel, endpoint_normalized, purpose_scope)` imediatamente antes do provedor. O RPC permite o envio quando não há bloqueio `global` ou no escopo solicitado. Erro, resultado inválido, endpoint inválido ou resposta ambígua gera `ContactPermissionCheckError` e bloqueia o envio. Bloqueios retornam `ContactPermissionBlockedError`, com código `CONTACT_PERMISSION_BLOCKED`; endpoints não são incluídos na mensagem de erro. As rotas HTTP devolvem 409 para bloqueio e 503 para falha de consulta, sem retry silencioso.

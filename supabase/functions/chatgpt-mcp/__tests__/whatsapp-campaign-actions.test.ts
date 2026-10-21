@@ -96,6 +96,40 @@ describe('MCP WhatsApp campaign actions', () => {
     }));
   });
 
+  it('accepts a bucket-relative media object path without accepting arbitrary media URLs', async () => {
+    const { client, rpc } = makeSupabase({ success: true, replayed: false, campaign: { id: campaignId, status: 'draft' } });
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client,
+      toolName: 'kifer_update_whatsapp_campaign',
+      actorId,
+      arguments: {
+        campaign_id: campaignId,
+        expected_updated_at: updatedAt,
+        client_request_id: 'campaign:media:1',
+        steps: [{ message: 'Olá', step_index: 0, media_storage_path: 'uploads/amil-outubro.png' }],
+      },
+    });
+
+    expect(result).toMatchObject({ success: true });
+    expect(rpc).toHaveBeenCalledWith('mcp_comm_whatsapp_campaign_mutation', expect.objectContaining({
+      p_payload: { steps: [{ message: 'Olá', step_index: 0, media_storage_path: 'uploads/amil-outubro.png' }] },
+    }));
+
+    const malicious = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client,
+      toolName: 'kifer_update_whatsapp_campaign',
+      actorId,
+      arguments: {
+        campaign_id: campaignId,
+        expected_updated_at: updatedAt,
+        client_request_id: 'campaign:media:2',
+        steps: [{ message: 'Olá', media_url: 'https://example.invalid/payload' }],
+      },
+    });
+    expect(malicious).toMatchObject({ success: false, error_code: 'INVALID_INPUT' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
   it('imports batches as contacts and does not translate them into leads', async () => {
     const { client, rpc } = makeSupabase({ success: true, inserted: 1, duplicate: 1, invalid_phone: 1, blocked: 0, failed: 0, replayed: false });
     await executeMcpWhatsAppCampaignWriteAction({

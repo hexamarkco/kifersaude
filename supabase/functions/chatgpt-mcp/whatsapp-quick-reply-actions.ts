@@ -9,7 +9,7 @@ const fail = (error_code: string, message: string): McpWriteResult => ({ success
 
 export const MCP_WHATSAPP_QUICK_REPLY_TOOLS: readonly McpToolDescriptor[] = [
   { name: 'kifer_get_whatsapp_quick_replies', description: 'Consulta as respostas rápidas e atalhos configurados na Inbox WhatsApp. OAuth admin obrigatório.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'kifer_update_whatsapp_quick_replies', description: 'Substitui a lista ordenada de respostas rápidas usada na Inbox. Envie a lista completa e expected_updated_at da leitura; use null somente para criar a configuração ausente. A auditoria registra IDs e contagem, sem armazenar o texto das mensagens.', inputSchema: { type: 'object', required: ['quick_replies', 'expected_updated_at'], additionalProperties: false, properties: { expected_updated_at: { type: ['string', 'null'], format: 'date-time' }, quick_replies: { type: 'array', maxItems: 100, items: { type: 'object', required: ['name', 'shortcut', 'text'], additionalProperties: false, properties: { id: { type: 'string', maxLength: 120 }, name: { type: 'string', minLength: 1, maxLength: 120 }, shortcut: { type: 'string', maxLength: 120 }, text: { type: 'string', minLength: 1, maxLength: 4000 } } } } } }, annotations: { readOnlyHint: false } },
+  { name: 'kifer_update_whatsapp_quick_replies', description: 'Substitui a lista ordenada de respostas rápidas usada na Inbox. Envie a lista completa e expected_updated_at da leitura; use null somente para criar a configuração ausente. A auditoria registra IDs e contagem, sem armazenar o texto das mensagens.', inputSchema: { type: 'object', required: ['quick_replies', 'expected_updated_at'], additionalProperties: false, properties: { expected_updated_at: { type: ['string', 'null'], format: 'date-time' }, quick_replies: { type: 'array', maxItems: 100, items: { type: 'object', required: ['name', 'shortcut', 'text'], additionalProperties: false, properties: { id: { type: 'string', maxLength: 120, pattern: '^[A-Za-z0-9:_-]{1,120}$' }, name: { type: 'string', minLength: 1, maxLength: 120 }, shortcut: { type: 'string', maxLength: 120 }, text: { type: 'string', minLength: 1, maxLength: 4000 } } } } } }, annotations: { readOnlyHint: false } },
 ];
 
 export const MCP_WHATSAPP_QUICK_REPLY_READ_TOOL_NAMES = ['kifer_get_whatsapp_quick_replies'] as const;
@@ -19,25 +19,36 @@ const normalizeShortcut = (value: string) => value.normalize('NFD').replace(/[\u
 
 const readCurrent = async (supabase: SupabaseClient) => supabase.from('integration_settings').select('id,slug,name,description,settings,updated_at').eq('slug', SLUG).maybeSingle();
 
-const normalizeQuickReplies = (value: unknown, previous: QuickReply[], now: string): QuickReply[] | null => {
+const normalizeQuickReplies = (value: unknown, previous: QuickReply[], now: string | null, strict = true): QuickReply[] | null => {
   if (!Array.isArray(value) || value.length > 100) return null;
   const used = new Set<string>();
+  const usedIds = new Set<string>();
   const result: QuickReply[] = [];
   for (let index = 0; index < value.length; index += 1) {
     const raw = value[index];
     if (!isRecord(raw)) return null;
+    if (strict && Object.keys(raw).some((key) => !['id', 'name', 'shortcut', 'text', 'created_at', 'updated_at'].includes(key))) return null;
+    if (raw.id !== undefined && typeof raw.id !== 'string') return null;
     const name = text(raw.name);
     const body = typeof raw.text === 'string' ? raw.text.replace(/\r\n/g, '\n').trim() : '';
     if (!name || name.length > 120 || !body || body.length > 4000 || (raw.shortcut !== undefined && (typeof raw.shortcut !== 'string' || raw.shortcut.length > 120))) return null;
     const id = text(raw.id) || `quick-reply-${normalizeShortcut(name) || `msg-${index + 1}`}-${index + 1}`;
-    if (id.length > 120) return null;
+    if (id.length > 120 || !/^[A-Za-z0-9:_-]{1,120}$/.test(id) || usedIds.has(id)) return null;
+    usedIds.add(id);
     const baseShortcut = normalizeShortcut(text(raw.shortcut) || name) || `msg-${index + 1}`;
     let shortcut = baseShortcut;
     let suffix = 2;
     while (used.has(shortcut)) { shortcut = `${baseShortcut}-${suffix}`; suffix += 1; }
     used.add(shortcut);
     const prior = previous.find((entry) => entry.id === id);
-    result.push({ id, name, shortcut, text: body, created_at: prior?.created_at ?? now, updated_at: now });
+    result.push({
+      id,
+      name,
+      shortcut,
+      text: body,
+      created_at: prior?.created_at ?? (text(raw.created_at) || now),
+      updated_at: now ?? (text(raw.updated_at) || null),
+    });
   }
   return result;
 };
@@ -48,8 +59,7 @@ export async function executeMcpWhatsAppQuickReplyReadAction(params: { supabase:
   const { data, error } = await readCurrent(supabase);
   if (error) return fail('DATABASE_ERROR', 'Não foi possível consultar as respostas rápidas.');
   const settings = isRecord(data?.settings) ? data.settings : {};
-  const now = new Date().toISOString();
-  const quickReplies = normalizeQuickReplies(settings.quickReplies ?? settings.quick_replies ?? [], [], now) ?? [];
+  const quickReplies = normalizeQuickReplies(settings.quickReplies ?? settings.quick_replies ?? [], [], null, false) ?? [];
   const { error: auditError } = await supabase.from('chatgpt_mcp_audit_log').insert({ tool_name: toolName, actor: actor.actor, resource_name: 'integration_settings', request_summary: { slug: SLUG, quick_reply_count: quickReplies.length } });
   if (auditError) console.error('[chatgpt-mcp] falha ao auditar leitura de respostas rápidas:', auditError.message);
   return { success: true, quick_replies: quickReplies, updated_at: text(data?.updated_at) || null };

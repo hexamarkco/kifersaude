@@ -38,6 +38,7 @@ import { executeMcpWhatsAppMessageWriteAction, MCP_WHATSAPP_MESSAGE_WRITE_TOOL_N
 import { executeMcpWhatsAppAiWriteAction, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } from './whatsapp-ai-actions.ts';
 import { executeMcpWhatsAppContactWriteAction, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
 import { executeMcpWhatsAppQuickReplyWriteAction, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
+import { executeMcpTrackingConfigWriteAction, MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES } from './tracking-config-actions.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
@@ -2964,6 +2965,9 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   }
   if ((MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
     return executeMcpWhatsAppQuickReplyWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpTrackingConfigWriteAction({ supabase, toolName, arguments: args, actor });
   }
   const isContractPersonImportAction = (MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)
     || (MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);

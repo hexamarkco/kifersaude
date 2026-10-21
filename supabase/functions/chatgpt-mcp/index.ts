@@ -22,6 +22,7 @@ import { MCP_WHATSAPP_MESSAGE_TOOLS, MCP_WHATSAPP_MESSAGE_WRITE_TOOL_NAMES } fro
 import { executeMcpWhatsAppAiReadAction, MCP_WHATSAPP_AI_READ_TOOL_NAMES, MCP_WHATSAPP_AI_TOOLS, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } from './whatsapp-ai-actions.ts';
 import { executeMcpWhatsAppContactReadAction, MCP_WHATSAPP_CONTACT_READ_TOOL_NAMES, MCP_WHATSAPP_CONTACT_TOOLS, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
 import { executeMcpWhatsAppQuickReplyReadAction, MCP_WHATSAPP_QUICK_REPLY_READ_TOOL_NAMES, MCP_WHATSAPP_QUICK_REPLY_TOOLS, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
+import { executeMcpTrackingConfigReadAction, MCP_TRACKING_CONFIG_READ_TOOL_NAMES, MCP_TRACKING_CONFIG_TOOLS, MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES } from './tracking-config-actions.ts';
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { campaignReadAuditSummary, executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
@@ -769,6 +770,7 @@ const tools = [
   ...MCP_WHATSAPP_AI_TOOLS,
   ...MCP_WHATSAPP_CONTACT_TOOLS,
   ...MCP_WHATSAPP_QUICK_REPLY_TOOLS,
+  ...MCP_TRACKING_CONFIG_TOOLS,
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
@@ -802,6 +804,7 @@ const ADMIN_READ_TOOLS = new Set([
   ...MCP_WHATSAPP_AI_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_CONTACT_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_QUICK_REPLY_READ_TOOL_NAMES,
+  ...MCP_TRACKING_CONFIG_READ_TOOL_NAMES,
 ]);
 
 async function callTool(supabase: SupabaseClient, name: string, rawArguments: unknown, actor: string, actorId: string | null, writeScopeAllowed: boolean) {
@@ -842,6 +845,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_WHATSAPP_AI_WRITE_TOOL_NAMES,
     ...MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES,
     ...MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES,
+    ...MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
@@ -989,6 +993,8 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
   if (whatsappContactResult) return toToolResult(whatsappContactResult);
   const whatsappQuickReplyResult = await executeMcpWhatsAppQuickReplyReadAction({ supabase, toolName: name, actor: { actor, actorId: actorId ?? '' } });
   if (whatsappQuickReplyResult) return toToolResult(whatsappQuickReplyResult);
+  const trackingConfigResult = await executeMcpTrackingConfigReadAction({ supabase, toolName: name, actor: { actor, actorId: actorId ?? '' } });
+  if (trackingConfigResult) return toToolResult(trackingConfigResult);
   const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (commercialReadResult) return toToolResult(commercialReadResult);
   let output: unknown;

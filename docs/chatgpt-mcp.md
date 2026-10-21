@@ -89,6 +89,7 @@ Todas as ferramentas abaixo exigem OAuth de administrador ativo. As ferramentas 
 | Consentimento | `kifer_get_contact_permission`, `kifer_set_contact_permission`, `kifer_bulk_set_contact_permission` | 1 leitura, 2 escrita | Estados `allowed`, `blocked` ou `unknown` por canal, endpoint e escopo (`global`, `commercial`, `service_reply`, `transactional`). Bulk é atômico e limitado a 50 entradas; decisões ficam em eventos append-only. |
 | Inbox e mensagens | `kifer_archive_whatsapp_chat`, `kifer_unarchive_whatsapp_chat`, `kifer_pin_whatsapp_chat`, `kifer_unpin_whatsapp_chat`, `kifer_mute_whatsapp_chat`, `kifer_unmute_whatsapp_chat`, `kifer_mark_whatsapp_chat_read`, `kifer_mark_whatsapp_chat_unread`, `kifer_link_chat_to_lead`, `kifer_unlink_chat_from_lead`, `kifer_delete_whatsapp_chat`, `kifer_set_whatsapp_autonomous_attendance`, `kifer_edit_whatsapp_message`, `kifer_delete_whatsapp_message`, `kifer_set_whatsapp_message_reaction`, `kifer_set_whatsapp_message_starred`, `kifer_forward_whatsapp_message`, `kifer_transcribe_whatsapp_audio`, `kifer_retry_whatsapp_media` | 12 ações de conversa, 7 ações de mensagem | Ações de estado do chat usam RPC MCP, admin revalidado, lock canônico, auditoria, controle de versão e idempotência. Exclusão do chat é lógica. Ativar atendimento autônomo pode gerar resposta externa real após 30 segundos e repete a qualificação no servidor. Edição, exclusão, reação, estrela e encaminhamento confirmam efeitos reais no WhatsApp; transcrição pode gerar custo; retry usa idempotência e valida consentimento. |
 | Contatos e respostas rápidas do WhatsApp | `kifer_list_whatsapp_saved_contacts`, `kifer_save_whatsapp_contact`, `kifer_rename_whatsapp_contact`, `kifer_get_whatsapp_quick_replies`, `kifer_update_whatsapp_quick_replies` | 2 leitura, 3 escrita | Contatos são lidos do cache da conta e salvos/renomeados no provedor só após confirmação. Respostas rápidas usam o `integration_settings` lido pelo composer e substituição completa com concorrência otimista. A auditoria registra apenas sufixo do telefone, tamanhos, IDs e contagem; texto de resposta não é copiado para o audit log. |
+| Rastreamento da landing page | `kifer_get_tracking_configuration`, `kifer_set_meta_pixel_id`, `kifer_set_google_tag_manager_id` | 1 leitura, 2 escrita | O MCP consulta e atualiza os IDs persistidos pelo painel com controle de versão e confirmação. Não há neste repositório um consumidor desses registros fora do painel; a execução efetiva de Meta Pixel/GTM no site depende de uma integração separada. O MCP só aceita IDs, nunca código/script arbitrário. |
 | Assistência de IA no WhatsApp | `kifer_list_whatsapp_attendance_critiques`, `kifer_suggest_whatsapp_reply`, `kifer_rewrite_whatsapp_message`, `kifer_generate_whatsapp_followup`, `kifer_refine_whatsapp_followup`, `kifer_critique_whatsapp_attendance` | 1 leitura, 5 escrita | Geração exige confirmação, pode enviar contexto a um provider configurado e gerar custo. Sugestões e follow-ups retornam rascunhos e não enviam mensagens; crítica é persistida no CRM. Auditorias não guardam rascunho, instruções ou texto da conversa. |
 | Conflitos de identidade | `kifer_resolve_identity_conflict` (além de `kifer_list_identity_conflicts` e `kifer_get_identity_conflict`) | 3 ferramentas no total: 2 leitura, 1 escrita | A resolução aceita somente candidato de lead já persistido em conflitos ambíguos ou conflitantes e exige versões atuais do conflito e conversa. Conflitos que dependem de prova externa retornam `requires_review`; merge genérico de lead/chat não é oferecido. |
 | Mídia do WhatsApp | `kifer_get_whatsapp_media` | 1 leitura | Retorna mídia apenas por conversa autorizada, com URL assinada temporária e metadados sanitizados; nunca retorna token de provider ou credenciais. |
@@ -163,6 +164,7 @@ O catálogo `kifer://capabilities/catalog` é gerado do registry publicado no en
 | Usuários e acessos | `kifer_list_users`, `kifer_invite_user`, `kifer_update_user`, `kifer_delete_user`, `kifer_send_user_password_reset`, `kifer_list_access_profiles`, `kifer_create_access_profile`, `kifer_update_access_profile`, `kifer_delete_access_profile` e `kifer_set_access_profile_permission`. Atribuir administrador, convidar, redefinir senha e excluir exige confirmação explícita; senhas em texto nunca entram no MCP. |
 | Bancada de IA | Listar, consultar, criar, renomear e excluir simulações; gerar resposta, abordagem inicial e cenário automatizado. Geração usa modelos configurados e pode gerar custo; exige confirmação e grava apenas na bancada, sem enviar WhatsApp. |
 | Recursos da Inbox | Contatos salvos no provider, respostas rápidas do composer e ferramentas de assistência de IA estão cobertos por operações específicas. O MCP não oferece sincronização irrestrita do catálogo de contatos nem acesso a dados brutos de provider. |
+| Rastreamento público | O MCP cobre a leitura/edição dos IDs guardados pelo painel com confirmação e concorrência otimista. Este repositório não consome os registros para carregar scripts na página; isso permanece uma integração pendente do próprio site. Snippets livres não são aceitos. |
 | Credenciais e segurança de infraestrutura | Senhas em texto, tokens/chaves de integração, configuração de autenticação, sessões, payloads brutos de webhook, SQL/RPC genérico e Storage irrestrito ficam fora do MCP. Segredos não são trafegados por prompts ou respostas. |
 | Conteúdo de páginas de operadoras | A página pública de operadoras é montada pelo código do frontend e não tem editor CRUD no CRM. Para alterá-la é necessário mudar e publicar o código do site. |
 
@@ -170,7 +172,7 @@ As ações de escrita e consultas operacionais exigem OAuth de administrador e `
 
 ## Migration adicional
 
-As migrations MCP incluem a base de contratos/oportunidades/consentimento/documentos/Inbox/conflitos (`20261008010000` a `20261008090000`), o staging privado de titulares/dependentes (`20261008090100`), consumo privado de dependentes (`20261021220404`), ativação da medição de produção (`20261021223000`), escrita transacional de configuração de IA (`20261021224000`), ativação transacional do canal WhatsApp (`20261021225000`) e conclusão de exclusão lógica/atendimento autônomo no Inbox (`20261021230000`). A migration de pacing de campanhas (`20261021221500`) também é necessária para os campos de intervalo usados pela operação de campanhas. Essas migrations e a Edge Function precisam ser publicadas na mesma sequência operacional autorizada; nenhuma foi aplicada ou publicada durante esta auditoria.
+As migrations MCP incluem a base de contratos/oportunidades/consentimento/documentos/Inbox/conflitos (`20261008010000` a `20261008090000`), o staging privado de titulares/dependentes (`20261008090100`), consumo privado de dependentes (`20261021220404`), ativação da medição de produção (`20261021223000`), escrita transacional de configuração de IA (`20261021224000`), ativação transacional do canal WhatsApp (`20261021225000`) e conclusão de exclusão lógica/atendimento autônomo no Inbox (`20261021230000`). A migration de pacing (`20261021221500`) configura os intervalos das campanhas, e `20261021230953` restaura o bucket público dedicado de mídia usado pelos disparos. Antes de publicar, confira `supabase migration list --linked` e `supabase db push --dry-run --linked`; não altere migrations já aplicadas e use uma nova migration para qualquer ajuste posterior.
 
 ## Publicação e reativação
 
@@ -184,14 +186,17 @@ As migrations MCP incluem a base de contratos/oportunidades/consentimento/docume
      KIFER_MCP_OAUTH_UI_URL="https://www.kifersaude.com.br/mcp-oauth-authorize.html"
    ```
 
-3. Publique a function:
+3. Publique as Edge Functions alteradas usando o script do repositório, que lê a configuração de `verify_jwt` em `supabase/config.toml`:
 
    ```bash
-   supabase functions deploy chatgpt-mcp --no-verify-jwt
-   supabase functions deploy comm-whatsapp-send
+   # Windows
+   deploy-functions.bat --no-pause
+
+   # WSL/Linux
+   bash scripts/deploy-supabase-functions.sh
    ```
 
-   Defina também `KIFER_MCP_WHATSAPP_INTERNAL_SECRET` como secret nas duas functions. É uma credencial servidor-a-servidor: nunca use o prefixo `VITE_`, nunca a exponha no navegador e nunca a inclua no ChatGPT.
+   Defina `KIFER_MCP_WHATSAPP_INTERNAL_SECRET` como secret em `chatgpt-mcp` e `comm-whatsapp-send`. É uma credencial servidor-a-servidor: nunca use o prefixo `VITE_`, nunca a exponha no navegador e nunca a inclua no ChatGPT.
 
 4. Verifique os metadados OAuth e o desafio MCP. Uma chamada não autenticada ao MCP deve retornar `401` com `resource_metadata`; o ChatGPT então inicia o OAuth automaticamente.
 

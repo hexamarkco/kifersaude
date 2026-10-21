@@ -26,6 +26,7 @@ test('30 recipients with five physical messages spend 30 admissions, not 150', (
   assert.match(reserveNewContact, /count\(\*\)::integer/);
   assert.match(reserveNewContact, /admission\.admitted_at >= p_now - interval '24 hours'/);
   assert.match(reserveNewContact, /v_campaign_admitted >= v_campaign\.daily_send_limit/);
+  assert.match(reserveNewContact, /ON CONFLICT DO NOTHING/);
   assert.doesNotMatch(reserveNewContact, /p_expected_message_count/);
   assert.match(stageReserve, /p_expected_message_count <> jsonb_array_length\(p_steps\)/);
   assert.match(stageReserve, /'expected_message_count', p_expected_message_count/);
@@ -39,6 +40,16 @@ test('30 per 570-minute window yields 19 minutes per campaign and 9m30 for two',
   assert.match(reserveNewContact, /make_interval\(secs => \(60 \/ v_rate\)::double precision\)/);
   assert.match(reserveNewContact, /pg_advisory_xact_lock/);
   assert.match(reserveNewContact, /round_robin_wait/);
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.get_comm_whatsapp_campaign_admission_turn/);
+  assert.match(worker, /rpc\('get_comm_whatsapp_campaign_admission_turn'[\s\S]*?p_channel_key: CAMPAIGN_ADMISSION_CHANNEL_KEY/);
+  assert.match(worker, /campaigns = \[turnCampaign, \.\.\.campaigns\.filter/);
+  assert.match(migration, /idx_campaign_admissions_campaign_endpoint_unique/);
+});
+
+test('the required Amil image follows effective A/B step precedence', () => {
+  assert.match(migration, /variant_label IN \('B', 'ANY'\) AND step\.step_kind = 'message'/);
+  assert.match(migration, /variant_label = 'ANY' AND step\.step_kind = 'message'[\s\S]*?media_type = 'image'/);
+  assert.match(migration, /variant_label = 'A' AND step\.step_kind = 'message'[\s\S]*?media_type = 'image'/);
 });
 
 test('rolling duplicate campaign admissions and human evidence block targets', () => {
@@ -55,6 +66,7 @@ test('bursts recheck status, window, permission and campaign evidence before eac
   assert.match(worker, /await assertCampaignDispatchReady\(supabaseAdmin, campaign\.id, target\.id\)/);
   assert.match(worker, /await assertContactPermissionForSend\(supabaseAdmin, phoneDigits, 'commercial'\)/);
   assert.match(worker, /marketing_eligibility_blocked/);
+  assert.match(worker, /Date\.parse\(latestInbound\.message_at\) > Date\.parse\(target\.sent_at\)/);
   assert.match(migration, /'campaign_paused', 'send_window_closed'/);
 });
 

@@ -1919,6 +1919,19 @@ async function executeStageBurst(params: {
   const chatId = chatRoute?.externalChatId || fallbackChatId;
 
   if (chatRoute?.identityConflict) {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'failed',
+      error_message: 'Identidade WhatsApp conflitante.',
+      last_attempt_at: getNowIso(),
+      locked_at: null,
+      lock_token: null,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_failed_identity_conflict',
+      payload: { before_step: companions[0].step_index },
+    });
     return { status: 'failed', nextStepIndex: companions[0].step_index, error: 'Identidade WhatsApp conflitante.' };
   }
   phoneDigits = chatRoute?.phoneNumber || phoneDigits;
@@ -1926,6 +1939,20 @@ async function executeStageBurst(params: {
   // ── Check canonical contact permission before reserving the burst ──
   const permissionBlock = await getCommercialContactBlock(supabaseAdmin, phoneDigits);
   if (permissionBlock) {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'stopped',
+      stopped_at: getNowIso(),
+      stopped_reason: 'contact_permission_blocked',
+      last_attempt_at: getNowIso(),
+      locked_at: null,
+      lock_token: null,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_stopped_contact_permission_blocked',
+      payload: { before_step: companions[0].step_index, reason: permissionBlock.message },
+    });
     return { status: 'stopped', nextStepIndex: companions[0].step_index, error: permissionBlock.message };
   }
 
@@ -1969,6 +1996,12 @@ async function executeStageBurst(params: {
     if (reservation.result === 'campaign_inactive') {
       const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
       await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: currentCampaign.status === 'cancelled' ? 'target_dispatch_cancelled' : 'target_dispatch_deferred',
+        payload: { reason_code: currentCampaign.status === 'cancelled' ? 'campaign_cancelled' : 'campaign_inactive', before_step: companions[0].step_index },
+      });
       return { status: currentCampaign.status === 'cancelled' ? 'cancelled' : 'deferred', nextStepIndex: companions[0].step_index };
     }
     await deferClaimedTargetForDispatchGate(supabaseAdmin, {
@@ -2003,6 +2036,12 @@ async function executeStageBurst(params: {
       await updateClaimedTarget(supabaseAdmin, target, {
         status: 'cancelled', locked_at: null, lock_token: null,
       });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_dispatch_cancelled',
+        payload: { reason_code: 'campaign_cancelled', stopped_before_step: step.step_index },
+      });
       return { status: 'cancelled', nextStepIndex: step.step_index };
     }
     if (activeCampaign.status === 'paused' || !['queued', 'running', 'scheduled'].includes(activeCampaign.status)) {
@@ -2014,6 +2053,12 @@ async function executeStageBurst(params: {
         });
       }
       await updateClaimedTarget(supabaseAdmin, target, { status: 'scheduled', locked_at: null, lock_token: null });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_dispatch_deferred',
+        payload: { reason_code: 'campaign_paused', stopped_before_step: step.step_index },
+      });
       return { status: 'deferred', nextStepIndex: step.step_index };
     }
     if (!isWithinSendWindow(activeCampaign)) {
@@ -2028,6 +2073,12 @@ async function executeStageBurst(params: {
         target,
         retryAt: new Date(Date.now() + 60_000).toISOString(),
         reason: 'A janela de envio terminou durante o burst.',
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_dispatch_deferred',
+        payload: { reason_code: 'send_window_closed', stopped_before_step: step.step_index },
       });
       return { status: 'deferred', nextStepIndex: step.step_index };
     }
@@ -2080,6 +2131,21 @@ async function executeStageBurst(params: {
             locked_at: null,
             lock_token: null,
           });
+          if (isOptOut) {
+            await insertEvent(supabaseAdmin, {
+              campaignId: campaign.id,
+              targetId: target.id,
+              eventType: 'target_opt_out_during_burst',
+              payload: { stopped_before_step: step.step_index, reply_at: reply.respondedAt },
+            });
+          } else {
+            await insertEvent(supabaseAdmin, {
+              campaignId: campaign.id,
+              targetId: target.id,
+              eventType: 'target_burst_interrupted_by_reply',
+              payload: { stopped_before_step: step.step_index, reply_at: reply.respondedAt },
+            });
+          }
           return {
             status: isOptOut ? 'stopped' : 'responded',
             nextStepIndex: step.step_index,
@@ -2100,44 +2166,53 @@ async function executeStageBurst(params: {
       // ── Opt-out re-check: even after responded_at is set, check latest
       //    inbound for explicit opt-out keywords. A normal reply may have been
       //    recorded, but an opt-out arriving later must still stop the burst. ──
-      if (target.responded_at) {
-        const chat = await findInboundCampaignChat(supabaseAdmin, target);
-        if (chat) {
-          const { data: latestInbound } = await supabaseAdmin
-            .from('comm_whatsapp_messages')
-            .select('text_content,media_caption,message_type')
-            .eq('chat_id', chat.id)
-            .eq('direction', 'inbound')
-            .order('message_at', { ascending: false })
-            .order('id', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      const chat = await findInboundCampaignChat(supabaseAdmin, target);
+      if (chat) {
+        const { data: latestInbound } = await supabaseAdmin
+          .from('comm_whatsapp_messages')
+          .select('text_content,media_caption,message_type,message_at')
+          .eq('chat_id', chat.id)
+          .eq('direction', 'inbound')
+          .order('message_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-          if (latestInbound) {
-            const preview = getInboundMessagePreviewText(latestInbound as InboundMessageRow)
-              || (latestInbound as InboundMessageRow)?.text_content;
-            if (isExplicitOptOut(preview)) {
-              for (let j = i; j < companions.length; j++) {
-                await advanceStepDispatch(supabaseAdmin, {
-                  dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
-                  newStatus: 'cancelled',
-                  resolution: 'opt_out_during_burst',
-                });
-              }
-              await updateClaimedTarget(supabaseAdmin, target, {
-                status: 'stopped',
-                stopped_at: getNowIso(),
-                stopped_reason: 'contact_opt_out',
-                responded_at: target.responded_at || getNowIso(),
-                locked_at: null,
-                lock_token: null,
+        if (
+          latestInbound
+          && target.sent_at
+          && Date.parse(latestInbound.message_at) > Date.parse(target.sent_at)
+        ) {
+          const preview = getInboundMessagePreviewText(latestInbound as InboundMessageRow)
+            || (latestInbound as InboundMessageRow)?.text_content;
+          if (isExplicitOptOut(preview)) {
+            for (let j = i; j < companions.length; j++) {
+              await advanceStepDispatch(supabaseAdmin, {
+                dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
+                newStatus: 'cancelled',
+                resolution: 'opt_out_during_burst',
               });
-              return {
-                status: 'stopped',
-                nextStepIndex: step.step_index,
-                error: 'Opt-out detectado durante burst.',
-              };
             }
+            await updateClaimedTarget(supabaseAdmin, target, {
+              status: 'stopped',
+              stopped_at: getNowIso(),
+              stopped_reason: 'contact_opt_out',
+              responded_at: target.responded_at || getNowIso(),
+              chat_id: chat.id,
+              locked_at: null,
+              lock_token: null,
+            });
+            await insertEvent(supabaseAdmin, {
+              campaignId: campaign.id,
+              targetId: target.id,
+              eventType: 'target_opt_out_during_burst',
+              payload: { stopped_before_step: step.step_index, reply_at: latestInbound.message_at },
+            });
+            return {
+              status: 'stopped',
+              nextStepIndex: step.step_index,
+              error: 'Opt-out detectado durante burst.',
+            };
           }
         }
       }
@@ -2410,6 +2485,12 @@ async function executeStageBurst(params: {
       externalMessageId,
       deliveryStatus,
     });
+
+    if (!target.sent_at) {
+      const firstSentAt = getNowIso();
+      await updateClaimedTarget(supabaseAdmin, target, { sent_at: firstSentAt });
+      target.sent_at = firstSentAt;
+    }
 
     // ── Inter-message delay (except after last message) ──
     if (i < companions.length - 1) {
@@ -3976,9 +4057,10 @@ async function processCampaigns(
   await reconcileResponses(supabaseAdmin, params.campaignId);
   await reactivateRecurringCampaigns(supabaseAdmin);
 
+  const campaignSelection = 'id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays';
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by,ab_test_enabled,ab_split_percent,recurrence_rule,recurrence_interval,recurrence_end_at,recurrence_next_run_at,recurrence_runs_completed,create_leads_from_csv,active_weekdays')
+    .select(campaignSelection)
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -3991,7 +4073,46 @@ async function processCampaigns(
   if (error) throw new Error(`Erro ao buscar campanhas: ${error.message}`);
 
   const now = Date.now();
-  const campaigns = ((data ?? []) as CampaignRow[]).filter((campaign) => !campaign.scheduled_at || Date.parse(campaign.scheduled_at) <= now);
+  let campaigns = ((data ?? []) as CampaignRow[]).filter((campaign) => !campaign.scheduled_at || Date.parse(campaign.scheduled_at) <= now);
+
+  // Keep the campaign selected by the sender-wide round-robin turn in the
+  // batch even when older active campaigns fill the normal five-row query.
+  // The reservation RPC remains authoritative and serializes concurrent
+  // workers; this read only prevents the worker's small batch from starving
+  // campaigns that are not among the oldest rows.
+  if (!params.campaignId) {
+    const { data: admissionTurn, error: admissionTurnError } = await supabaseAdmin
+      .rpc('get_comm_whatsapp_campaign_admission_turn', {
+        p_channel_key: CAMPAIGN_ADMISSION_CHANNEL_KEY,
+        p_time_zone: DEFAULT_CAMPAIGN_TIME_ZONE,
+      })
+      .maybeSingle();
+
+    if (admissionTurnError) {
+      throw new Error(`Erro ao buscar a vez global de admissão das campanhas: ${admissionTurnError.message}`);
+    }
+
+    const turnCampaignId = toTrimmedString(admissionTurn?.campaign_id);
+    if (turnCampaignId) {
+      let turnCampaign = campaigns.find((campaign) => campaign.id === turnCampaignId);
+      if (!turnCampaign) {
+        const { data: fetchedTurnCampaign, error: turnCampaignError } = await supabaseAdmin
+          .from('comm_whatsapp_campaigns')
+          .select(campaignSelection)
+          .eq('id', turnCampaignId)
+          .in('status', ['queued', 'running', 'scheduled'])
+          .maybeSingle();
+        if (turnCampaignError) {
+          throw new Error(`Erro ao carregar a campanha da vez global: ${turnCampaignError.message}`);
+        }
+        turnCampaign = fetchedTurnCampaign as CampaignRow | null;
+      }
+
+      if (turnCampaign && (!turnCampaign.scheduled_at || Date.parse(turnCampaign.scheduled_at) <= now)) {
+        campaigns = [turnCampaign, ...campaigns.filter((campaign) => campaign.id !== turnCampaignId)];
+      }
+    }
+  }
   const maxLimit = Math.min(Math.max(params.limit ?? 25, 1), 100);
   let processed = 0;
   let sent = 0;

@@ -39,14 +39,16 @@ export const getCampaignMediaReadinessBlocker = (
         return step?.step_index === 0 && step.step_kind === 'message';
       }).map(asRecord).filter((step): step is Record<string, unknown> => step !== null)
     : [];
-  const hasImage = (variant: string) => firstMessages.some((step) => (
-    (step.variant_label === variant || step.variant_label === 'ANY')
-    && step.media_type === 'image'
-    && hasText(step.media_url)
-  ));
+  const hasEffectiveImage = (variant: 'A' | 'B') => {
+    const exactVariant = firstMessages.find((step) => step.variant_label === variant);
+    const sharedStep = firstMessages.find((step) => step.variant_label === 'ANY');
+    const fallbackVariant = firstMessages.find((step) => step.variant_label === 'A');
+    const effectiveStep = exactVariant || sharedStep || fallbackVariant;
+    return effectiveStep?.media_type === 'image' && hasText(effectiveStep.media_url);
+  };
   const ready = abTestEnabled === true
-    ? hasImage('A') && hasImage('B')
-    : hasImage('A');
+    ? hasEffectiveImage('A') && hasEffectiveImage('B')
+    : hasEffectiveImage('A');
   return ready ? null : 'Anexe a imagem da promoção à primeira mensagem antes de ativar esta campanha.';
 };
 

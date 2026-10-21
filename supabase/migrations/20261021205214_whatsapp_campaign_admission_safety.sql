@@ -63,9 +63,30 @@ WHERE target.id = admission.target_id
   AND target.phone_digits IS NOT NULL
   AND target.phone_digits <> '';
 
+-- Older imports could create more than one target row for a normalized
+-- endpoint. Keep the earliest historical admission and enforce one
+-- recipient per campaign going forward.
+WITH ranked_admissions AS (
+  SELECT admission.id,
+    row_number() OVER (
+      PARTITION BY admission.campaign_id, admission.endpoint_hash
+      ORDER BY admission.admitted_at, admission.created_at, admission.id
+    ) AS duplicate_rank
+  FROM public.comm_whatsapp_campaign_admissions AS admission
+  WHERE admission.endpoint_hash IS NOT NULL
+)
+DELETE FROM public.comm_whatsapp_campaign_admissions AS admission
+USING ranked_admissions AS ranked
+WHERE ranked.id = admission.id AND ranked.duplicate_rank > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_campaign_admissions_campaign_endpoint_unique
+  ON public.comm_whatsapp_campaign_admissions (campaign_id, endpoint_hash)
+  WHERE endpoint_hash IS NOT NULL;
+
 -- The campaign panel currently has one configured WhatsApp sender shared by
--- every campaign. Use the sender id supplied by the worker when reserving;
--- legacy reservations are backfilled to the conservative shared key above.
+-- every campaign. The worker uses the stable logical key 'whatsapp' for both
+-- legacy and new reservations so deployments preserve the existing channel
+-- cooldown while they roll forward.
 
 CREATE OR REPLACE FUNCTION public._comm_whatsapp_campaign_window_minutes(
   p_campaign public.comm_whatsapp_campaigns
@@ -226,29 +247,72 @@ AS $function$
       '663279e5-739c-4efc-916e-cdf13142a458'::uuid
     ) THEN true
     WHEN p_campaign.ab_test_enabled THEN
-      EXISTS (
-        SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
-        WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
-          AND step.variant_label = 'ANY' AND step.step_kind = 'message'
-          AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
-      ) OR (
+      (
         EXISTS (
           SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
           WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
             AND step.variant_label = 'A' AND step.step_kind = 'message'
             AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
-        ) AND EXISTS (
+        ) OR (
+          NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label = 'A' AND step.step_kind = 'message'
+          ) AND EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label = 'ANY' AND step.step_kind = 'message'
+              AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+          )
+        )
+      ) AND (
+        EXISTS (
           SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
           WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
             AND step.variant_label = 'B' AND step.step_kind = 'message'
             AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+        ) OR (
+          NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label = 'B' AND step.step_kind = 'message'
+          ) AND EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label = 'ANY' AND step.step_kind = 'message'
+              AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+          )
+        ) OR (
+          NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label IN ('B', 'ANY') AND step.step_kind = 'message'
+          ) AND EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+            WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+              AND step.variant_label = 'A' AND step.step_kind = 'message'
+              AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+          )
         )
       )
-    ELSE EXISTS (
-      SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
-      WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
-        AND step.variant_label IN ('ANY', 'A') AND step.step_kind = 'message'
-        AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+    ELSE (
+      EXISTS (
+        SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+        WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+          AND step.variant_label = 'A' AND step.step_kind = 'message'
+          AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+      ) OR (
+        NOT EXISTS (
+          SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+          WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+            AND step.variant_label = 'A' AND step.step_kind = 'message'
+        ) AND EXISTS (
+          SELECT 1 FROM public.comm_whatsapp_campaign_steps AS step
+          WHERE step.campaign_id = p_campaign.id AND step.step_index = 0
+            AND step.variant_label = 'ANY' AND step.step_kind = 'message'
+            AND step.media_type = 'image' AND NULLIF(btrim(step.media_url), '') IS NOT NULL
+        )
+      )
     )
   END;
 $function$;
@@ -337,6 +401,7 @@ AS $function$
 DECLARE
   v_total integer := 0;
   v_eligible integer := 0;
+  v_duplicate_targets integer := 0;
   v_reasons jsonb := '[]'::jsonb;
   v_campaign public.comm_whatsapp_campaigns%ROWTYPE;
 BEGIN
@@ -347,12 +412,14 @@ BEGIN
 
   SELECT count(*)::integer,
          count(*) FILTER (WHERE readiness.reason IS NULL)::integer,
+         count(*) FILTER (WHERE readiness.reason IN ('contact_recent_campaign_duplicate', 'contact_duplicate_in_campaign'))::integer,
          COALESCE(jsonb_agg(DISTINCT readiness.reason) FILTER (WHERE readiness.reason IS NOT NULL), '[]'::jsonb)
-  INTO v_total, v_eligible, v_reasons
+  INTO v_total, v_eligible, v_duplicate_targets, v_reasons
   FROM (
     SELECT public._comm_whatsapp_campaign_target_marketing_reason(p_campaign_id, target.id) AS reason
     FROM public.comm_whatsapp_campaign_targets AS target
     WHERE target.campaign_id = p_campaign_id
+      AND target.status IN ('pending', 'scheduled', 'sending', 'failed')
   ) AS readiness;
 
   IF v_total = 0 THEN
@@ -365,10 +432,17 @@ BEGIN
   END IF;
 
   RETURN jsonb_build_object(
-    'ready', v_total > 0 AND v_eligible = v_total AND jsonb_array_length(v_reasons) = 0,
+    'ready', v_total > 0
+      AND v_eligible + v_duplicate_targets = v_total
+      AND NOT EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(v_reasons) AS blocker(reason_code)
+        WHERE blocker.reason_code NOT IN ('contact_recent_campaign_duplicate', 'contact_duplicate_in_campaign')
+      ),
     'total_targets', v_total,
     'eligible_targets', v_eligible,
-    'pending_targets', GREATEST(v_total - v_eligible, 0),
+    'pending_targets', GREATEST(v_total - v_eligible - v_duplicate_targets, 0),
+    'duplicate_targets', v_duplicate_targets,
     'reason_codes', v_reasons
   );
 END;
@@ -447,6 +521,9 @@ BEGIN
   END IF;
   IF v_campaign.status NOT IN ('queued', 'running', 'scheduled')
      OR (v_campaign.scheduled_at IS NOT NULL AND v_campaign.scheduled_at > p_now) THEN
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'campaign_inactive', NULL, p_now
+    );
     result := 'campaign_inactive'; retry_at := NULL; reason := 'Campanha fora do estado de envio.'; admission_exists := false; RETURN NEXT; RETURN;
   END IF;
   IF NOT public._comm_whatsapp_campaign_window_open(v_campaign, p_now, v_time_zone) THEN
@@ -476,6 +553,17 @@ BEGIN
     result := 'eligibility_blocked'; retry_at := NULL; reason := 'campaign_target_phone_missing'; admission_exists := false; RETURN NEXT; RETURN;
   END IF;
   v_endpoint_hash := encode(extensions.digest(convert_to(v_target.phone_digits, 'UTF8'), 'sha256'), 'hex');
+
+  SELECT * INTO v_existing FROM public.comm_whatsapp_campaign_admissions AS admission
+  WHERE admission.campaign_id = p_campaign_id AND admission.endpoint_hash = v_endpoint_hash;
+  IF FOUND THEN
+    retry_at := NULL;
+    reason := 'contact_duplicate_in_campaign';
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'contact_duplicate_in_campaign', NULL, p_now
+    );
+    result := 'eligibility_blocked'; admission_exists := false; RETURN NEXT; RETURN;
+  END IF;
 
   IF v_campaign.daily_send_limit IS NOT NULL AND v_campaign.daily_send_limit > 0 THEN
     SELECT count(*)::integer, min(admission.admitted_at + interval '24 hours')
@@ -586,10 +674,132 @@ BEGIN
     campaign_id, target_id, channel_key, endpoint_hash, admitted_at, admission_reason
   ) VALUES (
     p_campaign_id, p_target_id, v_channel_key, v_endpoint_hash, p_now, 'first_message_reserved'
-  ) ON CONFLICT (campaign_id, target_id) DO NOTHING;
+  ) ON CONFLICT DO NOTHING;
   GET DIAGNOSTICS v_inserted = ROW_COUNT;
 
-  result := 'reserved'; retry_at := NULL; reason := NULL; admission_exists := (v_inserted = 0);
+  IF v_inserted = 0 THEN
+    SELECT * INTO v_existing
+    FROM public.comm_whatsapp_campaign_admissions AS admission
+    WHERE admission.campaign_id = p_campaign_id
+      AND (admission.target_id = p_target_id OR admission.endpoint_hash = v_endpoint_hash)
+    ORDER BY CASE WHEN admission.target_id = p_target_id THEN 0 ELSE 1 END
+    LIMIT 1;
+    IF FOUND AND v_existing.target_id <> p_target_id THEN
+      retry_at := NULL;
+      reason := 'contact_duplicate_in_campaign';
+      PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+        p_campaign_id, p_target_id, v_channel_key, 'contact_duplicate_in_campaign', NULL, p_now
+      );
+      result := 'eligibility_blocked'; admission_exists := false; RETURN NEXT; RETURN;
+    END IF;
+    result := 'reserved'; retry_at := NULL; reason := NULL; admission_exists := true; RETURN NEXT; RETURN;
+  END IF;
+
+  result := 'reserved'; retry_at := NULL; reason := NULL; admission_exists := false;
+  RETURN NEXT;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_comm_whatsapp_campaign_admission_turn(
+  p_channel_key text,
+  p_time_zone text DEFAULT 'America/Sao_Paulo'
+)
+RETURNS TABLE(campaign_id uuid, available_at timestamptz)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $function$
+DECLARE
+  v_now timestamptz := clock_timestamp();
+  v_channel_key text := left(COALESCE(NULLIF(btrim(p_channel_key), ''), 'whatsapp'), 160);
+  v_time_zone text := COALESCE(NULLIF(p_time_zone, ''), 'America/Sao_Paulo');
+  v_candidate_ids uuid[];
+  v_rate numeric;
+  v_last_channel_at timestamptz;
+  v_last_channel_campaign uuid;
+  v_turn_campaign uuid;
+  v_campaign public.comm_whatsapp_campaigns%ROWTYPE;
+  v_last_campaign_at timestamptz;
+  v_campaign_interval interval;
+  v_channel_interval interval;
+BEGIN
+  SELECT array_agg(candidate.id ORDER BY candidate.id), sum(candidate.rate_per_minute)
+  INTO v_candidate_ids, v_rate
+  FROM (
+    SELECT active_campaign.id,
+      CASE
+        WHEN active_campaign.daily_send_limit IS NOT NULL AND active_campaign.daily_send_limit > 0
+          THEN active_campaign.daily_send_limit::numeric / public._comm_whatsapp_campaign_window_minutes(active_campaign)
+        ELSE GREATEST(active_campaign.pacing_per_minute, 1)::numeric / 60
+      END AS rate_per_minute
+    FROM public.comm_whatsapp_campaigns AS active_campaign
+    WHERE active_campaign.status IN ('queued', 'running', 'scheduled')
+      AND (active_campaign.scheduled_at IS NULL OR active_campaign.scheduled_at <= v_now)
+      AND (active_campaign.daily_send_limit IS NULL OR active_campaign.daily_send_limit > 0)
+      AND public._comm_whatsapp_campaign_window_open(active_campaign, v_now, v_time_zone)
+      AND (
+        active_campaign.daily_send_limit IS NULL
+        OR (SELECT count(*) FROM public.comm_whatsapp_campaign_admissions AS recent
+            WHERE recent.campaign_id = active_campaign.id
+              AND recent.admitted_at >= v_now - interval '24 hours') < active_campaign.daily_send_limit
+      )
+      AND EXISTS (
+        SELECT 1 FROM public.comm_whatsapp_campaign_targets AS target
+        WHERE target.campaign_id = active_campaign.id
+          AND target.status IN ('pending', 'scheduled', 'sending', 'failed')
+          AND (target.next_send_at IS NULL OR target.next_send_at <= v_now)
+          AND (target.next_retry_at IS NULL OR target.next_retry_at <= v_now)
+          AND NOT EXISTS (
+            SELECT 1 FROM public.comm_whatsapp_campaign_admissions AS admitted
+            WHERE admitted.campaign_id = target.campaign_id AND admitted.target_id = target.id
+          )
+          AND public._comm_whatsapp_campaign_target_marketing_reason(active_campaign.id, target.id) IS NULL
+      )
+  ) AS candidate;
+
+  IF COALESCE(v_rate, 0) <= 0 OR COALESCE(cardinality(v_candidate_ids), 0) = 0 THEN
+    RETURN;
+  END IF;
+
+  SELECT admission.admitted_at, admission.campaign_id
+  INTO v_last_channel_at, v_last_channel_campaign
+  FROM public.comm_whatsapp_campaign_admissions AS admission
+  WHERE admission.channel_key = v_channel_key
+  ORDER BY admission.admitted_at DESC, admission.created_at DESC, admission.id DESC
+  LIMIT 1;
+
+  SELECT candidate.id INTO v_turn_campaign
+  FROM unnest(v_candidate_ids) AS candidate(id)
+  ORDER BY CASE
+      WHEN v_last_channel_campaign IS NULL OR candidate.id > v_last_channel_campaign THEN 0
+      ELSE 1
+    END,
+    candidate.id
+  LIMIT 1;
+
+  v_channel_interval := make_interval(secs => (60 / v_rate)::double precision);
+  available_at := GREATEST(COALESCE(v_last_channel_at + v_channel_interval, v_now), v_now);
+
+  SELECT * INTO v_campaign
+  FROM public.comm_whatsapp_campaigns AS campaign
+  WHERE campaign.id = v_turn_campaign;
+
+  SELECT max(admission.admitted_at) INTO v_last_campaign_at
+  FROM public.comm_whatsapp_campaign_admissions AS admission
+  WHERE admission.campaign_id = v_turn_campaign;
+
+  IF v_campaign.daily_send_limit IS NOT NULL AND v_campaign.daily_send_limit > 0 THEN
+    v_campaign_interval := make_interval(secs => (
+      public._comm_whatsapp_campaign_window_minutes(v_campaign)::numeric * 60 / v_campaign.daily_send_limit
+    )::double precision);
+  ELSE
+    v_campaign_interval := make_interval(secs => 60.0 / GREATEST(v_campaign.pacing_per_minute, 1));
+  END IF;
+  IF v_last_campaign_at IS NOT NULL THEN
+    available_at := GREATEST(available_at, v_last_campaign_at + v_campaign_interval);
+  END IF;
+
+  campaign_id := v_turn_campaign;
   RETURN NEXT;
 END;
 $function$;
@@ -634,11 +844,18 @@ BEGIN
 
   IF v_campaign.status NOT IN ('queued', 'running', 'scheduled')
      OR (v_campaign.scheduled_at IS NOT NULL AND v_campaign.scheduled_at > v_now) THEN
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'campaign_inactive', NULL, v_now
+    );
     RETURN QUERY SELECT 'campaign_inactive'::text, NULL::uuid, NULL::integer, NULL::timestamptz,
       'Campanha fora do estado de envio.'::text, NULL::timestamptz;
     RETURN;
   END IF;
   IF NOT public._comm_whatsapp_campaign_window_open(v_campaign, v_now, v_time_zone) THEN
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'window_closed',
+      public._comm_whatsapp_campaign_next_window_at(v_campaign, v_now, v_time_zone), v_now
+    );
     RETURN QUERY SELECT 'window_closed'::text, NULL::uuid, NULL::integer,
       public._comm_whatsapp_campaign_next_window_at(v_campaign, v_now, v_time_zone),
       'Fora do dia ou da janela permitida.'::text, NULL::timestamptz;
@@ -715,15 +932,21 @@ BEGIN
       'A reserva do alvo expirou ou foi assumida por outro worker.'::text;
     RETURN;
   END IF;
+  v_channel_key := COALESCE(NULLIF(p_steps->0->>'channel_id', ''), 'whatsapp');
+  v_time_zone := COALESCE(NULLIF(p_steps->0->>'time_zone', ''), 'America/Sao_Paulo');
   IF v_campaign.status NOT IN ('queued', 'running', 'scheduled')
      OR (v_campaign.scheduled_at IS NOT NULL AND v_campaign.scheduled_at > v_now) THEN
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'campaign_inactive', NULL, v_now
+    );
     RETURN QUERY SELECT 'campaign_inactive'::text, NULL::timestamptz, 'Campanha fora do estado de envio.'::text;
     RETURN;
   END IF;
-
-  v_channel_key := COALESCE(NULLIF(p_steps->0->>'channel_id', ''), 'whatsapp');
-  v_time_zone := COALESCE(NULLIF(p_steps->0->>'time_zone', ''), 'America/Sao_Paulo');
   IF NOT public._comm_whatsapp_campaign_window_open(v_campaign, v_now, v_time_zone) THEN
+    PERFORM public._comm_whatsapp_campaign_record_admission_deferred(
+      p_campaign_id, p_target_id, v_channel_key, 'window_closed',
+      public._comm_whatsapp_campaign_next_window_at(v_campaign, v_now, v_time_zone), v_now
+    );
     RETURN QUERY SELECT 'window_closed'::text,
       public._comm_whatsapp_campaign_next_window_at(v_campaign, v_now, v_time_zone),
       'Fora do dia ou da janela permitida.'::text;
@@ -807,11 +1030,13 @@ REVOKE ALL ON FUNCTION public._comm_whatsapp_campaign_target_marketing_reason(uu
 REVOKE ALL ON FUNCTION public._comm_whatsapp_campaign_record_admission_deferred(uuid, uuid, text, text, timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public._comm_whatsapp_campaign_reserve_new_contact(uuid, uuid, text, text, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.get_comm_whatsapp_campaign_marketing_readiness(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_comm_whatsapp_campaign_admission_turn(text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.reserve_comm_whatsapp_campaign_dispatch(uuid, uuid, text, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.reserve_comm_whatsapp_campaign_stage_dispatch(uuid, uuid, text, integer, integer, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public._comm_whatsapp_campaign_target_marketing_reason(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public._comm_whatsapp_campaign_reserve_new_contact(uuid, uuid, text, text, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_comm_whatsapp_campaign_marketing_readiness(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_comm_whatsapp_campaign_admission_turn(text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.reserve_comm_whatsapp_campaign_dispatch(uuid, uuid, text, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.reserve_comm_whatsapp_campaign_stage_dispatch(uuid, uuid, text, integer, integer, jsonb) TO service_role;
 
@@ -851,6 +1076,7 @@ DECLARE
   v_media_size bigint;
   v_first_message text := '';
   v_existing public.comm_whatsapp_campaign_steps%ROWTYPE;
+  v_step_keys text[] := ARRAY[]::text[];
   v_updated integer;
   v_steps jsonb := p_steps;
 BEGIN
@@ -901,6 +1127,10 @@ BEGIN
         ELSE 'ANY'
       END INTO v_variant_label;
     END IF;
+    IF format('%s:%s', v_step_index, v_variant_label) = ANY(v_step_keys) THEN
+      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'MCP_CAMPAIGN_DUPLICATE_STEP';
+    END IF;
+    v_step_keys := array_append(v_step_keys, format('%s:%s', v_step_index, v_variant_label));
     v_message := btrim(COALESCE(v_step->>'message', v_step->>'message_text', ''));
     IF v_message = '' OR char_length(v_message) > 4096 THEN
       RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'MCP_CAMPAIGN_MESSAGE_REQUIRED';
@@ -991,6 +1221,13 @@ BEGIN
       );
     END IF;
   END LOOP;
+
+  -- `steps` is a full replacement of the configured sequence. Rows that
+  -- remain in the submitted sequence preserve their attachment when the MCP
+  -- caller edits only text; omitted rows are still removed as before.
+  DELETE FROM public.comm_whatsapp_campaign_steps AS existing
+  WHERE existing.campaign_id = p_campaign_id
+    AND NOT (format('%s:%s', existing.step_index, existing.variant_label) = ANY(v_step_keys));
 
   RETURN v_first_message;
 END;

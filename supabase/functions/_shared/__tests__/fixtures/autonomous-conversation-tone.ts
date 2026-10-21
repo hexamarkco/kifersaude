@@ -57,13 +57,75 @@ export const autonomousToneScenarios: ToneScenario[] = [
     review: 'Concluir com base completa, sem exigir bairro em cada região nem garantir cobertura.',
   },
   {
-    key: 'single-capital-neighborhood',
+    key: 'single-capital-without-neighborhood',
     history: [
       { role: 'lead', content: 'Só para mim, tenho 46 anos e vou usar o plano em Vitória.' },
     ],
-    candidate: 'Em qual bairro de Vitória você pretende usar o plano?',
+    candidate: 'Você tem CNPJ ou MEI? Dependendo do caso, pode ficar mais em conta.',
     handoff: null,
-    review: 'Preservar a coleta de bairro quando existe uma única capital principal de utilização.',
+    review: 'Avançar sem exigir bairro automaticamente em uma capital.',
+  },
+  {
+    key: 'confused-by-neighborhood-with-landmark',
+    history: [
+      { role: 'lead', content: 'Sou eu e filha' },
+      { role: 'lead', content: 'Ou só pra mim' },
+      { role: 'lead', content: '54\n26' },
+      { role: 'lead', content: 'Idades' },
+      { role: 'ai', content: 'Podemos avaliar as duas possibilidades. Em qual cidade vocês precisam de atendimento?' },
+      { role: 'lead', content: 'Porto Alegre' },
+      { role: 'ai', content: 'Em qual bairro vocês precisam de atendimento?' },
+      { role: 'lead', content: 'Como assim' },
+      { role: 'lead', content: 'Eu moro na zona perto Iguatemi shopping' },
+    ],
+    candidate: 'Perguntei só para entender o que fica mais perto de vocês, mas essa referência já ajuda. Você ou sua filha têm CNPJ ou MEI? Dependendo do caso, pode ficar mais em conta.',
+    handoff: null,
+    review: 'Explicar com delicadeza, aceitar a referência, preservar as duas possibilidades e idades, sem inventar bairro, pedir UF ou repetir perguntas respondidas.',
+  },
+  {
+    key: 'national-service-not-national-plan',
+    history: [
+      { role: 'lead', content: 'Vocês atendem Manaus? Todo plano de vocês atende no Brasil inteiro?' },
+    ],
+    candidate: 'Atendemos Manaus, sim. A cobertura depende do plano, então preciso verificar as opções para as regiões onde você quer usar. O plano seria só para você?',
+    handoff: null,
+    review: 'Acolher outra região sem prometer cobertura nacional de todos os produtos nem inventar disponibilidade local.',
+  },
+  {
+    key: 'ambiguous-city-asks-state-once',
+    history: [
+      { role: 'lead', content: 'Só para mim, 38 anos, vou usar em Santa Helena.' },
+    ],
+    candidate: 'Em qual estado fica a Santa Helena onde você precisa de atendimento?',
+    handoff: null,
+    review: 'Esclarecer cidade homônima sem deduzir UF pelo DDD ou pedir endereço.',
+  },
+  {
+    key: 'state-required-even-without-apparent-ambiguity',
+    history: [
+      { role: 'lead', content: 'Só para mim, 38 anos. Moro em Campinas. Não tenho CNPJ nem MEI e não tenho plano.' },
+    ],
+    candidate: 'Para verificar as opções nacionais e regionais, em qual estado você precisa de atendimento?',
+    handoff: null,
+    review: 'Pedir a UF ausente antes de concluir, sem repetir cidade, exigir bairro ou presumir estado pelo DDD.',
+  },
+  {
+    key: 'capital-completion-without-neighborhood',
+    history: [
+      { role: 'lead', content: 'Só para mim, 54 anos, Porto Alegre. Não tenho CNPJ nem MEI e não tenho plano.' },
+    ],
+    candidate: 'Vou verificar as opções para atendimento em Porto Alegre e te enviar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA | cotação encaminhada para atendimento manual]]',
+    handoff: 'QUALIFICACAO_COMPLETA',
+    review: 'Concluir em capital sem exigir bairro nem inventar cobertura ou preços.',
+  },
+  {
+    key: 'neighborhood-only-for-explicit-proximity',
+    history: [
+      { role: 'lead', content: 'Tenho 54 anos e moro em Porto Alegre. Quero algo perto de casa porque tenho dificuldade de deslocamento.' },
+    ],
+    candidate: 'Vamos olhar essa proximidade com cuidado. Você tem algum bairro ou ponto de referência para eu verificar as opções por perto?',
+    handoff: null,
+    review: 'Perguntar localização mais específica quando há uma necessidade concreta, sem prometer rede ou usar intimidade forçada.',
   },
   {
     key: 'family',

@@ -50,6 +50,13 @@ type DashboardCommercialSectionsProps = {
   onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
 };
 
+type DashboardDailyOverviewProps = {
+  analysis: DashboardCommercialAnalysis;
+  showFinancialMetrics: boolean;
+  onNavigateToLead: (leadId: string) => void;
+  onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
+};
+
 const currency = (value: number) =>
   value.toLocaleString('pt-BR', {
     style: 'currency',
@@ -204,38 +211,11 @@ export function DashboardCommercialSections({
   onNavigateToTab,
 }: DashboardCommercialSectionsProps) {
   const periodLabel = analysis.currentRange?.label ?? 'todo o histórico disponível';
-  const attentionLead = analysis.opportunities[0]?.leadId;
   const openAgenda = () => onNavigateToTab?.('agenda');
   const openLeads = () => onNavigateToTab?.('leads');
 
   return (
     <div className="space-y-6">
-      <section data-panel-animate aria-labelledby="dashboard-today-title">
-        <SectionHeader eyebrow="Ação comercial" title="Hoje no CRM" description="Um resumo compacto do que pede movimento agora." as="h2" />
-        <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
-            <CalendarClock className="h-4 w-4 text-[var(--info-text)]" aria-hidden="true" />
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</p>
-            <p className="text-xs font-medium text-[var(--text-secondary)]">Follow-ups pendentes</p>
-          </ActionSurface>
-          <ActionSurface variant="danger" padding="sm" onClick={openAgenda} className="text-left">
-            <AlertTriangle className="h-4 w-4 text-[var(--danger-text)]" aria-hidden="true" />
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</p>
-            <p className="text-xs font-medium text-[var(--text-secondary)]">Itens atrasados</p>
-          </ActionSurface>
-          <ActionSurface variant="warning" padding="sm" onClick={openLeads} className="text-left">
-            <Target className="h-4 w-4 text-[var(--warning-text)]" aria-hidden="true" />
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.followUp.withoutNextStep}</p>
-            <p className="text-xs font-medium text-[var(--text-secondary)]">Sem próximo passo</p>
-          </ActionSurface>
-          <ActionSurface variant="strong" padding="sm" onClick={attentionLead ? () => onNavigateToLead(attentionLead) : openLeads} className="text-left">
-            <WalletCards className="h-4 w-4 text-[var(--brand-primary)]" aria-hidden="true" />
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.stuck.valueAvailable ? compactCurrency(analysis.stuck.amount) : analysis.stuck.count}</p>
-            <p className="text-xs font-medium text-[var(--text-secondary)]">{analysis.stuck.valueAvailable ? 'Parado no avançado' : 'Oportunidades paradas'}</p>
-          </ActionSurface>
-        </div>
-      </section>
-
       <section data-panel-animate aria-labelledby="dashboard-kpi-title">
         <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -379,5 +359,120 @@ export function DashboardCommercialSections({
         </Surface>
       </section>
     </div>
+  );
+}
+
+export function DashboardDailyOverview({
+  analysis,
+  showFinancialMetrics,
+  onNavigateToLead,
+  onNavigateToTab,
+}: DashboardDailyOverviewProps) {
+  const openAgenda = () => onNavigateToTab?.('agenda');
+  const openLeads = () => onNavigateToTab?.('leads');
+  const opportunities = analysis.opportunities.slice(0, 4);
+
+  return (
+    <section className="space-y-4" aria-label="Resumo da operação diária" data-panel-animate>
+      <SectionHeader
+        eyebrow="Ação comercial"
+        title="O que pede atenção"
+        description="Pendências e oportunidades prioritárias para definir o próximo movimento."
+        as="h2"
+      />
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
+        <Surface padding="md" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Prioridades da carteira</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Sinais de follow-up, próxima etapa e atividade recente.</p>
+            </div>
+            <Button type="button" variant="text" size="sm" onClick={openLeads}>
+              Abrir leads <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+
+          {opportunities.length > 0 ? (
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {opportunities.map((opportunity) => (
+                <li key={opportunity.leadId}>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToLead(opportunity.leadId)}
+                    className="flex w-full flex-col gap-2 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium text-[var(--text-primary)]">{opportunity.name}</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <OpportunitySignal opportunity={opportunity} />
+                      <OperationalStatusBadge statusColor={opportunity.statusColor}>{opportunity.status}</OperationalStatusBadge>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<CheckCircle2 aria-hidden="true" />}
+              title="Nenhuma oportunidade prioritária"
+              description="Quando houver follow-up pendente ou oportunidade parada, ela aparecerá aqui."
+              className="py-6"
+            />
+          )}
+        </Surface>
+
+        <div className="space-y-4">
+          <Surface padding="md" className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Agenda</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">Itens que precisam de acompanhamento.</p>
+              </div>
+              <Button type="button" variant="secondary" size="sm" onClick={openAgenda}>
+                Abrir agenda <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <ActionSurface variant={analysis.agenda.overdue > 0 ? 'danger' : 'muted'} padding="sm" onClick={openAgenda} className="text-left">
+                <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</p>
+              </ActionSurface>
+              <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
+                <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</p>
+                <p className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</p>
+              </ActionSurface>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+              <span className="text-sm text-[var(--text-secondary)]">Sem próximo passo</span>
+              <Button type="button" variant="text" size="sm" onClick={openLeads}>
+                {analysis.followUp.withoutNextStep} leads <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          </Surface>
+
+          <Surface variant="strong" padding="sm" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+            <div>
+              <p className="text-xs text-[var(--text-muted)]">Vendas no período</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.salesCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--text-muted)]">Conversão</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.conversion)}</p>
+            </div>
+            <div className="col-span-2 sm:col-span-1 xl:col-span-2 2xl:col-span-1">
+              <p className="text-xs text-[var(--text-muted)]">{showFinancialMetrics ? 'Valor mensal vendido' : 'Leads recebidos'}</p>
+              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+                {showFinancialMetrics
+                  ? analysis.dataCoverage.monthlyRevenue ? compactCurrency(analysis.monthlyRevenue) : '—'
+                  : analysis.leadsReceived}
+              </p>
+            </div>
+          </Surface>
+        </div>
+      </div>
+    </section>
   );
 }

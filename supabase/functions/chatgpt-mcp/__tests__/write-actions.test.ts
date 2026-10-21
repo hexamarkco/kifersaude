@@ -812,13 +812,14 @@ test('recusa edição de sequência iniciada e entradas inválidas antes da escr
 });
 
 test('edição trata concorrência, início do processamento e revogação de autorização sem expor erro interno', async () => {
-  for (const [code, expected] of [['40001', 'CONFLICT'], ['P0001', 'SCHEDULE_NOT_EDITABLE'], ['42501', 'UNAUTHORIZED'], ['P0002', 'SCHEDULE_NOT_FOUND'], ['XX000', 'INTERNAL_ERROR']]) {
+  for (const [code, expected] of [['PT409', 'CONFLICT'], ['40001', 'CONFLICT'], ['P0001', 'SCHEDULE_NOT_EDITABLE'], ['42501', 'UNAUTHORIZED'], ['P0002', 'SCHEDULE_NOT_FOUND'], ['XX000', 'INTERNAL_ERROR']]) {
     const supabase = client({ comm_whatsapp_scheduled_sequences: { data: editableSequence }, mcp_action_audit_log: {} }, {
       update_scheduled_message_sequence_for_mcp: { error: { code, message: 'private internal details' } },
     });
     const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_scheduled_whatsapp_sequence', arguments: { ...sequenceEditArgs(), label: '', cancel_on_inbound_message: true }, actor });
     assert.equal(result?.error_code, expected);
     assert.equal(JSON.stringify(result).includes('private internal details'), false);
+    assert.equal(supabase.rpcCalls.length, 1);
     const payload = supabase.rpcCalls[0].args as Record<string, unknown>;
     assert.equal(payload.p_label, null);
     assert.equal(payload.p_cancel_on_inbound_message, true);

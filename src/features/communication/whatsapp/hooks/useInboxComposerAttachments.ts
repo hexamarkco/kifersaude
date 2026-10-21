@@ -216,10 +216,7 @@ export const useInboxComposerAttachments = ({
     const pastedAttachments = imageFiles
       .map(normalizePastedImageFile)
       .map(createPendingAttachmentFromFile);
-    setPendingAttachments((current) => [
-      ...current.filter((attachment) => attachment.kind === 'voice'),
-      ...pastedAttachments,
-    ]);
+    setPendingAttachments((current) => [...current, ...pastedAttachments]);
   }, [generatingFollowUp, voiceRecordingState]);
 
   const handleClearAttachment = useCallback((attachmentId?: string) => {

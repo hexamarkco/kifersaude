@@ -16,6 +16,18 @@ const isPng = (b: Uint8Array) => startsWithBytes(b, [0x89, 0x50, 0x4e, 0x47, 0x0
 const isGif = (b: Uint8Array) => startsWithBytes(b, [0x47, 0x49, 0x46, 0x38]);
 const isWebp = (b: Uint8Array) => matchesAscii(b, 'RIFF', 0) && matchesAscii(b, 'WEBP', 8);
 const isBmp = (b: Uint8Array) => startsWithBytes(b, [0x42, 0x4d]);
+const isAvif = (b: Uint8Array) => {
+  if (!matchesAscii(b, 'ftyp', 4)) return false;
+  for (let offset = 8; offset + 4 <= b.length; offset += 4) {
+    const brand = String.fromCharCode(b[offset], b[offset + 1], b[offset + 2], b[offset + 3]);
+    if (brand === 'avif' || brand === 'avis') return true;
+  }
+  return false;
+};
+
+export function isAvifImageSignature(bytes: Uint8Array): boolean {
+  return isAvif(bytes);
+}
 
 // ISO base media file format (mp4/mov/m4a/m4v/3gp) sempre tem "ftyp" a partir do byte 4.
 const isIsoBaseMedia = (b: Uint8Array) => matchesAscii(b, 'ftyp', 4);

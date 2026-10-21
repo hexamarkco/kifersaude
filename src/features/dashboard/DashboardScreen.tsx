@@ -33,7 +33,10 @@ import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import { DashboardAutomationCommand } from "./components/DashboardOperationsSections";
-import { DashboardCommercialSections } from "./components/DashboardCommercialSections";
+import {
+  DashboardCommercialSections,
+  DashboardDailyOverview,
+} from "./components/DashboardCommercialSections";
 import {
   DASHBOARD_CHART_PALETTE,
   mapOperadoraChartData,
@@ -2311,38 +2314,55 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
-        <TeamProduction onNavigateToLead={handleNavigateToLead} />
-        <DashboardCommercialSections
+        <DashboardDailyOverview
           analysis={dashboardCommercial}
           showFinancialMetrics={!isObserver}
           onNavigateToLead={handleNavigateToLead}
-          onNavigateToStatus={handleLeadStatusSegmentClick}
           onNavigateToTab={onNavigateToTab}
         />
-        <div className="grid grid-cols-1 gap-4" data-panel-animate>
-          <DashboardTrendSection
-            selectedMetric={selectedMetric}
-            chartRangeInMonths={chartRangeInMonths}
-            displayedMonthlySeries={displayedMonthlySeries}
-            latestMonthlyPoint={latestMonthlyPoint}
-            previousMonthlyPoint={previousMonthlyPoint}
-            highestMonthlyPoint={highestMonthlyPoint}
-            averageMonthlyValue={averageMonthlyValue}
-            onSelectedMetricChange={setSelectedMetric}
-            onChartRangeChange={setChartRangeInMonths}
-          />
-        </div>
-        <Surface padding="sm" data-panel-animate>
+        <Surface variant="muted" padding="sm" data-panel-animate>
           <SectionHeader
             eyebrow="Aprofundar"
-            title="Análises e operação complementar"
-            description="Distribuição detalhada, automações e calendário ficam disponíveis sem competir com as prioridades da operação."
-            action={<Button variant="secondary" size="sm" onClick={() => setShowSupportingAnalysis((current) => !current)}>{showSupportingAnalysis ? 'Ocultar detalhes' : 'Ver detalhes'}</Button>}
+            title="Análises e operação da equipe"
+            description="Resultados detalhados, produção, distribuição, automações e calendário."
+            action={(
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-expanded={showSupportingAnalysis}
+                aria-controls="dashboard-supporting-analysis"
+                onClick={() => setShowSupportingAnalysis((current) => !current)}
+              >
+                {showSupportingAnalysis ? 'Ocultar análises' : 'Abrir análises'}
+              </Button>
+            )}
           />
         </Surface>
 
         {showSupportingAnalysis && (
-          <div className="space-y-6">
+          <div id="dashboard-supporting-analysis" className="space-y-6">
+            <TeamProduction onNavigateToLead={handleNavigateToLead} />
+            <DashboardCommercialSections
+              analysis={dashboardCommercial}
+              showFinancialMetrics={!isObserver}
+              onNavigateToLead={handleNavigateToLead}
+              onNavigateToStatus={handleLeadStatusSegmentClick}
+              onNavigateToTab={onNavigateToTab}
+            />
+            <div className="grid grid-cols-1 gap-4" data-panel-animate>
+              <DashboardTrendSection
+                selectedMetric={selectedMetric}
+                chartRangeInMonths={chartRangeInMonths}
+                displayedMonthlySeries={displayedMonthlySeries}
+                latestMonthlyPoint={latestMonthlyPoint}
+                previousMonthlyPoint={previousMonthlyPoint}
+                highestMonthlyPoint={highestMonthlyPoint}
+                averageMonthlyValue={averageMonthlyValue}
+                onSelectedMetricChange={setSelectedMetric}
+                onChartRangeChange={setChartRangeInMonths}
+              />
+            </div>
             <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
             <DashboardDistributionSection
               leadStatusData={leadStatusData}

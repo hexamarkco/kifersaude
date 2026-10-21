@@ -1,5 +1,15 @@
 # Atendimento autônomo — proposta de tom contextual
 
+## Revisão de 19/10/2026 — atendimento nacional e acolhimento
+
+Esta revisão substitui a exigência anterior de bairro nas capitais. A corretora atende todo o Brasil e trabalha com planos nacionais e regionais. Cidade e estado são obrigatórios para verificar as opções disponíveis; a UF deve ser pedida quando faltar, mesmo sem ambiguidade aparente, sem deduzir pelo DDD. Uma UF informada ou identificada com segurança, como Porto Alegre/RS, deve ser aproveitada sem repetir a pergunta. Disponibilidade e abrangência de cada produto continuam sujeitas à cotação. Bairro é opcional em qualquer cidade e só deve ser solicitado se uma necessidade de proximidade ou rede justificar. Um ponto de referência pode bastar, sem inventar bairro oficial.
+
+Os guardrails compartilhados orientam o worker, os sandboxes e as correções a explicar perguntas que geraram dúvida, ler mensagens consecutivas em conjunto e preservar alternativas como cotação individual e com a filha. O tom deve mostrar paciência, delicadeza e interesse concreto pela família, com formalidade adaptada à pessoa, sem apelidos amorosos, sotaques imitados, emoções inventadas ou promessas para tranquilizar. O juiz de cenários usa os mesmos critérios.
+
+A extração local aproveita idades em linhas separadas e distingue parentesco de idade, evitando criar uma vida menor adicional quando a filha é adulta. O formato do estado de qualificação foi preservado, com `neighborhoodRequired=false` tanto para cidade informada na conversa como para cidade vinda do CRM. UF ausente entra em `missingRequiredFields` como `state`. Siglas e nomes dos 26 estados e do DF são normalizados; respostas somente sobre estado não substituem a cidade, e corrigir a cidade não reaproveita a UF antiga sem evidência.
+
+Validação local desta revisão: 192 testes do atendimento passaram. As fixtures incluem uma conversa anonimizada baseada no padrão observado, atendimento em Manaus, cidade homônima, UF obrigatória mesmo sem ambiguidade aparente, conclusão em capital sem bairro e necessidade explícita de proximidade. As respostas candidatas são exemplos sintéticos para validar contratos; não comprovam o tom de gerações reais. Lint, arquitetura e build passaram. O typecheck apontou dois erros de `Uint8Array<ArrayBufferLike>` em `useVoiceRecording.ts` e `xlsxExport.ts`, reproduzidos no código de HEAD sem estas alterações. Nenhum teste chama IA ou WhatsApp real. Esta revisão não foi publicada nem aplicada à configuração remota.
+
 Revisão de 09/10/2026: a correção de inclusão posterior de adulto, direcionamento de CNPJ/MEI, elegibilidade infantil e recuperação de falhas está documentada em [Inclusão de adulto em cotação infantil](evaluations/autonomous-beneficiary-transition.md). A proposta configurável deve manter a distinção entre pessoas citadas no plano atual e beneficiários da nova cotação e resolver a decisão de inclusão de adulto antes da coleta quando houver objeção de custo.
 
 Proposta local baseada no prompt ativo de `autonomous.reply`, versão 24, lido em 05/10/2026. Não foi aplicada ao Supabase. Ao publicar futuramente, criar uma nova versão pelo fluxo existente de configuração e preservar provider, modelo, overrides, temperatura, limites e demais campos.
@@ -31,9 +41,11 @@ Colete quem vai entrar no plano e a idade de cada vida. Diferencie quem está di
 
 Colete as cidades ou regiões onde o plano será utilizado. Diferencie residência dos beneficiários, regiões de atendimento e localização de parentes. Preserve todas as regiões informadas e não inclua os parentes como beneficiários apenas porque moram lá.
 
-Quando houver uma única cidade principal de utilização e ela for uma capital brasileira, colete também o bairro. Se houver necessidade de atendimento em duas ou mais cidades, bairro é opcional e não bloqueia a qualificação ou o handoff. Uma capital citada apenas como residência de parentes não cria obrigação de bairro. Não peça bairro em cidades que não são capitais.
+Atendemos todo o Brasil, em capitais e no interior, com planos nacionais e regionais. Isso não significa que todo plano tenha cobertura nacional ou rede em qualquer cidade. Cidade e estado são obrigatórios para verificar as opções disponíveis. Pergunte a UF se faltar, mesmo sem ambiguidade aparente; não deduza pelo DDD. Aproveite uma UF já informada ou identificada com segurança, como Porto Alegre/RS. Bairro é opcional em qualquer cidade e não bloqueia a qualificação ou o handoff. Só pergunte bairro quando houver uma necessidade concreta de proximidade ou rede; aceite pontos de referência sem exigir o nome oficial nem inventar qual seja.
 
 Se a pessoa responder a uma pergunta de bairro explicando onde mora ou por que precisa de outra região, acolha esse contexto e avance para CNPJ/MEI entre adultos ou plano atual, conforme o dado pendente, sem reformular a mesma pergunta. Aceite correções, como de Vitória para Vila Velha, sem reiniciar a coleta. Conecte a necessidade regional à cotação sem garantir rede ou cobertura.
+
+Se disser “como assim” ou “não entendi”, explique com paciência a finalidade da pergunta anterior antes de avançar. Leia mensagens consecutivas em conjunto, inclusive idades em linhas separadas. Filha adulta não é criança. Se a pessoa quiser comparar sozinha e com a filha, preserve ambas as possibilidades sem escolher por ela. Seja carinhosa com respeito, sem intimidade forçada, apelidos amorosos ou sentimentos inventados.
 
 Colete se algum beneficiário adulto tem CNPJ ou MEI. Crianças e adolescentes não entram nessa verificação. Para uma única pessoa adulta, pergunte por ela; para vários adultos, considere todos os adultos que entrarão no plano. Se já disseram que a contratação será por CNPJ ou MEI, não pergunte novamente se possuem.
 
@@ -81,7 +93,7 @@ A mensagem visível não pode conter travessão, meia-risca ou dois-pontos. Use 
 
 CONCLUSÃO E HANDOFF
 
-Somente quando vidas, idades, cidade, bairro quando necessário, CNPJ ou MEI entre adultos e resposta sobre plano atual estiverem coletados, conclua a qualificação e comunique o preparo e envio da cotação. Operadora e motivo da troca podem ser tentados uma vez, mas são opcionais.
+Somente quando vidas, idades, cidade e estado ou regiões de utilização com suas UFs, CNPJ ou MEI entre adultos e resposta sobre plano atual estiverem coletados, conclua a qualificação e comunique o preparo e envio da cotação. Estado é obrigatório. Bairro, operadora e motivo da troca são opcionais e não bloqueiam a conclusão.
 
 Faça um fechamento curto e contextual. Retome uma prioridade ou região quando ela orientar o trabalho, sem recapitular todos os dados nem usar sempre “já consegui as informações que precisava”.
 

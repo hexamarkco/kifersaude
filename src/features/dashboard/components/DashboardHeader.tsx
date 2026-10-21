@@ -1,9 +1,13 @@
-import { Filter, Layers3, Stethoscope, Tag, Target, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Filter, Layers3, SlidersHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
 
 import {
+  Badge,
+  Button,
   Input,
   PageHeader,
   FilterSelect,
+  Surface,
 } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
@@ -68,17 +72,26 @@ export function DashboardHeader({
   isCustomStartInvalid,
   isCustomEndInvalid,
 }: DashboardHeaderProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = [
+    dashboardOriginFilter,
+    dashboardOwnerFilter,
+    dashboardOperatorFilter,
+    dashboardContractTypeFilter,
+    dashboardStatusFilter,
+  ].filter(Boolean).length;
+
   return (
     <PageHeader
       eyebrow="Operação comercial"
       title="Dashboard"
-      description="Acompanhe o ritmo do pipeline, da carteira e das conversões."
+      description="Veja o que pede atenção e escolha o próximo passo da operação."
       data-panel-animate
       className="border-b border-[var(--border-subtle)] pb-5"
     >
-      <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center">
-          <div className="min-w-0 xl:w-52">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="w-full sm:w-52">
             <FilterSelect
               icon={Filter}
               value={periodFilter}
@@ -94,96 +107,95 @@ export function DashboardHeader({
           </div>
 
           {periodFilter === 'personalizado' && (
-            <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center xl:w-auto">
+            <div className="flex min-w-0 items-center gap-2">
               <Input
                 type="text"
                 value={customStartDate}
                 onChange={onStartDateChange}
-                placeholder="DD/MM/AAAA"
+                placeholder="De · DD/MM/AAAA"
+                aria-label="Data inicial do período"
                 maxLength={10}
-                className="sm:w-32"
+                className="w-36"
                 invalid={isCustomStartInvalid}
               />
-              <span className="text-center text-xs text-[var(--text-muted)] sm:hidden">
-                até
-              </span>
-              <span className="hidden text-sm text-[var(--text-muted)] sm:inline">
-                até
-              </span>
+              <span className="text-sm text-[var(--text-muted)]">até</span>
               <Input
                 type="text"
                 value={customEndDate}
                 onChange={onEndDateChange}
-                placeholder="DD/MM/AAAA"
+                placeholder="Até · DD/MM/AAAA"
+                aria-label="Data final do período"
                 maxLength={10}
-                className="sm:w-32"
+                className="w-36"
                 invalid={isCustomEndInvalid}
               />
             </div>
           )}
-
-          <div className="min-w-0 xl:w-52">
-            <FilterSelect
-              icon={Target}
-              value={dashboardOriginFilter}
-              onChange={onOriginFilterChange}
-              placeholder="Todas as origens"
-              neutralValues={['']}
-              options={visibleLeadOrigins.map((origin) => ({
-                value: origin.nome,
-                label: origin.nome,
-              }))}
-            />
-          </div>
-
-          <div className="min-w-0 xl:w-56">
-            <FilterSelect
-              icon={Users}
-              value={dashboardOwnerFilter}
-              onChange={onOwnerFilterChange}
-              placeholder="Todos os responsáveis"
-              options={responsavelOptions.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
-          </div>
-
-          <div className="min-w-0 xl:w-52">
-            <FilterSelect
-              icon={Stethoscope}
-              value={dashboardOperatorFilter}
-              onChange={onOperatorFilterChange}
-              placeholder="Todas as operadoras"
-              neutralValues={['']}
-              options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
-            />
-          </div>
-
-          <div className="min-w-0 xl:w-52">
-            <FilterSelect
-              icon={Tag}
-              value={dashboardContractTypeFilter}
-              onChange={onContractTypeFilterChange}
-              placeholder="Todos os tipos"
-              neutralValues={['']}
-              options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
-            />
-          </div>
-
-          <div className="min-w-0 xl:w-52">
-            <FilterSelect
-              icon={Layers3}
-              value={dashboardStatusFilter}
-              onChange={onStatusFilterChange}
-              placeholder="Todos os estágios"
-              neutralValues={['']}
-              options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
-            />
-          </div>
         </div>
 
+        <Button
+          type="button"
+          variant="secondary"
+          aria-expanded={filtersOpen}
+          aria-controls="dashboard-advanced-filters"
+          onClick={() => setFiltersOpen((open) => !open)}
+          className="shrink-0"
+        >
+          <SlidersHorizontal aria-hidden="true" />
+          Filtros avançados
+          {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
+        </Button>
       </div>
+
+      {filtersOpen && (
+        <Surface
+          id="dashboard-advanced-filters"
+          variant="muted"
+          padding="sm"
+          className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5"
+          aria-label="Filtros avançados do dashboard"
+        >
+          <FilterSelect
+            icon={Target}
+            value={dashboardOriginFilter}
+            onChange={onOriginFilterChange}
+            placeholder="Todas as origens"
+            neutralValues={['']}
+            options={visibleLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome }))}
+          />
+          <FilterSelect
+            icon={Users}
+            value={dashboardOwnerFilter}
+            onChange={onOwnerFilterChange}
+            placeholder="Todos os responsáveis"
+            options={responsavelOptions.map((option) => ({ value: option.value, label: option.label }))}
+          />
+          <FilterSelect
+            icon={Stethoscope}
+            value={dashboardOperatorFilter}
+            onChange={onOperatorFilterChange}
+            placeholder="Todas as operadoras"
+            neutralValues={['']}
+            options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
+          />
+          <FilterSelect
+            icon={Tag}
+            value={dashboardContractTypeFilter}
+            onChange={onContractTypeFilterChange}
+            placeholder="Todos os tipos"
+            neutralValues={['']}
+            options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
+          />
+          <FilterSelect
+            icon={Layers3}
+            value={dashboardStatusFilter}
+            onChange={onStatusFilterChange}
+            placeholder="Todos os estágios"
+            neutralValues={['']}
+            options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
+          />
+        </Surface>
+      )}
     </PageHeader>
   );
 }

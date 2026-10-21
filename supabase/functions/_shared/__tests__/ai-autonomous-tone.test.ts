@@ -25,7 +25,7 @@ describe('contextual autonomous conversation contract', () => {
       expect(prompt).toContain('diferencie residencia dos beneficiarios');
       expect(prompt).toContain('Preserve todas as regioes de utilizacao informadas');
       expect(prompt).toContain('nem inclua os parentes como beneficiarios');
-      expect(prompt).toContain('uma unica cidade principal de utilizacao');
+      expect(prompt).toContain('ATENDIMENTO EM TODO O BRASIL');
       expect(prompt).toContain('bairro e detalhe opcional e nao bloqueia');
       expect(prompt).toContain('nao reformule a mesma pergunta');
       expect(prompt).toContain('de Vitoria para Vila Velha');
@@ -36,11 +36,32 @@ describe('contextual autonomous conversation contract', () => {
   test('regional scenario judge distinguishes optional neighborhood from required data', () => {
     const scenario = autonomousToneScenarios.find((item) => item.key === 'multi-region-completion-without-neighborhood')!;
     const judge = buildJudgePrompt(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, scenario.history, true, scenario.handoff);
-    expect(judge.userPrompt).toContain('bairro e opcional e nao deve bloquear');
+    expect(judge.userPrompt).toContain('Bairro e opcional, inclusive em capital');
     expect(judge.userPrompt).toContain('sem incluir parentes como beneficiarios');
     expect(judge.userPrompt).toContain('Vitoria para Vila Velha');
-    expect(judge.userPrompt).toContain('unica cidade principal capital');
+    expect(judge.userPrompt).toContain('Bairro em qualquer cidade');
     expect(judge.userPrompt).toContain('contexto regional do item 1');
+  });
+
+  test('national service, respectful warmth and repair survive production and correction prompts', () => {
+    for (const prompt of [
+      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+      buildAutonomousAttendanceUserPrompt([]),
+      buildAutonomousValidationRetryInstruction({ valid: false, stopReason: 'invalid_output' }),
+    ]) {
+      expect(prompt).toContain('Atendimento da corretora em todo o Brasil nao significa cobertura nacional de todo plano');
+      expect(prompt).toContain('CIDADE E ESTADO OBRIGATORIOS');
+      expect(prompt).toContain('pergunte somente o estado, mesmo sem ambiguidade aparente');
+      expect(prompt).toContain('Porto Alegre/RS, sem repetir a pergunta');
+      expect(prompt).toContain('Nao pergunte bairro automaticamente por ser capital');
+      expect(prompt).toContain('perto do Shopping Iguatemi');
+      expect(prompt).toContain('DUVIDA SOBRE A PERGUNTA');
+      expect(prompt).toContain('CARINHO COM RESPEITO');
+      expect(prompt).toContain('Idades em linhas separadas');
+      expect(prompt).toContain('sem escolher por ela');
+    }
+    expect(AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION).toContain('Bairro e opcional em todo o Brasil');
+    expect(AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION).toContain('Estado e obrigatorio');
   });
 
   test.each(autonomousToneScenarios)('$key accepts a relevant candidate and preserves handoff', (scenario) => {

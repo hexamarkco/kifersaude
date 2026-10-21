@@ -127,7 +127,7 @@ describe('AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS', () => {
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /PLANO ATUAL E MOTIVO DA TROCA/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /custo, rede, reajuste, atendimento, cobertura/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /contexto comercial opcional e nunca bloqueia/);
-    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /bairro quando essa cidade for uma capital/);
+    assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Bairro e opcional em todo o Brasil, inclusive nas capitais/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /MENOR DE 12 ANOS/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /Não aplique essa regra a adolescentes de 12 anos ou mais/);
     assert.match(AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS, /mostre que entendeu a situação concreta/);

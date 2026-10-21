@@ -1387,7 +1387,7 @@ async function updateScheduledWhatsAppSequence(supabase: SupabaseClient, params:
   });
   if (error) {
     if (error.code === '42501') return errorResult('UNAUTHORIZED', 'A edição exige OAuth de administrador ativo.');
-    if (error.code === '40001') return errorResult('CONFLICT', 'A sequência mudou. Consulte novamente antes de editar.');
+    if (error.code === 'PT409' || error.code === '40001') return errorResult('CONFLICT', 'A sequência mudou. Consulte novamente antes de editar.');
     if (error.code === 'P0002') return errorResult('SCHEDULE_NOT_FOUND', 'Sequência não encontrada.');
     if (error.code === 'P0001') return errorResult('SCHEDULE_NOT_EDITABLE', 'A sequência já iniciou ou não aceita as etapas informadas. Consulte novamente.');
     return errorResult('INTERNAL_ERROR', 'Não foi possível editar a sequência.');

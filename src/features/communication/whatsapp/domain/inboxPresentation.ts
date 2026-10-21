@@ -133,7 +133,7 @@ export const hasVisualMediaCaption = (message: CommWhatsAppMessage) => (
 const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
-  if (file.type.startsWith('image/')) {
+  if (file.type.startsWith('image/') || /\.avif$/i.test(file.name)) {
     return 'image';
   }
 

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
+import { BRAZIL_STATES } from '../../../../src/lib/brasilLocations';
 import {
   extractAutonomousQualificationState,
   normalizeKnownOperator,
@@ -10,11 +11,73 @@ import {
 const stateFrom = (messages: QualificationMessage[]) => extractAutonomousQualificationState(messages, '2026-09-17T12:00:00.000Z');
 
 describe('ai autonomous qualification state', () => {
+test('cidade sem UF conhecida nao conclui antes de obter o estado', () => {
+  const state = stateFrom([
+    { role: 'lead', content: 'Só para mim, tenho 38 anos. Moro em Santa Helena. Não tenho CNPJ nem MEI e não tenho plano.' },
+  ]);
+  assert.equal(state.location.state, null);
+  assert.deepEqual(state.missingRequiredFields, ['state']);
+  assert.equal(qualificationStateIsComplete(state), false);
+});
+
+test.each(BRAZIL_STATES)('aceita nome ou sigla de $nome sem substituir a cidade', ({ uf, nome }) => {
+  for (const answer of [uf, uf.toLowerCase(), nome, `Sou do ${nome}`]) {
+    const state = stateFrom([
+      { role: 'lead', content: 'Só para mim, tenho 38 anos. Moro em Santa Helena. Não tenho CNPJ nem MEI e não tenho plano.' },
+      { role: 'ai', content: 'Em qual estado fica Santa Helena?' },
+      { role: 'lead', content: answer },
+    ]);
+    assert.equal(state.location.city, 'Santa Helena');
+    assert.equal(state.location.state, uf);
+    assert.equal(qualificationStateIsComplete(state), true);
+  }
+});
+
+test.each(['Campinas, SP', 'Campinas/SP', 'Campinas - SP', 'Campinas SP', 'Campinas, sp', 'Campinas, São Paulo', 'Campinas no estado de São Paulo'])(
+  'aproveita cidade e estado juntos em %s sem confundir o estado com a capital', (answer) => {
+    const state = stateFrom([
+      { role: 'ai', content: 'Em qual cidade e estado você precisa de atendimento?' },
+      { role: 'lead', content: answer },
+    ]);
+    assert.equal(state.location.city, 'Campinas');
+    assert.equal(state.location.state, 'SP');
+    assert.equal(state.location.isCapital, false);
+  },
+);
+
+test('aproveita cidade e estado enviados em mensagens consecutivas', () => {
+  const state = stateFrom([
+    { role: 'ai', content: 'Em qual cidade e estado você precisa de atendimento?' },
+    { role: 'lead', content: 'Campinas' },
+    { role: 'lead', content: 'São Paulo' },
+  ]);
+  assert.equal(state.location.city, 'Campinas');
+  assert.equal(state.location.state, 'SP');
+});
+
+test('cidade e UF informadas no CRM sao aproveitadas sem nova pergunta', () => {
+  const state = extractAutonomousQualificationState([
+    { role: 'lead', content: 'Só para mim, tenho 38 anos. Não tenho CNPJ nem MEI e não tenho plano.' },
+  ], '2026-10-19T16:00:00Z', { city: 'Campinas', state: 'São Paulo' });
+  assert.equal(state.location.state, 'SP');
+  assert.equal(qualificationStateIsComplete(state), true);
+});
+
+test('mudanca de cidade nao reaproveita UF antiga sem evidencia', () => {
+  const state = stateFrom([
+    { role: 'lead', content: 'Moro em Porto Alegre.' },
+    { role: 'lead', content: 'Na verdade vou usar em Santa Helena.' },
+  ]);
+  assert.equal(state.location.city, 'Santa Helena');
+  assert.equal(state.location.state, null);
+  assert.ok(state.missingRequiredFields.includes('state'));
+});
+
 test('qualificacao completa com informacoes espontaneas nao cria perguntas artificiais', () => {
   const state = stateFrom([
     {
       role: 'lead',
-      content: 'É para mim e minha esposa. Eu tenho 41 anos e ela 39. Somos de Niterói, no bairro Icaraí. Nenhum dos dois tem CNPJ ou MEI e hoje não temos plano.',
+      content: 'É para mim e minha esposa. Eu tenho 41 anos e ela 39. Somos de Niterói, RJ, no bairro Icaraí. Nenhum dos dois tem CNPJ ou MEI e hoje não temos plano.',
     },
   ]);
 
@@ -27,18 +90,51 @@ test('qualificacao completa com informacoes espontaneas nao cria perguntas artif
   assert.equal(qualificationStateIsComplete(state), true);
 });
 
-test('capital exige bairro e bairro informado libera a qualificacao', () => {
+test('bairro e opcional mesmo em capital e continua sendo aproveitado quando informado', () => {
   const withoutNeighborhood = stateFrom([
     { role: 'lead', content: 'É para mim, tenho 38 anos. Moro no Rio de Janeiro. Não tenho CNPJ nem MEI e não tenho plano.' },
   ]);
   assert.equal(withoutNeighborhood.location.isCapital, true);
-  assert.deepEqual(withoutNeighborhood.missingRequiredFields, ['neighborhood']);
+  assert.equal(withoutNeighborhood.location.neighborhoodRequired, false);
+  assert.deepEqual(withoutNeighborhood.missingRequiredFields, []);
+  assert.equal(qualificationStateIsComplete(withoutNeighborhood), true);
 
   const withNeighborhood = stateFrom([
     { role: 'lead', content: 'É para mim, tenho 38 anos. Moro no Rio de Janeiro, bairro Tijuca. Não tenho CNPJ nem MEI e não tenho plano.' },
   ]);
   assert.equal(withNeighborhood.location.neighborhood, 'Tijuca');
   assert.equal(qualificationStateIsComplete(withNeighborhood), true);
+});
+
+test.each(['Porto Alegre', 'Manaus', 'Recife', 'São Paulo', 'Brasília', 'Goiânia', 'Florianópolis'])(
+  'qualifica em %s sem exigir bairro, inclusive com cidade vinda do CRM', (city) => {
+    const messages: QualificationMessage[] = [
+      { role: 'lead', content: 'Só para mim, tenho 38 anos. Não tenho CNPJ nem MEI e não tenho plano.' },
+    ];
+    const seeded = extractAutonomousQualificationState(messages, '2026-10-19T16:00:00Z', { city });
+    const spoken = stateFrom([...messages, { role: 'lead', content: `Vou usar em ${city}.` }]);
+    for (const state of [seeded, spoken]) {
+      assert.equal(state.location.city, city);
+      assert.equal(state.location.neighborhoodRequired, false);
+      assert.equal(qualificationStateIsComplete(state), true);
+    }
+  },
+);
+
+test('aproveita idades em linhas separadas para mae e filha adulta sem criar terceira vida', () => {
+  const state = stateFrom([
+    { role: 'ai', content: 'Você busca um plano só para você ou para mais alguém da família?' },
+    { role: 'lead', content: 'Sou eu e filha' },
+    { role: 'lead', content: 'Ou só pra mim' },
+    { role: 'lead', content: '54\n26' },
+    { role: 'lead', content: 'Idades' },
+    { role: 'ai', content: 'Em qual cidade vocês precisam de atendimento?' },
+    { role: 'lead', content: 'Porto Alegre' },
+  ]);
+  assert.equal(state.lives.count, 2);
+  assert.deepEqual(state.lives.items.map((life) => life.age), [54, 26]);
+  assert.equal(state.location.city, 'Porto Alegre');
+  assert.deepEqual(state.missingRequiredFields, ['has_cnpj_or_mei', 'has_current_health_plan']);
 });
 
 test('preserva tres vidas quando ha um adulto, uma adolescente e um bebe', () => {
@@ -53,7 +149,7 @@ test('preserva tres vidas quando ha um adulto, uma adolescente e um bebe', () =>
 
 test('numero do CNPJ e detalhes da operadora nao bloqueiam a conclusao', () => {
   const state = stateFrom([
-    { role: 'lead', content: 'É para mim, tenho 32 anos, moro em Campinas. Tenho MEI, mas prefiro não passar o número. Tenho plano, mas não sei qual é.' },
+    { role: 'lead', content: 'É para mim, tenho 32 anos, moro em Campinas, SP. Tenho MEI, mas prefiro não passar o número. Tenho plano, mas não sei qual é.' },
   ]);
 
   assert.equal(state.company.hasCnpjOrMei, 'yes');
@@ -104,7 +200,7 @@ test('respostas curtas sao extraidas usando a pergunta anterior como contexto', 
     { role: 'ai', content: 'Quais sao as idades?' },
     { role: 'lead', content: '41, 39 e 9' },
     { role: 'ai', content: 'Em qual cidade voces moram?' },
-    { role: 'lead', content: 'Niterói' },
+    { role: 'lead', content: 'Niterói, RJ' },
     { role: 'ai', content: 'Alguem tem CNPJ ou MEI?' },
     { role: 'lead', content: 'Tem sim' },
     { role: 'ai', content: 'Hoje voces ja tem plano?' },
@@ -207,8 +303,10 @@ test('consolida respostas curtas da Karine sem inventar CNPJ ou plano', () => {
   assert.equal(state.lives.count, 1);
   assert.deepEqual(state.lives.items.map((life) => life.age), [44]);
   assert.equal(state.location.city, 'Cachoeiro De Itapemirim');
+  assert.equal(state.location.state, null);
   assert.equal(state.company.hasCnpjOrMei, 'no');
   assert.equal(state.currentHealthPlan.hasPlan, 'no');
-  assert.equal(qualificationStateIsComplete(state), true);
+  assert.equal(qualificationStateIsComplete(state), false);
+  assert.deepEqual(state.missingRequiredFields, ['state']);
 });
 });

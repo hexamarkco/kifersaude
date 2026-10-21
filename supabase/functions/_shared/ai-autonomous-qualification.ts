@@ -98,6 +98,44 @@ const normalize = (value: string): string => value
   .replace(/\s+/g, ' ')
   .trim();
 
+// Kept local to Deno; parity with the browser's state options is tested.
+const BRAZIL_STATE_CODES: Record<string, string> = {
+  acre: 'AC', alagoas: 'AL', amapa: 'AP', amazonas: 'AM', bahia: 'BA', ceara: 'CE',
+  'distrito federal': 'DF', 'espirito santo': 'ES', goias: 'GO', maranhao: 'MA',
+  'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', para: 'PA',
+  paraiba: 'PB', parana: 'PR', pernambuco: 'PE', piaui: 'PI', 'rio de janeiro': 'RJ',
+  'rio grande do norte': 'RN', 'rio grande do sul': 'RS', rondonia: 'RO', roraima: 'RR',
+  'santa catarina': 'SC', 'sao paulo': 'SP', sergipe: 'SE', tocantins: 'TO',
+};
+
+const normalizeStateCode = (value: string): string | null => {
+  const normalized = normalize(value).replace(/[.!?,;]+$/, '')
+    .replace(/^(?:(?:sou|moro|fica|resido|estou)\s+(?:no|na|em|do|da)\s+|(?:no|na|do|da)\s+|(?:estado|uf)\s+(?:(?:de|do|da|e)\s+)?)/, '').trim();
+  return BRAZIL_STATE_CODES[normalized]
+    ?? (Object.values(BRAZIL_STATE_CODES).includes(normalized.toUpperCase()) ? normalized.toUpperCase() : null);
+};
+
+const extractStateLocation = (text: string): { state: string | null; cityText: string } => {
+  const bareState = normalizeStateCode(text);
+  if (bareState) return { state: bareState, cityText: text };
+
+  const explicit = text.match(/\b(?:no\s+)?(?:estado|uf)\s+(?:(?:de|do|da|é|e)\s+)?([^.!?,;\n]+)/i);
+  const explicitState = explicit ? normalizeStateCode(explicit[1]) : null;
+  if (explicit && explicitState) {
+    return { state: explicitState, cityText: text.replace(explicit[0], '').trim() };
+  }
+  // A delimited state must be removed before looking for capitals. Otherwise
+  // "Campinas, São Paulo" is incorrectly reduced to the city of São Paulo.
+  for (const match of text.matchAll(/[,/-]\s*([^.!?,;\n/]+)/g)) {
+    const state = normalizeStateCode(match[1]);
+    if (state) return { state, cityText: text.slice(0, match.index).trim() };
+  }
+  const suffix = text.match(/\s+([A-Z]{2})(?=\s*(?:[.!?,;\n]|$))/);
+  const suffixState = suffix ? normalizeStateCode(suffix[1]) : null;
+  if (suffix && suffixState) return { state: suffixState, cityText: text.slice(0, suffix.index).trim() };
+  return { state: null, cityText: text };
+};
+
 const toTitle = (value: string): string => value
   .trim()
   .split(/\s+/)
@@ -265,7 +303,8 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
     const ages = existingPlanOnly ? [] : extractAgeValues(text);
     const ageQuestionPending = /idade|idades|quantos\s+anos|anos/.test(normalizedPreviousAi)
       && !/quantas?\s+(?:vidas?|pessoas?)/.test(normalizedPreviousAi);
-    const hasPendingAge = count !== null && latestAges.length < count && /^\s*\d{1,3}\s*$/.test(text);
+    const bareAgeList = /^\s*\d{1,3}(?:\s*(?:,|e|\/|\+|\r?\n)\s*\d{1,3})*\s*$/i.test(text);
+    const hasPendingAge = (count !== null ? latestAges.length < count : compositionStatus === 'known') && bareAgeList;
     const likelyAgeReply = /^\s*\d{1,3}\s*$/.test(text)
       || /^\s*\d{1,3}(?:\s*(?:,|e|\/|\+)\s*\d{1,3})+\s*$/i.test(text)
       || /\b(?:idade|anos?)\b/i.test(text);
@@ -330,7 +369,10 @@ const buildLives = (messages: QualificationMessage[]): { count: number | null; i
   }
   if (hasAdult && childReferenceCount > 0) {
     const adultCount = Math.max(1, latestAges.filter((age) => age >= 18).length);
-    const minorCount = Math.max(childReferenceCount, latestAges.filter((age) => age < 18).length);
+    // Filha/filho describes kinship, not age. Once every age is supplied,
+    // an adult daughter must not create an extra, imaginary minor.
+    const allAgesKnown = count !== null && latestAges.length >= count;
+    const minorCount = Math.max(allAgesKnown ? 0 : childReferenceCount, latestAges.filter((age) => age < 18).length);
     count = Math.max(count ?? 0, adultCount + minorCount);
   }
   if (onlyChild && !hasAdult) {
@@ -381,12 +423,12 @@ const calculateState = (
   const lives = buildLives(messages);
   let location: AutonomousQualificationState['location'] = {
     city: seed.city?.trim() || null,
-    state: seed.state?.trim() || null,
+    state: (seed.state ? normalizeStateCode(seed.state) : null) ?? (seed.city ? CAPITALS[normalize(seed.city)]?.state : null) ?? null,
     cityStatus: seed.city?.trim() ? 'known' : 'not_asked',
     isCapital: seed.city ? Boolean(CAPITALS[normalize(seed.city)]) : null,
     neighborhood: null,
     neighborhoodStatus: 'not_asked',
-    neighborhoodRequired: seed.city ? Boolean(CAPITALS[normalize(seed.city)]) : false,
+    neighborhoodRequired: false,
   };
   let company: AutonomousQualificationState['company'] = {
     hasCnpjOrMei: /mei|cnpj/i.test(seed.contractingType ?? '') ? 'yes' : 'unknown',
@@ -419,20 +461,25 @@ const calculateState = (
       continue;
     }
     const normalizedPreviousAi = normalize(previousAi);
-    const city = extractCity(message.content)
+    const { state: explicitState, cityText } = extractStateLocation(message.content);
+    const stateOnlyAnswer = normalizeStateCode(message.content)
+      && /\bestado\b|\buf\b/.test(normalizedPreviousAi)
+      && (!/\bcidade\b/.test(normalizedPreviousAi) || location.city !== null);
+    const city = stateOnlyAnswer ? null : extractCity(cityText)
       ?? (/cidade|onde\s+(?:mora|moram|usar|utilizar)/.test(normalizedPreviousAi)
-        ? extractCity(`cidade de ${message.content}`)
+        ? extractCity(`cidade de ${cityText}`)
         : null);
     if (city) {
       location = {
         ...location,
         city: city.city,
-        state: city.state,
+        state: explicitState ?? city.state ?? (normalize(city.city) === normalize(location.city ?? '') ? location.state : null),
         cityStatus: 'known',
         isCapital: city.isCapital,
-        neighborhoodRequired: city.isCapital,
+        neighborhoodRequired: false,
       };
     }
+    if (explicitState) location = { ...location, state: explicitState };
     const neighborhood = extractNeighborhood(message.content)
       ?? (/bairro/.test(normalizedPreviousAi) ? extractNeighborhood(`bairro ${message.content}`) : null);
     if (neighborhood) location = { ...location, neighborhood, neighborhoodStatus: 'known' };
@@ -489,6 +536,7 @@ const calculateState = (
   if (lives.compositionStatus !== 'known' || lives.count === null) missingRequiredFields.push('lives');
   if (lives.items.length === 0 || lives.items.some((life) => life.ageStatus !== 'known')) missingRequiredFields.push('ages');
   if (location.cityStatus !== 'known') missingRequiredFields.push('city');
+  if (!location.state) missingRequiredFields.push('state');
   if (location.neighborhoodRequired && location.neighborhoodStatus !== 'known') missingRequiredFields.push('neighborhood');
   if (company.answerStatus !== 'known') missingRequiredFields.push('has_cnpj_or_mei');
   if (currentHealthPlan.answerStatus !== 'known') missingRequiredFields.push('has_current_health_plan');

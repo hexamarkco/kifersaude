@@ -6,7 +6,8 @@ import {
   ContactPermissionCheckError,
 } from '../_shared/contact-permissions.ts';
 import { checkCommWhatsAppActionRateLimit, RATE_LIMIT_RESPONSE_BODY } from '../_shared/rate-limit.ts';
-import { isPlausibleMediaSignature } from '../_shared/file-signature.ts';
+import { isAvifImageSignature, isPlausibleMediaSignature } from '../_shared/file-signature.ts';
+import { convertAvifToJpeg } from '../_shared/image-conversion.ts';
 import {
   archiveCommWhatsAppMedia,
   COMM_WHATSAPP_MODULE,
@@ -78,7 +79,7 @@ const MCP_INTERNAL_SECRET_HEADER = 'X-Kifer-MCP-Internal-Secret';
 const MCP_INTERNAL_ACTOR_HEADER = 'X-Kifer-MCP-Actor-Id';
 // Mesmo teto já usado para download de mídia inbound (MAX_WHAPI_MEDIA_RESPONSE_BYTES).
 const MAX_OUTBOUND_MEDIA_UPLOAD_BYTES = 32 * 1024 * 1024;
-const MEDIA_SIGNATURE_SAMPLE_BYTES = 16;
+const MEDIA_SIGNATURE_SAMPLE_BYTES = 64;
 
 const createAdminClient = (headers: Record<string, string> = {}) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -667,7 +668,29 @@ Deno.serve(async (req: Request) => {
 
       if (mediaKind) {
         const headerBytes = new Uint8Array(await mediaFile.slice(0, MEDIA_SIGNATURE_SAMPLE_BYTES).arrayBuffer());
-        if (!isPlausibleMediaSignature(mediaKind, headerBytes)) {
+        if (mediaKind === 'image' && isAvifImageSignature(headerBytes)) {
+          try {
+            mediaFile = await convertAvifToJpeg(mediaFile);
+          } catch (error) {
+            console.error('[comm-whatsapp-send] falha ao converter imagem AVIF', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            return new Response(JSON.stringify({ error: 'Não foi possível converter a imagem AVIF. Tente exportá-la como JPG ou PNG.' }), {
+              status: 400,
+              headers: jsonHeaders,
+            });
+          }
+        }
+
+        if (mediaFile.size > MAX_OUTBOUND_MEDIA_UPLOAD_BYTES) {
+          return new Response(
+            JSON.stringify({ error: `Arquivo convertido excede o limite de ${Math.floor(MAX_OUTBOUND_MEDIA_UPLOAD_BYTES / (1024 * 1024))}MB.` }),
+            { status: 400, headers: jsonHeaders },
+          );
+        }
+
+        const normalizedHeaderBytes = new Uint8Array(await mediaFile.slice(0, MEDIA_SIGNATURE_SAMPLE_BYTES).arrayBuffer());
+        if (!isPlausibleMediaSignature(mediaKind, normalizedHeaderBytes)) {
           return new Response(JSON.stringify({ error: 'O conteúdo do arquivo não corresponde ao tipo declarado.' }), {
             status: 400,
             headers: jsonHeaders,

@@ -271,7 +271,7 @@ echo.
 if !TOTAL! EQU 0 (
   echo Nenhuma function com index.ts encontrada em supabase\functions.
 ) else (
-  echo Resumo: !SUCCESS! deploy(s), !SKIPPED! sem alteracao, !FAIL! falha(s), !TOTAL! total.
+  echo Resumo: !SUCCESS! deploy^(s^), !SKIPPED! sem alteracao, !FAIL! falha^(s^), !TOTAL! total.
 )
 
 set "EXIT_CODE=0"

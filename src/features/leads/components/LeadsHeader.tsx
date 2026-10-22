@@ -30,9 +30,7 @@ export function LeadsHeader({
       actions={(
         <>
           <LinkButton
-            href="/api-docs.html"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/painel/api"
             variant="secondary"
             size="md"
             title="Abrir documentação para integrar outros sistemas"

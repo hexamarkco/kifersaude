@@ -27,6 +27,7 @@ import type { TabNavigationOptions } from '../types/navigation';
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
   'leads': 'leads',
+  'api': 'leads',
   'contratos': 'contracts',
   'comissoes': 'financeiro-comissoes',
   'agenda': 'agenda',

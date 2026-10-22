@@ -58,6 +58,7 @@ import {
   getCampaignMediaReadinessBlocker,
 } from './domain/campaignReadiness';
 import { CampaignDeliveryStatusCard } from './components/CampaignDeliveryStatusCard';
+import { CampaignSequenceFlow } from './components/CampaignSequenceFlow';
 
 const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
   none: 'Não repetir',
@@ -756,8 +757,8 @@ export default function WhatsAppCampaignsScreen() {
     }));
   };
 
-  const addStage = () => {
-    setStages((current) => [...current, defaultStage(1, 'days')]);
+  const addStage = (kind: CommWhatsAppCampaignStepKind) => {
+    setStages((current) => [...current, { ...defaultStage(1, 'days'), kind }]);
   };
 
   const removeStage = (stageIndex: number) => {
@@ -1150,7 +1151,7 @@ export default function WhatsAppCampaignsScreen() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequência do disparo</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Cada etapa dispara sob o mesmo intervalo (ex: 3 mensagens imediatas, depois 2 mensagens 24h depois) e pode mudar o status do lead entre os envios.</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Monte o caminho de cada contato: envie mensagens, aguarde e mude o status. Selecione uma etapa no mapa para editar os detalhes.</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
                   <Badge tone="neutral">{stages.length} etapa(s)</Badge>
                   <Badge tone="neutral">{flatMessages.length} mensagem(ns)</Badge>
@@ -1171,10 +1172,6 @@ export default function WhatsAppCampaignsScreen() {
                 <Button variant="secondary" size="sm" onClick={() => void handleSaveTemplate()}>
                   <BookmarkPlus className="kds-control-icon" />
                   Salvar modelo
-                </Button>
-                <Button variant="secondary" size="sm" onClick={addStage}>
-                  <Plus className="kds-control-icon" />
-                  Adicionar etapa
                 </Button>
               </div>
             </div>
@@ -1225,11 +1222,16 @@ export default function WhatsAppCampaignsScreen() {
               </Field>
             )}
 
-            <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
-              {stages.map((stage, stageIndex) => {
+            <CampaignSequenceFlow
+              stages={stages}
+              statusOptions={leadStatusOptions}
+              interMessageIntervalSeconds={interMessageIntervalSeconds}
+              abTestEnabled={abTestEnabled}
+              onAddStage={addStage}
+              renderStageEditor={(stage, stageIndex) => {
                 const isFirstStage = stageIndex === 0;
                 return (
-                  <div key={stageIndex} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
+                  <div key={stageIndex} className="p-3">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{stageIndex + 1}</span>
@@ -1240,6 +1242,7 @@ export default function WhatsAppCampaignsScreen() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Select
+                          aria-label="Ação desta etapa"
                           className="min-w-[11rem]"
                           value={stage.kind}
                           onChange={(event) => updateStage(stageIndex, { kind: event.target.value as CommWhatsAppCampaignStepKind })}
@@ -1257,7 +1260,7 @@ export default function WhatsAppCampaignsScreen() {
                     {!isFirstStage && (
                       <div className="mb-3 grid gap-3 sm:grid-cols-2">
                         <Field label={<FieldLabel text="Aguardar desde a etapa anterior" hint="Quanto tempo esperar depois que a etapa anterior terminar antes de disparar este." />}>
-                          <Input type="number" min={0} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Number(event.target.value) || 0 })} />
+                          <Input type="number" min={0} step={1} value={stage.delayAmount} onChange={(event) => updateStage(stageIndex, { delayAmount: Math.max(0, Math.floor(Number(event.target.value) || 0)) })} />
                         </Field>
                         <Field label={<FieldLabel text="Unidade" hint="Unidade de tempo do intervalo de espera ao lado." />}>
                           <Select
@@ -1406,13 +1409,13 @@ export default function WhatsAppCampaignsScreen() {
                         >
                           <Plus /> Adicionar mensagem nesta etapa
                         </Button>
-                        <p className="text-[10px] text-[color:var(--panel-text-muted)]">As mensagens desta etapa saem em sequência, sem intervalo entre elas.</p>
+                        <p className="text-xs text-[color:var(--panel-text-muted)]">Cada mensagem aparece em um balão separado no WhatsApp.</p>
                       </div>
                     )}
                   </div>
                 );
-              })}
-            </div>
+              }}
+            />
           </Surface>
           </>
           )}

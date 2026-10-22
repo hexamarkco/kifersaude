@@ -1,25 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ListPlus, Plus, Trash2 } from 'lucide-react';
-import { useConfig } from '../../contexts/ConfigContext';
-import { configService, type ConfigCategory } from '../../features/config/data/configService';
-import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import { toast } from '../../lib/toast';
+import { Plus, Trash2 } from 'lucide-react';
+import { useConfig } from '../../../../contexts/ConfigContext';
+import { configService, type ConfigCategory } from '../../data/configService';
+import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
+import { toast } from '../../../../lib/toast';
 import {
-  Badge,
   Button,
-  Card,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  EmptyState,
   Field,
   Input,
   IconButton,
   Switch,
-} from '../../design-system';
+} from '../../../../design-system';
+import { SettingsCatalogList } from './SettingsCatalogList';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -189,106 +187,41 @@ export default function ConfigOptionManager({
   };
 
   return (
-    <Card padding="md">
-      <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="kds-card-title">{title}</h3>
-          {description && <p className="kds-card-subtitle mt-1">{description}</p>}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">{items.length} {items.length === 1 ? 'opção' : 'opções'}</Badge>
-            <Badge tone="success">{items.filter((item) => item.ativo).length} ativas</Badge>
-          </div>
-        </div>
-
-        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving} className="w-full sm:w-auto">
-          <Plus className="kds-control-icon" />
-          <span>{addLabel}</span>
-        </Button>
-      </div>
-
-      <p className="mt-4 text-xs text-[var(--text-secondary)]">
-        Nome e ordem são salvos automaticamente ao sair do campo.
-      </p>
-
-      {items.length === 0 ? (
-        <EmptyState
-          className="mt-5"
-          icon={<ListPlus aria-hidden="true" />}
-          title={emptyStateTitle}
-          description={emptyStateDescription}
-          action={(
-            <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
-              <Plus className="kds-control-icon" />
-              {addLabel}
-            </Button>
-          )}
-        />
-      ) : (
-        <div className="mt-5 space-y-3">
-          {items.map((item) => {
-            const isBusy = busyId === item.id;
-
-            return (
-              <Card
-                key={item.id}
-                variant="muted"
-                padding="md"
-                className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end"
-              >
-                <Field label={optionLabel} htmlFor={`config-option-label-${item.id}`}>
-                  <Input
-                    id={`config-option-label-${item.id}`}
-                    type="text"
-                    value={drafts[item.id]?.label ?? item.label}
-                    onChange={(event) => updateDraft(item.id, { label: event.target.value })}
-                    onBlur={() => void handleLabelBlur(item.id, item.label)}
-                    disabled={isBusy}
-                  />
-                </Field>
-
-                <Field label="Ordem" htmlFor={`config-option-order-${item.id}`}>
-                  <Input
-                    id={`config-option-order-${item.id}`}
-                    type="number"
-                    min="0"
-                    value={drafts[item.id]?.ordem ?? String(item.ordem)}
-                    onChange={(event) => updateDraft(item.id, { ordem: event.target.value })}
-                    onBlur={() => void handleOrderBlur(item.id, item.ordem)}
-                    disabled={isBusy}
-                  />
-                </Field>
-
-                <div className="flex items-center justify-between gap-3 xl:justify-end">
-                  <div className="flex min-h-14 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 xl:min-w-40">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--text-primary)]">{item.ativo ? 'Ativa' : 'Inativa'}</p>
-                      <p className="text-xs text-[var(--text-secondary)]">Disponibilidade</p>
-                    </div>
-                    <Switch
-                      size="sm"
-                      checked={item.ativo}
-                      onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
-                      disabled={isBusy}
-                      aria-label={`${item.ativo ? 'Desativar' : 'Ativar'} opção ${item.label}`}
-                    />
-                  </div>
-
-                  <IconButton
-                    onClick={() => void handleDelete(item.id)}
-                    variant="danger"
-                    title="Remover opção"
-                    disabled={isBusy}
-                    size="md"
-                    aria-label={`Remover opção ${item.label}`}
-                  >
-                    <Trash2 className="kds-control-icon" aria-hidden="true" />
-                  </IconButton>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+    <section>
+      <SettingsCatalogList
+        title={title} description={description}
+        hint="Nome e ordem são salvos automaticamente ao sair do campo."
+        items={items} getId={(item) => item.id} getSearchText={(item) => item.label}
+        initialSortKey="order" gridClassName="md:grid-cols-[minmax(0,1fr)_5rem_7rem_2.5rem]"
+        columns={[
+          { key: 'name', label: optionLabel, getValue: (item) => item.label },
+          { key: 'order', label: 'Ordem', getValue: (item) => item.ordem },
+          { key: 'active', label: 'Disponível', getValue: (item) => Number(item.ativo) },
+          { key: 'actions', label: 'Ações' },
+        ]}
+        action={<Button size="sm" onClick={() => setIsCreateModalOpen(true)} disabled={saving}><Plus className="kds-control-icon" aria-hidden="true" />{addLabel}</Button>}
+        emptyTitle={emptyStateTitle} emptyDescription={emptyStateDescription}
+        renderItem={(item) => {
+          const isBusy = busyId === item.id;
+          return <>
+            <Input size="sm" id={`config-option-label-${item.id}`} aria-label={`${optionLabel}: ${item.label}`}
+              value={drafts[item.id]?.label ?? item.label}
+              onChange={(event) => updateDraft(item.id, { label: event.target.value })}
+              onBlur={() => void handleLabelBlur(item.id, item.label)} disabled={isBusy} />
+            <div className="flex flex-wrap items-center justify-end gap-3 md:contents">
+              <div className="w-20 md:w-auto"><Input size="sm" type="number" min="0" id={`config-option-order-${item.id}`} aria-label={`Ordem de ${item.label}`}
+                value={drafts[item.id]?.ordem ?? String(item.ordem)}
+                onChange={(event) => updateDraft(item.id, { ordem: event.target.value })}
+                onBlur={() => void handleOrderBlur(item.id, item.ordem)} disabled={isBusy} /></div>
+              <div className="flex items-center gap-2">
+                <Switch size="sm" checked={item.ativo} onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })} disabled={isBusy} aria-label={`${item.ativo ? 'Desativar' : 'Ativar'} opção ${item.label}`} />
+                <span className="text-xs text-[var(--text-secondary)]">{item.ativo ? 'Ativa' : 'Inativa'}</span>
+              </div>
+              <IconButton onClick={() => void handleDelete(item.id)} variant="danger" title="Remover opção" disabled={isBusy} size="sm" aria-label={`Remover opção ${item.label}`}><Trash2 aria-hidden="true" /></IconButton>
+            </div>
+          </>;
+        }}
+      />
       <Dialog
         open={isCreateModalOpen}
         onOpenChange={(open) => {
@@ -344,6 +277,6 @@ export default function ConfigOptionManager({
         </DialogFooter>
       </Dialog>
       {ConfirmationDialog}
-    </Card>
+    </section>
   );
 }

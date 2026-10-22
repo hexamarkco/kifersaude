@@ -1,26 +1,22 @@
 import { useEffect, useState } from 'react';
-import { PaintBucket, Plus, Star, Trash2 } from 'lucide-react';
-import { useConfig } from '../../contexts/ConfigContext';
-import { configService } from '../../features/config/data/configService';
-import { getBadgeStyle } from '../../lib/colorUtils';
-import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import { toast } from '../../lib/toast';
+import { Plus, Star, Trash2 } from 'lucide-react';
+import { useConfig } from '../../../../contexts/ConfigContext';
+import { configService } from '../../data/configService';
+import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
+import { toast } from '../../../../lib/toast';
 import {
-  Badge,
   Button,
-  ButtonGroup,
-  Card,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  EmptyState,
   Field,
   Input,
   IconButton,
-} from '../../design-system';
+} from '../../../../design-system';
+import { SettingsCatalogList } from './SettingsCatalogList';
 
 type StatusDraft = { nome: string; ordem: string };
 
@@ -210,126 +206,37 @@ export default function LeadStatusManager() {
   };
 
   return (
-    <Card padding="md">
-      <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="kds-card-title">Etapas do funil</h3>
-          <p className="kds-card-subtitle mt-1">
-            Organize os status, suas cores e a etapa inicial para novos leads.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">{leadStatuses.length} {leadStatuses.length === 1 ? 'etapa' : 'etapas'}</Badge>
-            <Badge tone="success">{leadStatuses.filter((status) => status.ativo).length} ativas</Badge>
-          </div>
-        </div>
-
-        <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving} className="w-full sm:w-auto">
-          <Plus className="kds-control-icon" />
-          <span>Adicionar etapa</span>
-        </Button>
-      </div>
-
-      {leadStatuses.length === 0 ? (
-        <EmptyState
-          className="mt-5"
-          icon={<PaintBucket aria-hidden="true" />}
-          title="Seu funil ainda está vazio"
-          description="Adicione a primeira etapa para organizar o acompanhamento dos leads."
-          action={(
-            <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
-              <Plus className="kds-control-icon" />
-              Adicionar primeira etapa
-            </Button>
-          )}
-        />
-      ) : (
-        <div className="mt-5 space-y-3">
-          {leadStatuses.map((status) => {
-            const isProcessing = processingId === status.id;
-
-            return (
-              <Card
-                key={status.id}
-                variant="muted"
-                padding="md"
-                className="space-y-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border"
-                      style={getBadgeStyle(status.cor)}
-                      aria-hidden="true"
-                    >
-                      <PaintBucket className="h-4 w-4" />
-                    </span>
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                        Etapa {status.ordem}
-                      </span>
-                      {status.padrao ? <Badge tone="gold">Padrão do funil</Badge> : null}
-                    </div>
-                  </div>
-
-                  <ButtonGroup role="group" aria-label={`Ações do status ${status.nome}`}>
-                    <IconButton
-                      onClick={() => void handleSetDefault(status.id)}
-                      variant={status.padrao ? 'soft' : 'ghost'}
-                      disabled={isProcessing || status.padrao}
-                      size="md"
-                      aria-label={status.padrao ? `${status.nome} é o status padrão` : `Definir ${status.nome} como padrão`}
-                      title={status.padrao ? 'Status padrão' : 'Definir como padrão'}
-                    >
-                      <Star className={status.padrao ? 'kds-control-icon fill-current' : 'kds-control-icon'} aria-hidden="true" />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => void handleDelete(status.id)}
-                      variant="danger"
-                      disabled={isProcessing}
-                      size="md"
-                      aria-label={`Excluir status ${status.nome}`}
-                      title="Excluir status"
-                    >
-                      <Trash2 className="kds-control-icon" aria-hidden="true" />
-                    </IconButton>
-                  </ButtonGroup>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_120px_112px]">
-                  <Field label="Nome do status">
-                    <Input
-                      type="text"
-                      value={drafts[status.id]?.nome ?? status.nome}
-                      onChange={(event) => updateDraft(status.id, { nome: event.target.value })}
-                      onBlur={() => void handleNameBlur(status.id, status.nome)}
-                      disabled={isProcessing}
-                    />
-                  </Field>
-                  <Field label="Ordem">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={drafts[status.id]?.ordem ?? String(status.ordem)}
-                      onChange={(event) => updateDraft(status.id, { ordem: event.target.value })}
-                      onBlur={() => void handleOrderBlur(status.id, status.ordem)}
-                      disabled={isProcessing}
-                    />
-                  </Field>
-                  <Field label="Cor">
-                    <Input
-                      type="color"
-                      value={status.cor}
-                      onChange={(event) => void handleUpdate(status.id, { cor: event.target.value })}
-                      disabled={isProcessing}
-                      aria-label={`Cor do status ${status.nome}`}
-                    />
-                  </Field>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+    <section>
+      <SettingsCatalogList
+        title="Etapas do funil" description="Organize os nomes, as cores e a etapa inicial dos novos leads."
+        hint="Nome e ordem são salvos ao sair do campo. A estrela indica a etapa padrão."
+        items={leadStatuses} getId={(status) => status.id} getSearchText={(status) => status.nome}
+        initialSortKey="order" gridClassName="md:grid-cols-[minmax(0,1fr)_5rem_4rem_4rem_2.5rem]"
+        columns={[
+          { key: 'name', label: 'Etapa', getValue: (status) => status.nome },
+          { key: 'order', label: 'Ordem', getValue: (status) => status.ordem },
+          { key: 'color', label: 'Cor', getValue: (status) => status.cor },
+          { key: 'default', label: 'Padrão', getValue: (status) => Number(status.padrao) },
+          { key: 'actions', label: 'Ações' },
+        ]}
+        action={<Button size="sm" onClick={() => setIsCreateModalOpen(true)} disabled={saving}><Plus className="kds-control-icon" aria-hidden="true" />Adicionar etapa</Button>}
+        emptyTitle="Seu funil ainda está vazio" emptyDescription="Adicione a primeira etapa para organizar o acompanhamento dos leads."
+        renderItem={(status) => {
+          const isProcessing = processingId === status.id;
+          return <>
+            <Input size="sm" aria-label={`Nome da etapa ${status.nome}`} value={drafts[status.id]?.nome ?? status.nome}
+              onChange={(event) => updateDraft(status.id, { nome: event.target.value })} onBlur={() => void handleNameBlur(status.id, status.nome)} disabled={isProcessing} />
+            <div className="flex flex-wrap items-center justify-end gap-2 md:contents">
+              <div className="w-14 md:w-auto"><Input size="sm" type="number" min="0" aria-label={`Ordem da etapa ${status.nome}`} value={drafts[status.id]?.ordem ?? String(status.ordem)}
+                onChange={(event) => updateDraft(status.id, { ordem: event.target.value })} onBlur={() => void handleOrderBlur(status.id, status.ordem)} disabled={isProcessing} /></div>
+              <div className="w-10"><Input size="sm" type="color" value={status.cor} onChange={(event) => void handleUpdate(status.id, { cor: event.target.value })} disabled={isProcessing} aria-label={`Cor do status ${status.nome}`} className="px-1" /></div>
+              <IconButton onClick={() => void handleSetDefault(status.id)} variant={status.padrao ? 'soft' : 'ghost'} disabled={isProcessing || status.padrao} size="sm"
+                aria-label={status.padrao ? `${status.nome} é o status padrão` : `Definir ${status.nome} como padrão`} title={status.padrao ? 'Etapa padrão' : 'Definir como padrão'}><Star className={status.padrao ? 'fill-current' : ''} aria-hidden="true" /></IconButton>
+              <IconButton onClick={() => void handleDelete(status.id)} variant="danger" disabled={isProcessing} size="sm" aria-label={`Excluir status ${status.nome}`} title="Excluir etapa"><Trash2 aria-hidden="true" /></IconButton>
+            </div>
+          </>;
+        }}
+      />
       <Dialog
         open={isCreateModalOpen}
         onOpenChange={(open) => {
@@ -404,6 +311,6 @@ export default function LeadStatusManager() {
         </DialogFooter>
       </Dialog>
       {ConfirmationDialog}
-    </Card>
+    </section>
   );
 }

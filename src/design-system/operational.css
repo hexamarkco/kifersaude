@@ -920,3 +920,50 @@
   --operator-accent-border: var(--info-border);
   --operator-accent-ink: var(--info-text);
 }
+/* Integration documentation and request explorer. */
+.kds-api-page { min-width: 0; }
+.kds-api-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.kds-api-overview > div { display: flex; align-items: center; gap: 1rem; }
+.kds-api-overview svg { color: var(--brand-primary); flex-shrink: 0; }
+.kds-api-overview strong { color: var(--text-primary); font-size: 0.875rem; }
+.kds-api-overview p, .kds-api-muted { color: var(--text-muted); font-size: 0.8125rem; line-height: 1.6; }
+.kds-api-layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.kds-api-sidebar { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow-y: auto; scrollbar-width: thin; }
+.kds-api-workspace { display: flex; min-width: 0; flex-direction: column; gap: 1.5rem; }
+.kds-api-nav-heading { color: var(--text-muted); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+.kds-api-endpoint { display: flex; flex-direction: column; gap: 0.375rem; width: 100%; padding: 0.75rem; border: 1px solid transparent; border-radius: 8px; text-align: left; color: var(--text-secondary); transition: background 150ms ease; }
+.kds-api-endpoint > span { display: flex; gap: 0.5rem; align-items: center; }
+.kds-api-endpoint strong { font-size: 0.8125rem; font-weight: 600; }
+.kds-api-endpoint code { font-size: 0.6875rem; overflow-wrap: anywhere; color: var(--text-muted); }
+.kds-api-endpoint:hover { background: var(--bg-hover); }
+.kds-api-endpoint.is-active { background: var(--brand-primary-soft); border-color: var(--brand-primary-border); color: var(--brand-primary); }
+.kds-api-endpoint:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.kds-api-endpoint:disabled { cursor: wait; opacity: 0.65; }
+.kds-api-path { overflow-wrap: anywhere; color: var(--text-secondary); font-size: 0.8125rem; }
+.kds-api-query-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.kds-api-json-editor, .kds-api-code pre, .kds-api-path, .kds-api-parameters code, .kds-api-endpoint code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.kds-api-json-editor { tab-size: 2; font-size: 0.8125rem; line-height: 1.75; }
+.kds-api-details { min-width: 0; border-top: 1px solid var(--border-default); padding-top: 1rem; color: var(--text-secondary); font-size: 0.8125rem; line-height: 1.7; }
+.kds-api-details summary { cursor: pointer; color: var(--text-primary); font-weight: 600; }
+.kds-api-details > :not(summary) { margin-top: 1rem; }
+.kds-api-details h3 { color: var(--text-primary); font-weight: 600; }
+.kds-api-notes { padding-left: 1rem; list-style: disc; color: var(--text-secondary); font-size: 0.8125rem; line-height: 1.7; }
+.kds-api-notes li + li { margin-top: 0.375rem; }
+.kds-api-parameters > div { padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle); }
+.kds-api-parameters > div > div { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.kds-api-parameters code { overflow-wrap: anywhere; color: var(--text-primary); }
+.kds-api-parameters p { margin-top: 0.25rem; color: var(--text-muted); }
+.kds-api-code { min-width: 0; overflow: hidden; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-inset); }
+.kds-api-code-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 1rem; background: var(--bg-surface-muted); border-bottom: 1px solid var(--border-subtle); font-size: 0.75rem; color: var(--text-secondary); }
+.kds-api-code pre { max-height: 30rem; overflow: auto; padding: 1rem; color: var(--text-primary); font-size: 0.75rem; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kds-api-copy-message { padding: 0.5rem 1rem 0; color: var(--text-muted); font-size: 0.75rem; }
+.kds-api-empty { display: flex; align-items: center; gap: 1rem; padding: 1.5rem 0; color: var(--text-muted); font-size: 0.8125rem; line-height: 1.7; }
+.kds-api-help { padding: 0 0.25rem 1rem; border-top: 0; }
+@media (max-width: 1100px) {
+  .kds-api-layout { grid-template-columns: 14rem minmax(0, 1fr); gap: 1rem; }
+  .kds-api-overview { grid-template-columns: 1fr; gap: 0.75rem; }
+}
+@media (max-width: 767px) {
+  .kds-api-layout, .kds-api-query-grid { grid-template-columns: minmax(0, 1fr); }
+  .kds-api-sidebar { position: static; max-height: 24rem; }
+}

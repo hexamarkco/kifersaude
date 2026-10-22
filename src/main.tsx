@@ -9,6 +9,7 @@ import NoIndex from './components/seo/NoIndex';
 import { VercelSpeedInsights } from './app/VercelSpeedInsights';
 import {
   AiSandboxChatWrapper,
+  ApiDocsWrapper,
   BlogTab,
   ConfigPage,
   ContractsManagerWrapper,
@@ -78,6 +79,7 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<Navigate to="/painel/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardWrapper />} />
               <Route path="leads" element={<LeadsManagerWrapper />} />
+              <Route path="api" element={<ApiDocsWrapper />} />
               <Route path="contratos" element={<ContractsManagerWrapper />} />
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="agenda" element={<FinanceiroAgendaTab />} />

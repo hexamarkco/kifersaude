@@ -14,6 +14,7 @@ export const ProtectedRoute = lazyWithChunkRecovery(() => import('../components/
 export const LoginPage = lazyWithChunkRecovery(() => import('../pages/LoginPage'));
 export const DashboardWrapper = lazyWithChunkRecovery(() => import('../pages/routes/DashboardWrapper'));
 export const LeadsManagerWrapper = lazyWithChunkRecovery(() => import('../pages/routes/LeadsManagerWrapper'));
+export const ApiDocsWrapper = lazyWithChunkRecovery(() => import('../pages/routes/ApiDocsWrapper'));
 export const ContractsManagerWrapper = lazyWithChunkRecovery(() => import('../pages/routes/ContractsManagerWrapper'));
 export const WhatsAppInboxWrapper = lazyWithChunkRecovery(() => import('../pages/routes/WhatsAppInboxWrapper'));
 export const WhatsAppCampaignsWrapper = lazyWithChunkRecovery(() => import('../pages/routes/WhatsAppCampaignsWrapper'));

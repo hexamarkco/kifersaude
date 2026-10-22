@@ -4448,6 +4448,7 @@ export type Database = {
           actor_id: string
           bonus_por_vida_aplicado: boolean | null
           carencia_individual: string | null
+          consume_request_fingerprint: string | null
           consumed_at: string | null
           contract_id: string | null
           cpf: string | null
@@ -4469,6 +4470,7 @@ export type Database = {
           actor_id: string
           bonus_por_vida_aplicado?: boolean | null
           carencia_individual?: string | null
+          consume_request_fingerprint?: string | null
           consumed_at?: string | null
           contract_id?: string | null
           cpf?: string | null
@@ -4490,6 +4492,7 @@ export type Database = {
           actor_id?: string
           bonus_por_vida_aplicado?: boolean | null
           carencia_individual?: string | null
+          consume_request_fingerprint?: string | null
           consumed_at?: string | null
           contract_id?: string | null
           cpf?: string | null
@@ -7142,10 +7145,6 @@ export type Database = {
         }
         Returns: number
       }
-      _comm_whatsapp_campaign_marketing_review_ready: {
-        Args: { p_config: Json }
-        Returns: boolean
-      }
       _comm_whatsapp_campaign_next_window_at: {
         Args: {
           p_campaign: Database["public"]["Tables"]["comm_whatsapp_campaigns"]["Row"]
@@ -9375,6 +9374,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mcp_activate_team_production: {
+        Args: { p_actor_user_id: string }
+        Returns: string
+      }
       mcp_add_lead_to_opportunity: {
         Args: {
           p_actor_user_id: string
@@ -9434,6 +9437,16 @@ export type Database = {
         }
         Returns: Json
       }
+      mcp_comm_whatsapp_set_autonomous_attendance: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
+          p_status: string
+        }
+        Returns: Json
+      }
       mcp_comm_whatsapp_set_chat_archived: {
         Args: {
           p_actor_user_id: string
@@ -9441,6 +9454,15 @@ export type Database = {
           p_client_request_id: string
           p_expected_updated_at: string
           p_is_archived: boolean
+        }
+        Returns: Json
+      }
+      mcp_comm_whatsapp_set_chat_deleted: {
+        Args: {
+          p_actor_user_id: string
+          p_chat_id: string
+          p_client_request_id: string
+          p_expected_updated_at: string
         }
         Returns: Json
       }
@@ -9569,6 +9591,16 @@ export type Database = {
         }
         Returns: Json
       }
+      mcp_create_contract_dependent_from_import: {
+        Args: {
+          p_actor_user_id: string
+          p_client_request_id: string
+          p_contract_id: string
+          p_holder_id: string
+          p_import_id: string
+        }
+        Returns: Json
+      }
       mcp_create_contract_holder: {
         Args: {
           p_actor_user_id: string
@@ -9626,6 +9658,19 @@ export type Database = {
       }
       mcp_get_opportunity_360: {
         Args: { p_actor_user_id: string; p_opportunity_id: string }
+        Returns: Json
+      }
+      mcp_mutate_agenda_reminders: {
+        Args: {
+          p_actor_user_id: string
+          p_dry_run?: boolean
+          p_items: Json
+          p_operation: string
+        }
+        Returns: Json
+      }
+      mcp_mutate_ai_configuration: {
+        Args: { p_action: string; p_actor_user_id: string; p_payload: Json }
         Returns: Json
       }
       mcp_opportunity_assert_active_admin: {
@@ -9707,6 +9752,15 @@ export type Database = {
           p_expected_updated_at: string
           p_opportunity_id: string
           p_primary_contact_lead_id: string
+        }
+        Returns: Json
+      }
+      mcp_set_whatsapp_integration_enabled: {
+        Args: {
+          p_actor_user_id: string
+          p_enabled: boolean
+          p_expected_channel_updated_at: string
+          p_expected_settings_updated_at: string
         }
         Returns: Json
       }

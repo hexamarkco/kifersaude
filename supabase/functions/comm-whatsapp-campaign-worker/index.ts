@@ -1413,7 +1413,7 @@ const getBetweenMessageDelayMs = (
   if (previousStep.step_kind !== 'message' || nextStep.step_kind !== 'message' || intervalMinutes <= 0) {
     return configuredDelay;
   }
-  return Math.max(configuredDelay, intervalMinutes * 60_000);
+  return Math.max(configuredDelay, Math.round(intervalMinutes * 60) * 1000);
 };
 
 const OPT_OUT_KEYWORDS = [
@@ -1886,8 +1886,9 @@ function findStageCompanions(
   steps: CampaignStepRow[],
   currentStepIndex: number,
   interMessageIntervalMinutes: number,
+  maxWaitSeconds: number,
 ): CampaignStepRow[] | null {
-  if (interMessageIntervalMinutes > 0) return null;
+  if (interMessageIntervalMinutes >= 1) return null;
   const currentIndex = steps.findIndex((s) => s.step_index === currentStepIndex);
   if (currentIndex < 0) return null;
 
@@ -1898,9 +1899,15 @@ function findStageCompanions(
 
   // Coletar steps consecutivos com mesmo stage_index e step_kind='message'
   const companions: CampaignStepRow[] = [];
+  // Bound short waits within a request; the remaining messages resume from
+  // their persisted step on the next scheduled invocation.
+  const maxCompanions = interMessageIntervalMinutes > 0
+    ? Math.floor(Math.min(60, Math.max(0, maxWaitSeconds)) / Math.max(1, Math.round(interMessageIntervalMinutes * 60))) + 1
+    : Infinity;
   for (let i = currentIndex; i < steps.length; i++) {
     const s = steps[i];
     if (s.stage_index !== stageIndex || s.step_kind !== 'message') break;
+    if (companions.length >= maxCompanions || (companions.length > 0 && getDelayMs(s) > 0)) break;
     companions.push(s);
   }
 
@@ -2135,13 +2142,14 @@ async function executeStageBurst(params: {
     if (campaign.stop_on_reply && target.sent_at) {
       // Normal reply detection (short-circuits once responded_at is set)
       const reply = target.responded_at ? null : await findVisibleInboundCampaignReply(supabaseAdmin, target);
-      if (reply) {
+      if (reply || (target.responded_at && hasConfiguredInterMessageWait(allSteps, step, campaign.inter_message_interval_minutes))) {
         // Opt-out always stops — even with delay_amount=0 (same-stage burst)
-        const isOptOut = isExplicitOptOut(
+        const isOptOut = reply ? isExplicitOptOut(
           getInboundMessagePreviewText(reply.message as InboundMessageRow)
             || (reply.message as InboundMessageRow)?.text_content,
-        );
-        if (isOptOut || shouldStopSequenceBeforeStep(step)) {
+        ) : false;
+        const respondedAt = reply?.respondedAt || target.responded_at || nowIso;
+        if (isOptOut || shouldStopSequenceBeforeStep(step, target.status, hasConfiguredInterMessageWait(allSteps, step, campaign.inter_message_interval_minutes))) {
           for (let j = i; j < companions.length; j++) {
             await advanceStepDispatch(supabaseAdmin, {
               dispatchKey: `${campaign.id}:${target.id}:${companions[j].step_index}`,
@@ -2151,9 +2159,9 @@ async function executeStageBurst(params: {
           }
           await updateClaimedTarget(supabaseAdmin, target, {
             status: isOptOut ? 'stopped' : 'responded',
-            ...(isOptOut ? { stopped_at: reply.respondedAt || nowIso, stopped_reason: 'contact_opt_out' } : {}),
-            responded_at: reply.respondedAt || target.responded_at || nowIso,
-            chat_id: reply.chat.id,
+            ...(isOptOut ? { stopped_at: respondedAt, stopped_reason: 'contact_opt_out' } : {}),
+            responded_at: respondedAt,
+            chat_id: reply?.chat.id || target.chat_id,
             locked_at: null,
             lock_token: null,
           });
@@ -2162,14 +2170,14 @@ async function executeStageBurst(params: {
               campaignId: campaign.id,
               targetId: target.id,
               eventType: 'target_opt_out_during_burst',
-              payload: { stopped_before_step: step.step_index, reply_at: reply.respondedAt },
+              payload: { stopped_before_step: step.step_index, reply_at: respondedAt },
             });
           } else {
             await insertEvent(supabaseAdmin, {
               campaignId: campaign.id,
               targetId: target.id,
               eventType: 'target_burst_interrupted_by_reply',
-              payload: { stopped_before_step: step.step_index, reply_at: reply.respondedAt },
+              payload: { stopped_before_step: step.step_index, reply_at: respondedAt },
             });
           }
           return {
@@ -2179,7 +2187,7 @@ async function executeStageBurst(params: {
           };
         }
         // Normal reply with delay_amount=0 → record only, burst continues
-        if (!target.responded_at) {
+        if (reply && !target.responded_at) {
           await updateClaimedTarget(supabaseAdmin, target, {
             responded_at: reply.respondedAt || nowIso,
             chat_id: reply.chat.id,
@@ -2592,13 +2600,16 @@ async function executeStageBurst(params: {
 
     // ── Inter-message delay (except after last message) ──
     if (i < companions.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, BURST_INTER_MESSAGE_DELAY_MS));
+      const delayMs = campaign.inter_message_interval_minutes > 0
+        ? getBetweenMessageDelayMs(step, companions[i + 1], campaign.inter_message_interval_minutes)
+        : BURST_INTER_MESSAGE_DELAY_MS;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 
   // ── All messages sent — advance target ──
   const nextSendAt = firstStepAfterBurst
-    ? new Date(Date.now() + getDelayMs(firstStepAfterBurst)).toISOString()
+    ? new Date(Date.now() + getBetweenMessageDelayMs(companions[companions.length - 1], firstStepAfterBurst, campaign.inter_message_interval_minutes)).toISOString()
     : null;
   const targetStatus = firstStepAfterBurst ? 'scheduled' : 'sent';
 
@@ -3449,6 +3460,7 @@ async function sendTarget(params: {
   senderPhone: string | null;
   senderName: string | null;
   csvLeadDefaults: CsvLeadDefaults | null;
+  shortWaitDeadline: number;
 }) {
   const { supabaseAdmin, campaign, target } = params;
   let phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
@@ -3529,7 +3541,12 @@ async function sendTarget(params: {
   const nextStep = steps[stepPosition + 1] ?? null;
 
   // ── Burst detection: multiple consecutive messages in the same stage ──
-  const stageCompanions = findStageCompanions(steps, step.step_index, campaign.inter_message_interval_minutes);
+  const stageCompanions = findStageCompanions(
+    steps,
+    step.step_index,
+    campaign.inter_message_interval_minutes,
+    Math.floor((params.shortWaitDeadline - Date.now()) / 1000),
+  );
   if (stageCompanions) {
     return executeStageBurst({
       supabaseAdmin,
@@ -4202,6 +4219,9 @@ async function processCampaigns(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   params: { campaignId?: string; limit?: number },
 ) {
+  // Share the short-wait budget across campaigns and pool batches, leaving
+  // time for provider requests and persistence before the HTTP timeout.
+  const shortWaitDeadline = Date.now() + 90_000;
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const token = sanitizeWhapiToken(settings.token);
@@ -4359,6 +4379,7 @@ async function processCampaigns(
           senderPhone: channel.phone_number,
           senderName: channel.connected_user_name,
           csvLeadDefaults,
+          shortWaitDeadline,
         });
       } catch (error) {
         if (error instanceof CampaignTargetLeaseLostError) {

@@ -153,7 +153,7 @@ export type CreateCampaignInput = {
   pacingPerMinute: number;
   dailySendLimit?: number | null;
   contactIntervalMinutes?: number | null;
-  interMessageIntervalMinutes: number;
+  interMessageIntervalSeconds: number;
   sendWindowStart?: string | null;
   sendWindowEnd?: string | null;
   activeWeekdays: number[];
@@ -1035,7 +1035,7 @@ export const commWhatsAppCampaignService = {
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
         contact_interval_minutes: input.contactIntervalMinutes ?? null,
-        inter_message_interval_minutes: input.interMessageIntervalMinutes,
+        inter_message_interval_minutes: input.interMessageIntervalSeconds / 60,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         active_weekdays: input.activeWeekdays,
@@ -1125,7 +1125,7 @@ export const commWhatsAppCampaignService = {
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
         contact_interval_minutes: input.contactIntervalMinutes ?? null,
-        inter_message_interval_minutes: input.interMessageIntervalMinutes,
+        inter_message_interval_minutes: input.interMessageIntervalSeconds / 60,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         active_weekdays: input.activeWeekdays,

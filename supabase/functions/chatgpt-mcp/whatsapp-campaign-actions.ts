@@ -77,7 +77,8 @@ const CAMPAIGN_COMMON_PROPERTIES = {
   pacing_per_minute: { type: 'integer', minimum: 1, maximum: 120, default: 12 },
   daily_send_limit: { type: ['integer', 'null'], minimum: 1 },
   contact_interval_minutes: { type: ['integer', 'null'], minimum: 1, maximum: 1440, description: 'Intervalo mínimo entre novos contatos. Nulo distribui o público elegível pela janela de envio.' },
-  inter_message_interval_minutes: { type: 'integer', minimum: 0, maximum: 1440, default: 0, description: 'Intervalo entre balões da sequência; zero mantém o envio sequencial atual.' },
+  inter_message_interval_seconds: { type: 'integer', minimum: 0, maximum: 86400, description: 'Espera mínima entre balões em segundos. Zero mantém o padrão de cerca de 3 segundos. Em sequências longas ou esperas a partir de 60 segundos, a retomada pode levar até um minuto adicional. Não combinar com inter_message_interval_minutes.' },
+  inter_message_interval_minutes: { type: 'integer', minimum: 0, maximum: 1440, description: 'Compatibilidade com integrações anteriores. Prefira inter_message_interval_seconds; não combine as duas unidades.' },
   start_hour: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' },
   end_hour: { type: 'string', pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' },
   allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } },
@@ -754,6 +755,11 @@ const campaignPatch = (args: JsonRecord): JsonRecord => {
 
 const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
   const patch = campaignPatch(args);
+  if ('inter_message_interval_seconds' in args) {
+    const seconds = args.inter_message_interval_seconds;
+    if ('inter_message_interval_minutes' in args
+      || !Number.isInteger(seconds) || Number(seconds) < 0 || Number(seconds) > 86400) return null;
+  }
   if (
     ('contact_interval_minutes' in patch
       && patch.contact_interval_minutes !== null
@@ -761,6 +767,10 @@ const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
     || ('inter_message_interval_minutes' in patch
       && (!Number.isInteger(patch.inter_message_interval_minutes) || Number(patch.inter_message_interval_minutes) < 0 || Number(patch.inter_message_interval_minutes) > 1440))
   ) return null;
+
+  if ('inter_message_interval_seconds' in args) {
+    patch.inter_message_interval_minutes = Number(args.inter_message_interval_seconds) / 60;
+  }
 
   const pacingConfig: JsonRecord = {};
   if ('contact_interval_minutes' in patch) pacingConfig.contact_interval_minutes = patch.contact_interval_minutes;

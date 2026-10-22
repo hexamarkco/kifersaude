@@ -293,7 +293,7 @@ export default function WhatsAppCampaignsScreen() {
   const [activeWeekdays, setActiveWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
   const [contactIntervalMinutes, setContactIntervalMinutes] = useState<number | null>(null);
-  const [interMessageIntervalMinutes, setInterMessageIntervalMinutes] = useState(0);
+  const [interMessageIntervalSeconds, setInterMessageIntervalSeconds] = useState(0);
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
@@ -451,7 +451,7 @@ export default function WhatsAppCampaignsScreen() {
     setActiveWeekdays([1, 2, 3, 4, 5]);
     setDailySendLimit(null);
     setContactIntervalMinutes(null);
-    setInterMessageIntervalMinutes(0);
+    setInterMessageIntervalSeconds(0);
     setPacingPerMinute(12);
     setReactivationMode(false);
     setInactiveDays(90);
@@ -570,7 +570,7 @@ export default function WhatsAppCampaignsScreen() {
       setActiveWeekdays(campaign.active_weekdays?.length ? campaign.active_weekdays : [0, 1, 2, 3, 4, 5, 6]);
       setDailySendLimit(campaign.daily_send_limit ?? null);
       setContactIntervalMinutes(campaign.contact_interval_minutes ?? null);
-      setInterMessageIntervalMinutes(campaign.inter_message_interval_minutes ?? 0);
+      setInterMessageIntervalSeconds(Math.round((campaign.inter_message_interval_minutes ?? 0) * 60));
       setPacingPerMinute(campaign.pacing_per_minute || 12);
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
@@ -680,7 +680,7 @@ export default function WhatsAppCampaignsScreen() {
         pacingPerMinute,
         dailySendLimit,
         contactIntervalMinutes,
-        interMessageIntervalMinutes,
+        interMessageIntervalSeconds,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
         activeWeekdays: activeWeekdays.length > 0 ? activeWeekdays : [0, 1, 2, 3, 4, 5, 6],
@@ -1179,8 +1179,8 @@ export default function WhatsAppCampaignsScreen() {
               </div>
             </div>
 
-            <Field label={<FieldLabel text="Intervalo entre balões (minutos)" hint="0 mantém o envio sequencial atual, com cerca de 3 segundos entre balões. A partir de 1 minuto, cada balão é agendado separadamente; o sistema verifica os envios a cada minuto, e uma resposta pode parar a sequência." />}>
-              <Input type="number" min={0} max={1440} value={interMessageIntervalMinutes} onChange={(event) => setInterMessageIntervalMinutes(Math.min(1440, Math.max(0, Math.floor(Number(event.target.value) || 0))))} />
+            <Field label={<FieldLabel text="Intervalo entre balões (segundos)" hint="Informe a espera mínima entre as mensagens, em segundos. Exemplo: 10 espera pelo menos 10 segundos. Use 0 para manter o padrão de cerca de 3 segundos. Uma resposta pode interromper a sequência. Em sequências longas ou esperas de 60 segundos ou mais, a retomada pode levar até 1 minuto adicional." />}>
+              <Input type="number" min={0} max={86400} step={1} value={interMessageIntervalSeconds} onChange={(event) => setInterMessageIntervalSeconds(Math.min(86400, Math.max(0, Math.floor(Number(event.target.value) || 0))))} />
             </Field>
 
             {templates.length > 0 && (
@@ -1570,7 +1570,7 @@ export default function WhatsAppCampaignsScreen() {
                     <PreviewRow label="Campanha" value={activationPreview.campaign.name} />
                     <PreviewRow label="Agendamento" value={formatDateTime(activationPreview.campaign.scheduled_at)} />
                     <PreviewRow label="Janela" value={formatSendWindow(activationPreview.campaign)} />
-                    <PreviewRow label="Intervalo entre balões" value={activationPreview.campaign.inter_message_interval_minutes > 0 ? `A cada ${activationPreview.campaign.inter_message_interval_minutes} min` : 'Sequencial (aprox. 3 s)'} />
+                    <PreviewRow label="Intervalo entre balões" value={activationPreview.campaign.inter_message_interval_minutes > 0 ? `Pelo menos ${Math.round(activationPreview.campaign.inter_message_interval_minutes * 60)} segundos` : 'Padrão (cerca de 3 segundos)'} />
                     <PreviewRow label="Novos contatos por 24h" value={activationPreview.campaign.daily_send_limit ? String(activationPreview.campaign.daily_send_limit) : 'Sem limite'} />
                     <PreviewRow label="Origem" value={activationPreview.campaign.audience_source.toUpperCase()} />
                     <PreviewRow label="Contatos processados" value={String(activationPreview.materializedTargets)} />

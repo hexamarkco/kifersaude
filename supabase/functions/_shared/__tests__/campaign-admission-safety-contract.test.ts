@@ -92,7 +92,7 @@ test('campaign cadence is persisted, applied atomically to admissions, and pause
   assert.match(pacingMigration, /NEW\.contact_interval_minutes := v_contact_interval/);
   assert.match(pacingMigration, /NEW\.inter_message_interval_minutes := v_message_interval/);
   assert.match(worker, /contact_interval_minutes,inter_message_interval_minutes/);
-  assert.match(worker, /if \(interMessageIntervalMinutes > 0\) return null/);
+  assert.match(worker, /if \(interMessageIntervalMinutes >= 1\) return null/);
   assert.match(worker, /getBetweenMessageDelayMs\(step, nextStep, campaign\.inter_message_interval_minutes\)/);
   assert.match(worker, /hasConfiguredInterMessageWait\(steps, step, campaign\.inter_message_interval_minutes\)/);
 });

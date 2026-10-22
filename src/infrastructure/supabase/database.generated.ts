@@ -9644,6 +9644,19 @@ export type Database = {
         }
         Returns: Json
       }
+      mcp_exchange_oauth_tokens: {
+        Args: {
+          p_access_token_hash: string
+          p_client_id: string
+          p_code_challenge: string
+          p_credential_hash: string
+          p_grant_type: string
+          p_redirect_uri: string
+          p_refresh_token_hash: string
+          p_resource: string
+        }
+        Returns: Json
+      }
       mcp_get_contact_permission: {
         Args: { p_actor_user_id: string; p_channel: string; p_endpoint: string }
         Returns: Json

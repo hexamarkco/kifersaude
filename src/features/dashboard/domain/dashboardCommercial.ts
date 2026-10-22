@@ -22,6 +22,7 @@ export const DASHBOARD_STALE_OPPORTUNITY_HOURS = 48;
 const STALE_FOLLOW_UP_DAYS = 7;
 const DAY_IN_MS = 86_400_000;
 const terminalStatusPattern = /^(fechado|perdido|convertido)$/i;
+const reactivationStatusPattern = /^reativa[cç][aã]o$/iu;
 const proposalPattern = /proposta|cot[aã]ç[aã]o/iu;
 const decisionPattern = /decis[aã]o|negocia/iu;
 const advancedStagePattern = /proposta|decis[aã]o|negocia|contrata/iu;
@@ -271,7 +272,8 @@ export const buildDashboardCommercialAnalysis = ({
   const overdueReminderLeadIds = new Set(
     overdueReminders
       .map(resolveReminderLeadId)
-      .filter((leadId): leadId is string => Boolean(leadId)),
+      .filter((leadId): leadId is string => Boolean(leadId))
+      .filter((leadId) => !reactivationStatusPattern.test(leadsById.get(leadId)?.status?.trim() ?? '')),
   );
   const agendaItems = [...overdueReminders, ...pendingToday]
     .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime())

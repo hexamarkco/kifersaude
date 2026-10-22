@@ -112,6 +112,32 @@ test('only labels a lead with overdue follow-up when Agenda has an unread overdu
   assert.equal(withReminder.agenda.overdue, 1);
 });
 
+test('does not label a lead in Reativação with an overdue follow-up', () => {
+  const reactivationLead = lead({
+    id: 'lead-reactivation',
+    nome_completo: 'Em reativação',
+    status: 'Reativação',
+    proximo_retorno: '2026-09-10',
+  });
+  const overdueReminder: Reminder = {
+    id: 'reminder-reactivation',
+    lead_id: reactivationLead.id,
+    tipo: 'Follow-up',
+    titulo: 'Retomar contato',
+    data_lembrete: '2026-09-10T12:00:00.000Z',
+    lido: false,
+    prioridade: 'normal',
+    created_at: '2026-09-10T10:00:00.000Z',
+  };
+
+  const analysis = buildDashboardCommercialAnalysis(input({
+    leads: [reactivationLead],
+    reminders: [overdueReminder],
+  }));
+
+  assert.notEqual(analysis.opportunities[0]?.signal, 'Follow-up vencido');
+});
+
 test('consolida a mesma origem quando a grafia muda apenas em caixa ou acento', () => {
   const analysis = buildDashboardCommercialAnalysis(input({
     leads: [

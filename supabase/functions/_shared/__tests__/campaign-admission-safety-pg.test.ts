@@ -12,9 +12,13 @@ const pacingMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261021221500_campaign_pacing_configuration.sql'),
   'utf8',
 );
+const authorizationRemovalMigration = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261022035052_remove_campaign_commercial_authorization_gate.sql'),
+  'utf8',
+);
 
 const getFunctionSql = (name: string): string => {
-  for (const source of [pacingMigration, migration]) {
+  for (const source of [authorizationRemovalMigration, pacingMigration, migration]) {
     const start = source.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
     if (start < 0) continue;
     const end = source.indexOf('$function$;', start);
@@ -109,9 +113,9 @@ beforeEach(async () => {
   await db.exec([
     getFunctionSql('_comm_whatsapp_campaign_window_minutes'),
     getFunctionSql('_comm_whatsapp_campaign_window_open'),
-    getFunctionSql('_comm_whatsapp_campaign_marketing_review_ready'),
     getFunctionSql('_comm_whatsapp_campaign_required_image_ready'),
     getFunctionSql('_comm_whatsapp_campaign_target_marketing_reason'),
+    getFunctionSql('get_comm_whatsapp_campaign_marketing_readiness'),
     getFunctionSql('_comm_whatsapp_campaign_record_admission_deferred'),
     getFunctionSql('_comm_whatsapp_campaign_contact_interval_seconds'),
     getFunctionSql('_mcp_comm_whatsapp_campaign_apply_pacing_config'),
@@ -136,11 +140,7 @@ afterEach(async () => {
 const addCampaign = async (id: string) => db.query(
   `INSERT INTO public.comm_whatsapp_campaigns
     (id, status, send_window_start, send_window_end, active_weekdays, daily_send_limit, pacing_per_minute, audience_config)
-   VALUES ($1, 'running', '09:00', '18:30', ARRAY[1,2,3,4,5]::smallint[], 30, 6,
-     jsonb_build_object('marketing_review', jsonb_build_object(
-       'legal_basis_reviewed', true, 'legal_basis_reference', 'synthetic-legal-review',
-       'promotion_reviewed', true, 'promotion_reference', 'synthetic-promotion-review'
-     )))`,
+   VALUES ($1, 'running', '09:00', '18:30', ARRAY[1,2,3,4,5]::smallint[], 30, 6, '{}'::jsonb)`,
   [id],
 );
 
@@ -150,22 +150,6 @@ const addTargets = async (campaignId: string, offset: number, count: number) => 
     await db.query(
       'INSERT INTO public.comm_whatsapp_campaign_targets (id, campaign_id, phone_digits, whatsapp_check_status) VALUES ($1, $2, $3, \'valid\')',
       [makeTargetId(targetIndex), campaignId, `555000${String(targetIndex).padStart(5, '0')}`],
-    );
-    const evidence = JSON.stringify({
-      campaign_marketing_eligibility: {
-        [campaignId]: {
-          status: 'approved',
-          purpose: 'marketing',
-          legal_basis: 'synthetic-only',
-          evidence_reference: 'synthetic-review-fixture',
-        },
-      },
-    });
-    await db.query(
-      `INSERT INTO public.contact_permission_policies
-        (channel, endpoint_normalized, purpose_scope, state, evidence)
-       VALUES ('whatsapp', $1, 'commercial', 'allowed', $2::jsonb)`,
-      [`555000${String(targetIndex).padStart(5, '0')}`, evidence],
     );
   }
 };
@@ -296,7 +280,7 @@ test('reservas concorrentes no mesmo instante não iniciam duas campanhas juntas
   expect(rows[0].total).toBe(1);
 });
 
-test('WhatsApp marcado como válido sem permissão comercial comprovada continua bloqueado', async () => {
+test('WhatsApp válido sem autorização comercial cadastrada pode ser admitido e opt-out explícito continua bloqueado', async () => {
   await addCampaign(campaignIdA);
   const targetId = makeTargetId(1);
   const phoneDigits = '55500000001';
@@ -315,8 +299,27 @@ test('WhatsApp marcado como válido sem permissão comercial comprovada continua
 
   const result = await reserve(campaignIdA, targetId, campaignStart);
 
-  expect(result.result).toBe('eligibility_blocked');
-  expect(result.reason).toBe('contact_permission_unverified');
+  expect(result.result).toBe('reserved');
+  expect(result.reason).toBeNull();
+
+  const blockedTargetId = makeTargetId(2);
+  const blockedPhoneDigits = '55500000002';
+  await db.query(
+    `INSERT INTO public.comm_whatsapp_campaign_targets
+      (id, campaign_id, phone_digits, whatsapp_check_status)
+     VALUES ($1, $2, $3, 'valid')`,
+    [blockedTargetId, campaignIdA, blockedPhoneDigits],
+  );
+  await db.query(
+    `INSERT INTO public.contact_permission_policies
+      (channel, endpoint_normalized, purpose_scope, state)
+     VALUES ('whatsapp', $1, 'commercial', 'blocked')`,
+    [blockedPhoneDigits],
+  );
+
+  const blocked = await reserve(campaignIdA, blockedTargetId, campaignStart);
+  expect(blocked.result).toBe('eligibility_blocked');
+  expect(blocked.reason).toBe('contact_permission_blocked');
 });
 
 test('edição MCP de texto preserva a mídia da primeira etapa e os quatro balões seguintes', async () => {

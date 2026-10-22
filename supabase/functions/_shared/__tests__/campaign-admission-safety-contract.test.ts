@@ -7,6 +7,10 @@ const migration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261021205214_whatsapp_campaign_admission_safety.sql'),
   'utf8',
 );
+const authorizationRemovalMigration = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20261022035052_remove_campaign_commercial_authorization_gate.sql'),
+  'utf8',
+);
 const pacingMigration = readFileSync(
   resolve(process.cwd(), 'supabase/migrations/20261021221500_campaign_pacing_configuration.sql'),
   'utf8',
@@ -56,12 +60,12 @@ test('the required Amil image follows effective A/B step precedence', () => {
   assert.match(migration, /variant_label = 'A' AND step\.step_kind = 'message'[\s\S]*?media_type = 'image'/);
 });
 
-test('rolling duplicate campaign admissions and human evidence block targets', () => {
+test('campaigns no longer require commercial authorization and still suppress duplicates and opt-outs', () => {
   assert.match(migration, /idx_campaign_admissions_channel_endpoint_recent/);
-  assert.match(migration, /contact_recent_campaign_duplicate/);
-  assert.match(migration, /contact_marketing_eligibility_pending/);
-  assert.match(migration, /contact_permission_unverified/);
-  assert.match(migration, /CAMPAIGN_MARKETING_ELIGIBILITY_PENDING/);
+  assert.match(authorizationRemovalMigration, /contact_recent_campaign_duplicate/);
+  assert.match(authorizationRemovalMigration, /contact_permission_blocked/);
+  assert.doesNotMatch(authorizationRemovalMigration, /campaign_marketing_review_pending|contact_marketing_eligibility_pending|contact_permission_unverified/);
+  assert.doesNotMatch(worker, /isCampaignMarketingReviewReady/);
   assert.match(migration, /trg_comm_whatsapp_campaign_activation_readiness/);
 });
 

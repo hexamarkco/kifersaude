@@ -1,7 +1,6 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import type { McpToolDescriptor } from './mcp-discovery.ts';
 import { resolveCommWhatsAppCampaignMessage } from '../_shared/comm-whatsapp-campaign-template.ts';
-import { isCampaignMarketingReviewReady } from '../_shared/campaign-marketing-eligibility.ts';
 
 type JsonRecord = Record<string, unknown>;
 type CampaignWriteResult = JsonRecord;
@@ -404,12 +403,12 @@ const checkCampaignActivationReadiness = async (supabase: SupabaseClient, campai
     p_campaign_id: campaignId,
   });
   if (error) {
-    return errorResult('INTERNAL_ERROR', 'Não foi possível validar a elegibilidade da campanha antes de prepará-la para ativação.');
+    return errorResult('INTERNAL_ERROR', 'Não foi possível validar as regras de envio antes de preparar a campanha para ativação.');
   }
 
   const readiness = Array.isArray(data) ? data[0] : data;
   if (!isRecord(readiness) || typeof readiness.ready !== 'boolean') {
-    return errorResult('INTERNAL_ERROR', 'A validação de elegibilidade retornou um resultado inválido.');
+    return errorResult('INTERNAL_ERROR', 'A validação das regras de envio retornou um resultado inválido.');
   }
   if (readiness.ready) return null;
 
@@ -419,7 +418,7 @@ const checkCampaignActivationReadiness = async (supabase: SupabaseClient, campai
   return {
     ...errorResult(
       'CAMPAIGN_NOT_READY',
-      `Ativação bloqueada antes da mutação: ${reasonCodes.join(', ') || 'campaign_marketing_eligibility_pending'}.`,
+      `Ativação bloqueada antes da mutação: ${reasonCodes.join(', ') || 'campaign_send_readiness_pending'}.`,
     ),
     validation: {
       ready_to_activate: false,
@@ -632,9 +631,11 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
     schedule_valid: !loaded.campaign.scheduled_at || Boolean(parseDate(loaded.campaign.scheduled_at)),
     window_valid: isValidCampaignWindow(loaded.campaign.send_window_start, loaded.campaign.send_window_end),
     weekdays_valid: isValidCampaignWeekdays(loaded.campaign.active_weekdays),
-    marketing_review_ready: isCampaignMarketingReviewReady(campaignConfig),
+    // Kept for MCP payload compatibility; campaign authorization review is no longer required.
+    marketing_review_ready: true,
     required_promotion_image_ready: promotionImageReady,
     contact_marketing_eligibility_ready: rawReadiness.ready,
+    // Opt-outs are suppressed individually and do not prevent the rest of the list from activating.
     no_blocked_targets: blockedCount === 0,
   };
   const render = (sample: JsonRecord) => messageSteps
@@ -657,6 +658,9 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
     media_attached: Boolean(text(step.media_url)),
     media_type: text(step.media_type) || null,
   }));
+  const activationChecksPass = Object.entries(checks)
+    .filter(([key]) => key !== 'no_blocked_targets')
+    .every(([, passed]) => passed);
   return {
     success: true,
     campaign_id: campaignId,
@@ -670,7 +674,7 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
       blocked_targets: blockedCount,
       contacts_without_name: unnamedResult.count ?? null,
       ready_to_activate: ['draft', 'scheduled', 'paused'].includes(text(loaded.campaign.status))
-        && Object.values(checks).every(Boolean)
+        && activationChecksPass
         && rawReadiness.ready,
       marketing_reason_codes: reasonCodes,
       eligible_targets: Number(rawReadiness.eligible_targets ?? 0),

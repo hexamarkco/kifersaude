@@ -11,22 +11,6 @@ const AMIL_OCTOBER_CAMPAIGN_IDS = new Set([
   '663279e5-739c-4efc-916e-cdf13142a458',
 ]);
 
-export const getCampaignMarketingReviewBlocker = (audienceConfig: unknown): string | null => {
-  const config = asRecord(audienceConfig);
-  const review = asRecord(config?.marketing_review);
-  if (review?.legal_basis_reviewed !== true || !hasText(review.legal_basis_reference)) {
-    return 'Revise a finalidade e registre a referência da base legal antes de ativar.';
-  }
-  if (review.promotion_reviewed !== true || !hasText(review.promotion_reference)) {
-    return 'Confirme os termos e a abrangência da promoção com a Amil antes de ativar.';
-  }
-  return null;
-};
-
-export const isCampaignMarketingReviewReady = (audienceConfig: unknown): boolean => (
-  getCampaignMarketingReviewBlocker(audienceConfig) === null
-);
-
 export const getCampaignMediaReadinessBlocker = (
   campaignId: unknown,
   steps: unknown,
@@ -54,7 +38,5 @@ export const getCampaignMediaReadinessBlocker = (
 
 export const getCampaignActivationBlocker = (campaign: unknown, steps: unknown): string | null => {
   const value = asRecord(campaign);
-  const reviewBlocker = getCampaignMarketingReviewBlocker(value?.audience_config);
-  if (reviewBlocker) return reviewBlocker;
   return getCampaignMediaReadinessBlocker(value?.id, steps, value?.ab_test_enabled);
 };

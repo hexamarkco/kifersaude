@@ -42,7 +42,6 @@ import {
   ContactPermissionBlockedError,
   ContactPermissionCheckError,
 } from '../_shared/contact-permissions.ts';
-import { isCampaignMarketingReviewReady } from '../_shared/campaign-marketing-eligibility.ts';
 
 declare const Deno: {
   env: {
@@ -217,7 +216,7 @@ const getCampaignSendConcurrency = (): number => {
 
 const createAdminClient = createSupabaseAdminClient;
 
-type CampaignMarketingReadiness = {
+type CampaignSendReadiness = {
   ready: boolean;
   reason_codes: string[];
   total_targets: number;
@@ -225,24 +224,24 @@ type CampaignMarketingReadiness = {
   pending_targets: number;
 };
 
-async function getCampaignMarketingReadiness(
+async function getCampaignSendReadiness(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaignId: string,
-): Promise<CampaignMarketingReadiness> {
+): Promise<CampaignSendReadiness> {
   const { data, error } = await supabaseAdmin.rpc('get_comm_whatsapp_campaign_marketing_readiness', {
     p_campaign_id: campaignId,
   });
-  if (error) throw new Error(`Não foi possível validar elegibilidade de marketing: ${error.message}`);
+  if (error) throw new Error(`Não foi possível validar as regras de envio: ${error.message}`);
   const value = Array.isArray(data) ? data[0] : data;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('A validação de elegibilidade de marketing não retornou resultado válido.');
+    throw new Error('A validação das regras de envio não retornou resultado válido.');
   }
   const result = value as Record<string, unknown>;
   return {
     ready: result.ready === true,
     reason_codes: Array.isArray(result.reason_codes)
       ? result.reason_codes.filter((item): item is string => typeof item === 'string')
-      : ['marketing_readiness_invalid'],
+      : ['campaign_send_readiness_invalid'],
     total_targets: Number(result.total_targets) || 0,
     eligible_targets: Number(result.eligible_targets) || 0,
     pending_targets: Number(result.pending_targets) || 0,
@@ -424,7 +423,7 @@ async function assertCampaignDispatchReady(
   }
   const reasonCode = await getCampaignTargetMarketingReason(supabaseAdmin, campaignId, targetId);
   if (reasonCode) {
-    throw new CampaignDispatchGateError('marketing_eligibility', 'A elegibilidade do contato deixou de estar comprovada.', reasonCode);
+    throw new CampaignDispatchGateError('marketing_eligibility', 'O contato foi excluído por uma regra de envio.', reasonCode);
   }
 }
 
@@ -1121,24 +1120,14 @@ async function activateCampaign(
     throw new Error('Somente campanhas em rascunho, agendadas ou pausadas podem ser ativadas.');
   }
 
-  if (!isCampaignMarketingReviewReady(campaign.audience_config)) {
-    await insertEvent(supabaseAdmin, {
-      campaignId: campaign.id,
-      eventType: 'campaign_marketing_eligibility_blocked',
-      payload: { reason_codes: ['campaign_marketing_review_pending'] },
-      createdBy: profileId,
-    });
-    throw new Error('Ativação bloqueada: registre a revisão humana da finalidade/base legal e a confirmação vigente da promoção.');
-  }
-
   let materialized = { total: 0, valid: 0, invalid: 0 };
   if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
     materialized = await materializeCrmTargets(supabaseAdmin, campaign);
   }
 
-  const readiness = await getCampaignMarketingReadiness(supabaseAdmin, campaign.id);
+  const readiness = await getCampaignSendReadiness(supabaseAdmin, campaign.id);
   if (!readiness.ready) {
-    const reasons = readiness.reason_codes.length > 0 ? readiness.reason_codes.join(', ') : 'campaign_marketing_eligibility_pending';
+    const reasons = readiness.reason_codes.length > 0 ? readiness.reason_codes.join(', ') : 'campaign_send_readiness_pending';
     await insertEvent(supabaseAdmin, {
       campaignId: campaign.id,
       eventType: 'campaign_marketing_eligibility_blocked',
@@ -1150,7 +1139,7 @@ async function activateCampaign(
       },
       createdBy: profileId,
     });
-    throw new Error(`Ativação bloqueada por elegibilidade de marketing (${readiness.eligible_targets}/${readiness.total_targets} contatos elegíveis): ${reasons}.`);
+    throw new Error(`Ativação bloqueada pelas regras de envio (${readiness.eligible_targets}/${readiness.total_targets} contatos aptos): ${reasons}.`);
   }
 
   const nextStatus = campaign.scheduled_at && new Date(campaign.scheduled_at).getTime() > Date.now()
@@ -2016,16 +2005,16 @@ async function executeStageBurst(params: {
 
   if (reservation.result === 'eligibility_blocked') {
     await updateClaimedTarget(supabaseAdmin, target, {
-      status: 'stopped', stopped_at: getNowIso(), stopped_reason: reservation.reason || 'campaign_marketing_eligibility_pending',
-      error_message: reservation.reason || 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+      status: 'stopped', stopped_at: getNowIso(), stopped_reason: reservation.reason || 'campaign_send_readiness_pending',
+      error_message: reservation.reason || 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
     });
     await insertEvent(supabaseAdmin, {
       campaignId: campaign.id,
       targetId: target.id,
       eventType: 'target_marketing_eligibility_blocked',
-      payload: { reason_code: reservation.reason || 'contact_marketing_eligibility_pending' },
+      payload: { reason_code: reservation.reason || 'campaign_send_readiness_pending' },
     });
-    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: reservation.reason || 'Elegibilidade de marketing pendente.' };
+    return { status: 'stopped', nextStepIndex: companions[0].step_index, error: reservation.reason || 'Contato excluído pelas regras de envio.' };
   }
 
   if (reservation.result !== 'reserved') {
@@ -2130,7 +2119,7 @@ async function executeStageBurst(params: {
       }
       await updateClaimedTarget(supabaseAdmin, target, {
         status: 'stopped', stopped_at: getNowIso(), stopped_reason: marketingReason,
-        error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+        error_message: 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
       });
       await insertEvent(supabaseAdmin, {
         campaignId: campaign.id,
@@ -2358,8 +2347,8 @@ async function executeStageBurst(params: {
         });
         if (error.gate === 'marketing_eligibility') {
           await updateClaimedTarget(supabaseAdmin, target, {
-            status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_marketing_eligibility_pending',
-            error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+            status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_send_readiness_pending',
+            error_message: 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
           });
           return { status: 'stopped', nextStepIndex: step.step_index, error: error.reasonCode };
         }
@@ -3552,16 +3541,16 @@ async function sendTarget(params: {
 
   if (dispatchReservation.result === 'eligibility_blocked') {
     await updateClaimedTarget(supabaseAdmin, target, {
-      status: 'stopped', stopped_at: getNowIso(), stopped_reason: dispatchReservation.reason || 'campaign_marketing_eligibility_pending',
-      error_message: dispatchReservation.reason || 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+      status: 'stopped', stopped_at: getNowIso(), stopped_reason: dispatchReservation.reason || 'campaign_send_readiness_pending',
+      error_message: dispatchReservation.reason || 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
     });
     await insertEvent(supabaseAdmin, {
       campaignId: campaign.id,
       targetId: target.id,
       eventType: 'target_marketing_eligibility_blocked',
-      payload: { reason_code: dispatchReservation.reason || 'contact_marketing_eligibility_pending' },
+      payload: { reason_code: dispatchReservation.reason || 'campaign_send_readiness_pending' },
     });
-    return { status: 'stopped', reason: dispatchReservation.reason || 'Elegibilidade de marketing pendente.' };
+    return { status: 'stopped', reason: dispatchReservation.reason || 'Contato excluído pelas regras de envio.' };
   }
 
   if (dispatchReservation.result !== 'reserved' || !dispatchReservation.event_id) {
@@ -3646,7 +3635,7 @@ async function sendTarget(params: {
     });
     await updateClaimedTarget(supabaseAdmin, target, {
       status: 'stopped', stopped_at: getNowIso(), stopped_reason: marketingReason,
-      error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+      error_message: 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
     });
     await insertEvent(supabaseAdmin, {
       campaignId: campaign.id,
@@ -3680,14 +3669,14 @@ async function sendTarget(params: {
       });
       if (error.gate === 'marketing_eligibility') {
         await updateClaimedTarget(supabaseAdmin, target, {
-          status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_marketing_eligibility_pending',
-          error_message: 'Elegibilidade de marketing pendente.', locked_at: null, lock_token: null,
+          status: 'stopped', stopped_at: getNowIso(), stopped_reason: error.reasonCode || 'campaign_send_readiness_pending',
+          error_message: 'Contato excluído pelas regras de envio.', locked_at: null, lock_token: null,
         });
         await insertEvent(supabaseAdmin, {
           campaignId: campaign.id,
           targetId: target.id,
           eventType: 'target_marketing_eligibility_blocked',
-          payload: { reason_code: error.reasonCode || 'contact_marketing_eligibility_pending', stopped_before_step: step.step_index },
+          payload: { reason_code: error.reasonCode || 'campaign_send_readiness_pending', stopped_before_step: step.step_index },
         });
         return { status: 'stopped', reason: error.reasonCode };
       }
@@ -4235,11 +4224,11 @@ async function processCampaigns(
   let stopped = 0;
 
   for (const campaign of campaigns) {
-    let readiness: CampaignMarketingReadiness;
+    let readiness: CampaignSendReadiness;
     try {
-      readiness = await getCampaignMarketingReadiness(supabaseAdmin, campaign.id);
+      readiness = await getCampaignSendReadiness(supabaseAdmin, campaign.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao validar elegibilidade de marketing.';
+      const message = error instanceof Error ? error.message : 'Falha ao validar as regras de envio.';
       await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'paused', last_error: message }).eq('id', campaign.id);
       await insertEvent(supabaseAdmin, {
         campaignId: campaign.id,
@@ -4249,7 +4238,7 @@ async function processCampaigns(
       continue;
     }
     if (!readiness.ready) {
-      const message = `Elegibilidade de marketing pendente (${readiness.eligible_targets}/${readiness.total_targets} contatos elegíveis): ${readiness.reason_codes.join(', ') || 'campaign_marketing_eligibility_pending'}.`;
+      const message = `Regras de envio pendentes (${readiness.eligible_targets}/${readiness.total_targets} contatos aptos): ${readiness.reason_codes.join(', ') || 'campaign_send_readiness_pending'}.`;
       await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'paused', last_error: message }).eq('id', campaign.id);
       await insertEvent(supabaseAdmin, {
         campaignId: campaign.id,

@@ -56,9 +56,8 @@ import {
 } from './commWhatsAppCampaignService';
 import {
   getCampaignActivationBlocker,
-  getCampaignMarketingReviewBlocker,
   getCampaignMediaReadinessBlocker,
-} from './domain/campaignMarketingEligibility';
+} from './domain/campaignReadiness';
 
 const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
   none: 'Não repetir',
@@ -316,10 +315,6 @@ export default function WhatsAppCampaignsScreen() {
   const [contactIntervalMinutes, setContactIntervalMinutes] = useState<number | null>(null);
   const [interMessageIntervalMinutes, setInterMessageIntervalMinutes] = useState(0);
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
-  const [legalBasisReviewed, setLegalBasisReviewed] = useState(false);
-  const [legalBasisReference, setLegalBasisReference] = useState('');
-  const [promotionReviewed, setPromotionReviewed] = useState(false);
-  const [promotionReference, setPromotionReference] = useState('');
   const [reactivationMode, setReactivationMode] = useState(false);
   const [inactiveDays, setInactiveDays] = useState(90);
   const [recentCampaignDays, setRecentCampaignDays] = useState(30);
@@ -600,16 +595,6 @@ export default function WhatsAppCampaignsScreen() {
       setContactIntervalMinutes(campaign.contact_interval_minutes ?? null);
       setInterMessageIntervalMinutes(campaign.inter_message_interval_minutes ?? 0);
       setPacingPerMinute(campaign.pacing_per_minute || 12);
-      const marketingReviewValue = campaign.audience_config?.marketing_review;
-      const marketingReview = marketingReviewValue !== null
-        && typeof marketingReviewValue === 'object'
-        && !Array.isArray(marketingReviewValue)
-        ? marketingReviewValue as Record<string, unknown>
-        : {};
-      setLegalBasisReviewed(marketingReview.legal_basis_reviewed === true);
-      setLegalBasisReference(typeof marketingReview.legal_basis_reference === 'string' ? marketingReview.legal_basis_reference : '');
-      setPromotionReviewed(marketingReview.promotion_reviewed === true);
-      setPromotionReference(typeof marketingReview.promotion_reference === 'string' ? marketingReview.promotion_reference : '');
       const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
       setReactivationMode(Boolean(lastContactBefore));
       if (lastContactBefore) {
@@ -671,12 +656,6 @@ export default function WhatsAppCampaignsScreen() {
               exclude_recent_campaign_days: reactivationMode ? recentCampaignDays : 0,
               exclude_opt_out: true,
             },
-            marketing_review: {
-              legal_basis_reviewed: legalBasisReviewed,
-              legal_basis_reference: legalBasisReference.trim(),
-              promotion_reviewed: promotionReviewed,
-              promotion_reference: promotionReference.trim(),
-            },
           }
         : {
             csv: {
@@ -684,12 +663,6 @@ export default function WhatsAppCampaignsScreen() {
               valid_rows: csvValidTargets.length,
               create_leads: createLeadsFromCsv,
               exclude_opt_out: true,
-            },
-            marketing_review: {
-              legal_basis_reviewed: legalBasisReviewed,
-              legal_basis_reference: legalBasisReference.trim(),
-              promotion_reviewed: promotionReviewed,
-              promotion_reference: promotionReference.trim(),
             },
           };
 
@@ -1636,32 +1609,6 @@ export default function WhatsAppCampaignsScreen() {
               })}
             </div>
           </Field>
-          <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-            <div>
-              <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Revisão de elegibilidade de marketing</h3>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">A ativação exige revisão humana documentada da finalidade/base legal, confirmação atual dos termos da promoção e evidência comercial específica para cada contato. Marque cada item somente após a validação correspondente; isso não altera permissões de contato.</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
-                <label className="flex items-start gap-2 text-sm text-[color:var(--panel-text)]">
-                  <Checkbox checked={legalBasisReviewed} onChange={(event) => setLegalBasisReviewed(event.target.checked)} />
-                  <span>Finalidade e base legal revisadas por pessoa autorizada</span>
-                </label>
-                <Field label={<FieldLabel text="Referência da revisão legal" hint="Identificador ou referência interna para localizar a análise." />}>
-                  <Input value={legalBasisReference} maxLength={500} onChange={(event) => setLegalBasisReference(event.target.value)} placeholder="Registro ou documento de revisão" />
-                </Field>
-              </div>
-              <div className="space-y-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
-                <label className="flex items-start gap-2 text-sm text-[color:var(--panel-text)]">
-                  <Checkbox checked={promotionReviewed} onChange={(event) => setPromotionReviewed(event.target.checked)} />
-                  <span>Termos, produtos e abrangência confirmados com a Amil</span>
-                </label>
-                <Field label={<FieldLabel text="Referência da confirmação comercial" hint="Identificador ou documento que confirma os termos vigentes." />}>
-                  <Input value={promotionReference} maxLength={500} onChange={(event) => setPromotionReference(event.target.value)} placeholder="Registro ou documento da operadora" />
-                </Field>
-              </div>
-            </div>
-          </Card>
           </>
           )}
             </DialogBody>
@@ -1728,16 +1675,11 @@ export default function WhatsAppCampaignsScreen() {
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Elegibilidade para marketing</h3>
-                  {getCampaignMarketingReviewBlocker(activationPreview.campaign.audience_config) ? (
-                    <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMarketingReviewBlocker(activationPreview.campaign.audience_config)}</p>
-                  ) : (
-                    <p className="text-sm text-[color:var(--panel-text-soft)]">Revisões da campanha registradas. O servidor ainda exige, para cada contato, permissão comercial explícita e evidência de base legal/finalidade vinculada a esta campanha.</p>
-                  )}
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Regras de envio</h3>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">A lista importada pode seguir para a fila sem autorização comercial cadastrada. Telefones inválidos, opt-outs e contatos enviados em outra campanha nas últimas 24 horas são excluídos.</p>
                   {getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled) && (
                     <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled)}</p>
                   )}
-                  <p className="text-xs text-[color:var(--panel-text-muted)]">WhatsApp válido e permissão desconhecida não comprovam autorização para prospecção. Contatos sem evidência permanecem pendentes e não serão enviados.</p>
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">

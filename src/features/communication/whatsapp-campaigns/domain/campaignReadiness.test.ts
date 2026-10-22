@@ -2,35 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import {
   getCampaignActivationBlocker,
-  getCampaignMarketingReviewBlocker,
   getCampaignMediaReadinessBlocker,
-  isCampaignMarketingReviewReady,
-} from './campaignMarketingEligibility';
+} from './campaignReadiness';
 
-test('blocks campaigns until both human reviews have evidence references', () => {
-  assert.equal(isCampaignMarketingReviewReady({}), false);
-  assert.match(getCampaignMarketingReviewBlocker({ marketing_review: {
-    legal_basis_reviewed: true,
-    legal_basis_reference: 'legal-review-42',
-    promotion_reviewed: false,
-    promotion_reference: '',
-  } }) || '', /Amil/);
-});
-
-test('accepts only explicit boolean approvals with non-empty references', () => {
-  const config = { marketing_review: {
-    legal_basis_reviewed: true,
-    legal_basis_reference: 'legal-review-42',
-    promotion_reviewed: true,
-    promotion_reference: 'amil-terms-2026-10',
-  } };
-  assert.equal(isCampaignMarketingReviewReady(config), true);
-  assert.equal(isCampaignMarketingReviewReady({ marketing_review: {
-    legal_basis_reviewed: 'true',
-    legal_basis_reference: 'legal-review-42',
-    promotion_reviewed: true,
-    promotion_reference: 'amil-terms-2026-10',
-  } }), false);
+test('campaign activation does not require marketing authorization review', () => {
+  assert.equal(getCampaignActivationBlocker({ id: 'other-campaign', audience_config: {} }, []), null);
 });
 
 test('keeps the Amil October image pending until attached to message one', () => {
@@ -71,9 +47,9 @@ test('requires the effective first-message image for every A/B variant', () => {
   ], true), null);
 });
 
-test('combines legal review and first-message media gates for activation', () => {
+test('keeps the first-message image as the Amil activation gate', () => {
   assert.match(getCampaignActivationBlocker({
     id: '96da372c-b76d-4e12-a4e5-a93b6c60c084',
     audience_config: {},
-  }, []) || '', /base legal/);
+  }, []) || '', /Anexe a imagem/);
 });

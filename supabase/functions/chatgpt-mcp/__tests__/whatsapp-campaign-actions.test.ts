@@ -142,7 +142,7 @@ describe('MCP WhatsApp campaign actions', () => {
       from: (table: string) => queryFor(table),
       rpc: async (name: string) => name === 'get_comm_whatsapp_campaign_target_status_counts'
         ? { data: [{ status: 'pending', total_count: 1, responded_count: 0 }], error: null }
-        : { data: { ready: false, reason_codes: ['campaign_marketing_review_pending'], eligible_targets: 0, pending_targets: 1, duplicate_targets: 0 }, error: null },
+        : { data: { ready: false, reason_codes: ['campaign_promotion_image_pending'], eligible_targets: 0, pending_targets: 1, duplicate_targets: 0 }, error: null },
     } as never;
 
     const result = await executeMcpWhatsAppCampaignReadAction({
@@ -154,7 +154,7 @@ describe('MCP WhatsApp campaign actions', () => {
     expect(result).toMatchObject({
       metrics: { total: 1, valid: 1, pending: 1 },
       validation: {
-        marketing_review_ready: false,
+        marketing_review_ready: true,
         required_promotion_image_ready: false,
         contact_marketing_eligibility_ready: false,
         ready_to_activate: false,
@@ -379,12 +379,12 @@ describe('MCP WhatsApp campaign actions', () => {
     expect(invoke).toHaveBeenCalledWith('comm-whatsapp-campaign-worker', { body: { action: 'activate', campaignId, source: 'api' } });
   });
 
-  it('does not mutate or invoke the worker when marketing readiness blocks activation', async () => {
+  it('does not mutate or invoke the worker when the required campaign media is missing', async () => {
     const { client, rpc, invoke } = makeSupabase(
       { success: true, replayed: false, campaign_id: campaignId, status: 'paused' },
       {
         ready: false,
-        reason_codes: ['campaign_marketing_review_pending', 'campaign_promotion_image_pending'],
+        reason_codes: ['campaign_promotion_image_pending'],
         total_targets: 20,
         eligible_targets: 0,
         pending_targets: 20,
@@ -405,7 +405,7 @@ describe('MCP WhatsApp campaign actions', () => {
         ready_to_activate: false,
         eligible_targets: 0,
         total_targets: 20,
-        marketing_reason_codes: ['campaign_marketing_review_pending', 'campaign_promotion_image_pending'],
+        marketing_reason_codes: ['campaign_promotion_image_pending'],
       },
     });
     expect(rpc).toHaveBeenCalledTimes(1);

@@ -21,7 +21,7 @@ describe('OAuth discovery and incremental authorization', () => {
     const error = getMcpToolScopeError(tools[1], new Set(['kifer.read']), challenge);
     expect(error).toMatchObject({ isError: true, _meta: { 'mcp/www_authenticate': [challenge] } });
     expect(JSON.parse(error!.content[0].text)).toMatchObject({ success: false, error_code: 'INSUFFICIENT_SCOPE', reconnect_required: true });
-    expect(challenge).toContain('scope="kifer.read kifer.write"');
+    expect(challenge).toContain('scope="kifer.read kifer.write offline_access"');
     expect(challenge).toContain('error="insufficient_scope"');
     expect(challenge).toContain('error_description="Authorize read and write access to Kifer Saude"');
     expect(getMcpToolScopeError(tools[0], new Set(['kifer.read']), challenge)).toBeNull();
@@ -29,8 +29,13 @@ describe('OAuth discovery and incremental authorization', () => {
   });
 
   it('asks for full CRM scopes on initial linking and never treats legacy or read-only authorization as a write grant', () => {
-    expect(buildMcpOAuthChallenge(resource)).toContain('scope="kifer.read kifer.write"');
+    expect(buildMcpOAuthChallenge(resource)).toContain('scope="kifer.read kifer.write offline_access"');
     expect(getMcpConnectionAccess(new Set(['kifer.read', 'kifer.write']), tools, false).can_write).toBe(false);
     expect(getMcpConnectionAccess(new Set(['kifer.read', 'kifer.write']), tools, true).can_write).toBe(true);
+  });
+
+  it('requests renewal once without requiring offline_access to execute existing tools', () => {
+    expect(buildMcpOAuthChallenge(resource, ['kifer.read', 'offline_access'])).toContain('scope="kifer.read offline_access"');
+    expect(getMcpToolScopeError(tools[1], new Set(['kifer.read', 'kifer.write']), buildMcpOAuthChallenge(resource))).toBeNull();
   });
 });

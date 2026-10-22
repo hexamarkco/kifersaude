@@ -8,8 +8,6 @@ const AUTHORIZE_COMPLETE_PATH = '/oauth/authorize/complete';
 const TOKEN_PATH = '/oauth/token';
 const OAUTH_METADATA_PATH = '/.well-known/oauth-authorization-server';
 const RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
-const ACCESS_TOKEN_LIFETIME_SECONDS = 60 * 60;
-const REFRESH_TOKEN_LIFETIME_SECONDS = 60 * 60 * 24 * 30;
 const AUTHORIZATION_CODE_LIFETIME_SECONDS = 5 * 60;
 const ALLOWED_SCOPES = new Set(['openid', 'offline_access', 'kifer.read', 'kifer.write']);
 
@@ -24,13 +22,6 @@ type AuthorizationRequest = {
   redirectUri: string;
   state: string;
   codeChallenge: string;
-  scope: string;
-  resource: string;
-};
-
-type OAuthTokenRecord = {
-  user_id: string;
-  client_id: string;
   scope: string;
   resource: string;
 };
@@ -95,13 +86,6 @@ const randomToken = (bytes = 32): string => {
 const sha256 = async (value: string): Promise<string> =>
   base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))));
 
-const equalStrings = (left: string, right: string): boolean => {
-  if (!left || !right || left.length !== right.length) return false;
-  let result = 0;
-  for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
-  return result === 0;
-};
-
 const isSafeCodeChallenge = (value: string): boolean => /^[A-Za-z0-9._~-]{43,128}$/.test(value);
 
 const normalizeScope = (rawScope: string): { scope?: string; error?: string } => {
@@ -109,6 +93,9 @@ const normalizeScope = (rawScope: string): { scope?: string; error?: string } =>
   if (requested.some((scope) => !ALLOWED_SCOPES.has(scope))) return { error: 'Escopo OAuth nao permitido.' };
   const scopes = new Set(requested);
   scopes.add('kifer.read');
+  // Every CRM connection supports renewal. Consent still preserves whether
+  // the client requested read-only or read/write access.
+  scopes.add('offline_access');
   return { scope: [...scopes].sort().join(' ') };
 };
 
@@ -208,46 +195,6 @@ const clientConfigEndpoint = (): Response => {
   return json({ supabase_url: supabaseUrl, anon_key: anonKey });
 };
 
-const issueTokens = async (admin: SupabaseClient, record: OAuthTokenRecord): Promise<Record<string, unknown>> => {
-  const accessToken = randomToken();
-  const refreshToken = randomToken();
-  const now = Date.now();
-  const { error } = await admin.from('chatgpt_mcp_oauth_access_tokens').insert({
-    token_hash: await sha256(accessToken), user_id: record.user_id, client_id: record.client_id, scope: record.scope,
-    resource: record.resource, expires_at: new Date(now + ACCESS_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
-  });
-  if (error) throw new Error(`Falha ao criar token de acesso: ${error.message}`);
-  if (record.scope.split(' ').includes('offline_access')) {
-    const { error: refreshError } = await admin.from('chatgpt_mcp_oauth_refresh_tokens').insert({
-      token_hash: await sha256(refreshToken), user_id: record.user_id, client_id: record.client_id, scope: record.scope,
-      resource: record.resource, expires_at: new Date(now + REFRESH_TOKEN_LIFETIME_SECONDS * 1000).toISOString(),
-    });
-    if (refreshError) throw new Error(`Falha ao criar token de renovacao: ${refreshError.message}`);
-  }
-  return {
-    access_token: accessToken, token_type: 'Bearer', expires_in: ACCESS_TOKEN_LIFETIME_SECONDS, scope: record.scope,
-    ...(record.scope.split(' ').includes('offline_access') ? { refresh_token: refreshToken } : {}),
-  };
-};
-
-const consumeAuthorizationCode = async (admin: SupabaseClient, code: string, clientId: string, redirectUri: string, codeVerifier: string, resource: string): Promise<OAuthTokenRecord | null> => {
-  const { data, error } = await admin.from('chatgpt_mcp_oauth_authorization_codes')
-    .delete().eq('code_hash', await sha256(code)).eq('client_id', clientId).eq('redirect_uri', redirectUri).gt('expires_at', new Date().toISOString())
-    .select('user_id,client_id,scope,code_challenge,resource').maybeSingle();
-  if (error) throw new Error(`Falha ao validar codigo OAuth: ${error.message}`);
-  if (!data || (text(data.resource) && text(data.resource) !== resource) || !equalStrings(await sha256(codeVerifier), text(data.code_challenge))) return null;
-  return { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope), resource };
-};
-
-const consumeRefreshToken = async (admin: SupabaseClient, refreshToken: string, clientId: string, resource: string): Promise<OAuthTokenRecord | null> => {
-  const { data, error } = await admin.from('chatgpt_mcp_oauth_refresh_tokens')
-    .update({ revoked_at: new Date().toISOString() }).eq('token_hash', await sha256(refreshToken)).eq('client_id', clientId).is('revoked_at', null).gt('expires_at', new Date().toISOString())
-    .select('user_id,client_id,scope,resource').maybeSingle();
-  if (error) throw new Error(`Falha ao renovar token OAuth: ${error.message}`);
-  if (!data || (text(data.resource) && text(data.resource) !== resource)) return null;
-  return { user_id: text(data.user_id), client_id: text(data.client_id), scope: text(data.scope), resource };
-};
-
 const ensureActiveAdmin = async (admin: SupabaseClient, userId: string): Promise<{ email: string } | null> => {
   const { data, error } = await admin.from('user_profiles').select('email,role').eq('id', userId).maybeSingle();
   if (error) throw new Error(`Falha ao validar acesso: ${error.message}`);
@@ -256,31 +203,45 @@ const ensureActiveAdmin = async (admin: SupabaseClient, userId: string): Promise
 
 const tokenEndpoint = async (request: Request): Promise<Response> => {
   if (request.method !== 'POST') return tokenError('invalid_request', 'Use POST para obter tokens.', 405);
-  const form = await request.formData();
+  let form: FormData;
+  try { form = await request.formData(); } catch { return tokenError('invalid_request', 'Envie os parametros OAuth como formulario.'); }
   const config = oauthConfig();
   const clientId = text(form.get('client_id'));
   if (clientId !== config.clientId) return tokenError('invalid_client', 'Cliente OAuth desconhecido.', 401);
   const resource = resolveOAuthResource(form.get('resource'), getBaseUrl(request));
   if (!resource) return tokenError('invalid_target', 'Recurso OAuth nao permitido.');
   try {
-    const admin = getAdmin();
     const grantType = text(form.get('grant_type'));
-    let record: OAuthTokenRecord | null = null;
+    let credential: string;
+    let codeChallenge: string | null = null;
+    let redirectUri: string | null = null;
     if (grantType === 'authorization_code') {
-      const redirectUri = text(form.get('redirect_uri'));
+      redirectUri = text(form.get('redirect_uri'));
       const code = text(form.get('code'));
       const verifier = text(form.get('code_verifier'));
       if (!code || !verifier || !redirectUri) return tokenError('invalid_request', 'code, code_verifier e redirect_uri sao obrigatorios.');
-      record = await consumeAuthorizationCode(admin, code, clientId, redirectUri, verifier, resource);
+      credential = code;
+      codeChallenge = await sha256(verifier);
     } else if (grantType === 'refresh_token') {
       const refreshToken = text(form.get('refresh_token'));
       if (!refreshToken) return tokenError('invalid_request', 'refresh_token e obrigatorio.');
-      record = await consumeRefreshToken(admin, refreshToken, clientId, resource);
+      credential = refreshToken;
     } else {
       return tokenError('unsupported_grant_type', 'Grant OAuth nao suportado.');
     }
-    if (!record || !(await ensureActiveAdmin(admin, record.user_id))) return tokenError('invalid_grant', 'Autorizacao invalida, expirada ou revogada.');
-    return json(await issueTokens(admin, record));
+    const accessToken = randomToken();
+    const refreshToken = randomToken();
+    // Persist both replacements and consume the old grant in one transaction.
+    // A database failure must not revoke the client's only renewal credential.
+    const { data, error } = await getAdmin().rpc('mcp_exchange_oauth_tokens', {
+      p_grant_type: grantType, p_credential_hash: await sha256(credential), p_client_id: clientId,
+      p_resource: resource, p_redirect_uri: redirectUri, p_code_challenge: codeChallenge,
+      p_access_token_hash: await sha256(accessToken), p_refresh_token_hash: await sha256(refreshToken),
+    });
+    if (error) throw new Error('Falha ao persistir a troca OAuth.');
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.success !== true) return tokenError('invalid_grant', 'Autorizacao invalida, expirada ou revogada.');
+    if (typeof data.scope !== 'string' || typeof data.expires_in !== 'number') throw new Error('Resposta OAuth invalida.');
+    return json({ access_token: accessToken, token_type: 'Bearer', expires_in: data.expires_in, scope: data.scope, refresh_token: refreshToken });
   } catch (error) {
     console.error('[chatgpt-mcp] falha no endpoint OAuth token:', error instanceof Error ? error.message : error);
     return tokenError('server_error', 'Nao foi possivel emitir o token agora.', 500);

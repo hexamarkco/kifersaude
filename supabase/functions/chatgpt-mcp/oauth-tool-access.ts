@@ -4,7 +4,7 @@ import { toMcpToolResult } from './tool-result.ts';
 export const MCP_FULL_ACCESS_SCOPES = ['kifer.read', 'kifer.write'] as const;
 
 export const buildMcpOAuthChallenge = (resource: string, scopes: readonly string[] = MCP_FULL_ACCESS_SCOPES, insufficientScope = false): string =>
-  `Bearer realm="Kifer Saude MCP", resource_metadata="${resource}/.well-known/oauth-protected-resource", scope="${scopes.join(' ')}"${insufficientScope ? ', error="insufficient_scope", error_description="Authorize read and write access to Kifer Saude"' : ''}`;
+  `Bearer realm="Kifer Saude MCP", resource_metadata="${resource}/.well-known/oauth-protected-resource", scope="${[...new Set([...scopes, 'offline_access'])].join(' ')}"${insufficientScope ? ', error="insufficient_scope", error_description="Authorize read and write access to Kifer Saude"' : ''}`;
 
 // Discovery describes capabilities, not the current token's permissions. Hiding
 // a write here prevents the client from discovering its OAuth scope requirement.

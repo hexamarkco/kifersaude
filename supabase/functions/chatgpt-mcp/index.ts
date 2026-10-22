@@ -1096,7 +1096,7 @@ Deno.serve(async (request: Request) => {
         resources: { listChanged: false, subscribe: false },
         prompts: { listChanged: false },
       },
-      serverInfo: { name: 'kifer-saude-crm', version: '1.3.0' },
+      serverInfo: { name: 'kifer-saude-crm', version: '1.3.1' },
       instructions: 'Servidor do Kifer Saude para consultar e operar o CRM. O catálogo mostra todas as ferramentas, inclusive escritas. Pedidos do usuário podem autorizar ações individuais ou lotes; execute as ações já solicitadas e confira os resultados. kifer_get_connection_access diagnostica a autorização. Se uma escrita retornar mcp/www_authenticate, conclua o fluxo OAuth com leitura e escrita; a ferramenta existe, falta autorizar a conexão. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
     });
   }

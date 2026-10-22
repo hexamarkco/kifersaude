@@ -38,7 +38,7 @@ describe('deployed MCP request flow', () => {
     const response = await (await request('tools/call', { name: 'kifer_update_reminder', arguments: { reminder_id: '22222222-2222-4222-8222-222222222222', changes: { data_lembrete: '2030-10-22T12:00:00Z' } } })).json();
     expect(response.result.isError).toBe(true);
     expect(response.result._meta['mcp/www_authenticate'][0]).toContain('error="insufficient_scope"');
-    expect(response.result._meta['mcp/www_authenticate'][0]).toContain('scope="kifer.read kifer.write"');
+    expect(response.result._meta['mcp/www_authenticate'][0]).toContain('scope="kifer.read kifer.write offline_access"');
     expect(createClient).not.toHaveBeenCalled();
   });
   it('reports the real connection scope and recognizes a fully authorized administrator', async () => {

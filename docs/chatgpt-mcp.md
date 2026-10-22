@@ -244,6 +244,16 @@ Token: https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/oauth/t
 
 Depois clique em **Verificar ferramentas**. A página `www.kifersaude.com.br/mcp-oauth-authorize.html` pedirá o e-mail e a senha da conta administradora e exibirá os escopos solicitados. Clique em **Autorizar leitura e escrita** para habilitar ações, ou conecte somente `kifer.read` quando quiser uma sessão apenas de consulta. Tokens antigos de leitura podem descobrir todas as ferramentas, mas precisam da nova autorização para executar escritas. Confirme `can_write: true` em `kifer_get_connection_access` antes de tentar alterar registros.
 
+### Renovação automática da conexão
+
+O token de acesso vence em uma hora, mas o ChatGPT deve renová-lo sem pedir login. Os desafios OAuth incluem `offline_access`, e o servidor acrescenta esse escopo ao pedido apresentado no consentimento, mesmo se o cliente tiver solicitado somente `kifer.read kifer.write`. Isso não acrescenta escrita a uma conexão de leitura.
+
+Toda troca de código aprovado retorna `access_token`, `refresh_token`, `expires_in` e os escopos efetivamente concedidos. O refresh token é rotativo e válido por 30 dias; cada renovação bem-sucedida devolve seu substituto com uma nova janela de 30 dias. O cliente deve guardar o substituto e chamar `/oauth/token` com `grant_type=refresh_token` quando o acesso vencer. Não é necessário refazer o login enquanto essa renovação estiver disponível.
+
+A migration `20261022190618_mcp_oauth_atomic_token_exchange.sql` faz a emissão dos dois hashes e o consumo do código/token anterior na mesma transação. Falhas de persistência não consomem a credencial anterior. Cliente, recurso, PKCE, expiração, revogação e perfil administrador são validados antes da troca; os escopos são copiados do grant original, sem ampliação. A RPC é restrita a `service_role` e não recebe nem devolve tokens em texto puro.
+
+Conexões criadas antes dessa correção sem `offline_access` não receberam refresh token. Elas exigem uma reconexão após o deploy para o ChatGPT receber a credencial de renovação; o servidor não consegue entregar retroativamente esse segredo a uma conexão já instalada. Os refresh tokens antigos continuam aceitos até sua expiração/revogação, com os mesmos escopos.
+
 > A URL de retorno fica vinculada a este plugin do ChatGPT. Nao descarte este rascunho nem crie outro plugin antes de finalizar. Se for necessario recria-lo, atualize tambem o secret `KIFER_MCP_OAUTH_REDIRECT_URI` com a nova URL mostrada pelo ChatGPT e publique a function novamente.
 
 5. Comece por perguntas como:

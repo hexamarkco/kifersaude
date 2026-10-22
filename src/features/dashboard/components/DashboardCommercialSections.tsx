@@ -394,13 +394,13 @@ export function DashboardDailyOverview({
           </div>
 
           {opportunities.length > 0 ? (
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="space-y-2.5">
               {opportunities.map((opportunity) => (
-                <li key={opportunity.leadId}>
+                <li key={opportunity.leadId} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)]">
                   <button
                     type="button"
                     onClick={() => onNavigateToLead(opportunity.leadId)}
-                    className="flex w-full flex-col gap-2 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:flex-row sm:items-center sm:justify-between"
+                    className="flex w-full flex-col gap-3 rounded-xl px-4 py-4 text-left transition-colors hover:border-[var(--brand-primary-border)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:flex-row sm:items-center sm:justify-between"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <span className="truncate text-sm font-medium text-[var(--text-primary)]">{opportunity.name}</span>

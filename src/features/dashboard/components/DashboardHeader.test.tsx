@@ -50,7 +50,7 @@ test('mantém período acessível e recolhe filtros avançados com contador de f
     await act(async () => { advancedButton.click(); });
 
     assert.equal(findAdvancedFilterButton()?.getAttribute('aria-expanded'), 'true');
-    assert.equal(container.textContent?.includes('Todas as origens'), true);
+    assert.equal(container.textContent?.includes('Todos os responsáveis'), true);
     assert.equal(container.textContent?.includes('Indicação'), true);
     assert.equal(findAdvancedFilterButton()?.textContent?.includes('1'), true);
 

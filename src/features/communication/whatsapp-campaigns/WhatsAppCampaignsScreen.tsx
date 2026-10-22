@@ -930,22 +930,6 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
-  const handleProcessCampaign = async (campaign: CommWhatsAppCampaign) => {
-    if (campaignMutationLockRef.current) return;
-    campaignMutationLockRef.current = true;
-    setCampaignActionId(campaign.id);
-    try {
-      const result = await commWhatsAppCampaignService.processCampaign(campaign.id);
-      toast.success(`Processamento concluído: ${result.sent ?? 0} enviado(s), ${result.failed ?? 0} falha(s).`);
-      await loadCampaigns();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível processar o disparo.');
-    } finally {
-      campaignMutationLockRef.current = false;
-      setCampaignActionId(null);
-    }
-  };
-
   const handleDeleteCampaign = async () => {
     if (!campaignPendingDelete) return;
     if (campaignMutationLockRef.current) return;
@@ -1825,12 +1809,6 @@ export default function WhatsAppCampaignsScreen() {
                       <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id && loadingActivationPreview} onClick={() => void openActivationPreview(campaign)}>
                         {!(campaignActionId === campaign.id && loadingActivationPreview) && <PlayCircle className="kds-control-icon" />}
                         Ativar
-                      </Button>
-                    )}
-                    {['queued', 'running', 'scheduled'].includes(campaign.status) && (
-                      <Button size="sm" variant="primary" loading={campaignActionId === campaign.id} onClick={() => void handleProcessCampaign(campaign)}>
-                        {campaignActionId !== campaign.id && <Send className="kds-control-icon" />}
-                        Processar lote
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => setCampaignPendingDelete(campaign)}>

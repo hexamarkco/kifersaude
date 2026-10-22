@@ -40,6 +40,7 @@ import {
   Download,
   ArrowUp,
   ArrowDown,
+  Contact,
 } from "lucide-react";
 import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
@@ -1996,7 +1997,7 @@ export default function LeadsManager({
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
                           <div className="flex justify-end gap-1">
-                            <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Abrir lead" aria-label="Abrir lead" size="md"><MessageCircle aria-hidden="true" /></IconButton>
+                            <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Ver detalhes do lead" aria-label="Ver detalhes do lead" size="md"><Contact aria-hidden="true" /></IconButton>
                             {canEditLeads && <IconButton onClick={() => openReminderScheduler(lead)} variant="soft" title="Agendar lembrete" aria-label="Agendar lembrete" size="md"><Bell aria-hidden="true" /></IconButton>}
                             {canEditLeads && <IconButton onClick={() => handleConvertToContract(lead)} variant="soft" title="Converter em contrato" aria-label="Converter em contrato" size="md"><FileText aria-hidden="true" /></IconButton>}
                             {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md" loading={deletingLeadIds.has(lead.id)}><Trash2 aria-hidden="true" /></IconButton>}

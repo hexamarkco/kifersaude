@@ -7,7 +7,7 @@ const metrics: Array<[keyof ProductionSummary, string]> = [
   ['clients','Clientes'],['messages','Envios imediatos'],['scheduled_messages','Envios agendados'],['schedules','Agendamentos criados'],
   ['reminders','Retornos concluídos'],['advances','Avanços'],['regressions','Regressões'],['losses','Perdas'],['sales','Vendas'],['cancellations','Cancelamentos'],
 ];
-const origins: Record<string, string> = { crm:'CRM',mcp:'MCP',automation:'Automação',external:'WhatsApp externo',unknown:'Sem identificação' };
+const origins: Record<string, string> = { crm:'CRM',mcp:'Assistente conectado',automation:'Automação',external:'WhatsApp externo',unknown:'Sem identificação' };
 const states: Record<string, string> = { scheduled:'Agendado',sending:'Enviando',sent:'Enviado',delivered:'Entregue',read:'Lido',played:'Reproduzido',failed:'Falhou',cancelled:'Cancelado',expired:'Expirado',running:'Em andamento',paused:'Pausado',completed:'Concluído' };
 const entities: Record<string, string> = { comm_whatsapp_messages:'Mensagem',comm_whatsapp_scheduled_messages:'Agendamento',comm_whatsapp_scheduled_sequences:'Sequência',contracts:'Contrato',reminders:'Lembrete',interactions:'Interação',leads:'Cliente' };
 
@@ -48,7 +48,7 @@ export function TeamProduction({ onNavigateToLead }: { onNavigateToLead: (id: st
     {report && !report.started_at && <Alert tone="info">A medição individual ainda não foi ativada. O histórico do login compartilhado não será atribuído a uma pessoa.
       {isAdmin && <Button className="mt-3" onClick={() => void model.activate()}>Iniciar medição a partir de agora</Button>}</Alert>}
     {report?.started_at && <>
-      <p className="text-xs text-[var(--text-muted)]">Medição iniciada em {new Date(report.started_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. Autoria pela Inbox é autenticada; pelo MCP é declarada.</p>
+      <p className="text-xs text-[var(--text-muted)]">Medição iniciada em {new Date(report.started_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. No painel, a conta identifica o responsável. No assistente conectado, informe quem está atendendo em cada ação.</p>
       <div className="overflow-x-auto"><Table size="sm"><TableHeader><TableRow><SortableTableHead label="Atendente" sortDirection={summarySorting.key === 'display_name' ? summarySorting.direction : null} onSort={() => sortSummaryBy('display_name')} />{metrics.map(([key,label]) => <SortableTableHead key={key} align="right" label={label} sortDirection={summarySorting.key === key ? summarySorting.direction : null} onSort={() => sortSummaryBy(key)} />)}</TableRow></TableHeader>
         <TableBody>{sortedSummary.map((row) => <TableRow key={row.user_id ?? 'team'}><TableCell>{row.display_name}</TableCell>{metrics.map(([key]) => <TableCell key={key} align="right">{row[key]}</TableCell>)}</TableRow>)}</TableBody>
       </Table></div>

@@ -902,7 +902,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'warning' as const,
         icon: AlertTriangle,
         title: 'Envio desabilitado',
-        description: 'O canal está configurado, mas o envio foi desativado em /painel/config.',
+        description: 'O envio está desativado. Peça ao responsável pelo sistema para conferir Configurações > Integrações.',
       };
     }
 
@@ -911,7 +911,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'danger' as const,
         icon: WifiOff,
         title: `WhatsApp ${connectionStatusLabel}`,
-        description: 'Reconecte o canal na Whapi ou valide a sessão antes de atender por aqui.',
+        description: 'Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.',
       };
     }
 
@@ -919,8 +919,8 @@ export default function WhatsAppInboxScreen() {
       return {
         tone: 'info' as const,
         icon: Clock3,
-        title: 'Webhook ainda sem eventos',
-        description: 'O canal está conectado, mas ainda não recebemos nenhum evento do webhook neste inbox.',
+        title: 'Aguardando mensagens do WhatsApp',
+        description: 'O WhatsApp está conectado, mas ainda não recebemos atualizações. Envie uma mensagem para o número conectado para conferir o recebimento.',
       };
     }
 
@@ -928,8 +928,8 @@ export default function WhatsAppInboxScreen() {
       return {
         tone: 'info' as const,
         icon: Clock3,
-        title: 'Webhook sem eventos recentes',
-        description: `Último evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso não for esperado, valide o webhook na Whapi.`,
+        title: 'Sem atualizações recentes do WhatsApp',
+        description: `Última atualização recebida em ${formatMessageTime(channelState.last_webhook_received_at)}. Se faltarem mensagens, confira a conexão em Configurações > Integrações.`,
       };
     }
 

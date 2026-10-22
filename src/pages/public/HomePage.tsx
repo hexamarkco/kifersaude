@@ -226,7 +226,7 @@ const fallbackPublicMetrics: PublicMetric[] = [
   {
     value: '4.9',
     label: 'avaliação média percebida',
-    detail: 'fallback visual até a leitura protegida carregar',
+    detail: 'avaliações em atualização',
   },
 ];
 

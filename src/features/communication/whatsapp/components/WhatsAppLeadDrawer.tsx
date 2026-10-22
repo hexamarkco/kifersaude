@@ -634,7 +634,7 @@ export default function WhatsAppLeadDrawer({
                 <div>
                   <p className="font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</p>
                   <p className="mt-1 leading-6 text-[var(--text-muted)]">
-                    Procure um lead existente do CRM para ligar esta conversa e editar status sem sair do inbox.
+                    Procure um contato já cadastrado para vincular esta conversa e atualizar o atendimento sem sair daqui.
                   </p>
                 </div>
               </Surface>

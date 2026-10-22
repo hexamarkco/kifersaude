@@ -132,7 +132,7 @@ export default function WhatsAppQuickRepliesModal({
         closeOnEscape={!saving}
         showCloseButton={!saving}
         title="Mensagens rápidas"
-        description="Cadastre atalhos independentes do inbox. Use {{ para inserir variáveis dinâmicas na mensagem."
+        description="Crie atalhos para mensagens que você usa com frequência. Digite {{ para escolher informações como o nome do contato."
         size="xl"
         footer={(
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
@@ -209,7 +209,7 @@ export default function WhatsAppQuickRepliesModal({
                     Editor da mensagem rápida
                   </h3>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    O atalho e a mensagem ficam disponíveis imediatamente no composer do inbox.
+                    O atalho e a mensagem ficam disponíveis imediatamente ao escrever uma resposta no WhatsApp.
                   </p>
                 </div>
                 <Button

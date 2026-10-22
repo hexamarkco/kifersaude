@@ -100,12 +100,12 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
         <SectionHeader
           eyebrow="Panorama"
           title="Funil comercial"
-          description="Leitura do pipeline ativo e da conversao entre etapas."
+          description="Acompanhe os contatos em negociação e a passagem entre etapas."
         />
 
         <div className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--bg-hover)] px-3.5 py-2 text-xs font-semibold text-[var(--text-secondary)]">
           <Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
-          {totalLeads.toLocaleString('pt-BR')} no pipeline
+          {totalLeads.toLocaleString('pt-BR')} em negociação
           <span className="text-[var(--text-subtle)]">·</span>
           {stages.length} etapas
         </div>

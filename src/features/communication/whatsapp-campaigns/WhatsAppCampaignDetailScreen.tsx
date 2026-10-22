@@ -25,6 +25,8 @@ import {
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignChanges } from './campaignRealtime';
 import { getCampaignTargetDisplayName } from './domain/campaignTargetPresentation';
+import { CampaignIssueNotice } from './components/CampaignIssueNotice';
+import { groupCampaignIssues } from './domain/campaignIssuePresentation';
 import {
   commWhatsAppCampaignService,
   computeContactIntervalMinutes,
@@ -38,7 +40,7 @@ const campaignStatusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   draft: 'Rascunho',
   scheduled: 'Agendado',
   queued: 'Na fila',
-  running: 'Rodando',
+  running: 'Em andamento',
   paused: 'Pausado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
@@ -51,7 +53,7 @@ const targetStatusLabels: Record<CommWhatsAppCampaignTargetStatus, string> = {
   sent: 'Enviado',
   responded: 'Respondeu',
   stopped: 'Bloqueado',
-  failed: 'Falhou',
+  failed: 'Precisa de atenção',
   invalid: 'Inválido',
   cancelled: 'Cancelado',
 };
@@ -494,10 +496,11 @@ export default function WhatsAppCampaignDetailScreen() {
   const conversionRate = contactedCount > 0 ? Math.round((respondedCount / contactedCount) * 1000) / 10 : 0;
   const failureRate = contactedCount > 0 ? Math.round(((targetCounts.failed + targetCounts.invalid) / contactedCount) * 1000) / 10 : 0;
 
-  const topFailureReasons = useMemo(
-    () => failureReasons.slice(0, 5).map((row) => [row.error_message, row.total_count] as const),
+  const groupedFailureReasons = useMemo(
+    () => groupCampaignIssues(failureReasons),
     [failureReasons],
   );
+  const topFailureReasons = groupedFailureReasons.slice(0, 5);
 
   const variantBreakdown = useMemo(() => {
     if (!campaign?.ab_test_enabled) return [];
@@ -674,7 +677,7 @@ export default function WhatsAppCampaignDetailScreen() {
             <Metric label="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
             <Metric label="Enviados" value={targetCounts.sent} />
             <Metric label="Responderam" value={respondedCount} />
-            <Metric label="Falhas" value={targetCounts.failed + targetCounts.invalid} />
+            <Metric label="Precisam de atenção" value={targetCounts.failed + targetCounts.invalid} />
           </div>
 
           {pendingWhatsAppValidation > 0 && (
@@ -690,7 +693,7 @@ export default function WhatsAppCampaignDetailScreen() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Relatório</h2>
-                <p className="text-sm text-[color:var(--panel-text-soft)]">Taxas e principais motivos de falha entre os contatos já processados.</p>
+                <p className="text-sm text-[color:var(--panel-text-soft)]">Veja os resultados e o que precisa ser conferido antes de continuar os envios.</p>
               </div>
               <BarChart3 className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
@@ -700,15 +703,15 @@ export default function WhatsAppCampaignDetailScreen() {
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Principais motivos de falha</h3>
-                {failureReasons.length > 5 && (
-                  <p className="text-xs text-[color:var(--panel-text-muted)]">Mostrando os 5 mais comuns de {failureReasons.length} motivo(s) distintos.</p>
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">O que precisa de atenção</h3>
+                {groupedFailureReasons.length > 5 && (
+                  <p className="text-xs text-[color:var(--panel-text-muted)]">Mostrando os 5 mais comuns de {groupedFailureReasons.length} motivo(s) distintos.</p>
                 )}
                 {topFailureReasons.length > 0 ? (
                   <ul className="mt-2 space-y-2">
-                    {topFailureReasons.map(([reason, count]) => (
+                    {topFailureReasons.map(({ reason, count, details }) => (
                       <li key={reason} className="flex items-start justify-between gap-3 rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-sm">
-                        <span className="text-[color:var(--panel-text-soft)]">{reason}</span>
+                        <CampaignIssueNotice reason={reason} details={details} />
                         <Badge tone="danger" size="sm">{count}</Badge>
                       </li>
                     ))}
@@ -741,7 +744,7 @@ export default function WhatsAppCampaignDetailScreen() {
                 <p className="text-sm text-[color:var(--panel-text-soft)]">
                   {targetsTotal > 0
                     ? `Mostrando ${(targetsPage - 1) * targetsPageSize + 1}-${Math.min(targetsPage * targetsPageSize, targetsTotal)} de ${targetsTotal.toLocaleString('pt-BR')} contato(s).`
-                    : 'Nenhum contato materializado ainda.'}
+                    : 'Nenhum contato nesta lista.'}
                 </p>
               </div>
               <Users className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
@@ -780,11 +783,11 @@ export default function WhatsAppCampaignDetailScreen() {
                     <Info label="Etapa" value={String(target.current_step_index + 1)} />
                     <Info label="Próximo envio" value={formatDateTime(target.next_send_at)} />
                     <Info label="Última tentativa" value={formatDateTime(target.last_attempt_at)} />
-                    <Info label="Erro" value={target.error_message || '-'} />
                   </div>
+                  {target.error_message && <CampaignIssueNotice reason={target.error_message} />}
                 </Card>
               ))}
-              {targets.length === 0 && <EmptyState title="Nenhum contato materializado ainda." />}
+              {targets.length === 0 && <EmptyState title="Nenhum contato nesta lista." />}
             </div>
             <div className="hidden lg:block">
               <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
@@ -795,7 +798,7 @@ export default function WhatsAppCampaignDetailScreen() {
                     <SortableTableHead label="Etapa" sortDirection={targetSorting.key === "step" ? targetSorting.direction : null} onSort={() => sortTargetsBy("step")} />
                     <SortableTableHead label="Próximo envio" sortDirection={targetSorting.key === "next" ? targetSorting.direction : null} onSort={() => sortTargetsBy("next")} />
                     <SortableTableHead label="Última tentativa" sortDirection={targetSorting.key === "last" ? targetSorting.direction : null} onSort={() => sortTargetsBy("last")} />
-                    <SortableTableHead label="Erro" sortDirection={targetSorting.key === "error" ? targetSorting.direction : null} onSort={() => sortTargetsBy("error")} />
+                    <SortableTableHead label="O que fazer" sortDirection={targetSorting.key === "error" ? targetSorting.direction : null} onSort={() => sortTargetsBy("error")} />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -809,12 +812,12 @@ export default function WhatsAppCampaignDetailScreen() {
                       <TableCell className="text-[var(--text-secondary)]">{target.current_step_index + 1}</TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.next_send_at)}</TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.last_attempt_at)}</TableCell>
-                      <TableCell className="max-w-xs text-xs text-[var(--text-muted)]">{target.error_message || '-'}</TableCell>
+                      <TableCell className="max-w-xs text-xs text-[var(--text-muted)]"><CampaignIssueNotice reason={target.error_message} /></TableCell>
                     </TableRow>
                   ))}
                   {targets.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6}><EmptyState title="Nenhum contato materializado ainda." /></TableCell>
+                      <TableCell colSpan={6}><EmptyState title="Nenhum contato nesta lista." /></TableCell>
                     </TableRow>
                   )}
                 </TableBody>

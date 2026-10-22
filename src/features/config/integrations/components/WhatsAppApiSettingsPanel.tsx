@@ -17,6 +17,7 @@ import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../../components/ui/panelLoading";
 import { toast } from "../../../../lib/toast";
+import { formatConnectionStatusLabel } from '../../../communication/whatsapp';
 import {
   Alert,
   Button,
@@ -198,7 +199,7 @@ export default function WhatsAppApiSettingsPanel() {
     try {
       const applied = await loadChannelState("refreshHealth");
       if (applied) {
-        toast.success("Saúde do canal atualizada.");
+        toast.success("Situação da conexão atualizada.");
       }
     } catch (error) {
       console.error("[WhatsAppApiSettings] Error refreshing health:", error);
@@ -239,9 +240,9 @@ export default function WhatsAppApiSettingsPanel() {
         if (!copied) throw new Error("Clipboard fallback failed");
       }
 
-      toast.success("Webhook copiado para a area de transferencia.");
+      toast.success("Endereço da conexão copiado.");
     } catch {
-      toast.error("Não foi possível copiar o link do webhook agora.");
+      toast.error("Não foi possível copiar o endereço da conexão agora.");
     }
   };
 
@@ -254,7 +255,7 @@ export default function WhatsAppApiSettingsPanel() {
           <p className="font-semibold">
             Integração de automação não encontrada.
           </p>
-          <p>Execute as migrações mais recentes para habilitar a integração.</p>
+          <p>Peça ao responsável pelo sistema para concluir a configuração do WhatsApp.</p>
         </div>
         </div>
       </Alert>
@@ -267,186 +268,197 @@ export default function WhatsAppApiSettingsPanel() {
       phase={loadingUi.phase}
       hasContent={autoContactIntegration !== null}
       skeleton={<WhatsAppApiSkeleton />}
-      overlayLabel="Atualizando configurações da API WhatsApp..."
+      overlayLabel="Atualizando conexão do WhatsApp..."
       stageClassName="min-h-[340px]"
     >
       <div className="space-y-6">
-        <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">
-            Como conectar um canal na Whapi Cloud
-          </summary>
-          <Alert tone="info" className="mt-3">
-            <div className="flex items-start gap-3">
-              <Info className="mt-0.5 h-5 w-5 shrink-0" />
-              <div className="space-y-2 text-sm">
-                <p className="font-semibold">
-                  Como obter seu token da Whapi Cloud:
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="lg:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] p-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Conexão do WhatsApp</h3>
+              <p className="text-sm text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}{channelPhone ? ` · ${channelPhone}` : ''}</p>
+              <p className="text-xs text-[var(--text-muted)]">Confira a conexão antes de ativar as mensagens automáticas.</p>
+              <p className="text-xs text-[var(--text-secondary)]">{webhookDiagnostics.status === "receiving_messages" ? "As mensagens estão chegando ao sistema." : webhookDiagnostics.status === "error" ? "Houve um problema ao receber a última atualização. Peça ajuda ao suporte." : "Ainda não há recebimento de mensagens confirmado. Confira a conexão antes de usar as automações."}</p>
+            </div>
+            <Button variant="secondary" onClick={handleRefreshHealth} loading={refreshingHealth}>Atualizar conexão</Button>
+          </div>
+          <Card variant="muted" padding="sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-[var(--text-primary)]">
+                  Ativar canal para automações
+                </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Quando desligado, nenhum lead entra nos fluxos mesmo com a
+                  automação marcada como ativa.
                 </p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>
-                    Acesse{" "}
-                    <a
-                      href="https://whapi.cloud"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline"
-                    >
-                      whapi.cloud
-                    </a>{" "}
-                    e crie uma conta
-                  </li>
-                  <li>Após o login, vá para o painel de controle</li>
-                  <li>Configure um canal conectando seu WhatsApp</li>
-                  <li>Copie o token de autenticação do seu canal</li>
-                  <li>Adicione-o como <code>WHAPI_TOKEN</code> nos Edge Secrets do Supabase</li>
-                </ol>
               </div>
+              <Switch
+                checked={enabled}
+                onChange={(event) => setEnabled(event.target.checked)}
+                aria-label="Ativar canal para automações"
+              />
+            </div>
+            <p className="mt-3 text-xs text-[var(--text-muted)]">
+              O disparo automático dos fluxos continua sendo controlado em
+              Configurações &gt; Automações.
+            </p>
+          </Card>
+          <Alert
+            className="h-full"
+            tone={tokenConfigured ? "success" : "warning"}
+          >
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold">Acesso ao serviço de WhatsApp</p>
+              <p>
+                {tokenConfigured
+                  ? "A chave de acesso está configurada e protegida no sistema."
+                  : "Peça ao responsável pelo sistema para configurar a chave de acesso e concluir a conexão."}
+              </p>
             </div>
           </Alert>
-        </details>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.6fr)]">
-              <Card variant="muted" padding="sm">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-[var(--text-primary)]">
-                      Webhook do canal
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {webhookAuthentication === "header"
-                        ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
-                        : "Cole esta URL exatamente como está no campo URL da Whapi (modo Body, eventos messages, statuses e channel). O segredo já vem embutido nela — não precisa configurar header."}
+          <details className="lg:col-span-2 space-y-3">
+            <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">Configuração avançada para o suporte</summary>
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">
+                Ajuda para configurar a conexão (responsável técnico)
+              </summary>
+              <Alert tone="info" className="mt-3">
+                <div className="flex items-start gap-3">
+                  <Info className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="space-y-2 text-sm">
+                    <p className="font-semibold">
+                      Como obter seu token da Whapi Cloud:
                     </p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Status atual: <span className="font-semibold text-[var(--text-secondary)]">{channelStatus || "unknown"}</span>
-                      {channelPhone ? ` · ${channelPhone}` : ""}
-                    </p>
+                    <ol className="list-decimal list-inside space-y-1 ml-2">
+                      <li>
+                        Acesse{" "}
+                        <a
+                          href="https://whapi.cloud"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          whapi.cloud
+                        </a>{" "}
+                        e crie uma conta
+                      </li>
+                      <li>Após o login, vá para o painel de controle</li>
+                      <li>Configure um canal conectando seu WhatsApp</li>
+                      <li>Copie o token de autenticação do seu canal</li>
+                      <li>Adicione-o como <code>WHAPI_TOKEN</code> nos Edge Secrets do Supabase</li>
+                    </ol>
                   </div>
-                  <IconButton
-                    variant="secondary"
-                    size="md"
-                    onClick={handleRefreshHealth}
-                    loading={refreshingHealth}
-                    aria-label="Atualizar saúde do canal"
-                    title="Atualizar saúde do canal"
-                  >
-                    {!refreshingHealth && <RefreshCcw className="kds-control-icon" aria-hidden="true" />}
-                  </IconButton>
                 </div>
-
-                <div className="mt-3">
-                  <Input
-                    readOnly
-                    value={webhookUrl}
-                    size="md"
-                    className="font-mono"
-                    action={(
-                      <IconButton
-                        variant="icon"
-                        size="sm"
-                        aria-label="Copiar webhook"
-                        title="Copiar webhook"
-                        onClick={handleCopyWebhook}
-                        disabled={!webhookUrl}
-                      >
-                        <Copy className="kds-control-icon" aria-hidden="true" />
-                      </IconButton>
-                    )}
-                  />
-                </div>
-                {webhookAuthentication === "header" ? (
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">
-                    O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
-                  </p>
-                ) : (
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">
-                    Se ao salvar essa URL na Whapi ela oferecer um campo de header customizado, prefira configurar {webhookHeaderName || "X-Kifer-Webhook-Secret"} lá e remover o `secret` da URL — mas se não houver esse campo (comum no plano/tela padrão), pode colar a URL como está.
-                  </p>
-                )}
-                <div className="mt-3">
-                  {webhookDiagnostics.status === "message_event_missing" ? (
-                    <Alert tone="warning">
-                      <div className="space-y-1 text-xs">
-                        <p className="font-semibold">O webhook responde, mas nenhuma mensagem chegou</p>
-                        <p>
-                          Na Whapi, edite este webhook e habilite o evento <strong>messages</strong>,
-                          ação <strong>post</strong>, método <strong>POST</strong> e modo <strong>Body</strong>.
-                          O evento de canal sozinho atualiza QR/AUTH, mas não entrega mensagens ao Inbox.
-                        </p>
-                        {webhookDiagnostics.lastWebhookAt ? (
-                          <p>Último evento geral: {formatDiagnosticDate(webhookDiagnostics.lastWebhookAt)}.</p>
-                        ) : null}
-                      </div>
-                    </Alert>
-                  ) : webhookDiagnostics.status === "error" ? (
-                    <Alert tone="danger">
-                      <div className="space-y-1 text-xs">
-                        <p className="font-semibold">O último webhook falhou</p>
-                        <p>{webhookDiagnostics.lastError || "Consulte os logs da Edge Function."}</p>
-                      </div>
-                    </Alert>
-                  ) : webhookDiagnostics.status === "receiving_messages" ? (
-                    <Alert tone="success">
-                      <div className="space-y-1 text-xs">
-                        <p className="font-semibold">Eventos de mensagem estão chegando</p>
-                        {webhookDiagnostics.lastMessageWebhookAt ? (
-                          <p>Último evento persistido: {formatDiagnosticDate(webhookDiagnostics.lastMessageWebhookAt)}.</p>
-                        ) : null}
-                      </div>
-                    </Alert>
-                  ) : (
-                    <Alert tone="info">
-                      <p className="text-xs">
-                        Aguardando a primeira mensagem real. O botão de check da Whapi não testa o evento messages.post.
-                      </p>
-                    </Alert>
-                  )}
-                </div>
-              </Card>
-
-              <Card variant="muted" padding="sm">
-                <div className="flex items-start justify-between gap-4">
+              </Alert>
+            </details>
+            <Card variant="muted" padding="sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-[var(--text-primary)]">
-                    Ativar canal para automações
+                    Configuração de recebimento (webhook)
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
-                    Quando desligado, nenhum lead entra nos fluxos mesmo com a
-                    automação marcada como ativa.
+                    {webhookAuthentication === "header"
+                      ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
+                      : "Cole esta URL exatamente como está no campo URL da Whapi (modo Body, eventos messages, statuses e channel). O segredo já vem embutido nela — não precisa configurar header."}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Status atual: <span className="font-semibold text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}</span>
+                    {channelPhone ? ` · ${channelPhone}` : ""}
                   </p>
                 </div>
-                <Switch
-                  checked={enabled}
-                  onChange={(event) => setEnabled(event.target.checked)}
-                  aria-label="Ativar canal para automações"
+                <IconButton
+                  variant="secondary"
+                  size="md"
+                  onClick={handleRefreshHealth}
+                  loading={refreshingHealth}
+                  aria-label="Atualizar conexão do WhatsApp"
+                  title="Atualizar conexão do WhatsApp"
+                >
+                  {!refreshingHealth && <RefreshCcw className="kds-control-icon" aria-hidden="true" />}
+                </IconButton>
+              </div>
+
+              <div className="mt-3">
+                <Input
+                  readOnly
+                  value={webhookUrl}
+                  size="md"
+                  className="font-mono"
+                  action={(
+                    <IconButton
+                      variant="icon"
+                      size="sm"
+                      aria-label="Copiar endereço da conexão"
+                      title="Copiar endereço da conexão"
+                      onClick={handleCopyWebhook}
+                      disabled={!webhookUrl}
+                    >
+                      <Copy className="kds-control-icon" aria-hidden="true" />
+                    </IconButton>
+                  )}
                 />
               </div>
-              <p className="mt-3 text-xs text-[var(--text-muted)]">
-                O disparo automático dos fluxos continua sendo controlado em
-                Configurações &gt; Automações.
-              </p>
-            </Card>
-            <Alert
-              className="lg:col-span-2"
-              tone={tokenConfigured ? "success" : "warning"}
-            >
-              <div className="space-y-1 text-sm">
-                <p className="font-semibold">Credencial Whapi protegida</p>
-                <p>
-                  {tokenConfigured
-                    ? "WHAPI_TOKEN está configurado nos Edge Secrets."
-                    : "Configure WHAPI_TOKEN nos Edge Secrets do Supabase para ativar a comunicação."}
+              {webhookAuthentication === "header" ? (
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
                 </p>
+              ) : (
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  Se ao salvar essa URL na Whapi ela oferecer um campo de header customizado, prefira configurar {webhookHeaderName || "X-Kifer-Webhook-Secret"} lá e remover o `secret` da URL — mas se não houver esse campo (comum no plano/tela padrão), pode colar a URL como está.
+                </p>
+              )}
+              <div className="mt-3">
+                {webhookDiagnostics.status === "message_event_missing" ? (
+                  <Alert tone="warning">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-semibold">O webhook responde, mas nenhuma mensagem chegou</p>
+                      <p>
+                        Na Whapi, edite este webhook e habilite o evento <strong>messages</strong>,
+                        ação <strong>post</strong>, método <strong>POST</strong> e modo <strong>Body</strong>.
+                        O evento de canal sozinho atualiza QR/AUTH, mas não entrega mensagens ao Inbox.
+                      </p>
+                      {webhookDiagnostics.lastWebhookAt ? (
+                        <p>Último evento geral: {formatDiagnosticDate(webhookDiagnostics.lastWebhookAt)}.</p>
+                      ) : null}
+                    </div>
+                  </Alert>
+                ) : webhookDiagnostics.status === "error" ? (
+                  <Alert tone="danger">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-semibold">O último webhook falhou</p>
+                      <p>{webhookDiagnostics.lastError || "Consulte os logs da Edge Function."}</p>
+                    </div>
+                  </Alert>
+                ) : webhookDiagnostics.status === "receiving_messages" ? (
+                  <Alert tone="success">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-semibold">Eventos de mensagem estão chegando</p>
+                      {webhookDiagnostics.lastMessageWebhookAt ? (
+                        <p>Último evento persistido: {formatDiagnosticDate(webhookDiagnostics.lastMessageWebhookAt)}.</p>
+                      ) : null}
+                    </div>
+                  </Alert>
+                ) : (
+                  <Alert tone="info">
+                    <p className="text-xs">
+                      Aguardando a primeira mensagem real. O botão de check da Whapi não testa o evento messages.post.
+                    </p>
+                  </Alert>
+                )}
               </div>
-            </Alert>
-          </div>
+            </Card>
 
-          <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
-            <Button onClick={handleSave} loading={saving}>
-              {!saving && <Save className="kds-control-icon" />}
-              <span>{saving ? "Salvando..." : "Salvar configuração"}</span>
-            </Button>
-          </div>
+          </details>
+        </div>
+
+        <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+          <Button onClick={handleSave} loading={saving}>
+            {!saving && <Save className="kds-control-icon" />}
+            <span>{saving ? "Salvando..." : "Salvar configuração"}</span>
+          </Button>
+        </div>
       </div>
     </PanelAdaptiveLoadingFrame>
   );

@@ -922,7 +922,7 @@ export default function AutoContactFlowSettingsScreen() {
     update_status: "Atualizar status do lead",
     create_task: "Criar tarefa",
     send_email: "Enviar e-mail",
-    webhook: "Disparar webhook",
+    webhook: "Chamar outro sistema",
     archive_lead: "Arquivar lead",
     delete_lead: "Excluir lead",
     activate_autonomous_service: "Ativar atendimento autônomo (IA)",
@@ -1303,7 +1303,7 @@ export default function AutoContactFlowSettingsScreen() {
       case "webhook":
         return step.webhookUrl?.trim()
           ? `Webhook ${step.webhookMethod ?? "POST"}`
-          : "Disparar webhook";
+          : "Chamar outro sistema";
       case "archive_lead":
         return "Arquivar lead";
       case "delete_lead":
@@ -1883,13 +1883,13 @@ export default function AutoContactFlowSettingsScreen() {
                   <section className="space-y-4" aria-labelledby="automation-logging-heading">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h5 id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Logs estruturados e auditoria</h5>
-                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Registre eventos e ações para análise operacional.</p>
+                        <h5 id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Histórico de atividades</h5>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Guarde as ações realizadas para consultar o que aconteceu.</p>
                       </div>
                       <Switch
                         checked={loggingDraft.enabled}
                         onChange={(event) => setLoggingDraft((previous) => ({ ...previous, enabled: event.target.checked }))}
-                        aria-label="Ativar logs estruturados e auditoria"
+                        aria-label="Ativar histórico de atividades"
                       />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -1901,7 +1901,7 @@ export default function AutoContactFlowSettingsScreen() {
                           value={loggingDraft.retentionDays}
                           onChange={(event) => setLoggingDraft((previous) => ({ ...previous, retentionDays: Number(event.target.value) }))}
                           size="md"
-                          aria-label="Período de retenção dos logs em dias"
+                          aria-label="Dias para guardar o histórico"
                         />
                       </div>
                       <div className="flex min-w-0 items-center rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2 sm:mt-6">
@@ -1909,8 +1909,8 @@ export default function AutoContactFlowSettingsScreen() {
                           <Switch
                             checked={loggingDraft.includePayloads}
                             onChange={(event) => setLoggingDraft((previous) => ({ ...previous, includePayloads: event.target.checked }))}
-                            label="Salvar payloads completos"
-                            aria-label="Salvar payloads completos nos logs"
+                            label="Salvar conteúdo completo"
+                            aria-label="Salvar conteúdo completo no histórico"
                           />
                           <p className="mt-1 text-xs text-[var(--text-muted)]">Inclui o conteúdo integral dos eventos.</p>
                         </div>
@@ -2984,9 +2984,10 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
 
                             {step.actionType === "webhook" && (
                               <div className="grid gap-3 md:grid-cols-2">
+                                <p className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</p>
                                 <div className="md:col-span-2">
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    URL
+                                    Endereço do serviço
                                   </label>
                                   <Input
                                     type="text"
@@ -3003,7 +3004,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 </div>
                                 <div>
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                     Método
+                                    Método
                                   </label>
                                   <FilterSelect
                                     icon={Activity}
@@ -3030,7 +3031,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 </div>
                                 <div>
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Headers (JSON)
+                                    Cabeçalhos da conexão (JSON)
                                   </label>
                                   <Input
                                     type="text"
@@ -3047,7 +3048,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 </div>
                                 <div className="md:col-span-2">
                                   <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Body
+                                    Dados enviados
                                   </label>
                                   <VariableAutocompleteTextarea
                                     value={step.webhookBody ?? ""}
@@ -3277,11 +3278,11 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 Envio de teste
                               </div>
                               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                Envia somente a etapa escolhida para seu número. Não cria jobs, não altera o lead e não executa ações de status.
+                                Envia somente as mensagens da etapa escolhida para o seu número. Não agenda novas ações nem altera os dados ou o status do contato.
                               </p>
                             </div>
                             <span className="kds-config-token border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-1 text-[11px] text-[var(--text-primary)]">
-                              Whapi real
+                              Envio real pelo WhatsApp
                             </span>
                           </div>
 

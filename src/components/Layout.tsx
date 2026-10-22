@@ -155,7 +155,7 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren: TabConfig[] = [
-    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats },
+    { id: 'whatsapp-inbox', label: 'WhatsApp', icon: MessageCircle, badge: unreadInboxChats },
     { id: 'whatsapp-campaigns', label: 'Disparos', icon: Send },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
@@ -191,7 +191,7 @@ export default function Layout({
   const mobileNavItems: Array<{ id: string; label: string; icon: LucideIcon }> = [
     { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle },
+    { id: 'whatsapp-inbox', label: 'WhatsApp', icon: MessageCircle },
     { id: 'contracts', label: 'Contratos', icon: FileText },
   ].filter((item) => canView(item.id));
   const mobileMoreItems = tabs

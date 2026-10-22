@@ -841,7 +841,7 @@ export const commWhatsAppCampaignService = {
       .limit(12);
 
     if (error) {
-      throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar a saude do worker de disparos.'));
+      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível consultar o andamento dos envios automáticos.'));
     }
 
     const recentRuns = (data ?? []) as unknown as CommWhatsAppCampaignWorkerRun[];

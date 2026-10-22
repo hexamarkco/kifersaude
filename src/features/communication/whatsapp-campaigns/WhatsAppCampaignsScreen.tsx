@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Activity, AlertCircle, ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -51,13 +51,13 @@ import {
   type CommWhatsAppCampaignStepKind,
   type CommWhatsAppCampaignTemplate,
   type CommWhatsAppCampaignWorkerHealth,
-  type CommWhatsAppCampaignWorkerRun,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
 import {
   getCampaignActivationBlocker,
   getCampaignMediaReadinessBlocker,
 } from './domain/campaignReadiness';
+import { CampaignDeliveryStatusCard } from './components/CampaignDeliveryStatusCard';
 
 const recurrenceRuleLabels: Record<CommWhatsAppCampaignRecurrenceRule, string> = {
   none: 'Não repetir',
@@ -158,27 +158,6 @@ const formatSendWindow = (campaign: CommWhatsAppCampaign) => {
   return `${campaign.send_window_start.slice(0, 5)} - ${campaign.send_window_end.slice(0, 5)}`;
 };
 
-const formatRelativeRunTime = (value: string | null | undefined) => {
-  if (!value) return 'Nunca';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Nunca';
-  const diffMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-  if (diffMinutes < 1) return 'agora mesmo';
-  if (diffMinutes < 60) return `ha ${diffMinutes} min`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `ha ${diffHours}h`;
-  return `ha ${Math.floor(diffHours / 24)}d`;
-};
-
-const getWorkerRunTone = (run: CommWhatsAppCampaignWorkerRun | null): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' => {
-  if (!run) return 'warning';
-  if (run.status === 'failed') return 'danger';
-  if (run.status === 'running') return 'warning';
-  const finishedAt = run.finished_at ? new Date(run.finished_at).getTime() : new Date(run.started_at).getTime();
-  if (!Number.isNaN(finishedAt) && Date.now() - finishedAt > 10 * 60 * 1000) return 'warning';
-  return 'success';
-};
-
 const defaultWorkerHealth: CommWhatsAppCampaignWorkerHealth = {
   latestRun: null,
   latestSuccess: null,
@@ -190,7 +169,7 @@ const statusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   draft: 'Rascunho',
   scheduled: 'Agendado',
   queued: 'Na fila',
-  running: 'Rodando',
+  running: 'Em andamento',
   paused: 'Pausado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
@@ -283,6 +262,7 @@ export default function WhatsAppCampaignsScreen() {
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
+  const [workerHealthAvailable, setWorkerHealthAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<CampaignLoadError>(false);
   const [saving, setSaving] = useState(false);
@@ -399,6 +379,7 @@ export default function WhatsAppCampaignsScreen() {
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);
       if (suggestionsResult.status === 'fulfilled') setAiSuggestions(suggestionsResult.value);
       if (workerHealthResult.status === 'fulfilled') setWorkerHealth(workerHealthResult.value);
+      setWorkerHealthAvailable(workerHealthResult.status === 'fulfilled');
       if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value);
 
       const failedResults = results.filter((result) => result.status === 'rejected');
@@ -954,7 +935,7 @@ export default function WhatsAppCampaignsScreen() {
     setSuggestionActionId(suggestion.id);
     try {
       await commWhatsAppCampaignService.acceptAiSuggestion(suggestion);
-      toast.success('Opt-out comercial registrado para campanhas e follow-ups.');
+      toast.success('Pedido registrado: este contato deixará de receber campanhas e mensagens de acompanhamento.');
       await loadCampaigns();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível bloquear este contato.');
@@ -985,7 +966,7 @@ export default function WhatsAppCampaignsScreen() {
       <PageHeader
         eyebrow="Comunicação"
         title="Disparos WhatsApp"
-        description="Crie campanhas conversacionais para leads do CRM ou contatos importados por CSV, com base preparada para opt-out sinalizado por IA."
+        description="Crie campanhas para seus contatos, defina as mensagens e acompanhe os envios. Você também pode importar uma lista de uma planilha CSV."
         actions={(
           <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 lg:justify-end">
             <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
@@ -1001,72 +982,14 @@ export default function WhatsAppCampaignsScreen() {
         )}
       />
 
-      <Card className="comm-campaign-toolbar space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Activity className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
-              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Saúde do worker</h2>
-              <Badge tone={getWorkerRunTone(workerHealth.latestRun)}>
-                {workerHealth.latestRun ? workerHealth.latestRun.status : 'sem execução'}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">
-              Última execução {formatRelativeRunTime(workerHealth.latestRun?.finished_at ?? workerHealth.latestRun?.started_at)}.
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
-            <OperationalMetricChip
-              icon={<Activity className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="processados"
-              value={workerHealth.latestRun?.processed ?? 0}
-              className="justify-center"
-            />
-            <OperationalMetricChip
-              icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="enviados"
-              value={workerHealth.latestRun?.sent ?? 0}
-              tone="success"
-              className="justify-center"
-            />
-            <OperationalMetricChip
-              icon={<AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="falhas"
-              value={workerHealth.latestRun?.failed ?? 0}
-              tone="danger"
-              active={(workerHealth.latestRun?.failed ?? 0) > 0}
-              className="justify-center"
-            />
-          </div>
-        </div>
-        {workerHealth.latestFailure && (
-          <Surface variant="danger" padding="sm" className="text-sm">
-            Última falha {formatRelativeRunTime(workerHealth.latestFailure.finished_at ?? workerHealth.latestFailure.started_at)}: {workerHealth.latestFailure.error_message || 'Erro não informado.'}
-          </Surface>
-        )}
-        <div className="grid gap-2 lg:grid-cols-3">
-          {workerHealth.recentRuns.slice(0, 3).map((run) => (
-            <Surface key={run.id} variant="muted" padding="sm" className="text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <Badge tone={getWorkerRunTone(run)} size="sm">{run.status}</Badge>
-                <span className="text-xs text-[color:var(--panel-text-muted)]">{run.source} · {run.action}</span>
-              </div>
-              <p className="mt-2 text-xs text-[color:var(--panel-text-muted)]">{formatRelativeRunTime(run.finished_at ?? run.started_at)}</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-soft)]">{run.processed} proc. · {run.sent} env. · {run.failed} falha(s)</p>
-            </Surface>
-          ))}
-          {workerHealth.recentRuns.length === 0 && (
-            <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma execução registrada ainda. O próximo cron deve aparecer aqui após rodar.</p>
-          )}
-        </div>
-      </Card>
+      <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
 
       {aiSuggestions.length > 0 && (
         <Card className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</h2>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Respostas que podem indicar opt-out, número errado, destinatário incorreto ou reclamação. A IA apenas sinaliza; o bloqueio depende da sua confirmação.</p>
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confira respostas que podem indicar um pedido para parar as mensagens, número errado ou reclamação. A IA sugere a revisão; você confirma a decisão.</p>
             </div>
             <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
           </div>
@@ -1112,11 +1035,11 @@ export default function WhatsAppCampaignsScreen() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {suggestion.intent === 'opt_out' && suggestion.recommended_action === 'suggest_block_whatsapp_campaigns' ? (
                       <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
-                        Registrar opt-out comercial
+                        Parar mensagens comerciais
                       </Button>
                     ) : suggestion.intent === 'wrong_number' ? (
                       <p className="self-center text-xs text-[color:var(--panel-text-muted)]">
-                        Número ou destinatário incorreto exige revisão de identidade; isso não é registrado como opt-out.
+                        Se o número ou a pessoa estiver incorreta, confira os dados do contato antes de registrar um pedido para parar as mensagens.
                       </p>
                     ) : null}
                     <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
@@ -1184,7 +1107,7 @@ export default function WhatsAppCampaignsScreen() {
                   </Field>
                 </div>
               )}
-              <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O sistema vai processar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, números inválidos e opt-outs.</p>
+              <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O sistema vai processar os alvos no momento de ativar a campanha, removendo contatos arquivados, duplicados, números inválidos e pessoas que pediram para não receber mensagens.</p>
             </Surface>
           ) : (
             <Surface variant="muted" padding="sm" className="space-y-4">
@@ -1256,7 +1179,7 @@ export default function WhatsAppCampaignsScreen() {
               </div>
             </div>
 
-            <Field label={<FieldLabel text="Intervalo entre balões (minutos)" hint="0 mantém o envio sequencial atual, com cerca de 3 segundos entre balões. A partir de 1 minuto, cada balão é agendado separadamente; a retomada ocorre no ciclo do worker, de até 1 minuto, e uma resposta pode parar a sequência." />}>
+            <Field label={<FieldLabel text="Intervalo entre balões (minutos)" hint="0 mantém o envio sequencial atual, com cerca de 3 segundos entre balões. A partir de 1 minuto, cada balão é agendado separadamente; o sistema verifica os envios a cada minuto, e uma resposta pode parar a sequência." />}>
               <Input type="number" min={0} max={1440} value={interMessageIntervalMinutes} onChange={(event) => setInterMessageIntervalMinutes(Math.min(1440, Math.max(0, Math.floor(Number(event.target.value) || 0))))} />
             </Field>
 
@@ -1523,7 +1446,7 @@ export default function WhatsAppCampaignsScreen() {
               </div>
               {recurrenceRule !== 'none' && (
                 <p className="text-xs text-[color:var(--panel-text-muted)]">
-                  Quando esta campanha for concluída, o sistema rematerializa o mesmo público de CRM (respeitando opt-outs e o modo de reativação segura) e ativa uma nova rodada automaticamente.
+                  Quando esta campanha terminar, o sistema prepara novamente a lista de contatos do CRM e inicia outra rodada. Pessoas que pediram para não receber mensagens continuam excluídas; as regras de reativação também são respeitadas.
                 </p>
               )}
             </Surface>
@@ -1598,7 +1521,7 @@ export default function WhatsAppCampaignsScreen() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
               {csvSaveProgress
                 ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Não feche esta janela.`
-                : 'Respostas interrompem novos envios para aquele contato; opt-outs bloqueados serão excluídos da fila.'}
+                : 'Respostas interrompem novos envios para aquele contato. Quem pediu para não receber mensagens fica fora da fila.'}
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {wizardStep > 0 && (
@@ -1656,7 +1579,7 @@ export default function WhatsAppCampaignsScreen() {
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
                   <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Regras de envio</h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">A lista importada pode seguir para a fila sem autorização comercial cadastrada. Telefones inválidos, opt-outs e contatos enviados em outra campanha nas últimas 24 horas são excluídos.</p>
+                  <p className="text-sm text-[color:var(--panel-text-soft)]">A lista importada pode seguir para a fila sem autorização comercial cadastrada. Ficam de fora os telefones inválidos, quem pediu para não receber mensagens e os contatos que já receberam outra campanha nas últimas 24 horas.</p>
                   {getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled) && (
                     <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled)}</p>
                   )}

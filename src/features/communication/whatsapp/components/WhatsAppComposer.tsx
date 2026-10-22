@@ -835,7 +835,7 @@ export function WhatsAppComposer({
                                   </div>
                                 ) : (
                                   <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                                    Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
+                                    Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair da conversa.
                                   </p>
                                 )}
                               </div>

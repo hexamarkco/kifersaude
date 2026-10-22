@@ -109,19 +109,19 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind
     {
       key: "whatsapp_audio_transcription",
       label: "Transcrição de áudio do WhatsApp",
-      description: "Usado no inbox para transcrever notas de voz e áudios sob demanda.",
+      description: "Transcreve notas de voz e áudios das conversas quando você solicitar.",
       kind: "transcription",
     },
     {
       key: "attendance_critique",
       label: "Crítica de atendimento (IA)",
-      description: "Usado no inbox para gerar uma análise de qualidade do atendimento, sob demanda.",
+      description: "Analisa a qualidade de um atendimento quando você solicitar.",
       kind: "text",
     },
     {
       key: "autonomous_attendance",
       label: "Atendimento autônomo",
-      description: "Usado no chat de testes (/chat) para simular o atendimento autônomo antes de ligar a automação no inbox real.",
+      description: "Simula o atendimento da IA na área de testes antes de ativar as respostas nas conversas reais.",
       kind: "text",
     },
   ];
@@ -993,7 +993,7 @@ export default function IntegrationsScreen() {
                   <span>
                     {savingAiRouting
                       ? "Salvando..."
-                      : "Salvar roteamento de IA"}
+                      : "Salvar modelos por tarefa"}
                   </span>
                 </Button>
               </div>
@@ -1003,7 +1003,7 @@ export default function IntegrationsScreen() {
         </section>}
 
         {activeSection === "whatsapp" && <section className="space-y-4">
-          <SectionHeader title="WhatsApp (Whapi)" description="Conecte o canal de WhatsApp para uso nos fluxos de automação." />
+          <SectionHeader title="Conexão do WhatsApp" description="Conecte o canal de WhatsApp para uso nos fluxos de automação." />
           <WhatsAppApiSettingsPanel />
         </section>}
 

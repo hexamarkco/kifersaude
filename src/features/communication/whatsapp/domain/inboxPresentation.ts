@@ -45,17 +45,21 @@ export const formatConnectionStatusLabel = (value?: string | null, fallback = 'I
     case 'AUTH':
       return 'Conectado';
     case 'QR':
-      return 'Aguardando QR';
+      return 'Aguardando leitura do QR code';
     case 'LAUNCH':
       return 'Conectando';
     case 'INIT':
-      return 'Inicializando';
+      return 'Preparando conexão';
     case 'STOP':
-      return 'Parado';
+      return 'Conexão interrompida';
     case 'DISCONNECTED':
       return 'Desconectado';
+    case 'SYNC_ERROR':
+      return 'Falha de atualização';
+    case 'ERROR':
+      return 'Falha de conexão';
     default:
-      return normalized;
+      return fallback;
   }
 };
 

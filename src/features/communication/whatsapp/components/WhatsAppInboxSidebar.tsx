@@ -330,7 +330,7 @@ export function WhatsAppInboxSidebar({
             {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
             <div className="space-y-1">
               <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">{archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}</p>
-              <p className="text-sm text-[var(--text-secondary)]">{archivedSectionOpen ? 'Arquive uma conversa para ela aparecer nesta lista separada.' : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{archivedSectionOpen ? 'Arquive uma conversa para ela aparecer nesta lista separada.' : 'As mensagens recebidas no WhatsApp aparecerão aqui automaticamente.'}</p>
             </div>
           </div>
         ) : (

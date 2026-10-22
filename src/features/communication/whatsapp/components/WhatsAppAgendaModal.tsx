@@ -1571,7 +1571,7 @@ export default function WhatsAppAgendaModal({
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
-        description="Mesma base da Agenda unificada, agora acessível dentro do inbox. Tudo o que você fizer aqui reflete em /painel/agenda."
+        description="Consulte e organize seus lembretes sem sair da conversa. As alterações também aparecem na Agenda do sistema."
         size="xl"
         bodyClassName="whatsapp-agenda-dialog-body"
         footer={

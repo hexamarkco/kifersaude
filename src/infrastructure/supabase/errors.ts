@@ -38,7 +38,7 @@ export const getSupabaseErrorMessage = async (
       } catch {
         // Some function errors do not expose a JSON response body.
       }
-      return `Edge Function retornou status ${context.status}`;
+      return fallbackMessage;
     }
 
     if (context instanceof Error && context.message.trim()) {

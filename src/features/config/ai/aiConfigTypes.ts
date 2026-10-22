@@ -181,13 +181,13 @@ export const AI_FEATURE_CATEGORIES: Record<string, string> = {
   agenda: "Agenda",
   followup: "Follow-up",
   autonomous: "Atendimento Autônomo",
-  sandbox: "Sandbox",
+  sandbox: "Testes de atendimento",
   contratos: "Contratos",
 };
 
 export const AI_MODEL_RESOLUTION_SOURCE_LABELS: Record<AiModelResolutionSource, string> = {
-  feature: "Personalizado (esta feature)",
-  ai_routing: "Roteamento por funcionalidade",
-  provider_default: "Default do provider",
-  fallback: "Fallback",
+  feature: "Personalizado para esta tarefa",
+  ai_routing: "Modelo escolhido para a tarefa",
+  provider_default: "Padrão do fornecedor",
+  fallback: "Alternativa automática",
 };

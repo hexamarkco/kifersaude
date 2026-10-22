@@ -237,13 +237,13 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
         <DialogHeader>
           <DialogTitle>Preparar titular para importação</DialogTitle>
           <DialogDescription>
-            Contrato {contract.codigo_contrato}. Os dados ficam em staging por até 24 horas e serão usados uma única vez pelo MCP.
+            Contrato {contract.codigo_contrato}. Os dados ficam protegidos por até 24 horas e podem ser usados uma única vez pelo assistente conectado.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           {result ? (
             <Surface variant="muted" padding="md">
-              <h3 className="font-semibold text-[var(--text-primary)]">Staging criado</h3>
+              <h3 className="font-semibold text-[var(--text-primary)]">Dados preparados</h3>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
                 Copie o identificador e use-o na action <code>kifer_create_contract_holder_from_import</code>.
               </p>
@@ -291,7 +291,7 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
             <>
               <Button variant="secondary" onClick={close} disabled={saving}>Cancelar</Button>
               <Button type="submit" form="holder-import-form" loading={saving}>
-                Criar staging protegido
+                Preparar dados protegidos
               </Button>
             </>
           )}

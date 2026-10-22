@@ -247,7 +247,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   }, [loadedProvider, reasoningProvider, providerError, reasoningEffort, supportedReasoningEfforts]);
 
   const handleSave = useCallback(async () => {
-    if (!prompt.trim()) return toast.error("O prompt não pode estar vazio");
+    if (!prompt.trim()) return toast.error("Preencha as instruções da IA");
 
     if (modelOverrideEnabled) {
       const validation = await aiConfigService.validateModelOverride(provider, model, taskType);
@@ -419,7 +419,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 label="Esforço de raciocínio"
                 description={supportedReasoningEfforts.length > 0
                   ? "Automático usa o nível seguro definido para o modelo e a tarefa."
-                  : "Este modelo não oferece controle de esforço neste provider."}
+                  : "Este modelo não oferece controle de esforço neste fornecedor."}
               >
                 <Select
                   value={reasoningEffort ?? ""}
@@ -451,7 +451,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
               <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-2.5 text-xs text-[var(--info-text)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
-                <p>Preço não cadastrado para este modelo. A telemetria registrará tokens, mas o custo estimado ficará indeterminado até o preço ser configurado.</p>
+                <p>O uso de texto deste modelo será registrado, mas o custo estimado só ficará disponível quando o preço for cadastrado.</p>
               </div>
             )}
 
@@ -459,7 +459,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {effectiveModel && (
               <div className="space-y-1 rounded-[var(--radius-md)] bg-[var(--bg-surface-muted)] p-2.5 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-[var(--text-muted)]">Modelo efetivo</span>
+                  <span className="text-[var(--text-muted)]">Modelo em uso</span>
                   <span className="font-medium text-[var(--text-primary)]">
                     {effectiveModel.model}
                   </span>
@@ -480,13 +480,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           </div>
 
           {/* Prompt */}
-          <Field label="Prompt da funcionalidade" description="Instrução principal enviada para a IA.">
+          <Field label="Instruções da IA" description="Instrução principal enviada para a IA.">
             <Textarea
               value={prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
               rows={10}
               className="font-mono"
-              placeholder="Digite o prompt..."
+              placeholder="Descreva como a IA deve agir nesta tarefa..."
             />
           </Field>
 
@@ -497,17 +497,17 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setOutputInstructions(e.target.value)}
               rows={6}
               className="font-mono"
-              placeholder="Ex: Retorne JSON no formato..."
+              placeholder="Descreva o formato e as regras que a resposta deve seguir."
             />
           </Field>
 
           {/* Temperature + Max Tokens */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field
-              label="Temperatura"
+              label="Variação das respostas"
               description={reasoningEffort && reasoningEffort !== "none"
                 ? "Ignorada por este modelo enquanto o raciocínio estiver ativo."
-                : `Padrão: ${feature.default_temperature}. Pode ser ignorada no modo de raciocínio automático.`}
+                : `Valores maiores permitem respostas mais variadas. Padrão: ${feature.default_temperature}. Alguns modelos ajustam isso automaticamente.`}
             >
               <Input
                 type="number"
@@ -518,7 +518,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTemperature(Number(e.target.value))}
               />
             </Field>
-            <Field label="Máximo de tokens" description={`Padrão: ${feature.default_max_output_tokens}`}>
+            <Field label="Limite de texto (tokens)" description={`Tokens são unidades de texto usadas pela IA. Padrão: ${feature.default_max_output_tokens}.`}>
               <Input
                 type="number"
                 min={100}
@@ -563,8 +563,8 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               Valores padrão do sistema:
             </p>
             <div className="text-xs text-[var(--text-muted)] space-y-0.5">
-              <p>Temperatura: {feature.default_temperature}</p>
-              <p>Máximo de tokens: {feature.default_max_output_tokens}</p>
+              <p>Variação das respostas: {feature.default_temperature}</p>
+              <p>Limite de texto (tokens): {feature.default_max_output_tokens}</p>
             </div>
           </div>
         </DrawerBody>

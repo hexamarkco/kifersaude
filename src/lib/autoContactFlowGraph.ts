@@ -151,7 +151,7 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
               : step.actionType === 'send_email'
                 ? 'Enviar e-mail'
               : step.actionType === 'webhook'
-                ? 'Disparar webhook'
+                ? 'Chamar outro sistema'
                 : step.actionType === 'send_message' && step.messages?.some((item) => 'ai' in item)
                   ? 'Enviar mensagem (IA)'
                 : 'Enviar mensagem',

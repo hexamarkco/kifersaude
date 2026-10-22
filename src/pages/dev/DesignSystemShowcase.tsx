@@ -1364,7 +1364,7 @@ function ShowcaseContent() {
               title="Leads em negociação"
               subtitle="Base de leads"
               value="23 / 58"
-              trend={<span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]"><Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" />Pipeline ativo</span>}
+              trend={<span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]"><Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" />Negociações em andamento</span>}
             />
           </Item>
         </Cat>

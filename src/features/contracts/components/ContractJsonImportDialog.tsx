@@ -92,9 +92,9 @@ export function ContractJsonImportDialog({
       size="md"
     >
       <DialogHeader onClose={loading ? undefined : onClose}>
-        <DialogTitle>Importar contrato por JSON</DialogTitle>
+        <DialogTitle>Importar contrato de arquivo</DialogTitle>
         <DialogDescription>
-          Selecione um JSON no formato esperado. Os campos serão aplicados ao formulário para revisão; nada é salvo até você confirmar o contrato.
+          Selecione um arquivo .json preenchido conforme o modelo abaixo. Revise os dados no formulário antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>
       <DialogBody className="space-y-4">
@@ -105,18 +105,22 @@ export function ContractJsonImportDialog({
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={downloadTemplate}>
             <Download className="kds-control-icon" />
-            Baixar modelo JSON
+            Baixar modelo de arquivo
           </Button>
         </div>
 
         <div className="rounded-[var(--kds-radius-sm)] border border-dashed border-[var(--border-default)] bg-[var(--surface-primary)] p-5 text-center">
           <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
           <p className="mt-2 font-medium text-[var(--text-primary)]">
-            {file ? file.name : 'Escolha o arquivo JSON do contrato'}
+            {file ? file.name : 'Escolha o arquivo .json do contrato'}
           </p>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Valores numéricos podem ser números JSON. Datas em AAAA-MM-DD; renovação em AAAA-MM. taxa_adesao_tipo: nao_cobrar, percentual_mensalidade ou valor_fixo.
+            Use o modelo de arquivo para preencher os dados. Depois de importar, confira valores, datas e a taxa de adesão no formulário.
           </p>
+          <details className="mt-3 text-left text-xs text-[var(--text-muted)]">
+            <summary className="cursor-pointer">Orientações de formato para quem prepara o arquivo</summary>
+            <p className="mt-2">Datas: AAAA-MM-DD; renovação: AAAA-MM. O campo taxa_adesao_tipo aceita nao_cobrar, percentual_mensalidade ou valor_fixo. Valores numéricos devem seguir o modelo .json.</p>
+          </details>
           <input
             ref={inputRef}
             type="file"
@@ -129,16 +133,16 @@ export function ContractJsonImportDialog({
         }}
           />
           <Button type="button" variant="secondary" size="sm" className="mt-4" onClick={() => inputRef.current?.click()} disabled={loading}>
-            Selecionar arquivo JSON
+            Selecionar arquivo
           </Button>
         </div>
 
         {payload && (
-          <Alert tone="success" title="JSON validado">
+          <Alert tone="success" title="Arquivo conferido">
             {contractFieldCount} campo(s) do contrato e {holderFieldCount} campo(s) do titular prontos para aplicar. Revise os dados no formulário antes de salvar.
           </Alert>
         )}
-        {error && <Alert tone="danger" title="Não foi possível importar o JSON">{error}</Alert>}
+        {error && <Alert tone="danger" title="Não foi possível importar o arquivo">{error}</Alert>}
       </DialogBody>
       <DialogFooter>
         <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>

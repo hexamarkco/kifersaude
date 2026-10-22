@@ -280,7 +280,7 @@ export default function LeadKanbanBoard({
             Funil visual
           </p>
           <h3 className="kds-op-panel-title mt-2">
-            Pipeline por status
+            Contatos por etapa do atendimento
           </h3>
           <p className="kds-op-lead-muted mt-1 text-sm">
             Arraste cards entre colunas para atualizar o status sem sair da

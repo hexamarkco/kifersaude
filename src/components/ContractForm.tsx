@@ -1221,7 +1221,7 @@ export default function ContractForm({
             disabled={saving}
           >
             <FileUp className="kds-control-icon" />
-            Importar JSON
+            Importar de arquivo
           </Button>
         </DialogHeader>
         <DialogBody>

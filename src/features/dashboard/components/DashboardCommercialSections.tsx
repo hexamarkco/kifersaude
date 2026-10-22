@@ -265,7 +265,7 @@ export function DashboardCommercialSections({
 
       <section data-panel-animate aria-labelledby="dashboard-funnel-title">
         <Surface padding="md">
-          <SectionHeader eyebrow="Pipeline" title="Funil comercial" description="Etapas e tempo médio calculados a partir do estágio atual e do histórico salvo." as="h2" />
+          <SectionHeader eyebrow="Negociações" title="Funil comercial" description="Veja quantos contatos estão em cada etapa e há quanto tempo estão nela." as="h2" />
           {analysis.stageMetrics.some((stage) => stage.count > 0) ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {analysis.stageMetrics.filter((stage) => stage.count > 0).map((stage) => (
@@ -320,7 +320,7 @@ export function DashboardCommercialSections({
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <section data-panel-animate aria-labelledby="dashboard-pipeline-value-title">
           <Surface padding="md" className="h-full">
-            <SectionHeader eyebrow="Valor em aberto" title="Pipeline comercial" description="Valor mensal registrado em contratos vinculados às oportunidades abertas." as="h2" />
+            <SectionHeader eyebrow="Valor em aberto" title="Funil de vendas" description="Valor mensal registrado em contratos vinculados às oportunidades abertas." as="h2" />
             <div className="mt-4 flex items-end justify-between gap-4"><p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && analysis.pipelineValueAvailable ? currency(analysis.pipelineValue) : '—'}</p><Badge tone={analysis.pipelineValueAvailable ? 'info' : 'neutral'}>{analysis.pipelineValueAvailable ? 'R$/mês' : 'Sem valor cadastrado'}</Badge></div>
             <div className="mt-5 space-y-3">{analysis.pipelineStages.length > 0 ? analysis.pipelineStages.map((stage) => <button key={stage.status} type="button" onClick={() => onNavigateToStatus(stage.status)} className="flex w-full items-center gap-3 text-left"><span className="min-w-0 flex-1 truncate text-sm text-[var(--text-secondary)]">{stage.status}</span><span className="text-xs tabular-nums text-[var(--text-muted)]">{stage.count}</span><span className="w-28 text-right text-sm font-medium tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && stage.monthlyValue !== null ? compactCurrency(stage.monthlyValue) : '—'}</span></button>) : <EmptyState icon={<DollarSign aria-hidden="true" />} title="Sem valores em aberto" description="O modelo atual não registra valor potencial diretamente no lead." className="py-8" />}</div>
           </Surface>

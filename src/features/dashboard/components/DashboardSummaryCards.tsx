@@ -35,7 +35,7 @@ export function DashboardSummaryCards({
         title="Leads em negociação"
         subtitle="Base de leads"
         value={<span className="tabular-nums">{leadsAtivos} / {totalLeads}</span>}
-        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Pipeline ativo</span>}
+        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">Negociações em andamento</span>}
         className="h-full space-y-3"
       />
 

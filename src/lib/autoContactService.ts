@@ -1286,7 +1286,7 @@ export async function sendAutoContactMessage(_params: {
   content: string | { url: string; caption?: string; filename?: string };
   settings: AutoContactSettings;
 }): Promise<void> {
-  throw new Error('O envio de automações é processado exclusivamente pelo worker do servidor.');
+  throw new Error('As mensagens automáticas são enviadas pelo sistema, conforme os horários e regras definidos.');
 }
 
 const shouldExitFlow = (flow: AutoContactFlow, lead: Lead, event?: string): boolean => {

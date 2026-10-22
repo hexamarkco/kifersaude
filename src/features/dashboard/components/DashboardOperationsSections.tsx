@@ -70,12 +70,12 @@ export function DashboardPipelineHealth({ analysis, onNavigateToStatus }: Pick<O
   return (
     <Surface padding="md" data-panel-animate className="space-y-5" aria-labelledby="dashboard-pipeline-title">
       <SectionHeader
-        eyebrow="Saúde do pipeline"
+        eyebrow="Andamento das negociações"
         title="Onde as oportunidades estão parando"
         description={analysis.bottleneck ? `${analysis.bottleneck.status} concentra ${analysis.bottleneck.count} leads com média de ${Math.round(analysis.bottleneck.averageDays)} dias na etapa.` : 'Ainda não há etapas ativas suficientes para avaliar um gargalo.'}
         as="h2"
       />
-      <div className="flex flex-wrap gap-2" aria-label="Indicadores complementares do pipeline">
+      <div className="flex flex-wrap gap-2" aria-label="Mais informações sobre as negociações">
         <Badge tone="neutral" size="sm">{analysis.activePipeline} oportunidades abertas</Badge>
         <Badge tone="neutral" size="sm">{analysis.activeContracts} contratos ativos</Badge>
         <Badge tone="neutral" size="sm">{analysis.averageCycleDays === null ? 'Ciclo sem base suficiente' : `Ciclo médio: ${Math.round(analysis.averageCycleDays)} dias`}</Badge>
@@ -98,7 +98,7 @@ export function DashboardPipelineHealth({ analysis, onNavigateToStatus }: Pick<O
           ))}
         </div>
       ) : (
-        <EmptyState icon={<Filter aria-hidden="true" />} title="Pipeline sem oportunidades ativas" description="Quando houver leads em etapas abertas, a distribuição e o tempo por etapa aparecerão aqui." className="py-8" />
+        <EmptyState icon={<Filter aria-hidden="true" />} title="Nenhuma negociação em andamento" description="Quando houver leads em etapas abertas, a distribuição e o tempo por etapa aparecerão aqui." className="py-8" />
       )}
     </Surface>
   );
@@ -166,7 +166,7 @@ export function DashboardAutomationCommand({ leads, onNavigate }: AutomationComm
         <Button variant="secondary" size="sm" onClick={() => onNavigate('agenda')}>Organizar follow-ups <ArrowRight aria-hidden="true" /></Button>
         <Button variant="secondary" size="sm" onClick={() => onNavigate('config')}>Revisar fluxos e IA <ArrowRight aria-hidden="true" /></Button>
       </div>
-      <p className="text-xs text-[var(--text-muted)]">A cobertura e as falhas de execução de jobs permanecem restritas ao backend por segurança. Para expô-las aqui, o sistema precisa de um resumo autorizado, somente leitura.</p>
+      <p className="text-xs text-[var(--text-muted)]">O acompanhamento detalhado das automações ainda não está disponível neste painel. Para investigar uma falha, peça ajuda ao responsável pelas automações.</p>
     </Surface>
   );
 }

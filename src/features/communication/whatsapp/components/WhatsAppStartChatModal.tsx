@@ -127,7 +127,7 @@ export default function WhatsAppStartChatModal({
                 </div>
                 <p className="mt-4 text-base font-semibold text-[var(--text-primary)]">Iniciar por número</p>
                 <p className="mt-1 max-w-xs text-sm leading-6 text-[var(--text-muted)]">
-                  Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.
+                  Digite um número com DDD. O sistema confere se ele tem WhatsApp antes de abrir a conversa.
                 </p>
                 <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />

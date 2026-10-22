@@ -891,7 +891,7 @@ export default function FlowBuilder({
           : nextStep.actionType === "send_email"
             ? "Enviar e-mail"
             : nextStep.actionType === "webhook"
-              ? "Disparar webhook"
+              ? "Chamar outro sistema"
               : nextStep.actionType === "archive_lead"
                 ? "Arquivar lead"
                 : nextStep.actionType === "delete_lead"
@@ -1808,9 +1808,10 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "webhook" && (
                   <div className="space-y-2">
+                    <p className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</p>
                     <div>
                       <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
-                        URL
+                        Endereço do serviço
                       </label>
                       <Input
                         type="text"
@@ -1850,7 +1851,7 @@ export default function FlowBuilder({
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
-                          Headers (JSON)
+                          Cabeçalhos da conexão (JSON)
                         </label>
                         <Input
                           type="text"
@@ -1866,7 +1867,7 @@ export default function FlowBuilder({
                     </div>
                     <div>
                       <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
-                        Body
+                        Dados enviados
                       </label>
                       <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.webhookBody ?? ""}

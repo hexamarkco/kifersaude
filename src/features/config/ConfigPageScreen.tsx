@@ -44,7 +44,7 @@ export default function ConfigPageScreen() {
       <PageHeader
         eyebrow="Administração"
         title="Configurações"
-        description="Centralize a operação administrativa do CRM em áreas claras, seguras e orientadas à tarefa."
+        description="Ajuste o sistema, gerencie a equipe e configure os atendimentos automáticos."
         actions={
           <Badge tone="gold">
             <CheckCircle2 className="h-3.5 w-3.5" />

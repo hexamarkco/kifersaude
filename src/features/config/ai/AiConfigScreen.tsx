@@ -179,7 +179,7 @@ export default function AiConfigScreen() {
 
       const unavailableProviders = providerResults.filter(({ result }) => result.error).length;
       if (unavailableProviders > 0) {
-        toast.warning(`Export concluído; ${unavailableProviders} provider(s) não responderam ao snapshot em tempo real.`);
+        toast.warning(`Arquivo exportado. Não foi possível consultar os dados atuais de ${unavailableProviders} fornecedor(es) de IA.`);
       } else {
         toast.success("Configurações exportadas");
       }

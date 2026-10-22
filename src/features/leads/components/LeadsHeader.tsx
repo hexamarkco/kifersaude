@@ -35,10 +35,10 @@ export function LeadsHeader({
             rel="noopener noreferrer"
             variant="secondary"
             size="md"
-            title="Abrir documentacao da API"
+            title="Abrir documentação para integrar outros sistemas"
           >
             <BookOpen className="kds-control-icon" />
-            <span>API Docs</span>
+            <span>Documentação de integração</span>
           </LinkButton>
           <Button
             type="button"

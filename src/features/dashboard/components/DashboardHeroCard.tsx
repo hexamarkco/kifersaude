@@ -16,7 +16,7 @@ export function DashboardHeroCard() {
             Continue crescendo!
           </h3>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Mantenha seu pipeline ativo e acompanhe suas métricas em tempo real
+            Acompanhe as negociações em andamento e veja o que precisa da sua atenção
           </p>
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kds-radius-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">

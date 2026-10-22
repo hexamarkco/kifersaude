@@ -69,9 +69,8 @@ const formatDateTime = (value?: string | null) => {
 const normalizeWhapiChannelStatus = (value?: string | null) => String(value ?? '').trim().toUpperCase();
 
 const normalizeStatusLabel = (value?: string | null) => {
-  const normalized = String(value ?? '').trim();
-  if (!normalized) return 'desconhecido';
-  return normalized.replace(/_/g, ' ');
+  const labels: Record<string, string> = { pending: 'Aguardando envio', sending: 'Enviando', sent: 'Enviada', delivered: 'Entregue', read: 'Lida', played: 'Reproduzida', failed: 'Falha no envio', received: 'Recebida', deleted: 'Excluída' };
+  return labels[String(value ?? '').trim().toLowerCase()] || 'Situação não confirmada';
 };
 
 const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => {
@@ -80,8 +79,8 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'AUTH') {
     return {
       tone: 'success',
-      title: 'Canal AUTH',
-      description: 'Canal autenticado, conectado e operacional segundo a Whapi.',
+      title: 'WhatsApp conectado',
+      description: 'A conexão foi confirmada pelo serviço de WhatsApp.',
       connected: true,
     };
   }
@@ -89,7 +88,7 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'QR') {
     return {
       tone: 'warning',
-      title: 'Canal QR',
+      title: 'Aguardando conexão pelo celular',
       description: 'Aguardando leitura do QR code ou pareamento do dispositivo.',
       connected: false,
     };
@@ -98,8 +97,8 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'INIT') {
     return {
       tone: 'warning',
-      title: 'Canal INIT',
-      description: 'Canal inicializando. Em reconexões normais pode evoluir para LAUNCH e AUTH em poucos segundos.',
+      title: 'Preparando conexão',
+      description: 'Aguarde alguns instantes enquanto o WhatsApp prepara a conexão.',
       connected: false,
     };
   }
@@ -107,8 +106,8 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'LAUNCH') {
     return {
       tone: 'warning',
-      title: 'Canal LAUNCH',
-      description: 'Canal conectando ou temporariamente inativo. Aguarde a evolução para AUTH antes de considerar operacional.',
+      title: 'Conectando WhatsApp',
+      description: 'A conexão ainda não foi confirmada. Aguarde antes de iniciar novos envios.',
       connected: false,
     };
   }
@@ -116,8 +115,8 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'STOP') {
     return {
       tone: 'danger',
-      title: 'Canal STOP',
-      description: 'Canal parado na Whapi. Revise a instância antes de enviar mensagens.',
+      title: 'Conexão interrompida',
+      description: 'Confira a conexão em Configurações > Integrações antes de enviar novas mensagens.',
       connected: false,
     };
   }
@@ -125,8 +124,8 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'SYNC_ERROR') {
     return {
       tone: 'danger',
-      title: 'Canal SYNC_ERROR',
-      description: 'A Whapi indica problema de sincronização. Reautentique ou verifique o canal no painel da Whapi.',
+      title: 'Problema ao atualizar as conversas',
+      description: 'Confira a conexão em Configurações > Integrações. Se continuar, peça ajuda ao responsável pelo sistema.',
       connected: false,
     };
   }
@@ -134,16 +133,16 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
   if (status === 'ERROR') {
     return {
       tone: 'danger',
-      title: 'Canal ERROR',
-      description: 'A Whapi retornou estado de erro para a instância.',
+      title: 'Problema na conexão do WhatsApp',
+      description: 'Não foi possível confirmar a conexão. Confira as configurações antes de iniciar novos envios.',
       connected: false,
     };
   }
 
   return {
     tone: 'neutral',
-    title: status ? `Canal ${status}` : 'Canal sem status',
-    description: 'Status não reconhecido no mapeamento oficial da Whapi. Confirme no painel da Whapi antes de operar.',
+    title: 'Conexão ainda não confirmada',
+    description: 'Atualize a conexão. Se o problema continuar, peça ajuda ao responsável pelo sistema.',
     connected: false,
   };
 };
@@ -154,7 +153,7 @@ const getChannelHealth = (metrics: CommWhatsAppDashboardMetrics | null): Priorit
     return {
       tone: 'danger',
       title: 'Canal não encontrado',
-      description: 'O canal primário do WhatsApp ainda não foi inicializado no banco.',
+      description: 'A conexão do WhatsApp ainda não foi configurada. Peça ajuda ao responsável pelo sistema.',
       connected: false,
     };
   }
@@ -172,13 +171,13 @@ const getChannelHealth = (metrics: CommWhatsAppDashboardMetrics | null): Priorit
   if (!statusInfo.connected) {
     return {
       ...statusInfo,
-      description: channel.last_error || statusInfo.description,
+      description: statusInfo.description,
     };
   }
 
   return {
     ...statusInfo,
-    description: `Webhook: ${formatDateTime(channel.last_webhook_received_at)}. Saúde: ${normalizeStatusLabel(channel.health_status)}.`,
+    description: `Conexão confirmada. Última atualização recebida: ${formatDateTime(channel.last_webhook_received_at)}.`,
   };
 };
 
@@ -414,7 +413,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       }
 
       if (result.identityConflicts > 0) {
-        toast.warning(`${result.identityConflicts} conflito(s) de identidade foram sinalizados durante a sincronização. Revise-os no inbox.`);
+        toast.warning(`${result.identityConflicts} conflito(s) de identidade foram sinalizados durante a sincronização. Confira as conversas sinalizadas.`);
       }
     } catch (syncError) {
       if (sessionId !== dashboardSessionIdRef.current) return;
@@ -434,7 +433,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       isOpen={isOpen}
       onClose={handleClose}
       title="Painel WhatsApp"
-      description="Dashboard operacional para decidir onde olhar agora no inbox."
+      description="Veja as conversas que precisam de atenção e acompanhe o atendimento."
       size="xl"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -446,14 +445,14 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               variant="secondary"
               onClick={() => void handleSyncAllChats()}
               loading={syncingAll}
-              title="Recupera até 25 mensagens recentes por conversa que a Whapi possa não ter entregue por webhook."
+              title="Busca até 25 mensagens recentes por conversa para recuperar atualizações que ainda não apareceram aqui."
             >
               {!syncingAll && <RotateCw className="kds-control-icon" />}
               Forçar sincronização geral
             </Button>
             <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
               {!exportingInbox && <Download className="kds-control-icon" />}
-              Exportar JSON
+              Exportar conversas (.json)
             </Button>
             <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}>
               {!loading && <RefreshCw className="kds-control-icon" />}
@@ -490,6 +489,12 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</p>
               <h3 className="mt-1 text-base font-semibold">{channelHealth.title}</h3>
               <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
+              {metrics?.channel?.last_error && (
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer">Informações para o suporte</summary>
+                  <p className="mt-2 break-words">{metrics.channel.last_error}</p>
+                </details>
+              )}
               <div className="mt-3 border-t border-[color:var(--border-subtle)] pt-3 text-xs font-medium">
                 <p>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</p>
                 <p className="mt-0.5 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>

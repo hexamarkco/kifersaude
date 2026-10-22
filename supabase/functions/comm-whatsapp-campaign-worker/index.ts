@@ -2448,7 +2448,21 @@ async function executeStageBurst(params: {
         newStatus: 'uncertain',
         errorMessage,
       });
-      return { status: 'uncertain', nextStepIndex: step.step_index, error: errorMessage };
+      await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'failed',
+        error_message: `${errorMessage} O contato ficou bloqueado para evitar reenvio duplicado.`,
+        last_attempt_at: getNowIso(),
+        locked_at: null,
+        lock_token: null,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_failed_ambiguous_provider_result',
+        payload: { step_index: step.step_index, reason_code: 'provider_message_id_missing' },
+      });
+      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
     }
 
     const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
@@ -2532,7 +2546,7 @@ async function executeStageBurst(params: {
   await updateClaimedTarget(supabaseAdmin, target, {
     status: targetStatus,
     sent_at: target.sent_at || nowIso,
-    chat_id: chatId || target.chat_id,
+    chat_id: chatRoute?.chatId || target.chat_id,
     current_step_index: firstStepAfterBurst ? firstStepAfterBurst.step_index : companions[companions.length - 1].step_index,
     next_send_at: nextSendAt,
     next_retry_at: null,

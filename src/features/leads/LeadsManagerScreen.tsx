@@ -83,7 +83,8 @@ import {
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import {
-  shouldPromptFirstReminderAfterQuote,
+  getNextUpcomingUnreadReminderDate,
+  normalizeLeadStatusLabel,
   syncLeadNextReturnFromUpcomingReminder,
 } from "../../lib/leadReminderUtils";
 import { downloadXlsx } from "../../lib/xlsxExport";
@@ -1320,14 +1321,9 @@ export default function LeadsManager({
     }
 
     try {
-      const normalizedStatus = newStatus.trim().toLowerCase();
+      const normalizedStatus = normalizeLeadStatusLabel(newStatus);
 
-      if (shouldPromptFirstReminderAfterQuote(newStatus)) {
-        openReminderScheduler(
-          { ...lead, status: newStatus },
-          "Deseja agendar o primeiro lembrete após a proposta enviada?",
-        );
-      } else if (
+      if (
         normalizedStatus === "perdido" ||
         normalizedStatus === "convertido"
       ) {
@@ -1344,22 +1340,24 @@ export default function LeadsManager({
         const reminderRule = STATUS_REMINDER_RULES[normalizedStatus];
 
         if (reminderRule) {
-          const reminderDate = new Date();
-          reminderDate.setHours(
-            reminderDate.getHours() + reminderRule.hoursFromNow,
-          );
-          reminderDate.setMinutes(0, 0, 0);
+          const existingReminderDate = await getNextUpcomingUnreadReminderDate(leadId);
 
-          const reminderDateISO = reminderDate.toISOString();
+          if (!existingReminderDate) {
+            const reminderDate = new Date();
+            reminderDate.setHours(
+              reminderDate.getHours() + reminderRule.hoursFromNow,
+            );
+            reminderDate.setMinutes(0, 0, 0);
 
-          await createLeadReminder({
-            leadId,
-            type: reminderRule.type ?? "Follow-up",
-            title: `${reminderRule.title} - ${lead.nome_completo}`,
-            description: reminderRule.description ?? null,
-            remindAt: reminderDateISO,
-            priority: reminderRule.priority ?? "normal",
-          });
+            await createLeadReminder({
+              leadId,
+              type: reminderRule.type ?? "Follow-up",
+              title: `${reminderRule.title} - ${lead.nome_completo}`,
+              description: reminderRule.description ?? null,
+              remindAt: reminderDate.toISOString(),
+              priority: reminderRule.priority ?? "normal",
+            });
+          }
 
           const nextReturnDate =
             await syncLeadNextReturnFromUpcomingReminder(leadId);
@@ -1759,6 +1757,7 @@ export default function LeadsManager({
               leads={filteredLeads}
               onLeadClick={setSelectedLead}
               onConvertToContract={handleConvertToContract}
+              onStatusChange={handleStatusChange}
             />
           </div>
         ) : (

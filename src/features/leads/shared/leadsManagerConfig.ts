@@ -15,12 +15,33 @@ export const STATUS_REMINDER_RULES: Record<string, StatusReminderRule> = {
     type: "Follow-up",
     priority: "alta",
   },
-  "proposta em análise": {
+  "proposta enviada": {
+    hoursFromNow: 24,
+    title: "Acompanhar proposta enviada",
+    description: "Verifique se o lead recebeu a proposta e esclareça dúvidas.",
+    type: "Follow-up",
+    priority: "normal",
+  },
+  "proposta em analise": {
     hoursFromNow: 48,
     title: "Acompanhar proposta em análise",
     description: "Verifique dúvidas pendentes e reforce benefícios do plano.",
     type: "Follow-up",
     priority: "normal",
+  },
+  decisao: {
+    hoursFromNow: 24,
+    title: "Acompanhar decisão do lead",
+    description: "Confirme a decisão e esclareça os pontos ainda pendentes.",
+    type: "Follow-up",
+    priority: "normal",
+  },
+  contratacao: {
+    hoursFromNow: 24,
+    title: "Acompanhar contratação",
+    description: "Verifique as pendências para concluir a contratação.",
+    type: "Follow-up",
+    priority: "alta",
   },
 };
 

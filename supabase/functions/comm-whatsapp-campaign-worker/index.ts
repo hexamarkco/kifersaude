@@ -2295,8 +2295,31 @@ async function executeStageBurst(params: {
       if (sendingTransition.oldStatus === 'sent') {
         continue;
       }
-      // Failed or uncertain — stop burst
-      if (sendingTransition.oldStatus === 'failed' || sendingTransition.oldStatus === 'uncertain') {
+      // An uncertain provider result must never be retried automatically: the provider
+      // may already have accepted it, so stop this target to prevent duplicate sends.
+      if (sendingTransition.oldStatus === 'uncertain') {
+        const errorMessage = 'O resultado do envio desta etapa ficou incerto. Contato bloqueado para evitar reenvio duplicado.';
+        await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
+        await updateClaimedTarget(supabaseAdmin, target, {
+          status: 'failed',
+          error_message: errorMessage,
+          last_attempt_at: getNowIso(),
+          next_send_at: null,
+          next_retry_at: null,
+          locked_at: null,
+          lock_token: null,
+        });
+        await insertEvent(supabaseAdmin, {
+          campaignId: campaign.id,
+          targetId: target.id,
+          eventType: 'target_failed_ambiguous_provider_result',
+          payload: { step_index: step.step_index, reason_code: 'existing_uncertain_dispatch' },
+        });
+        return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+      }
+
+      // A definitive failed step stops the burst.
+      if (sendingTransition.oldStatus === 'failed') {
         return { status: 'failed', nextStepIndex: step.step_index, error: 'Step anterior falhou.' };
       }
       continue;

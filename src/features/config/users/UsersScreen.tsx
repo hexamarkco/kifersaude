@@ -41,10 +41,13 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   FilterSelect,
   IconButton,
+  useTableSorting,
+  useSortedTableRows,
 } from "../../../design-system";
 import { FALLBACK_PROFILES } from "./shared/usersSettingsConstants";
 import {
@@ -74,6 +77,7 @@ export default function UsersScreen() {
   const [editUserRole, setEditUserRole] = useState("observer");
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { sorting, sortBy } = useTableSorting<"username" | "role" | "created_at">("username");
   const usersLoadRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const loadingUi = useAdaptiveLoading(loading);
@@ -110,6 +114,11 @@ export default function UsersScreen() {
         .some((value) => value.toLocaleLowerCase("pt-BR").includes(normalizedTerm));
     });
   }, [profileBySlug, searchTerm, users]);
+  const sortedUsers = useSortedTableRows(filteredUsers, sorting, (userProfile, key) => {
+    if (key === "username") return userProfile.username || userProfile.email || "";
+    if (key === "role") return formatProfileLabel(userProfile.role, profileBySlug.get(userProfile.role)?.name);
+    return userProfile.created_at ?? null;
+  });
 
   useEffect(() => {
     void loadUsers();
@@ -372,9 +381,9 @@ export default function UsersScreen() {
             <Table size="sm" stickyHeader className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Perfil de acesso</TableHead>
-                  <TableHead>Criado em</TableHead>
+                  <SortableTableHead label="Usuário" sortDirection={sorting.key === "username" ? sorting.direction : null} onSort={() => sortBy("username")} />
+                  <SortableTableHead label="Perfil de acesso" sortDirection={sorting.key === "role" ? sorting.direction : null} onSort={() => sortBy("role")} />
+                  <SortableTableHead label="Criado em" sortDirection={sorting.key === "created_at" ? sorting.direction : null} onSort={() => sortBy("created_at")} />
                   <TableHead align="right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -386,7 +395,7 @@ export default function UsersScreen() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((userProfile) => {
+                  sortedUsers.map((userProfile) => {
                     const profile = profileBySlug.get(userProfile.role);
                     const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
                     const isCurrentUser = userProfile.id === currentUserManagementId;
@@ -429,7 +438,7 @@ export default function UsersScreen() {
                 </p>
               </Card>
             ) : (
-              filteredUsers.map((userProfile) => {
+              sortedUsers.map((userProfile) => {
                 const profile = profileBySlug.get(userProfile.role);
                 const profileLabel = formatProfileLabel(
                   userProfile.role,

@@ -70,6 +70,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   Toolbar,
@@ -659,6 +660,16 @@ export default function LeadsManager({
             return lead.tipo_contratacao || "";
           case "telefone":
             return normalizePhone(lead.telefone);
+          case "status":
+            return lead.status || "";
+          case "responsavel":
+            return lead.responsavel || "";
+          case "proximo_retorno": {
+            const nextReturn = nextReminderByLeadId.get(lead.id) ?? lead.proximo_retorno;
+            if (!nextReturn) return null;
+            const timestamp = new Date(nextReturn).getTime();
+            return Number.isNaN(timestamp) ? null : timestamp;
+          }
           case "created_at":
           default: {
             const createdDate = lead.created_at ?? lead.data_criacao;
@@ -700,6 +711,7 @@ export default function LeadsManager({
     return sorted;
   }, [
     leads,
+    nextReminderByLeadId,
     deferredSearchQuery,
     filterStatus,
     filterResponsavel,
@@ -1494,6 +1506,15 @@ export default function LeadsManager({
   ]);
 
   const hasLeadsSnapshot = leads.length > 0;
+  const toggleColumnSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((current) => current === "asc" ? "desc" : "asc");
+      return;
+    }
+    setSortField(field);
+    setSortDirection(field === "created_at" ? "desc" : "asc");
+  };
+  const sortDirectionFor = (field: SortField) => sortField === field ? sortDirection : null;
 
   return (
     <PanelAdaptiveLoadingFrame
@@ -1918,12 +1939,12 @@ export default function LeadsManager({
                 <TableHeader>
                   <TableRow>
                     {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}
-                    <TableHead>Lead</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Origem e tipo</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Próximo follow-up</TableHead>
-                    <TableHead>Criado em</TableHead>
+                    <SortableTableHead label="Lead" sortDirection={sortDirectionFor("nome")} onSort={() => toggleColumnSort("nome")} />
+                    <SortableTableHead label="Status" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} />
+                    <SortableTableHead label="Origem e tipo" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} />
+                    <SortableTableHead label="Responsável" sortDirection={sortDirectionFor("responsavel")} onSort={() => toggleColumnSort("responsavel")} />
+                    <SortableTableHead label="Próximo follow-up" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} />
+                    <SortableTableHead label="Criado em" sortDirection={sortDirectionFor("created_at")} onSort={() => toggleColumnSort("created_at")} />
                     <TableHead align="right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>

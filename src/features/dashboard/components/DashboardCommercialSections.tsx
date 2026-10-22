@@ -31,9 +31,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
+  useTableSorting,
+  useSortedTableRows,
 } from '../../../design-system';
 import type { TabNavigationOptions } from '../../../types/navigation';
 import type {
@@ -114,6 +116,17 @@ function OpportunityTable({
   opportunities: DashboardOpportunity[];
   onNavigateToLead: (leadId: string) => void;
 }) {
+  const { sorting, sortBy } = useTableSorting<"name" | "status" | "last" | "next" | "owner" | "value">();
+  const sortedOpportunities = useSortedTableRows(opportunities, sorting, (item, key) => {
+    switch (key) {
+      case "name": return item.name;
+      case "status": return item.status;
+      case "last": return item.lastContact;
+      case "next": return item.nextStep;
+      case "owner": return item.responsavel;
+      case "value": return item.monthlyValue;
+    }
+  });
   if (opportunities.length === 0) {
     return <EmptyState icon={<CheckCircle2 aria-hidden="true" />} title="Nenhuma oportunidade crítica" description="A fila é formada por sinais reais de follow-up, etapa e atividade registrados no CRM." className="py-8" />;
   }
@@ -122,16 +135,16 @@ function OpportunityTable({
     <Table size="sm">
       <TableHeader>
         <TableRow>
-          <TableHead>Cliente</TableHead>
-          <TableHead>Estágio</TableHead>
-          <TableHead>Último contato</TableHead>
-          <TableHead>Próximo passo</TableHead>
-          <TableHead>Responsável</TableHead>
-          <TableHead align="right">Valor</TableHead>
+          <SortableTableHead label="Cliente" sortDirection={sorting.key === "name" ? sorting.direction : null} onSort={() => sortBy("name")} />
+          <SortableTableHead label="Estágio" sortDirection={sorting.key === "status" ? sorting.direction : null} onSort={() => sortBy("status")} />
+          <SortableTableHead label="Último contato" sortDirection={sorting.key === "last" ? sorting.direction : null} onSort={() => sortBy("last")} />
+          <SortableTableHead label="Próximo passo" sortDirection={sorting.key === "next" ? sorting.direction : null} onSort={() => sortBy("next")} />
+          <SortableTableHead label="Responsável" sortDirection={sorting.key === "owner" ? sorting.direction : null} onSort={() => sortBy("owner")} />
+          <SortableTableHead label="Valor" align="right" sortDirection={sorting.key === "value" ? sorting.direction : null} onSort={() => sortBy("value")} />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {opportunities.map((opportunity) => (
+        {sortedOpportunities.map((opportunity) => (
           <TableRow key={opportunity.leadId}>
             <TableCell>
               <Button variant="text" size="sm" className="justify-start truncate" onClick={() => onNavigateToLead(opportunity.leadId)}>
@@ -169,6 +182,18 @@ function PerformanceTable({
   showProposals?: boolean;
   showFinancialMetrics: boolean;
 }) {
+  const { sorting, sortBy } = useTableSorting<"label" | "leads" | "proposals" | "contracts" | "conversion" | "monthly" | "commission">();
+  const sortedRows = useSortedTableRows(rows, sorting, (row, key) => {
+    switch (key) {
+      case "label": return row.label;
+      case "leads": return row.leads;
+      case "proposals": return row.proposals;
+      case "contracts": return row.contracts;
+      case "conversion": return row.conversion;
+      case "monthly": return row.monthlyValue;
+      case "commission": return row.commissionExpected;
+    }
+  });
   if (rows.length === 0) {
     return <EmptyState icon={<PackageOpen aria-hidden="true" />} title={`Sem dados de ${label.toLowerCase()}`} description="Os dados aparecem quando houver registros no período e nos filtros selecionados." className="py-8" />;
   }
@@ -177,17 +202,17 @@ function PerformanceTable({
     <Table size="sm">
       <TableHeader>
         <TableRow>
-          <TableHead>{label}</TableHead>
-          {showLeads && <TableHead align="right">Leads</TableHead>}
-          {showProposals && <TableHead align="right">Propostas</TableHead>}
-          <TableHead align="right">Vendas</TableHead>
-          <TableHead align="right">Conversão</TableHead>
-          {showFinancialMetrics && <TableHead align="right">Mensalidade</TableHead>}
-          {showFinancialMetrics && <TableHead align="right">Comissão</TableHead>}
+          <SortableTableHead label={label} sortDirection={sorting.key === "label" ? sorting.direction : null} onSort={() => sortBy("label")} />
+          {showLeads && <SortableTableHead label="Leads" align="right" sortDirection={sorting.key === "leads" ? sorting.direction : null} onSort={() => sortBy("leads")} />}
+          {showProposals && <SortableTableHead label="Propostas" align="right" sortDirection={sorting.key === "proposals" ? sorting.direction : null} onSort={() => sortBy("proposals")} />}
+          <SortableTableHead label="Vendas" align="right" sortDirection={sorting.key === "contracts" ? sorting.direction : null} onSort={() => sortBy("contracts")} />
+          <SortableTableHead label="Conversão" align="right" sortDirection={sorting.key === "conversion" ? sorting.direction : null} onSort={() => sortBy("conversion")} />
+          {showFinancialMetrics && <SortableTableHead label="Mensalidade" align="right" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />}
+          {showFinancialMetrics && <SortableTableHead label="Comissão" align="right" sortDirection={sorting.key === "commission" ? sorting.direction : null} onSort={() => sortBy("commission")} />}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.slice(0, 8).map((row) => (
+        {sortedRows.slice(0, 8).map((row) => (
           <TableRow key={row.label}>
             <TableCell className="max-w-48 truncate font-medium text-[var(--text-primary)]">{row.label}</TableCell>
             {showLeads && <TableCell align="right" className="tabular-nums">{row.leads || '—'}</TableCell>}
@@ -210,6 +235,16 @@ export function DashboardCommercialSections({
   onNavigateToStatus,
   onNavigateToTab,
 }: DashboardCommercialSectionsProps) {
+  const { sorting: proposalSorting, sortBy: sortProposalsBy } = useTableSorting<"name" | "status" | "activity" | "owner" | "value">();
+  const recentProposals = useSortedTableRows(analysis.recentProposals, proposalSorting, (item, key) => {
+    switch (key) {
+      case "name": return item.name;
+      case "status": return item.status;
+      case "activity": return item.lastContact;
+      case "owner": return item.responsavel;
+      case "value": return item.monthlyValue;
+    }
+  });
   const periodLabel = analysis.currentRange?.label ?? 'todo o histórico disponível';
   const openAgenda = () => onNavigateToTab?.('agenda');
   const openLeads = () => onNavigateToTab?.('leads');
@@ -355,7 +390,7 @@ export function DashboardCommercialSections({
       <section data-panel-animate aria-labelledby="dashboard-proposals-title">
         <Surface padding="md">
           <SectionHeader eyebrow="Carteira recente" title="Propostas recentes" description="Leads atualmente em etapas cujo nome contém proposta ou cotação. O CRM não possui uma entidade separada de proposta." as="h2" />
-          {analysis.recentProposals.length > 0 ? <div className="mt-4"><Table size="sm"><TableHeader><TableRow><TableHead>Cliente</TableHead><TableHead>Estágio atual</TableHead><TableHead>Última atividade</TableHead><TableHead>Responsável</TableHead><TableHead align="right">Valor registrado</TableHead></TableRow></TableHeader><TableBody>{analysis.recentProposals.map((opportunity) => <TableRow key={opportunity.leadId}><TableCell><Button variant="text" size="sm" className="justify-start" onClick={() => onNavigateToLead(opportunity.leadId)}>{opportunity.name}<ArrowRight aria-hidden="true" /></Button></TableCell><TableCell><OperationalStatusBadge statusColor={opportunity.statusColor}>{opportunity.status}</OperationalStatusBadge></TableCell><TableCell className="text-sm text-[var(--text-secondary)]">{date(opportunity.lastContact)}</TableCell><TableCell className="text-sm text-[var(--text-secondary)]">{opportunity.responsavel || 'Não informado'}</TableCell><TableCell align="right" className="tabular-nums">{showFinancialMetrics && opportunity.monthlyValue !== null ? compactCurrency(opportunity.monthlyValue) : '—'}</TableCell></TableRow>)}</TableBody></Table></div> : <EmptyState icon={<PackageOpen aria-hidden="true" />} title="Nenhuma proposta no recorte" description="A visualização depende de leads em estágios configurados com proposta ou cotação." className="mt-4 py-10" />}
+          {analysis.recentProposals.length > 0 ? <div className="mt-4"><Table size="sm"><TableHeader><TableRow><SortableTableHead label="Cliente" sortDirection={proposalSorting.key === "name" ? proposalSorting.direction : null} onSort={() => sortProposalsBy("name")} /><SortableTableHead label="Estágio atual" sortDirection={proposalSorting.key === "status" ? proposalSorting.direction : null} onSort={() => sortProposalsBy("status")} /><SortableTableHead label="Última atividade" sortDirection={proposalSorting.key === "activity" ? proposalSorting.direction : null} onSort={() => sortProposalsBy("activity")} /><SortableTableHead label="Responsável" sortDirection={proposalSorting.key === "owner" ? proposalSorting.direction : null} onSort={() => sortProposalsBy("owner")} /><SortableTableHead label="Valor registrado" align="right" sortDirection={proposalSorting.key === "value" ? proposalSorting.direction : null} onSort={() => sortProposalsBy("value")} /></TableRow></TableHeader><TableBody>{recentProposals.map((opportunity) => <TableRow key={opportunity.leadId}><TableCell><Button variant="text" size="sm" className="justify-start" onClick={() => onNavigateToLead(opportunity.leadId)}>{opportunity.name}<ArrowRight aria-hidden="true" /></Button></TableCell><TableCell><OperationalStatusBadge statusColor={opportunity.statusColor}>{opportunity.status}</OperationalStatusBadge></TableCell><TableCell className="text-sm text-[var(--text-secondary)]">{date(opportunity.lastContact)}</TableCell><TableCell className="text-sm text-[var(--text-secondary)]">{opportunity.responsavel || 'Não informado'}</TableCell><TableCell align="right" className="tabular-nums">{showFinancialMetrics && opportunity.monthlyValue !== null ? compactCurrency(opportunity.monthlyValue) : '—'}</TableCell></TableRow>)}</TableBody></Table></div> : <EmptyState icon={<PackageOpen aria-hidden="true" />} title="Nenhuma proposta no recorte" description="A visualização depende de leads em estágios configurados com proposta ou cotação." className="mt-4 py-10" />}
         </Surface>
       </section>
     </div>

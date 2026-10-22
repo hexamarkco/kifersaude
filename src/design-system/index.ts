@@ -106,11 +106,14 @@ export {
   TableBody,
   TableCell,
   TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   TableActions,
 } from './components/Table';
-export type { TableProps, TableSize, TableActionsProps, TableBodyProps, TableCellProps, TableHeadProps, TableHeaderProps, TableRowProps } from './components/Table';
+export type { TableProps, TableSize, TableActionsProps, TableBodyProps, TableCellProps, TableHeadProps, SortableTableHeadProps, TableHeaderProps, TableRowProps } from './components/Table';
+export { useTableSorting, useSortedTableRows, sortTableRows } from './hooks/useTableSorting';
+export type { TableSortDirection, TableSortValue, TableSortingState } from './hooks/useTableSorting';
 export { default as Tooltip } from './components/Tooltip';
 export type { TooltipProps, TooltipSide, TooltipSize } from './components/Tooltip';
 export { Toast, ToastProvider } from './components/Toast';

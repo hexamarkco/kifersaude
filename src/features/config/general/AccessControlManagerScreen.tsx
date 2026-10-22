@@ -26,10 +26,12 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   IconButton,
+  useTableSorting,
+  useSortedTableRows,
 } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 
@@ -47,6 +49,10 @@ export default function AccessControlManagerScreen() {
   const [profileDescription, setProfileDescription] = useState("");
   const [profileIsAdmin, setProfileIsAdmin] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const { sorting, sortBy } = useTableSorting<"module" | "description">();
+  const { sorting: profileSorting, sortBy: sortProfilesBy } = useTableSorting<"profiles">();
+  const sortedModules = useSortedTableRows(ACCESS_MODULES, sorting, (module, key) => key === "module" ? module.label : module.description);
+  const sortedProfiles = useSortedTableRows(accessProfiles, profileSorting, (profile) => formatProfileLabel(profile.slug, profile.name));
 
   const profileById = useMemo(
     () => new Map(accessProfiles.map((profile) => [profile.id, profile])),
@@ -432,24 +438,15 @@ export default function AccessControlManagerScreen() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>
-                Módulo
-              </TableHead>
-              <TableHead>
-                Descrição
-              </TableHead>
-              {accessProfiles.map((profile) => (
-                <TableHead
-                  key={profile.id}
-                  align="center"
-                >
-                  {formatProfileLabel(profile.slug, profile.name)}
-                </TableHead>
+              <SortableTableHead label="Módulo" sortDirection={sorting.key === "module" ? sorting.direction : null} onSort={() => sortBy("module")} />
+              <SortableTableHead label="Descrição" sortDirection={sorting.key === "description" ? sorting.direction : null} onSort={() => sortBy("description")} />
+              {sortedProfiles.map((profile) => (
+                <SortableTableHead key={profile.id} align="center" label={formatProfileLabel(profile.slug, profile.name)} sortDirection={profileSorting.key === "profiles" ? profileSorting.direction : null} onSort={() => sortProfilesBy("profiles")} />
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ACCESS_MODULES.map((module) => (
+            {sortedModules.map((module) => (
               <TableRow key={module.id}>
                 <TableCell className="font-medium">
                   {module.label}
@@ -457,7 +454,7 @@ export default function AccessControlManagerScreen() {
                 <TableCell className="text-[color:var(--text-secondary)]">
                   {module.description}
                 </TableCell>
-                {accessProfiles.map((profile) => {
+                {sortedProfiles.map((profile) => {
                   const permission = getPermission(
                     profile.slug,
                     module.id,

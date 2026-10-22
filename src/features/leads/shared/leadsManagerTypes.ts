@@ -11,7 +11,10 @@ export type LeadsSortField =
   | "nome"
   | "origem"
   | "tipo_contratacao"
-  | "telefone";
+  | "telefone"
+  | "status"
+  | "responsavel"
+  | "proximo_retorno";
 export type LeadsViewMode = "list" | "kanban";
 
 export type StatusReminderRule = {

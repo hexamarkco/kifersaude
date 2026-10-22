@@ -15,11 +15,12 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   FilterMultiSelect,
   Pagination,
+  useTableSorting,
 } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import { subscribeToCampaignChanges } from './campaignRealtime';
@@ -110,6 +111,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [targetsSearch, setTargetsSearch] = useState('');
   const deferredTargetsSearch = useDeferredValue(targetsSearch);
   const [targetsStatusFilter, setTargetsStatusFilter] = useState<CommWhatsAppCampaignTargetStatus[]>([]);
+  const { sorting: targetSorting, sortBy: sortTargetsBy } = useTableSorting<"contact" | "status" | "step" | "next" | "last" | "error">();
   const [loadingTargetsPage, setLoadingTargetsPage] = useState(false);
   const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>>([]);
   const [failureReasons, setFailureReasons] = useState<Array<{ error_message: string; total_count: number }>>([]);
@@ -120,10 +122,12 @@ export default function WhatsAppCampaignDetailScreen() {
   const [liveRefreshError, setLiveRefreshError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const targetsPageRef = useRef(0);
-  const targetsFiltersRef = useRef<{ pageSize: number; status: CommWhatsAppCampaignTargetStatus[]; search: string }>({
+  const targetsFiltersRef = useRef<{ pageSize: number; status: CommWhatsAppCampaignTargetStatus[]; search: string; sortField: 'created_at' | 'display_name' | 'status' | 'current_step_index' | 'next_send_at' | 'last_attempt_at' | 'error_message'; sortAscending: boolean }>({
     pageSize: DEFAULT_TARGETS_PAGE_SIZE,
     status: [],
     search: '',
+    sortField: 'created_at',
+    sortAscending: true,
   });
   const refreshLiveDataInFlightRef = useRef<number | null>(null);
   const loadDetailInFlightRef = useRef<number | null>(null);
@@ -163,6 +167,8 @@ export default function WhatsAppCampaignDetailScreen() {
           pageSize: targetsFilters.pageSize,
           status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
           search: targetsFilters.search || undefined,
+          sortField: targetsFilters.sortField,
+          sortAscending: targetsFilters.sortAscending,
         }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
@@ -232,12 +238,16 @@ export default function WhatsAppCampaignDetailScreen() {
         pageSize: targetsFiltersRef.current.pageSize,
         status: [...targetsFiltersRef.current.status],
         search: targetsFiltersRef.current.search,
+        sortField: targetsFiltersRef.current.sortField,
+        sortAscending: targetsFiltersRef.current.sortAscending,
       };
       const result = await commWhatsAppCampaignService.listCampaignTargets(campaignId, {
         page: page - 1,
         pageSize: targetsFilters.pageSize,
         status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
         search: targetsFilters.search || undefined,
+        sortField: targetsFilters.sortField,
+        sortAscending: targetsFilters.sortAscending,
       });
       if (screenGeneration !== screenGenerationRef.current || requestId !== targetListRequestIdRef.current) return;
       setTargets(result.targets);
@@ -266,6 +276,13 @@ export default function WhatsAppCampaignDetailScreen() {
       pageSize: targetsPageSize,
       status: targetsStatusFilter,
       search: deferredTargetsSearch.trim(),
+      sortField: targetSorting.key === 'contact' ? 'display_name'
+        : targetSorting.key === 'status' ? 'status'
+          : targetSorting.key === 'step' ? 'current_step_index'
+            : targetSorting.key === 'next' ? 'next_send_at'
+              : targetSorting.key === 'last' ? 'last_attempt_at'
+                : targetSorting.key === 'error' ? 'error_message' : 'created_at',
+      sortAscending: targetSorting.direction === 'asc',
     };
 
     if (!didMountTargetsFiltersRef.current) {
@@ -274,7 +291,7 @@ export default function WhatsAppCampaignDetailScreen() {
     }
 
     void goToTargetsPage(1);
-  }, [targetsPageSize, targetsStatusFilter, deferredTargetsSearch, goToTargetsPage]);
+  }, [targetsPageSize, targetsStatusFilter, deferredTargetsSearch, targetSorting, goToTargetsPage]);
 
   // Atualizacao leve chamada quando a linha da campanha muda (worker roda um
   // tick por minuto): re-busca so os agregados baratos (contadores via RPC,
@@ -312,6 +329,8 @@ export default function WhatsAppCampaignDetailScreen() {
           pageSize: targetsFilters.pageSize,
           status: targetsFilters.status.length > 0 ? targetsFilters.status : undefined,
           search: targetsFilters.search || undefined,
+          sortField: targetsFilters.sortField,
+          sortAscending: targetsFilters.sortAscending,
         }),
         commWhatsAppCampaignService.getCampaignTargetStatusCounts(campaignId),
         commWhatsAppCampaignService.getCampaignFailureReasons(campaignId),
@@ -748,7 +767,7 @@ export default function WhatsAppCampaignDetailScreen() {
               </div>
             </div>
             <div className="grid gap-3 lg:hidden">
-              {targets.map((target) => (
+                {targets.map((target) => (
                 <Card key={target.id} className="space-y-3 bg-[color:var(--panel-surface-soft)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -771,12 +790,12 @@ export default function WhatsAppCampaignDetailScreen() {
               <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Etapa</TableHead>
-                    <TableHead>Próximo envio</TableHead>
-                    <TableHead>Última tentativa</TableHead>
-                    <TableHead>Erro</TableHead>
+                    <SortableTableHead label="Contato" sortDirection={targetSorting.key === "contact" ? targetSorting.direction : null} onSort={() => sortTargetsBy("contact")} />
+                    <SortableTableHead label="Status" sortDirection={targetSorting.key === "status" ? targetSorting.direction : null} onSort={() => sortTargetsBy("status")} />
+                    <SortableTableHead label="Etapa" sortDirection={targetSorting.key === "step" ? targetSorting.direction : null} onSort={() => sortTargetsBy("step")} />
+                    <SortableTableHead label="Próximo envio" sortDirection={targetSorting.key === "next" ? targetSorting.direction : null} onSort={() => sortTargetsBy("next")} />
+                    <SortableTableHead label="Última tentativa" sortDirection={targetSorting.key === "last" ? targetSorting.direction : null} onSort={() => sortTargetsBy("last")} />
+                    <SortableTableHead label="Erro" sortDirection={targetSorting.key === "error" ? targetSorting.direction : null} onSort={() => sortTargetsBy("error")} />
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -42,6 +42,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  SortableTableHead,
   TableHeader,
   TableRow,
   Toolbar,
@@ -52,6 +53,8 @@ import {
   FilterSelect,
   Pagination,
   IconButton,
+  useTableSorting,
+  useSortedTableRows,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
@@ -117,6 +120,7 @@ export default function ContractsManager({
     setSelectedContract((current) => current?.id === updated.id ? { ...current, ...updated } : current);
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const { sorting, sortBy } = useTableSorting<"contract" | "status" | "plan" | "monthly" | "start" | "renewal" | "owner">();
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
   const contractsLoadRequestIdRef = useRef(0);
@@ -457,7 +461,18 @@ export default function ContractsManager({
   );
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedContracts = filteredContracts.slice(startIndex, endIndex);
+  const sortedContracts = useSortedTableRows(filteredContracts, sorting, (contract, key) => {
+    switch (key) {
+      case "contract": return contract.codigo_contrato ?? "";
+      case "status": return contract.status ?? "";
+      case "plan": return `${contract.operadora ?? ""} ${contract.produto_plano ?? ""}`;
+      case "monthly": return contract.mensalidade_total ?? null;
+      case "start": return contract.data_inicio ?? null;
+      case "renewal": return contract.data_renovacao ?? null;
+      case "owner": return contract.responsavel ?? "";
+    }
+  });
+  const paginatedContracts = sortedContracts.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -740,12 +755,12 @@ export default function ContractsManager({
             <Table size="sm" stickyHeader className="kds-table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Contrato</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Operadora e plano</TableHead>
-                  <TableHead>Financeiro</TableHead>
-                  <TableHead>Datas críticas</TableHead>
-                  <TableHead>Responsável</TableHead>
+                  <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />
+                  <SortableTableHead label="Status" sortDirection={sorting.key === "status" ? sorting.direction : null} onSort={() => sortBy("status")} />
+                  <SortableTableHead label="Operadora e plano" sortDirection={sorting.key === "plan" ? sorting.direction : null} onSort={() => sortBy("plan")} />
+                  <SortableTableHead label="Financeiro" align="right" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />
+                  <SortableTableHead label="Datas críticas" sortDirection={sorting.key === "renewal" ? sorting.direction : null} onSort={() => sortBy("renewal")} />
+                  <SortableTableHead label="Responsável" sortDirection={sorting.key === "owner" ? sorting.direction : null} onSort={() => sortBy("owner")} />
                   <TableHead align="right">Ações</TableHead>
                 </TableRow>
               </TableHeader>

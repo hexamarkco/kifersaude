@@ -749,6 +749,8 @@ export const commWhatsAppCampaignService = {
       pageSize?: number;
       status?: CommWhatsAppCampaignTargetStatus[];
       search?: string;
+      sortField?: 'created_at' | 'display_name' | 'status' | 'current_step_index' | 'next_send_at' | 'last_attempt_at' | 'error_message';
+      sortAscending?: boolean;
     } = {},
   ): Promise<{ targets: CommWhatsAppCampaignTargetListItem[]; total: number }> {
     const pageSize = Math.min(Math.max(options.pageSize ?? 50, 1), 200);
@@ -774,7 +776,7 @@ export const commWhatsAppCampaignService = {
     }
 
     const { data, error, count } = await query
-      .order('created_at', { ascending: true })
+      .order(options.sortField ?? 'created_at', { ascending: options.sortAscending ?? true, nullsFirst: false })
       .order('id', { ascending: true })
       .range(from, to);
 

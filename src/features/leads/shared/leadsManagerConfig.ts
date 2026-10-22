@@ -51,6 +51,9 @@ export const SORT_OPTIONS: Array<{ value: LeadsSortField; label: string }> = [
   { value: "origem", label: "Origem (A-Z)" },
   { value: "tipo_contratacao", label: "Tipo (A-Z)" },
   { value: "telefone", label: "Telefone (0-9)" },
+  { value: "status", label: "Status (A-Z)" },
+  { value: "responsavel", label: "Responsável (A-Z)" },
+  { value: "proximo_retorno", label: "Próximo follow-up" },
 ];
 
 export const VIEW_MODE_TABS: TabItem<LeadsViewMode>[] = [

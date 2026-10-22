@@ -1,4 +1,4 @@
-import { Alert, Button, Field, Input, Select, Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '../../../design-system';
+import { Alert, Button, Field, Input, Select, Table, TableHeader, SortableTableHead, TableBody, TableRow, TableCell, useTableSorting, useSortedTableRows } from '../../../design-system';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProduction } from '../hooks/useProduction';
 import { productionActionLabels, productionRange, type ProductionSummary } from '../domain/types';
@@ -16,6 +16,19 @@ export function TeamProduction({ onNavigateToLead }: { onNavigateToLead: (id: st
   const model = useProduction();
   const { report } = model;
   const names = new Map(report?.operators.map((operator) => [operator.user_id, operator.display_name]));
+  const { sorting: summarySorting, sortBy: sortSummaryBy } = useTableSorting<keyof ProductionSummary | 'display_name'>();
+  const { sorting: eventSorting, sortBy: sortEventsBy } = useTableSorting<'occurred_at' | 'executor' | 'action' | 'origin' | 'state' | 'record'>();
+  const sortedSummary = useSortedTableRows(report?.summary ?? [], summarySorting, (row, key) => key === 'display_name' ? row.display_name : row[key]);
+  const sortedEvents = useSortedTableRows(report?.events ?? [], eventSorting, (event, key) => {
+    switch (key) {
+      case 'occurred_at': return event.occurred_at;
+      case 'executor': return names.get(event.operator_user_id ?? '') ?? 'Sem identificação';
+      case 'action': return productionActionLabels[event.action] ?? event.action;
+      case 'origin': return origins[event.origin] ?? 'Sem identificação';
+      case 'state': return event.active ? states[event.state ?? ''] ?? event.state ?? 'Registrado' : 'Desfeito';
+      case 'record': return entities[event.entity_table] ?? 'Registro';
+    }
+  });
   return <section aria-labelledby="team-production-title" className="space-y-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-primary)] p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h2 id="team-production-title" className="font-[var(--font-display)] text-xl">Produção da equipe</h2>
@@ -36,14 +49,14 @@ export function TeamProduction({ onNavigateToLead }: { onNavigateToLead: (id: st
       {isAdmin && <Button className="mt-3" onClick={() => void model.activate()}>Iniciar medição a partir de agora</Button>}</Alert>}
     {report?.started_at && <>
       <p className="text-xs text-[var(--text-muted)]">Medição iniciada em {new Date(report.started_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. Autoria pela Inbox é autenticada; pelo MCP é declarada.</p>
-      <div className="overflow-x-auto"><Table size="sm"><TableHeader><TableRow><TableHead>Atendente</TableHead>{metrics.map(([key,label]) => <TableHead key={key} align="right">{label}</TableHead>)}</TableRow></TableHeader>
-        <TableBody>{report.summary.map((row) => <TableRow key={row.user_id ?? 'team'}><TableCell>{row.display_name}</TableCell>{metrics.map(([key]) => <TableCell key={key} align="right">{row[key]}</TableCell>)}</TableRow>)}</TableBody>
+      <div className="overflow-x-auto"><Table size="sm"><TableHeader><TableRow><SortableTableHead label="Atendente" sortDirection={summarySorting.key === 'display_name' ? summarySorting.direction : null} onSort={() => sortSummaryBy('display_name')} />{metrics.map(([key,label]) => <SortableTableHead key={key} align="right" label={label} sortDirection={summarySorting.key === key ? summarySorting.direction : null} onSort={() => sortSummaryBy(key)} />)}</TableRow></TableHeader>
+        <TableBody>{sortedSummary.map((row) => <TableRow key={row.user_id ?? 'team'}><TableCell>{row.display_name}</TableCell>{metrics.map(([key]) => <TableCell key={key} align="right">{row[key]}</TableCell>)}</TableRow>)}</TableBody>
       </Table></div>
       <p className="text-sm text-[var(--text-muted)]">Fora da comparação individual: automações {report.unattributed.automation} · WhatsApp externo — autoria não identificada {report.unattributed.external} · outros envios sem autoria {report.unattributed.unknown}.</p>
       <p className="text-xs text-[var(--text-muted)]">Clientes podem aparecer para os dois atendentes; o total da equipe elimina duplicidades. Agendamentos criados e envios efetivos são indicadores distintos.</p>
       <details><summary className="cursor-pointer text-sm font-medium">Registros que compõem os indicadores ({report.total_events})</summary>
-        <div className="mt-3 overflow-x-auto"><Table size="sm"><TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Executor</TableHead><TableHead>Ação</TableHead><TableHead>Origem / autoria</TableHead><TableHead>Situação</TableHead><TableHead>Registro</TableHead></TableRow></TableHeader>
-          <TableBody>{report.events.map((event) => <TableRow key={event.id}>
+        <div className="mt-3 overflow-x-auto"><Table size="sm"><TableHeader><TableRow><SortableTableHead label="Quando" sortDirection={eventSorting.key === 'occurred_at' ? eventSorting.direction : null} onSort={() => sortEventsBy('occurred_at')} /><SortableTableHead label="Executor" sortDirection={eventSorting.key === 'executor' ? eventSorting.direction : null} onSort={() => sortEventsBy('executor')} /><SortableTableHead label="Ação" sortDirection={eventSorting.key === 'action' ? eventSorting.direction : null} onSort={() => sortEventsBy('action')} /><SortableTableHead label="Origem / autoria" sortDirection={eventSorting.key === 'origin' ? eventSorting.direction : null} onSort={() => sortEventsBy('origin')} /><SortableTableHead label="Situação" sortDirection={eventSorting.key === 'state' ? eventSorting.direction : null} onSort={() => sortEventsBy('state')} /><SortableTableHead label="Registro" sortDirection={eventSorting.key === 'record' ? eventSorting.direction : null} onSort={() => sortEventsBy('record')} /></TableRow></TableHeader>
+          <TableBody>{sortedEvents.map((event) => <TableRow key={event.id}>
             <TableCell>{new Date(event.occurred_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</TableCell>
             <TableCell>{names.get(event.operator_user_id ?? '') ?? 'Sem identificação'}</TableCell>
             <TableCell>{productionActionLabels[event.action] ?? event.action}</TableCell>

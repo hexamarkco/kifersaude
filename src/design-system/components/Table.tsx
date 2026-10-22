@@ -1,4 +1,5 @@
 import { forwardRef, type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 
@@ -77,6 +78,49 @@ export function TableRow({ selected = false, className, children, ...props }: Ta
 export type TableHeadProps = ThHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right';
 };
+
+export type SortableTableHeadProps = TableHeadProps & {
+  label: string;
+  sortDirection: 'asc' | 'desc' | null;
+  onSort: () => void;
+};
+
+export function SortableTableHead({
+  label,
+  sortDirection,
+  onSort,
+  align = 'left',
+  className,
+}: SortableTableHeadProps) {
+  const SortIcon = sortDirection === 'asc'
+    ? ArrowUp
+    : sortDirection === 'desc'
+      ? ArrowDown
+      : ArrowUpDown;
+
+  return (
+    <TableHead
+      align={align}
+      className={className}
+      aria-sort={sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none'}
+    >
+      <button
+        type="button"
+        onClick={onSort}
+        className={cx(
+          'inline-flex items-center gap-1.5 rounded-sm text-inherit transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          align === 'right' && 'ml-auto',
+          align === 'center' && 'mx-auto',
+        )}
+        aria-label={`Ordenar por ${label}`}
+        title={sortDirection === 'asc' ? `Ordenado por ${label}, crescente` : sortDirection === 'desc' ? `Ordenado por ${label}, decrescente` : `Ordenar por ${label}`}
+      >
+        <span>{label}</span>
+        <SortIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
+      </button>
+    </TableHead>
+  );
+}
 
 export function TableHead({ align = 'left', className, children, ...props }: TableHeadProps) {
   return (

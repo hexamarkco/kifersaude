@@ -2044,6 +2044,7 @@ async function executeStageBurst(params: {
   })();
 
   const whapi = createWhapiClient(params.token);
+  let persistedChatId = chatRoute?.chatId || target.chat_id;
 
   for (let i = 0; i < companions.length; i++) {
     const step = companions[i];
@@ -2290,39 +2291,53 @@ async function executeStageBurst(params: {
       newStatus: 'sending',
     });
 
-    if (sendingTransition.oldStatus !== 'pending') {
-      // Already processed (sent/failed/cancelled) — skip
-      if (sendingTransition.oldStatus === 'sent') {
-        continue;
-      }
-      // An uncertain provider result must never be retried automatically: the provider
-      // may already have accepted it, so stop this target to prevent duplicate sends.
-      if (sendingTransition.oldStatus === 'uncertain') {
-        const errorMessage = 'O resultado do envio desta etapa ficou incerto. Contato bloqueado para evitar reenvio duplicado.';
-        await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
-        await updateClaimedTarget(supabaseAdmin, target, {
-          status: 'failed',
-          error_message: errorMessage,
-          last_attempt_at: getNowIso(),
-          next_send_at: null,
-          next_retry_at: null,
-          locked_at: null,
-          lock_token: null,
-        });
-        await insertEvent(supabaseAdmin, {
-          campaignId: campaign.id,
-          targetId: target.id,
-          eventType: 'target_failed_ambiguous_provider_result',
-          payload: { step_index: step.step_index, reason_code: 'existing_uncertain_dispatch' },
-        });
-        return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
-      }
-
-      // A definitive failed step stops the burst.
-      if (sendingTransition.oldStatus === 'failed') {
-        return { status: 'failed', nextStepIndex: step.step_index, error: 'Step anterior falhou.' };
-      }
+    if (sendingTransition.oldStatus === 'sent') {
       continue;
+    }
+
+    const retryAt = existingDispatch?.next_retry_at ? new Date(existingDispatch.next_retry_at).getTime() : null;
+    if (sendingTransition.oldStatus === 'failed' && retryAt !== null && retryAt > Date.now()) {
+      await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+        target,
+        retryAt: new Date(retryAt).toISOString(),
+        reason: 'A etapa anterior ainda aguarda a janela de nova tentativa.',
+      });
+      return { status: 'deferred', nextStepIndex: step.step_index };
+    }
+
+    const isFreshOrRetryTransition = sendingTransition.newStatus === 'sending'
+      && (sendingTransition.oldStatus === 'pending' || sendingTransition.oldStatus === 'failed');
+    if (!isFreshOrRetryTransition) {
+      const ambiguous = sendingTransition.oldStatus === 'sending' || sendingTransition.oldStatus === 'uncertain';
+      const errorMessage = ambiguous
+        ? 'O estado do envio desta etapa ficou ambíguo. Contato bloqueado para evitar reenvio duplicado.'
+        : 'A etapa não foi reservada para envio. Contato bloqueado para revisão manual.';
+
+      if (sendingTransition.oldStatus === 'sending') {
+        await advanceStepDispatch(supabaseAdmin, {
+          dispatchKey,
+          newStatus: 'uncertain',
+          errorMessage,
+          resolution: 'reclaimed_sending_dispatch',
+        });
+      }
+      await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'failed',
+        error_message: errorMessage,
+        last_attempt_at: getNowIso(),
+        next_send_at: null,
+        next_retry_at: null,
+        locked_at: null,
+        lock_token: null,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: ambiguous ? 'target_failed_ambiguous_provider_result' : 'target_failed_dispatch_state',
+        payload: { step_index: step.step_index, reason_code: `unexpected_dispatch_state_${sendingTransition.oldStatus || 'missing'}` },
+      });
+      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
     }
 
     // ── Resolve message text ──
@@ -2493,7 +2508,7 @@ async function executeStageBurst(params: {
 
     // ── Persist message ──
     try {
-      await persistCommWhatsAppMessage(supabaseAdmin, {
+      const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
         channelId: params.channelId,
         externalChatId: chatId,
         phoneNumber: phoneDigits,
@@ -2529,6 +2544,7 @@ async function executeStageBurst(params: {
           ...(step.media_url ? { campaign_media_type: step.media_type || 'document' } : {}),
         },
       });
+      persistedChatId = persisted.chatId || persistedChatId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao persistir mensagem aceita pela Whapi.';
       await advanceStepDispatch(supabaseAdmin, {
@@ -2541,12 +2557,32 @@ async function executeStageBurst(params: {
     }
 
     // ── Mark step as sent ──
-    await advanceStepDispatch(supabaseAdmin, {
+    const sentTransition = await advanceStepDispatch(supabaseAdmin, {
       dispatchKey,
       newStatus: 'sent',
       externalMessageId,
       deliveryStatus,
     });
+    if (sentTransition.newStatus !== 'sent') {
+      const errorMessage = 'A mensagem foi aceita e gravada, mas a confirmação da etapa não foi persistida. Contato bloqueado para evitar reenvio duplicado.';
+      await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'failed',
+        error_message: errorMessage,
+        last_attempt_at: getNowIso(),
+        next_send_at: null,
+        next_retry_at: null,
+        locked_at: null,
+        lock_token: null,
+      });
+      await insertEvent(supabaseAdmin, {
+        campaignId: campaign.id,
+        targetId: target.id,
+        eventType: 'target_failed_ambiguous_provider_result',
+        payload: { step_index: step.step_index, external_message_id: externalMessageId, reason_code: 'dispatch_sent_transition_not_confirmed' },
+      });
+      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+    }
 
     if (!target.sent_at) {
       const firstSentAt = getNowIso();
@@ -2569,7 +2605,7 @@ async function executeStageBurst(params: {
   await updateClaimedTarget(supabaseAdmin, target, {
     status: targetStatus,
     sent_at: target.sent_at || nowIso,
-    chat_id: chatRoute?.chatId || target.chat_id,
+    chat_id: persistedChatId,
     current_step_index: firstStepAfterBurst ? firstStepAfterBurst.step_index : companions[companions.length - 1].step_index,
     next_send_at: nextSendAt,
     next_retry_at: null,

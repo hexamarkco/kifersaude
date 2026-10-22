@@ -92,7 +92,7 @@ const formatWindow = (campaign: CommWhatsAppCampaign) => {
   return timeLabel ?? weekdaysLabel ?? 'Sem janela definida';
 };
 
-const DEFAULT_TARGETS_PAGE_SIZE = 50;
+const DEFAULT_TARGETS_PAGE_SIZE = 10;
 
 const targetStatusFilterOptions = (Object.keys(targetStatusLabels) as CommWhatsAppCampaignTargetStatus[]).map((status) => ({
   value: status,

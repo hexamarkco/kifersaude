@@ -404,7 +404,7 @@ export default function UsersScreen() {
                       <TableRow key={userProfile.id} className="align-middle">
                         <TableCell className="min-w-64">
                           <div className="flex items-center gap-3">
-                            <CardIcon className="h-8 w-8"><UserIcon className="h-4 w-4" /></CardIcon>
+                            <CardIcon><UserIcon className="h-4 w-4" /></CardIcon>
                             <div className="min-w-0">
                               <span className="block truncate font-semibold text-[var(--text-primary)]">@{userProfile.username}</span>
                               <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{userProfile.email}</span>

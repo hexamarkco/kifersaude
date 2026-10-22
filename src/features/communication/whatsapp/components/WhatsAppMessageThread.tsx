@@ -234,19 +234,21 @@ export function WhatsAppMessageThread({
                     const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
                     const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
                     const isGroupMessage = isGroupChatMessage(selectedChat, message);
+                    const hasMessageBubble = !isBubblelessMediaMessage(message) || hasVisualMediaCaption(message);
+                    const messageBubbleClass = !hasMessageBubble
+                      ? 'whatsapp-inbox-media-message'
+                      : isBubblelessMediaMessage(message)
+                        ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
+                        : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
                     const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
                     const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
                     const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
-                      const messageMeta = (
-                        <div className={cx(
+                    const messageMeta = (
+                      <div className={cx(
                         'whatsapp-inbox-message-meta flex w-full flex-wrap items-center gap-1.5 text-[11px] font-medium',
                         reactions.length > 0
                           ? `mt-0 px-1 ${messageMetaJustify}`
-                          : isGroupMessage
-                          ? `mt-1 px-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`
-                          : isBubblelessMediaMessage(message) && !hasVisualMediaCaption(message)
-                            ? `mt-1 px-1 ${messageMetaJustify}`
-                            : `mt-2 px-1 ${messageMetaJustify}`,
+                          : `mt-1 px-1 ${messageMetaJustify}`,
                       )}>
                         <span className={`${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
                           <span>{formatMessageTime(message.message_at)}</span>
@@ -356,11 +358,7 @@ export function WhatsAppMessageThread({
                             ) : null}
                             <div
                               className={cx(
-                                isBubblelessMediaMessage(message)
-                                  ? hasVisualMediaCaption(message)
-                                    ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                                    : 'whatsapp-inbox-media-message'
-                                  : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`,
+                                messageBubbleClass,
                                 highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
                               )}
                               onContextMenu={(event) => {
@@ -386,6 +384,7 @@ export function WhatsAppMessageThread({
                                 mediaSendingProgress={mediaSendingProgress}
                                 onCancelMediaUpload={mediaUploadProgress?.attachmentId === message.id ? handleCancelMediaUpload : undefined}
                               />
+                              {hasMessageBubble ? messageMeta : null}
                             </div>
 
                           </div>
@@ -407,9 +406,9 @@ export function WhatsAppMessageThread({
                                   </span>
                                 ))}
                               </div>
-                              {messageMeta}
                             </div>
-                          ) : messageMeta}
+                          ) : null}
+                          {!hasMessageBubble ? messageMeta : null}
                         </div>
                       </div>
                     );

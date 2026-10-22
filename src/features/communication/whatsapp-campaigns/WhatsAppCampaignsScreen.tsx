@@ -472,10 +472,6 @@ export default function WhatsAppCampaignsScreen() {
     setContactIntervalMinutes(null);
     setInterMessageIntervalMinutes(0);
     setPacingPerMinute(12);
-    setLegalBasisReviewed(false);
-    setLegalBasisReference('');
-    setPromotionReviewed(false);
-    setPromotionReference('');
     setReactivationMode(false);
     setInactiveDays(90);
     setRecentCampaignDays(30);

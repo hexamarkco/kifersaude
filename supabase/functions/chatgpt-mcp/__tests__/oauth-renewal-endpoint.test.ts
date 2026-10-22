@@ -6,7 +6,7 @@ vi.mock('npm:@supabase/supabase-js@2.57.4', () => ({ createClient }));
 import { handleOAuthRoute } from '../oauth';
 
 const endpoint = 'https://project.supabase.co/functions/v1/chatgpt-mcp';
-const config: Record<string, string> = { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-key', KIFER_MCP_OAUTH_CLIENT_ID: 'chatgpt-kifer', KIFER_MCP_OAUTH_REDIRECT_URI: 'https://client.test/callback', KIFER_MCP_OAUTH_UI_URL: 'https://crm.test/consent' };
+const config: Record<string, string> = { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'example-server-key', KIFER_MCP_OAUTH_CLIENT_ID: 'chatgpt-kifer', KIFER_MCP_OAUTH_REDIRECT_URI: 'https://client.test/callback', KIFER_MCP_OAUTH_UI_URL: 'https://crm.test/consent' };
 const hash = async (value: string) => Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))).toString('base64url');
 const token = (params: Record<string, string>) => handleOAuthRoute(new Request(`${endpoint}/oauth/token`, { method: 'POST', body: new URLSearchParams({ client_id: 'chatgpt-kifer', ...params }) }));
 
@@ -56,15 +56,15 @@ describe('OAuth connection renewal HTTP flow', () => {
 
   it('returns OAuth errors without leaking tokens on invalid grants or persistence errors', async () => {
     rpc.mockResolvedValueOnce({ data: { success: false }, error: null });
-    const invalid = await token({ grant_type: 'refresh_token', refresh_token: 'synthetic-refresh' });
+    const invalid = await token({ grant_type: 'refresh_token', refresh_token: 'example-refresh' });
     expect(invalid?.status).toBe(400);
     expect(await invalid!.json()).toMatchObject({ error: 'invalid_grant' });
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'sensitive-db-detail' } });
-    const failed = await token({ grant_type: 'refresh_token', refresh_token: 'synthetic-refresh' });
+    const failed = await token({ grant_type: 'refresh_token', refresh_token: 'example-refresh' });
     expect(failed?.status).toBe(500);
     const body = await failed!.json();
     expect(body.error).toBe('server_error');
-    expect(JSON.stringify(body)).not.toMatch(/sensitive-db-detail|synthetic-refresh|access_token|refresh_token/);
+    expect(JSON.stringify(body)).not.toMatch(/sensitive-db-detail|example-refresh|access_token|refresh_token/);
   });
 
   it('rejects wrong targets, clients and malformed bodies before accessing the database', async () => {

@@ -5,7 +5,7 @@ O endpoint `chatgpt-mcp` permite consultar dados atuais do CRM e executar açõe
 ## Limites de segurança
 
 - O acesso do ChatGPT exige OAuth com PKCE S256, vínculo do token ao URI do recurso MCP e uma conta com perfil `admin` no CRM.
-- Ferramentas de leitura exigem `kifer.read`; ferramentas de escrita exigem também `kifer.write`. O servidor preserva os escopos OAuth concedidos, filtra `tools/list` e bloqueia chamadas sem o escopo necessário.
+- Ferramentas de leitura exigem `kifer.read`; ferramentas de escrita exigem também `kifer.write`. O catálogo `tools/list` anuncia todas as ferramentas e seus requisitos OAuth, inclusive para uma conexão antiga de leitura. A execução continua validando os escopos: uma escrita sem `kifer.write` retorna `isError` e `_meta["mcp/www_authenticate"]` com `insufficient_scope`, permitindo ao cliente abrir a autorização de leitura e escrita.
 - Tabelas de códigos, tokens e auditoria são acessíveis somente pela Edge Function via `service_role`; o cliente não consulta esses registros diretamente.
 - Tokens de autorização, acesso e renovação são armazenados somente como hashes, têm validade limitada e são invalidados quando a conta deixa de ser administradora.
 - As ferramentas de leitura continuam anotadas como `readOnlyHint`. As ações de escrita são schemas fechados, com validação de entidades, auditoria e OAuth de administrador.
@@ -28,7 +28,7 @@ O agendador oferece `kifer_update_scheduled_whatsapp_sequence` para editar sequ�
 | `kifer_send_whatsapp_message` | `chat_id`, `message`, `client_request_id` | Envia texto pela integração atual; em resultado `ambiguous`, consulte a conversa antes de tentar novamente com outra chave. |
 | `kifer_send_whatsapp_media` | `chat_id`, MIME/nome/base64 e `client_request_id` | Envia mídia imediata de até 20 MiB pelo endpoint interno existente; valida MIME, evita URL externa e não persiste base64 na auditoria. Provider aceita PDF/documento, imagem, áudio/voz e vídeo. Em resultado `ambiguous`, consulte a conversa antes de tentar novamente com outra chave. |
 | `kifer_schedule_whatsapp_message` | `chat_id`, `message`, `scheduled_at`, `client_request_id` | Programa uma única mensagem de texto para uma conversa existente. Usa a fila nativa do Inbox; não aceita telefone, mídia ou recorrência. |
-| `kifer_create_reminder` | `lead_id`, `contract_id?`, `tipo`, `titulo`, `descricao?`, `data_lembrete`, `prioridade` | Cria lembrete e sincroniza `leads.proximo_retorno` a partir do próximo lembrete aberto. |
+| `kifer_create_reminder` | `lead_id?`, `contract_id?`, `tipo`, `titulo`, `descricao?`, `data_lembrete`, `prioridade` | Cria lembrete de lead ou tarefa avulsa (`Tarefa`/`Outro`). Quando vinculado ao lead, sincroniza `leads.proximo_retorno` a partir do próximo lembrete aberto. |
 | `kifer_update_lead_status` | `lead_id`, `status`, `observacao?` | Aceita somente status ativos de `lead_status_config`, registra interação e histórico. |
 | `kifer_create_interaction` | `lead_id`, `contract_id?`, `tipo`, `descricao`, `responsavel?` | Registra observação no histórico comercial. |
 | `kifer_set_next_follow_up` | `lead_id`, `proximo_retorno`, `observacao?` | Cria um lembrete de retorno; não cria uma segunda fonte de verdade. |
@@ -52,6 +52,10 @@ O agendador oferece `kifer_update_scheduled_whatsapp_sequence` para editar sequ�
 | `kifer_list_lead_statuses` | sem parâmetros | Lista status comerciais ativos e válidos. |
 | `kifer_list_reminders` / `kifer_update_reminder` | filtros fechados / campos fechados | Consulta ou altera lembretes sem acesso genérico à tabela. |
 | `kifer_complete_reminder` / `kifer_cancel_reminder` | `reminder_id` | Conclui ou cancela sem exclusão física, preservando auditoria e a sincronização do próximo retorno. |
+| `kifer_get_reminder` | `reminder_id` | Consulta um item da agenda e sua `ultima_modificacao`, inclusive tarefas sem lead. |
+| `kifer_reschedule_reminders` | `items[]`, `dry_run?` | Reagenda de 1 a 100 itens com datas individuais e versões atuais em uma transação; `reopen: true` torna o item novamente pendente. Um conflito cancela o lote inteiro. |
+| `kifer_reopen_reminder` | `reminder_id`, `expected_ultima_modificacao` | Reabre um lembrete concluído/cancelado e sincroniza o próximo retorno do lead. |
+| `kifer_delete_reminders` | `items[]`, `confirm_deletion: true`, `dry_run?` | Exclui de 1 a 100 itens como a Agenda do CRM; exige versões atuais e registra auditoria na mesma transação. |
 | `kifer_get_next_follow_up` | `lead_id` | Retorna o próximo lembrete pendente de retorno/follow-up. |
 | `kifer_bulk_cancel_automation_jobs` | filtros fechados de fila | Cancela logicamente no máximo 100 jobs pendentes, preservando histórico e retornando itens ignorados/erros. |
 | `kifer_create_followup_flow` | gatilho e janela comercial fechados | Cria um fluxo vazio; não aceita URLs, webhooks ou configurações técnicas. |
@@ -168,7 +172,15 @@ O catálogo `kifer://capabilities/catalog` é gerado do registry publicado no en
 | Credenciais e segurança de infraestrutura | Senhas em texto, tokens/chaves de integração, configuração de autenticação, sessões, payloads brutos de webhook, SQL/RPC genérico e Storage irrestrito ficam fora do MCP. Segredos não são trafegados por prompts ou respostas. |
 | Conteúdo de páginas de operadoras | A página pública de operadoras é montada pelo código do frontend e não tem editor CRUD no CRM. Para alterá-la é necessário mudar e publicar o código do site. |
 
-As ações de escrita e consultas operacionais exigem OAuth de administrador e `kifer.write`; tokens somente com `kifer.read` não recebem ferramentas de escrita. A conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos. Auditorias de conteúdo/prompts, usuários e simulações registram IDs, chaves, campos alterados ou comprimentos, sem copiar PII, senhas ou texto integral.
+As consultas operacionais exigem OAuth de administrador e `kifer.read`; as ações de escrita exigem também `kifer.write`. O catálogo completo permanece visível com seus requisitos, e tokens somente de leitura recebem um desafio de autorização ao tentar escrever. `kifer_get_connection_access` informa os escopos efetivos e se a conexão pode escrever. A conexão legada continua somente leitura para ferramentas específicas. A auditoria MCP registra mutações em `mcp_action_audit_log`, decisões de consentimento em eventos append-only e acesso a documentos na auditoria específica de documentos. Auditorias de conteúdo/prompts, usuários e simulações registram IDs, chaves, campos alterados ou comprimentos, sem copiar PII, senhas ou texto integral.
+
+### Agenda e reagendamento em lote
+
+`kifer_create_reminder` também cria tarefas avulsas com `tipo: "Tarefa"` ou `"Outro"` sem `lead_id`. Follow-ups comerciais continuam vinculados a um lead. Para reagendar vários itens, consulte `kifer_list_reminders` ou `kifer_get_reminder` e envie a `ultima_modificacao` de cada registro como `expected_ultima_modificacao`. As datas exigem fuso explícito; por exemplo, 09h em São Paulo pode ser enviado como `2030-10-22T09:00:00-03:00`. Cada item aceita sua própria data, permitindo intervalos de três minutos ou outra distribuição solicitada. `dry_run: true` valida versões e mostra o plano sem gravar. Lotes maiores podem ser divididos em chamadas de até 100 itens. As ações operam as mesmas linhas da Agenda, preservam a atribuição de produção e sincronizam `leads.proximo_retorno` na mesma transação. A migration necessária é `20261022041916_mcp_agenda_reminder_actions.sql`.
+
+### Conexões antigas que perderam ações
+
+A versão 1.2.0 passou a exigir `kifer.write`, mas ocultava escritas de `tools/list` quando o token antigo tinha somente `kifer.read`. Isso impedia o cliente de descobrir a ação e solicitar o novo escopo. A versão 1.3.0 publica o catálogo completo, solicita leitura/escrita por padrão no desafio inicial e devolve o desafio OAuth também no erro de uma ferramenta. Os tokens antigos não são promovidos silenciosamente. Depois do deploy, atualize as ferramentas na configuração do plugin existente e conclua a autorização **Autorizar leitura e escrita** quando solicitada. Se os escopos estiverem configurados manualmente no cliente, inclua `kifer.read kifer.write`. Confirme com `kifer_get_connection_access`: `can_write` deve ser `true` antes de executar mutações.
 
 ## Migration adicional
 
@@ -230,7 +242,7 @@ Autorizacao: https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/o
 Token: https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/oauth/token
 ```
 
-Depois clique em **Verificar ferramentas**. A página `www.kifersaude.com.br/mcp-oauth-authorize.html` pedirá o e-mail e a senha da conta administradora e exibirá os escopos solicitados. Clique em **Autorizar leitura e escrita** para habilitar ações, ou conecte somente `kifer.read` quando quiser uma sessão apenas de consulta. Tokens antigos com leitura precisam ser reautorizados para exibir ferramentas de escrita. Então teste uma consulta e uma ação inofensiva antes de publicar o plugin apenas para o grupo autorizado.
+Depois clique em **Verificar ferramentas**. A página `www.kifersaude.com.br/mcp-oauth-authorize.html` pedirá o e-mail e a senha da conta administradora e exibirá os escopos solicitados. Clique em **Autorizar leitura e escrita** para habilitar ações, ou conecte somente `kifer.read` quando quiser uma sessão apenas de consulta. Tokens antigos de leitura podem descobrir todas as ferramentas, mas precisam da nova autorização para executar escritas. Confirme `can_write: true` em `kifer_get_connection_access` antes de tentar alterar registros.
 
 > A URL de retorno fica vinculada a este plugin do ChatGPT. Nao descarte este rascunho nem crie outro plugin antes de finalizar. Se for necessario recria-lo, atualize tambem o secret `KIFER_MCP_OAUTH_REDIRECT_URI` com a nova URL mostrada pelo ChatGPT e publique a function novamente.
 

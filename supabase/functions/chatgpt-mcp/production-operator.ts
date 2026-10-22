@@ -2,7 +2,7 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import type { McpToolDescriptor } from './mcp-discovery.ts';
 
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const COMMERCIAL_WRITE = /^kifer_(?:(?:send|schedule|bulk_schedule|update_scheduled|cancel_scheduled|retry_scheduled|upload_scheduled|create_interaction|create_reminder|update_reminder|complete_reminder|cancel_reminder|set_next_follow_up|create_lead|update_lead|bulk_update_lead|bulk_assign_lead|bulk_archive_lead)|.*contract|.*opportunity)/;
+const COMMERCIAL_WRITE = /^kifer_(?:(?:send|schedule|bulk_schedule|update_scheduled|cancel_scheduled|retry_scheduled|upload_scheduled|create_interaction|create_reminder|update_reminder|complete_reminder|cancel_reminder|reschedule_reminders|reopen_reminder|delete_reminders|set_next_follow_up|create_lead|update_lead|bulk_update_lead|bulk_assign_lead|bulk_archive_lead)|.*contract|.*opportunity)/;
 
 export const requiresProductionOperator = (name: string) => COMMERCIAL_WRITE.test(name);
 

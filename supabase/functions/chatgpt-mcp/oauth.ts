@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { resolveOAuthResource } from './oauth-resource.ts';
+import { buildMcpOAuthChallenge, MCP_FULL_ACCESS_SCOPES } from './oauth-tool-access.ts';
 
 const FUNCTION_PATH = '/functions/v1/chatgpt-mcp';
 const AUTHORIZE_PATH = '/oauth/authorize';
@@ -321,5 +322,5 @@ export async function authenticateOAuthAccessToken(request: Request): Promise<OA
   return user ? { userId: text(data.user_id), actor: `chatgpt:${user.email}`, scope: text(data.scope) } : null;
 }
 
-export const getMcpOAuthChallenge = (request: Request): string =>
-  `Bearer realm="Kifer Saude MCP", resource_metadata="${getBaseUrl(request)}${RESOURCE_METADATA_PATH}", scope="kifer.read"`;
+export const getMcpOAuthChallenge = (request: Request, scopes: readonly string[] = MCP_FULL_ACCESS_SCOPES, insufficientScope = false): string =>
+  buildMcpOAuthChallenge(getBaseUrl(request), scopes, insufficientScope);

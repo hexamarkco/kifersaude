@@ -73,6 +73,29 @@ const client = (handlers: Record<string, Result | Result[]>, rpcHandlers: Record
   };
 };
 
+test('creates standalone agenda tasks without requiring a lead or querying lead data', async () => {
+  const supabase = client({ reminders: { data: { id: '22222222-2222-4222-8222-222222222222' } } });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { tipo: 'Tarefa', titulo: 'Revisar agenda', data_lembrete: '2030-10-22T12:00:00Z', prioridade: 'normal' }, actor });
+  assert.equal(result.success, true);
+  assert.equal(supabase.calls.includes('leads'), false);
+  assert.equal(supabase.writes.find((write) => write.table === 'reminders')?.operation, 'insert');
+  assert.equal((supabase.writes.find((write) => write.table === 'reminders')?.value as Record<string, unknown>).lead_id, null);
+});
+
+test('still requires a lead for commercial follow-up reminders', async () => {
+  const supabase = client({});
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { tipo: 'Follow-up', titulo: 'Follow-up', data_lembrete: '2030-10-22T12:00:00Z', prioridade: 'normal' }, actor });
+  assert.equal(result.success, false);
+  assert.equal(supabase.writes.some((write) => write.table === 'reminders'), false);
+});
+
+test('does not silently discard an invalid lead when creating a standalone task', async () => {
+  const supabase = client({});
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { lead_id: 123, tipo: 'Tarefa', titulo: 'Tarefa', data_lembrete: '2030-10-22T12:00:00Z', prioridade: 'normal' }, actor });
+  assert.equal(result.success, false);
+  assert.equal(supabase.writes.some((write) => write.table === 'reminders'), false);
+});
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));

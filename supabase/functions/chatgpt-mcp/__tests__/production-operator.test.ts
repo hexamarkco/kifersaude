@@ -3,7 +3,7 @@ import { productionHeaders, requiresProductionOperator, validateProductionOperat
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 test('commercial mutations require an operator but reads and automatic campaign execution do not', () => {
-  for (const name of ['kifer_send_whatsapp_message','kifer_schedule_whatsapp_sequence','kifer_bulk_schedule_whatsapp_messages','kifer_update_scheduled_whatsapp_message','kifer_complete_reminder','kifer_create_contract_bundle']) expect(requiresProductionOperator(name)).toBe(true);
+  for (const name of ['kifer_send_whatsapp_message','kifer_schedule_whatsapp_sequence','kifer_bulk_schedule_whatsapp_messages','kifer_update_scheduled_whatsapp_message','kifer_complete_reminder','kifer_create_contract_bundle','kifer_reschedule_reminders','kifer_reopen_reminder','kifer_delete_reminders']) expect(requiresProductionOperator(name)).toBe(true);
   expect(withProductionOperator([{name:'kifer_get_contract',annotations:{readOnlyHint:true}}])[0].inputSchema).toBeUndefined();
 });
 test('discovery adds required declared identity while preserving business schema', () => {

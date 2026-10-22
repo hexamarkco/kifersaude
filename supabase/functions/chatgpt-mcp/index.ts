@@ -27,6 +27,8 @@ import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } f
 import { campaignReadAuditSummary, executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
 import { toMcpToolResult } from './tool-result.ts';
+import { getMcpConnectionAccess, getMcpDiscoverableTools, getMcpToolScopeError, MCP_CONNECTION_ACCESS_TOOL, MCP_FULL_ACCESS_SCOPES } from './oauth-tool-access.ts';
+import { executeMcpAgendaReadAction, MCP_AGENDA_TOOLS, MCP_AGENDA_WRITE_TOOL_NAMES } from './agenda-actions.ts';
 import { attachMcpOAuthSecuritySchemes, getMcpPrompt, MCP_PROMPTS, MCP_RESOURCES, readMcpResource, type McpToolDescriptor } from './mcp-discovery.ts';
 
 /**
@@ -728,8 +730,8 @@ const tools = [
   },
   {
     name: 'kifer_create_reminder',
-    description: 'Cria um lembrete associado a um lead existente. Use quando o usuário pedir para lembrar, agendar um Follow-up ou registrar uma próxima ação. Para acompanhamento comercial, o tipo deve ser exatamente "Follow-up"; "Retorno" e aliases não são permitidos. Esta ação altera dados reais.',
-    inputSchema: { type: 'object', required: ['lead_id', 'tipo', 'titulo', 'data_lembrete', 'prioridade'], additionalProperties: false, properties: { lead_id: { type: 'string' }, contract_id: { type: 'string' }, tipo: { type: 'string', minLength: 1, maxLength: 160, description: 'Use exatamente "Follow-up" para acompanhamento comercial. Não use "Retorno", "follow up", "followup" ou outras variações.' }, titulo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', maxLength: 4000 }, data_lembrete: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] } } },
+    description: 'Cria um lembrete de lead ou uma tarefa avulsa da agenda. Para tarefa sem lead_id, use tipo "Tarefa" ou "Outro". Acompanhamento comercial exige lead_id e tipo exatamente "Follow-up". Use quando o usuário pedir para lembrar, agendar ou registrar uma próxima ação; altera dados reais.',
+    inputSchema: { type: 'object', required: ['tipo', 'titulo', 'data_lembrete', 'prioridade'], additionalProperties: false, properties: { lead_id: { type: 'string', format: 'uuid' }, contract_id: { type: 'string', format: 'uuid' }, tipo: { type: 'string', minLength: 1, maxLength: 160, description: '"Tarefa" ou "Outro" para tarefa avulsa; "Follow-up" para acompanhamento comercial vinculado a lead.' }, titulo: { type: 'string', minLength: 1, maxLength: 160 }, descricao: { type: 'string', maxLength: 4000 }, data_lembrete: { type: 'string', format: 'date-time' }, prioridade: { type: 'string', enum: ['baixa', 'normal', 'alta'] } } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -771,6 +773,8 @@ const tools = [
   ...MCP_WHATSAPP_CONTACT_TOOLS,
   ...MCP_WHATSAPP_QUICK_REPLY_TOOLS,
   ...MCP_TRACKING_CONFIG_TOOLS,
+  ...MCP_AGENDA_TOOLS,
+  MCP_CONNECTION_ACCESS_TOOL,
   MCP_WHATSAPP_MEDIA_READ_TOOL,
 ];
 
@@ -783,6 +787,7 @@ const discoveryTools = withProductionOperator([...tools as readonly McpToolDescr
 const exposedTools = attachMcpOAuthSecuritySchemes(discoveryTools);
 
 const ADMIN_READ_TOOLS = new Set([
+  'kifer_get_reminder',
   'kifer_list_records', 'kifer_get_record', 'kifer_search', 'kifer_get_lead_360', 'kifer_get_whatsapp_transcript',
   'kifer_list_scheduled_whatsapp_messages', 'kifer_get_scheduled_whatsapp_message', 'kifer_list_scheduled_whatsapp_sequences', 'kifer_get_scheduled_whatsapp_sequence', 'kifer_get_commercial_followup_audit',
   'kifer_list_leads_without_whatsapp_chat', 'kifer_list_reminders', 'kifer_get_next_follow_up',
@@ -846,6 +851,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES,
     ...MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES,
     ...MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES,
+    ...MCP_AGENDA_WRITE_TOOL_NAMES,
     ...MCP_LEAD_ADMIN_TOOL_NAMES,
   ]);
   if (writeAction.has(name)) {
@@ -995,6 +1001,8 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
   if (whatsappQuickReplyResult) return toToolResult(whatsappQuickReplyResult);
   const trackingConfigResult = await executeMcpTrackingConfigReadAction({ supabase, toolName: name, actor: { actor, actorId: actorId ?? '' } });
   if (trackingConfigResult) return toToolResult(trackingConfigResult);
+  const agendaResult = await executeMcpAgendaReadAction({ supabase, toolName: name, arguments: args, actor: { actor, actorId: actorId ?? '' } });
+  if (agendaResult) return toToolResult(agendaResult);
   const commercialReadResult = await executeMcpCommercialReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (commercialReadResult) return toToolResult(commercialReadResult);
   let output: unknown;
@@ -1088,18 +1096,16 @@ Deno.serve(async (request: Request) => {
         resources: { listChanged: false, subscribe: false },
         prompts: { listChanged: false },
       },
-      serverInfo: { name: 'kifer-saude-crm', version: '1.2.0' },
-      instructions: 'Servidor do Kifer Saude com três primitivas MCP: ferramentas para ações e consultas, recursos para contexto seguro e prompts para workflows compostos. Ferramentas de escrita alteram dados reais e só devem ser chamadas após solicitação explícita do usuário. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
+      serverInfo: { name: 'kifer-saude-crm', version: '1.3.0' },
+      instructions: 'Servidor do Kifer Saude para consultar e operar o CRM. O catálogo mostra todas as ferramentas, inclusive escritas. Pedidos do usuário podem autorizar ações individuais ou lotes; execute as ações já solicitadas e confira os resultados. kifer_get_connection_access diagnostica a autorização. Se uma escrita retornar mcp/www_authenticate, conclua o fluxo OAuth com leitura e escrita; a ferramenta existe, falta autorizar a conexão. Nunca use nem sugira SQL, RPC ou requisições arbitrárias.',
     });
   }
   if (rpc.method === 'tools/list') {
-    const visibleTools = oauthScopes.has('kifer.write') ? exposedTools : exposedTools.filter((tool) => tool.annotations?.readOnlyHint === true);
-    return resultResponse(rpc.id, { tools: visibleTools });
+    return resultResponse(rpc.id, { tools: getMcpDiscoverableTools(exposedTools) });
   }
   if (rpc.method === 'resources/list') return resultResponse(rpc.id, { resources: MCP_RESOURCES });
   if (rpc.method === 'resources/read') {
-    const visibleTools = oauthScopes.has('kifer.write') ? discoveryTools : discoveryTools.filter((tool) => tool.annotations?.readOnlyHint === true);
-    const result = readMcpResource(rpc.params?.uri, visibleTools);
+    const result = readMcpResource(rpc.params?.uri, getMcpDiscoverableTools(discoveryTools));
     if (!result.ok) return errorResponse(rpc.id, -32602, result.message);
     return resultResponse(rpc.id, { contents: result.contents });
   }
@@ -1113,6 +1119,9 @@ Deno.serve(async (request: Request) => {
 
   const toolName = text(rpc.params?.name);
   try {
+    const scopeError = getMcpToolScopeError(exposedTools.find((tool) => tool.name === toolName), oauthScopes, getMcpOAuthChallenge(request, MCP_FULL_ACCESS_SCOPES, true));
+    if (scopeError) return resultResponse(rpc.id, scopeError);
+    if (toolName === MCP_CONNECTION_ACCESS_TOOL.name) return resultResponse(rpc.id, toToolResult(getMcpConnectionAccess(oauthScopes, exposedTools, actorId !== null)));
     const supabase = getSupabaseAdmin();
     const toolResult = await callTool(supabase, toolName, rpc.params?.arguments, actor, actorId, oauthScopes.has('kifer.write'));
     return resultResponse(rpc.id, toolResult);

@@ -39,6 +39,7 @@ import { executeMcpWhatsAppAiWriteAction, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } fro
 import { executeMcpWhatsAppContactWriteAction, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
 import { executeMcpWhatsAppQuickReplyWriteAction, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
 import { executeMcpTrackingConfigWriteAction, MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES } from './tracking-config-actions.ts';
+import { executeMcpAgendaWriteAction, MCP_AGENDA_WRITE_TOOL_NAMES } from './agenda-actions.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
@@ -485,6 +486,7 @@ async function syncNextReturn(supabase: SupabaseClient, leadId: string) {
 }
 
 async function createReminder(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
+  if (params.lead_id !== undefined && (typeof params.lead_id !== 'string' || !safeUuid(params.lead_id))) return errorResult('INVALID_INPUT', 'lead_id deve ser um UUID quando informado.');
   const leadId = text(params.lead_id);
   const contractId = text(params.contract_id);
   const tipo = text(params.tipo).slice(0, MAX_SHORT_TEXT_LENGTH);
@@ -492,15 +494,16 @@ async function createReminder(supabase: SupabaseClient, params: Record<string, u
   const descricao = text(params.descricao).slice(0, MAX_DESCRIPTION_LENGTH) || null;
   const prioridade = text(params.prioridade) || 'normal';
   const date = parseDate(params.data_lembrete);
-  if (!safeUuid(leadId) || !tipo || !titulo || !date || !PRIORITIES.has(prioridade)) return errorResult('INVALID_INPUT', 'Informe lead_id, tipo, titulo, data_lembrete válida e prioridade válida.');
+  if ((leadId && !safeUuid(leadId)) || !tipo || !titulo || !date || !PRIORITIES.has(prioridade)) return errorResult('INVALID_INPUT', 'Informe tipo, titulo, data_lembrete e prioridade válidos; lead_id deve ser um UUID quando informado.');
+  if (!leadId && !['Tarefa', 'Outro'].includes(tipo)) return errorResult('INVALID_INPUT', 'Lembretes comerciais exigem lead_id. Para uma tarefa avulsa da agenda, use tipo Tarefa ou Outro.');
   if (FOLLOW_UP_TYPE_ALIASES.has(tipo.toLocaleLowerCase('pt-BR')) && tipo !== 'Follow-up') {
     return errorResult('INVALID_INPUT', 'Use exatamente o tipo "Follow-up" para acompanhamento comercial; "Retorno" e aliases não são mais permitidos.');
   }
-  if (!(await existingLead(supabase, leadId))) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
+  if (leadId && !(await existingLead(supabase, leadId))) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
   if (contractId && (!safeUuid(contractId) || !(await validateContract(supabase, leadId, contractId)))) return errorResult('CONTRACT_NOT_FOUND', 'Contrato não encontrado para este lead.');
-  const { data, error } = await supabase.from('reminders').insert({ lead_id: leadId, contract_id: contractId || null, tipo, titulo, descricao, data_lembrete: date, prioridade }).select('id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,created_at').maybeSingle();
+  const { data, error } = await supabase.from('reminders').insert({ lead_id: leadId || null, contract_id: contractId || null, tipo, titulo, descricao, data_lembrete: date, prioridade }).select('id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,created_at,ultima_modificacao').maybeSingle();
   if (error || !data) return errorResult('INTERNAL_ERROR', 'Não foi possível criar o lembrete.');
-  const nextReturn = await syncNextReturn(supabase, leadId);
+  const nextReturn = leadId ? await syncNextReturn(supabase, leadId) : null;
   return { success: true, reminder: data, proximo_retorno: nextReturn, actor: actor.actor };
 }
 
@@ -2909,7 +2912,7 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
   }
   if (toolName === 'kifer_list_reminders') {
     const { page, pageSize, from } = pageParams(args);
-    let query = supabase.from('reminders').select('id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,lido,concluido_em,cancelled_at,cancellation_reason,created_at', { count: 'exact' });
+    let query = supabase.from('reminders').select('id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,lido,concluido_em,cancelled_at,cancellation_reason,created_at,ultima_modificacao', { count: 'exact' });
     if (safeUuid(text(args.lead_id))) query = query.eq('lead_id', text(args.lead_id));
     if (text(args.status) === 'pending') query = query.eq('lido', false).is('cancelled_at', null);
     if (text(args.status) === 'completed') query = query.eq('lido', true).is('cancelled_at', null);
@@ -2968,6 +2971,9 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
   }
   if ((MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
     return executeMcpTrackingConfigWriteAction({ supabase, toolName, arguments: args, actor });
+  }
+  if ((MCP_AGENDA_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) {
+    return executeMcpAgendaWriteAction({ supabase, toolName, arguments: args, actor });
   }
   const isContractPersonImportAction = (MCP_CONTRACT_HOLDER_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)
     || (MCP_CONTRACT_DEPENDENT_IMPORT_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);

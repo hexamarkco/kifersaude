@@ -21,7 +21,6 @@ import {
   UserRound,
 } from 'lucide-react';
 
-import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import {
   Button,
@@ -40,6 +39,7 @@ import {
 } from '../../design-system';
 import {
   PublicFooter,
+  PublicHomeHeader,
   PrivacyNotice,
   loadPublicHomeMetrics,
   submitPublicLead,
@@ -586,7 +586,6 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [isScrolled, setIsScrolled] = useState(false);
   const [metricsInView, setMetricsInView] = useState(false);
 
   const totalLives = Number.parseInt(formData.numeroVidas, 10) || 0;
@@ -594,19 +593,6 @@ export default function HomePage() {
     .map(([range, quantity]) => ({ range, quantity: Number.parseInt(quantity, 10) }))
     .filter(({ quantity }) => Number.isFinite(quantity) && quantity > 0);
   const ageRangeTotal = filledAgeRanges.reduce((sum, item) => sum + item.quantity, 0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -632,18 +618,6 @@ export default function HomePage() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-
-    if (showQuoteModal) {
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showQuoteModal]);
 
   useEffect(() => {
     if (window.location.hash !== '#cotacao') {
@@ -956,70 +930,7 @@ export default function HomePage() {
       />
 
       <PublicShell width="full" className="min-h-screen overflow-x-hidden">
-        <header>
-        <nav
-          aria-label="Navegação principal"
-          className={`fixed top-0 z-40 w-full transition-all duration-300 ${
-            isScrolled ? 'bg-[var(--panel-glass-bg-lite)] shadow-[var(--shadow-card)] backdrop-blur-sm' : 'bg-transparent'
-          }`}
-        >
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <a href="#topo" onClick={(event) => handleNavLinkClick(event, 'topo')} className="flex items-center space-x-3 whitespace-nowrap">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
-                <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
-              </div>
-              <span className="text-2xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</span>
-            </a>
-
-            <div className="hidden flex-1 items-center justify-center space-x-6 lg:flex">
-              <a
-                href="#prova-social"
-                onClick={(event) => handleNavLinkClick(event, 'prova-social')}
-                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
-              >
-                Operadoras
-              </a>
-              <a
-                href="#para-quem"
-                onClick={(event) => handleNavLinkClick(event, 'para-quem')}
-                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
-              >
-                Para quem é
-              </a>
-              <a
-                href="#como-funciona"
-                onClick={(event) => handleNavLinkClick(event, 'como-funciona')}
-                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
-              >
-                Como funciona
-              </a>
-              <a
-                href="#depoimentos"
-                onClick={(event) => handleNavLinkClick(event, 'depoimentos')}
-                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
-              >
-                Depoimentos
-              </a>
-              <a
-                href="#faq"
-                onClick={(event) => handleNavLinkClick(event, 'faq')}
-                className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
-              >
-                Dúvidas
-              </a>
-            </div>
-
-            <Button
-              type="button"
-              onClick={() => setShowQuoteModal(true)}
-              variant="primary"
-              size="md"
-            >
-              Cotação grátis
-            </Button>
-          </div>
-        </nav>
-        </header>
+        <PublicHomeHeader onNavigate={scrollToSection} onRequestQuote={() => setShowQuoteModal(true)} />
 
         <main id="conteudo-principal">
         <section id="topo" className="kds-public-home-hero relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pt-24 sm:px-6 sm:pt-28 lg:px-8">

@@ -1,3 +1,5 @@
+import { cx } from '../../lib/cx';
+
 type PublicBrandMarkProps = {
   className?: string;
 };
@@ -6,9 +8,12 @@ export default function PublicBrandMark({ className = 'h-6 w-auto' }: PublicBran
   return (
     <svg
       viewBox="0 0 574 455"
+      width="574"
+      height="455"
+      preserveAspectRatio="xMidYMid meet"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={cx('kds-public-brand-mark', className)}
       aria-hidden="true"
       focusable="false"
     >

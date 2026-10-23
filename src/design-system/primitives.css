@@ -207,6 +207,110 @@
 .kds-public-brand-mark-sm { height: var(--control-height-sm); }
 .kds-public-brand-mark-md { height: var(--control-height-md); }
 
+.kds-public-header {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.kds-public-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  max-width: 84rem;
+  margin-inline: auto;
+  padding: var(--space-4);
+}
+
+.kds-public-header-brand {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height-lg);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.kds-public-header-mark {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: var(--control-height-md);
+}
+
+.kds-public-header-wordmark {
+  display: none;
+  font: var(--type-heading-3);
+  white-space: nowrap;
+}
+
+.kds-public-header-navigation {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kds-public-header-navigation a,
+.kds-public-mobile-navigation a {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height-lg);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font: var(--type-body);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.kds-public-header-navigation a:hover,
+.kds-public-mobile-navigation a:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.kds-public-header-brand:focus-visible,
+.kds-public-header-navigation a:focus-visible,
+.kds-public-mobile-navigation a:focus-visible {
+  outline: 2px solid var(--focus-ring-strong);
+  outline-offset: var(--space-1);
+}
+
+.kds-public-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kds-public-header-toggle {
+  display: flex;
+}
+
+.kds-public-mobile-navigation {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (min-width: 480px) {
+  .kds-public-header-wordmark { display: inline; }
+}
+
+@media (min-width: 640px) {
+  .kds-public-header-inner { padding-inline: var(--space-8); }
+}
+
+@media (min-width: 1024px) {
+  .kds-public-header-navigation { display: flex; }
+  .kds-public-header-toggle { display: none; }
+}
+
 .kds-public-login-icon {
   display: inline-flex;
   align-items: center;

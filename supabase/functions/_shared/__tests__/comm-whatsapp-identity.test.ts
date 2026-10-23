@@ -13,6 +13,7 @@ import {
 } from '../comm-whatsapp';
 import {
   extractWhapiParticipantDigits,
+  getWhapiInboundPhoneHint,
   isDirectWhapiChatId,
   isInboxWhapiChatId,
   isWhapiGroupChatId,
@@ -146,6 +147,73 @@ test('rejects a divergent reverse mapping', async () => {
 
   const identity = await resolveVerifiedWhapiDirectIdentity({ token: 'test', chatId: '123456@lid' });
 
+  assert.equal(identity.verified, false);
+  assert.equal(identity.reason, 'reverse_mismatch');
+});
+
+test('uses only consistent inbound sender phones as lookup hints, excluding own phone and shared cards', () => {
+  const own = '5521999999999';
+  const phone = '5521979005603';
+  assert.equal(getWhapiInboundPhoneHint([
+    { direction: 'outbound', sender_phone: own },
+    { direction: 'inbound', sender_phone: own },
+    { direction: 'inbound', metadata: { from: '4372276707388@lid', contact: { phone } } },
+  ], own), '');
+  assert.equal(getWhapiInboundPhoneHint([
+    { direction: 'inbound', sender_phone: phone, metadata: { from: '552179005603' } },
+  ], own), `${phone}@s.whatsapp.net`);
+  assert.equal(getWhapiInboundPhoneHint([
+    { direction: 'inbound', sender_phone: phone },
+    { direction: 'inbound', sender_phone: '5521988887777' },
+  ], own), '');
+});
+
+const mockHintLookup = (reverseLid: string, refreshedPhone: string) => {
+  const requests: string[] = [];
+  let forwardLookups = 0;
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+    const path = decodeURIComponent(url.pathname);
+    requests.push(path);
+    if (path === '/contacts/ids/4372276707388@lid') {
+      forwardLookups += 1;
+      return forwardLookups > 1 && refreshedPhone
+        ? Response.json({ id: refreshedPhone }) : new Response('{}', { status: 404 });
+    }
+    if (path === '/contacts/lids/5521979005603@s.whatsapp.net') return Response.json({ lid: reverseLid });
+    throw new Error(`Unexpected lookup ${path}`);
+  }) as typeof fetch;
+  return requests;
+};
+
+test('recovers an uncached LID only after verifying the sender hint in both provider directions', async () => {
+  const requests = mockHintLookup('4372276707388@lid', '5521979005603@s.whatsapp.net');
+  const identity = await resolveVerifiedWhapiDirectIdentity({ token: 'test', chatId: '4372276707388@lid', phoneHint: '5521979005603' });
+  assert.equal(identity.verified, true);
+  assert.equal(identity.phone, '5521979005603');
+  assert.deepEqual(requests, [
+    '/contacts/ids/4372276707388@lid', '/contacts/lids/5521979005603@s.whatsapp.net', '/contacts/ids/4372276707388@lid',
+  ]);
+});
+
+test('a sender hint that maps to another LID is never accepted as identity proof', async () => {
+  const requests = mockHintLookup('1111111111111@lid', '5521979005603@s.whatsapp.net');
+  const identity = await resolveVerifiedWhapiDirectIdentity({ token: 'test', chatId: '4372276707388@lid', phoneHint: '5521979005603' });
+  assert.equal(identity.verified, false);
+  assert.equal(identity.phone, '');
+  assert.equal(requests.length, 2);
+});
+
+test('a one-way match still cannot reconcile a private conversation', async () => {
+  mockHintLookup('4372276707388@lid', '');
+  const identity = await resolveVerifiedWhapiDirectIdentity({ token: 'test', chatId: '4372276707388@lid', phoneHint: '5521979005603' });
+  assert.equal(identity.verified, false);
+  assert.equal(identity.phone, '');
+});
+
+test('flags a provider round trip that resolves to a different phone than the hint', async () => {
+  mockHintLookup('4372276707388@lid', '5521988887777@s.whatsapp.net');
+  const identity = await resolveVerifiedWhapiDirectIdentity({ token: 'test', chatId: '4372276707388@lid', phoneHint: '5521979005603' });
   assert.equal(identity.verified, false);
   assert.equal(identity.reason, 'reverse_mismatch');
 });

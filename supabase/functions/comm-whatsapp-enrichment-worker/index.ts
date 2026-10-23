@@ -6,10 +6,12 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   fetchWhapiChatName,
+  fetchCommWhatsAppInboundPhoneHint,
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isValidCommWhatsAppDisplayName,
+  isWhapiLidChatId,
   resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveVerifiedWhapiDirectIdentity,
   toTrimmedString,
@@ -126,6 +128,7 @@ async function processIdentityJob(params: {
   job: EnrichmentJob;
   token: string;
   ownChannelName: string | null;
+  ownPhoneNumber: string | null;
 }) {
   const chatId = toTrimmedString(params.job.chat_id);
   if (!chatId) return;
@@ -149,6 +152,11 @@ async function processIdentityJob(params: {
   const identity = await resolveVerifiedWhapiDirectIdentity({
     token: params.token,
     chatId: chat.external_chat_id,
+    phoneHint: isWhapiLidChatId(chat.external_chat_id)
+      ? await fetchCommWhatsAppInboundPhoneHint(params.supabaseAdmin, {
+          chatId: chat.id, channelId: chat.channel_id, ownPhoneNumber: params.ownPhoneNumber,
+        })
+      : undefined,
   });
   const postLookupRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(params.supabaseAdmin, chat.id);
   if (!postLookupRoute?.chatId) return;
@@ -287,6 +295,7 @@ async function processJobs(supabaseAdmin: ReturnType<typeof createAdminClient>, 
           job,
           token: settings.token,
           ownChannelName: channel.connected_user_name,
+          ownPhoneNumber: channel.phone_number,
         });
       } else {
         await processMediaJob({ supabaseAdmin, job, token: settings.token });

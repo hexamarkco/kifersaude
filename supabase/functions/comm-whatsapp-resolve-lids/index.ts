@@ -3,6 +3,7 @@ import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   corsHeaders,
   fetchWhapiChatName,
+  fetchCommWhatsAppInboundPhoneHint,
   getWhapiToken,
   isWhapiLidChatId,
   isValidCommWhatsAppDisplayName,
@@ -147,7 +148,13 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const identity = await resolveVerifiedWhapiDirectIdentity({ token, chatId: externalChatId });
+      const identity = await resolveVerifiedWhapiDirectIdentity({
+        token,
+        chatId: externalChatId,
+        phoneHint: await fetchCommWhatsAppInboundPhoneHint(supabase, {
+          chatId: chat.id, channelId: chat.channel_id, ownPhoneNumber: channel.phone_number,
+        }),
+      });
       const postLookupRoute = apply
         ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabase, chat.id)
         : null;

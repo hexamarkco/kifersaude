@@ -6,6 +6,7 @@ import {
   formatPhoneFromDigits,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
+  getWhapiInboundPhoneHint,
   isDirectWhapiChatId,
   isInboxWhapiChatId,
   isWhapiGroupChatId,
@@ -2808,18 +2809,49 @@ export type VerifiedWhapiDirectIdentity = {
   reason: 'verified' | 'invalid_chat_id' | 'counterpart_unresolved' | 'reverse_unresolved' | 'reverse_mismatch';
 };
 
+export async function fetchCommWhatsAppInboundPhoneHint(
+  supabaseAdmin: SupabaseClient,
+  input: { chatId: string; channelId: string; ownPhoneNumber: string | null },
+): Promise<string> {
+  const { data, error } = await supabaseAdmin.from('comm_whatsapp_messages')
+    .select('direction,sender_phone,metadata')
+    .eq('channel_id', input.channelId)
+    .eq('chat_id', input.chatId)
+    .eq('direction', 'inbound')
+    .order('message_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(`Nao foi possivel consultar o remetente da conversa: ${error.message}`);
+  return getWhapiInboundPhoneHint(data ?? [], input.ownPhoneNumber);
+}
+
 export async function resolveVerifiedWhapiDirectIdentity(params: {
   token: string;
   chatId: string;
+  phoneHint?: string;
 }): Promise<VerifiedWhapiDirectIdentity> {
   const inputChatId = normalizeWhapiChatId(params.chatId);
   const inputIsLid = isWhapiLidChatId(inputChatId);
   let lidChatId = '';
   let phoneChatId = '';
+  let hintedReverseLid = '';
 
   if (inputIsLid) {
     lidChatId = inputChatId;
-    const phone = await resolveWhapiLidToPhone({ token: params.token, chatId: lidChatId });
+    let phone = await resolveWhapiLidToPhone({ token: params.token, chatId: lidChatId });
+    const hintedPhoneChatId = normalizeWhapiPhoneChatId(params.phoneHint);
+    if (!phone && hintedPhoneChatId) {
+      // The cache-only LID lookup may be empty. A sender phone lets the
+      // provider look up the opposite direction, then we require both sides.
+      const reverse = await resolveWhapiPhoneToLid({ token: params.token, chatId: hintedPhoneChatId });
+      if (reverse === lidChatId) {
+        phone = await resolveWhapiLidToPhone({ token: params.token, chatId: lidChatId });
+        const hintKeys = new Set(getCommWhatsAppPhoneLookupKeys(extractPhoneFromChatId(hintedPhoneChatId)));
+        if (phone && !getCommWhatsAppPhoneLookupKeys(phone).some((key) => hintKeys.has(key))) {
+          return { verified: false, lidChatId, phoneChatId: normalizeWhapiPhoneChatId(phone), phone, reason: 'reverse_mismatch' };
+        }
+        hintedReverseLid = reverse;
+      }
+    }
     phoneChatId = normalizeWhapiPhoneChatId(phone);
   } else if (isWhapiPhoneDirectChatId(inputChatId)) {
     phoneChatId = normalizeWhapiPhoneChatId(inputChatId);
@@ -2839,7 +2871,7 @@ export async function resolveVerifiedWhapiDirectIdentity(params: {
   }
 
   const reverseLid = inputIsLid
-    ? await resolveWhapiPhoneToLid({ token: params.token, chatId: phoneChatId })
+    ? hintedReverseLid || await resolveWhapiPhoneToLid({ token: params.token, chatId: phoneChatId })
     : lidChatId;
   const reversePhone = inputIsLid
     ? phoneChatId
@@ -4324,7 +4356,7 @@ export type SyncWhapiDirectChatMessagesParams = {
 };
 
 export type SyncWhapiDirectChatMessagesResult = {
-  chatId: string;
+  chatId: string | null;
   canonicalExternalChatId: string;
   fetched: number;
   inserted: number;
@@ -4355,9 +4387,47 @@ export async function syncWhapiDirectChatMessages(
     throw new Error('Conversa invalida para sincronizacao.');
   }
 
+  // Discovery is not a conversation: consult history before any RPC that can
+  // create a chat or reconcile identifiers. Empty/failed provider reads used
+  // to leave a second, message-less LID entry beside the existing phone chat.
+  const messagePage = await fetchWhapiChatMessagesPage({
+    token,
+    chatId: externalChatId,
+    count: pageSize,
+    offset,
+    timeTo,
+    timeFrom: params.timeFrom,
+    sort: params.sort ?? 'asc',
+  });
+  if (messagePage.messages.length === 0) {
+    const route = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+      channelId: channel.id,
+      externalChatId,
+    });
+    const hasMore = messagePage.hasMore && messagePage.nextOffset > offset;
+    return {
+      chatId: route.chatId,
+      canonicalExternalChatId: route.externalChatId,
+      fetched: 0,
+      inserted: 0,
+      updated: 0,
+      hasMore,
+      nextOffset: hasMore ? messagePage.nextOffset : null,
+      timeTo,
+      identityConflict: route.identityConflict,
+    };
+  }
+
   let phoneDigits = extractPhoneFromChatId(externalChatId);
   let canonicalExternalChatId = externalChatId;
-  const identity = await resolveVerifiedWhapiDirectIdentity({ token, chatId: externalChatId }).catch(() => null);
+  const identity = await resolveVerifiedWhapiDirectIdentity({
+    token,
+    chatId: externalChatId,
+    phoneHint: getWhapiInboundPhoneHint(messagePage.messages.map((message) => ({
+      direction: message.from_me === true ? 'outbound' : 'inbound',
+      metadata: { from: message.from },
+    })), channel.phone_number),
+  }).catch(() => null);
   let identityConflict = false;
 
   if (identity?.verified) {
@@ -4395,23 +4465,22 @@ export async function syncWhapiDirectChatMessages(
     whapiName = '';
   }
 
-  const { data: ensuredData, error: ensureError } = await supabaseAdmin.rpc('comm_whatsapp_ensure_observed_chat', {
-    p_channel_id: channel.id,
-    p_external_chat_id: canonicalExternalChatId,
-    p_phone_number: phoneDigits || null,
-    p_push_name: isValidCommWhatsAppDisplayName(whapiName) ? whapiName : null,
+  const route = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+    channelId: channel.id,
+    externalChatId: canonicalExternalChatId,
   });
-  if (ensureError) throw new Error(`Nao foi possivel preparar a conversa para sincronizacao: ${ensureError.message}`);
+  // Only atomic persistence may create an unverified chat. A nonempty page
+  // can contain only replays already owned by another canonical conversation.
+  const chat = {
+    id: route.chatId,
+    display_name: route.displayName || whapiName || (phoneDigits ? formatPhoneLabel(phoneDigits) : 'Contato privado'),
+    push_name: route.pushName,
+  };
+  let persistedChatId = chat.id;
+  let conflictRecorded = false;
 
-  const chat = (Array.isArray(ensuredData) ? ensuredData[0] : ensuredData) as {
-    id: string;
-    unread_count: number;
-    display_name: string;
-    push_name: string | null;
-  } | null;
-  if (!chat?.id) throw new Error('A conversa canonica nao foi retornada pela preparacao da sincronizacao.');
-
-  if (identity?.reason === 'reverse_mismatch') {
+  const recordIdentityConflict = async (chatId: string) => {
+    if (identity?.reason !== 'reverse_mismatch' || conflictRecorded) return;
     identityConflict = true;
     const dedupeKey = `reverse:${channel.id}:${identity.lidChatId || externalChatId}:${identity.phoneChatId || 'unknown'}`;
     const { error: conflictError } = await supabaseAdmin
@@ -4419,7 +4488,7 @@ export async function syncWhapiDirectChatMessages(
       .upsert({
         dedupe_key: dedupeKey,
         channel_id: channel.id,
-        chat_id: chat.id,
+        chat_id: chatId,
         conflict_type: 'reverse_mapping_conflict',
         status: 'open',
         details: {
@@ -4437,22 +4506,15 @@ export async function syncWhapiDirectChatMessages(
     const { error: flagError } = await supabaseAdmin
       .from('comm_whatsapp_chats')
       .update({ identity_conflict: true, updated_at: getNowIso() })
-      .eq('id', chat.id);
+      .eq('id', chatId);
     if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
-  }
+    conflictRecorded = true;
+  };
+  if (chat.id) await recordIdentityConflict(chat.id);
 
   const displayName = chat.display_name;
   const pushName = whapiName || (!isOwnCommWhatsAppChannelName(chat.push_name, channel.connected_user_name) ? chat.push_name : null);
 
-  const messagePage = await fetchWhapiChatMessagesPage({
-    token,
-    chatId: externalChatId,
-    count: pageSize,
-    offset,
-    timeTo,
-    timeFrom: params.timeFrom,
-    sort: params.sort ?? 'asc',
-  });
   const messages = dedupeWhapiHistoryMessages(messagePage.messages);
   const orderedMessages = [...messages].sort((a, b) => {
     const aTime = Number(a.timestamp ?? 0);
@@ -4546,7 +4608,7 @@ export async function syncWhapiDirectChatMessages(
         || (toTrimmedString(message.type) || 'text') === 'text'
       );
 
-      if (canCheckSemanticDuplicate) {
+      if (canCheckSemanticDuplicate && chat.id) {
         let existingMessageQuery = supabaseAdmin
           .from('comm_whatsapp_messages')
           .select('id')
@@ -4577,7 +4639,7 @@ export async function syncWhapiDirectChatMessages(
 
     const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
       channelId: channel.id,
-      externalChatId,
+      externalChatId: canonicalExternalChatId,
       phoneNumber: phoneDigits,
       displayName,
       pushName,
@@ -4618,6 +4680,11 @@ export async function syncWhapiDirectChatMessages(
       },
     });
 
+    persistedChatId = persisted.chatId;
+    if (persisted.inserted && !chat.id) {
+      chat.id = persisted.chatId;
+      await recordIdentityConflict(persisted.chatId);
+    }
     if (persisted.inserted) {
       insertedCount += 1;
     } else {
@@ -4628,7 +4695,7 @@ export async function syncWhapiDirectChatMessages(
   const hasMore = messagePage.hasMore && messagePage.nextOffset > offset;
 
   return {
-    chatId: chat.id,
+    chatId: persistedChatId,
     canonicalExternalChatId,
     fetched: orderedMessages.length,
     inserted: insertedCount,

@@ -136,6 +136,32 @@ export const normalizeWhapiPhoneChatId = (value: unknown): string => {
   return phone.length >= 7 && phone.length <= 15 ? `${phone}@s.whatsapp.net` : '';
 };
 
+/** A provider sender is only a lookup hint, never proof for merging chats. */
+export const getWhapiInboundPhoneHint = (messages: readonly {
+  direction: string;
+  sender_phone?: unknown;
+  metadata?: unknown;
+}[], ownPhoneNumber?: unknown): string => {
+  const ownKeys = new Set(getCommWhatsAppPhoneLookupKeys(ownPhoneNumber));
+  let candidate = '';
+  let candidateKeys: Set<string> | null = null;
+  for (const message of messages) {
+    if (message.direction !== 'inbound') continue;
+    const metadata = message.metadata && typeof message.metadata === 'object'
+      ? message.metadata as Record<string, unknown> : {};
+    for (const value of [message.sender_phone, metadata.from]) {
+      const phoneChatId = normalizeWhapiPhoneChatId(value);
+      if (!phoneChatId) continue;
+      const keys = getCommWhatsAppPhoneLookupKeys(extractPhoneFromChatId(phoneChatId));
+      if (keys.some((key) => ownKeys.has(key))) continue;
+      if (candidateKeys && !keys.some((key) => candidateKeys?.has(key))) return '';
+      candidate ||= phoneChatId;
+      candidateKeys ??= new Set(keys);
+    }
+  }
+  return candidate;
+};
+
 export const formatPhoneFromDigits = (digits: string): string => {
   if (digits.length === 13 && digits.startsWith('55')) {
     return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;

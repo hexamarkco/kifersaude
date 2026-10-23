@@ -752,7 +752,7 @@ export default function ContractsManager({
           />
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader className="kds-table-fixed">
+            <Table size="sm" stickyHeader className="min-w-[75rem]" columnWidths={['20%', '15%', '17%', '16%', '14%', '9%', '9%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />

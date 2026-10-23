@@ -15,16 +15,23 @@
   border-collapse: collapse;
   font-family: var(--font-sans);
   font-weight: var(--font-weight-regular);
-  table-layout: auto;
+  table-layout: fixed;
 }
 .kds-table-fixed {
   table-layout: fixed;
 }
-.kds-table-fixed .kds-table-head,
-.kds-table-fixed .kds-table-cell {
+.kds-table .kds-table-head,
+.kds-table .kds-table-cell {
   white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+.kds-table-head button {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  text-align: inherit;
 }
 
 .kds-table-md { font-size: 0.875rem; }

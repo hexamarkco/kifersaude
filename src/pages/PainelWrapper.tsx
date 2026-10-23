@@ -23,6 +23,7 @@ import {
 } from '../design-system';
 import { RefreshCw } from 'lucide-react';
 import type { TabNavigationOptions } from '../types/navigation';
+import { getConfigAreaForTab, hasConfigAreaAccess } from '../features/config';
 
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
@@ -37,6 +38,7 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'lembretes': 'agenda',
   'blog': 'blog',
   'config': 'config',
+  'automacoes': 'automation-hub',
 };
 
 const TAB_ROUTE_MAP: Record<string, string> = {
@@ -49,6 +51,7 @@ const TAB_ROUTE_MAP: Record<string, string> = {
   'whatsapp-campaigns': 'disparos',
   'blog': 'blog',
   'config': 'config',
+  'automation-hub': 'automacoes',
 };
 
 export default function PainelWrapper() {
@@ -89,21 +92,27 @@ export default function PainelWrapper() {
       ['blog', getRoleModulePermission(role, 'blog').can_view],
       [
         'config',
-        ['config-system', 'config-users', 'config-automation', 'config-integrations', 'config-access'].some(
-          (moduleId) => getRoleModulePermission(role, moduleId).can_view,
-        ),
+        hasConfigAreaAccess(role, getRoleModulePermission, 'settings'),
       ],
+      ['automation-hub', hasConfigAreaAccess(role, getRoleModulePermission, 'automation')],
     ];
 
     return new Set(entries.filter(([, allowed]) => allowed).map(([tabId]) => tabId));
   }, [getRoleModulePermission, role]);
 
-  const activeTab = useMemo(() => {
+  const requestedTab = useMemo(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
     const route = pathParts[1] || 'dashboard';
-    const requestedTab = ROUTE_TAB_MAP[route] || 'dashboard';
+    if (route === 'config' || route === 'automacoes') {
+      const area = getConfigAreaForTab(new URLSearchParams(location.search).get('tab'));
+      if (area) return area === 'automation' ? 'automation-hub' : 'config';
+    }
+    return ROUTE_TAB_MAP[route] || 'dashboard';
+  }, [location.pathname, location.search]);
+
+  const activeTab = useMemo(() => {
     return validTabIds.has(requestedTab) ? requestedTab : (Array.from(validTabIds)[0] ?? 'dashboard');
-  }, [location.pathname, validTabIds]);
+  }, [requestedTab, validTabIds]);
 
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
@@ -178,10 +187,6 @@ export default function PainelWrapper() {
       return;
     }
 
-    const pathParts = location.pathname.split('/').filter(Boolean);
-    const route = pathParts[1] || 'dashboard';
-    const requestedTab = ROUTE_TAB_MAP[route] || 'dashboard';
-
     if (validTabIds.has(requestedTab)) {
       return;
     }
@@ -189,7 +194,7 @@ export default function PainelWrapper() {
     const fallbackTab = Array.from(validTabIds)[0];
     const fallbackRoute = fallbackTab ? TAB_ROUTE_MAP[fallbackTab] : 'dashboard';
     navigate(`/painel/${fallbackRoute}`, { replace: true });
-  }, [configLoading, location.pathname, navigate, validTabIds]);
+  }, [configLoading, requestedTab, navigate, validTabIds]);
 
   const handleCloseNotification = (reminder: NotificationReminder) => {
     setActiveNotifications((prev) => prev.filter((item) => item !== reminder));

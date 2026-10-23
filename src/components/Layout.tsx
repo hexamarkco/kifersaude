@@ -8,6 +8,7 @@ import {
   Moon,
   LogOut,
   Settings,
+  Workflow,
   MessageCircle,
   Sun,
   ChevronDown,
@@ -39,7 +40,7 @@ import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { CONFIG_MODULE_IDS } from '../lib/accessControl';
+import { hasConfigAreaAccess } from '../features/config';
 
 type TabConfig = {
   id: string;
@@ -182,7 +183,11 @@ export default function Layout({
     baseTabs.push({ id: 'financeiro', label: 'Financeiro', icon: PiggyBank, children: financeiroChildren });
   }
 
-  const canViewConfig = canView('config') || CONFIG_MODULE_IDS.some((moduleId) => canView(moduleId));
+  if (hasConfigAreaAccess(currentRole, getRoleModulePermission, 'automation')) {
+    baseTabs.push({ id: 'automation-hub', label: 'Automações e IA', icon: Workflow });
+  }
+
+  const canViewConfig = hasConfigAreaAccess(currentRole, getRoleModulePermission, 'settings');
 
   const tabs = canViewConfig
     ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]

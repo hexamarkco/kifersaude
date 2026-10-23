@@ -229,7 +229,7 @@ export default function LeadStatusManager() {
             <div className="flex flex-wrap items-center justify-end gap-2 md:contents">
               <div className="w-14 md:w-auto"><Input size="sm" type="number" min="0" aria-label={`Ordem da etapa ${status.nome}`} value={drafts[status.id]?.ordem ?? String(status.ordem)}
                 onChange={(event) => updateDraft(status.id, { ordem: event.target.value })} onBlur={() => void handleOrderBlur(status.id, status.ordem)} disabled={isProcessing} /></div>
-              <div className="w-10"><Input size="sm" type="color" value={status.cor} onChange={(event) => void handleUpdate(status.id, { cor: event.target.value })} disabled={isProcessing} aria-label={`Cor do status ${status.nome}`} /></div>
+              <div className="w-14"><Input size="sm" type="color" value={status.cor} onChange={(event) => void handleUpdate(status.id, { cor: event.target.value })} disabled={isProcessing} aria-label={`Cor do status ${status.nome}`} /></div>
               <IconButton onClick={() => void handleSetDefault(status.id)} variant={status.padrao ? 'soft' : 'ghost'} disabled={isProcessing || status.padrao} size="sm"
                 aria-label={status.padrao ? `${status.nome} é o status padrão` : `Definir ${status.nome} como padrão`} title={status.padrao ? 'Etapa padrão' : 'Definir como padrão'}><Star className={status.padrao ? 'fill-current' : ''} aria-hidden="true" /></IconButton>
               <IconButton onClick={() => void handleDelete(status.id)} variant="danger" disabled={isProcessing} size="sm" aria-label={`Excluir status ${status.nome}`} title="Excluir etapa"><Trash2 aria-hidden="true" /></IconButton>

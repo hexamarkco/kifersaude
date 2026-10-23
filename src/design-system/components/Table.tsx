@@ -9,10 +9,11 @@ export type TableProps = HTMLAttributes<HTMLTableElement> & {
   size?: TableSize;
   striped?: boolean;
   stickyHeader?: boolean;
+  columnWidths?: readonly string[];
 };
 
 const Table = forwardRef<HTMLTableElement, TableProps>(function Table(
-  { size = 'md', striped = false, stickyHeader = false, className, children, ...props },
+  { size = 'md', striped = false, stickyHeader = false, columnWidths, className, children, ...props },
   ref,
 ) {
   return (
@@ -29,6 +30,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(function Table(
         )}
         {...props}
       >
+        {columnWidths && <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }} />)}</colgroup>}
         {children}
       </table>
     </div>

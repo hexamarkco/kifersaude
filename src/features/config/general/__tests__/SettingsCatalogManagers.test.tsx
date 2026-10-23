@@ -127,3 +127,26 @@ test('cancelar a confirmação não exclui a origem', async () => {
     assert.deepEqual(mocks.calls, []);
   } finally { view.unmount(); }
 });
+
+test('listas de cadastro filtram por nome sem acentos e ordenam sem gravar a ordem de negócio', async () => {
+  reset();
+  mocks.options = { contract_modalidade: [
+    { id: 'z', category: 'contract_modalidade', label: 'Zeta', value: 'z', ordem: 1, ativo: true, created_at: '', updated_at: '' },
+    { id: 'a', category: 'contract_modalidade', label: 'Álfa', value: 'a', ordem: 2, ativo: true, created_at: '', updated_at: '' },
+  ] };
+  const view = render(<ConfigOptionManager category="contract_modalidade" title="Modalidades" />);
+  try {
+    const rowNames = () => Array.from(view.container.querySelectorAll<HTMLInputElement>('ul li input[id^="config-option-label"]')).map((input) => input.value);
+    assert.deepEqual(rowNames(), ['Zeta', 'Álfa']);
+    await act(async () => button(view.container, 'Ordenar por Nome da opção').click());
+    assert.deepEqual(rowNames(), ['Álfa', 'Zeta']);
+    const search = view.container.querySelector<HTMLInputElement>('input[aria-label="Buscar em Modalidades"]');
+    assert.ok(search);
+    await changeInput(search, 'alfa');
+    assert.deepEqual(rowNames(), ['Álfa']);
+    assert.deepEqual(mocks.calls, []);
+    assert.equal(view.container.querySelector('.kds-card'), null);
+    await changeInput(search, 'inexistente');
+    assert.ok(view.container.textContent?.includes('Nenhum item encontrado'));
+  } finally { view.unmount(); }
+});

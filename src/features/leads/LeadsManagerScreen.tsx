@@ -1935,7 +1935,9 @@ export default function LeadsManager({
                 </Surface>
             )}
             <div className="hidden lg:block">
-              <Table size="sm" stickyHeader>
+              <Table size="sm" stickyHeader className="min-w-[80rem]" columnWidths={canSelectLeads
+                ? ['3.5%', '20.5%', '14%', '12%', '10%', '14%', '10%', '16%']
+                : ['24%', '14%', '12%', '10%', '14%', '10%', '16%']}>
                 <TableHeader>
                   <TableRow>
                     {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}

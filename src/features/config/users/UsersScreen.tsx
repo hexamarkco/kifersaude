@@ -378,7 +378,7 @@ export default function UsersScreen() {
         <div className="space-y-3">
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader className="min-w-[720px]">
+            <Table size="sm" stickyHeader className="min-w-[720px]" columnWidths={['43%', '25%', '17%', '15%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Usuário" sortDirection={sorting.key === "username" ? sorting.direction : null} onSort={() => sortBy("username")} />

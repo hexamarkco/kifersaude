@@ -1759,6 +1759,11 @@
   background: var(--bg-canvas);
 }
 
+html:has(.kds-app-shell .terracota-content-shell:not(.is-full-bleed)),
+.kds-app-shell .terracota-content-shell:not(.is-full-bleed) > .terracota-main {
+  scrollbar-gutter: stable;
+}
+
 .kds-sidebar {
   border-color: var(--border-default);
   color: var(--text-secondary);

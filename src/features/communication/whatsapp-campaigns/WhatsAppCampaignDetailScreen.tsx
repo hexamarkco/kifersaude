@@ -790,7 +790,7 @@ export default function WhatsAppCampaignDetailScreen() {
               {targets.length === 0 && <EmptyState title="Nenhum contato nesta lista." />}
             </div>
             <div className="hidden lg:block">
-              <Table size="sm" className={loadingTargetsPage ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              <Table size="sm" columnWidths={['24%', '12%', '7%', '16%', '16%', '25%']} className={`min-w-[70rem] transition-opacity ${loadingTargetsPage ? 'opacity-60' : ''}`}>
                 <TableHeader>
                   <TableRow>
                     <SortableTableHead label="Contato" sortDirection={targetSorting.key === "contact" ? targetSorting.direction : null} onSort={() => sortTargetsBy("contact")} />

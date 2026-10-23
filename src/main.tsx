@@ -94,6 +94,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="lembretes" element={<Navigate to="/painel/agenda" replace />} />
               <Route path="blog" element={<BlogTab />} />
               <Route path="config" element={<ConfigPage />} />
+              <Route path="automacoes" element={<ConfigPage area="automation" />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -1008,19 +1008,22 @@ export default function HomePage() {
         </header>
 
         <main id="conteudo-principal">
-        <section id="topo" className="relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8 lg:pb-0 lg:pt-20">
+        <section id="topo" className="kds-public-home-hero relative overflow-hidden [background:var(--surface-hero-bg)] px-4 pt-24 sm:px-6 sm:pt-28 lg:px-8">
           <div aria-hidden="true" className="kds-public-hero-glow pointer-events-none absolute inset-0 bg-[var(--brand-primary-muted)] opacity-20" />
           <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-one pointer-events-none" />
           <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-two pointer-events-none" />
-          <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-4">
-            <div className="kds-public-hero-copy relative z-10 max-w-2xl py-6 sm:py-10 lg:py-16">
+          <div className="relative mx-auto grid w-full max-w-7xl items-center gap-6 lg:grid-cols-2 lg:gap-0">
+            <div className="kds-public-hero-copy relative z-10 min-w-0 pt-6 sm:pt-10 lg:self-start lg:pb-16 lg:pt-24">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)]">
-                <Heart aria-hidden="true" className="h-4 w-4 fill-current text-[color:var(--brand-primary)]" />
+                <Heart aria-hidden="true" className="h-4 w-4 shrink-0 fill-current text-[color:var(--brand-primary)]" />
                 Corretora de planos de saúde no Rio de Janeiro
               </div>
 
-              <h1 className="mt-7 max-w-[11ch] font-[var(--font-display)] text-[clamp(2.75rem,6.2vw,5.75rem)] font-bold leading-[0.96] text-[color:var(--text-primary)]">
-                Plano de saúde no Rio de Janeiro com <span className="text-[color:var(--brand-primary)]">orientação de verdade.</span>
+              <h1 className="kds-public-home-hero-title mt-7 font-[var(--font-display)] font-bold text-[color:var(--text-primary)]">
+                <span className="lg:block">Plano de saúde</span>{' '}
+                <span className="lg:block">no Rio de Janeiro</span>{' '}
+                <span className="lg:block">com <span className="text-[color:var(--brand-primary)]">orientação</span></span>{' '}
+                <span className="text-[color:var(--brand-primary)] lg:block">de verdade.</span>
               </h1>
 
               <p className="mt-7 max-w-xl text-lg leading-8 text-[color:var(--text-secondary)] sm:text-xl">
@@ -1032,7 +1035,7 @@ export default function HomePage() {
                 Seu cuidado é a nossa prioridade
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
@@ -1065,18 +1068,19 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <div className="kds-public-hero-visual relative mx-auto flex w-full max-w-xl items-end justify-center self-end lg:h-[calc(100vh-5rem)] lg:min-h-[640px]">
-              <div aria-hidden="true" className="absolute bottom-[7%] left-1/2 aspect-square w-[92%] -translate-x-1/2 rounded-full bg-[var(--brand-primary-muted)]" />
-              <div aria-hidden="true" className="absolute bottom-[10%] left-[4%] h-[54%] w-[92%] rounded-[50%] border border-[color:var(--brand-primary-border)] opacity-50" />
+            <div className="kds-public-hero-visual relative mx-auto flex w-full min-w-0 max-w-xl items-end justify-center self-end lg:max-w-none">
+              <div aria-hidden="true" className="kds-public-home-hero-disc absolute left-1/2 aspect-square -translate-x-1/2 rounded-full bg-[var(--brand-primary-muted)]" />
+              <div aria-hidden="true" className="kds-public-home-hero-ring absolute rounded-[50%] border border-[color:var(--brand-primary-border)]" />
+              <div aria-hidden="true" className="kds-public-home-hero-dot absolute aspect-square rounded-full" />
               <img
                 src="/luiza-kifer-hero.png"
                 alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
                 width="1728"
                 height="2304"
                 loading="eager"
-                className="relative z-10 h-auto max-h-[720px] w-[88%] object-contain object-bottom lg:w-full"
+                className="kds-public-home-hero-portrait relative z-10 h-auto object-contain object-bottom"
               />
-              <div className="absolute bottom-[9%] right-0 z-20 flex items-center gap-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)] sm:right-[2%] sm:px-5 sm:py-4">
+              <div className="absolute bottom-[12%] right-0 z-20 flex items-center gap-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)] sm:px-5 sm:py-4">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary-muted)] text-[color:var(--brand-primary)]">
                   <UserRound aria-hidden="true" className="h-5 w-5" />
                 </span>

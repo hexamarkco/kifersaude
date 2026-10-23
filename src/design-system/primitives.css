@@ -343,6 +343,98 @@
 .kds-public-hero-copy > :nth-child(6) { animation-delay: 420ms; }
 .kds-public-hero-visual { animation-delay: 220ms; }
 
+/* Home-only composition; operator landing heroes retain their own layout. */
+.kds-public-home-hero::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+  bottom: -26rem;
+  left: 44%;
+  width: 64rem;
+  height: 36rem;
+  border: 1px solid var(--brand-primary-border);
+  border-radius: 50%;
+}
+
+.kds-public-home-hero-title {
+  max-width: 18ch;
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.kds-public-home-hero-portrait {
+  width: 100%;
+  max-width: none;
+}
+
+.kds-public-home-hero-disc {
+  top: 8%;
+  width: 108%;
+}
+
+.kds-public-home-hero-ring {
+  top: 6%;
+  left: 2%;
+  width: 108%;
+  height: 76%;
+  transform: rotate(-18deg);
+}
+
+.kds-public-home-hero-dot {
+  top: 24%;
+  right: 0;
+  width: 9%;
+  background: var(--brand-primary-border);
+}
+
+.kds-public-home-hero > .kds-public-hero-orb {
+  display: none;
+}
+
+.kds-public-home-hero > .kds-public-hero-orb-one {
+  top: 10%;
+  right: 4%;
+  width: clamp(8rem, 14vw, 13rem);
+  background: var(--brand-primary-muted);
+}
+
+.kds-public-home-hero > .kds-public-hero-orb-two {
+  bottom: 12%;
+  left: 44%;
+  border: 0;
+  background: var(--brand-primary-muted);
+}
+
+@media (min-width: 1024px) {
+  .kds-public-home-hero > .kds-public-hero-orb {
+    display: block;
+  }
+
+  .kds-public-home-hero .kds-public-hero-visual {
+    padding-top: 2rem;
+  }
+
+  .kds-public-home-hero-title {
+    max-width: none;
+    font-size: clamp(3rem, 5vw, 4.5rem);
+  }
+
+  .kds-public-home-hero-portrait {
+    width: calc(100% + 4.5rem);
+    flex-shrink: 0;
+  }
+
+  .kds-public-home-hero-disc {
+    width: 116%;
+  }
+
+  .kds-public-home-hero-ring {
+    left: -2%;
+    width: 116%;
+  }
+}
+
 .kds-public-hero-glow::before,
 .kds-public-hero-glow::after {
   position: absolute;

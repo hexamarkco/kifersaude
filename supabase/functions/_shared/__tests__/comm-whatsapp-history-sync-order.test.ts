@@ -31,12 +31,16 @@ test('a consulta à Whapi preserva o sentido de ordenação solicitado', async (
     count: 25,
     offset: 0,
     sort: 'desc',
+    timeFrom: 1792700000,
+    timeTo: 1792800000,
   });
 
   const requestedUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
   assert.equal(requestedUrl.searchParams.get('sort'), 'desc');
   assert.equal(requestedUrl.searchParams.get('count'), '25');
   assert.equal(requestedUrl.searchParams.get('offset'), '0');
+  assert.equal(requestedUrl.searchParams.get('time_from'), '1792700000');
+  assert.equal(requestedUrl.searchParams.get('time_to'), '1792800000');
 });
 
 test('repete somente a leitura de histórico após timeout e preserva o cursor', async () => {

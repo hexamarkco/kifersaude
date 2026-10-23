@@ -2890,6 +2890,7 @@ export async function fetchWhapiChatMessagesPage(params: {
   count?: number;
   offset?: number;
   timeTo?: number;
+  timeFrom?: number;
   sort?: 'asc' | 'desc';
 }): Promise<WhapiChatMessagesPage> {
   const count = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 500);
@@ -2901,6 +2902,9 @@ export async function fetchWhapiChatMessagesPage(params: {
   url.searchParams.set('sort', params.sort === 'asc' ? 'asc' : 'desc');
   if (Number.isFinite(timeTo) && timeTo > 0) {
     url.searchParams.set('time_to', String(Math.floor(timeTo)));
+  }
+  if (Number.isFinite(params.timeFrom) && Number(params.timeFrom) > 0) {
+    url.searchParams.set('time_from', String(Math.floor(Number(params.timeFrom))));
   }
 
   const requestHistory = () => fetchWhapiWithTimeout(url.toString(), {
@@ -4315,6 +4319,7 @@ export type SyncWhapiDirectChatMessagesParams = {
   offset?: number;
   count?: number;
   timeTo?: number;
+  timeFrom?: number;
   sort?: 'asc' | 'desc';
 };
 
@@ -4445,6 +4450,7 @@ export async function syncWhapiDirectChatMessages(
     count: pageSize,
     offset,
     timeTo,
+    timeFrom: params.timeFrom,
     sort: params.sort ?? 'asc',
   });
   const messages = dedupeWhapiHistoryMessages(messagePage.messages);
@@ -4666,6 +4672,7 @@ const syncWhapiGroupChatMessages = async (
     count: pageSize,
     offset,
     timeTo,
+    timeFrom: params.timeFrom,
     sort: params.sort ?? 'asc',
   });
   const messages = dedupeWhapiHistoryMessages(messagePage.messages);

@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { projectRecoveryChats } from './discovery.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -21,6 +22,7 @@ declare const Deno: {
 };
 
 type SyncAllBody = {
+  mode?: 'discover';
   chatOffset?: number;
   chatCount?: number;
   pagesPerChat?: number;
@@ -114,6 +116,19 @@ Deno.serve(async (req: Request) => {
         status: 400,
         headers: jsonHeaders,
       });
+    }
+
+    if (body.mode === 'discover') {
+      const count = Math.min(Math.max(Math.floor(Number(body.chatCount) || 100), 1), 200);
+      const chatsPage = await fetchWhapiChatsPage({ token: settings.token, count, offset: chatOffset });
+      const groupsPage = await fetchWhapiGroupsPage({ token: settings.token, count, offset: chatOffset });
+      const hasMoreChats = chatsPage.hasMore || groupsPage.hasMore;
+      return new Response(JSON.stringify({
+        success: true,
+        chats: projectRecoveryChats(chatsPage.chats, groupsPage.groups),
+        hasMoreChats,
+        nextChatOffset: hasMoreChats ? chatOffset + count : null,
+      }), { status: 200, headers: jsonHeaders });
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);

@@ -22,6 +22,7 @@ type SyncBody = {
   offset?: number;
   count?: number;
   timeTo?: number;
+  timeFrom?: number;
 };
 
 const jsonHeaders = {
@@ -116,6 +117,7 @@ Deno.serve(async (req: Request) => {
       offset,
       count: pageSize,
       timeTo,
+      timeFrom: body.timeFrom,
       sort: 'desc',
     });
 

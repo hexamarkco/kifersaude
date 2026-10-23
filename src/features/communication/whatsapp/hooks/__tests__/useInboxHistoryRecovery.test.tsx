@@ -145,7 +145,7 @@ test('limita cada execução a 10 páginas e retoma do cursor salvo', async () =
     const options = args[1] as { offset: number; timeTo: number };
     return Promise.resolve(pageResult({
       hasMore: true,
-      nextOffset: options.offset + 100,
+      nextOffset: options.offset + 25,
       timeTo: 900,
     }));
   });
@@ -155,15 +155,15 @@ test('limita cada execução a 10 páginas e retoma do cursor salvo', async () =
   assert.equal(mocks.sync.mock.calls.length, 10);
   assert.equal(mocks.sync.mock.calls[0]?.[0], '5511999999999@s.whatsapp.net');
   const firstOptions = mocks.sync.mock.calls[0]?.[1] as { offset: number; count: number };
-  assert.deepEqual({ offset: firstOptions.offset, count: firstOptions.count }, { offset: 0, count: 100 });
-  assert.equal((mocks.sync.mock.calls[9]?.[1] as { offset: number }).offset, 900);
+  assert.deepEqual({ offset: firstOptions.offset, count: firstOptions.count }, { offset: 0, count: 25 });
+  assert.equal((mocks.sync.mock.calls[9]?.[1] as { offset: number }).offset, 225);
   assert.deepEqual(mocks.toastSuccess.mock.calls[0], [
     'Histórico sincronizado (10 mensagens). Ainda há mais mensagens; execute a recuperação novamente para continuar.',
   ]);
 
   mocks.sync.mockResolvedValueOnce(pageResult({ imported: 2, fetched: 2, inserted: 2, timeTo: null }));
   await act(async () => actions.handleRecoverHistory());
-  assert.equal((mocks.sync.mock.calls[10]?.[1] as { offset: number }).offset, 1000);
+  assert.equal((mocks.sync.mock.calls[10]?.[1] as { offset: number }).offset, 250);
   assert.equal((mocks.sync.mock.calls[10]?.[1] as { timeTo: number }).timeTo, 900);
   assert.deepEqual(mocks.toastSuccess.mock.calls[1], [
     'Histórico sincronizado (2 mensagens). Use "Carregar mais" para navegar nas mais antigas.',
@@ -189,7 +189,7 @@ test('preserva o cursor após uma falha intermediária e retoma sem repetir pág
     assert.equal(mocks.loadMessages.mock.calls.length, 0);
 
     await act(async () => actions.handleRecoverHistory());
-    assert.deepEqual(mocks.sync.mock.calls[2]?.[1], { offset: 100, count: 100, timeTo: 700 });
+    assert.deepEqual(mocks.sync.mock.calls[2]?.[1], { offset: 100, count: 25, timeTo: 700 });
     assert.equal(mocks.loadMessages.mock.calls.length, 1);
     assert.equal(mocks.loadChats.mock.calls.length, 1);
     view.unmount();

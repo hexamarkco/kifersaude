@@ -116,6 +116,7 @@ Deno.serve(async (req: Request) => {
       offset,
       count: pageSize,
       timeTo,
+      sort: 'desc',
     });
 
     return new Response(JSON.stringify({

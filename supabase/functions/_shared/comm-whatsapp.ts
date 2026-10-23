@@ -647,6 +647,13 @@ export async function fetchWhapiWithTimeout(
 
   try {
     return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const timeoutError = new Error('O WhatsApp demorou para responder à consulta. Aguarde um momento e tente recuperar as mensagens novamente.');
+      timeoutError.name = 'TimeoutError';
+      throw timeoutError;
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -2896,12 +2903,20 @@ export async function fetchWhapiChatMessagesPage(params: {
     url.searchParams.set('time_to', String(Math.floor(timeTo)));
   }
 
-  const response = await fetchWhapiWithTimeout(url.toString(), {
+  const requestHistory = () => fetchWhapiWithTimeout(url.toString(), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
+  }, 30_000);
+  // Only retry the read, before any messages are persisted. Reconnecting a
+  // channel can temporarily make history queries slower than ordinary reads.
+  const response = await requestHistory().catch((error: unknown) => {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return requestHistory();
+    }
+    throw error;
   });
   const payload = await readResponsePayload(response);
   if (!response.ok) {

@@ -66,7 +66,7 @@ export const useInboxHistoryRecovery = ({
       while (hasMore && pages < 10) {
         const result = await whatsappConversationsRepository.syncHistory(targetChat.external_chat_id, {
           offset,
-          count: 100,
+          count: 25,
           timeTo,
         });
         imported += result.imported;

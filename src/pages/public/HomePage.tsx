@@ -1363,17 +1363,17 @@ export default function HomePage() {
 
             <Reveal className="mt-12 space-y-3" delayMs={100}>
               {faqItems.map((faq, index) => (
-                  <div key={faq.question} className="kds-public-motion-card rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 sm:px-6">
+                <div key={faq.question}>
                   <Button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
                     variant="ghost"
                     size="md"
                     fullWidth
-                    className="justify-between text-left"
+                    className="kds-public-faq-trigger justify-between text-left"
                     aria-expanded={openFaqIndex === index}
                   >
-                    <span className="text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
+                    <span className="min-w-0 whitespace-normal text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
                     {openFaqIndex === index ? (
                       <Minus className="kds-control-icon shrink-0 text-[color:var(--brand-primary)]" />
                     ) : (
@@ -1385,7 +1385,7 @@ export default function HomePage() {
                     style={{ gridTemplateRows: openFaqIndex === index ? '1fr' : '0fr' }}
                   >
                     <div className="overflow-hidden">
-                      <p className="pt-3 leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
+                      <p className="px-4 pb-2 pt-3 leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
                     </div>
                   </div>
                 </div>

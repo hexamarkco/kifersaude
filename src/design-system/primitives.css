@@ -343,6 +343,11 @@
 .kds-public-hero-copy > :nth-child(6) { animation-delay: 420ms; }
 .kds-public-hero-visual { animation-delay: 220ms; }
 
+.kds-public-shell .kds-button.kds-public-faq-trigger {
+  height: auto;
+  padding-block: var(--space-2);
+}
+
 /* Home-only composition; operator landing heroes retain their own layout. */
 .kds-public-home-hero::before {
   position: absolute;

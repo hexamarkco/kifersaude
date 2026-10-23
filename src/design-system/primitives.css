@@ -344,6 +344,21 @@
 .kds-public-hero-visual { animation-delay: 220ms; }
 
 /* Home-only composition; operator landing heroes retain their own layout. */
+.kds-public-home-hero::before {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+  z-index: 1;
+  inset-inline: 0;
+  bottom: 0;
+  height: clamp(5rem, 10vw, 9rem);
+  background: linear-gradient(to bottom, transparent, var(--bg-surface));
+}
+
+.kds-public-home-hero .kds-public-hero-visual {
+  z-index: 1;
+}
+
 .kds-public-home-hero::after {
   position: absolute;
   content: '';
@@ -366,6 +381,8 @@
 .kds-public-home-hero-portrait {
   width: 100%;
   max-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - clamp(5rem, 10vw, 9rem)), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - clamp(5rem, 10vw, 9rem)), transparent);
 }
 
 .kds-public-home-hero-disc {

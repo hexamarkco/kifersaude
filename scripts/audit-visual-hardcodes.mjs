@@ -147,7 +147,15 @@ const auditFile = async (filePath) => {
   const matches = [];
   const isDesignSystemFile = path.relative(projectRoot, filePath).split(path.sep).includes('design-system');
 
-  for (const value of source.match(/(?:linear|radial|conic)-gradient/gi) || []) {
+  // Requested home hero fade: allow only these exact transition/mask values in
+  // their owning selectors. All other gradients still fail the flat UI audit.
+  const gradientSource = path.relative(projectRoot, filePath).split(path.sep).join('/') === 'src/design-system/primitives.css'
+    ? source.replace(/\.kds-public-home-hero(?:::before|-portrait)\s*\{[^}]*\}/g, (block) => block
+      .replaceAll('linear-gradient(to bottom, transparent, var(--bg-surface))', 'none')
+      .replaceAll('linear-gradient(to bottom, black calc(100% - clamp(5rem, 10vw, 9rem)), transparent)', 'none'))
+    : source;
+
+  for (const value of gradientSource.match(/(?:linear|radial|conic)-gradient/gi) || []) {
     matches.push({ type: 'non-flat-gradient', value });
   }
 

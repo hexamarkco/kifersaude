@@ -8,7 +8,7 @@ import PrivacyPolicyPage from './PrivacyPolicyPage';
 import PrivacyNotice from './components/PrivacyNotice';
 
 // Sem AuthProvider nem mocks de APIs: o documento precisa renderizar sozinho.
-test('renderiza sem sessão, com canais reais, revisão explícita e seções acessíveis', () => {
+test('renderiza sem sessão, com canais reais, texto final e seções acessíveis', () => {
   const view = render(<PrivacyPolicyPage />);
   assert.equal(view.container.querySelector('h1')?.textContent, 'Política de Privacidade');
   const sections = [...view.container.querySelectorAll('main section')];
@@ -16,7 +16,9 @@ test('renderiza sem sessão, com canais reais, revisão explícita e seções ac
   for (const section of sections) {
     assert.ok(view.container.querySelector(`[id="${section.getAttribute('aria-labelledby')}"]`));
   }
-  assert.ok(view.container.textContent?.includes('Revisão antes da publicação'));
+  assert.doesNotMatch(view.container.textContent ?? '', /minuta|revisão antes da publicação|após aprovação|código inspecionado/i);
+  assert.equal(view.container.querySelector('aside[aria-label="Documento em revisão"]'), null);
+  assert.ok(view.container.textContent?.includes('Última atualização:'));
   assert.ok(view.container.textContent?.includes(siteConfig.cnpj));
   assert.ok(view.container.querySelector(`a[href="mailto:${siteConfig.email}"]`));
   assert.ok(view.container.querySelector('footer a[href="/politica-de-privacidade"]'));

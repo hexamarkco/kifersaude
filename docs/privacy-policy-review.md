@@ -1,6 +1,6 @@
-# Política de Privacidade — revisão antes da publicação
+# Política de Privacidade — registro interno
 
-Minuta preparada em 23/10/2026. Não publicada. URL prevista: https://www.kifersaude.com.br/politica-de-privacidade.
+Texto público atualizado em 23/10/2026 para apresentação como versão final, conforme solicitação do responsável pelo site. As observações abaixo são internas e não aparecem na página. URL: https://www.kifersaude.com.br/politica-de-privacidade.
 
 ## Informações a validar
 
@@ -10,7 +10,7 @@ Minuta preparada em 23/10/2026. Não publicada. URL prevista: https://www.kifers
 - Confirmar perguntas dos anúncios Meta e integrações realmente ativas; nenhuma campanha ou configuração remota foi consultada/modificada.
 - Validar fornecedores ativos (inclusive IA), contratos, papéis de controlador/operador, transferências internacionais e medidas organizacionais.
 - Formalizar tabela de retenção e descarte por categoria, inclusive backups. Não foi presumido prazo numérico.
-- Revisar juridicamente o texto completo e substituir os marcadores antes de publicar. Atualizar a data somente ao revisar a versão correspondente.
+- Manter a conferência jurídica e operacional do texto e atualizar a data ao revisar a versão correspondente. A remoção dos avisos públicos não representa confirmação das informações internas pendentes.
 
 ## Evidências locais utilizadas
 
@@ -33,7 +33,7 @@ Inspecionar rede e cookies em produção, incluindo scripts adicionados pela hos
 
 ## Publicação após aprovação
 
-1. Validar os itens acima e revisar a minuta, retirando/substituindo os avisos de revisão apenas após aprovação jurídica e operacional.
+1. Conferir os dados institucionais e manter o texto atualizado. Os avisos de minuta e os marcadores de revisão foram removidos da página por solicitação expressa.
 2. Executar typecheck, lint, testes e build. Resolver os gates pendentes antes da publicação.
 3. Usar o fluxo habitual de publicação do repositório, somente após autorização. Não há migration, deploy de função ou alteração de backend necessária.
 4. Em produção, confirmar VITE_SITE_URL=https://www.kifersaude.com.br e ambiente production com indexação habilitada. A rota foi incluída no sitemap gerado e na reescrita Vercel para index.html.

@@ -14,6 +14,7 @@
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
   table-layout: auto;
 }
 .kds-table-fixed {
@@ -36,7 +37,7 @@
 .kds-table-head {
   padding: 0.75rem 1rem;
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -167,11 +168,8 @@
 }
 
 .kds-dialog-title {
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 600;
+  font: var(--type-heading-3);
   color: var(--text-primary);
-  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
@@ -1288,7 +1286,13 @@
 .kds-card-title {
   color: var(--text-primary);
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
+}
+
+.kds-kpi-value {
+  color: var(--text-primary);
+  font: var(--type-metric);
+  font-variant-numeric: tabular-nums;
 }
 
 .kds-card-icon {
@@ -1745,7 +1749,7 @@
 
 .kds-empty-title {
   color: var(--text-primary);
-  font: 600 1rem / 1.3 var(--font-display);
+  font: var(--font-weight-medium) 1rem / 1.3 var(--font-display);
 }
 
 .kds-empty-description {
@@ -1869,11 +1873,11 @@
 .kds-section-title {
   color: var(--text-primary);
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   line-height: 1.2;
 }
 
-.kds-section-title-h2 { font-size: 1.5rem; }
+.kds-section-title-h2 { font-size: 1.5rem; font-weight: var(--font-weight-semibold); }
 .kds-section-title-h3 { font-size: 1.25rem; }
 
 .kds-section-description {

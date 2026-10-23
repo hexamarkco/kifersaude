@@ -28,7 +28,7 @@
 
 .kds-kanban-column-title {
   color: var(--text-primary);
-  font: 700 0.875rem / 1.25 var(--font-sans);
+  font: var(--font-weight-semibold) 0.875rem / 1.25 var(--font-sans);
 }
 
 /* ── Calendar / Date Picker / Agenda ───────────────── */
@@ -52,7 +52,7 @@
 }
 
 .kds-dp-calendar-title {
-  font: 700 0.8125rem/1.2 var(--font-display);
+  font: var(--font-weight-semibold) 0.8125rem/1.2 var(--font-sans);
   color: var(--text-primary);
 }
 
@@ -373,14 +373,15 @@
 
 .kds-op-chip-value {
   color: var(--text-primary);
-  font: 700 0.8125rem / 1 var(--font-sans);
+  font: var(--font-weight-bold) 0.8125rem / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: normal;
   white-space: nowrap;
 }
 
 .kds-op-chip-label {
   color: var(--text-muted);
-  font: 700 0.6875rem / 1 var(--font-sans);
+  font: var(--font-weight-medium) 0.6875rem / 1 var(--font-sans);
   letter-spacing: 0.035em;
   text-transform: uppercase;
   overflow-wrap: normal;
@@ -614,17 +615,17 @@
 
 .kds-op-lead-title {
   color: var(--text-primary);
-  font: 700 1rem / 1.25 var(--font-sans);
+  font: var(--font-weight-semibold) 1rem / 1.25 var(--font-sans);
 }
 
 .kds-op-lead-meta,
 .kds-op-lead-side {
   color: var(--text-secondary);
-  font: 500 0.8125rem / 1.45 var(--font-sans);
+  font: var(--font-weight-regular) 0.8125rem / 1.45 var(--font-sans);
 }
 
 .kds-op-lead-muted { color: var(--text-muted); }
-.kds-op-lead-strong { color: var(--text-secondary); font-weight: 700; }
+.kds-op-lead-strong { color: var(--text-secondary); font-weight: var(--font-weight-semibold); }
 .kds-op-lead-accent { color: var(--accent-gold-hover); }
 .kds-op-lead-danger { color: var(--danger-text); }
 

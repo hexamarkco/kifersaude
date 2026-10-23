@@ -51,15 +51,19 @@
 .kds-heading-sm { font: var(--type-label); }
 
 .kds-text-xs { font: var(--type-caption); }
-.kds-text-sm { font: var(--type-body); }
+.kds-text-sm { font: var(--type-body-sm); }
 .kds-text-md { font: var(--type-body); }
-.kds-text-lg { font-size: 1rem; line-height: 1.55; }
-.kds-text-xl { font-size: 1.125rem; line-height: 1.55; }
+.kds-text-lg { font: var(--type-body-lg); }
+.kds-text-xl { font: var(--type-body-xl); }
 
-.kds-text-weight-regular { font-weight: 400; }
-.kds-text-weight-medium { font-weight: 500; }
-.kds-text-weight-semibold { font-weight: 600; }
-.kds-text-weight-bold { font-weight: 700; }
+.kds-heading-weight-regular,
+.kds-text-weight-regular { font-weight: var(--font-weight-regular); }
+.kds-heading-weight-medium,
+.kds-text-weight-medium { font-weight: var(--font-weight-medium); }
+.kds-heading-weight-semibold,
+.kds-text-weight-semibold { font-weight: var(--font-weight-semibold); }
+.kds-heading-weight-bold,
+.kds-text-weight-bold { font-weight: var(--font-weight-bold); }
 
 .kds-text-tone-primary { color: var(--text-primary); }
 .kds-text-tone-secondary { color: var(--text-secondary); }
@@ -126,8 +130,8 @@
 }
 
 .kds-public-metric-value {
-  font: var(--type-heading-1);
-  font-family: var(--font-sans);
+  font: var(--type-metric-display);
+  font-variant-numeric: tabular-nums;
 }
 
 .kds-public-empty-state {

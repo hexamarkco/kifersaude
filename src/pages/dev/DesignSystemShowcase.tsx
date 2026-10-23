@@ -148,7 +148,7 @@ function Cat({ id, title, description, children }: { id: string; title: string; 
   return (
     <section id={id} className="mb-16 scroll-mt-8">
       <div className="mb-6 border-b border-[var(--border-default)] pb-4">
-        <h2 className="font-[var(--font-display)] text-3xl font-semibold text-[var(--text-primary)]">{title}</h2>
+        <Heading level={2}>{title}</Heading>
         <p className="mt-1 text-sm text-[var(--text-muted)]">{description}</p>
       </div>
       <div className="ds-cat-grid">{children}</div>
@@ -340,9 +340,9 @@ function ShowcaseContent() {
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] px-4 py-16 sm:px-8">
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-2 text-center font-[var(--font-display)] text-5xl font-medium text-[var(--text-primary)] sm:text-6xl">
+        <Heading level={1} className="mb-2 text-center">
           Design System
-        </h1>
+        </Heading>
         <p className="mb-8 text-center text-sm text-[var(--text-muted)]">
           Kifer Saúde · biblioteca completa de componentes, por categoria
         </p>
@@ -351,7 +351,7 @@ function ShowcaseContent() {
 
         {/* ═══════════════════ FOUNDATIONS ═══════════════════ */}
         <Cat id="foundations" title="Foundations" description="Tipografia, layout e superfícies públicas reutilizáveis.">
-          <Item title="Typography" span="md">
+          <Item title="Hierarquia tipográfica" span="full">
             <Stack gap="sm">
               <Heading level={3} size="lg">Leads em negociação</Heading>
               <Text size="sm" tone="secondary">Use a escala tipográfica para diferenciar contexto, conteúdo e apoio.</Text>
@@ -359,6 +359,38 @@ function ShowcaseContent() {
                 <Text size="xs" tone="muted" weight="medium">Última atualização há 2 min</Text>
                 <TextLink href="#feedback" underline>Ver feedback</TextLink>
               </Inline>
+            </Stack>
+          </Item>
+
+          <Item title="Playfair Display nos títulos" span="md">
+            <Stack gap="md">
+              <Heading level={3} size="display">Cuidado em cada <em>escolha.</em></Heading>
+              <Text size="sm">Títulos maiores em medium, seções em semibold e títulos locais em medium. Itálico apenas em destaques editoriais.</Text>
+              {(['regular', 'medium', 'semibold', 'bold'] as const).map((weight) => (
+                <div key={weight}>
+                  <Text size="xs" tone="muted">{weight}</Text>
+                  <Heading level={4} size="lg" weight={weight}>Atendimento com atenção</Heading>
+                </div>
+              ))}
+            </Stack>
+          </Item>
+
+          <Item title="Inter na operação" span="md">
+            <Stack gap="md">
+              {(['regular', 'medium', 'semibold', 'bold'] as const).map((weight) => (
+                <div key={weight}>
+                  <Text size="xs" tone="muted">{weight}</Text>
+                  <Text tone="primary" weight={weight}>Acompanhe cada oportunidade</Text>
+                </div>
+              ))}
+              <Text size="sm">Corpo e apoio em regular, rótulos em medium, ações em semibold e números importantes em bold.</Text>
+              <div className="panel-page-shell">
+                <OperationalMetricChip value="128" label="oportunidades" />
+                <Heading level={4} size="md" className="mt-4">Resumo do atendimento</Heading>
+                <h3 className="kds-op-lead-title mt-2">Ana Paula Costa</h3>
+                <p className="kds-op-lead-meta">Contato recebido hoje</p>
+                <KpiCard title="Contratos ativos" value="1.248" subtitle="Atualizado hoje" className="mt-4" />
+              </div>
             </Stack>
           </Item>
 

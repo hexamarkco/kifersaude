@@ -111,7 +111,7 @@ export type KpiCardProps = Omit<CrmCardProps, 'kind'> & {
 export function KpiCard({ value, trend, chart, children, ...props }: KpiCardProps) {
   return (
     <CrmCard kind="kpi" {...props}>
-      {value && <div className="text-3xl font-semibold tracking-tight text-[var(--text-primary)]">{value}</div>}
+      {value && <div className="kds-kpi-value">{value}</div>}
       {trend && <div className="text-sm text-[var(--text-secondary)]">{trend}</div>}
       {chart && <div className="pt-2">{chart}</div>}
       {children}

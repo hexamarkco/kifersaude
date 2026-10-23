@@ -57,7 +57,7 @@ html,
   overflow-wrap: break-word;
 }
 
-.painel-theme.kifer-ds .panel-page-shell :is(h1, h2, h3, h4) {
+.painel-theme.kifer-ds .panel-page-shell :where(h1, h2, h3, h4):not(.kds-heading, .kds-op-lead-title, .kds-kanban-column-title) {
   font-family: var(--font-display, var(--ks-font-heading));
 }
 

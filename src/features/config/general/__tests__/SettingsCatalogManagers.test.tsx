@@ -5,17 +5,20 @@ import { test, vi } from 'vitest';
 import type { ConfigOption } from '../../domain/types';
 import { CONTRACT_CONFIG_MANAGERS, LEAD_CONFIG_MANAGERS } from '../shared/systemSettingsConfig';
 
-const mocks = vi.hoisted(() => ({
-  calls: [] as unknown[][],
-  errors: [] as string[],
-  confirm: true,
-  options: {} as Record<string, ConfigOption[]>,
-  statuses: [
-    { id: 'initial', nome: 'Contato inicial', cor: '#112233', ordem: 1, ativo: true, padrao: true, created_at: '', updated_at: '' },
-    { id: 'proposal', nome: 'Proposta enviada', cor: '#445566', ordem: 2, ativo: true, padrao: false, created_at: '', updated_at: '' },
-  ],
-  origins: [{ id: 'origin', nome: 'Indicação', ativo: true, visivel_para_observadores: false, created_at: '' }],
-}));
+const mocks = await vi.hoisted(async () => {
+  const { KIFER_THEME_COLORS } = await import('../../../../design-system/tokens');
+  return {
+    calls: [] as unknown[][],
+    errors: [] as string[],
+    confirm: true,
+    options: {} as Record<string, ConfigOption[]>,
+    statuses: [
+      { id: 'initial', nome: 'Contato inicial', cor: KIFER_THEME_COLORS.darkCanvas, ordem: 1, ativo: true, padrao: true, created_at: '', updated_at: '' },
+      { id: 'proposal', nome: 'Proposta enviada', cor: KIFER_THEME_COLORS.lightCanvas, ordem: 2, ativo: true, padrao: false, created_at: '', updated_at: '' },
+    ],
+    origins: [{ id: 'origin', nome: 'Indicação', ativo: true, visivel_para_observadores: false, created_at: '' }],
+  };
+});
 
 vi.mock('../../../../contexts/ConfigContext', () => ({
   useConfig: () => ({

@@ -93,6 +93,11 @@
   width: 100%;
   background: var(--surface-hero-bg);
   color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.kds-public-shell :where(h1, h2, h3, h4, h5, h6):not(.kds-heading) {
+  font-family: var(--font-display);
 }
 
 .kds-public-shell-inner {
@@ -118,6 +123,11 @@
   border-radius: var(--kds-radius-xl);
   background: var(--bg-elevated);
   box-shadow: var(--shadow-card);
+}
+
+.kds-public-metric-value {
+  font: var(--type-heading-1);
+  font-family: var(--font-sans);
 }
 
 .kds-public-empty-state {
@@ -376,13 +386,6 @@
   border-radius: 50%;
 }
 
-.kds-public-home-hero-title {
-  max-width: 18ch;
-  font-size: clamp(2.25rem, 6vw, 3.5rem);
-  line-height: 1.08;
-  letter-spacing: -0.04em;
-}
-
 .kds-public-home-hero-portrait {
   width: 100%;
   max-width: none;
@@ -435,11 +438,6 @@
 
   .kds-public-home-hero .kds-public-hero-visual {
     padding-top: 2rem;
-  }
-
-  .kds-public-home-hero-title {
-    max-width: none;
-    font-size: clamp(3rem, 5vw, 4.5rem);
   }
 
   .kds-public-home-hero-portrait {

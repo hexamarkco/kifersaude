@@ -113,7 +113,9 @@ const auditCanonicalControls = (source) => {
           ) {
             matches.push({ type: 'icon-only-button', value: component });
           }
-          for (const iconMatch of body.matchAll(/<[A-Z][A-Za-z0-9]*(?:\s[^>]*)?className=(['"])([^'"]*)\1[^>]*\/?\s*>/g)) {
+          // Icons are self-closing. Text/layout components can also be nested
+          // in a button and must not be mistaken for icon geometry overrides.
+          for (const iconMatch of body.matchAll(/<[A-Z][A-Za-z0-9]*(?:\s[^>]*)?className=(['"])([^'"]*)\1[^>]*\/\s*>/g)) {
             for (const token of iconMatch[2].split(/\s+/)) {
               if (iconGeometryTokenPattern.test(token)) matches.push({ type: 'primitive-icon-override', value: `${component}:${token}` });
             }
@@ -146,6 +148,14 @@ const auditFile = async (filePath) => {
   const source = await fs.readFile(filePath, 'utf8');
   const matches = [];
   const isDesignSystemFile = path.relative(projectRoot, filePath).split(path.sep).includes('design-system');
+
+  // The public home uses Heading and Text so its typography follows the DS
+  // scale. Untyped arbitrary font utilities are interpreted as font weights.
+  if (path.relative(projectRoot, filePath).split(path.sep).join('/') === 'src/pages/public/HomePage.tsx') {
+    for (const value of source.match(/<h[1-6]\b|font-\[var\(--font-(?:display|sans)\)\]/g) || []) {
+      matches.push({ type: 'public-home-noncanonical-typography', value });
+    }
+  }
 
   // Requested home hero fade: allow only these exact transition/mask values in
   // their owning selectors. All other gradients still fail the flat UI audit.

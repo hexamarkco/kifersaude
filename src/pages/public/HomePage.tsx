@@ -30,10 +30,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Heading,
   LinkButton,
   Input,
   PublicShell,
+  PublicCard,
   Select,
+  Text,
 } from '../../design-system';
 import {
   PublicFooter,
@@ -535,7 +538,7 @@ function CityAutocompleteField({ id, value, onChange }: CityAutocompleteFieldPro
       {showSuggestions ? (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-56 overflow-y-auto rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]"
+          className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-56 overflow-y-auto rounded-[var(--radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]"
         >
           {suggestions.map((city, index) => {
             const matchIndex = city.toLowerCase().indexOf(query);
@@ -903,7 +906,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {AGE_RANGES.map((range) => (
               <div key={range} className="rounded-[var(--kds-radius-sm)] border border-[color:var(--border-default)] bg-[var(--bg-inset)] p-3">
-                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{formatAgeRangeLabel(range)}</p>
+                <Text tone="primary" weight="semibold">{formatAgeRangeLabel(range)}</Text>
                 <Input
                   type="number"
                   min="0"
@@ -961,14 +964,14 @@ export default function HomePage() {
           }`}
         >
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <a href="#topo" onClick={(event) => handleNavLinkClick(event, 'topo')} className="flex items-center space-x-3">
+            <a href="#topo" onClick={(event) => handleNavLinkClick(event, 'topo')} className="flex items-center space-x-3 whitespace-nowrap">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] shadow-[var(--shadow-button)]">
                 <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
               </div>
               <span className="text-2xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</span>
             </a>
 
-            <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
+            <div className="hidden flex-1 items-center justify-center space-x-6 lg:flex">
               <a
                 href="#prova-social"
                 onClick={(event) => handleNavLinkClick(event, 'prova-social')}
@@ -1030,23 +1033,23 @@ export default function HomePage() {
                 Corretora de planos de saúde no Rio de Janeiro
               </div>
 
-              <h1 className="kds-public-home-hero-title mt-7 font-[var(--font-display)] font-bold text-[color:var(--text-primary)]">
+              <Heading level={1} className="mt-8">
                 <span className="lg:block">Plano de saúde</span>{' '}
                 <span className="lg:block">no Rio de Janeiro</span>{' '}
                 <span className="lg:block">com <span className="text-[color:var(--brand-primary)]">orientação</span></span>{' '}
                 <span className="text-[color:var(--brand-primary)] lg:block">de verdade.</span>
-              </h1>
+              </Heading>
 
-              <p className="mt-7 max-w-xl text-lg leading-8 text-[color:var(--text-secondary)] sm:text-xl">
+              <Text size="xl" tone="secondary" className="mt-8 max-w-xl">
                 Compare operadoras e encontre um plano de saúde para sua cidade, sua família ou sua empresa. Conte com atendimento humano antes e depois da contratação.
-              </p>
+              </Text>
 
-              <div aria-hidden="true" className="mt-7 h-0.5 w-14 rounded-full bg-[var(--brand-primary)]" />
-              <p className="mt-7 font-[var(--font-display)] text-xl font-semibold text-[color:var(--text-primary)] sm:text-2xl">
+              <div aria-hidden="true" className="mt-8 h-0.5 w-14 rounded-full bg-[var(--brand-primary)]" />
+              <Text size="xl" tone="primary" weight="semibold" className="mt-8">
                 Seu cuidado é a nossa prioridade
-              </p>
+              </Text>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
@@ -1103,14 +1106,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="prova-social" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="prova-social" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">confiança em números</p>
-                <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Uma corretora de planos de saúde que explica antes de vender.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">confiança em números</Text>
+              <Heading level={2} className="mt-4">Uma corretora de planos de saúde que explica antes de vender.</Heading>
+              <Text size="lg" tone="secondary" className="mt-4">
                 A Kifer compara operadoras, custos, rede credenciada e regras com linguagem simples. O foco é ajudar você a escolher um plano de saúde coerente com sua rotina, sem pressão.
-              </p>
+              </Text>
             </Reveal>
 
             <Reveal className="mt-12 grid gap-5 md:grid-cols-3" delayMs={100} onReveal={() => setMetricsInView(true)}>
@@ -1118,28 +1121,28 @@ export default function HomePage() {
                 const MetricIcon = metricIcons[index] ?? Sparkles;
 
                 return (
-                  <article
+                  <PublicCard
                     key={metric.label}
-                    className="kds-public-motion-card relative overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]"
+                    className="kds-public-motion-card relative overflow-hidden p-8"
                   >
                     <MetricIcon className="absolute -right-4 -top-4 h-24 w-24 text-[color:var(--brand-primary)] opacity-[0.08]" />
-                    <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
+                    <span className="relative flex h-12 w-12 items-center justify-center rounded-full text-[color:var(--brand-primary)]">
                       <MetricIcon className="h-6 w-6" />
                     </span>
-                    <p className="relative mt-6 text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">
+                    <Text tone="primary" weight="semibold" className="relative mt-6 kds-public-metric-value">
                       <AnimatedMetricValue value={metric.value} play={metricsInView} />
-                    </p>
-                    <p className="relative mt-3 text-lg font-semibold text-[color:var(--brand-primary)]">{metric.label}</p>
-                    <p className="relative mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{metric.detail}</p>
-                  </article>
+                    </Text>
+                    <Text size="lg" tone="brand" weight="semibold" className="relative mt-3">{metric.label}</Text>
+                    <Text tone="secondary" className="relative mt-2">{metric.detail}</Text>
+                  </PublicCard>
                 );
               })}
             </Reveal>
 
             <div className="mt-12 rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] px-6 py-8 shadow-[var(--shadow-card)]">
               <div className="mb-6 flex flex-col gap-2 text-center">
-                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">operadoras parceiras</p>
-                <p className="text-base text-[color:var(--text-secondary)]">Comparamos planos de diferentes operadoras para encontrar opções adequadas à sua rotina no Rio de Janeiro.</p>
+                <Text tone="muted" weight="semibold" className="uppercase tracking-[0.16em]">operadoras parceiras</Text>
+                <Text size="lg" tone="secondary">Comparamos planos de diferentes operadoras para encontrar opções adequadas à sua rotina no Rio de Janeiro.</Text>
               </div>
 
               <div className="partner-logos-marquee py-2">
@@ -1163,26 +1166,26 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="para-quem" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="para-quem" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Planos de saúde para pessoa física, MEI e empresas.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">para quem é</Text>
+              <Heading level={2} className="mt-4">Planos de saúde para pessoa física, MEI e empresas.</Heading>
+              <Text size="lg" tone="secondary" className="mt-4">
                 Cada perfil tem necessidades diferentes de cobertura, custo e carência. Escolha o seu e conte com a Kifer para entender as opções.
-              </p>
+              </Text>
             </Reveal>
 
             <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {audienceCards.map((card) => (
-                <article key={card.eyebrow} className="kds-public-motion-card flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-7 shadow-[var(--shadow-card)]">
+                <PublicCard key={card.eyebrow} className="kds-public-motion-card flex flex-col p-8">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                     <card.icon className="h-7 w-7" />
                   </span>
 
-                  <p className="mt-5 text-sm font-black uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">{card.eyebrow}</p>
-                  <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold leading-tight text-[color:var(--text-primary)]">{card.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-[color:var(--text-secondary)]">{card.description}</p>
+                  <Text tone="brand" weight="semibold" className="mt-5 uppercase tracking-[0.18em]">{card.eyebrow}</Text>
+                  <Heading level={3} className="mt-2">{card.title}</Heading>
+                  <Text tone="secondary" className="mt-3">{card.description}</Text>
 
                   <ul className="mt-5 flex-1 space-y-2.5">
                     {card.bullets.map((bullet) => (
@@ -1203,20 +1206,20 @@ export default function HomePage() {
                     {card.ctaLabel}
                     <ChevronRight className="kds-control-icon" />
                   </Button>
-                </article>
+                </PublicCard>
               ))}
             </Reveal>
           </div>
         </section>
 
-        <section id="como-funciona" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="como-funciona" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">como funciona</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Como contratar um plano de saúde com mais clareza.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">como funciona</Text>
+              <Heading level={2} className="mt-4">Como contratar um plano de saúde com mais clareza.</Heading>
+              <Text size="lg" tone="secondary" className="mt-4">
                 Do primeiro contato até a ativação, você entende o que está sendo comparado e sabe exatamente em que etapa está.
-              </p>
+              </Text>
             </Reveal>
 
             <Reveal className="relative mt-16 grid gap-10 md:grid-cols-3 md:gap-8" delayMs={100}>
@@ -1230,14 +1233,14 @@ export default function HomePage() {
                       {item.step}
                     </span>
                   </div>
-                  <h3 className="mt-6 font-[var(--font-display)] text-xl font-bold text-[color:var(--text-primary)]">{item.title}</h3>
-                  <p className="mt-3 max-w-xs text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.text}</p>
+                  <Heading level={3} className="mt-6">{item.title}</Heading>
+                  <Text tone="secondary" className="mt-3 max-w-xs">{item.text}</Text>
                 </div>
               ))}
             </Reveal>
 
-            <Reveal className="mt-14 flex flex-col items-center gap-4 text-center" delayMs={150}>
-              <p className="text-base font-semibold text-[color:var(--text-primary)]">Pronto para começar a sua comparação?</p>
+            <Reveal className="mt-12 flex flex-col items-center gap-4 text-center" delayMs={150}>
+              <Text size="lg" tone="primary" weight="semibold">Pronto para começar a sua comparação?</Text>
               <Button
                 type="button"
                 onClick={() => scrollToForm()}
@@ -1251,32 +1254,32 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="depoimentos" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="depoimentos" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">depoimentos</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Quem já contou com a Kifer compartilha sua experiência.</h2>
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">depoimentos</Text>
+              <Heading level={2} className="mt-4">Quem já contou com a Kifer compartilha sua experiência.</Heading>
             </Reveal>
 
             <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
               {testimonials.map((testimonial) => (
-                <article key={testimonial.name} className="kds-public-motion-card rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
+                <PublicCard key={testimonial.name} className="kds-public-motion-card p-8">
                   <div className="mb-5 flex items-center gap-1 text-[color:var(--accent-gold)]">
                     {Array.from({ length: 5 }).map((_, index) => (
                       <Star key={`${testimonial.name}-${index}`} className="h-5 w-5 fill-current" />
                     ))}
                   </div>
-                  <p className="text-lg leading-relaxed text-[color:var(--text-secondary)]">&quot;{testimonial.quote}&quot;</p>
+                  <Text size="lg" tone="secondary">&quot;{testimonial.quote}&quot;</Text>
                   <div className="mt-8 flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-lg font-bold text-[color:var(--brand-primary)]">
                       {testimonial.initial}
                     </div>
                     <div>
-                      <p className="font-semibold text-[color:var(--text-primary)]">{testimonial.name}</p>
-                      <p className="text-sm text-[color:var(--text-muted)]">{testimonial.detail}</p>
+                      <Text tone="primary" weight="semibold">{testimonial.name}</Text>
+                      <Text tone="muted">{testimonial.detail}</Text>
                     </div>
                   </div>
-                </article>
+                </PublicCard>
               ))}
             </Reveal>
 
@@ -1294,7 +1297,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="quem-somos" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="quem-somos" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <Reveal className="relative overflow-hidden rounded-[var(--kds-radius-xl)] [background:var(--surface-hero-bg)] p-4 shadow-[var(--shadow-card)]">
               <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)]">
@@ -1311,14 +1314,14 @@ export default function HomePage() {
             </Reveal>
 
             <Reveal delayMs={120}>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luíza</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Conte com a Luíza Kifer para escolher seu plano de saúde no Rio de Janeiro.</h2>
-              <p className="mt-6 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">sobre a Luíza</Text>
+              <Heading level={2} className="mt-4">Conte com a Luíza Kifer para escolher seu plano de saúde no Rio de Janeiro.</Heading>
+              <Text size="lg" tone="secondary" className="mt-6">
                 Sou corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e oriento cada cliente com a mesma atenção que dedicaria à minha família.
-              </p>
-              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
+              </Text>
+              <Text size="lg" tone="secondary" className="mt-4">
                 Na Kifer, explicamos custos, rede credenciada e regras de contratação com linguagem simples para você escolher sem pressão e evitar surpresas depois.
-              </p>
+              </Text>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 {[
@@ -1343,22 +1346,22 @@ export default function HomePage() {
                     icon: Phone,
                   },
                 ].map((item) => (
-                  <article key={item.title} className="kds-public-motion-card rounded-[var(--kds-radius-md)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-5 shadow-[var(--shadow-card)]">
+                  <PublicCard key={item.title} className="kds-public-motion-card bg-[var(--bg-surface-muted)] p-5">
                     <item.icon className="kds-public-motion-icon h-8 w-8 text-[color:var(--brand-primary)]" />
-                    <h3 className="mt-4 font-[var(--font-display)] text-lg font-bold text-[color:var(--text-primary)]">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.description}</p>
-                  </article>
+                    <Heading level={3} className="mt-4">{item.title}</Heading>
+                    <Text tone="secondary" className="mt-2">{item.description}</Text>
+                  </PublicCard>
                 ))}
               </div>
             </Reveal>
           </div>
         </section>
 
-        <section id="faq" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="faq" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
             <Reveal className="text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">perguntas frequentes</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Dúvidas sobre plano de saúde no Rio de Janeiro.</h2>
+              <Text tone="brand" weight="semibold" className="uppercase tracking-[0.2em]">perguntas frequentes</Text>
+              <Heading level={2} className="mt-4">Dúvidas sobre plano de saúde no Rio de Janeiro.</Heading>
             </Reveal>
 
             <Reveal className="mt-12 space-y-3" delayMs={100}>
@@ -1373,7 +1376,7 @@ export default function HomePage() {
                     className="kds-public-faq-trigger justify-between text-left"
                     aria-expanded={openFaqIndex === index}
                   >
-                    <span className="min-w-0 whitespace-normal text-base font-semibold leading-relaxed text-[color:var(--text-primary)] sm:text-lg">{faq.question}</span>
+                    <Text as="span" tone="primary" weight="semibold" className="min-w-0 whitespace-normal">{faq.question}</Text>
                     {openFaqIndex === index ? (
                       <Minus className="kds-control-icon shrink-0 text-[color:var(--brand-primary)]" />
                     ) : (
@@ -1385,7 +1388,7 @@ export default function HomePage() {
                     style={{ gridTemplateRows: openFaqIndex === index ? '1fr' : '0fr' }}
                   >
                     <div className="overflow-hidden">
-                      <p className="px-4 pb-2 pt-3 leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
+                      <Text tone="secondary" className="px-4 pb-2 pt-3">{faq.answer}</Text>
                     </div>
                   </div>
                 </div>
@@ -1394,14 +1397,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="cotacao" className="scroll-mt-32 bg-[var(--brand-primary)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="cotacao" className="scroll-mt-32 bg-[var(--brand-primary)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
             <Reveal className="text-[color:var(--text-on-brand)]">
-              <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80">cotação gratuita</p>
-              <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba uma cotação de plano de saúde feita para o seu perfil.</h2>
-              <p className="mt-5 text-lg leading-relaxed opacity-90">
+              <Text tone="inverse" weight="semibold" className="uppercase tracking-[0.2em] opacity-80">cotação gratuita</Text>
+              <Heading level={2} tone="inverse" className="mt-4">Receba uma cotação de plano de saúde feita para o seu perfil.</Heading>
+              <Text size="lg" tone="inverse" className="mt-5 opacity-90">
                 Preencha o formulário e receba orientação para pessoa física, MEI ou empresa com foco em rede credenciada, custo, carência e contratação sem complicação.
-              </p>
+              </Text>
 
               <div className="mt-8 space-y-4 rounded-[var(--kds-radius-xl)] border border-[color:color-mix(in_srgb,var(--text-on-brand)_24%,transparent)] bg-[color:color-mix(in_srgb,var(--text-on-brand)_14%,transparent)] p-6 backdrop-blur-sm">
                 {[
@@ -1418,7 +1421,7 @@ export default function HomePage() {
             </Reveal>
 
             <Reveal delayMs={120}>
-              <form onSubmit={handleSubmit} className="rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] p-8 text-[color:var(--text-primary)] shadow-[var(--shadow-modal)] md:p-10">
+              <form onSubmit={handleSubmit} className="kds-public-card p-8 text-[color:var(--text-primary)] md:p-10">
                 <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
                 <Button
@@ -1426,7 +1429,7 @@ export default function HomePage() {
                   loading={submitting}
                   fullWidth
                   size="lg"
-                  className="public-brand-button"
+                  variant="primary"
                 >
                   <span className="hidden sm:inline">Quero minha cotação personalizada agora</span>
                   <span className="sm:hidden">Quero minha cotação</span>
@@ -1439,7 +1442,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-20 sm:px-6 lg:px-8">
+        <section id="fale-agora" className="scroll-mt-32 bg-[var(--text-primary)] px-4 py-16 sm:px-6 lg:px-8">
           <Reveal className="relative mx-auto max-w-7xl overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] text-[color:var(--text-inverse)] shadow-[var(--shadow-modal)]">
             <div className="pointer-events-none absolute inset-0 opacity-20">
               <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-[var(--brand-primary)] blur-3xl" />
@@ -1462,15 +1465,15 @@ export default function HomePage() {
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
                       Online agora
                     </div>
-                    <p className="mt-1.5 text-sm font-semibold opacity-80">Luíza Kifer · Kifer Saúde</p>
+                    <Text tone="inverse" weight="semibold" className="mt-1.5 opacity-80">Luíza Kifer · Kifer Saúde</Text>
                   </div>
                 </div>
 
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
-                <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
-                <p className="mt-4 max-w-xl text-lg leading-relaxed opacity-75">
+                <Text tone="secondary" weight="semibold" className="uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</Text>
+                <Heading level={2} tone="inverse" className="mt-4">Quer resolver isso hoje pelo WhatsApp?</Heading>
+                <Text size="lg" tone="inverse" className="mt-4 max-w-xl opacity-75">
                   Se preferir, fale direto com a gente. A Kifer entende o que você precisa, compara as opções e acompanha você durante a contratação.
-                </p>
+                </Text>
 
                 <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold opacity-70">
                   <Clock className="h-4 w-4 text-[color:var(--accent-gold)]" />
@@ -1485,8 +1488,8 @@ export default function HomePage() {
                       <img src="/image.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[color:var(--text-primary)]">Luíza Kifer</p>
-                      <p className="text-xs font-semibold text-[color:var(--success-text)]">online</p>
+                      <Text tone="primary" weight="semibold">Luíza Kifer</Text>
+                      <Text size="xs" tone="success" weight="semibold">online</Text>
                     </div>
                     <MessageCircle className="ml-auto h-5 w-5 text-[color:var(--success)]" />
                   </div>
@@ -1535,14 +1538,14 @@ export default function HomePage() {
                 loading={submitting}
                 fullWidth
                 size="lg"
-                className="public-brand-button"
+                variant="primary"
               >
                 Solicitar cotação pelo WhatsApp
                 <MessageCircle aria-hidden="true" />
               </Button>
 
               <PrivacyNotice />
-              <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Resposta em até 10 minutos</p>
+              <Text tone="muted" className="mt-4 text-center">Resposta em até 10 minutos</Text>
             </form>
           </OverlayModal>
         ) : null}

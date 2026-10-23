@@ -2,12 +2,13 @@ import type { MouseEvent } from 'react';
 import { Instagram, MapPin, MessageCircle } from 'lucide-react';
 import PublicBrandMark from '../../../components/public/PublicBrandMark';
 import { siteConfig } from '../../../config/site';
+import { Heading, Text } from '../../../design-system';
 
 type Props = { onNavigate?: (event: MouseEvent<HTMLAnchorElement>, section: string) => void };
 
 export default function PublicFooter({ onNavigate }: Props) {
   return (
-    <footer className="bg-[var(--text-primary)] px-4 py-14 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
+    <footer className="bg-[var(--text-primary)] px-4 py-12 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
           <div>
@@ -17,13 +18,13 @@ export default function PublicFooter({ onNavigate }: Props) {
               </div>
               <span className="text-2xl font-bold">Kifer Saúde</span>
             </div>
-            <p className="mt-5 max-w-md text-sm leading-relaxed opacity-70">
+            <Text tone="inverse" className="mt-5 max-w-md opacity-70">
               Corretora especializada em planos de saúde no Rio de Janeiro. Conte com atendimento humano, comparação entre operadoras e suporte antes e depois da contratação.
-            </p>
+            </Text>
           </div>
 
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</h3>
+            <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
               <a
                 href="/#para-quem"
@@ -57,7 +58,7 @@ export default function PublicFooter({ onNavigate }: Props) {
           </div>
 
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Contato</h3>
+            <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Contato</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
               <a href={`${siteConfig.whatsappUrl}?text=${encodeURIComponent('Olá! Quero uma cotação de plano de saúde com a Kifer.')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
                 <MessageCircle className="h-4 w-4 text-[color:var(--success)]" />
@@ -75,7 +76,7 @@ export default function PublicFooter({ onNavigate }: Props) {
           </div>
 
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</h3>
+            <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
               <a href="/politica-de-privacidade" className="block underline underline-offset-4">Política de Privacidade</a>
               <p>CNPJ {siteConfig.cnpj}</p>

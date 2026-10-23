@@ -27,3 +27,5 @@ export const FinanceiroAgendaTab = lazyWithChunkRecovery(() => import('../featur
 export function RouteLoading() {
   return <AppLoadingScreen />;
 }
+
+export const PrivacyPolicyPage = lazyWithChunkRecovery(() => import('../features/public-content/PrivacyPolicyPage'));

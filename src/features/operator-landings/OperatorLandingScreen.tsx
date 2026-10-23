@@ -329,6 +329,7 @@ export default function OperatorLandingScreen({ page }: OperatorLandingScreenPro
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-primary)]"><PublicBrandMark className="h-5 w-auto text-[color:var(--text-on-brand)]" /></span>
               <span><strong>Kifer Saúde</strong> · corretora responsável pelo atendimento</span>
             </div>
+            <a href="/politica-de-privacidade" className="font-semibold underline underline-offset-4">Política de Privacidade</a>
             <a href="/#topo" className="font-semibold opacity-80 transition-opacity hover:opacity-100">Voltar ao início</a>
           </div>
         </footer>

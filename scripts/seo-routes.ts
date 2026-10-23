@@ -4,6 +4,7 @@
  */
 export const indexablePublicRoutes = [
   '/',
+  '/politica-de-privacidade',
   '/planos/amil',
   '/planos/porto-saude',
   '/planos/bradesco-saude',

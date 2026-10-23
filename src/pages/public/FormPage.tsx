@@ -6,7 +6,7 @@ import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
 import { formsService, type PublicFormSubmitPayload } from '../../lib/formsService';
 import { formatPhoneInput } from '../../lib/inputFormatters';
-import type { PublicForm, PublicFormGeoPermission, PublicFormStep } from '../../features/public-content';
+import { PrivacyNotice, type PublicForm, type PublicFormGeoPermission, type PublicFormStep } from '../../features/public-content';
 import { toast } from '../../lib/toast';
 import {
   Button,
@@ -629,6 +629,7 @@ function ContactStep({ step, contact, setContact, submitting, onSubmit }: Contac
         />
       </Field>
 
+      <PrivacyNotice />
       <Button type="submit" fullWidth size="lg" loading={submitting}>
         {!submitting && <ShieldCheck className="kds-control-icon" />}
         <span>{submitting ? 'Enviando...' : 'Enviar'}</span>

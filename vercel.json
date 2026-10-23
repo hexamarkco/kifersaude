@@ -11,6 +11,7 @@
   ],
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
+    { "source": "/politica-de-privacidade", "destination": "/index.html" },
     { "source": "/links", "destination": "/index.html" },
     { "source": "/forms/:slug", "destination": "/index.html" },
     { "source": "/login", "destination": "/index.html" },

@@ -19,6 +19,7 @@ import {
   FinanceiroComissoesTab,
   FormPage,
   HomePage,
+  PrivacyPolicyPage,
   LeadsManagerWrapper,
   LinksPage,
   LoginPage,
@@ -44,6 +45,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
       <BrowserRouter>
+        <Routes>
+          <Route path="/politica-de-privacidade" element={<Suspense fallback={<RouteLoading />}><PrivacyPolicyPage /></Suspense>} />
+          <Route path="*" element={
         <AuthProvider>
           <VercelSpeedInsights />
           <Suspense fallback={<RouteLoading />}>
@@ -96,6 +100,8 @@ createRoot(document.getElementById('root')!).render(
           </Suspense>
           <ToastViewport />
         </AuthProvider>
+          } />
+        </Routes>
       </BrowserRouter>
     </AppErrorBoundary>
   </StrictMode>,

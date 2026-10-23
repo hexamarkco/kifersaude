@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   Heart,
-  Instagram,
   MapPin,
   MessageCircle,
   Minus,
@@ -37,6 +36,8 @@ import {
   Select,
 } from '../../design-system';
 import {
+  PublicFooter,
+  PrivacyNotice,
   loadPublicHomeMetrics,
   submitPublicLead,
   type PublicLeadSubmission,
@@ -97,8 +98,6 @@ const WHATSAPP_PHONE = '5521979302389';
 const WHATSAPP_DEFAULT_MESSAGE = 'Olá! Quero uma cotação de plano de saúde com a Kifer.';
 const WHATSAPP_SUPPORT_MESSAGE = 'Olá! Já sou cliente da Kifer Saúde e preciso de suporte.';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
-const CNPJ = '46.423.078/0001-10';
-const INSTAGRAM_URL = 'https://instagram.com/souluizakifer';
 const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=kifer+saude';
 
 const faqItems: PublicFaqItem[] = [
@@ -1419,7 +1418,7 @@ export default function HomePage() {
                   <ChevronRight aria-hidden="true" />
                 </Button>
 
-                <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
+                <PrivacyNotice />
               </form>
             </Reveal>
           </div>
@@ -1509,83 +1508,7 @@ export default function HomePage() {
 
         </main>
 
-        <footer className="bg-[var(--text-primary)] px-4 py-14 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-primary)]">
-                    <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
-                  </div>
-                  <span className="text-2xl font-bold">Kifer Saúde</span>
-                </div>
-                <p className="mt-5 max-w-md text-sm leading-relaxed opacity-70">
-                  Corretora especializada em planos de saúde no Rio de Janeiro, com atendimento humano, comparação consultiva e suporte até o pós-venda.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</h3>
-                <div className="mt-5 space-y-3 text-sm opacity-70">
-                  <a
-                    href="#para-quem"
-                    onClick={(event) => handleNavLinkClick(event, 'para-quem')}
-                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
-                  >
-                    Para quem é
-                  </a>
-                  <a
-                    href="#como-funciona"
-                    onClick={(event) => handleNavLinkClick(event, 'como-funciona')}
-                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
-                  >
-                    Como funciona
-                  </a>
-                  <a
-                    href="#faq"
-                    onClick={(event) => handleNavLinkClick(event, 'faq')}
-                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
-                  >
-                    FAQ
-                  </a>
-                  <a
-                    href="#cotacao"
-                    onClick={(event) => handleNavLinkClick(event, 'cotacao')}
-                    className="block transition-colors hover:text-[color:var(--text-inverse)]"
-                  >
-                    Cotação gratuita
-                  </a>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Contato</h3>
-                <div className="mt-5 space-y-3 text-sm opacity-70">
-                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
-                    <MessageCircle className="h-4 w-4 text-[color:var(--success)]" />
-                    WhatsApp
-                  </a>
-                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
-                    <Instagram className="h-4 w-4 text-[color:var(--accent-gold)]" />
-                    @souluizakifer
-                  </a>
-                  <span className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-[color:var(--accent-gold)]" />
-                    Rio de Janeiro, RJ
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</h3>
-                <div className="mt-5 space-y-3 text-sm opacity-70">
-                  <p>CNPJ: {CNPJ}</p>
-                  <p>Desenvolvido por Kifer Saúde</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter onNavigate={handleNavLinkClick} />
 
         {showQuoteModal ? (
           <OverlayModal title="Faça sua cotação" subtitle="Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>
@@ -1603,6 +1526,7 @@ export default function HomePage() {
                 <MessageCircle aria-hidden="true" />
               </Button>
 
+              <PrivacyNotice />
               <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Resposta em até 10 minutos</p>
             </form>
           </OverlayModal>

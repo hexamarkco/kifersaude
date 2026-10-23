@@ -18,7 +18,7 @@ export default function PublicFooter({ onNavigate }: Props) {
               <span className="text-2xl font-bold">Kifer Saúde</span>
             </div>
             <p className="mt-5 max-w-md text-sm leading-relaxed opacity-70">
-              Corretora especializada em planos de saúde no Rio de Janeiro, com atendimento humano, comparação consultiva e suporte até o pós-venda.
+              Corretora especializada em planos de saúde no Rio de Janeiro. Conte com atendimento humano, comparação entre operadoras e suporte antes e depois da contratação.
             </p>
           </div>
 
@@ -44,7 +44,7 @@ export default function PublicFooter({ onNavigate }: Props) {
                 onClick={onNavigate ? (event) => onNavigate(event, 'faq') : undefined}
                 className="block transition-colors hover:text-[color:var(--text-inverse)]"
               >
-                FAQ
+                Dúvidas
               </a>
               <a
                 href="/#cotacao"
@@ -78,7 +78,7 @@ export default function PublicFooter({ onNavigate }: Props) {
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</h3>
             <div className="mt-5 space-y-3 text-sm opacity-70">
               <a href="/politica-de-privacidade" className="block underline underline-offset-4">Política de Privacidade</a>
-              <p>CNPJ: {siteConfig.cnpj}</p>
+              <p>CNPJ {siteConfig.cnpj}</p>
               <p>Desenvolvido por Kifer Saúde</p>
             </div>
           </div>

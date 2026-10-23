@@ -13,7 +13,7 @@ export const siteConfig = {
   name: 'Kifer Saúde',
   legalName: 'Kifer Saúde',
   cnpj: '46.423.078/0001-10',
-  personName: 'Luiza Kifer',
+  personName: 'Luíza Kifer',
   description:
     'Corretora de planos de saúde no Rio de Janeiro para pessoa física, MEI e empresas. A Kifer compara operadoras, rede credenciada, carência e coparticipação com atendimento humano.',
   url: normalizeSiteUrl(import.meta.env.VITE_SITE_URL),

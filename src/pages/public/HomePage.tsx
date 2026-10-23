@@ -104,12 +104,12 @@ const faqItems: PublicFaqItem[] = [
   {
     question: 'MEI pode contratar plano empresarial?',
     answer:
-      'Sim. Com CNPJ ativo e enquadramento aceito pela operadora, o MEI pode avaliar planos empresariais. A Kifer verifica a elegibilidade, o número de vidas e as condições disponíveis antes da proposta.',
+      'Sim. Com CNPJ ativo e enquadramento aceito pela operadora, o MEI pode avaliar planos empresariais. A Kifer verifica os requisitos, a quantidade de pessoas e as condições disponíveis antes de apresentar a proposta.',
   },
   {
     question: 'Qual a diferença entre plano por adesão e empresarial?',
     answer:
-      'O empresarial depende de CNPJ e costuma seguir regras de elegibilidade da empresa. O plano por adesão depende de vínculo com entidade de classe e pode ter outra estrutura de preço, carência e reajuste.',
+      'O plano empresarial exige CNPJ e segue as regras de contratação da operadora. O plano por adesão exige vínculo com uma entidade de classe e pode ter condições diferentes de preço, carência e reajuste.',
   },
   {
     question: 'Tem carência?',
@@ -117,9 +117,9 @@ const faqItems: PublicFaqItem[] = [
       'A carência varia conforme a operadora, o tipo de contratação e a regra do produto. Antes da contratação, a Kifer explica o que muda para consultas, exames, internações e urgência.',
   },
   {
-    question: 'Cobre qual área do RJ?',
+    question: 'Quais regiões do Rio de Janeiro o plano cobre?',
     answer:
-      'A abrangência varia por plano. A análise considera sua cidade, os bairros onde você usa o serviço e a rede credenciada que faz sentido para sua rotina no Rio de Janeiro e na Grande Rio.',
+      'A cobertura varia conforme o plano. A análise considera sua cidade, os bairros onde você precisa de atendimento e a rede credenciada disponível no Rio de Janeiro e na região metropolitana.',
   },
   {
     question: 'Como faço para contratar?',
@@ -141,7 +141,7 @@ const metricIcons = [Users, Building2, TrendingUp];
 
 const testimonials: Testimonial[] = [
   {
-    quote: 'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10!',
+    quote: 'Eu achava que plano bom era caro, mas com a Luíza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10!',
     initial: 'R',
     name: 'Regina',
     detail: '44 anos, Rio de Janeiro',
@@ -166,15 +166,15 @@ const audienceCards: AudienceCard[] = [
     title: 'Plano de saúde para pessoa física e família.',
     description: 'Compare operadoras, rede credenciada, carência e coparticipação para escolher uma cobertura compatível com sua rotina no RJ.',
     bullets: ['Opções para solteiros, casais e famílias', 'Rede analisada para os locais que você usa', 'Cotação gratuita e sem compromisso'],
-    ctaLabel: 'Quero cotar pessoa física',
+    ctaLabel: 'Quero cotar como pessoa física',
     contractKind: 'PF',
     icon: UserRound,
   },
   {
     eyebrow: 'MEI',
     title: 'Plano de saúde empresarial para MEI.',
-    description: 'Com CNPJ ativo, o MEI pode avaliar opções empresariais. A Kifer verifica elegibilidade, número de vidas e condições antes da proposta.',
-    bullets: ['Análise de elegibilidade do CNPJ', 'Comparação com opções individuais quando fizer sentido', 'Suporte na documentação e ativação'],
+    description: 'Com CNPJ ativo, o MEI pode avaliar planos empresariais. A Kifer verifica os requisitos, a quantidade de pessoas e as condições antes de apresentar a proposta.',
+    bullets: ['Verificação dos requisitos para contratar com CNPJ', 'Comparação com planos individuais quando fizer sentido', 'Suporte com a documentação e a ativação'],
     ctaLabel: 'Quero cotar como MEI',
     contractKind: 'MEI',
     icon: Briefcase,
@@ -183,8 +183,8 @@ const audienceCards: AudienceCard[] = [
     eyebrow: 'Empresa',
     title: 'Plano de saúde empresarial para pequenas empresas.',
     description: 'Compare operadoras e formatos de contratação para montar um benefício adequado ao tamanho do seu time, à rede desejada e ao orçamento.',
-    bullets: ['Proposta alinhada ao quadro de funcionários', 'Comparação entre operadoras parceiras', 'Suporte na documentação e ativação'],
-    ctaLabel: 'Quero cotar para empresa',
+    bullets: ['Proposta alinhada ao quadro de funcionários', 'Comparação entre operadoras parceiras', 'Suporte com a documentação e a ativação'],
+    ctaLabel: 'Quero cotar para minha empresa',
     contractKind: 'CNPJ',
     icon: Building2,
   },
@@ -200,13 +200,13 @@ const howItWorksSteps = [
   {
     step: '2',
     title: 'A Kifer compara as opções',
-    text: 'A análise considera operadora, custo, carência, coparticipação e rede credenciada para sua rotina.',
+    text: 'A análise compara operadoras, custos, carências, coparticipação e a rede credenciada mais adequada à sua rotina.',
     icon: Search,
   },
   {
     step: '3',
     title: 'Você escolhe com segurança',
-    text: 'Depois da decisão, a Kifer acompanha documentação, proposta e ativação do plano de saúde.',
+    text: 'Depois da sua escolha, a Kifer acompanha a documentação, a proposta e a ativação do plano de saúde.',
     icon: CheckCircle,
   },
 ];
@@ -215,7 +215,7 @@ const fallbackPublicMetrics: PublicMetric[] = [
   {
     value: '+500',
     label: 'clientes atendidos',
-    detail: 'histórico comercial da operação',
+    detail: 'histórico de atendimento da Kifer',
   },
   {
     value: String(partnerLogos.length),
@@ -224,10 +224,20 @@ const fallbackPublicMetrics: PublicMetric[] = [
   },
   {
     value: '4.9',
-    label: 'avaliação média percebida',
+    label: 'avaliação média',
     detail: 'avaliações em atualização',
   },
 ];
+
+const publicMetricCopyByLabel = new Map<string, Pick<PublicMetric, 'label' | 'detail'>>([
+  ['clientes atendidos', { label: 'clientes atendidos', detail: 'histórico de atendimento da Kifer' }],
+  ['operadoras comparadas', { label: 'operadoras comparadas', detail: 'operadoras parceiras da Kifer' }],
+  ['cotacoes novas no mes', { label: 'cotações novas no mês', detail: 'pedidos de cotação recebidos neste mês' }],
+]);
+
+const formatAgeRangeLabel = (range: string) => range === '59+'
+  ? '59 anos ou mais'
+  : `${range.replace('00', '0').replace(' - ', ' a ')} anos`;
 
 const createInitialAgeRangeCounts = () =>
   AGE_RANGES.reduce<Record<(typeof AGE_RANGES)[number], string>>((accumulator, range) => {
@@ -265,6 +275,7 @@ const normalizePublicMetric = (value: unknown): PublicMetric | null => {
     value: metricValue,
     label,
     detail,
+    ...publicMetricCopyByLabel.get(label.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
   };
 };
 
@@ -328,7 +339,7 @@ const parseMetricValue = (raw: string): ParsedMetricValue | null => {
 
 const formatMetricValue = (value: number, parsed: ParsedMetricValue) => {
   const formattedNumber =
-    parsed.decimalPlaces > 0 ? value.toFixed(parsed.decimalPlaces) : Math.round(value).toLocaleString('pt-BR');
+    parsed.decimalPlaces > 0 ? value.toFixed(parsed.decimalPlaces).replace('.', ',') : Math.round(value).toLocaleString('pt-BR');
 
   return `${parsed.sign}${formattedNumber}${parsed.suffix}`;
 };
@@ -718,22 +729,22 @@ export default function HomePage() {
     }
 
     if (totalLives < 1) {
-      toast.warning('Informe a quantidade de vidas no contrato.');
+      toast.warning('Informe quantas pessoas vão entrar no plano.');
       return;
     }
 
     if (totalLives > 99) {
-      toast.warning('Informe no maximo 99 vidas no contrato.');
+      toast.warning('Informe no máximo 99 pessoas para este plano.');
       return;
     }
 
     if (totalLives > 1 && filledAgeRanges.length === 0) {
-      toast.warning('Distribua as vidas nas faixas etárias para continuar.');
+      toast.warning('Distribua as pessoas nas faixas etárias para continuar.');
       return;
     }
 
     if (totalLives > 1 && ageRangeTotal !== totalLives) {
-      toast.warning('A soma das faixas etárias precisa bater com a quantidade total de vidas.');
+      toast.warning('A soma das pessoas nas faixas etárias precisa ser igual ao total informado.');
       return;
     }
 
@@ -744,14 +755,14 @@ export default function HomePage() {
 
     const holderAge = Number(formData.idadeTitular);
     if (totalLives === 1 && (!Number.isInteger(holderAge) || holderAge < 0 || holderAge > 120)) {
-      toast.warning('Informe uma idade valida para prosseguir.');
+      toast.warning('Informe uma idade válida para prosseguir.');
       return;
     }
 
     const agesText =
       totalLives === 1
-        ? `1 vida - idade: ${formData.idadeTitular.trim()}`
-        : `${totalLives} vidas - ${filledAgeRanges.map(({ range, quantity }) => `${range}: ${quantity}`).join(', ')}`;
+        ? `uma pessoa com ${holderAge} ${holderAge === 1 ? 'ano' : 'anos'}`
+        : `${totalLives} pessoas, sendo ${filledAgeRanges.map(({ range, quantity }) => `${quantity} ${quantity === 1 ? 'pessoa' : 'pessoas'} na faixa de ${formatAgeRangeLabel(range)}`).join(', ')}`;
 
     setSubmitting(true);
 
@@ -778,18 +789,18 @@ export default function HomePage() {
 
       const whatsappMessage = [
         'Olá! Acabei de preencher a cotação no site da Kifer.',
-        `Nome: ${cleanName}`,
-        `Cidade: ${cleanCity}`,
-        `Tipo: ${formData.tipoContratacao}`,
-        `Beneficiários: ${agesText}`,
+        `Meu nome é ${cleanName}.`,
+        `Minha cidade é ${cleanCity}.`,
+        `Quero cotar ${formData.tipoContratacao === 'PF' ? 'como pessoa física' : formData.tipoContratacao === 'MEI' ? 'como MEI' : 'para minha empresa'}.`,
+        `O plano será para ${agesText}.`,
       ].join('\n');
 
       openWhatsApp(whatsappMessage);
-      toast.success('Cotação enviada com sucesso. Abrimos o WhatsApp para agilizar o atendimento.');
+      toast.success('Pedido de cotação enviado. Continue no WhatsApp para falar com a Kifer.');
       resetForm();
       setShowQuoteModal(false);
     } catch {
-      toast.error('Não foi possível enviar a cotação agora. Tente novamente ou fale no WhatsApp.');
+      toast.error('Não foi possível enviar seu pedido de cotação agora. Tente novamente ou fale no WhatsApp.');
     } finally {
       setSubmitting(false);
     }
@@ -867,7 +878,7 @@ export default function HomePage() {
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-lives">
-          Quantas vidas são no contrato? *
+          Quantas pessoas vão entrar no plano? *
         </label>
         <Input
           id="quote-lives"
@@ -877,22 +888,22 @@ export default function HomePage() {
           value={formData.numeroVidas}
           onChange={(event) => setFormData((current) => ({ ...current, numeroVidas: event.target.value }))}
           size="lg"
-          placeholder="Ex: 1, 2, 3"
+          placeholder="Por exemplo, 1, 2 ou 3"
         />
       </div>
 
       {totalLives > 1 ? (
         <div className="md:col-span-2">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <label className="block text-sm font-semibold text-[color:var(--text-primary)]">Idade das vidas *</label>
+            <label className="block text-sm font-semibold text-[color:var(--text-primary)]">Pessoas por faixa etária *</label>
             <span className={`text-xs font-semibold ${ageRangeTotal === totalLives ? 'text-[color:var(--success-text)]' : 'text-[color:var(--text-muted)]'}`}>
-              Distribuídas: {ageRangeTotal} de {totalLives}
+              {ageRangeTotal} de {totalLives} pessoas distribuídas
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {AGE_RANGES.map((range) => (
               <div key={range} className="rounded-[var(--kds-radius-sm)] border border-[color:var(--border-default)] bg-[var(--bg-inset)] p-3">
-                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{range}</p>
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{formatAgeRangeLabel(range)}</p>
                 <Input
                   type="number"
                   min="0"
@@ -991,7 +1002,7 @@ export default function HomePage() {
                 onClick={(event) => handleNavLinkClick(event, 'faq')}
                 className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
               >
-                FAQ
+                Dúvidas
               </a>
             </div>
 
@@ -1027,7 +1038,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-7 max-w-xl text-lg leading-8 text-[color:var(--text-secondary)] sm:text-xl">
-                Compare operadoras e encontre uma opção de plano de saúde para sua cidade, sua família ou sua empresa — com atendimento humano do primeiro contato ao pós-venda.
+                Compare operadoras e encontre um plano de saúde para sua cidade, sua família ou sua empresa. Conte com atendimento humano antes e depois da contratação.
               </p>
 
               <div aria-hidden="true" className="mt-7 h-0.5 w-14 rounded-full bg-[var(--brand-primary)]" />
@@ -1074,7 +1085,7 @@ export default function HomePage() {
               <div aria-hidden="true" className="kds-public-home-hero-dot absolute aspect-square rounded-full" />
               <img
                 src="/luiza-kifer-hero.png"
-                alt="Luiza Kifer, especialista em planos de saúde, segurando um notebook"
+                alt="Luíza Kifer, especialista em planos de saúde, segurando um notebook"
                 width="1728"
                 height="2304"
                 loading="eager"
@@ -1128,7 +1139,7 @@ export default function HomePage() {
             <div className="mt-12 rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] px-6 py-8 shadow-[var(--shadow-card)]">
               <div className="mb-6 flex flex-col gap-2 text-center">
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">operadoras parceiras</p>
-                <p className="text-base text-[color:var(--text-secondary)]">Trabalhamos com marcas relevantes para comparar cenário real de contratação no RJ.</p>
+                <p className="text-base text-[color:var(--text-secondary)]">Comparamos planos de diferentes operadoras para encontrar opções adequadas à sua rotina no Rio de Janeiro.</p>
               </div>
 
               <div className="partner-logos-marquee py-2">
@@ -1158,7 +1169,7 @@ export default function HomePage() {
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Planos de saúde para pessoa física, MEI e empresas.</h2>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                Cada perfil pede uma leitura diferente de rede, custo e carência. Escolha o seu abaixo e a Kifer cuida dos detalhes.
+                Cada perfil tem necessidades diferentes de cobertura, custo e carência. Escolha o seu e conte com a Kifer para entender as opções.
               </p>
             </Reveal>
 
@@ -1244,7 +1255,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">depoimentos</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Clientes que saíram da cotação com mais segurança.</h2>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Quem já contou com a Kifer compartilha sua experiência.</h2>
             </Reveal>
 
             <Reveal className="mt-12 grid gap-6 md:grid-cols-3" delayMs={100}>
@@ -1289,7 +1300,7 @@ export default function HomePage() {
               <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)]">
                 <img
                   src="/image.png"
-                  alt="Luiza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
+                  alt="Luíza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
                   width="1024"
                   height="1536"
                   loading="lazy"
@@ -1300,35 +1311,35 @@ export default function HomePage() {
             </Reveal>
 
             <Reveal delayMs={120}>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luiza</p>
-              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Luiza Kifer: atendimento humano para escolher seu plano de saúde no RJ.</h2>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luíza</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Conte com a Luíza Kifer para escolher seu plano de saúde no Rio de Janeiro.</h2>
               <p className="mt-6 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                 Sou corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e cuido de cada cliente com o mesmo cuidado que eu teria ao orientar alguém da minha família.
+                Sou corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e oriento cada cliente com a mesma atenção que dedicaria à minha família.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
-                O foco da Kifer é deixar a contratação mais clara, comparando custo, rede e regras com linguagem simples para você decidir sem pressão e sem surpresa depois.
+                Na Kifer, explicamos custos, rede credenciada e regras de contratação com linguagem simples para você escolher sem pressão e evitar surpresas depois.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 {[
                   {
                     title: 'Corretora independente',
-                    description: 'Comparação com visão consultiva, sem discurso engessado de operadora única.',
+                    description: 'Comparo diferentes operadoras e explico as opções de acordo com o que você precisa.',
                     icon: Heart,
                   },
                   {
                     title: 'Especialista no RJ',
-                    description: 'Leitura prática de bairros, cidades e rede credenciada que fazem sentido para a rotina local.',
+                    description: 'Considero sua cidade, os bairros que você frequenta e a rede credenciada disponível.',
                     icon: MapPin,
                   },
                   {
                     title: 'Atendimento via WhatsApp',
-                    description: 'Velocidade para esclarecer dúvidas e tocar a contratação sem burocracia desnecessária.',
+                    description: 'Esclareço suas dúvidas e acompanho a contratação pelo WhatsApp.',
                     icon: MessageCircle,
                   },
                   {
-                    title: 'Acompanhamento até o pós-venda',
-                    description: 'Você não recebe só a cotação. Recebe suporte até a ativação ficar resolvida.',
+                    title: 'Suporte após a contratação',
+                    description: 'Você conta com orientação durante a contratação, na ativação e depois de contratar o plano.',
                     icon: Phone,
                   },
                 ].map((item) => (
@@ -1346,7 +1357,7 @@ export default function HomePage() {
         <section id="faq" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
             <Reveal className="text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">faq rápido</p>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">perguntas frequentes</p>
               <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Dúvidas sobre plano de saúde no Rio de Janeiro.</h2>
             </Reveal>
 
@@ -1395,7 +1406,7 @@ export default function HomePage() {
               <div className="mt-8 space-y-4 rounded-[var(--kds-radius-xl)] border border-[color:color-mix(in_srgb,var(--text-on-brand)_24%,transparent)] bg-[color:color-mix(in_srgb,var(--text-on-brand)_14%,transparent)] p-6 backdrop-blur-sm">
                 {[
                   'Atendimento sem custo e sem compromisso.',
-                  'Análise prática da sua cidade, faixa etária e número de vidas.',
+                  'Análise da sua cidade, das idades e da quantidade de pessoas no plano.',
                   'Contato direto pelo WhatsApp para agilizar a resposta.',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3 text-sm leading-relaxed opacity-90">
@@ -1440,7 +1451,7 @@ export default function HomePage() {
                 <div className="mb-6 flex items-center gap-4">
                   <div className="relative h-20 w-20 shrink-0">
                     <div className="h-full w-full overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
-                      <img src="/image.png" alt="Luiza Kifer" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
+                      <img src="/image.png" alt="Luíza Kifer" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[color:var(--text-primary)] bg-[var(--success)]">
                       <span className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
@@ -1451,19 +1462,19 @@ export default function HomePage() {
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
                       Online agora
                     </div>
-                    <p className="mt-1.5 text-sm font-semibold opacity-80">Luiza Kifer · Kifer Saúde</p>
+                    <p className="mt-1.5 text-sm font-semibold opacity-80">Luíza Kifer · Kifer Saúde</p>
                   </div>
                 </div>
 
                 <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
                 <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
                 <p className="mt-4 max-w-xl text-lg leading-relaxed opacity-75">
-                  Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.
+                  Se preferir, fale direto com a gente. A Kifer entende o que você precisa, compara as opções e acompanha você durante a contratação.
                 </p>
 
                 <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold opacity-70">
                   <Clock className="h-4 w-4 text-[color:var(--accent-gold)]" />
-                  Responde em poucos minutos, sem robô.
+                  Atendimento humano para esclarecer suas dúvidas.
                 </div>
               </div>
 
@@ -1474,14 +1485,14 @@ export default function HomePage() {
                       <img src="/image.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[color:var(--text-primary)]">Luiza Kifer</p>
+                      <p className="text-sm font-bold text-[color:var(--text-primary)]">Luíza Kifer</p>
                       <p className="text-xs font-semibold text-[color:var(--success-text)]">online</p>
                     </div>
                     <MessageCircle className="ml-auto h-5 w-5 text-[color:var(--success)]" />
                   </div>
 
                   <div className="mt-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm leading-relaxed text-[color:var(--text-primary)]">
-                    Oi! 👋 Me conta sua cidade e o tipo de plano que você procura que eu já trago as opções comparadas.
+                    Oi! 👋 Conte sua cidade e o tipo de plano que você procura. Vou comparar as opções para você.
                     <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-[color:var(--text-muted)]">
                       agora
                       <CheckCheck className="h-3.5 w-3.5 text-[color:var(--info)]" />
@@ -1526,7 +1537,7 @@ export default function HomePage() {
                 size="lg"
                 className="public-brand-button"
               >
-                Enviar cotação via WhatsApp
+                Solicitar cotação pelo WhatsApp
                 <MessageCircle aria-hidden="true" />
               </Button>
 

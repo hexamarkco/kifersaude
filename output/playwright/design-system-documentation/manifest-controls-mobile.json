@@ -1,0 +1,946 @@
+{
+  "config": {
+    "id": "mobile",
+    "width": 390,
+    "height": 844
+  },
+  "records": [
+    {
+      "file": "mobile/light/20-select-sm-aberto.png",
+      "label": "Select sm com opções abertas",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4664
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 288579
+    },
+    {
+      "file": "mobile/light/20-select-sm-aberto-viewport.png",
+      "label": "Select sm com opções abertas — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 47892
+    },
+    {
+      "file": "mobile/light/20-select-md-aberto.png",
+      "label": "Select md com opções abertas",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 288622
+    },
+    {
+      "file": "mobile/light/20-select-md-aberto-viewport.png",
+      "label": "Select md com opções abertas — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 50148
+    },
+    {
+      "file": "mobile/light/20-select-lg-aberto.png",
+      "label": "Select lg com opções abertas",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 286405
+    },
+    {
+      "file": "mobile/light/20-select-lg-aberto-viewport.png",
+      "label": "Select lg com opções abertas — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 50694
+    },
+    {
+      "file": "mobile/light/21-combobox-aberto.png",
+      "label": "Combobox: opções abertas",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 292323
+    },
+    {
+      "file": "mobile/light/21-combobox-aberto-viewport.png",
+      "label": "Combobox: opções abertas — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 55908
+    },
+    {
+      "file": "mobile/light/21-combobox-sem-resultados.png",
+      "label": "Combobox: busca sem resultados",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 287193
+    },
+    {
+      "file": "mobile/light/21-combobox-sem-resultados-viewport.png",
+      "label": "Combobox: busca sem resultados — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 50710
+    },
+    {
+      "file": "mobile/light/22-multiselect-aberto.png",
+      "label": "Seleção múltipla com opções e checkboxes",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 291647
+    },
+    {
+      "file": "mobile/light/22-multiselect-aberto-viewport.png",
+      "label": "Seleção múltipla com opções e checkboxes — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 53524
+    },
+    {
+      "file": "mobile/light/23-calendario-data.png",
+      "label": "Data: seletor aberto",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 284642
+    },
+    {
+      "file": "mobile/light/23-calendario-data-viewport.png",
+      "label": "Data: seletor aberto — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 54347
+    },
+    {
+      "file": "mobile/light/24-seletor-horario.png",
+      "label": "Horário: seletor aberto",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 281253
+    },
+    {
+      "file": "mobile/light/24-seletor-horario-viewport.png",
+      "label": "Horário: seletor aberto — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 48177
+    },
+    {
+      "file": "mobile/light/25-calendario-data-horario.png",
+      "label": "Atendimento: seletor aberto",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 279213
+    },
+    {
+      "file": "mobile/light/25-calendario-data-horario-viewport.png",
+      "label": "Atendimento: seletor aberto — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 46196
+    },
+    {
+      "file": "mobile/light/26-preferencias-alternativas.png",
+      "label": "Checkbox marcado, radio Empresa e switch desligado",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 284712
+    },
+    {
+      "file": "mobile/light/26-preferencias-alternativas-viewport.png",
+      "label": "Checkbox marcado, radio Empresa e switch desligado — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 57251
+    },
+    {
+      "file": "mobile/light/27-mascaras-preenchidas.png",
+      "label": "Máscaras de telefone, CPF, CNPJ, CEP e CNS preenchidas com dados fictícios",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4653
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 288560
+    },
+    {
+      "file": "mobile/light/27-mascaras-preenchidas-viewport.png",
+      "label": "Máscaras de telefone, CPF, CNPJ, CEP e CNS preenchidas com dados fictícios — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 46565
+    },
+    {
+      "file": "mobile/light/28-formulario-validacao-erros.png",
+      "label": "Formulário enviado vazio: mensagens de erro e foco no primeiro campo",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 4704
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 296269
+    },
+    {
+      "file": "mobile/light/28-formulario-validacao-erros-viewport.png",
+      "label": "Formulário enviado vazio: mensagens de erro e foco no primeiro campo — composição no viewport",
+      "group": "Formulários interativos",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 54834
+    },
+    {
+      "file": "mobile/light/29-navegacao-selecoes.png",
+      "label": "Abas em Configurações, paginação avançada e etapa seguinte",
+      "group": "Navegação interativa",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2840
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 175367
+    },
+    {
+      "file": "mobile/light/29-navegacao-selecoes-viewport.png",
+      "label": "Abas em Configurações, paginação avançada e etapa seguinte — composição no viewport",
+      "group": "Navegação interativa",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 43650
+    },
+    {
+      "file": "mobile/light/30-filtro-status-aberto.png",
+      "label": "Filtro de status aberto na tabela",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 7820
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 420394
+    },
+    {
+      "file": "mobile/light/30-filtro-status-aberto-viewport.png",
+      "label": "Filtro de status aberto na tabela — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 52365
+    },
+    {
+      "file": "mobile/light/31-tabela-filtrada.png",
+      "label": "Tabela ou cards filtrados por Contratado",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 6936
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 386643
+    },
+    {
+      "file": "mobile/light/31-tabela-filtrada-viewport.png",
+      "label": "Tabela ou cards filtrados por Contratado — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 43666
+    },
+    {
+      "file": "mobile/light/32-tabela-sem-resultados.png",
+      "label": "Busca na tabela sem resultados e ação para limpar",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 5917
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 368686
+    },
+    {
+      "file": "mobile/light/32-tabela-sem-resultados-viewport.png",
+      "label": "Busca na tabela sem resultados e ação para limpar — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 48121
+    },
+    {
+      "file": "mobile/light/33-tabela-ordenada-paginada-selecionada.png",
+      "label": "Ordenação descendente, segunda página e seleção de contato",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 7816
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 412123
+    },
+    {
+      "file": "mobile/light/33-tabela-ordenada-paginada-selecionada-viewport.png",
+      "label": "Ordenação descendente, segunda página e seleção de contato — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 30288
+    },
+    {
+      "file": "mobile/light/34-filtro-multiplo-aberto.png",
+      "label": "Filtro múltiplo de operadoras aberto",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 7816
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 418106
+    },
+    {
+      "file": "mobile/light/34-filtro-multiplo-aberto-viewport.png",
+      "label": "Filtro múltiplo de operadoras aberto — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 53915
+    },
+    {
+      "file": "mobile/light/35-filtro-periodo-aberto.png",
+      "label": "Filtro de intervalo de datas aberto",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 7816
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 416049
+    },
+    {
+      "file": "mobile/light/35-filtro-periodo-aberto-viewport.png",
+      "label": "Filtro de intervalo de datas aberto — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 51844
+    },
+    {
+      "file": "mobile/light/36-superficie-erro.png",
+      "label": "Superfície semântica de erro",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 7816
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 413155
+    },
+    {
+      "file": "mobile/light/36-superficie-erro-viewport.png",
+      "label": "Superfície semântica de erro — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 46892
+    },
+    {
+      "file": "mobile/light/37-composicao-publica-expandida.png",
+      "label": "Composição pública expandida com PublicShell, PublicCard e estado vazio",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 8119
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 427276
+    },
+    {
+      "file": "mobile/light/37-composicao-publica-expandida-viewport.png",
+      "label": "Composição pública expandida com PublicShell, PublicCard e estado vazio — composição no viewport",
+      "group": "Dados e filtros",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 58658
+    },
+    {
+      "file": "mobile/light/38-toast-sucesso.png",
+      "label": "Toast temporário: Sucesso",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2362
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 163042
+    },
+    {
+      "file": "mobile/light/38-toast-sucesso-viewport.png",
+      "label": "Toast temporário: Sucesso — composição no viewport",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 62318
+    },
+    {
+      "file": "mobile/light/38-toast-erro.png",
+      "label": "Toast temporário: Erro",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2351
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 163368
+    },
+    {
+      "file": "mobile/light/38-toast-erro-viewport.png",
+      "label": "Toast temporário: Erro — composição no viewport",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 60670
+    },
+    {
+      "file": "mobile/light/38-toast-atencao.png",
+      "label": "Toast temporário: Atenção",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2351
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 160066
+    },
+    {
+      "file": "mobile/light/38-toast-atencao-viewport.png",
+      "label": "Toast temporário: Atenção — composição no viewport",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 57175
+    },
+    {
+      "file": "mobile/light/38-toast-informacao.png",
+      "label": "Toast temporário: Informação",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2351
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 159186
+    },
+    {
+      "file": "mobile/light/38-toast-informacao-viewport.png",
+      "label": "Toast temporário: Informação — composição no viewport",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 57001
+    },
+    {
+      "file": "mobile/light/38-toast-neutro.png",
+      "label": "Toast temporário: Neutro",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 414,
+        "height": 2351
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 160000
+    },
+    {
+      "file": "mobile/light/38-toast-neutro-viewport.png",
+      "label": "Toast temporário: Neutro — composição no viewport",
+      "group": "Feedback interativo",
+      "theme": "light",
+      "device": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "viewport",
+      "bytes": 56433
+    }
+  ],
+  "failures": []
+}

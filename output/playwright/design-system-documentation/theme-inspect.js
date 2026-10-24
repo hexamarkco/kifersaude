@@ -1,0 +1,3 @@
+async (page) => {
+ return await page.evaluate(()=>({themeControls:[...document.querySelectorAll('button')].filter(b=>['Modo claro','Modo escuro'].includes(b.textContent?.trim())||['Modo claro','Modo escuro'].includes(b.getAttribute('aria-label'))).map(b=>({label:b.getAttribute('aria-label'),html:b.parentElement.outerHTML.slice(0,1600),style:{position:getComputedStyle(b.parentElement).position,top:getComputedStyle(b.parentElement).top,bottom:getComputedStyle(b.parentElement).bottom}})),forms:[...document.querySelectorAll('form')].length,assets:[...document.querySelectorAll('script[src]')].map(s=>new URL(s.src).pathname),cardCount:document.querySelectorAll('.ds-item-card').length}));
+}

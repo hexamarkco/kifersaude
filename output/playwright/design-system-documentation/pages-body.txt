@@ -1,0 +1,17 @@
+for(const theme of ['light','dark']){
+ for(const [hash,name,label] of [['overview','01-visao-geral','Visão geral completa'],['foundations','02-fundamentos-visuais','Fundamentos: cores, fontes, espaços, raios, sombras e ícones']]){
+  await go('#'+hash,theme);await capture(name,label,'Seções',theme);
+ }
+ await go('#components',theme);
+ for(const [tab,name,label] of [['Ações','03-componentes-acoes','Botões: variantes, tamanhos, ícones, grupos, links e ações de formulário'],['Formulários','04-componentes-formularios','Inputs, máscaras, seleção, escolhas, datas e formulário'],['Navegação','05-componentes-navegacao','Sidebar, header, breadcrumbs, abas, paginação e etapas'],['Dados','06-componentes-dados','Tabela, filtros, cards, indicadores, badges e avatares'],['Feedback','07-componentes-feedback','Alertas, toasts, skeletons, loading e progresso'],['Interações','08-componentes-interacoes','Acionadores de modal, confirmação, drawer, popover, menu e tooltip']]){
+  await page.getByRole('tab',{name:tab,exact:true}).click();await page.evaluate(()=>scrollTo(0,0));await capture(name,label,'Componentes',theme);
+ }
+ for(const [hash,name,label] of [['states','09-estados-validacao','Estados disponíveis, foco, disabled, validação, loading, vazio e erros'],['patterns','10-padroes-layout','Estruturas de página e convenções de UX'],['responsive','11-responsividade','Demonstração e orientações para desktop, tablet e mobile']]){
+  await go('#'+hash,theme);await capture(name,label,'Seções',theme);
+ }
+ for(const [pattern,label] of [['list','Listagem de contatos'],['detail','Detalhes de um contato'],['create','Formulário de criação'],['edit','Formulário de edição'],['dashboard','Dashboard comercial']]){
+  await go('?preview=1&pattern='+pattern+'&theme='+theme,theme);
+  await capture('12-pagina-'+pattern,label+' — prévia independente com todo o conteúdo','Páginas completas',theme);
+ }
+}
+return {config,records,failures};

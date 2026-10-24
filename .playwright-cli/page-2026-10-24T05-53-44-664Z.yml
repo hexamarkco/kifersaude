@@ -1,0 +1,130 @@
+- generic [ref=e3]:
+  - link "Pular para o conteúdo" [ref=e4] [cursor=pointer]:
+    - /url: "#ds-main"
+  - complementary [ref=e5]:
+    - link "Kifer Saúde, visão geral do design system" [ref=e6] [cursor=pointer]:
+      - /url: "#overview"
+      - generic [ref=e7]: k.
+      - strong [ref=e8]:
+        - text: Kifer Saúde
+        - generic [ref=e9]: DESIGN SYSTEM
+    - generic [ref=e10]: BIBLIOTECA DO CRM
+    - navigation "Seções do design system" [ref=e12]:
+      - link "Visão geral" [ref=e13] [cursor=pointer]:
+        - /url: "#overview"
+      - link "Fundamentos visuais" [ref=e18] [cursor=pointer]:
+        - /url: "#foundations"
+      - link "Componentes" [ref=e26] [cursor=pointer]:
+        - /url: "#components"
+      - link "Estados e validação" [ref=e38] [cursor=pointer]:
+        - /url: "#states"
+      - link "Padrões de layout" [ref=e43] [cursor=pointer]:
+        - /url: "#patterns"
+      - link "Responsividade" [ref=e49] [cursor=pointer]:
+        - /url: "#responsive"
+    - generic [ref=e54]:
+      - text: Componentes reais do CRM
+      - paragraph [ref=e56]: Uma base compartilhada.Cada experiência conectada.
+      - link "Acessar o CRM" [ref=e57] [cursor=pointer]:
+        - /url: /painel
+  - generic [ref=e60]:
+    - banner [ref=e61]:
+      - navigation "Breadcrumb" [ref=e63]:
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - link "Design system" [ref=e66] [cursor=pointer]:
+              - /url: "#overview"
+          - listitem [aria-hidden] [ref=e67]
+          - listitem [ref=e70]: Visão geral
+      - generic [ref=e71]:
+        - searchbox "Buscar no design system" [ref=e73]
+        - button "Ativar tema escuro" [ref=e75] [cursor=pointer]
+    - main [ref=e79]:
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]: TERRACOTA CRM
+          - heading [level=1] [ref=e84]:
+            - text: Uma base comum.Mais clareza em
+            - emphasis [ref=e85]: cada experiência.
+          - paragraph [ref=e86]: O design system do Kifer Saúde reúne os fundamentos, componentes e padrões que dão forma ao nosso CRM.
+          - generic [ref=e87]:
+            - button "Explorar componentes" [ref=e88] [cursor=pointer]
+            - button "Ver em uso" [ref=e92] [cursor=pointer]
+        - generic "Identidade visual Terracota" [ref=e96]:
+          - generic [ref=e97]: A NOSSA LINGUAGEM
+          - generic [ref=e105]:
+            - text: Aa
+            - generic [ref=e106]: Playfair Display + Inter
+          - generic [ref=e113]:
+            - generic [ref=e114]: Humana no tom.Precisa na operação.
+            - generic [ref=e115]: k.
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e118]: "01"
+          - generic [ref=e119]:
+            - heading "Clareza primeiro" [level=2] [ref=e120]
+            - paragraph [ref=e121]: Hierarquia que orienta. Uma ação principal por contexto.
+        - generic [ref=e122]:
+          - generic [ref=e123]: "02"
+          - generic [ref=e124]:
+            - heading "Consistência sempre" [level=2] [ref=e125]
+            - paragraph [ref=e126]: Os mesmos componentes, do primeiro contato ao contrato.
+        - generic [ref=e127]:
+          - generic [ref=e128]: "03"
+          - generic [ref=e129]:
+            - heading "Cuidado nos detalhes" [level=2] [ref=e130]
+            - paragraph [ref=e131]: Feedback útil, navegação acessível e espaço para respirar.
+      - generic [ref=e132]:
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic [ref=e135]: DO COMPONENTE À EXPERIÊNCIA
+            - heading "O sistema, em uso." [level=2] [ref=e136]
+            - paragraph [ref=e137]: Explore uma listagem real de componentes. Busque, filtre, edite e experimente.
+          - button "Todos os padrões" [ref=e138] [cursor=pointer]
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - strong [ref=e155]: Listagem de contatos
+            - group "Largura da prévia" [ref=e156]:
+              - button "Visualizar em desktop" [pressed] [ref=e158] [cursor=pointer]
+              - button "Visualizar em tablet" [ref=e163] [cursor=pointer]
+              - button "Visualizar em mobile" [ref=e168] [cursor=pointer]
+          - generic [ref=e173]:
+            - generic [ref=e174]:
+              - generic [ref=e179]: kifersaude · listagem
+              - generic [ref=e180]: Fluido
+            - iframe [ref=e181]:
+              - status [ref=f1e4]:
+                - paragraph [ref=f1e8]: Carregando
+          - generic [ref=e182]:
+            - generic [ref=e183]: Componentes do projeto · dados demonstrativos
+            - link "Abrir exemplo" [ref=e186] [cursor=pointer]:
+              - /url: /design-system?preview=1&pattern=list&theme=light
+      - generic [ref=e192]:
+        - generic [ref=e193]: COMECE POR AQUI
+        - heading "Uma linguagem. Cinco perspectivas." [level=2] [ref=e194]
+      - generic [ref=e195]:
+        - button "01 Fundamentos visuais A matéria-prima de toda interface." [ref=e196] [cursor=pointer]:
+          - generic [ref=e203]: "01"
+          - strong [ref=e204]: Fundamentos visuais
+          - generic [ref=e205]: A matéria-prima de toda interface.
+        - button "02 Componentes Blocos reais, prontos para reutilizar." [ref=e208] [cursor=pointer]:
+          - generic [ref=e219]: "02"
+          - strong [ref=e220]: Componentes
+          - generic [ref=e221]: Blocos reais, prontos para reutilizar.
+        - button "03 Estados e validação Cada ação merece uma resposta clara." [ref=e224] [cursor=pointer]:
+          - generic [ref=e228]: "03"
+          - strong [ref=e229]: Estados e validação
+          - generic [ref=e230]: Cada ação merece uma resposta clara.
+        - button "04 Padrões de layout Páginas que seguem a mesma lógica." [ref=e233] [cursor=pointer]:
+          - generic [ref=e238]: "04"
+          - strong [ref=e239]: Padrões de layout
+          - generic [ref=e240]: Páginas que seguem a mesma lógica.
+        - button "05 Responsividade A mesma experiência, em cada tela." [ref=e243] [cursor=pointer]:
+          - generic [ref=e247]: "05"
+          - strong [ref=e248]: Responsividade
+          - generic [ref=e249]: A mesma experiência, em cada tela.
+      - group [ref=e252]:
+        - generic "Como esta biblioteca se conecta ao projeto" [ref=e253] [cursor=pointer]
+      - generic [ref=e254]:
+        - generic [ref=e255]: Kifer Saúde / Design system
+        - generic [ref=e256]: Clareza em cada interação.

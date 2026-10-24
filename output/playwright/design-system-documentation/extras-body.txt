@@ -1,0 +1,14 @@
+await go('#components');await page.getByRole('tab',{name:'Formulários',exact:true}).click();
+await page.getByRole('button',{name:'Buscar operadora',exact:true}).click();await page.getByPlaceholder('Buscar operadora…',{exact:true}).fill('Sul');await capture('80-combobox-filtrado','Combobox filtrado: apenas SulAmérica','Formulários interativos');await close();
+await page.getByRole('button',{name:'Operadoras de interesse',exact:true}).click();
+await page.getByRole('option',{name:'Bradesco Saúde',exact:true}).click();await page.getByRole('option',{name:'SulAmérica',exact:true}).click();await capture('81-multiselect-tres-opcoes','Seleção múltipla com três operadoras marcadas','Formulários interativos');await close();
+await page.getByRole('tab',{name:'Dados',exact:true}).click();
+await specimen('Tabela com comportamento real').getByRole('button',{name:'Ver Ana Paula Ribeiro',exact:true}).first().click();await page.getByRole('dialog',{name:'Ana Paula Ribeiro',exact:true}).waitFor();await capture('82-modal-consulta-tabela','Modal de consulta acionado a partir da tabela','Sobreposições');await close();
+await specimen('Barra de filtros').getByRole('button',{name:/Período:/}).click();await page.getByLabel('De',{exact:true}).click();await capture('83-calendario-em-filtro-periodo','Calendário aberto dentro do popover de período','Dados e filtros');await close();await close();
+for(const surface of ['muted','strong','hero','warning','success','info']){
+ await selectField(specimen('Cards e superfícies'),'Superfície semântica',surface);await capture('84-superficie-'+surface,'Superfície semântica: '+surface,'Dados e filtros');
+}
+await go('#components','dark');await page.getByRole('tab',{name:'Formulários',exact:true}).click();await page.getByLabel('Operadora · md',{exact:true}).click();await capture('85-select-aberto','Select aberto no tema escuro','Formulários interativos','dark');await close();
+await page.getByRole('tab',{name:'Interações',exact:true}).click();await page.getByRole('button',{name:'Criar contato no modal',exact:true}).click();await capture('86-modal-formulario','Modal de criação no tema escuro','Sobreposições','dark');await close();
+await specimen('Popover e menu contextual').getByRole('button',{name:'Sobre este status',exact:true}).click();await capture('87-popover-status','Popover de status no tema escuro','Sobreposições','dark');await close();
+return {config,records,failures};

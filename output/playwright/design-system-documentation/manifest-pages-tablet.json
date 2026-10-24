@@ -1,0 +1,586 @@
+{
+  "config": {
+    "id": "tablet",
+    "width": 768,
+    "height": 1024
+  },
+  "records": [
+    {
+      "file": "tablet/light/01-visao-geral.png",
+      "label": "Visão geral completa",
+      "group": "Seções",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 2345
+      },
+      "url": "https://www.kifersaude.com.br/design-system#overview",
+      "capture": "fullPage",
+      "bytes": 199887
+    },
+    {
+      "file": "tablet/light/02-fundamentos-visuais.png",
+      "label": "Fundamentos: cores, fontes, espaços, raios, sombras e ícones",
+      "group": "Seções",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 2600
+      },
+      "url": "https://www.kifersaude.com.br/design-system#foundations",
+      "capture": "fullPage",
+      "bytes": 240830
+    },
+    {
+      "file": "tablet/light/03-componentes-acoes.png",
+      "label": "Botões: variantes, tamanhos, ícones, grupos, links e ações de formulário",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 1817
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 181207
+    },
+    {
+      "file": "tablet/light/04-componentes-formularios.png",
+      "label": "Inputs, máscaras, seleção, escolhas, datas e formulário",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 3155
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 275902
+    },
+    {
+      "file": "tablet/light/05-componentes-navegacao.png",
+      "label": "Sidebar, header, breadcrumbs, abas, paginação e etapas",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 1853
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 174431
+    },
+    {
+      "file": "tablet/light/06-componentes-dados.png",
+      "label": "Tabela, filtros, cards, indicadores, badges e avatares",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 4112
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 394216
+    },
+    {
+      "file": "tablet/light/07-componentes-feedback.png",
+      "label": "Alertas, toasts, skeletons, loading e progresso",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 1522
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 151348
+    },
+    {
+      "file": "tablet/light/08-componentes-interacoes.png",
+      "label": "Acionadores de modal, confirmação, drawer, popover, menu e tooltip",
+      "group": "Componentes",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 1443
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 135646
+    },
+    {
+      "file": "tablet/light/09-estados-validacao.png",
+      "label": "Estados disponíveis, foco, disabled, validação, loading, vazio e erros",
+      "group": "Seções",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 3254
+      },
+      "url": "https://www.kifersaude.com.br/design-system#states",
+      "capture": "fullPage",
+      "bytes": 289006
+    },
+    {
+      "file": "tablet/light/10-padroes-layout.png",
+      "label": "Estruturas de página e convenções de UX",
+      "group": "Seções",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 2069
+      },
+      "url": "https://www.kifersaude.com.br/design-system#patterns",
+      "capture": "fullPage",
+      "bytes": 194230
+    },
+    {
+      "file": "tablet/light/11-responsividade.png",
+      "label": "Demonstração e orientações para desktop, tablet e mobile",
+      "group": "Seções",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 780,
+        "height": 1908
+      },
+      "url": "https://www.kifersaude.com.br/design-system#responsive",
+      "capture": "fullPage",
+      "bytes": 155699
+    },
+    {
+      "file": "tablet/light/12-pagina-list.png",
+      "label": "Listagem de contatos — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1122
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=list&theme=light",
+      "capture": "fullPage",
+      "bytes": 83331
+    },
+    {
+      "file": "tablet/light/12-pagina-detail.png",
+      "label": "Detalhes de um contato — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=detail&theme=light",
+      "capture": "fullPage",
+      "bytes": 72722
+    },
+    {
+      "file": "tablet/light/12-pagina-create.png",
+      "label": "Formulário de criação — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=create&theme=light",
+      "capture": "fullPage",
+      "bytes": 72370
+    },
+    {
+      "file": "tablet/light/12-pagina-edit.png",
+      "label": "Formulário de edição — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=edit&theme=light",
+      "capture": "fullPage",
+      "bytes": 73698
+    },
+    {
+      "file": "tablet/light/12-pagina-dashboard.png",
+      "label": "Dashboard comercial — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "light",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=dashboard&theme=light",
+      "capture": "fullPage",
+      "bytes": 78745
+    },
+    {
+      "file": "tablet/dark/01-visao-geral.png",
+      "label": "Visão geral completa",
+      "group": "Seções",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 2345
+      },
+      "url": "https://www.kifersaude.com.br/design-system#overview",
+      "capture": "fullPage",
+      "bytes": 201674
+    },
+    {
+      "file": "tablet/dark/02-fundamentos-visuais.png",
+      "label": "Fundamentos: cores, fontes, espaços, raios, sombras e ícones",
+      "group": "Seções",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 2600
+      },
+      "url": "https://www.kifersaude.com.br/design-system#foundations",
+      "capture": "fullPage",
+      "bytes": 239455
+    },
+    {
+      "file": "tablet/dark/03-componentes-acoes.png",
+      "label": "Botões: variantes, tamanhos, ícones, grupos, links e ações de formulário",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 1817
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 180286
+    },
+    {
+      "file": "tablet/dark/04-componentes-formularios.png",
+      "label": "Inputs, máscaras, seleção, escolhas, datas e formulário",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 3155
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 275628
+    },
+    {
+      "file": "tablet/dark/05-componentes-navegacao.png",
+      "label": "Sidebar, header, breadcrumbs, abas, paginação e etapas",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 1853
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 173603
+    },
+    {
+      "file": "tablet/dark/06-componentes-dados.png",
+      "label": "Tabela, filtros, cards, indicadores, badges e avatares",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 4112
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 395927
+    },
+    {
+      "file": "tablet/dark/07-componentes-feedback.png",
+      "label": "Alertas, toasts, skeletons, loading e progresso",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 1522
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 150867
+    },
+    {
+      "file": "tablet/dark/08-componentes-interacoes.png",
+      "label": "Acionadores de modal, confirmação, drawer, popover, menu e tooltip",
+      "group": "Componentes",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 1443
+      },
+      "url": "https://www.kifersaude.com.br/design-system#components",
+      "capture": "fullPage",
+      "bytes": 135096
+    },
+    {
+      "file": "tablet/dark/09-estados-validacao.png",
+      "label": "Estados disponíveis, foco, disabled, validação, loading, vazio e erros",
+      "group": "Seções",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 3254
+      },
+      "url": "https://www.kifersaude.com.br/design-system#states",
+      "capture": "fullPage",
+      "bytes": 287879
+    },
+    {
+      "file": "tablet/dark/10-padroes-layout.png",
+      "label": "Estruturas de página e convenções de UX",
+      "group": "Seções",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 2069
+      },
+      "url": "https://www.kifersaude.com.br/design-system#patterns",
+      "capture": "fullPage",
+      "bytes": 196527
+    },
+    {
+      "file": "tablet/dark/11-responsividade.png",
+      "label": "Demonstração e orientações para desktop, tablet e mobile",
+      "group": "Seções",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 774,
+        "height": 1908
+      },
+      "url": "https://www.kifersaude.com.br/design-system#responsive",
+      "capture": "fullPage",
+      "bytes": 155759
+    },
+    {
+      "file": "tablet/dark/12-pagina-list.png",
+      "label": "Listagem de contatos — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1122
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=list&theme=dark",
+      "capture": "fullPage",
+      "bytes": 83853
+    },
+    {
+      "file": "tablet/dark/12-pagina-detail.png",
+      "label": "Detalhes de um contato — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=detail&theme=dark",
+      "capture": "fullPage",
+      "bytes": 73259
+    },
+    {
+      "file": "tablet/dark/12-pagina-create.png",
+      "label": "Formulário de criação — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=create&theme=dark",
+      "capture": "fullPage",
+      "bytes": 73233
+    },
+    {
+      "file": "tablet/dark/12-pagina-edit.png",
+      "label": "Formulário de edição — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=edit&theme=dark",
+      "capture": "fullPage",
+      "bytes": 74528
+    },
+    {
+      "file": "tablet/dark/12-pagina-dashboard.png",
+      "label": "Dashboard comercial — prévia independente com todo o conteúdo",
+      "group": "Páginas completas",
+      "theme": "dark",
+      "device": "tablet",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "pixels": {
+        "width": 758,
+        "height": 1027
+      },
+      "url": "https://www.kifersaude.com.br/design-system?preview=1&pattern=dashboard&theme=dark",
+      "capture": "fullPage",
+      "bytes": 79661
+    }
+  ],
+  "failures": []
+}

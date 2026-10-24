@@ -3,7 +3,7 @@ import { isAuthorizedMetaWorker } from './auth.ts';
 import { createMetaRepository } from '../_shared/meta-ads/repository.ts';
 import { createGraphClient } from '../_shared/meta-ads/graph.ts';
 import { isRecord, MetaError, type CapiApproval, type Receipt, type Conversion } from '../_shared/meta-ads/domain.ts';
-import { runMetaWorker } from '../_shared/meta-ads/worker.ts';
+import { isValidationLeadId, runMetaWorker } from '../_shared/meta-ads/worker.ts';
 
 declare const Deno: { env: { get(key: string): string | undefined }; serve(handler: (req: Request) => Promise<Response>): void };
 const env = (key: string) => Deno.env.get(key) ?? '';
@@ -27,7 +27,8 @@ Deno.serve(async (req) => {
       retrieve: (id) => createGraphClient(env('META_GRAPH_VERSION'), env('META_PAGE_ACCESS_TOKEN'))(id,
         'id,created_time,form_id,is_organic,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,field_data'),
       importLead: async (receipt, lead) => {
-        const validationOnly = receipt.leadgen_id === env('META_VALIDATION_LEAD_ID');
+        const validationOnly = isValidationLeadId(receipt.leadgen_id,
+          [env('META_VALIDATION_LEAD_ID'),env('META_VALIDATION_LEAD_IDS')].join(','));
         await repo.rpc(validationOnly ? 'meta_ads_validate_test_import' : 'meta_ads_import', {
           p_id: receipt.leadgen_id,p_lock: receipt.lock_token,p_lead: lead,
         });

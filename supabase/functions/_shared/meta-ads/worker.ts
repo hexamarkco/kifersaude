@@ -13,6 +13,10 @@ export type WorkerDependencies = {
     error: string | null, retrySeconds: number | null) => Promise<void>;
   approval: CapiApproval;
 };
+export function isValidationLeadId(id: string, configuredIds: string): boolean {
+  return /^\d+$/.test(id) && configuredIds.split(',').some((value) => value.trim() === id);
+}
+
 export async function runMetaWorker(deps: WorkerDependencies) {
   const config = await deps.config();
   const result = { imported: 0, validatedTests: 0, sent: 0, failed: 0, capiEnabled: canSend(deps.approval) };

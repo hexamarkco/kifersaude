@@ -3,8 +3,9 @@
 Migrations e três Edge Functions implantadas no projeto `eaxvvhamkmovkoqssahj`
 em 23/10/2026, após autorização. O receptor e o processamento periódico estão
 ativos. Em 24/10, `pages_manage_metadata` foi concedida e a Página inscrita no
-aplicativo. Falta atribuir o getLeads no Gerenciador de Acesso a Leads para
-comprovar a entrega automática pela Meta. A CAPI permanece desabilitada.
+aplicativo. O getLeads foi atribuído no Gerenciador de Acesso a Leads e o fluxo
+automático Meta → webhook → cron → importação com rollback foi comprovado com
+teste oficial, sem persistir contato nem enviar mensagens. A CAPI permanece desabilitada.
 
 ## O que já existia e o que foi reutilizado
 
@@ -125,6 +126,7 @@ Secrets de servidor necessários:
 | `META_GRAPH_VERSION` | Versão explícita suportada pelo aplicativo, no formato `vNN.0` |
 | `META_WORKER_SECRET` | Credencial exclusiva do scheduler, também guardada no Vault |
 | `META_VALIDATION_LEAD_ID` | ID exato do teste oficial que executa importação com rollback |
+| `META_VALIDATION_LEAD_IDS` | IDs exatos separados por vírgula, preservando a proteção de testes anteriores |
 
 O runtime já fornece `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY`.
 Não há fallback para versões Graph ou tokens de outras integrações.
@@ -153,8 +155,8 @@ indefinido até a avaliação comercial.
 O callback configurado é
 `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/meta-lead-webhook`.
 O desafio e a assinatura `leadgen` do aplicativo foram confirmados na versão
-`v26.0`. A entrega automática ainda depende da atribuição do aplicativo no
-Gerenciador de Acesso a Leads. A permissão
+`v26.0`. O aplicativo foi atribuído no Gerenciador de Acesso a Leads e a entrega
+automática foi comprovada. A permissão
 `pages_manage_metadata` e a inscrição da Página já foram confirmadas em 24/10;
 o token atual permite consultar o lead de teste.
 
@@ -240,18 +242,19 @@ contratos anteriores/incompatíveis, RLS/grants, autorização administrativa,
 reconciliação e bloqueio de transporte CAPI.
 
 Para testar o ambiente implantado sem persistir contato nem acionar comunicações,
-o ID oficial fixado em `META_VALIDATION_LEAD_ID` segue exclusivamente para
+os IDs oficiais fixados em `META_VALIDATION_LEAD_ID` ou `META_VALIDATION_LEAD_IDS` seguem exclusivamente para
 `meta_ads_validate_test_import`. Essa RPC exige o nome sintético fixo, telefone
 reservado e resposta comercial; executa a função real de importação e reverte a
 subtransação, incluindo os triggers. O recibo termina em `validation_passed`,
 separado de uma importação concluída. Requisições pg_net só partem após commit;
 o endpoint de push também foi conferido como não configurado nesse ambiente.
-Não usar outro lead de teste em produção: os demais IDs seguem o fluxo comercial
-normal e podem gerar comunicações reais.
+Preservar os IDs anteriores na lista protege contra entregas atrasadas. Não usar
+outro lead de teste em produção sem pausar o worker, fixar seu ID e conferir a
+configuração antes de retomar: os demais IDs seguem o fluxo comercial normal e
+podem gerar comunicações reais.
 
-A inscrição da Página foi comprovada; a entrega originada pela Meta ainda depende
-da atribuição do getLeads no Gerenciador de Acesso a Leads. Avaliação, contrato
-sintético e eventos `held` são cobertos pelos
+A inscrição da Página e a entrega originada pela Meta foram comprovadas em 24/10.
+Avaliação, contrato sintético e eventos `held` são cobertos pelos
 testes locais; o teste remoto de rollback não valida essas etapas. Transporte
 CAPI/Test Events exige autorização própria e aprovação de dados e não foi executado.
 
@@ -260,7 +263,7 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
 
 ## Resultado das verificações locais
 
-- 33 testes específicos passaram, incluindo execução das migrations em PGlite,
+- 34 testes específicos passaram, incluindo execução das migrations em PGlite,
   E2E com Graph simulada, rollback do teste, autenticação do scheduler e histórico.
 - As três Edge Functions passaram em `deno check`; build, lint, arquitetura,
   checagem de credenciais e auditoria visual passaram. O lint geral aponta três
@@ -382,3 +385,29 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
   O cron 47 foi retomado e a chamada via pg_net recebeu HTTP 200, sem timeout
   (request `710811`). Banco confirmou zero contatos e atribuições do teste e zero
   eventos de conversão; CAPI continua explicitamente desativada.
+
+## Fluxo automático comprovado em 24/10/2026
+
+- Após o usuário concluir a confirmação de identidade, o getLeads foi atribuído
+  como CRM da Página no Gerenciador de Acesso a Leads. A lista passou a exibir
+  `getLeads`; a integração Google Sheets existente foi preservada.
+- O worker ficou pausado durante a substituição do teste sintético anterior.
+  Novo teste oficial `2387036975167734`, com o mesmo nome fixo, telefone reservado
+  e resposta comercial, criado às 02:20:02 BRT. Seu ID foi protegido no servidor;
+  os IDs anteriores `1097931793037511` e `1840662990291917` também permaneceram
+  na lista exata de validação, para impedir importações por entregas atrasadas.
+- A própria Meta entregou a notificação: recibo persistido às 02:20:07,538 BRT,
+  com Página e formulário corretos, assinatura aceita e status `pending`.
+  Nenhum POST local foi feito para esse ID.
+- Após publicar o worker atualizado e retomar a agenda às 02:20:44 BRT, o cron 47
+  executou automaticamente às 02:21:00. O worker consultou o lead na Graph API,
+  executou a importação canônica com rollback e finalizou às 02:21:01,117 BRT:
+  `validation_passed`, uma tentativa, nenhum erro.
+- Resposta HTTP do worker via pg_net (request `710828`): HTTP 200, sem timeout,
+  `validatedTests=1`, `imported=0`, `sent=0`, `failed=0`, `capiEnabled=false`.
+  Consultas ao banco confirmaram zero contatos do telefone reservado, zero
+  atribuições do teste e zero eventos de conversão. Não houve mensagem WhatsApp/IA.
+- Os 34 testes específicos, lint dos módulos alterados, `deno check`, checagem de
+  credenciais e arquitetura passaram. Este teste comprova o caminho real de
+  recebimento e importação; não valida transporte CAPI, revisão comercial nem
+  criação de contrato em produção. A CAPI continua desativada e o cron ativo.

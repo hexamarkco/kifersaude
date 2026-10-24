@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildConversion, canSend, mapGraphLead, parseNotifications, verifySignature,
   MetaError, retryDelay, type MetaConfig, type Receipt, type Conversion, type CapiApproval } from '../meta-ads/domain.ts';
 import { createGraphClient } from '../meta-ads/graph.ts';
-import { runMetaWorker, type WorkerDependencies } from '../meta-ads/worker.ts';
+import { isValidationLeadId, runMetaWorker, type WorkerDependencies } from '../meta-ads/worker.ts';
 import { createWebhookHandler } from '../../meta-lead-webhook/handler.ts';
 import { createAdminHandler } from '../../meta-ads-admin/handler.ts';
 import { isAuthorizedMetaWorker } from '../../meta-ads-worker/auth.ts';
@@ -113,6 +113,15 @@ function worker(overrides: Partial<WorkerDependencies> = {}): WorkerDependencies
   };
 }
 describe('reliable worker and delivery gates', () => {
+  it('keeps all pinned test IDs protected against delayed deliveries without matching other IDs', () => {
+    const configured='111111111111111, 222222222222222';
+    expect(isValidationLeadId('111111111111111',configured)).toBe(true);
+    expect(isValidationLeadId('222222222222222',configured)).toBe(true);
+    expect(isValidationLeadId('333333333333333',configured)).toBe(false);
+    expect(isValidationLeadId('11111111111111',configured)).toBe(false);
+    expect(isValidationLeadId('','')).toBe(false);
+    expect(isValidationLeadId('333333333333333','*')).toBe(false);
+  });
   it('allows only a configured scheduler secret or the existing service credential', () => {
     const scheduler='a'.repeat(64);
     expect(isAuthorizedMetaWorker(new Request('https://local.invalid'),'example-service','')).toBe(false);

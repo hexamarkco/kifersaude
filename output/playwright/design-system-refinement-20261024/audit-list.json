@@ -1,0 +1,58 @@
+[
+  {
+    "theme": "light",
+    "viewport": 320,
+    "width": 310,
+    "table": 0,
+    "selectionColumn": 0
+  },
+  {
+    "theme": "dark",
+    "viewport": 320,
+    "width": 310,
+    "table": 0,
+    "selectionColumn": 0
+  },
+  {
+    "theme": "light",
+    "viewport": 390,
+    "width": 380,
+    "table": 0,
+    "selectionColumn": 0
+  },
+  {
+    "theme": "dark",
+    "viewport": 390,
+    "width": 380,
+    "table": 0,
+    "selectionColumn": 0
+  },
+  {
+    "theme": "light",
+    "viewport": 768,
+    "width": 758,
+    "table": 717.6000366210938,
+    "selectionColumn": 64
+  },
+  {
+    "theme": "dark",
+    "viewport": 768,
+    "width": 758,
+    "table": 717.6000366210938,
+    "selectionColumn": 64
+  },
+  {
+    "theme": "light",
+    "viewport": 1920,
+    "width": 1910,
+    "table": 1470.4000244140625,
+    "selectionColumn": 64
+  },
+  {
+    "theme": "dark",
+    "viewport": 1920,
+    "width": 1910,
+    "table": 1470.4000244140625,
+    "selectionColumn": 64
+  }
+]

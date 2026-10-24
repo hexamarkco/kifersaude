@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
+import { useDesignSystemAppearance } from '../appearanceContext';
 import Button, { type ButtonSize, type ButtonVariant } from './Button';
 import { ToastContext } from './toastContext';
 
@@ -108,15 +109,17 @@ function ToastContainer({
   position: ToastPosition;
   onDismiss: (id: string) => void;
 }) {
+  const appearance = useDesignSystemAppearance();
   if (toasts.length === 0) return null;
 
-  const isDarkThemeActive = document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+  const isDarkThemeActive = appearance ? appearance.theme === 'dark' : document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   return createPortal(
     <div
       className={cx(
         'kds-toast-container modal-theme-host painel-theme kifer-ds',
         isDarkThemeActive ? 'theme-dark' : 'theme-light',
+        appearance && 'kds-operational',
         `kds-toast-${position}`,
       )}
       aria-live="polite"

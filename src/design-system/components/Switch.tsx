@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -10,15 +10,19 @@ export type SwitchProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | '
 };
 
 const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
-  { size = 'md', label, className, disabled, ...props },
+  { size = 'md', label, id, 'aria-label': ariaLabel, className, disabled, ...props },
   ref,
 ) {
+  const generatedId = useId();
+  const controlId = id ?? `switch-${generatedId}`;
   const switchElement = (
     <label className={cx('kds-switch', `kds-switch-${size}`, disabled && 'kds-switch-disabled', className)}>
       <input
         ref={ref}
         type="checkbox"
         role="switch"
+        id={controlId}
+        aria-label={ariaLabel ?? label}
         disabled={disabled}
         className="kds-switch-input"
         {...props}
@@ -33,7 +37,7 @@ const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
     return (
       <div className="kds-switch-field">
         {switchElement}
-        <span className="kds-switch-label">{label}</span>
+        <label className="kds-switch-label" htmlFor={controlId}>{label}</label>
       </div>
     );
   }

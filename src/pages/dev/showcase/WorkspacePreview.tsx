@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -35,8 +35,14 @@ import {
   Input,
   KpiCard,
   NavigationList,
-  PageContainer,
-  PageHeader,
+  ListPage,
+  DetailPage,
+  FormPage,
+  FormSection,
+  DashboardPage,
+  PageActions,
+  ResponsiveCollection,
+  type PageHeaderProps,
   PageSection,
   Pagination,
   Progress,
@@ -94,12 +100,12 @@ export function ContactForm({
   initial,
   onSave,
   onCancel,
-  compact = false,
+  header,
 }: {
   initial?: DemoContact;
   onSave: (contact: DemoContact) => void;
   onCancel: () => void;
-  compact?: boolean;
+  header?: PageHeaderProps;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [email, setEmail] = useState(initial?.email ?? '');
@@ -142,9 +148,12 @@ export function ContactForm({
       notes,
     });
   };
-  return (
-    <form className="ds-demo-form" onSubmit={submit} noValidate>
-      <div className={compact ? 'ds-stack' : 'ds-form-grid'}>
+  const fields = (
+    <>
+      <FormSection
+        title="Dados do contato"
+        description="Campos com * são obrigatórios."
+      >
         <Field
           label="Nome completo"
           required
@@ -198,31 +207,45 @@ export function ContactForm({
             options={operatorOptions}
           />
         </Field>
-      </div>
-      <Field
-        label="Observações"
-        hint="Este exemplo mantém os dados somente enquanto a prévia estiver aberta."
-      >
-        <Textarea
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          placeholder="Preferências e próximos passos da conversa"
-          rows={3}
-        />
-      </Field>
-      <FormActions
-        onCancel={() => {
-          setName(initial?.name ?? '');
-          setEmail(initial?.email ?? '');
-          setPhone(initial?.phone ?? '');
-          setOperator(initial?.operator ?? 'Amil');
-          setNotes(initial?.notes ?? '');
-          setSubmitted(false);
-          onCancel();
-        }}
-        submitLabel={initial ? 'Salvar alterações' : 'Criar contato'}
-        message="Demonstração · dados somente nesta prévia"
-      />
+      </FormSection>
+      <FormSection title="Contexto do atendimento">
+        <Field
+          label="Observações"
+          hint="Este exemplo mantém os dados somente enquanto a prévia estiver aberta."
+        >
+          <Textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Preferências e próximos passos da conversa"
+            rows={3}
+          />
+        </Field>
+      </FormSection>
+    </>
+  );
+  const actions = (
+    <FormActions
+      onCancel={() => {
+        setName(initial?.name ?? '');
+        setEmail(initial?.email ?? '');
+        setPhone(initial?.phone ?? '');
+        setOperator(initial?.operator ?? 'Amil');
+        setNotes(initial?.notes ?? '');
+        setSubmitted(false);
+        onCancel();
+      }}
+      submitLabel={initial ? 'Salvar alterações' : 'Criar contato'}
+      message="Demonstração · dados somente nesta prévia"
+    />
+  );
+  return header ? (
+    <FormPage header={header} onSubmit={submit} noValidate actions={actions}>
+      {fields}
+    </FormPage>
+  ) : (
+    <form className="ds-demo-form" onSubmit={submit} noValidate>
+      {fields}
+      {actions}
     </form>
   );
 }
@@ -231,10 +254,12 @@ export function ContactList({
   contacts = demoContacts,
   onOpen,
   onCreate,
+  header,
 }: {
   contacts?: DemoContact[];
   onOpen?: (contact: DemoContact) => void;
   onCreate?: () => void;
+  header?: PageHeaderProps;
 }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
@@ -253,61 +278,86 @@ export function ContactList({
   const currentPage = Math.min(page, totalPages);
   const rows = sorted.slice((currentPage - 1) * 4, currentPage * 4);
   const hasFilters = Boolean(search || status);
-  return (
-    <div className="ds-stack">
-      <FilterBar>
-        <ToolbarSearch>
-          <SearchInput
-            aria-label="Buscar contatos"
-            placeholder="Buscar nome, e-mail ou operadora"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
-        </ToolbarSearch>
-        <ToolbarActions>
-          <FilterSelect
-            icon={Filter}
-            placeholder="Todos os status"
-            value={status}
-            onChange={(value) => {
-              setStatus(value);
-              setPage(1);
-            }}
-            options={statusOptions}
-          />
-          {hasFilters && (
-            <Button
-              variant="text"
-              size="sm"
-              onClick={() => {
-                setSearch('');
-                setStatus('');
-                setPage(1);
-              }}
+  const searchControl = (
+    <>
+      <SearchInput
+        aria-label="Buscar contatos"
+        placeholder="Buscar nome, e-mail ou operadora"
+        value={search}
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setPage(1);
+        }}
+      />
+    </>
+  );
+  const filters = (
+    <>
+      <FilterSelect
+        icon={Filter}
+        placeholder="Todos os status"
+        value={status}
+        onChange={(value) => {
+          setStatus(value);
+          setPage(1);
+        }}
+        options={statusOptions}
+      />
+      {hasFilters && (
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => {
+            setSearch('');
+            setStatus('');
+            setPage(1);
+          }}
+        >
+          Limpar filtros
+        </Button>
+      )}
+    </>
+  );
+  const summary = (
+    <div className="ds-list-summary">
+      <span>
+        {filtered.length} contatos
+        {hasFilters ? ' encontrados' : ' na demonstração'}
+      </span>
+      {selected.length > 0 && <Badge>{selected.length} selecionados</Badge>}
+    </div>
+  );
+  const pagination =
+    rows.length > 0 ? (
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        itemsPerPage={4}
+        totalItems={filtered.length}
+      />
+    ) : null;
+  const content = rows.length ? (
+    <>
+      <ResponsiveCollection
+        table={
+          <>
+            <Table
+              aria-label="Contatos demonstrativos"
+              columnWidths={[
+                'var(--space-16)',
+                'auto',
+                'auto',
+                'auto',
+                'auto',
+                'var(--space-16)',
+              ]}
             >
-              Limpar filtros
-            </Button>
-          )}
-        </ToolbarActions>
-      </FilterBar>
-      <div className="ds-list-summary" role="status">
-        <span>
-          {filtered.length} contatos
-          {hasFilters ? ' encontrados' : ' na demonstração'}
-        </span>
-        {selected.length > 0 && <Badge>{selected.length} selecionados</Badge>}
-      </div>
-      {rows.length ? (
-        <>
-          <div className="ds-desktop-table">
-            <Table aria-label="Contatos demonstrativos">
               <TableHeader>
                 <TableRow>
                   <TableHead>
                     <Checkbox
+                      touchTarget
                       aria-label="Selecionar contatos desta página"
                       checked={rows.every((row) => selected.includes(row.id))}
                       onChange={(event) =>
@@ -353,6 +403,7 @@ export function ContactList({
                   <TableRow key={row.id} selected={selected.includes(row.id)}>
                     <TableCell>
                       <Checkbox
+                        touchTarget
                         aria-label={`Selecionar ${row.name}`}
                         checked={selected.includes(row.id)}
                         onChange={(event) =>
@@ -392,7 +443,9 @@ export function ContactList({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </>
+        }
+        cards={
           <div className="ds-mobile-contacts">
             <Select
               aria-label="Ordenar contatos"
@@ -432,6 +485,7 @@ export function ContactList({
                     <strong>{row.name}</strong>
                   </div>
                   <Checkbox
+                    touchTarget
                     aria-label={`Selecionar ${row.name}`}
                     checked={selected.includes(row.id)}
                     onChange={(event) =>
@@ -465,46 +519,60 @@ export function ContactList({
               </Card>
             ))}
           </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            itemsPerPage={4}
-            totalItems={filtered.length}
-          />
-        </>
-      ) : (
-        <EmptyState
-          icon={<Search />}
-          title={
-            hasFilters
-              ? 'Nenhum contato encontrado'
-              : 'Sua lista está pronta para começar'
-          }
-          description={
-            hasFilters
-              ? 'Tente outro nome ou ajuste os filtros para ampliar a busca.'
-              : 'Adicione o primeiro contato para organizar o atendimento.'
-          }
-          action={
-            hasFilters ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setSearch('');
-                  setStatus('');
-                }}
-              >
-                Limpar busca e filtros
-              </Button>
-            ) : (
-              <Button onClick={onCreate} disabled={!onCreate}>
-                Criar contato
-              </Button>
-            )
-          }
-        />
-      )}
+        }
+      />
+    </>
+  ) : (
+    <EmptyState
+      icon={<Search />}
+      title={
+        hasFilters
+          ? 'Nenhum contato encontrado'
+          : 'Sua lista está pronta para começar'
+      }
+      description={
+        hasFilters
+          ? 'Tente outro nome ou ajuste os filtros para ampliar a busca.'
+          : 'Adicione o primeiro contato para organizar o atendimento.'
+      }
+      action={
+        hasFilters ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSearch('');
+              setStatus('');
+            }}
+          >
+            Limpar busca e filtros
+          </Button>
+        ) : (
+          <Button onClick={onCreate} disabled={!onCreate}>
+            Criar contato
+          </Button>
+        )
+      }
+    />
+  );
+  return header ? (
+    <ListPage
+      header={header}
+      search={searchControl}
+      filters={filters}
+      summary={summary}
+      pagination={pagination}
+    >
+      {content}
+    </ListPage>
+  ) : (
+    <div className="ds-stack">
+      <FilterBar>
+        <ToolbarSearch>{searchControl}</ToolbarSearch>
+        <ToolbarActions>{filters}</ToolbarActions>
+      </FilterBar>
+      <div role="status">{summary}</div>
+      {content}
+      {pagination}
     </div>
   );
 }
@@ -536,12 +604,92 @@ export default function WorkspacePreview({
     dashboard: 'Visão comercial',
   };
   const descriptions = {
-    list: 'Cada conversa, uma oportunidade de cuidar.',
+    list: 'Consulte os contatos e organize o próximo atendimento.',
     detail: 'Informações e próximos passos do relacionamento.',
     create: 'Organize o início de um novo relacionamento.',
     edit: 'Mantenha as informações do atendimento atualizadas.',
-    dashboard: 'Acompanhe os resultados desta base demonstrativa.',
+    dashboard: 'Resultados desta base demonstrativa.',
   };
+  const breadcrumbs = (
+    <Breadcrumb>
+      <BreadcrumbItem>
+        <BreadcrumbLink
+          href="?preview=1&pattern=list"
+          onClick={(event) => {
+            event.preventDefault();
+            setView('list');
+          }}
+        >
+          CRM
+        </BreadcrumbLink>
+      </BreadcrumbItem>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem isCurrent>
+        {view === 'detail' || view === 'edit' ? contact.name : titles[view]}
+      </BreadcrumbItem>
+    </Breadcrumb>
+  );
+  const header: PageHeaderProps = {
+    title: titles[view],
+    description: descriptions[view],
+    breadcrumbs,
+    identity:
+      view === 'detail' ? <Avatar name={contact.name} size="md" /> : undefined,
+    status:
+      view === 'detail' ? <ContactStatus status={contact.status} /> : undefined,
+    actions:
+      view === 'list' ? (
+        <PageActions
+          primary={{
+            label: 'Novo contato',
+            icon: Plus,
+            onClick: () => setView('create'),
+          }}
+        />
+      ) : view === 'detail' ? (
+        <PageActions
+          secondary={[
+            {
+              label: 'Voltar',
+              icon: ArrowLeft,
+              onClick: () => setView('list'),
+            },
+          ]}
+          primary={{
+            label: 'Editar contato',
+            icon: Pencil,
+            onClick: () => setView('edit'),
+          }}
+        />
+      ) : undefined,
+  };
+  const save = (next: DemoContact) => {
+    setContacts((current) =>
+      current.some((row) => row.id === next.id)
+        ? current.map((row) => (row.id === next.id ? next : row))
+        : [next, ...current],
+    );
+    setContact(next);
+    setView('detail');
+    toast({
+      variant: 'success',
+      title: 'Exemplo salvo nesta prévia',
+      description:
+        'A lista demonstrativa foi atualizada. Recarregar restaura os exemplos.',
+    });
+  };
+  const periodFilter = (
+    <Field label="Período do dashboard">
+      <Select
+        value={period}
+        onChange={(event) => setPeriod(event.target.value)}
+        options={[
+          { value: 'month', label: 'Todos os contatos' },
+          { value: 'new', label: 'Novos contatos' },
+        ]}
+      />
+    </Field>
+  );
   return (
     <div className="ds-workspace">
       <div className="ds-workspace-top">
@@ -592,121 +740,51 @@ export default function WorkspacePreview({
             activeId={view === 'detail' || view === 'edit' ? 'list' : view}
             onNavigate={changeView}
           />
-          <div className="ds-workspace-sidebar-note">
-            <CheckCircle2 size={16} />
-            <p>
-              Os mesmos componentes.
-              <br />
-              Uma experiência consistente.
-            </p>
-          </div>
         </aside>
-        <PageContainer size="full" spacing="sm" className="ds-workspace-main">
-          <Breadcrumb>
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                href="?preview=1&pattern=list"
-                onClick={(event) => {
-                  event.preventDefault();
-                  setView('list');
-                }}
-              >
-                CRM
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              {view === 'detail' || view === 'edit' ? 'Contatos' : titles[view]}
-            </BreadcrumbItem>
-            {(view === 'detail' || view === 'edit') && (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  {view === 'edit' ? 'Editar' : contact.name}
-                </BreadcrumbItem>
-              </>
-            )}
-          </Breadcrumb>
-          <PageHeader
-            title={titles[view]}
-            description={descriptions[view]}
-            actions={
-              view === 'list' ? (
-                <Button onClick={() => setView('create')}>
-                  <Plus />
-                  Novo contato
-                </Button>
-              ) : view === 'detail' ? (
-                <>
-                  <Button variant="secondary" onClick={() => setView('list')}>
-                    <ArrowLeft />
-                    Voltar
-                  </Button>
-                  <Button onClick={() => setView('edit')}>
-                    <Pencil />
-                    Editar contato
-                  </Button>
-                </>
-              ) : view === 'dashboard' ? (
-                <Select
-                  aria-label="Período do dashboard"
-                  value={period}
-                  onChange={(event) => setPeriod(event.target.value)}
-                  options={[
-                    { value: 'month', label: 'Todos os contatos' },
-                    { value: 'new', label: 'Novos contatos' },
-                  ]}
-                />
-              ) : undefined
-            }
-          />
+        <div className="ds-workspace-content">
           {view === 'list' && (
             <ContactList
+              header={header}
               contacts={contacts}
               onOpen={openContact}
               onCreate={() => setView('create')}
             />
           )}
           {(view === 'create' || view === 'edit') && (
-            <Card>
-              <SectionHeader
-                title="Informações do contato"
-                description="Campos marcados com * são obrigatórios."
-                as="h2"
-              />
-              <ContactForm
-                key={`${view}-${contact.id}`}
-                initial={view === 'edit' ? contact : undefined}
-                onCancel={() => setView(view === 'edit' ? 'detail' : 'list')}
-                onSave={(next) => {
-                  setContacts((current) =>
-                    current.some((row) => row.id === next.id)
-                      ? current.map((row) => (row.id === next.id ? next : row))
-                      : [next, ...current],
-                  );
-                  setContact(next);
-                  setView('detail');
-                  toast({
-                    variant: 'success',
-                    title: 'Exemplo salvo nesta prévia',
-                    description:
-                      'A lista demonstrativa foi atualizada. Recarregar a prévia restaura os exemplos.',
-                  });
-                }}
-              />
-            </Card>
+            <ContactForm
+              key={`${view}-${contact.id}`}
+              header={header}
+              initial={view === 'edit' ? contact : undefined}
+              onSave={save}
+              onCancel={() => setView(view === 'edit' ? 'detail' : 'list')}
+            />
           )}
           {view === 'detail' && (
-            <div className="ds-detail-grid">
-              <Card>
-                <SectionHeader title="Sobre o contato" as="h2" />
-                <div className="ds-detail-person">
-                  <Avatar name={contact.name} size="lg" />
-                  <div>
-                    <h3>{contact.name}</h3>
-                    <ContactStatus status={contact.status} />
+            <DetailPage
+              header={header}
+              aside={
+                <Card>
+                  <SectionHeader title="Próximo atendimento" as="h2" />
+                  <div className="ds-stack">
+                    <Field label="Data e horário">
+                      <DateTimePicker placeholder="Selecionar atendimento" />
+                    </Field>
+                    <Alert tone="info">
+                      Este agendamento é visual e não cria lembretes.
+                    </Alert>
+                    <div className="ds-timeline">
+                      <CalendarDays size={18} />
+                      <div>
+                        <strong>Conversa inicial</strong>
+                        <p>Interesse em cobertura para a família.</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </Card>
+              }
+            >
+              <Card>
+                <SectionHeader title="Informações de contato" as="h2" />
                 <dl className="ds-description-list">
                   <div>
                     <dt>E-mail</dt>
@@ -732,29 +810,12 @@ export default function WorkspacePreview({
                   )}
                 </dl>
               </Card>
-              <Card>
-                <SectionHeader title="Próximo atendimento" as="h2" />
-                <p className="ds-description">
-                  Escolha uma data para testar o calendário.
-                </p>
-                <Field label="Data e horário">
-                  <DateTimePicker placeholder="Selecionar atendimento" />
-                </Field>
-                <Alert tone="info">
-                  Este agendamento é apenas visual e não cria lembretes.
-                </Alert>
-                <div className="ds-timeline">
-                  <CalendarDays size={18} />
-                  <div>
-                    <strong>Conversa inicial</strong>
-                    <p>Interesse em cobertura para a família.</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
+            </DetailPage>
           )}
           {view === 'dashboard' && (
             <Dashboard
+              header={header}
+              filters={periodFilter}
               contacts={
                 period === 'new'
                   ? contacts.filter((row) => row.status === 'Novo contato')
@@ -764,10 +825,9 @@ export default function WorkspacePreview({
             />
           )}
           <footer className="ds-demo-footer">
-            Ambiente de demonstração · informações ilustrativas · nenhuma
-            comunicação é enviada
+            Demonstração · dados ilustrativos · nenhuma comunicação é enviada
           </footer>
-        </PageContainer>
+        </div>
       </div>
     </div>
   );
@@ -776,33 +836,44 @@ export default function WorkspacePreview({
 function Dashboard({
   contacts,
   onOpen,
+  header,
+  filters,
 }: {
+  header: PageHeaderProps;
+  filters: ReactNode;
   contacts: DemoContact[];
   onOpen: (contact: DemoContact) => void;
 }) {
   const contracted = contacts.filter((row) => row.status === 'Contratado');
   return (
-    <div className="ds-stack">
-      <div className="ds-kpi-grid">
-        <KpiCard
-          title="Contatos"
-          value={String(contacts.length)}
-          subtitle="Nesta base de exemplo"
-          icon={<Users />}
-        />
-        <KpiCard
-          title="Contratados"
-          value={String(contracted.length)}
-          subtitle="Com contratação concluída"
-          icon={<CheckCircle2 />}
-        />
-        <KpiCard
-          title="Valor contratado"
-          value={currency(contracted.reduce((sum, row) => sum + row.value, 0))}
-          subtitle="Mensalidades dos exemplos"
-          icon={<FileText />}
-        />
-      </div>
+    <DashboardPage
+      header={header}
+      filters={filters}
+      indicators={
+        <>
+          <KpiCard
+            title="Contatos"
+            value={String(contacts.length)}
+            subtitle="Nesta base de exemplo"
+            icon={<Users />}
+          />
+          <KpiCard
+            title="Contratados"
+            value={String(contracted.length)}
+            subtitle="Com contratação concluída"
+            icon={<CheckCircle2 />}
+          />
+          <KpiCard
+            title="Valor contratado"
+            value={currency(
+              contracted.reduce((sum, row) => sum + row.value, 0),
+            )}
+            subtitle="Mensalidades dos exemplos"
+            icon={<FileText />}
+          />
+        </>
+      }
+    >
       <div className="ds-detail-grid">
         <ChartCard
           title="Etapas do atendimento"
@@ -851,6 +922,6 @@ function Dashboard({
           </div>
         </PageSection>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

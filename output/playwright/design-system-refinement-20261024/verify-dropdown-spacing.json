@@ -1,0 +1,294 @@
+[
+  {
+    "name": "filter-or-sort",
+    "width": 320,
+    "theme": "light",
+    "gaps": [
+      4
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 320,
+    "theme": "light",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 320,
+    "theme": "light",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 320,
+    "theme": "light",
+    "gaps": [
+      4.000030517578125,
+      4
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 320,
+    "theme": "dark",
+    "gaps": [
+      4
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 320,
+    "theme": "dark",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 320,
+    "theme": "dark",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 320,
+    "theme": "dark",
+    "gaps": [
+      4.000030517578125,
+      4
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 390,
+    "theme": "light",
+    "gaps": [
+      4
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 390,
+    "theme": "light",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 390,
+    "theme": "light",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 390,
+    "theme": "light",
+    "gaps": [
+      4.000030517578125,
+      4
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 390,
+    "theme": "dark",
+    "gaps": [
+      4
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 390,
+    "theme": "dark",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 390,
+    "theme": "dark",
+    "gaps": [
+      4,
+      4.000030517578125
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 390,
+    "theme": "dark",
+    "gaps": [
+      4.000030517578125,
+      4
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 768,
+    "theme": "light",
+    "gaps": [
+      3.9999732971191406,
+      4.000003814697266,
+      4.000003814697266,
+      4.000003814697266
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 768,
+    "theme": "light",
+    "gaps": [
+      4.000003814697266,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 768,
+    "theme": "light",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 768,
+    "theme": "light",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 768,
+    "theme": "dark",
+    "gaps": [
+      3.9999732971191406,
+      4.000003814697266,
+      4.000003814697266,
+      4.000003814697266
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 768,
+    "theme": "dark",
+    "gaps": [
+      4.000003814697266,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 768,
+    "theme": "dark",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 768,
+    "theme": "dark",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 1920,
+    "theme": "light",
+    "gaps": [
+      4.000003814697266,
+      4.000003814697266,
+      3.9999732971191406,
+      4.000003814697266
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 1920,
+    "theme": "light",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 1920,
+    "theme": "light",
+    "gaps": [
+      3.9999732971191406,
+      4.000034332275391
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 1920,
+    "theme": "light",
+    "gaps": [
+      3.9999732971191406,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "filter-or-sort",
+    "width": 1920,
+    "theme": "dark",
+    "gaps": [
+      4.000003814697266,
+      4.000003814697266,
+      3.9999732971191406,
+      4.000003814697266
+    ]
+  },
+  {
+    "name": "Operadora · md",
+    "width": 1920,
+    "theme": "dark",
+    "gaps": [
+      4.000034332275391,
+      3.9999732971191406
+    ]
+  },
+  {
+    "name": "Buscar operadora",
+    "width": 1920,
+    "theme": "dark",
+    "gaps": [
+      3.9999732971191406,
+      4.000034332275391
+    ]
+  },
+  {
+    "name": "Operadoras de interesse",
+    "width": 1920,
+    "theme": "dark",
+    "gaps": [
+      3.9999732971191406,
+      3.9999732971191406
+    ]
+  }
+]

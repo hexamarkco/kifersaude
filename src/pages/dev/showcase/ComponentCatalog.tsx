@@ -61,6 +61,7 @@ import {
   FilterMultiSelect,
   FilterSelect,
   FormActions,
+  PageActions,
   Heading,
   IconButton,
   Inline,
@@ -149,6 +150,8 @@ export default function ComponentCatalog() {
 }
 
 function Actions() {
+  const [actionExamples, setActionExamples] = useState(1);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const { toast } = useToast();
   const [period, setPeriod] = useState('week');
   const [view, setView] = useState('list');
@@ -200,7 +203,7 @@ function Actions() {
         </Specimen>
         <Specimen
           title="Escala de tamanho"
-          description="32, 40 e 48 px: compacto, padrão e destaque."
+          description="Desktop: 32, 40 e 48 px. Em telas pequenas, alvos com no mínimo 44 px."
           source="Button size=sm | md | lg · --control-height-*"
         >
           <div className="ds-row">
@@ -352,6 +355,44 @@ function Actions() {
           </details>
         </Specimen>
         <Specimen
+          title="Ações da página"
+          description="Uma ordem oficial: exclusão isolada, secundárias antes da principal. A exclusão exige confirmação."
+          source="PageActions / ConfirmDialog"
+          wide
+        >
+          <div role="status">
+            <Badge tone="info">{actionExamples} exemplos neste bloco</Badge>
+          </div>
+          <PageActions
+            destructive={{
+              label: 'Excluir exemplo',
+              icon: Trash2,
+              disabled: actionExamples === 0,
+              onClick: () => setDeleteConfirm(true),
+            }}
+            secondary={[
+              { label: 'Reiniciar', onClick: () => setActionExamples(1) },
+            ]}
+            primary={{
+              label: 'Adicionar exemplo',
+              icon: Plus,
+              onClick: () => setActionExamples((current) => current + 1),
+            }}
+          />
+          <ConfirmDialog
+            open={deleteConfirm}
+            onOpenChange={setDeleteConfirm}
+            title="Excluir um exemplo?"
+            description="A contagem deste bloco será reduzida em um. Use Reiniciar para restaurar a demonstração."
+            confirmLabel="Excluir exemplo"
+            destructive
+            closeOnConfirm
+            onConfirm={() =>
+              setActionExamples((current) => Math.max(0, current - 1))
+            }
+          />
+        </Specimen>
+        <Specimen
           title="Salvar e cancelar"
           description="Cancelar antes de Salvar. A mensagem de contexto fica próxima das ações."
           source="FormActions · components/FormActions.tsx"
@@ -439,7 +480,12 @@ function Forms() {
           source="InputGroup / InputAddon / Textarea"
         >
           <div className="kds-field">
-            <label className="kds-field-label" htmlFor="ds-showcase-monthly-amount">Valor mensal</label>
+            <label
+              className="kds-field-label"
+              htmlFor="ds-showcase-monthly-amount"
+            >
+              Valor mensal
+            </label>
             <InputGroup>
               <InputAddon>R$</InputAddon>
               <Input
@@ -1366,6 +1412,9 @@ function Overlays() {
   const [menu, setMenu] = useState(false);
   const [popover, setPopover] = useState(false);
   const [archived, setArchived] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savedNote, setSavedNote] = useState('');
+  const [noteError, setNoteError] = useState(false);
   const { toast } = useToast();
   return (
     <>
@@ -1377,34 +1426,74 @@ function Overlays() {
       <div className="ds-grid">
         <Specimen
           title="Modal de formulário"
-          description="Cabeçalho, corpo e ações consistentes. Teste a validação sem sair do contexto."
-          source="Dialog / DialogHeader / DialogTitle / DialogDescription / DialogBody / DialogFooter"
+          description="Uma anotação curta cabe no modal. Cadastros completos usam FormPage."
+          source="Dialog / Field / Textarea / FormActions"
         >
           <Button onClick={() => setDialog(true)}>
             <Plus />
-            Criar contato no modal
+            Adicionar anotação
           </Button>
           <Dialog open={dialog} onOpenChange={setDialog} size="md">
             <DialogHeader onClose={() => setDialog(false)}>
-              <DialogTitle>Novo contato de exemplo</DialogTitle>
+              <DialogTitle>Adicionar anotação</DialogTitle>
               <DialogDescription>
-                Preencha os campos obrigatórios. Os dados ficam somente nesta
-                demonstração.
+                Registre uma informação curta para o próximo atendimento.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
-              <ContactForm
-                onCancel={() => setDialog(false)}
-                onSave={(contact) => {
+              <form
+                id="showcase-quick-note"
+                noValidate
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!noteDraft.trim()) {
+                    setNoteError(true);
+                    const field =
+                      event.currentTarget.elements.namedItem('note');
+                    if (field instanceof HTMLElement) field.focus();
+                    return;
+                  }
+                  setSavedNote(noteDraft.trim());
                   setDialog(false);
+                  setNoteError(false);
                   toast({
                     variant: 'success',
-                    description: `${contact.name}: formulário do exemplo validado.`,
+                    description: 'Anotação salva apenas neste exemplo.',
                   });
                 }}
-              />
+              >
+                <Field
+                  label="Anotação do atendimento"
+                  required
+                  error={
+                    noteError && !noteDraft.trim()
+                      ? 'Escreva uma anotação para salvar.'
+                      : undefined
+                  }
+                >
+                  <Textarea
+                    name="note"
+                    rows={3}
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                    placeholder="Ex.: prefere atendimento pela manhã"
+                  />
+                </Field>
+              </form>
             </DialogBody>
+            <DialogFooter>
+              <FormActions
+                form="showcase-quick-note"
+                submitLabel="Salvar anotação"
+                onCancel={() => setDialog(false)}
+              />
+            </DialogFooter>
           </Dialog>
+          {savedNote && (
+            <Alert tone="info" title="Última anotação do exemplo">
+              {savedNote}
+            </Alert>
+          )}
         </Specimen>
         <Specimen
           title="Confirmação de ação"
@@ -1553,7 +1642,7 @@ function Overlays() {
                     }}
                   >
                     <Pencil />
-                    Editar exemplo
+                    Adicionar anotação
                   </Button>
                   <Button
                     variant="ghost"

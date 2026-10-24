@@ -1,0 +1,685 @@
+{
+  "records": [
+    {
+      "name": "select",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 320,
+      "theme": "light"
+    },
+    {
+      "name": "select",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 320,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 320,
+      "theme": "dark"
+    },
+    {
+      "name": "select",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 390,
+      "theme": "light"
+    },
+    {
+      "name": "select",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 390,
+      "theme": "dark"
+    },
+    {
+      "name": "select",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 768,
+      "theme": "light"
+    },
+    {
+      "name": "select",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "combobox",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "short-modal",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "popover",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "menu",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-top",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-right",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "tooltip-left",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "workspace-modal",
+      "width": 768,
+      "height": 844
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 768,
+      "theme": "dark"
+    },
+    {
+      "name": "select",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "combobox",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "short-modal",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "popover",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "menu",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-top",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-right",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-left",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "workspace-modal",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 1920,
+      "theme": "light"
+    },
+    {
+      "name": "select",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "combobox",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Data",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Horário",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "datepicker-Atendimento",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "short-modal",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Direita",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Esquerda",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "drawer-Abaixo",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "popover",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "menu",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-top",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-right",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-bottom",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "tooltip-left",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "workspace-modal",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "name": "nested-period-calendar",
+      "width": 1920,
+      "theme": "dark"
+    }
+  ],
+  "errors": []
+}

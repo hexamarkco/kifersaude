@@ -18,6 +18,9 @@ export type MultiSelectProps = {
   invalid?: boolean;
   className?: string;
   'aria-label'?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  required?: boolean;
 };
 
 const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(function MultiSelect({
@@ -31,6 +34,9 @@ const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(function Mul
   invalid = false,
   className,
   'aria-label': ariaLabel,
+  'aria-describedby': describedBy,
+  'aria-invalid': ariaInvalid,
+  required,
 }, ref) {
   const [open, setOpen] = useState(false);
   const selected = options.filter((option) => values.includes(option.value));
@@ -51,7 +57,9 @@ const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(function Mul
           aria-label={ariaLabel}
           aria-haspopup="listbox"
           aria-expanded={open}
-          aria-invalid={invalid || undefined}
+          aria-invalid={ariaInvalid ?? (invalid || undefined)}
+          aria-describedby={describedBy}
+          aria-required={required || undefined}
           className={cx(
             'kds-select kds-select-trigger panel-ui-input flex w-full items-center justify-between text-left',
             panelInputSizeClasses[size],

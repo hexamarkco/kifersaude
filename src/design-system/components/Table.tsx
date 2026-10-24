@@ -17,7 +17,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(function Table(
   ref,
 ) {
   return (
-    <div className="kds-table-wrapper">
+    <div className="kds-table-wrapper" role="region" aria-label={props['aria-label'] ? `Rolagem de ${props['aria-label']}` : 'Tabela com rolagem horizontal'} tabIndex={0}>
       <table
         ref={ref}
         className={cx(

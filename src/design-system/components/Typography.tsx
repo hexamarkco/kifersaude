@@ -13,6 +13,7 @@ export type HeadingProps = HTMLAttributes<HTMLHeadingElement> & {
   size?: 'display' | 'xl' | 'lg' | 'md' | 'sm';
   tone?: TextTone;
   weight?: TextWeight;
+  family?: 'interface' | 'display';
   children: ReactNode;
 };
 
@@ -21,6 +22,7 @@ export function Heading({
   size,
   tone = 'primary',
   weight,
+  family,
   className,
   children,
   ...props
@@ -30,7 +32,7 @@ export function Heading({
 
   return (
     <Component
-      className={cx('kds-heading', `kds-heading-${resolvedSize}`, weight && `kds-heading-weight-${weight}`, toneClass(tone), className)}
+      className={cx('kds-heading', family === 'display' && 'kds-heading-editorial', family === 'interface' && 'kds-heading-interface', `kds-heading-${resolvedSize}`, weight && `kds-heading-weight-${weight}`, toneClass(tone), className)}
       {...props}
     >
       {children}

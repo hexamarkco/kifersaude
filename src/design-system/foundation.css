@@ -18,6 +18,25 @@
 
 .painel-theme.kifer-ds,
 .modal-theme-host.painel-theme.kifer-ds {
+  /* Operational scale, shared by pages and portal content. Editorial headings remain available. */
+  --type-ui-title: 600 clamp(1.375rem, 2vw, 1.75rem) / 1.25 var(--font-sans);
+  --type-ui-section: 600 1.125rem / 1.4 var(--font-sans);
+  --type-ui-heading: 600 1rem / 1.4 var(--font-sans);
+  --layout-gap: var(--space-6);
+  --section-gap: var(--space-4);
+  --page-gutter: clamp(1rem, 2.5vw, 2rem);
+  --touch-target: 2.75rem;
+  --calendar-touch-target: 2.25rem;
+  --radius-control: var(--radius-md);
+  --radius-control-group: calc(var(--radius-control) + var(--space-1));
+  --radius-control-inset: calc(var(--radius-control) - 1px);
+  --radius-panel: var(--radius-lg);
+  --radius-dialog: var(--radius-xl);
+  --dialog-width-sm: 28rem;
+  --dialog-width-md: 42rem;
+  --dialog-width-lg: 48rem;
+  --dialog-width-xl: 72rem;
+  --dialog-width-full: 90rem;
   color-scheme: dark;
 
   --font-display: 'Playfair Display', serif;

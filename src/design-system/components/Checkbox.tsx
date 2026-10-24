@@ -8,14 +8,15 @@ import {
 } from '../tokens';
 
 export type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> & {
+  touchTarget?: boolean;
   size?: PanelCheckboxSize;
 };
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
-  { size = 'sm', className, disabled, ...props },
+  { size = 'sm', className, disabled, touchTarget = false, ...props },
   ref,
 ) {
-  return (
+  const input = (
     <input
       ref={ref}
       type="checkbox"
@@ -28,6 +29,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
       {...props}
     />
   );
+  return touchTarget ? <label className="kds-checkbox-target">{input}</label> : input;
 });
 
 export default Checkbox;

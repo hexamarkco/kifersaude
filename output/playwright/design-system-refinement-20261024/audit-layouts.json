@@ -1,0 +1,901 @@
+{
+  "reports": [
+    {
+      "name": "overview",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 310,
+      "theme": "light",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 310,
+      "theme": "dark",
+      "viewport": 320,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 380,
+      "theme": "light",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 380,
+      "theme": "dark",
+      "viewport": 390,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 758,
+      "theme": "light",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 758,
+      "theme": "dark",
+      "viewport": 768,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 1910,
+      "theme": "light",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "overview",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "foundations",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Formulários",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Navegação",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Dados",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Feedback",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "components-Interações",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "states",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "patterns",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "responsive",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-list",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-detail",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-create",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-edit",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    },
+    {
+      "name": "preview-dashboard",
+      "width": 1910,
+      "theme": "dark",
+      "viewport": 1920,
+      "offenders": []
+    }
+  ],
+  "errors": []
+}

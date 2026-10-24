@@ -22,6 +22,7 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   Button,
+  DesignSystemProvider,
   DialogTitle,
   Drawer,
   DrawerBody,
@@ -86,8 +87,9 @@ export default function DesignSystemShowcase() {
     }
   }, [preview, theme]);
   return (
-    <div
-      className={`painel-theme kifer-ds theme-${theme} ds-showcase${preview ? ' ds-preview-document' : ''}`}
+    <DesignSystemProvider
+      theme={theme}
+      className={`ds-showcase${preview ? ' ds-preview-document' : ''}`}
     >
       <Helmet>
         <title>Design system | Kifer Saúde</title>
@@ -106,7 +108,7 @@ export default function DesignSystemShowcase() {
           />
         )}
       </ToastProvider>
-    </div>
+    </DesignSystemProvider>
   );
 }
 
@@ -482,10 +484,15 @@ function PreviewStudio({
   compact?: boolean;
 }) {
   const [pattern, setPattern] = useState<Pattern>('list');
-  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(
-    'desktop',
-  );
-  const dimensions = { desktop: 'calc(100% - 2px)', tablet: '768px', mobile: '390px' };
+  const [device, setDevice] = useState<
+    'desktop' | 'tablet' | 'mobile' | 'compact'
+  >('desktop');
+  const dimensions = {
+    desktop: 'calc(100% - 2px)',
+    tablet: '768px',
+    mobile: '390px',
+    compact: '320px',
+  };
   return (
     <div className="ds-studio">
       <div className="ds-studio-toolbar">
@@ -513,6 +520,7 @@ function PreviewStudio({
               { id: 'desktop', label: 'Desktop', icon: Monitor },
               { id: 'tablet', label: 'Tablet', icon: Tablet },
               { id: 'mobile', label: 'Mobile', icon: Smartphone },
+              { id: 'compact', label: '320 px', icon: Smartphone },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <Tooltip key={id} content={label} side="bottom">
@@ -529,7 +537,13 @@ function PreviewStudio({
           ))}
         </div>
       </div>
-      <div className="ds-studio-canvas" data-device={device}>
+      <div
+        className="ds-studio-canvas"
+        data-device={device}
+        role="region"
+        aria-label="Prévia responsiva com rolagem localizada"
+        tabIndex={0}
+      >
         <div className="ds-browser-frame" style={{ width: dimensions[device] }}>
           <div className="ds-browser-bar">
             <div>
@@ -548,7 +562,9 @@ function PreviewStudio({
                 ? 'Fluido'
                 : device === 'tablet'
                   ? '768 px'
-                  : '390 px'}
+                  : device === 'compact'
+                    ? '320 px'
+                    : '390 px'}
             </span>
           </div>
           <iframe
@@ -644,12 +660,12 @@ function PatternSection({
               [
                 '04',
                 'Salvar tem um lugar',
-                'Ações no final do formulário: Cancelar antes de Salvar. Nomeie o resultado: “Criar contato” ou “Salvar alterações”. Durante o envio, evite ações duplicadas.',
+                'Ações no final do formulário: Cancelar antes de Salvar. Use uma barra sticky em páginas longas, sem remover o espaço das ações no documento. Durante o envio, bloqueie repetição e cancelamento.',
               ],
               [
                 '05',
                 'Detalhes preservam o contexto',
-                'Agrupe informações relacionadas em seções. Use drawer para consulta rápida; página para trabalho contínuo; modal para uma tarefa curta ou confirmação.',
+                'Agrupe informações relacionadas em seções. Use drawer para consulta rápida; página para trabalho contínuo; modal para uma tarefa curta ou confirmação. Excluir fica separado de Salvar e exige confirmação.',
               ],
               [
                 '06',
@@ -669,11 +685,14 @@ function PatternSection({
           <details className="ds-technical">
             <summary>Blocos reutilizáveis destes layouts</summary>
             <p>
-              PageContainer → Breadcrumb → PageHeader → FilterBar/Toolbar →
-              Card/Table/EmptyState → Pagination. Formulários: Field + controles
-              + FormActions. Sobreposições: Dialog/Drawer + cabeçalho + corpo +
-              ações. Navegação: NavigationList. Não há importação de
-              repositories ou consultas nestes exemplos.
+              ListPage reúne PageHeader, PageActions, busca, filtros e
+              paginação. DetailPage organiza identificação, status e seções;
+              FormPage usa FormSection e FormActions; DashboardPage agrupa
+              filtros e indicadores. O conteúdo reutiliza Card/Table/EmptyState
+              → Pagination. Formulários: Field + controles + FormActions.
+              Sobreposições: Dialog/Drawer + cabeçalho + corpo + ações.
+              Navegação: NavigationList. Não há importação de repositories ou
+              consultas nestes exemplos.
             </p>
           </details>
         </>

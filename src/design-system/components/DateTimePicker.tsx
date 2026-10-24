@@ -38,6 +38,9 @@ export type DateTimePickerProps = {
   name?: string;
   size?: PanelInputSize;
   className?: string;
+  'aria-label'?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
 };
 
 export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>(function DateTimePicker(
@@ -55,6 +58,9 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     name,
     size = 'md',
     className,
+    'aria-label': ariaLabel,
+    'aria-describedby': describedBy,
+    'aria-invalid': ariaInvalid,
   },
   ref,
 ) {
@@ -183,6 +189,9 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
           id={id}
           disabled={disabled}
           aria-required={required || undefined}
+          aria-label={ariaLabel}
+          aria-describedby={describedBy}
+          aria-invalid={ariaInvalid}
           className={cx(
             panelInputBaseClass,
             panelInputSizeClasses[size],

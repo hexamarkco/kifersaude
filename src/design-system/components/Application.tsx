@@ -83,3 +83,12 @@ export function ToolbarActions({ className, children, ...props }: ToolbarActions
 
 /** Semantic alias for toolbars whose primary purpose is filtering a collection. */
 export const FilterBar = Toolbar;
+
+export type ResponsiveCollectionProps = { table: ReactNode; cards: ReactNode };
+/** The collection adapts to its actual container, including inside narrow panels. */
+export function ResponsiveCollection({ table, cards }: ResponsiveCollectionProps) {
+  return <div className="kds-responsive-collection">
+    <div className="kds-collection-table">{table}</div>
+    <div className="kds-collection-cards">{cards}</div>
+  </div>;
+}

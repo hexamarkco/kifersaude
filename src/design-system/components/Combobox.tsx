@@ -21,6 +21,9 @@ export type ComboboxProps = {
   invalid?: boolean;
   className?: string;
   'aria-label'?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  required?: boolean;
 };
 
 export default function Combobox({
@@ -36,6 +39,9 @@ export default function Combobox({
   invalid = false,
   className,
   'aria-label': ariaLabel,
+  'aria-describedby': describedBy,
+  'aria-invalid': ariaInvalid,
+  required,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -80,7 +86,9 @@ export default function Combobox({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listboxId}
-          aria-invalid={invalid || undefined}
+          aria-invalid={ariaInvalid ?? (invalid || undefined)}
+          aria-describedby={describedBy}
+          aria-required={required || undefined}
           className={cx('kds-select kds-select-trigger panel-ui-input flex w-full items-center justify-between text-left', panelInputSizeClasses[size], invalid && 'kds-input-invalid', className)}
         >
           <span className={cx('min-w-0 flex-1 truncate', !selected && 'text-[var(--text-muted)]')}>{selected?.label ?? placeholder}</span>

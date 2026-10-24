@@ -2,7 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
-  useLayoutEffect,
+  useId,
   useRef,
   useState,
   type HTMLAttributes,
@@ -11,11 +11,15 @@ import {
 import { createPortal } from 'react-dom';
 
 import { cx } from '../../lib/cx';
+import { useDesignSystemAppearance } from '../appearanceContext';
+import { useOverlayPosition } from '../hooks/useOverlayPosition';
 
 export type PopoverSide = 'top' | 'right' | 'bottom' | 'left';
 export type PopoverAlign = 'start' | 'center' | 'end';
 
 type PopoverContextValue = {
+  id: string;
+  parentId?: string;
   open: boolean;
   setOpen: (open: boolean) => void;
   triggerRef: React.RefObject<HTMLSpanElement>;
@@ -37,6 +41,8 @@ export type PopoverProps = {
 };
 
 export function Popover({ open: controlledOpen, defaultOpen = false, onOpenChange, children }: PopoverProps) {
+  const parent = useContext(PopoverContext);
+  const id = useId();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const open = controlledOpen ?? uncontrolledOpen;
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -45,7 +51,7 @@ export function Popover({ open: controlledOpen, defaultOpen = false, onOpenChang
     onOpenChange?.(nextOpen);
   };
 
-  return <PopoverContext.Provider value={{ open, setOpen, triggerRef }}>{children}</PopoverContext.Provider>;
+  return <PopoverContext.Provider value={{ open, setOpen, triggerRef, id, parentId: parent?.id }}>{children}</PopoverContext.Provider>;
 }
 
 export type PopoverTriggerProps = HTMLAttributes<HTMLSpanElement> & {
@@ -78,22 +84,6 @@ export type PopoverContentProps = HTMLAttributes<HTMLDivElement> & {
   onInteractOutside?: () => void;
 };
 
-type Position = { top: number; left: number };
-
-function getPosition(trigger: DOMRect, content: DOMRect, side: PopoverSide, align: PopoverAlign, offset: number): Position {
-  const crossAxis = align === 'start' ? 0 : align === 'end' ? 1 : 0.5;
-  if (side === 'top' || side === 'bottom') {
-    return {
-      top: side === 'top' ? trigger.top - content.height - offset : trigger.bottom + offset,
-      left: trigger.left + trigger.width * crossAxis - content.width * crossAxis,
-    };
-  }
-  return {
-    top: trigger.top + trigger.height * crossAxis - content.height * crossAxis,
-    left: side === 'left' ? trigger.left - content.width - offset : trigger.right + offset,
-  };
-}
-
 export function PopoverContent({
   side = 'bottom',
   align = 'start',
@@ -101,40 +91,28 @@ export function PopoverContent({
   onEscapeKeyDown,
   onInteractOutside,
   className,
+  style,
   children,
   ...props
 }: PopoverContentProps) {
-  const { open, setOpen, triggerRef } = usePopoverContext();
+  const appearance = useDesignSystemAppearance();
+  const { open, setOpen, triggerRef, id, parentId } = usePopoverContext();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<Position>({ top: -10000, left: -10000 });
+  const position = useOverlayPosition(open, triggerRef, contentRef, side, align, sideOffset);
   const [theme, setTheme] = useState('theme-light');
-
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current || !contentRef.current) return;
-    const updatePosition = () => {
-      const trigger = triggerRef.current;
-      const content = contentRef.current;
-      if (!trigger || !content) return;
-      const next = getPosition(trigger.getBoundingClientRect(), content.getBoundingClientRect(), side, align, sideOffset);
-      setPosition({
-        top: Math.max(8, Math.min(next.top, window.innerHeight - content.offsetHeight - 8)),
-        left: Math.max(8, Math.min(next.left, window.innerWidth - content.offsetWidth - 8)),
-      });
-    };
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [align, open, side, sideOffset, triggerRef]);
 
   useEffect(() => {
     if (!open) return;
     const host = triggerRef.current?.closest('.painel-theme');
     setTheme(host?.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light');
     const handlePointerDown = (event: PointerEvent) => {
+      let owner = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-popover-id]') : null;
+      const portals = Array.from(document.querySelectorAll<HTMLElement>('[data-popover-id]'));
+      while (owner) {
+        if (owner.dataset.popoverId === id) return;
+        const parent = owner.dataset.popoverParent;
+        owner = portals.find((portal) => portal.dataset.popoverId === parent) ?? null;
+      }
       if (!contentRef.current?.contains(event.target as Node) && !triggerRef.current?.contains(event.target as Node)) {
         onInteractOutside?.();
         setOpen(false);
@@ -142,29 +120,35 @@ export function PopoverContent({
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (document.querySelector('.kds-floating-tooltip')) return;
+        if (Array.from(document.querySelectorAll<HTMLElement>('[data-popover-parent]')).some((portal) => portal.dataset.popoverParent === id)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
         onEscapeKeyDown?.();
         setOpen(false);
         triggerRef.current?.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus();
       }
     };
     document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [onEscapeKeyDown, onInteractOutside, open, setOpen, triggerRef]);
+  }, [onEscapeKeyDown, onInteractOutside, open, setOpen, triggerRef, id]);
 
   if (!open || typeof document === 'undefined') return null;
 
   return createPortal(
     <div
       ref={contentRef}
+      data-popover-id={id}
+      data-popover-parent={parentId}
       role="dialog"
       aria-label={props['aria-label'] ?? 'Conteudo adicional'}
-      className={cx('kds-popover modal-theme-host painel-theme kifer-ds', theme, className)}
-      style={{ position: 'fixed', top: position.top, left: position.left, ...props.style }}
+      className={cx('kds-popover modal-theme-host painel-theme kifer-ds', appearance ? `theme-${appearance.theme} kds-operational` : theme, className)}
       {...props}
+      style={{ position: 'fixed', top: position.top, left: position.left, maxHeight: position.maxHeight, maxWidth: position.maxWidth, ...style }}
     >
       {children}
     </div>,

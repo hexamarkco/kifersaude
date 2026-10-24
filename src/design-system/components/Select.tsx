@@ -185,6 +185,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           disabled={disabled}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
+          aria-invalid={nativeProps['aria-invalid'] ?? (resolvedState === 'error' || undefined)}
+          aria-required={required || undefined}
           aria-haspopup="listbox"
           aria-controls={listboxId}
           aria-expanded={isOpen}

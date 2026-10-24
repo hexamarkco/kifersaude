@@ -55,7 +55,7 @@ const colors = [
     label: 'Dourado',
     token: '--accent-gold',
     use: 'Ênfase especial, com parcimônia',
-    ink: '--text-primary',
+    ink: '--action-accent-text',
   },
 ];
 const semantic = [
@@ -160,7 +160,7 @@ export default function Foundations() {
       <div className="ds-grid">
         <Specimen
           title="Tipografia de marca"
-          description="Playfair Display para títulos. Presença sem competir com o conteúdo."
+          description="Playfair Display para apresentações editoriais e de marca. Na operação diária, use Inter."
           source="Heading · Typography.tsx / --font-display"
         >
           <div className="ds-type-display">
@@ -168,8 +168,12 @@ export default function Foundations() {
             <br />
             com clareza.
           </div>
-          <Heading level={2}>Visão comercial</Heading>
-          <Heading level={3}>Próximos passos</Heading>
+          <Heading family="display" level={2}>
+            Visão comercial
+          </Heading>
+          <Heading family="display" level={3}>
+            Próximos passos
+          </Heading>
           <span className="ds-caption">
             Títulos · pesos 500 e 600 · entrelinha compacta
           </span>
@@ -179,6 +183,12 @@ export default function Foundations() {
           description="Inter para leitura, navegação, controles, valores e tabelas."
           source="Text · Typography.tsx / --font-sans"
         >
+          <Heading family="interface" level={2}>
+            Visão comercial
+          </Heading>
+          <Heading family="interface" level={3}>
+            Informações do atendimento
+          </Heading>
           <Text size="lg" weight="semibold">
             Cada informação no seu lugar.
           </Text>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Button from './Button';
+import { PageActions } from './PageActions';
 
 export type FormActionsProps = {
   onCancel: () => void;
@@ -9,6 +9,7 @@ export type FormActionsProps = {
   disabled?: boolean;
   form?: string;
   message?: ReactNode;
+  sticky?: boolean;
 };
 
 /** Place inside a form, or associate the submit button with an external form id. */
@@ -20,18 +21,16 @@ export function FormActions({
   disabled = false,
   form,
   message,
+  sticky = false,
 }: FormActionsProps) {
   return (
-    <div className="kds-form-actions">
-      {message && <div className="kds-form-actions-message">{message}</div>}
-      <div className="kds-form-actions-buttons">
-        <Button variant="secondary" onClick={onCancel} disabled={loading}>
-          {cancelLabel}
-        </Button>
-        <Button type="submit" form={form} loading={loading} disabled={disabled}>
-          {submitLabel}
-        </Button>
-      </div>
-    </div>
+    <PageActions
+      placement="form"
+      sticky={sticky}
+      busy={loading}
+      message={message}
+      secondary={[{ label: cancelLabel, onClick: onCancel }]}
+      primary={{ label: submitLabel, type: 'submit', form, loading, disabled }}
+    />
   );
 }

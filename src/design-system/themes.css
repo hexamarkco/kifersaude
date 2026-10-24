@@ -292,3 +292,20 @@
   --shadow-button-gold: 0 6px 14px -9px rgba(0, 0, 0, 0.52);
   --shadow-focus: 0 0 0 3px var(--focus-ring);
 }
+/* Explicit operational appearance. Existing CRM screens adopt this boundary separately. */
+.painel-theme.kifer-ds.kds-operational:not(.theme-dark) {
+  --action-primary-bg: var(--brand-primary-active);
+  --action-primary-hover: color-mix(in srgb, var(--brand-primary-active) 88%, var(--text-primary));
+  --action-primary-text: var(--text-on-brand);
+  --action-accent-text: var(--text-primary);
+}
+.painel-theme.kifer-ds.kds-operational.theme-dark {
+  --action-primary-bg: var(--brand-primary);
+  --action-primary-hover: var(--brand-primary-hover);
+  --action-primary-text: var(--text-inverse);
+  --action-accent-text: var(--text-inverse);
+}
+.painel-theme.kifer-ds.kds-operational {
+  --text-muted: var(--text-secondary);
+  --type-label: 500 0.8125rem / 1.4 var(--font-sans);
+}

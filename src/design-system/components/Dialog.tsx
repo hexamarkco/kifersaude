@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
+import { useDesignSystemAppearance } from '../appearanceContext';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'wide' | 'full';
 export type DialogPresentation = 'standard' | 'workspace';
@@ -49,10 +50,11 @@ export function Dialog({
   ...props
 }: DialogProps) {
   const titleId = useId();
+  const appearance = useDesignSystemAppearance();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
   const isDarkThemeActive =
-    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+    appearance ? appearance.theme === 'dark' : typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   useEffect(() => {
     if (!open) return;
@@ -134,6 +136,7 @@ export function Dialog({
       className={cx(
         'kds-dialog-overlay modal-theme-host painel-theme kifer-ds',
         isDarkThemeActive ? 'theme-dark' : 'theme-light',
+        appearance && 'kds-operational',
       )}
     >
       <div
@@ -143,6 +146,7 @@ export function Dialog({
       <div className="kds-dialog-container">
         <div
           ref={dialogRef}
+          data-size={size}
           role="dialog"
           aria-modal="true"
           aria-labelledby={props['aria-label'] ? undefined : titleId}

@@ -6074,6 +6074,312 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_commercial_reviews: {
+        Row: {
+          actor_id: string
+          attribution_id: string
+          contract_completed: boolean
+          contract_id: string | null
+          criteria_version: string
+          eligible_business: boolean
+          id: string
+          interest_confirmed: boolean
+          lives: number
+          opportunity_id: string | null
+          qualified: boolean
+          region_served: boolean
+          reviewed_at: string
+        }
+        Insert: {
+          actor_id: string
+          attribution_id: string
+          contract_completed?: boolean
+          contract_id?: string | null
+          criteria_version?: string
+          eligible_business: boolean
+          id?: string
+          interest_confirmed: boolean
+          lives: number
+          opportunity_id?: string | null
+          qualified: boolean
+          region_served: boolean
+          reviewed_at?: string
+        }
+        Update: {
+          actor_id?: string
+          attribution_id?: string
+          contract_completed?: boolean
+          contract_id?: string | null
+          criteria_version?: string
+          eligible_business?: boolean
+          id?: string
+          interest_confirmed?: boolean
+          lives?: number
+          opportunity_id?: string | null
+          qualified?: boolean
+          region_served?: boolean
+          reviewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_commercial_reviews_attribution_id_fkey"
+            columns: ["attribution_id"]
+            isOneToOne: false
+            referencedRelation: "meta_lead_attributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_commercial_reviews_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_commercial_reviews_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_conversion_events: {
+        Row: {
+          approval_reference: string | null
+          attempts: number
+          attribution_id: string
+          dataset_id: string | null
+          event_id: string
+          event_name: string | null
+          kind: string
+          last_error_code: string | null
+          lock_token: string | null
+          locked_until: string | null
+          next_attempt_at: string
+          occurred_at: string
+          review_id: string
+          sent_at: string | null
+          status: string
+          subject_key: string
+        }
+        Insert: {
+          approval_reference?: string | null
+          attempts?: number
+          attribution_id: string
+          dataset_id?: string | null
+          event_id?: string
+          event_name?: string | null
+          kind: string
+          last_error_code?: string | null
+          lock_token?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          occurred_at: string
+          review_id: string
+          sent_at?: string | null
+          status?: string
+          subject_key: string
+        }
+        Update: {
+          approval_reference?: string | null
+          attempts?: number
+          attribution_id?: string
+          dataset_id?: string | null
+          event_id?: string
+          event_name?: string | null
+          kind?: string
+          last_error_code?: string | null
+          lock_token?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          occurred_at?: string
+          review_id?: string
+          sent_at?: string | null
+          status?: string
+          subject_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_conversion_events_attribution_id_fkey"
+            columns: ["attribution_id"]
+            isOneToOne: false
+            referencedRelation: "meta_lead_attributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_conversion_events_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "meta_commercial_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_integration_attempts: {
+        Row: {
+          attempt: number
+          created_at: string
+          direction: string
+          entity_id: string
+          error_code: string | null
+          id: number
+          outcome: string
+        }
+        Insert: {
+          attempt: number
+          created_at?: string
+          direction: string
+          entity_id: string
+          error_code?: string | null
+          id?: never
+          outcome: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          direction?: string
+          entity_id?: string
+          error_code?: string | null
+          id?: never
+          outcome?: string
+        }
+        Relationships: []
+      }
+      meta_lead_attributions: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          commercial_answer: string | null
+          form_id: string
+          id: string
+          imported_at: string
+          lead_id: string
+          leadgen_id: string
+          matched_existing: boolean
+          meta_created_at: string
+          page_id: string
+          received_at: string
+          traffic_type: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          commercial_answer?: string | null
+          form_id: string
+          id?: string
+          imported_at?: string
+          lead_id: string
+          leadgen_id: string
+          matched_existing: boolean
+          meta_created_at: string
+          page_id: string
+          received_at: string
+          traffic_type: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          commercial_answer?: string | null
+          form_id?: string
+          id?: string
+          imported_at?: string
+          lead_id?: string
+          leadgen_id?: string
+          matched_existing?: boolean
+          meta_created_at?: string
+          page_id?: string
+          received_at?: string
+          traffic_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_attributions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_lead_attributions_leadgen_id_fkey"
+            columns: ["leadgen_id"]
+            isOneToOne: true
+            referencedRelation: "meta_lead_receipts"
+            referencedColumns: ["leadgen_id"]
+          },
+        ]
+      }
+      meta_lead_receipts: {
+        Row: {
+          ad_id: string | null
+          attempts: number
+          form_id: string
+          imported_at: string | null
+          last_error_code: string | null
+          lead_id: string | null
+          leadgen_id: string
+          lock_token: string | null
+          locked_until: string | null
+          meta_created_at: string
+          next_attempt_at: string
+          page_id: string
+          received_at: string
+          status: string
+        }
+        Insert: {
+          ad_id?: string | null
+          attempts?: number
+          form_id: string
+          imported_at?: string | null
+          last_error_code?: string | null
+          lead_id?: string | null
+          leadgen_id: string
+          lock_token?: string | null
+          locked_until?: string | null
+          meta_created_at: string
+          next_attempt_at?: string
+          page_id: string
+          received_at?: string
+          status?: string
+        }
+        Update: {
+          ad_id?: string | null
+          attempts?: number
+          form_id?: string
+          imported_at?: string | null
+          last_error_code?: string | null
+          lead_id?: string | null
+          leadgen_id?: string
+          lock_token?: string | null
+          locked_until?: string | null
+          meta_created_at?: string
+          next_attempt_at?: string
+          page_id?: string
+          received_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_receipts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operadoras: {
         Row: {
           ativo: boolean | null
@@ -9820,6 +10126,67 @@ export type Database = {
           p_patch: Json
         }
         Returns: Json
+      }
+      meta_ads_claim: { Args: { p_direction: string }; Returns: Json }
+      meta_ads_enqueue: { Args: { p_receipts: Json }; Returns: number }
+      meta_ads_finish: {
+        Args: {
+          p_direction: string
+          p_error?: string
+          p_id: string
+          p_lock: string
+          p_retry_seconds?: number
+        }
+        Returns: boolean
+      }
+      meta_ads_history: {
+        Args: { p_actor: string; p_before: number }
+        Returns: Json
+      }
+      meta_ads_import: {
+        Args: { p_id: string; p_lead: Json; p_lock: string }
+        Returns: string
+      }
+      meta_ads_reconcile: { Args: never; Returns: number }
+      meta_ads_release: {
+        Args: {
+          p_approval: string
+          p_contract_event: string
+          p_dataset: string
+          p_ids: string[]
+          p_qualified_event: string
+        }
+        Returns: number
+      }
+      meta_ads_requeue: {
+        Args: { p_actor: string; p_id: string }
+        Returns: boolean
+      }
+      meta_ads_requeue_event: {
+        Args: { p_actor: string; p_id: string }
+        Returns: boolean
+      }
+      meta_ads_review: {
+        Args: {
+          p_actor: string
+          p_attribution: string
+          p_completed?: boolean
+          p_contract?: string
+          p_eligible: boolean
+          p_interest: boolean
+          p_lives: number
+          p_opportunity?: string
+          p_region: boolean
+        }
+        Returns: string
+      }
+      meta_ads_snapshot: {
+        Args: { p_actor: string; p_search?: string }
+        Returns: Json
+      }
+      meta_ads_validate_event: {
+        Args: { p_id: string; p_lock: string }
+        Returns: boolean
       }
       normalize_comm_whatsapp_chat_id: {
         Args: { value: string }

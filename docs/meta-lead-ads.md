@@ -1,7 +1,8 @@
 # Meta Lead Ads, CRM e sinais comerciais
 
-Implementação local; ativação de produção é uma etapa separada. Nenhuma migration,
-Edge Function, assinatura de página, lead ou evento real foi aplicado/enviado nesta entrega.
+Migration e três Edge Functions implantadas no projeto `eaxvvhamkmovkoqssahj`
+em 23/10/2026, após autorização. O recebimento permanece pausado e a CAPI,
+desabilitada. A ativação comercial continua sendo uma etapa separada.
 
 ## O que já existia e o que foi reutilizado
 
@@ -252,5 +253,37 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
   reproduziu ambos.
 - `migrations:check` já falha em `HEAD` por duas migrations históricas com slug
   `comm_whatsapp_status_refresh_index_trigger`. Nenhuma foi editada ou renomeada.
-- Não foram aplicadas migrations, consultados contatos reais, publicados serviços
-  ou enviados eventos de produção. Os tipos persistidos remotos não foram alterados.
+- Durante a implementação e os testes locais não foram aplicadas migrations,
+  publicados serviços ou enviados eventos de produção. A implantação autorizada
+  posterior está registrada abaixo.
+
+## Implantação autorizada em 23/10/2026
+
+- Migration `20261024011732_meta_lead_ads_crm_pipeline.sql` aplicada com sua versão
+  original e conferida no histórico remoto. Nenhuma outra migration foi executada.
+- Functions `meta-lead-webhook`, `meta-ads-worker` e `meta-ads-admin` publicadas e
+  confirmadas como `ACTIVE`, versão 1. A configuração JWT foi preservada: autenticação
+  própria no webhook/worker e JWT obrigatório no endpoint administrativo.
+- O token de Página e o token de verificação existentes foram preservados em
+  `META_PAGE_ACCESS_TOKEN` e `META_WEBHOOK_VERIFY_TOKEN`, com conferência de digest
+  antes da remoção do JSON legado. Nenhum valor foi exibido ou salvo no repositório.
+  Isso confirma a preservação, não a validade atual das credenciais na Meta.
+- `enabled=false`, fila de recebimentos vazia e fila de eventos vazia confirmados.
+  As cinco tabelas têm RLS habilitado; `anon` e `authenticated` não têm leitura
+  direta nem execução das RPCs. O snapshot administrativo foi executado com sucesso.
+- As verificações HTTP confirmaram bloqueio de requisições sem autenticação:
+  worker/admin retornam 401 e o desafio sem token válido retorna 403. Um POST sem
+  assinatura retorna 503 enquanto o App Secret ainda não está provisionado.
+- Ainda faltam `META_APP_SECRET`, `META_GRAPH_VERSION`, mapeamento da pergunta
+  comercial, conferência dos defaults e da validade/rotação das credenciais,
+  inscrição da Página e agendamento do worker. Não foi criado cron nem ativado
+  recebimento nesta etapa. Secrets e liberações da CAPI continuam ausentes.
+- Há uma divergência histórica preexistente: a migration local
+  `20261022142800_fix_step_dispatch_transition_result.sql` corresponde à versão
+  remota `20261022142917`. O deploy utilizou uma cópia isolada em `.deploy-cache`
+  com os arquivos compartilhados e a migration obtida do histórico remoto. O
+  dry-run indicou somente a nova migration Meta. Nenhum arquivo histórico do
+  repositório ou registro histórico remoto foi editado, removido ou renomeado.
+- Tipos Supabase regenerados pelo script oficial e conferidos com o banco
+  implantado. Nenhum contato real foi criado ou consultado, e nenhum evento
+  foi enviado à Meta durante as verificações.

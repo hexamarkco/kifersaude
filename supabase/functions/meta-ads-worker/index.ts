@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { isServiceRoleRequest } from '../_shared/service-role-auth.ts';
+import { isAuthorizedMetaWorker } from './auth.ts';
 import { createMetaRepository } from '../_shared/meta-ads/repository.ts';
 import { createGraphClient } from '../_shared/meta-ads/graph.ts';
 import { isRecord, MetaError, type CapiApproval, type Receipt, type Conversion } from '../_shared/meta-ads/domain.ts';
@@ -16,7 +16,7 @@ const approval: CapiApproval = {
   qualifiedEvent: env('META_CAPI_QUALIFIED_EVENT'), contractEvent: env('META_CAPI_CONTRACT_EVENT'), token: env('META_CAPI_ACCESS_TOKEN'),
 };
 Deno.serve(async (req) => {
-  if (!isServiceRoleRequest(req, serviceKey)) return Response.json({ error: 'Não autorizado' }, { status: 401 });
+  if (!isAuthorizedMetaWorker(req, serviceKey, env('META_WORKER_SECRET'))) return Response.json({ error: 'Não autorizado' }, { status: 401 });
   if (req.method !== 'POST') return new Response(null, { status: 405 });
   try {
     await repo.rpc('meta_ads_reconcile');
@@ -26,7 +26,13 @@ Deno.serve(async (req) => {
       claimOutbound: () => repo.rpc<Conversion | null>('meta_ads_claim', { p_direction: 'outbound' }),
       retrieve: (id) => createGraphClient(env('META_GRAPH_VERSION'), env('META_PAGE_ACCESS_TOKEN'))(id,
         'id,created_time,form_id,is_organic,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,field_data'),
-      importLead: async (receipt, lead) => { await repo.rpc('meta_ads_import', { p_id: receipt.leadgen_id,p_lock: receipt.lock_token,p_lead: lead }); },
+      importLead: async (receipt, lead) => {
+        const validationOnly = receipt.leadgen_id === env('META_VALIDATION_LEAD_ID');
+        await repo.rpc(validationOnly ? 'meta_ads_validate_test_import' : 'meta_ads_import', {
+          p_id: receipt.leadgen_id,p_lock: receipt.lock_token,p_lead: lead,
+        });
+        if (validationOnly) return 'validated_test';
+      },
       validateOutbound: (event) => repo.rpc<boolean>('meta_ads_validate_event', { p_id: event.event_id,p_lock: event.lock_token }),
       send: async (dataset, event) => {
         const response = await createGraphClient(env('META_GRAPH_VERSION'), approval.token)(dataset, { data: [event] });

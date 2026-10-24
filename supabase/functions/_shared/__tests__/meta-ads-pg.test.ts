@@ -46,6 +46,7 @@ beforeAll(async () => {
   await db.exec(old.slice(start,old.indexOf('$$;',start)+3));
   await db.query(`INSERT INTO public.integration_settings VALUES('facebook_ads_manager','{"pageAccessToken":"synthetic-old-secret","verifyToken":"synthetic-old-verify"}',now())`);
   await db.exec(readFileSync(resolve('supabase/migrations/20261024011732_meta_lead_ads_crm_pipeline.sql'),'utf8'));
+  await db.exec(readFileSync(resolve('supabase/migrations/20261024022700_meta_lead_validation_probe.sql'),'utf8'));
   expect(await value<string>(`SELECT settings->>'pageAccessToken' AS value FROM integration_settings`)).toBeNull();
   expect(await value<boolean>(`SELECT (settings->>'enabled')::boolean AS value FROM integration_settings`)).toBe(false);
   await db.exec(`REVOKE ALL ON public.opportunities,public.opportunity_leads FROM service_role;
@@ -261,4 +262,21 @@ it('searches attribution by contact or exact Meta ID and paginates the complete 
   expect(older).toHaveLength(5);
   expect(new Set([...snapshot.history,...older].map((entry) => entry.id)).size).toBe(55);
   await expect(scalar('meta_ads_history',[observer,snapshot.history.at(-1)!.id])).rejects.toThrow('FORBIDDEN');
+});
+
+it('executes the canonical CRM import for an official test but rolls back records and automation atomically', async () => {
+  await enqueue(); const lease=(await claim())!;
+  const lead=JSON.stringify({name:'KIFER TESTE DE INTEGRACAO',phone:'12025550100',commercial_answer:'Synthetic choice',traffic_type:'organic'});
+  const result=await scalar<{canonical_import_validated:boolean;crm_record_persisted:boolean}>('meta_ads_validate_test_import',[metaLead,lease.lock_token,lead]);
+  expect(result.canonical_import_validated).toBe(true);expect(result.crm_record_persisted).toBe(false);
+  expect(await count('leads')).toBe(0);expect(await count('test_flow_entries')).toBe(0);
+  expect(await count('meta_lead_attributions')).toBe(0);expect(await count('meta_conversion_events')).toBe(0);
+  expect(await value<string>('SELECT status AS value FROM meta_lead_receipts')).toBe('validation_passed');
+  expect(await claim()).toBeNull();
+});
+
+it('never accepts a real or arbitrary contact in the validation-only transaction', async () => {
+  await enqueue();const lease=(await claim())!;
+  await expect(scalar('meta_ads_validate_test_import',[metaLead,lease.lock_token,JSON.stringify({name:'Other Contact',phone:'12025550100',commercial_answer:'Synthetic'})])).rejects.toThrow('INVALID_VALIDATION_CONTACT');
+  expect(await count('leads')).toBe(0);
 });

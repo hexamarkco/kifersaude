@@ -6,7 +6,7 @@ export type WorkerDependencies = {
   claimInbound: () => Promise<Receipt | null>;
   claimOutbound: () => Promise<Conversion | null>;
   retrieve: (id: string) => Promise<unknown>;
-  importLead: (receipt: Receipt, lead: ImportedLead) => Promise<void>;
+  importLead: (receipt: Receipt, lead: ImportedLead) => Promise<'validated_test' | void>;
   validateOutbound: (event: Conversion) => Promise<boolean>;
   send: (dataset: string, event: ReturnType<typeof buildConversion>) => Promise<void>;
   finish: (direction: 'inbound' | 'outbound', id: string, lock: string,
@@ -15,7 +15,7 @@ export type WorkerDependencies = {
 };
 export async function runMetaWorker(deps: WorkerDependencies) {
   const config = await deps.config();
-  const result = { imported: 0, sent: 0, failed: 0, capiEnabled: canSend(deps.approval) };
+  const result = { imported: 0, validatedTests: 0, sent: 0, failed: 0, capiEnabled: canSend(deps.approval) };
   // Small batches remain below the edge wall-clock limit with 15s Graph timeouts.
   for (let index = 0; config.enabled && index < 4; index++) {
     const receipt = await deps.claimInbound();
@@ -23,8 +23,9 @@ export async function runMetaWorker(deps: WorkerDependencies) {
     try {
       if (receipt.page_id !== config.pageId || receipt.form_id !== config.formId) throw new MetaError('ORIGIN_MISMATCH');
       const lead = mapGraphLead(await deps.retrieve(receipt.leadgen_id), receipt, config);
-      await deps.importLead(receipt, lead);
-      result.imported++;
+      const outcome = await deps.importLead(receipt, lead);
+      if (outcome === 'validated_test') result.validatedTests++;
+      else result.imported++;
     } catch (error) {
       const failure = error instanceof MetaError ? error : new MetaError('IMPORT_UNAVAILABLE', true);
       await deps.finish('inbound', receipt.leadgen_id, receipt.lock_token!, failure.code,

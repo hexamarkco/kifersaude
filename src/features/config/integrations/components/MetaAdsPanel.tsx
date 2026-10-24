@@ -7,6 +7,7 @@ const date = (value: string | null) => value ? new Date(value).toLocaleString('p
 const outcome: Record<string, string> = {
   started: 'Processamento iniciado', success: 'Concluído', retry: 'Nova tentativa agendada',
   dead: 'Precisa de correção', requeued: 'Recolocado na fila',
+  validation_passed: 'Teste validado · nenhum contato ou mensagem criado',
 };
 const failure: Record<string, string> = {
   GRAPH_AUTH: 'Acesso à Meta recusado. Peça ao administrador para verificar a credencial.',

@@ -7,6 +7,7 @@ import { createGraphClient } from '../meta-ads/graph.ts';
 import { runMetaWorker, type WorkerDependencies } from '../meta-ads/worker.ts';
 import { createWebhookHandler } from '../../meta-lead-webhook/handler.ts';
 import { createAdminHandler } from '../../meta-ads-admin/handler.ts';
+import { isAuthorizedMetaWorker } from '../../meta-ads-worker/auth.ts';
 
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto); });
 // Synthetic IDs and reserved 202-555 numbers. Never use campaign/account IDs as fixtures.
@@ -112,6 +113,18 @@ function worker(overrides: Partial<WorkerDependencies> = {}): WorkerDependencies
   };
 }
 describe('reliable worker and delivery gates', () => {
+  it('allows only a configured scheduler secret or the existing service credential', () => {
+    const scheduler='a'.repeat(64);
+    expect(isAuthorizedMetaWorker(new Request('https://local.invalid'),'example-service','')).toBe(false);
+    expect(isAuthorizedMetaWorker(new Request('https://local.invalid',{headers:{'x-meta-worker-secret':scheduler}}),'example-service',scheduler)).toBe(true);
+    expect(isAuthorizedMetaWorker(new Request('https://local.invalid',{headers:{'x-meta-worker-secret':'b'.repeat(64)}}),'example-service',scheduler)).toBe(false);
+    expect(isAuthorizedMetaWorker(new Request('https://local.invalid',{headers:{Authorization:'Bearer example-service'}}),'example-service',scheduler)).toBe(true);
+  });
+  it('counts validation-only imports separately from persisted CRM leads', async () => {
+    const deps=worker({importLead:async()=> 'validated_test'});
+    const result=await runMetaWorker(deps);expect(result.validatedTests).toBe(1);expect(result.imported).toBe(0);
+    expect(deps.send).not.toHaveBeenCalled();
+  });
   it('imports through the CRM transaction with delivery disabled, without claiming CAPI events', async () => {
     const deps = worker(); const result = await runMetaWorker(deps);
     expect(result.imported).toBe(1); expect(result.sent).toBe(0);

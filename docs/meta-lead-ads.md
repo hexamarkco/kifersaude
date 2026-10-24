@@ -1,8 +1,9 @@
 # Meta Lead Ads, CRM e sinais comerciais
 
-Migration e três Edge Functions implantadas no projeto `eaxvvhamkmovkoqssahj`
-em 23/10/2026, após autorização. O recebimento permanece pausado e a CAPI,
-desabilitada. A ativação comercial continua sendo uma etapa separada.
+Migrations e três Edge Functions implantadas no projeto `eaxvvhamkmovkoqssahj`
+em 23/10/2026, após autorização. O receptor e o processamento periódico estão
+ativos; falta conceder `pages_manage_metadata` e inscrever a Página no aplicativo
+para comprovar a entrega automática pela Meta. A CAPI permanece desabilitada.
 
 ## O que já existia e o que foi reutilizado
 
@@ -106,7 +107,7 @@ o código não lê arquivos/configuração privados do MCP nem depende do outro 
   atribuições pesquisáveis por nome/ID Meta e histórico paginado. Cada página tem até
   50 registros. A busca permite avaliar entradas comerciais mais antigas.
 
-## Configuração pendente: recebimento
+## Configuração do recebimento
 
 Depois da autorização de implantação, aplicar a nova migration e publicar
 `meta-lead-webhook`, `meta-ads-worker` e `meta-ads-admin`. `supabase/config.toml`
@@ -121,6 +122,8 @@ Secrets de servidor necessários:
 | `META_WEBHOOK_VERIFY_TOKEN` | Token aleatório exclusivo para o desafio |
 | `META_PAGE_ACCESS_TOKEN` | Ler leads da Página, nunca token do frontend |
 | `META_GRAPH_VERSION` | Versão explícita suportada pelo aplicativo, no formato `vNN.0` |
+| `META_WORKER_SECRET` | Credencial exclusiva do scheduler, também guardada no Vault |
+| `META_VALIDATION_LEAD_ID` | ID exato do teste oficial que executa importação com rollback |
 
 O runtime já fornece `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY`.
 Não há fallback para versões Graph ou tokens de outras integrações.
@@ -142,16 +145,23 @@ Referências reais, utilizadas somente na configuração:
 
 Conferir `defaultOrigem`, `defaultResponsavel`, status ativo marcado como padrão,
 origem fallback `Meta — origem não confirmada` e a chave exata da pergunta comercial
-em `commercialField`. Este campo começa vazio para evitar copiar perguntas sensíveis
-por suposição. O tipo de contratação permanece indefinido até a avaliação comercial.
+em `commercialField`. A configuração validada usa `FBS`, `Luiza` e a pergunta
+`perfil_contratacao`, conferida no formulário. O tipo de contratação permanece
+indefinido até a avaliação comercial.
 
-Configurar o callback `https://<projeto>.supabase.co/functions/v1/meta-lead-webhook`,
-completar o desafio, assinar o campo `leadgen` no aplicativo e inscrever a Página
-no aplicativo. Só então ativar `settings.enabled` no registro já existente
-`facebook_ads_manager`. Agendar POST autenticado para `meta-ads-worker` a cada
-minuto por mecanismo de servidor, com credencial armazenada em Vault/secret manager.
-Essa agenda não é instalada automaticamente pela migration. Sem o agendamento,
-o webhook persiste recebimentos e o painel mostra a fila aguardando processamento.
+O callback configurado é
+`https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/meta-lead-webhook`.
+O desafio e a assinatura `leadgen` do aplicativo foram confirmados na versão
+`v26.0`. A inscrição da Página é uma etapa distinta e continua pendente da
+permissão `pages_manage_metadata`; o token atual já permite consultar o lead de teste.
+
+`settings.enabled=true` permite o teste controlado e o recebimento posterior.
+O cron `meta-ads-worker` (job 47), ativado depois do provisionamento da credencial,
+executa `private.invoke_meta_ads_worker()` a cada minuto. A função obtém a chave
+`meta_ads_worker_secret` no Vault e a envia no header `x-meta-worker-secret`;
+nenhuma chave `service_role` fica no comando cron. A mesma chave precisa existir
+em `META_WORKER_SECRET` na Edge Function. A migration prepara a função e o Vault,
+mas a ativação do cron é separada. Pausar `settings.enabled` impede o despacho.
 Dimensionar frequência/concurrency pelo volume; o painel não dispara o worker.
 
 ## Configuração pendente: CAPI
@@ -205,7 +215,7 @@ ou defini-lo como `false`; não alterar datas/identidades dos eventos.
 Local, sem credenciais reais:
 
 ```bash
-npm test -- supabase/functions/_shared/__tests__/meta-ads.test.ts supabase/functions/_shared/__tests__/meta-ads-pg.test.ts src/features/config/integrations/components/__tests__/MetaAdsPanel.test.tsx
+npm test -- supabase/functions/_shared/__tests__/meta-ads.test.ts supabase/functions/_shared/__tests__/meta-ads-pg.test.ts supabase/functions/_shared/__tests__/meta-ads-scheduler-pg.test.ts src/features/config/integrations/components/__tests__/MetaAdsPanel.test.tsx
 npm run typecheck
 npm run lint
 npm run architecture:check
@@ -226,25 +236,31 @@ contatos existentes/ambíguos, ausência de qualificação por status, critério
 contratos anteriores/incompatíveis, RLS/grants, autorização administrativa,
 reconciliação e bloqueio de transporte CAPI.
 
-Após autorização específica, validar em ambiente isolado com um aplicativo e
-formulário de teste próprios: desafio → inscrição da Página → recebimento → fila →
-importação → atribuição → avaliação → contrato sintético → eventos `held`.
-Manter WhatsApp/IA simulados ou desativados nesse ambiente: criar um lead na
-produção pode acionar comunicações reais pelo fluxo oficial. Usar a ferramenta
-de teste da Meta apenas nesse ambiente, sem contatos reais. Uma validação de
-transporte CAPI/Test Events exige autorização própria e aprovação de dados;
-não é executada pelos testes locais.
+Para testar o ambiente implantado sem persistir contato nem acionar comunicações,
+o ID oficial fixado em `META_VALIDATION_LEAD_ID` segue exclusivamente para
+`meta_ads_validate_test_import`. Essa RPC exige o nome sintético fixo, telefone
+reservado e resposta comercial; executa a função real de importação e reverte a
+subtransação, incluindo os triggers. O recibo termina em `validation_passed`,
+separado de uma importação concluída. Requisições pg_net só partem após commit;
+o endpoint de push também foi conferido como não configurado nesse ambiente.
+Não usar outro lead de teste em produção: os demais IDs seguem o fluxo comercial
+normal e podem gerar comunicações reais.
+
+A inscrição da Página e uma entrega originada pela Meta ainda precisam ser
+comprovadas. Avaliação, contrato sintético e eventos `held` são cobertos pelos
+testes locais; o teste remoto de rollback não valida essas etapas. Transporte
+CAPI/Test Events exige autorização própria e aprovação de dados e não foi executado.
 
 Não alterar `database.generated.ts` manualmente. Após implantação autorizada e
 schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
 
 ## Resultado das verificações locais
 
-- 28 testes específicos passaram, incluindo execução da migration em PGlite,
-  E2E com Graph simulada, busca e paginação de histórico.
+- 33 testes específicos passaram, incluindo execução das migrations em PGlite,
+  E2E com Graph simulada, rollback do teste, autenticação do scheduler e histórico.
 - As três Edge Functions passaram em `deno check`; build, lint, arquitetura,
   checagem de credenciais e auditoria visual passaram. O lint geral aponta três
-  avisos em artefatos locais já existentes, fora desta implementação.
+  avisos em artefatos locais já existentes e um aviso no cleanup de `useMetaAds`.
 - A execução da suíte completa registrou 1.664 testes aprovados e seis falhas em
   testes existentes de lembretes/MCP, campanhas, follow-up, agenda do inbox e editor
   de IA. As mesmas seis falhas foram reproduzidas numa cópia limpa de `HEAD`.
@@ -287,3 +303,41 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
 - Tipos Supabase regenerados pelo script oficial e conferidos com o banco
   implantado. Nenhum contato real foi criado ou consultado, e nenhum evento
   foi enviado à Meta durante as verificações.
+
+## Conexão e teste remoto em 23/10/2026
+
+- Aplicativo `1213514694030711` (getLeads), Página e formulário conferidos na Meta.
+  O callback legado foi substituído pelo receptor implantado e sua assinatura
+  `page/leadgen` foi confirmada ativa em `v26.0`. O desafio retornou HTTP 200.
+- A credencial estática antiga estava expirada. Uma credencial válida de Página,
+  do mesmo aplicativo e recurso, foi provisionada com segurança no servidor a
+  partir do cofre autorizado do Kifer Meta MCP. A sessão consultada vence em
+  22/12/2026; manter renovação operacional. Não há dependência de runtime entre
+  os projetos. App Secret e novo token aleatório de verificação foram provisionados;
+  nenhum segredo foi exibido, versionado ou disponibilizado ao frontend.
+- A Meta criou o lead de teste oficial `1097931793037511` no formulário configurado,
+  usando somente `KIFER TESTE DE INTEGRACAO`, o número reservado `+1 202 555 0100`
+  e uma opção comercial existente. Sua recuperação pela Graph API foi confirmada.
+  O ID foi fixado no secret de validação antes do processamento.
+- Às 23:38:41 BRT, uma **reprodução assinada por nós** da notificação desse teste
+  retornou HTTP 200 no webhook e no worker. Resultado: `validatedTests=1`,
+  `imported=0`, `sent=0`, `failed=0`, `capiEnabled=false`. O recibo ficou em
+  `validation_passed`; consultas ao banco confirmaram zero contatos e atribuições
+  desse teste persistidos e zero eventos de conversão. Isso valida o receptor,
+  a consulta Graph e a importação canônica com rollback, mas não comprova entrega
+  originada pela infraestrutura da Meta.
+- A ferramenta oficial informou que a Página não possui aplicativo associado.
+  A inscrição pela API retornou erro de permissão; falta `pages_manage_metadata`
+  no login atual. A ampliação foi apresentada para confirmação do usuário.
+  Depois da concessão, inscrever a Página em `leadgen`, conferir `subscribed_apps`
+  e verificar a entrega original da Meta com o mesmo teste protegido. Não criar
+  outro ID sintético em produção sem antes proteger seu processamento.
+- Migrations adicionais `20261024022700_meta_lead_validation_probe.sql` e
+  `20261024023443_meta_ads_worker_schedule.sql` aplicadas. Worker atualizado,
+  autenticação dedicada conferida e cron de um minuto ativo. Tipos regenerados
+  pelo script oficial. A chamada pela função do scheduler via pg_net recebeu
+  HTTP 200, sem timeout, com fila vazia e CAPI desabilitada (request `710542`).
+  O cron registrou execuções `succeeded` às 23:44 e 23:45 BRT.
+  Nenhuma migration histórica foi alterada.
+- `META_CAPI_ENABLED=false` permanece explícito. Não houve envio de conversão,
+  mensagens WhatsApp/IA, cadastro persistido ou contrato de teste em produção.

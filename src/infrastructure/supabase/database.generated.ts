@@ -10188,6 +10188,10 @@ export type Database = {
         Args: { p_id: string; p_lock: string }
         Returns: boolean
       }
+      meta_ads_validate_test_import: {
+        Args: { p_id: string; p_lead: Json; p_lock: string }
+        Returns: Json
+      }
       normalize_comm_whatsapp_chat_id: {
         Args: { value: string }
         Returns: string

@@ -26,6 +26,7 @@ import {
   SegmentedControl,
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
+import MetaAdsPanel from "./components/MetaAdsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
 import { normalizeModelOptions } from "./shared/integrationsSettings";
 import { loadAiProviderModels } from "./data/integrationsApi";
@@ -285,7 +286,7 @@ const normalizeRoutingSettings = (
 export default function IntegrationsScreen() {
   const [activeSection, setActiveSection] = useConfigParam(
     "section",
-    ["ai", "whatsapp", "tracking"] as const,
+    ["ai", "whatsapp", "meta", "tracking"] as const,
     "ai",
   );
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<
@@ -790,6 +791,7 @@ export default function IntegrationsScreen() {
           items={[
             { id: "ai", label: "Inteligência artificial", icon: Sparkles },
             { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+            { id: "meta", label: "Meta Ads", icon: Facebook },
             { id: "tracking", label: "Rastreamento", icon: Tag },
           ]}
           value={activeSection}
@@ -797,6 +799,7 @@ export default function IntegrationsScreen() {
           listClassName="flex-nowrap overflow-x-auto"
         />
 
+        {activeSection === "meta" && <MetaAdsPanel />}
         {activeSection === "ai" && <section className="space-y-4">
           <SectionHeader title="Integração de IA" description="Configure a OpenAI e escolha o modelo de cada funcionalidade." />
 

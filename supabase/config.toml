@@ -11,6 +11,18 @@ project_id = "eaxvvhamkmovkoqssahj"
 [functions.comm-whatsapp-webhook]
 verify_jwt = false
 
+# Meta authenticates callbacks with HMAC over the raw body. No CRM reads here.
+[functions.meta-lead-webhook]
+verify_jwt = false
+
+# Internal worker: service-role credential is checked before any operation.
+[functions.meta-ads-worker]
+verify_jwt = false
+
+# Human admin session is verified again inside the handler.
+[functions.meta-ads-admin]
+verify_jwt = true
+
 # --- Publicos (qualquer visitante) ---
 [functions.public-lead-submit]
 verify_jwt = false
